@@ -1,0 +1,59 @@
+<?php
+
+use addons\webman\model\PlayerGameLog;
+
+return [
+    'title' => 'Game log',
+    'point_title' => 'Up and down points record',
+    'player_info' => 'Player information',
+    'machine_info' => 'Machine information',
+    'player_wallet_info' => 'Player wallet',
+    'machine_data' => 'Machine data',
+    'fields' => [
+        'id' => 'number',
+        'game_id' => 'Game classification',
+        'player_id' => 'player ID',
+        'department_id' => 'Department/channel ID',
+        'machine_id' => 'Machine ID',
+        'type' => 'type',
+        'odds' => 'ratio',
+        'open_point' => 'upper point',
+        'wash_point' => 'Lower points',
+        'gift_point' => 'Gift points',
+        'before_game_amount' => 'Current wallet',
+        'game_amount' => 'game point',
+        'after_game_amount' => 'Remaining wallet',
+        'machine_amount' => 'Machine score',
+        'control_open_point' => 'Industrial control pressure point',
+        'pressure' => 'pressure',
+        'score' => 'score',
+        'create_at' => 'Creation time',
+        'turn_point' => 'Number of turns',
+        'created_at_start' => 'Start time',
+        'created_at_end' => 'End time',
+        'action_type' => 'Action source',
+        'action' => 'operation',
+        'chip_amount' => 'code quantity',
+        'total_chip_amount' => 'Total coding volume',
+    ],
+    'total_data' => [
+        'total_game_amount' => 'Total game points',
+        'total_open_point' => 'Total points',
+        'total_wash_point' => 'Total points',
+        'total_pressure' => 'Total pressure',
+        'total_score' => 'Total score',
+        'total_turn_point' => 'Total number of turns',
+        'total_wash_amount' => 'Divide the game points',
+        'total_open_amount' => 'Score game points',
+    ],
+    'type' => [
+        'system' => 'System automatic',
+        'admin' => 'Administrator',
+        'player' => 'player',
+    ],
+    'action' => [
+        PlayerGameLog::ACTION_OPEN => 'Split',
+        PlayerGameLog::ACTION_LEAVE => 'Abandoned',
+        PlayerGameLog::ACTION_DOWN => 'Lower Score',
+    ]
+];

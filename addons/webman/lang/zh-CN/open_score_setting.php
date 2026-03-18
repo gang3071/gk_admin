@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'title' => '店家开分配置',
+    'score_settings' => '开分选项配置',
+    'player_exists' => '该店家已存在开分配置',
+    'at_least_one_score' => '至少需要配置一个开分选项',
+    'reset_to_default' => '恢复默认配置',
+    'reset_confirm_message' => '确定要将开分配置恢复为默认值吗？',
+    'reset_success' => '已成功恢复为默认配置',
+    'reset_failed' => '恢复默认配置失败',
+    'not_set' => '未设置',
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => '店家',
+        'player_name' => '店家名称',
+        'player_uuid' => '店家UUID',
+        'scores' => '当前开分选项',
+        'default_scores' => '默认开分数',
+        'system_default' => '系统预设开分',
+        'score_1' => '开分选项1',
+        'score_2' => '开分选项2',
+        'score_3' => '开分选项3',
+        'score_4' => '开分选项4',
+        'score_5' => '开分选项5',
+        'score_6' => '开分选项6',
+        'created_at' => '创建时间',
+        'updated_at' => '更新时间',
+    ],
+    'help' => [
+        'player_id' => '选择需要配置开分的店家',
+        'score' => '请输入开分金额，0表示不启用该选项',
+        'default_scores' => '设置默认开分数值（0=标准, 100=基础, 200=中级, 500=高级），用于恢复默认配置时使用',
+    ],
+];

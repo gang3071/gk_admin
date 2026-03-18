@@ -1,0 +1,11 @@
+{
+    "name": "webman",
+    "title": "webman核心包",
+    "description": "支持webman框架的核心包 Ex-Admin for webman",
+    "status": true,
+    "version": "1.0.2",
+    "ex_admin_version": ">=1.1.4",
+    "author": "rocky",
+    "namespace": "addons\\webman",
+    "require": []
+}

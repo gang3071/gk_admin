@@ -1,0 +1,2633 @@
+<?php
+
+namespace addons\webman\controller;
+
+use addons\webman\Admin;
+use addons\webman\model\Currency;
+use addons\webman\model\GameType;
+use addons\webman\model\mongo\MachineOperationLog;
+use addons\webman\model\Player;
+use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\model\PlayerGameLog;
+use addons\webman\model\PlayerLoginRecord;
+use addons\webman\model\PlayerPresentRecord;
+use addons\webman\model\PlayerRechargeRecord;
+use addons\webman\model\PlayerWithdrawRecord;
+use addons\webman\model\PlayGameRecord;
+use addons\webman\model\StoreAgentShiftHandoverRecord;
+use ExAdmin\ui\component\common\Button;
+use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
+use ExAdmin\ui\component\echart\BarChart;
+use ExAdmin\ui\component\echart\LineChart;
+use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\statistic\Statistic;
+use ExAdmin\ui\component\layout\Divider;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\component\navigation\dropdown\Dropdown;
+use ExAdmin\ui\support\Request;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
+use MongoDB\BSON\UTCDateTime;
+use support\Db;
+use support\Response;
+
+/**
+ * 数据中心
+ * @group channel
+ */
+class ChannelIndexController
+{
+    /**
+     * 数据中心
+     * @group channel
+     * @auth true
+     */
+    public function index($data_type = null): Layout
+    {
+        $rechargeData = $this->rechargeData($data_type);
+        $withdrawData = $this->withdrawData($data_type);
+        $playerData = $this->playerData();
+        $loginData = $this->loginData();
+        $dropdown = Dropdown::create(
+            Button::create(admin_trans('data_center.data_cycle') . ' (' . admin_trans('data_center.data_type.' . ($data_type == null || $data_type == 'all' ? 'all' : $data_type)) . ')')
+        )->trigger(['click']);
+        $dropdown->item(admin_trans('data_center.data_type.all'))->redirect([$this, 'index'], ['data_type' => 'all']);
+        $dropdown->item(admin_trans('data_center.data_type.today'))->redirect([$this, 'index'],
+            ['data_type' => 'today']);
+        $dropdown->item(admin_trans('data_center.data_type.yesterday'))->redirect([$this, 'index'],
+            ['data_type' => 'yesterday']);
+        $dropdown->item(admin_trans('data_center.data_type.week'))->redirect([$this, 'index'], ['data_type' => 'week']);
+        $dropdown->item(admin_trans('data_center.data_type.last_week'))->redirect([$this, 'index'],
+            ['data_type' => 'last_week']);
+        $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'index'],
+            ['data_type' => 'month']);
+        $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'index'],
+            ['data_type' => 'last_month']);
+        $layout = Layout::create();
+        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown) {
+            $row->gutter([10, 10]);
+            $row->column(
+                Card::create([
+                    Row::create()->column($dropdown, 3),
+                ])->bodyStyle([
+                    'padding' => '13px'
+                ])
+            );
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-globe')->style([
+                        'fontSize' => '45px',
+                        'color' => 'rgb(0,154,97)',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.department_id'))->value(Admin::user()->department->id ?? '')
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 6),
+                    Divider::create()->type('vertical')->style(['height' => '4.9em']),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.department_name'))->value(Admin::user()->department->name ?? '')
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 8),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                , 12);
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-user')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.today_add_player'))->value($playerData['today'])
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 8),
+                    Divider::create()->type('vertical')->style(['height' => '4.9em']),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.player_all'))->value($playerData['all'])
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 8),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->extra(Icon::create('MoreOutlined')->redirect('ex-admin/addons-webman-controller-ChannelPlayerController/index'))->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-user')->style([
+                        'fontSize' => '45px',
+                        'color' => '#e91e63',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.today_active_player'))->value($loginData['today'])
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 8),
+                    Divider::create()->type('vertical')->style(['height' => '4.9em']),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.mouth_active_player'))->value($loginData['month'])
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 8)
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()
+                , 6);
+            $row->column(
+                Card::create([
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.recharge_all'))->value(floatval($rechargeData['all']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Divider::create()->type('vertical')->style(['height' => '4.9em']),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.recharge_self'))->value(floatval($rechargeData['self']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.recharge_third'))->value(floatval($rechargeData['third']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.recharge_artificial'))->value(floatval($rechargeData['artificial']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.recharge_business'))->value(floatval($rechargeData['business']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('player_extend.fields.machine_put_amount'))->value(floatval($rechargeData['machine_put_amount']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 3),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->extra(Icon::create('MoreOutlined')->redirect('ex-admin/addons-webman-controller-ChannelRechargeRecordController/index'))->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 12);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill-alt')->style([
+                        'fontSize' => '45px',
+                        'color' => '#ff9800',
+                        'marginRight' => '20px'
+                    ]), 3),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.withdraw_all'))->value(floatval($withdrawData['all']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Divider::create()->type('vertical')->style(['height' => '4.9em']),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.withdraw_self'))->value(floatval($withdrawData['self']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.withdraw_third'))->value(floatval($withdrawData['third']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.withdraw_artificial'))->value(floatval($withdrawData['artificial']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.withdraw_business'))->value(floatval($withdrawData['business']))
+                        ->valueStyle([
+                            'font-size' => '20px',
+                            'font-weight' => '500',
+                            'text-align' => 'center'
+                        ])
+                        ->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 4),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->extra(Icon::create('MoreOutlined')->redirect('ex-admin/addons-webman-controller-ChannelWithdrawRecordController/index'))->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 12);
+
+            $row->column(Card::create($this->rechargeChart())->hoverable(), 12);
+            $row->column(Card::create($this->withdrawChart())->hoverable(), 12);
+            $row->column(Card::create($this->playerChart())->hoverable(), 12);
+            $row->column(Card::create($this->machineChart())->hoverable(), 12);
+        });
+
+        return $layout;
+    }
+
+    /**
+     * 获取充值数据
+     * @param $data_type
+     * @return array
+     */
+    public function rechargeData($data_type): array
+    {
+        return [
+            'all' => PlayerRechargeRecord::where('status',
+                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->whereIn('type', [
+                PlayerRechargeRecord::TYPE_THIRD,
+                PlayerRechargeRecord::TYPE_SELF,
+                PlayerRechargeRecord::TYPE_ARTIFICIAL,
+                PlayerRechargeRecord::TYPE_GB,
+                PlayerRechargeRecord::TYPE_MACHINE,
+            ])->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('point'),
+            'self' => PlayerRechargeRecord::where('status',
+                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->where('type',
+                PlayerRechargeRecord::TYPE_SELF)->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('point'),
+            'third' => PlayerRechargeRecord::where('status',
+                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->whereIn('type',
+                [
+                    PlayerRechargeRecord::TYPE_THIRD,
+                    PlayerRechargeRecord::TYPE_GB,
+                ])->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('point'),
+            'artificial' => PlayerRechargeRecord::where('status',
+                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->where('type',
+                PlayerRechargeRecord::TYPE_ARTIFICIAL)->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('point'),
+            'business' => PlayerPresentRecord::where('type', PlayerPresentRecord::TYPE_OUT)->when($data_type,
+                function (Builder $q, $value) {
+                    switch ($value) {
+                        case 'today': // 今天
+                            $q->where('created_at', '>=', Carbon::today()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfDay());
+                            break;
+                        case 'yesterday': // 昨天
+                            $q->where('created_at', '>=', Carbon::yesterday()->startOfDay())->where('created_at', '<=',
+                                Carbon::yesterday()->endOfDay());
+                            break;
+                        case 'week': // 本周
+                            $q->where('created_at', '>=',
+                                Carbon::today()->startOfWeek()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfWeek()->endOfDay());
+                            break;
+                        case 'last_week': // 上周
+                            $q->where('created_at', '>=',
+                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                            break;
+                        case 'month': // 本月
+                            $q->where('created_at', '>=',
+                                Carbon::today()->firstOfMonth()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfMonth()->endOfDay());
+                            break;
+                        case 'last_month': // 上月
+                            $startDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                1, // 第一天
+                                0, 0, 0
+                            );
+
+                            $endDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                                23, 59, 59
+                            );
+
+                            $q->whereBetween('created_at', [$startDate, $endDate]);
+                            break;
+                        default:
+                            break;
+                    }
+                })->sum('amount'),
+            'machine_put_amount' => PlayerDeliveryRecord::where('type',
+                PlayerDeliveryRecord::TYPE_MACHINE)->when($data_type,
+                function (Builder $q, $value) {
+                    switch ($value) {
+                        case 'today': // 今天
+                            $q->where('created_at', '>=', Carbon::today()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfDay());
+                            break;
+                        case 'yesterday': // 昨天
+                            $q->where('created_at', '>=', Carbon::yesterday()->startOfDay())->where('created_at', '<=',
+                                Carbon::yesterday()->endOfDay());
+                            break;
+                        case 'week': // 本周
+                            $q->where('created_at', '>=',
+                                Carbon::today()->startOfWeek()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfWeek()->endOfDay());
+                            break;
+                        case 'last_week': // 上周
+                            $q->where('created_at', '>=',
+                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                            break;
+                        case 'month': // 本月
+                            $q->where('created_at', '>=',
+                                Carbon::today()->firstOfMonth()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfMonth()->endOfDay());
+                            break;
+                        case 'last_month': // 上月
+                            $startDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                1, // 第一天
+                                0, 0, 0
+                            );
+
+                            $endDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                                23, 59, 59
+                            );
+
+                            $q->whereBetween('created_at', [$startDate, $endDate]);
+                            break;
+                        default:
+                            break;
+                    }
+                })->sum('amount'),
+        ];
+    }
+
+    /**
+     * 获取提现数据
+     * @param $data_type
+     * @return array
+     */
+    public function withdrawData($data_type): array
+    {
+        return [
+            'all' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->when($data_type,
+                function (Builder $q, $value) {
+                    switch ($value) {
+                        case 'today': // 今天
+                            $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                                Carbon::today()->endOfDay());
+                            break;
+                        case 'yesterday': // 昨天
+                            $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time',
+                                '<=',
+                                Carbon::yesterday()->endOfDay());
+                            break;
+                        case 'week': // 本周
+                            $q->where('finish_time', '>=',
+                                Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                                Carbon::today()->endOfWeek()->endOfDay());
+                            break;
+                        case 'last_week': // 上周
+                            $q->where('finish_time', '>=',
+                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                            break;
+                        case 'month': // 本月
+                            $q->where('finish_time', '>=',
+                                Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                                Carbon::today()->endOfMonth()->endOfDay());
+                            break;
+                        case 'last_month': // 上月
+                            $startDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                1, // 第一天
+                                0, 0, 0
+                            );
+
+                            $endDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                                23, 59, 59
+                            );
+
+                            $q->whereBetween('finish_time', [$startDate, $endDate]);
+                            break;
+                        default:
+                            break;
+                    }
+                })->sum('money'),
+            'self' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->where('type',
+                PlayerWithdrawRecord::TYPE_SELF)->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('money'),
+            'third' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->whereIn('type',
+                [
+                    PlayerWithdrawRecord::TYPE_THIRD,
+                    PlayerWithdrawRecord::TYPE_GB,
+                ])->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('money'),
+            'artificial' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->where('type',
+                PlayerWithdrawRecord::TYPE_ARTIFICIAL)->when($data_type, function (Builder $q, $value) {
+                switch ($value) {
+                    case 'today': // 今天
+                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday': // 昨天
+                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
+                            Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week': // 本周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week': // 上周
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month': // 本月
+                        $q->where('finish_time', '>=',
+                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
+                            Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month': // 上月
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, // 第一天
+                            0, 0, 0
+                        );
+
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+
+                        $q->whereBetween('finish_time', [$startDate, $endDate]);
+                        break;
+                    default:
+                        break;
+                }
+            })->sum('point'),
+            'business' => PlayerPresentRecord::where('type', PlayerPresentRecord::TYPE_IN)->when($data_type,
+                function (Builder $q, $value) {
+                    switch ($value) {
+                        case 'today': // 今天
+                            $q->where('created_at', '>=', Carbon::today()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfDay());
+                            break;
+                        case 'yesterday': // 昨天
+                            $q->where('created_at', '>=', Carbon::yesterday()->startOfDay())->where('created_at', '<=',
+                                Carbon::yesterday()->endOfDay());
+                            break;
+                        case 'week': // 本周
+                            $q->where('created_at', '>=',
+                                Carbon::today()->startOfWeek()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfWeek()->endOfDay());
+                            break;
+                        case 'last_week': // 上周
+                            $q->where('created_at', '>=',
+                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                            break;
+                        case 'month': // 本月
+                            $q->where('created_at', '>=',
+                                Carbon::today()->firstOfMonth()->startOfDay())->where('created_at', '<=',
+                                Carbon::today()->endOfMonth()->endOfDay());
+                            break;
+                        case 'last_month': // 上月
+                            $startDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                1, // 第一天
+                                0, 0, 0
+                            );
+
+                            $endDate = Carbon::create(
+                                Carbon::now()->subMonthNoOverflow()->year,
+                                Carbon::now()->subMonthNoOverflow()->month,
+                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                                23, 59, 59
+                            );
+
+                            $q->whereBetween('created_at', [$startDate, $endDate]);
+                            break;
+                        default:
+                            break;
+                    }
+                })->sum('amount'),
+        ];
+    }
+
+    /**
+     * 获取玩家数据
+     * @return array
+     */
+    public function playerData(): array
+    {
+        return [
+            'all' => Player::count('*'),
+            'today' => Player::whereDate('created_at', date('Y-m-d'))->count(),
+        ];
+    }
+
+    /**
+     * 获取活跃玩家数据
+     * @return array
+     */
+    public function loginData(): array
+    {
+        return [
+            'month' => PlayerLoginRecord::whereYear('created_at', date('Y'))->whereMonth('created_at',
+                date('m'))->distinct('player_id')->count(),
+            'today' => PlayerLoginRecord::whereDate('created_at', date('Y-m-d'))->distinct('player_id')->count(),
+        ];
+    }
+
+    /**
+     * 充值趋势图
+     * @return LineChart
+     */
+    public function rechargeChart(): LineChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        $data = PlayerRechargeRecord::whereDate('created_at', '>=', $range)
+            ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+            ->whereIn('type', [
+                PlayerRechargeRecord::TYPE_THIRD,
+                PlayerRechargeRecord::TYPE_SELF,
+                PlayerRechargeRecord::TYPE_ARTIFICIAL,
+                PlayerRechargeRecord::TYPE_GB,
+            ])
+            ->groupBy('date')
+            ->orderBy('date', 'DESC')
+            ->get([
+                DB::raw('Date(`created_at`) as date'),
+                DB::raw('SUM(`point`) as value')
+            ])
+            ->toArray();
+        $data = $data ? array_column($data, 'value', 'date') : [];
+        $xAxis = [];
+        $yAxis = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $yAxis[] = $data[$date] ?? 0;
+        }
+
+        return LineChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create(admin_trans('data_center.recharge_chart'))->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data(admin_trans('data_center.recharge_amount'), $yAxis);
+    }
+
+    /**
+     * 提现趋势图
+     * @return LineChart
+     */
+    public function withdrawChart(): LineChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        $data = PlayerWithdrawRecord::whereDate('created_at', '>=', $range)
+            ->where('status', PlayerWithdrawRecord::STATUS_SUCCESS)
+            ->groupBy('date')
+            ->orderBy('date', 'DESC')
+            ->get([
+                DB::raw('Date(`created_at`) as date'),
+                DB::raw('SUM(`point`) as value')
+            ])
+            ->toArray();
+        $data = $data ? array_column($data, 'value', 'date') : [];
+        $xAxis = [];
+        $yAxis = [];
+
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $yAxis[] = $data[$date] ?? 0;
+        }
+
+        return LineChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create(admin_trans('data_center.withdraw_chart'))->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data(admin_trans('data_center.withdraw_amount'), $yAxis);
+    }
+
+    /**
+     * 新增玩家
+     * @return BarChart
+     */
+    public function playerChart(): BarChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        $data = Player::whereDate('created_at', '>=', $range)
+            ->groupBy('date')
+            ->orderBy('date', 'DESC')
+            ->get([
+                DB::raw('Date(`created_at`) as date'),
+                DB::raw('COUNT(`id`) as value')
+            ])
+            ->toArray();
+        $data = $data ? array_column($data, 'value', 'date') : [];
+        $xAxis = [];
+        $yAxis = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $yAxis[] = $data[$date] ?? 0;
+        }
+
+        return BarChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create(admin_trans('data_center.player_chart'))->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data(admin_trans('data_center.player_amount'), $yAxis);
+    }
+
+    /**
+     * 机台操作
+     * @return LineChart
+     */
+    public function machineChart(): LineChart
+    {
+        $startDate = Carbon::now()->subHours(24);
+        $logs = MachineOperationLog::raw(function ($collection) use ($startDate) {
+            return $collection->aggregate([
+                [
+                    '$match' => [
+                        'created_at' => [
+                            '$gte' => new UTCDateTime($startDate->timestamp * 1000),
+                        ],
+                        'status' => 1,
+                        'department_id' => Admin::user()->department->id,
+                    ]
+                ],
+                [
+                    '$group' => [
+                        '_id' => [
+                            'date' => [
+                                '$dateToString' => [
+                                    'format' => '%Y-%m-%d %H',
+                                    'date' => '$created_at',
+                                    'timezone' => 'Asia/Shanghai'
+                                ]
+                            ],
+                            'hour' => ['$hour' => '$created_at']
+                        ],
+                        'count' => ['$sum' => 1]
+                    ]
+                ],
+                [
+                    '$sort' => [
+                        '_id.date' => 1
+                    ]
+                ]
+            ]);
+        })->toArray();
+        $data = [];
+        foreach ($logs as $log) {
+            $data[$log['_id']->date] = $log['count'];
+        }
+        $xAxis = [];
+        $yAxis = [];
+        for ($i = 23; $i >= 0; $i--) {
+            $time = Carbon::now()->subHours($i)->format('Y-m-d H');
+            $xAxis[] = $time;
+            $yAxis[] = $data[$time] ?? 0;
+        }
+        return LineChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create(admin_trans('data_center.machine_24_chart'))->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data(admin_trans('data_center.machine_amount'), $yAxis);
+    }
+
+    /**
+     * 代理数据中心
+     * @group channel
+     * @auth true
+     */
+    public function agentIndex($data_type = null): Layout
+    {
+        /** @var \addons\webman\model\AdminUser $agent */
+        $agent = Admin::user();
+
+        // 1. 查询下级店家数量
+        $storeNum = $agent->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->count();
+
+        // 2. 获取下级店家ID列表
+        $storeIds = $agent->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
+
+        // 3. 查询下级玩家数量（通过店家关联）
+        $playerNum = Player::query()
+            ->where('department_id', $agent->department_id)
+            ->whereIn('store_admin_id', $storeIds)
+            ->where('is_promoter', 0)
+            ->count();
+
+        // 4. 构建玩家筛选闭包（通过店家关联）
+        $playerFilter = function ($query) use ($storeIds) {
+            $query->whereHas('player', function ($q) use ($storeIds) {
+                $q->whereIn('store_admin_id', $storeIds)
+                    ->where('is_promoter', 0);
+            });
+        };
+
+        // 5. 构建时间筛选闭包
+        $timeFilter = function ($query) use ($data_type) {
+            if ($data_type) {
+                switch ($data_type) {
+                    case 'today':
+                        $query->where('created_at', '>=', Carbon::today()->startOfDay())
+                            ->where('created_at', '<=', Carbon::today()->endOfDay());
+                        break;
+                    case 'yesterday':
+                        $query->where('created_at', '>=', Carbon::yesterday()->startOfDay())
+                            ->where('created_at', '<=', Carbon::yesterday()->endOfDay());
+                        break;
+                    case 'week':
+                        $query->where('created_at', '>=', Carbon::today()->startOfWeek()->startOfDay())
+                            ->where('created_at', '<=', Carbon::today()->endOfWeek()->endOfDay());
+                        break;
+                    case 'last_week':
+                        $query->where('created_at', '>=', Carbon::today()->subWeek()->startOfWeek()->startOfDay())
+                            ->where('created_at', '<=', Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                        break;
+                    case 'month':
+                        $query->where('created_at', '>=', Carbon::today()->firstOfMonth()->startOfDay())
+                            ->where('created_at', '<=', Carbon::today()->endOfMonth()->endOfDay());
+                        break;
+                    case 'last_month':
+                        $startDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            1, 0, 0, 0
+                        );
+                        $endDate = Carbon::create(
+                            Carbon::now()->subMonthNoOverflow()->year,
+                            Carbon::now()->subMonthNoOverflow()->month,
+                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                            23, 59, 59
+                        );
+                        $query->where('created_at', '>=', $startDate)
+                            ->where('created_at', '<=', $endDate);
+                        break;
+                }
+            }
+        };
+
+        // 6. 查询全部历史数据（充值、提现、投钞）
+        // 查询充值数据（不包括投钞）
+        $rechargeAmount = PlayerRechargeRecord::query()
+            ->when(true, $playerFilter)
+            ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+            ->whereIn('type', [
+                PlayerRechargeRecord::TYPE_THIRD,
+                PlayerRechargeRecord::TYPE_SELF,
+                PlayerRechargeRecord::TYPE_BUSINESS,
+                PlayerRechargeRecord::TYPE_ARTIFICIAL,
+                PlayerRechargeRecord::TYPE_GB,
+                PlayerRechargeRecord::TYPE_EH,
+            ])
+            ->when($data_type, $timeFilter)
+            ->sum('point') ?? 0;
+
+        // 查询投钞数据
+        $machinePutPoint = PlayerRechargeRecord::query()
+            ->when(true, $playerFilter)
+            ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+            ->where('type', PlayerRechargeRecord::TYPE_MACHINE)
+            ->when($data_type, $timeFilter)
+            ->sum('point') ?? 0;
+
+        // 查询提现数据
+        $withdrawAmount = PlayerWithdrawRecord::query()
+            ->when(true, $playerFilter)
+            ->where('status', PlayerWithdrawRecord::STATUS_SUCCESS)
+            ->when($data_type, $timeFilter)
+            ->sum('point') ?? 0;
+
+        // 查询电子游戏总押注
+        $electronicBetTotal = PlayGameRecord::query()
+            ->when(true, $playerFilter)
+            ->when($data_type, $timeFilter)
+            ->sum('bet') ?? 0;
+
+        // 查询实体机押注 - 钢珠
+        $steelBallBetTotal = PlayerGameLog::query()
+            ->whereHas('player', function ($q) use ($storeIds) {
+                $q->whereIn('store_admin_id', $storeIds)
+                    ->where('is_promoter', 0);
+            })
+            ->whereHas('machine.machineCategory.gameType', function ($query) {
+                $query->where('type', GameType::TYPE_STEEL_BALL);
+            })
+            ->when($data_type, $timeFilter)
+            ->sum('pressure') ?? 0;
+
+        // 查询实体机押注 - Slot
+        $slotBetTotal = PlayerGameLog::query()
+            ->whereHas('player', function ($q) use ($storeIds) {
+                $q->whereIn('store_admin_id', $storeIds)
+                    ->where('is_promoter', 0);
+            })
+            ->whereHas('machine.machineCategory.gameType', function ($query) {
+                $query->where('type', GameType::TYPE_SLOT);
+            })
+            ->when($data_type, $timeFilter)
+            ->sum('pressure') ?? 0;
+
+        $statisticsData = [
+            'recharge_amount' => $rechargeAmount,
+            'withdraw_amount' => $withdrawAmount,
+            'machine_put_point' => $machinePutPoint,
+            'electronic_bet' => $electronicBetTotal,
+            'steel_ball_bet' => $steelBallBetTotal,
+            'slot_bet' => $slotBetTotal,
+        ];
+
+        // 7. 查询当期数据（按下级店家分组统计）
+        $totalData = PlayerDeliveryRecord::query()
+            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+            ->join('admin_users', 'player.store_admin_id', '=', 'admin_users.id')
+            ->whereIn('player.store_admin_id', $storeIds)
+            ->where('player.is_promoter', 0)
+            ->when(!empty($agent->last_settlement_timestamp), function ($query) use ($agent) {
+                $query->where('player_delivery_record.created_at', '>=', date('Y-m-d H:i:s', $agent->last_settlement_timestamp));
+            })
+            ->selectRaw('
+                        player.store_admin_id,
+                        admin_users.ratio,
+                        sum(IF(player_delivery_record.type = ' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ', player_delivery_record.amount, 0)) as total_in,
+                        sum(IF(player_delivery_record.type = ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ', player_delivery_record.amount, 0)) as total_out,
+                        sum(IF(player_delivery_record.type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ', player_delivery_record.amount, 0)) as total_point
+                    ')
+            ->groupBy('player.store_admin_id', 'admin_users.ratio')
+            ->get();
+
+        // 7. 计算当期各项金额和分润
+        $presentInAmount = 0;
+        $machinePutPoint = 0;
+        $presentOutAmount = 0;
+        $selfProfitAmount = 0;
+        $totalPoint = 0;
+
+        foreach ($totalData as $data) {
+            // 营收 = 投钞 + 转入 - 转出
+            $revenue = bcsub(bcadd($data['total_point'], $data['total_in'], 2), $data['total_out'], 2);
+            $totalPoint = bcadd($totalPoint, $revenue, 2);
+
+            // 分润计算：(店家ratio - 代理ratio) * 营收
+            $storeRatio = $data['ratio'] ?? 0;
+            if ($storeRatio - $agent->ratio > 0) {
+                $selfProfitAmount = bcadd($selfProfitAmount,
+                    bcmul($revenue, ($storeRatio - $agent->ratio) / 100, 2), 2);
+            }
+
+            $presentInAmount = bcadd($presentInAmount, bcadd(0, $data['total_in'] ?? 0, 2), 2);
+            $machinePutPoint = bcadd($machinePutPoint, bcadd(0, $data['total_point'] ?? 0, 2), 2);
+            $presentOutAmount = bcadd($presentOutAmount, bcadd(0, $data['total_out'] ?? 0, 2), 2);
+        }
+
+        $ratio = $agent->ratio ?? 0;
+        $info['present_in_amount'] = $presentInAmount;
+        $info['present_out_amount'] = $presentOutAmount;
+        $info['machine_put_point'] = $machinePutPoint;
+        $info['self_profit_amount'] = bcadd($selfProfitAmount, $agent->adjust_amount ?? 0, 2);
+        $info['total_point'] = $totalPoint;
+        $info['adjust_amount'] = $agent->adjust_amount ?? 0;
+        $info['profit_amount'] = bcmul($totalPoint, $ratio / 100, 2);
+        $info['ratio'] = $ratio;
+
+        // 日期筛选下拉框
+        $dropdown = Dropdown::create(
+            Button::create(admin_trans('data_center.data_cycle') . ' (' . admin_trans('data_center.data_type.' . ($data_type == null || $data_type == 'all' ? 'all' : $data_type)) . ')')
+        )->trigger(['click']);
+        $dropdown->item(admin_trans('data_center.data_type.all'))->redirect([$this, 'agentIndex'], ['data_type' => 'all']);
+        $dropdown->item(admin_trans('data_center.data_type.today'))->redirect([$this, 'agentIndex'], ['data_type' => 'today']);
+        $dropdown->item(admin_trans('data_center.data_type.yesterday'))->redirect([$this, 'agentIndex'], ['data_type' => 'yesterday']);
+        $dropdown->item(admin_trans('data_center.data_type.week'))->redirect([$this, 'agentIndex'], ['data_type' => 'week']);
+        $dropdown->item(admin_trans('data_center.data_type.last_week'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_week']);
+        $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'agentIndex'], ['data_type' => 'month']);
+        $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_month']);
+
+        $layout = Layout::create();
+        $layout->row(function (Row $row) use (
+            $agent,
+            $storeNum,
+            $playerNum,
+            $statisticsData,
+            $storeIds,
+            $info,
+            $dropdown
+        ) {
+            $row->gutter([10, 10]);
+            $row->column(
+                Card::create([
+                    Row::create()->column(
+                        Html::create()->content([
+                            Html::create(admin_trans('admin.agent') . '：')->tag('span')->style([
+                                'font-size' => '16px',
+                                'font-weight' => 'bold',
+                                'margin-right' => '10px'
+                            ]),
+                            Html::create($agent->nickname ?? $agent->username)->tag('span')->style([
+                                'font-size' => '16px',
+                                'color' => '#409eff'
+                            ])
+                        ])
+                    , 9),
+                    Row::create()->column($dropdown, 15),
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'align-items' => 'center',
+                    'justify-content' => 'space-between'
+                ])
+            );
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-globe')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title('总店家数')->value(floatval($storeNum))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-users')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title('总玩家数')->value(floatval($playerNum))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('总充值')->value(floatval($statisticsData['recharge_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title('总提现')->value(floatval($statisticsData['withdraw_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill-alt')->style([
+                        'fontSize' => '45px',
+                        'color' => '#e91e63',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title('总投钞')->value(floatval($statisticsData['machine_put_point'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()
+                , 6);
+
+            // 电子游戏总押注
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-gamepad')->style([
+                        'fontSize' => '45px',
+                        'color' => '#1890ff',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.electronic_bet'))->value(floatval($statisticsData['electronic_bet'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            // 实体机押注 - 钢珠
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-circle')->style([
+                        'fontSize' => '45px',
+                        'color' => '#52c41a',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.steel_ball_bet'))->value(floatval($statisticsData['steel_ball_bet'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            // 实体机押注 - Slot
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-square')->style([
+                        'fontSize' => '45px',
+                        'color' => '#faad14',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.slot_bet'))->value(floatval($statisticsData['slot_bet'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            $row->column(Card::create($this->openWashChart($storeIds))->hoverable(), 16);
+            $row->column(Card::create($this->moneyChart($storeIds))->hoverable(), 8);
+            $row->column(Card::create($this->revenueChart($storeIds))->hoverable(), 12);
+            $row->column(Card::create($this->profitLossChart($storeIds))->hoverable(), 12);
+        });
+
+        return $layout;
+    }
+
+    /**
+     * 充值/提现趋势
+     * @param $storeIds
+     * @return LineChart
+     */
+    public function openWashChart($storeIds = []): LineChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        // 如果没有店家ID，返回空数据
+        if (empty($storeIds) || (is_object($storeIds) && $storeIds->isEmpty())) {
+            $dataA = [];
+            $dataB = [];
+        } else {
+            // 查询充值数据（不包括投钞）
+            $rechargeData = PlayerRechargeRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+                ->whereIn('type', [
+                    PlayerRechargeRecord::TYPE_THIRD,
+                    PlayerRechargeRecord::TYPE_SELF,
+                    PlayerRechargeRecord::TYPE_BUSINESS,
+                    PlayerRechargeRecord::TYPE_ARTIFICIAL,
+                    PlayerRechargeRecord::TYPE_GB,
+                    PlayerRechargeRecord::TYPE_EH,
+                ])
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as recharge_amount')
+                ])
+                ->toArray();
+
+            // 查询提现数据
+            $withdrawData = PlayerWithdrawRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerWithdrawRecord::STATUS_SUCCESS)
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as withdraw_amount')
+                ])
+                ->toArray();
+
+            $dataA = $rechargeData ? array_column($rechargeData, 'recharge_amount', 'date') : [];
+            $dataB = $withdrawData ? array_column($withdrawData, 'withdraw_amount', 'date') : [];
+        }
+
+        $xAxis = [];
+        $yAxisA = [];
+        $yAxisB = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $yAxisA[] = $dataA[$date] ?? 0;
+            $yAxisB[] = $dataB[$date] ?? 0;
+        }
+
+        return LineChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create('充值/提现趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data('充值', $yAxisA)
+            ->data('提现', $yAxisB);
+    }
+
+    /**
+     * 投钞
+     * @param $storeIds
+     * @return LineChart
+     */
+    public function moneyChart($storeIds = []): LineChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        // 如果没有店家ID，返回空数据
+        if (empty($storeIds) || (is_object($storeIds) && $storeIds->isEmpty())) {
+            $dataA = [];
+        } else {
+            // 查询投钞数据
+            $data = PlayerRechargeRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+                ->where('type', PlayerRechargeRecord::TYPE_MACHINE)
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as machine_amount')
+                ])
+                ->toArray();
+
+            $dataA = $data ? array_column($data, 'machine_amount', 'date') : [];
+        }
+
+        $xAxis = [];
+        $yAxis = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $yAxis[] = $dataA[$date] ?? 0;
+        }
+
+        return LineChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create('投钞趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data('投钞', $yAxis);
+    }
+
+    /**
+     * 营收趋势
+     * @param $storeIds
+     * @return BarChart
+     */
+    public function revenueChart($storeIds = []): BarChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        // 如果没有店家ID，返回空数据
+        if (empty($storeIds) || (is_object($storeIds) && $storeIds->isEmpty())) {
+            $dataA = [];
+            $dataB = [];
+        } else {
+            // 查询充值数据（不包括投钞）
+            $rechargeData = PlayerRechargeRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+                ->whereIn('type', [
+                    PlayerRechargeRecord::TYPE_THIRD,
+                    PlayerRechargeRecord::TYPE_SELF,
+                    PlayerRechargeRecord::TYPE_BUSINESS,
+                    PlayerRechargeRecord::TYPE_ARTIFICIAL,
+                    PlayerRechargeRecord::TYPE_GB,
+                    PlayerRechargeRecord::TYPE_EH,
+                ])
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as recharge_amount')
+                ])
+                ->toArray();
+
+            // 查询投钞数据
+            $machineData = PlayerRechargeRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+                ->where('type', PlayerRechargeRecord::TYPE_MACHINE)
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as machine_amount')
+                ])
+                ->toArray();
+
+            $dataA = $rechargeData ? array_column($rechargeData, 'recharge_amount', 'date') : [];
+            $dataB = $machineData ? array_column($machineData, 'machine_amount', 'date') : [];
+        }
+
+        $xAxis = [];
+        $yAxisA = [];
+        $yAxisB = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $yAxisA[] = $dataA[$date] ?? 0;
+            $yAxisB[] = $dataB[$date] ?? 0;
+        }
+        return BarChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create('营收趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data('充值', $yAxisA)
+            ->data('投钞', $yAxisB);
+    }
+
+    /**
+     * 盈亏分析
+     * @param $storeIds
+     * @return BarChart
+     */
+    public function profitLossChart($storeIds = []): BarChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        // 如果没有店家ID，返回空数据
+        if (empty($storeIds) || (is_object($storeIds) && $storeIds->isEmpty())) {
+            $dataA = [];
+            $dataB = [];
+            $dataC = [];
+        } else {
+            // 查询充值数据（不包括投钞）
+            $rechargeData = PlayerRechargeRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+                ->whereIn('type', [
+                    PlayerRechargeRecord::TYPE_THIRD,
+                    PlayerRechargeRecord::TYPE_SELF,
+                    PlayerRechargeRecord::TYPE_BUSINESS,
+                    PlayerRechargeRecord::TYPE_ARTIFICIAL,
+                    PlayerRechargeRecord::TYPE_GB,
+                    PlayerRechargeRecord::TYPE_EH,
+                ])
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as recharge_amount')
+                ])
+                ->toArray();
+
+            // 查询投钞数据
+            $machineData = PlayerRechargeRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+                ->where('type', PlayerRechargeRecord::TYPE_MACHINE)
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as machine_amount')
+                ])
+                ->toArray();
+
+            // 查询提现数据
+            $withdrawData = PlayerWithdrawRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerWithdrawRecord::STATUS_SUCCESS)
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`point`) as withdraw_amount')
+                ])
+                ->toArray();
+
+            $dataA = $rechargeData ? array_column($rechargeData, 'recharge_amount', 'date') : [];
+            $dataB = $withdrawData ? array_column($withdrawData, 'withdraw_amount', 'date') : [];
+            $dataC = $machineData ? array_column($machineData, 'machine_amount', 'date') : [];
+        }
+
+        $xAxis = [];
+        $yAxis = [];
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $rechargeAmount = $dataA[$date] ?? 0;
+            $withdrawAmount = $dataB[$date] ?? 0;
+            $machinePutPoint = $dataC[$date] ?? 0;
+            $yAxis[] = $rechargeAmount + $machinePutPoint - $withdrawAmount;
+        }
+        return BarChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create('盈亏分析')->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data('盈亏', $yAxis);
+    }
+
+    /**
+     * 上传
+     * @return Response|void
+     */
+    public function myEditorUpload()
+    {
+        $file = request()->file('file');
+        if ($file && $file->isValid()) {
+            $size = $file->getSize();
+            if ($file->getSize() >= 1024 * 1024) {
+                return jsonFailResponse(trans('image_upload_size_fail', ['{size}' => '1M'], 'message'));
+            }
+            $extension = $file->getUploadExtension();
+            if (!in_array($extension, ['png', 'jpg', 'jpeg'])) {
+                return jsonFailResponse(trans('image_upload_size_fail', ['{size}' => '1M'], 'message'));
+            }
+            $uploadName = $file->getUploadName();
+            $basePath = public_path() . '/storage/' . date('Ymd') . DIRECTORY_SEPARATOR;
+            $baseUrl = env('APP_URL', 'http://127.0.0.1:8787') . '/storage/' . date('Ymd') . '/';
+            $uniqueId = hash_file('md5', $file->getPathname());
+            $saveFilename = $uniqueId . '.' . $file->getUploadExtension();
+            $savePath = $basePath . $saveFilename;
+            $file->move($savePath);
+
+            return jsonSuccessResponse('success', [
+                'origin_name' => $uploadName,
+                'save_name' => $saveFilename,
+                'save_path' => $savePath,
+                'url' => $baseUrl . $saveFilename,
+                'unique_id' => $uniqueId,
+                'size' => $size,
+                'mime_type' => $file->getUploadMimeType(),
+                'extension' => $extension,
+            ]);
+        }
+    }
+
+    /**
+     * 店家中心
+     * @group channel
+     * @auth true
+     */
+    public function storeIndex(): Layout
+    {
+        /** @var \addons\webman\model\AdminUser $store */
+        $store = Admin::user();
+
+        // 获取筛选参数
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+        $dateType = isset($exAdminFilter['date_type']) && $exAdminFilter['date_type'] !== '' ? intval($exAdminFilter['date_type']) : null;
+
+        // 查询店家下的玩家（使用 store_admin_id）
+        $playerNum = Player::query()
+            ->where('department_id', $store->department_id)
+            ->where('store_admin_id', $store->id)
+            ->where('is_promoter', 0)
+            ->count();
+        $playerIds = Player::query()
+            ->where('department_id', $store->department_id)
+            ->where('store_admin_id', $store->id)
+            ->where('is_promoter', 0)
+            ->get()
+            ->pluck('id');
+
+        // 运营统计数据（受时间筛选影响）
+        $operationStatisticsQuery = PlayerDeliveryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
+            ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
+                $query->where(getDateWhere($dateType, 'created_at'));
+            })
+            ->whereIn('type', [
+                PlayerDeliveryRecord::TYPE_PRESENT_IN,
+                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
+                PlayerDeliveryRecord::TYPE_MACHINE,
+            ])
+            ->selectRaw("
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+            ")
+            ->first();
+
+        $operationStatistics = [
+            'present_in_amount' => $operationStatisticsQuery->present_in_amount ?? 0,
+            'present_out_amount' => $operationStatisticsQuery->present_out_amount ?? 0,
+            'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
+        ];
+
+        // 总数据统计（不受时间筛选影响，用于"总转入"、"总转出"、"总投钞"卡片）
+        $totalStatisticsQuery = PlayerDeliveryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
+            ->whereIn('type', [
+                PlayerDeliveryRecord::TYPE_PRESENT_IN,
+                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
+                PlayerDeliveryRecord::TYPE_MACHINE,
+            ])
+            ->selectRaw("
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+            ")
+            ->first();
+
+        $playerDeliveryRecord = [
+            [
+                'present_in_amount' => $totalStatisticsQuery->present_in_amount ?? 0,
+                'present_out_amount' => $totalStatisticsQuery->present_out_amount ?? 0,
+                'machine_put_point' => $totalStatisticsQuery->machine_put_point ?? 0,
+            ]
+        ];
+        $presentInAmount = 0;
+        $machinePutPoint = 0;
+        $presentOutAmount = 0;
+        $selfProfitAmount = 0;
+        $totalPoint = 0;
+
+        // 店家的配置直接从 AdminUser 读取
+        $ratio = $store->ratio ?? 0;
+        $adjustAmount = $store->adjust_amount ?? 0;
+        $lastSettlementTimestamp = $store->last_settlement_timestamp;
+
+        // 统计交易数据
+        $totalData = PlayerDeliveryRecord::query()
+            ->whereIn('player_id', $playerIds)
+            ->when(!empty($lastSettlementTimestamp), function ($query) use ($lastSettlementTimestamp) {
+                $query->where('created_at', '>=', $lastSettlementTimestamp);
+            })->selectRaw('
+                    sum(IF(type = ' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ', amount, 0)) as total_in,
+                    sum(IF(type = ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ', amount, 0)) as total_out,
+                    sum(IF(type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ', amount, 0)) as total_point
+                ')->first();
+
+        $presentInAmount = bcadd(0, $totalData['total_in'] ?? 0, 2);
+        $machinePutPoint = bcadd(0, $totalData['total_point'] ?? 0, 2);
+        $presentOutAmount = bcadd(0, $totalData['total_out'] ?? 0, 2);
+        $totalPoint = bcsub(bcadd($machinePutPoint, $presentInAmount, 2), $presentOutAmount, 2);
+        if (100 - $ratio > 0) {
+            $selfProfitAmount = bcmul($totalPoint, (100 - $ratio) / 100, 2);
+        }
+        $info['present_in_amount'] = $presentInAmount;
+        $info['present_out_amount'] = $presentOutAmount;
+        $info['machine_put_point'] = $machinePutPoint;
+        $info['self_profit_amount'] = bcadd($selfProfitAmount, $adjustAmount, 2);
+        $info['total_point'] = $totalPoint;
+        $info['adjust_amount'] = $adjustAmount;
+        $info['profit_amount'] = $ratio > 0 ? bcmul($totalPoint, $ratio / 100, 2) : 0;
+        $info['ratio'] = $ratio;
+
+        // 店家不再有 PlayerPlatformCash，设为 null
+        $storePlatformCash = null;
+        // 创建时间筛选下拉菜单
+        $dateTypeLabels = [
+            null => '全部',
+            1 => '今日',
+            2 => '昨天',
+            3 => '本周',
+            4 => '上周',
+            5 => '本月',
+            6 => '上月'
+        ];
+        $currentLabel = $dateTypeLabels[$dateType] ?? '全部';
+        $timeDropdown = Dropdown::create(
+            Button::create($currentLabel)->size('mini')
+        )->trigger(['click']);
+        $timeDropdown->item('全部')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => []]);
+        $timeDropdown->item('今日')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 1]]);
+        $timeDropdown->item('昨天')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 2]]);
+        $timeDropdown->item('本周')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 3]]);
+        $timeDropdown->item('上周')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 4]]);
+        $timeDropdown->item('本月')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 5]]);
+        $timeDropdown->item('上月')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 6]]);
+
+        $layout = Layout::create();
+        $layout->row(function (Row $row) use (
+            $playerNum,
+            $playerDeliveryRecord,
+            $operationStatistics,
+            $playerIds,
+            $store,
+            $info,
+            $storePlatformCash,
+            $dateType,
+            $timeDropdown
+        ) {
+            /** @var StoreAgentShiftHandoverRecord $storeAgentShiftHandoverRecord */
+            $storeAgentShiftHandoverRecord = StoreAgentShiftHandoverRecord::query()->where('bind_admin_user_id',
+                Admin::user()->id)->orderBy('id', 'desc')->first();
+            $row->gutter([10, 10]);
+            // 计算运营统计的小计（基于时间筛选的数据）
+            $subtotal = bcsub(
+                $operationStatistics['present_in_amount'] ?? 0,
+                $operationStatistics['present_out_amount'] ?? 0,
+                2
+            );
+
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Button::create('交班')->modal([$this, 'shiftHandover']),
+                        Html::create(admin_trans('shift_handover.start_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))
+                            ->style([
+                                'color' => 'rgb(26 148 169)',
+                                'fontSize' => '16px',
+                                'marginLeft' => '20px',
+                                'fontWeight' => 'bold',
+                            ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 5);
+
+            // 运营统计标题和筛选
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('运营统计')->style([
+                            'fontSize' => '14px',
+                            'fontWeight' => 'bold',
+                            'color' => '#303133',
+                            'marginRight' => '10px'
+                        ]),
+                        $timeDropdown
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 3);
+
+            // 上分总和（运营统计，受时间筛选影响）
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('上分总和')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($operationStatistics['present_in_amount'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#67C23A'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 下分总和（运营统计，受时间筛选影响）
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('下分总和')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($operationStatistics['present_out_amount'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#F56C6C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 投钞总和（运营统计，受时间筛选影响）
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('投钞总和')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($operationStatistics['machine_put_point'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#409EFF'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 小计（上分 - 下分）
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('小计')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($subtotal), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-television')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('总设备数')->value(floatval($playerNum))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title('绑定代理')->value($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? '') : '')
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 8);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('总转入(开分)')->value(floatval($playerDeliveryRecord[0]['present_in_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title('总转出(洗分)')->value(floatval($playerDeliveryRecord[0]['present_out_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 8);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill-alt')->style([
+                        'fontSize' => '45px',
+                        'color' => '#e91e63',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('店家余额')->value(floatval($storePlatformCash->money ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title('总投钞')->value(floatval($playerDeliveryRecord[0]['machine_put_point'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()
+                , 8);
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('当期转入(开分)')->value(floatval($info['present_in_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 7),
+                    Row::create()->column(Statistic::create()->title('当期转出(洗分)')->value('-' . floatval($info['present_out_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center',
+                            'color' => 'red !important',
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 7),
+                    Row::create()->column(Statistic::create()->title('当期总投钞')->value(floatval($info['machine_put_point'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 7),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 8);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('当期分润金额')->value(floatval($info['self_profit_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 7),
+                    Row::create()->column(Statistic::create()->title('当期调整分润')->value(floatval($info['adjust_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 7),
+                    Row::create()->column(Statistic::create()->title('当期营收')->value(floatval($info['total_point'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 7),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 8);
+
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                        'fontSize' => '45px',
+                        'color' => '#409eff',
+                        'marginRight' => '20px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title('当期上缴金额')->value(floatval($info['profit_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title('上缴比例')->value(floatval($info['ratio'] ?? 0) . '%')
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 8);
+            $row->column(Card::create($this->openWashChart([$store->id]))->hoverable(), 16);
+            $row->column(Card::create($this->moneyChart([$store->id]))->hoverable(), 8);
+            $row->column(Card::create($this->revenueChart([$store->id]))->hoverable(), 12);
+            $row->column(Card::create($this->profitLossChart([$store->id]))->hoverable(), 12);
+        });
+
+        return $layout;
+    }
+
+    /**
+     * 绑定代理
+     * @group channel
+     * @return Form
+     */
+    public function shiftHandover(): Form
+    {
+        // 检查是否启用自动交班
+        $admin = Admin::user();
+        $autoShiftService = new \app\service\store\AutoShiftService();
+
+        if ($autoShiftService->isAutoShiftEnabled($admin->department_id, $admin->id)) {
+            // 如果启用了自动交班，显示提示信息并阻止手动交班
+            return Form::create([], function (Form $form) {
+                $form->layout('vertical');
+                $form->push(Card::create([
+                    Html::create('<div style="text-align: center; padding: 40px 0;">
+                        <i class="fa fa-info-circle" style="font-size: 48px; color: #1890ff;"></i>
+                        <h3 style="margin-top: 20px; color: #1890ff;">' . admin_trans('shift_handover.auto_shift_enabled') . '</h3>
+                        <p style="color: #666; margin-top: 10px;">' . admin_trans('shift_handover.auto_shift_enabled_desc') . '</p>
+                        <p style="color: #999; margin-top: 5px;">' . admin_trans('shift_handover.auto_shift_close_hint') . '</p>
+                        <div style="margin-top: 30px;">
+                            <a href="/channel-auto-shift/config" class="btn btn-primary">' . admin_trans('shift_handover.goto_auto_shift_config') . '</a>
+                        </div>
+                    </div>')->tag('div')
+                ])->title(admin_trans('shift_handover.manual_shift_disabled')));
+
+                // 禁用提交按钮
+                $form->disableSubmit();
+            });
+        }
+
+        return Form::create([], function (Form $form) {
+            /** @var StoreAgentShiftHandoverRecord $storeAgentShiftHandoverRecord */
+            $storeAgentShiftHandoverRecord = StoreAgentShiftHandoverRecord::query()->where('bind_admin_user_id',
+                Admin::user()->id)->orderBy('id', 'desc')->first();
+            if (!empty($storeAgentShiftHandoverRecord)) {
+                if (is_string($storeAgentShiftHandoverRecord->end_time)) {
+                    $endTime = Carbon::parse($storeAgentShiftHandoverRecord->end_time);
+                } else {
+                    $endTime = $storeAgentShiftHandoverRecord->end_time;
+                }
+                $form->date('end_time', admin_trans('shift_handover.shift_time'))->bindFunction('disabledDate', "
+                    var date = new Date(time);
+                    var Month = date.getMonth() + 1;
+                    var Day = date.getDate();
+                    var Y = date.getFullYear() + '-';
+                    var M = Month < 10 ? '0' + Month + '-' : Month + '-';
+                    var D = Day < 10 ? '0' + Day : Day;
+                    var newDateStr = Y + M + D;
+                    var condition1 = newDateStr < '" . $endTime->subDay()->format('Y-m-d') . "';
+                    var condition2 = newDateStr > '" . Carbon::today()->format('Y-m-d') . "';
+                    return condition2 || condition1;", ['time'])
+                    ->valueFormat('YYYY-MM-DD HH:mm:ss')
+                    ->showTime(true)->help(admin_trans('shift_handover.shift_time_help'))
+                    ->style([
+                        'width' => '100%',
+                    ]);
+            } else {
+                $form->dateTimeRange('start_time', 'end_time', '')->placeholder([
+                    admin_trans('public_msg.created_at_start'),
+                    admin_trans('public_msg.created_at_end')
+                ])->style([
+                    'width' => '100%',
+                ]);
+            }
+            $form->layout('vertical');
+            $form->push(Card::create([
+                Html::create(admin_trans('shift_handover.start_time') . ': ' . ($storeAgentShiftHandoverRecord->start_time ?? admin_trans('shift_handover.none')))->tag('p'),
+                Html::create(admin_trans('shift_handover.end_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))->tag('p'),
+            ])->title(admin_trans('shift_handover.last_shift_time')));
+            $form->saving(function (Form $form) {
+                // 使用事务保护整个交班流程
+                DB::beginTransaction();
+                try {
+                    $admin = Admin::user();
+                    $endTime = $form->input('end_time');
+
+                    // 1. 加锁查询最后一条交班记录（防止并发问题）
+                    /** @var StoreAgentShiftHandoverRecord $storeAgentShiftHandover */
+                    $storeAgentShiftHandover = StoreAgentShiftHandoverRecord::query()
+                        ->where('bind_admin_user_id', $admin->id)
+                        ->orderBy('id', 'desc')
+                        ->lockForUpdate()  // 行锁，防止并发
+                        ->first();
+
+                    // 2. 确定开始时间
+                    if (!empty($storeAgentShiftHandover)) {
+                        $startTime = $storeAgentShiftHandover->end_time;
+                    } else {
+                        $startTime = $form->input('start_time');
+                    }
+
+                    // 3. 时间验证
+                    $start = Carbon::parse($startTime);
+                    $end = Carbon::parse($endTime);
+                    $now = Carbon::now();
+
+                    // 验证结束时间不能超过当前时间
+                    if ($end->gt($now)) {
+                        DB::rollBack();
+                        return message_error(admin_trans('shift_handover.error.end_time_future'));
+                    }
+
+                    // 验证第一次交班时开始时间不能是未来
+                    if (empty($storeAgentShiftHandover) && $start->gt($now)) {
+                        DB::rollBack();
+                        return message_error(admin_trans('shift_handover.error.start_time_future'));
+                    }
+
+                    // 验证时间顺序（修复并发导致时间倒置的问题）
+                    if ($start->gte($end)) {
+                        DB::rollBack();
+                        return message_error(admin_trans('shift_handover.error.start_gte_end'));
+                    }
+
+                    // 验证时间跨度不超过30天
+                    $diffInDays = $start->diffInDays($end);
+                    if ($diffInDays > 30) {
+                        DB::rollBack();
+                        return message_error(admin_trans('shift_handover.error.time_range_too_long'));
+                    }
+
+                    // 4. 检查是否存在重复的交班记录
+                    $exists = StoreAgentShiftHandoverRecord::query()
+                        ->where('bind_admin_user_id', $admin->id)
+                        ->where(function($query) use ($startTime, $endTime) {
+                            // 检查时间范围是否有重叠
+                            $query->where(function($q) use ($startTime, $endTime) {
+                                // 新记录的开始时间在已有记录的时间范围内
+                                $q->where('start_time', '<=', $startTime)
+                                  ->where('end_time', '>', $startTime);
+                            })->orWhere(function($q) use ($startTime, $endTime) {
+                                // 新记录的结束时间在已有记录的时间范围内
+                                $q->where('start_time', '<', $endTime)
+                                  ->where('end_time', '>=', $endTime);
+                            })->orWhere(function($q) use ($startTime, $endTime) {
+                                // 新记录完全包含已有记录
+                                $q->where('start_time', '>=', $startTime)
+                                  ->where('end_time', '<=', $endTime);
+                            });
+                        })
+                        ->exists();
+
+                    if ($exists) {
+                        DB::rollBack();
+                        return message_error(admin_trans('shift_handover.error.duplicate_record'));
+                    }
+
+                    // 5. 统计数据（修复时间边界和软删除问题）
+                    $result = PlayerDeliveryRecord::query()
+                        ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+                        ->where('player.department_id', $admin->department_id)
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player.is_promoter', 0)
+                        ->whereIn('player_delivery_record.type', [
+                            PlayerDeliveryRecord::TYPE_PRESENT_IN,
+                            PlayerDeliveryRecord::TYPE_PRESENT_OUT,
+                            PlayerDeliveryRecord::TYPE_MACHINE,
+                        ])
+                        ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
+                        ->where('player_delivery_record.created_at', '<=', $endTime)
+                        ->selectRaw("
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS present_in_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS present_out_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS machine_put_point
+                        ")
+                        ->first();
+
+                    // 6. 安全处理查询结果（防止null错误）
+                    $playerDeliveryRecord = $result ? $result->toArray() : [
+                        'present_in_amount' => 0,
+                        'present_out_amount' => 0,
+                        'machine_put_point' => 0
+                    ];
+
+                    // 7. 获取货币配置并验证
+                    /** @var Currency $currency */
+                    $currency = Currency::query()
+                        ->where('identifying', $admin->department->channel->currency)
+                        ->first();
+
+                    if (!$currency) {
+                        DB::rollBack();
+                        \Log::error('交班失败：货币配置不存在', [
+                            'currency_code' => $admin->department->channel->currency,
+                            'department_id' => $admin->department_id,
+                            'user_id' => $admin->id
+                        ]);
+                        return message_error(admin_trans('shift_handover.error.config_error'));
+                    }
+
+                    // 8. 创建交班记录
+                    $storeAgentShiftHandoverRecord = new StoreAgentShiftHandoverRecord();
+                    $storeAgentShiftHandoverRecord->department_id = $admin->department_id;
+                    $storeAgentShiftHandoverRecord->machine_amount =
+                        ($playerDeliveryRecord['machine_put_point'] ?? 0) * $currency->ratio;
+                    $storeAgentShiftHandoverRecord->machine_point =
+                        $playerDeliveryRecord['machine_put_point'] ?? 0;
+                    $storeAgentShiftHandoverRecord->total_in =
+                        $playerDeliveryRecord['present_in_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->total_out =
+                        $playerDeliveryRecord['present_out_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->start_time = $startTime;
+                    $storeAgentShiftHandoverRecord->end_time = $endTime;
+                    $storeAgentShiftHandoverRecord->user_id = $admin->id;
+                    $storeAgentShiftHandoverRecord->user_name = $admin->username;
+                    $storeAgentShiftHandoverRecord->bind_admin_user_id = $admin->id;
+                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
+                        bcadd($storeAgentShiftHandoverRecord->machine_point,
+                              $storeAgentShiftHandoverRecord->total_in, 2),
+                        $storeAgentShiftHandoverRecord->total_out,
+                        2
+                    );
+                    $storeAgentShiftHandoverRecord->save();
+
+                    // 9. 记录日志
+                    \Log::info('店家交班成功', [
+                        'record_id' => $storeAgentShiftHandoverRecord->id,
+                        'bind_admin_user_id' => $admin->id,
+                        'user_id' => $admin->id,
+                        'user_name' => $admin->username,
+                        'start_time' => $startTime,
+                        'end_time' => $endTime,
+                        'machine_point' => $storeAgentShiftHandoverRecord->machine_point,
+                        'total_in' => $storeAgentShiftHandoverRecord->total_in,
+                        'total_out' => $storeAgentShiftHandoverRecord->total_out,
+                        'total_profit_amount' => $storeAgentShiftHandoverRecord->total_profit_amount
+                    ]);
+
+                    DB::commit();
+                    return message_success(admin_trans('shift_handover.error.shift_success'));
+
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    \Log::error('交班失败', [
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                        'user_id' => Admin::id(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]);
+                    return message_error(admin_trans('shift_handover.error.shift_failed'));
+                }
+            });
+        });
+    }
+}

@@ -1,0 +1,51 @@
+<?php
+
+return [
+    'title' => '全民代理设置',
+    'report_title' => '全民代理报表',
+    'national_profit_record' => '分润明细',
+    'fields' => [
+        'id' => 'ID',
+        'uid' => '玩家ID',
+        'chip_amount' => '当前打码量',
+        'level_sort' => '用户级别',
+        'level' => '用户等级',
+        'invite_num' => '邀请玩家数',
+        'pending_amount' => '待结算点数',
+        'settlement_amount' => '已结算点数',
+        'created_at' => '创建时间',
+        'updated_at' => '更新时间',
+        'last_national_profit_money' => '上期结算点数',
+        'last_national_profit_created_at' => '上期结算时间',
+        'recommend_promoter_uuid' => '所属推荐人UUID',
+        'type' => '返佣类型',
+    ],
+    'level_list' => [
+        'title' => '升级条件',
+        'sort' => '等级权重级别',
+        'name' => '等级名称',
+        'level' => '等级分级',
+        'must_chip_amount' => '打码量',
+        'damage_rebate_ratio' => '客损返佣比例',
+        'recharge_ratio' => '首冲返佣点数',
+        'reverse_water' => '反水比例',
+    ],
+    'must_chip_amount_error' => '打码量必须高于下级，低于上级',
+    'invite' =>[
+        'min' => '最小人数',
+        'max' => '最大人数',
+        'number' => '人数要求',
+        'interval' => '奖励间隔',
+        'money' => '奖励点数',
+        'status' => '状态',
+    ],
+    'invite_num_error' => '邀请人数区间重叠',
+    'machine_amount' => '机台分润',
+    'game_amount' => '电子游戏分润',
+    'type' => [
+        '首充返佣',
+        '客损返佣'
+    ],
+    'settlement' => '分润结算',
+    'settlement_confirm' => '您正在对全民代理 {uuid} 进行结算操作, 当前可结算分润{amount}, 请确认是否结算?',
+];

@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'all_transfer_out' => '全部转出',
+    'all_transfer_out_msg' => '确定全部转出该玩家的, 游戏钱包的余额吗?',
+    'wallet_balance' => '钱包余额',
+    'transfer_in' => '转入',
+    'transfer_in_title' => '转入{game_platform_name}游戏平台',
+    'transfer_out' => '转出',
+    'transfer_out_title' => '转出玩家 {name} 在游戏平台 {game_platform_name}余额',
+    'not_found_player_platform' => '未找到该玩家在该平台的游戏账号',
+    'game_platform_disable' => '该游戏平台已禁用',
+    'current_balance' => '当前余额',
+    'transfer_in_amount' => '转入金额',
+    'has_all_transfer_in' => '是否全部转入',
+    'insufficient_account_balance' => '账户余额不足',
+    'transfer_in_failed' => '转入失败',
+    'transfer_in_success' => '转入成功',
+    'transfer_out_amount' => '转出金额',
+    'has_all_transfer_out' => '是否全部转出',
+    'transfer_out_failed' => '转出失败',
+    'transfer_out_success' => '转出成功',
+    'player_game_wallet' => '游戏钱包',
+    'game_balance_not_found' => '未查询到余额',
+];

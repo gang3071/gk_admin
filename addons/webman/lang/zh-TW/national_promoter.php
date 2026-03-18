@@ -1,0 +1,51 @@
+<?php
+
+return [
+    'title' => '全民代理設定',
+    'report_title' => '全民代理報表',
+    'national_profit_record' => '分潤明細',
+    'fields' => [
+        'id' => 'ID',
+        'uid' => '玩家ID',
+        'chip_amount' => '當前打碼量',
+        'level_sort' => '用戶級別',
+        'level' => '用戶等級',
+        'invite_num' => '邀請玩家數',
+        'pending_amount' => '待結算點數',
+        'settlement_amount' => '已結算點數',
+        'created_at' => '創建時間',
+        'updated_at' => '更新時間',
+        'last_national_profit_money' => '上期結算點數',
+        'last_national_profit_created_at' => '上期結算時間',
+        'recommend_promoter_uuid' => '所屬推薦人UUID',
+        'type' => '返傭類型',
+    ],
+    'level_list' => [
+        'title' => '陞級條件',
+        'sort' => '等級權重級別',
+        'name' => '等級名稱',
+        'level' => '等級分級',
+        'must_chip_amount' => '打碼量',
+        'damage_rebate_ratio' => '客損返傭比例',
+        'recharge_ratio' => '首沖返傭點數',
+        'reverse_water' => '反水比例',
+    ],
+    'must_chip_amount_error' => '打碼量必須高於下級，低於上級',
+    'invite' => [
+        'min' => '最小人數',
+        'max' => '最大人數',
+        'number' => '人數要求',
+        'interval' => '獎勵間隔',
+        'money' => '獎勵點數',
+        'status' => '狀態',
+    ],
+    'invite_num_error' => '邀請人數區間重疊',
+    'machine_amount' => '機台分潤',
+    'game_amount' => '電子遊戲分潤',
+    'type' => [
+        '首充返傭',
+        '客損返傭'
+    ],
+    'settlement' => '分潤結算',
+    'settlement_confirm' => '您正在對全民代理 {uuid} 進行結算操作，當前可結算分潤 {amount}， 請確認是否結算?',
+];

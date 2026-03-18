@@ -1,0 +1,33 @@
+<?php
+
+return [
+    'title' => '游戏平台列表',
+    'fields' => [
+        'id' => 'ID',
+        'code' => '游戏平台编码',
+        'name' => '游戏平台名称',
+        'cate_id' => '游戏类型',
+        'display_mode' => '游戏展示模式',
+        'logo' => 'Logo',
+        'status' => '状态',
+        'ratio' => '电子游戏结算比值',
+        'has_lobby' => '是否进入大厅',
+        'picture' => '客户端大图',
+    ],
+    'display_mode' => [
+        1 => '横版',
+        2 => '竖版',
+        3 => '全部支持',
+    ],
+    'display_mode_help' => '选择游戏展示方向（横屏/竖屏/全部）',
+    'game_platform' => '游戏供应商信息',
+    'action_error' => '操作失败',
+    'action_success' => '操作成功',
+    'enter_game' => '进入游戏大厅',
+    'enter_game_confirm' => '您确定要进入该游戏厂商大厅吗?',
+    'ratio_help' => '电子游戏平台结算比值, 剩余作为推广员分润基数',
+    'ratio_placeholder' => '请填写电子游戏平台结算比值',
+    'view_game' => '查看游戏',
+    'player_not_fount' => '未设置后管玩家账号',
+    'disable' => '游戏平台已被禁用',
+];

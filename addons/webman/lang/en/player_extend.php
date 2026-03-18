@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => 'player ID',
+        'sex' => 'gender',
+        'email' => 'email',
+        'ip' => 'IP address',
+        'qq' => 'QQ account',
+        'telegram' => 'Telegram',
+        'birthday' => 'birthday',
+        'id_number' => 'ID card',
+        'address' => 'address',
+        'wechat' => 'Wechat ID',
+        'whatsapp' => 'Whatsapp',
+        'facebook' => 'Facebook',
+        'line' => 'Line',
+        'remark' => 'Remarks',
+        'coin_recharge_amount' => 'Coin dealer recharge',
+        'present_out' => 'Transfer out',
+        'present_in' => 'Transfer',
+        'recharge_amount' => 'Total recharge points',
+        'withdraw_amount' => 'Total withdrawal points',
+        'present_out_amount' => 'Total transferred out points',
+        'present_in_amount' => 'Total transferred points',
+        'third_recharge_amount' => 'Total third-party recharge points',
+        'third_withdraw_amount' => 'Total third-party withdrawal points',
+        'created_at' => 'Creation time',
+        'updated_at' => 'Update time',
+        'machine_put_amount' => 'Total number of banknotes dispensed',
+        'total_money' => 'Total amount',
+    ],
+    'remark_limit' => 'Remark characters cannot exceed 255 characters'
+];

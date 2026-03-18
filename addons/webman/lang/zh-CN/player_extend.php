@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => '玩家ID',
+        'sex' => '性别',
+        'email' => '邮箱',
+        'ip' => 'IP地址',
+        'qq' => 'QQ账号',
+        'telegram' => 'Telegram',
+        'birthday' => '生日',
+        'id_number' => '身份证',
+        'address' => '地址',
+        'wechat' => '微信号',
+        'whatsapp' => 'Whatsapp',
+        'facebook' => 'Facebook',
+        'line' => 'Line',
+        'remark' => '备注',
+        'coin_recharge_amount' => '币商充值',
+        'present_out' => '转出',
+        'present_in' => '转入',
+        'recharge_amount' => '总充值点数',
+        'withdraw_amount' => '总提现点数',
+        'machine_put_amount' => '总投钞数',
+        'present_out_amount' => '总转出点数',
+        'present_in_amount' => '总转入点数',
+        'third_recharge_amount' => '第三方总充值点数',
+        'third_withdraw_amount' => '第三方总提现点数',
+        'created_at' => '创建时间',
+        'updated_at' => '更新时间',
+        'total_money' => '总金额',
+    ],
+    'remark_limit' => '备注字符不能超过255个字'
+];

@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'all_transfer_out' => 'Transfer all',
+    'all_transfer_out_msg' => "Are you sure to transfer all of the player's game wallet balance?",
+    'wallet_balance' => 'Wallet Balance',
+    'transfer_in' => 'Transfer in',
+    'transfer_in_title' => 'Transfer to {game_platform_name} gaming platform',
+    'transfer_out' => 'Transfer out ',
+    'transfer_out_title' => "Transfer player {name}'s balance on the game platform {game_platform_name}",
+    'not_found_player_platform' => "The player's game account on this platform was not found",
+    'game_platform_disable' => 'The game platform has been disabled,',
+    'current_balance' => 'Current balance',
+    'transfer_in_amount' => 'Transfer amount ',
+    'has_all_transfer_in' => 'Has everything been transferred in',
+    'insufficient_account_balance' => 'insufficient account balance',
+    'transfer_in_failed' => 'Transfer failed',
+    'transfer_in_success' => 'Successful transfer',
+    'transfer_out_amount' => 'Transfer amount',
+    'has_all_transfer_out' => 'Has all items been transferred out',
+    'transfer_out_failed' => 'Transfer out failed',
+    'transfer_out_success' => 'Transfer successful',
+    'player_game_wallet' => 'Game wallet',
+    'game_balance_not_found' => 'No balance found',
+];

@@ -1,0 +1,46 @@
+<?php
+
+use addons\webman\model\PlayerDeliveryRecord;
+
+return [
+    'title' => 'アカウント充提記録',
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => 'プレイヤー',
+        'recharge_total' => 'チャージ金額',
+        'withdraw_total' => '出金金額',
+        'total_amount' => '累計金額',
+        'target' => 'トランザクションデータテーブル',
+        'target_id' => 'データ ID',
+        'type' => 'タイプ',
+        'source' => '取引オブジェクト',
+        'amount' => 'ゲームポイント',
+        'user_id' => '管理者 ID',
+        'user_name' => 'オペレータ',
+        'amount_before' => '変更前の金額',
+        'amount_after' => '変更後のポイント',
+        'tradeno' => '注文番号',
+        'remark' => '備考',
+        'updated_at' => '更新時刻',
+        'created_at' => '作成時刻',
+    ],
+    'type' => [
+        PlayerdeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD => '(運営背景) ポイントを追加',
+        PlayerdeliveryRecord::TYPE_PRESENT_IN => 'ポイント移行',
+        PlayerdeliveryRecord::TYPE_PRESENT_OUT => '転送されたポイント',
+        PlayerdeliveryRecord::TYPE_MACHINE_UP => 'マシンのアップロード',
+        PlayerdeliveryRecord::TYPE_MACHINE_DOWN => 'マシン ポイント',
+        PlayerdeliveryRecord::TYPE_RECHARGE => 'リチャージ',
+        PlayerdeliveryRecord::TYPE_WITHDRAWAL => '撤退',
+        PlayerdeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT => '(運営背景) 減点',
+        PlayerdeliveryRecord::TYPE_WITHDRAWAL_BACK => '出金フォールバック',
+        PlayerdeliveryRecord::TYPE_ACTIVITY_BONUS => 'アクティビティ報酬',
+        PlayerdeliveryRecord::TYPE_REGISTER_PRESENT => 'システム ボーナス ポイント',
+        PlayerdeliveryRecord::TYPE_PROFIT => '利益分配',
+        PlayerdeliveryRecord::TYPE_LOTTERY => '宝くじ当選',
+        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT => 'プラットフォームの電子ゲームへの移行',
+        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN => 'ゲーム転入プラットフォーム',
+    ],
+    'detail' => '詳細',
+    'chart' => 'チャート',
+];

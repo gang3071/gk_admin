@@ -1,0 +1,59 @@
+<?php
+
+use addons\webman\model\PlayerGameLog;
+
+return [
+    'title' => '游戏日志',
+    'point_title' => '上下分记录',
+    'player_info' => '玩家信息',
+    'machine_info' => '机台信息',
+    'player_wallet_info' => '玩家钱包',
+    'machine_data' => '机台数据',
+    'fields' => [
+        'id' => '编号',
+        'game_id' => '游戏分类',
+        'player_id' => '玩家ID',
+        'department_id' => '部门/渠道ID',
+        'machine_id' => '机台ID',
+        'type' => '类型',
+        'odds' => '比值',
+        'open_point' => '上分',
+        'wash_point' => '下分',
+        'gift_point' => '外贈分數',
+        'before_game_amount' => '目前錢包',
+        'game_amount' => '游戏点',
+        'after_game_amount' => '剩餘錢包',
+        'machine_amount' => '機台分數',
+        'control_open_point' => '工控壓分',
+        'pressure' => '押分',
+        'score' => '得分',
+        'create_at' => '创建时间',
+        'turn_point' => '转数',
+        'created_at_start' => '开始时间',
+        'created_at_end' => '结束时间',
+        'action_type' => '操作来源',
+        'action' => '操作',
+        'chip_amount' => '打码量',
+    ],
+    'total_data' => [
+        'total_game_amount' => '总游戏点',
+        'total_open_point' => '总上分',
+        'total_wash_point' => '总下分',
+        'total_pressure' => '总押分',
+        'total_score' => '总得分',
+        'total_turn_point' => '总转数',
+        'total_chip_amount' => '总打码量',
+        'total_wash_amount' => '下分游戏点数',
+        'total_open_amount' => '上分游戏点数',
+    ],
+    'type' => [
+        'system' => '系统自动',
+        'admin' => '管理员',
+        'player' => '玩家',
+    ],
+    'action' => [
+        PlayerGameLog::ACTION_OPEN => '开分',
+        PlayerGameLog::ACTION_LEAVE => '弃台',
+        PlayerGameLog::ACTION_DOWN => '下分',
+    ]
+];

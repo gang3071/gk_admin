@@ -1,0 +1,46 @@
+<?php
+
+use addons\webman\model\PlayerDeliveryRecord;
+
+return [
+    'title' => '充提記錄',
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => '玩家',
+        'recharge_total' => '充值金額',
+        'withdraw_total' => '提現金額',
+        'total_amount' => '充提差额累计',
+        'target' => '交易資料錶',
+        'target_id' => '資料id',
+        'type' => '類型',
+        'source' => '交易對象',
+        'amount' => '遊戲點',
+        'user_id' => '管理員id',
+        'user_name' => '操作人',
+        'amount_before' => '變更前點數',
+        'amount_after' => '變更後點數',
+        'tradeno' => '單號',
+        'remark' => '備註',
+        'updated_at' => '更新時間',
+        'created_at' => '創建時間',
+    ],
+    'type' => [
+        PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD => '（管理後臺）加點',
+        PlayerDeliveryRecord::TYPE_PRESENT_IN => '點數轉入',
+        PlayerDeliveryRecord::TYPE_PRESENT_OUT => '點數轉出',
+        PlayerDeliveryRecord::TYPE_MACHINE_UP => '機台上分',
+        PlayerDeliveryRecord::TYPE_MACHINE_DOWN => '機台下分',
+        PlayerDeliveryRecord::TYPE_RECHARGE => '充值',
+        PlayerDeliveryRecord::TYPE_WITHDRAWAL => '提現',
+        PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT => '（管理後臺）扣點',
+        PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK => '提現回退',
+        PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS => '活動獎勵',
+        PlayerDeliveryRecord::TYPE_REGISTER_PRESENT => '系統贈點',
+        PlayerDeliveryRecord::TYPE_PROFIT => '推廣分潤',
+        PlayerDeliveryRecord::TYPE_LOTTERY => '彩金中獎',
+        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT => '平臺轉入電子遊戲',
+        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN => '電子遊戲轉入平臺',
+    ],
+    'detail' => '詳情',
+    'chart' => '圖表',
+];

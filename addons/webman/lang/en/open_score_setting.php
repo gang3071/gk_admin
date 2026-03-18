@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'title' => 'Open Score Setting',
+    'score_settings' => 'Score Options Configuration',
+    'player_exists' => 'This player already has an open score configuration',
+    'at_least_one_score' => 'At least one score option must be configured',
+    'reset_to_default' => 'Reset to Default',
+    'reset_confirm_message' => 'Are you sure you want to reset the score configuration to default values?',
+    'reset_success' => 'Successfully reset to default configuration',
+    'reset_failed' => 'Failed to reset to default configuration',
+    'not_set' => 'Not Set',
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => 'Player',
+        'player_name' => 'Player Name',
+        'player_uuid' => 'Player UUID',
+        'scores' => 'Current Score Options',
+        'default_scores' => 'Default Score Value',
+        'system_default' => 'System Preset Scores',
+        'score_1' => 'Score Option 1',
+        'score_2' => 'Score Option 2',
+        'score_3' => 'Score Option 3',
+        'score_4' => 'Score Option 4',
+        'score_5' => 'Score Option 5',
+        'score_6' => 'Score Option 6',
+        'created_at' => 'Created At',
+        'updated_at' => 'Updated At',
+    ],
+    'help' => [
+        'player_id' => 'Select the player to configure open score',
+        'score' => 'Enter score amount, 0 means disable this option',
+        'default_scores' => 'Set default score value (0=Standard, 100=Basic, 200=Intermediate, 500=Advanced), used when resetting to default',
+    ],
+];

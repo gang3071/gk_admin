@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'title' => '店機開分配置',
+    'score_settings' => '開分選項配置',
+    'player_exists' => '該店機已存在開分配置',
+    'at_least_one_score' => '至少需要配置一個開分選項',
+    'reset_to_default' => '恢復默認配置',
+    'reset_confirm_message' => '確定要將開分配置恢復為默認值嗎？',
+    'reset_success' => '已成功恢復為默認配置',
+    'reset_failed' => '恢復默認配置失敗',
+    'not_set' => '未設置',
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => '店機',
+        'player_name' => '店機名稱',
+        'player_uuid' => '店機UUID',
+        'scores' => '當前開分選項',
+        'default_scores' => '默認開分數',
+        'system_default' => '系統預設開分',
+        'score_1' => '開分選項1',
+        'score_2' => '開分選項2',
+        'score_3' => '開分選項3',
+        'score_4' => '開分選項4',
+        'score_5' => '開分選項5',
+        'score_6' => '開分選項6',
+        'created_at' => '創建時間',
+        'updated_at' => '更新時間',
+    ],
+    'help' => [
+        'player_id' => '選擇需要配置開分的店機',
+        'score' => '請輸入開分金額，0表示不啟用該選項',
+        'default_scores' => '設置默認開分數值（0=標準, 100=基礎, 200=中級, 500=高級），用於恢復默認配置時使用',
+    ],
+];

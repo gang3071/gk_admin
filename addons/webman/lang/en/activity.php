@@ -1,0 +1,35 @@
+<?php
+
+/** TODO 翻译 */
+return [
+    'title' => 'Activity',
+    'fields' => [
+        'id' => 'ID',
+        'cate_id' => 'Machine category',
+        'status' => 'status',
+        'sort' => 'sort',
+        'type' => 'type',
+        'start_time' => 'Start time',
+        'end_time' => 'End time',
+        'user_id' => 'Administrator ID',
+        'user_name' => "Administrator's name",
+        'created_at' => 'Creation time',
+        'time_frame' => 'Opening time',
+        'department_id' => 'Open channels',
+    ],
+    'created_at_start' => 'Start time',
+    'created_at_end' => 'End time',
+    'activity_phase_must' => 'Please fill in the activity phase configuration',
+    'game_type_must_diff' => 'Steel balls and solde cannot participate in the same event at the same time',
+    'not_fount' => 'Activity not found',
+    'activity_content_must' => 'Please fill in the activity content',
+    'game_type_fail' => 'Machine type error',
+    'detail' => 'details',
+    'chart' => 'chart',
+    'rang_time' => 'Opening time',
+    'activity_content' => 'activity content',
+    'activity_info' => 'activity information',
+    'phase' => 'Activity phase',
+    'point' => 'Code compression quantity',
+    'ratio' => 'Reverse water ratio',
+];

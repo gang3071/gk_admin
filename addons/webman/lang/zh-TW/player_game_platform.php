@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'all_transfer_out' => '全部轉出',
+    'all_transfer_out_msg' => '確定全部轉出該玩家的，遊戲錢包的餘額嗎？',
+    'wallet_balance' => '錢包餘額',
+    'transfer_in' => '轉入',
+    'transfer_in_title' => '轉入{game_platform_name}遊戲平臺',
+    'transfer_out' => '轉出',
+    'transfer_out_title' => '轉出玩家{name}在遊戲平臺{game_platform_name}餘額',
+    'not_found_player_platform' => '未找到該玩家在該平臺的遊戲帳號',
+    'game_platform_disable' => '該遊戲平臺已禁用',
+    'current_balance' => '當前餘額',
+    'transfer_in_amount' => '轉入金額',
+    'has_all_transfer_in' => '是否全部轉入',
+    'insufficient_account_balance' => '帳戶餘額不足',
+    'transfer_in_failed' => '轉入失敗',
+    'transfer_in_success' => '轉入成功',
+    'transfer_out_amount' => '轉出金額',
+    'has_all_transfer_out' => '是否全部轉出',
+    'transfer_out_failed' => '轉出失敗',
+    'transfer_out_success' => '轉出成功',
+    'player_game_wallet' => '遊戲錢包',
+    'game_balance_not_found' => '未査詢到餘額',
+];

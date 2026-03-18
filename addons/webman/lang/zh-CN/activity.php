@@ -1,0 +1,35 @@
+<?php
+
+/** TODO 翻译 */
+return [
+    'title' => '活动',
+    'fields' => [
+        'id' => 'ID',
+        'cate_id' => '机台类别',
+        'status' => '状态',
+        'sort' => '排序',
+        'type' => '类型',
+        'start_time' => '开始时间',
+        'end_time' => '结束时间',
+        'user_id' => '管理员ID',
+        'user_name' => '管理员姓名',
+        'created_at' => '创建时间',
+        'time_frame' => '开放时间',
+        'department_id' => '开放渠道',
+    ],
+    'created_at_start' => '开始时间',
+    'created_at_end' => '结束时间',
+    'activity_phase_must' => '请填写活动阶段配置',
+    'game_type_must_diff' => '钢珠和solt无法同时参加同一活动',
+    'not_fount' => '活动未找到',
+    'activity_content_must' => '请填写活动内容',
+    'game_type_fail' => '机台类型错误',
+    'detail' => '详情',
+    'chart' => '图表',
+    'rang_time' => '开放时间',
+    'activity_content' => '活动内容',
+    'activity_info' => '活动信息',
+    'phase' => '活动阶段',
+    'point' => '压码量',
+    'ratio' => '反水比例',
+];

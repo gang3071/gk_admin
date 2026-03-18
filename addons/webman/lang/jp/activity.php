@@ -1,0 +1,35 @@
+<?php
+
+/** TODO 翻译 */
+return [
+    'title' => 'アクティビティ',
+    'fields' => [
+        'id' => 'ID',
+        'cate_id' => 'マシンカテゴリ',
+        'status' => 'ステータス',
+        'sort' => '並べ替え',
+        'type' => 'タイプ',
+        'start_time' => '開始時刻',
+        'end_time' => '終了時刻',
+        'user_id' => '管理者ID',
+        'user_name' => '管理者の名前',
+        'created_at' => '作成時刻',
+        'time_frame' => '開始時間',
+        'department_id' => 'オープンチャネル',
+    ],
+    'created_at_start' => '開始時刻',
+    'created_at_end' => '終了時刻',
+    'activity_phase_must' => 'アクティビティフェーズの設定を入力してください',
+    'game_type_must_diff' => '鋼球とソルデは同じイベントに同時に参加できません',
+    'not_fount' => 'アクティビティが見つかりません',
+    'activity_content_must' => 'アクティビティの内容を入力してください',
+    'game_type_fail' => 'マシンタイプエラー',
+    'detail' => '詳細',
+    'chart' => 'チャート',
+    'rang_time' => '開場時間',
+    'activity_content' => 'アクティビティコンテンツ',
+    'activity_info' => 'アクティビティ情報',
+    'phase' => 'アクティビティフェーズ',
+    'point' => 'あつりょくふごうりょう',
+    'ratio' => '反水比率',
+];

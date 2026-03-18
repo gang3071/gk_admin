@@ -1,0 +1,35 @@
+<?php
+
+return [
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => 'プレイヤーID',
+        'sex' => '性別',
+        'email' => '電子メール',
+        'ip' => 'IP アドレス',
+        'qq' => 'QQ アカウント',
+        'telegram' => '電報',
+        'birthday' => '誕生日',
+        'id_number' => 'ID カード',
+        'address' => '住所',
+        'wechat' => 'wechat ID',
+        'Whatsapp' => 'Whatsapp',
+        'facebook' => 'フェイスブック',
+        'line' => 'ライン',
+        'remark' => '備考',
+        'coin_recharge_amount' => 'コイン販売者リチャージ',
+        'present_out' => '送金',
+        'present_in' => '転送',
+        'recharge_amount' => '合計リチャージポイント',
+        'withdraw_amount' => '合計出金ポイント',
+        'present_out_amount' => '送金合計ポイント',
+        'present_in_amount' => '合計移行ポイント',
+        'third_recharge_amount' => 'サードパーティの合計リチャージポイント',
+        'third_withdraw_amount' => '第三者の出金ポイントの合計',
+        'created_at' => '作成時刻',
+        'updated_at' => '更新時刻',
+        'machine_put_amount' => '総紙幣数',
+        'total_money' => '合計金額',
+    ],
+    'remark_limit' => '備考文字は 255 文字を超えることはできません'
+];

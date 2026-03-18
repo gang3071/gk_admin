@@ -1,0 +1,40 @@
+{
+  "name": "yjb/admin",
+  "type": "project",
+  "keywords": ["high performance", "http service", "admin"],
+  "license": "MIT",
+  "description": "管理后台项目",
+  "require": {
+    "php": ">=8.0",
+    "workerman/webman-framework": "^1.5.0",
+    "monolog/monolog": "^2.0",
+    "rockys/ex-admin-webman": "^1.0",
+    "ext-pdo": "*",
+    "ext-json": "*",
+    "ext-bcmath": "*",
+    "zjkal/time-helper": "^1.1",
+    "psr/container": "1.1.1",
+    "workerman/validation": "^3.0",
+    "symfony/translation": "^5.4",
+    "webman/event": "^1.0",
+    "tinywan/jwt": "^1.6",
+    "php-di/php-di": "6",
+    "doctrine/annotations": "1.14",
+    "illuminate/database": "^8.83",
+    "ext-openssl": "*",
+    "webman/log": "^1.1",
+    "robmorgan/phinx": "^0.14.0",
+    "ext-simplexml": "*",
+    "illuminate/pagination": "^8.83",
+    "graham-campbell/result-type": "^1.1",
+    "phpoption/phpoption": "^1.9",
+    "vlucas/phpdotenv": "^5.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "": "./",
+      "app\\": "./app",
+      "App\\": "./app"
+    }
+  }
+}

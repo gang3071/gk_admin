@@ -1,0 +1,35 @@
+<?php
+
+/** TODO 翻译 */
+return [
+    'title' => '活動',
+    'fields' => [
+        'id' => 'ID',
+        'cate_id' => '機台類別',
+        'status' => '狀態',
+        'sort' => '排序',
+        'type' => '類型',
+        'start_time' => '開始時間',
+        'end_time' => '結束時間',
+        'user_id' => '管理員ID',
+        'user_name' => '管理員姓名',
+        'created_at' => '創建時間',
+        'time_frame' => '開放時間',
+        'department_id' => '開放通路',
+    ],
+    'created_at_start' => '開始時間',
+    'created_at_end' => '結束時間',
+    'activity_phase_must' => '請填寫活動階段配寘',
+    'game_type_must_diff' => '鋼珠和solt無法同時參加同一活動',
+    'not_fount' => '活動未找到',
+    'activity_content_must' => '請填寫活動內容',
+    'game_type_fail' => '機台類型錯誤',
+    'detail' => '詳情',
+    'chart' => '圖表',
+    'rang_time' => '開放時間',
+    'activity_content' => '活動內容',
+    'activity_info' => '活動資訊',
+    'phase' => '活動階段',
+    'point' => '壓碼量',
+    'ratio' => '反水比例',
+];

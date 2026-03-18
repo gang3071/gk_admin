@@ -1,0 +1,46 @@
+<?php
+
+use addons\webman\model\PlayerDeliveryRecord;
+
+return [
+    'title' => 'Recharge ithdraw record',
+    'fields' => [
+        'id' => 'ID',
+        'player_id' => 'player',
+        'recharge_total' => 'Recharge Amount',
+        'withdraw_total' => 'Withdrawal Amount',
+        'total_amount' => 'Total Amount',
+        'target' => 'Transaction data table',
+        'target_id' => 'data id',
+        'type' => 'type',
+        'source' => 'Trading object',
+        'amount' => 'game point',
+        'user_id' => 'Administrator id',
+        'user_name' => 'Operator',
+        'amount_before' => 'Amount before change',
+        'amount_after' => 'Points after change',
+        'tradeno' => 'Order number',
+        'remark' => 'Remarks',
+        'updated_at' => 'Update time',
+        'created_at' => 'Creation time',
+    ],
+    'type' => [
+        PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD => '(Management background) add points',
+        PlayerDeliveryRecord::TYPE_PRESENT_IN => 'Point transfer',
+        PlayerDeliveryRecord::TYPE_PRESENT_OUT => 'Points transferred out',
+        PlayerDeliveryRecord::TYPE_MACHINE_UP => 'Machine Upload',
+        PlayerDeliveryRecord::TYPE_MACHINE_DOWN => 'Machine points',
+        PlayerDeliveryRecord::TYPE_RECHARGE => 'Recharge',
+        PlayerDeliveryRecord::TYPE_WITHDRAWAL => 'Withdrawal',
+        PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT => '(Management background) deduction points',
+        PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK => 'Withdrawal fallback',
+        PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS => 'Activity reward',
+        PlayerDeliveryRecord::TYPE_REGISTER_PRESENT => 'System bonus points',
+        PlayerDeliveryRecord::TYPE_PROFIT => 'Profit sharing',
+        PlayerDeliveryRecord::TYPE_LOTTERY => 'Lottery Winning',
+        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT => 'Platform transfers to electronic games',
+        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN => 'Electronic games transferred to the platform',
+    ],
+    'detail' => 'details',
+    'chart' => 'chart',
+];

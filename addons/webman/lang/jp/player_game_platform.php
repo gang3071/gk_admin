@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'all_transfer_out' => 'すべて転送',
+    'all_transfer_out_msg' => 'このプレイヤーの、ゲームウォレットの残高をすべて転送しますか？',
+    'wallet_balance' => 'ウォレット残高',
+    'transfer_in' => '転入',
+    'transfer_in_title' => '{game_platform_name}ゲームプラットフォームに移動',
+    'transfer_out' => '転出',
+    'transfer_out_title' => '転出プレイヤー{name}のゲームプラットフォーム{game _ platform _ name}での残高',
+    'not_found_player_platform' => 'プラットフォーム上のプレイヤーのゲームアカウントが見つかりません',
+    'game_platform_disable' => 'このゲームプラットフォームは無効',
+    'current_balance' => '現在の残高',
+    'transfer_in_amount' => '繰り越し金額',
+    'has_all_transfer_in' => 'すべて転送するかどうか',
+    'insufficient_account_balance' => 'アカウント残高が不足している',
+    'transfer_in_failed' => '転入失敗',
+    'transfer_in_success' => '転入成功',
+    'transfer_out_amount' => '振替金額',
+    'has_all_transfer_out' => 'すべて転送するかどうか',
+    'transfer_out_failed' => '転送失敗',
+    'transfer_out_success' => '転出成功',
+    'player_game_wallet' => 'ゲームウォレット',
+    'game_balance_not_found' => '残高が照会されていません',
+];
