@@ -987,7 +987,7 @@ class ChannelPlayerController
                     if (empty($player)) {
                         return message_error(admin_trans('player.not_fount'));
                     }
-                    DB::beginTransaction();
+                    Db::beginTransaction();
                     try {
                         $player->name = $form->input('name');
                         $player->machine_play_num = $form->input('machine_play_num');
@@ -1002,9 +1002,9 @@ class ChannelPlayerController
                             'remark' => $form->input('player_extend.remark'),
                             'player_id' => $orgData['id']
                         ]);
-                        DB::commit();
+                        Db::commit();
                     } catch (\Exception $e) {
-                        DB::rollBack();
+                        Db::rollBack();
                         return message_error($e->getMessage());
                     }
                     return message_success(admin_trans('player.save_player_info_success'));
@@ -1046,7 +1046,7 @@ class ChannelPlayerController
                         }
                     }
 
-                    DB::beginTransaction();
+                    Db::beginTransaction();
                     try {
                         $player = new Player();
                         $player->phone = $phone;
@@ -1117,9 +1117,9 @@ class ChannelPlayerController
                             $playerPromoter->save();
                         }
 
-                        DB::commit();
+                        Db::commit();
                     } catch (\Exception $e) {
-                        DB::rollBack();
+                        Db::rollBack();
                         return message_error($e->getMessage());
                     }
                     return message_success(admin_trans('player.save_player_info_success'));
@@ -1210,11 +1210,11 @@ class ChannelPlayerController
     public function store($data): Msg
     {
         try {
-            DB::beginTransaction();
+            Db::beginTransaction();
             playerManualSystem($data);
-            DB::commit();
+            Db::commit();
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
             return message_error(admin_trans('player.wallet.wallet_operation_failed'));
         }
         return message_success(admin_trans('player.wallet.wallet_operation_success'));
@@ -1256,7 +1256,7 @@ class ChannelPlayerController
                 if ($player->status == 0) {
                     return message_error(admin_trans('player.disable'));
                 }
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     /** @var PlayerPlatformCash $playerWallet */
                     $playerWallet = PlayerPlatformCash::query()->where('player_id',
@@ -1377,9 +1377,9 @@ class ChannelPlayerController
                     $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                     $playerDeliveryRecord->save();
 
-                    DB::commit();
+                    Db::commit();
                 } catch (\Exception $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player.artificial_recharge_error'));
                 }
                 return message_success(admin_trans('player.artificial_recharge_success'));
@@ -1429,7 +1429,7 @@ class ChannelPlayerController
                 if ($player->machine_wallet->money < $form->input('point')) {
                     return message_error(admin_trans('player.insufficient_balance'));
                 }
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     // 生成订单
                     $playerWithdrawRecord = new PlayerWithdrawRecord();
@@ -1476,9 +1476,9 @@ class ChannelPlayerController
                     $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
                     $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
                     $playerDeliveryRecord->save();
-                    DB::commit();
+                    Db::commit();
                 } catch (\Exception $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player.artificial_withdrawal_error'));
                 }
                 return message_success(admin_trans('player.artificial_withdrawal_success'));
@@ -1815,7 +1815,7 @@ class ChannelPlayerController
             }
             $amount = $gameService->getBalance(['lang' => $lang]);
             if ($amount > 0) {
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     $player = $playerGamePlatform->player;
                     $gamePlatform = $playerGamePlatform->gamePlatform;
@@ -1862,9 +1862,9 @@ class ChannelPlayerController
                         [], 'message');
                     $playerDeliveryRecord->save();
 
-                    DB::commit();
+                    Db::commit();
                 } catch (Exception|GameException $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
                 }
             }
@@ -1916,7 +1916,7 @@ class ChannelPlayerController
                     }
                     $amount = $balance;
                 }
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     $player = $playerGamePlatform->player;
                     $gamePlatform = $playerGamePlatform->gamePlatform;
@@ -1963,12 +1963,12 @@ class ChannelPlayerController
                         [], 'message');
                     $playerDeliveryRecord->save();
 
-                    DB::commit();
+                    Db::commit();
                 } catch (Exception $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
                 } catch (GameException $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
                 }
                 return message_success(admin_trans('player_game_platform.transfer_out_success'));
@@ -2014,7 +2014,7 @@ class ChannelPlayerController
                 $gamePlatform = $playerGamePlatform->gamePlatform;
                 $gameService = GameServiceFactory::createService(strtoupper($gamePlatform->code), $player);
                 $balance = $gameService->getBalance(['lang' => $lang]);
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     $playerWalletTransfer = new PlayerWalletTransfer();
                     $playerWalletTransfer->player_id = $player->id;
@@ -2055,12 +2055,12 @@ class ChannelPlayerController
                     $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
                         [], 'message');
                     $playerDeliveryRecord->save();
-                    DB::commit();
+                    Db::commit();
                 } catch (Exception $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
                 } catch (GameException $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
                 }
                 return message_success(admin_trans('player_game_platform.transfer_in_success'));
@@ -2119,7 +2119,7 @@ class ChannelPlayerController
      */
     public function savePromoter($id, $ratio, string $name = ''): Msg
     {
-        DB::beginTransaction();
+        Db::beginTransaction();
         try {
             /** @var Player $player */
             $player = Player::with(['player_promoter'])->find($id);
@@ -2166,9 +2166,9 @@ class ChannelPlayerController
             $player->save();
 
             $parentPromoter && $orgPromoter == 0 && $parentPromoter->increment('team_num');
-            DB::commit();
+            Db::commit();
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
             return message_error($e->getMessage());
         }
 
@@ -2611,7 +2611,7 @@ class ChannelPlayerController
                 if ($player->status == 0) {
                     return message_error(admin_trans('player.disable'));
                 }
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     $beforeGameAmount = $player->machine_wallet->money;
                     // 生成订单
@@ -2673,9 +2673,9 @@ class ChannelPlayerController
                     $playerMoneyEditLog->origin_money = $beforeGameAmount;
                     $playerMoneyEditLog->after_money = $player->machine_wallet->money;
                     $playerMoneyEditLog->save();
-                    DB::commit();
+                    Db::commit();
                 } catch (\Exception $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     Log::error($e->getMessage());
                     return message_error(admin_trans('player.coin_recharge_error'));
                 }
@@ -2721,7 +2721,7 @@ class ChannelPlayerController
                 if ($player->machine_wallet->money < $form->input('point')) {
                     return message_error(admin_trans('player.insufficient_balance'));
                 }
-                DB::beginTransaction();
+                Db::beginTransaction();
                 try {
                     $beforeGameAmount = $player->machine_wallet->money;
                     // 生成订单
@@ -2786,9 +2786,9 @@ class ChannelPlayerController
                     $playerMoneyEditLog->origin_money = $beforeGameAmount;
                     $playerMoneyEditLog->after_money = $player->machine_wallet->money;
                     $playerMoneyEditLog->save();
-                    DB::commit();
+                    Db::commit();
                 } catch (\Exception $e) {
-                    DB::rollBack();
+                    Db::rollBack();
                     return message_error(admin_trans('player.artificial_withdrawal_error'));
                 }
                 return message_success(admin_trans('player.artificial_withdrawal_success'));
@@ -3690,23 +3690,60 @@ class ChannelPlayerController
             });
         }
 
-        // 获取店家列表（只获取店家，不包括代理）
-        // 店家的特征：recommend_id > 0
-        $storeMachines = PlayerPromoter::query()
-            ->where('status', 1)
-            ->where('department_id', Admin::user()->department_id)
-            ->where('recommend_id', '>', 0) // 只获取店家（有上级的才是店家）
+        // 获取当前渠道下的所有代理和店家（新架构）
+        $currentDepartmentId = Admin::user()->department_id;
+
+        // 1. 获取所有代理部门（pid = 当前渠道的department_id）
+        $agentDepartments = AdminDepartment::query()
+            ->where('type', AdminDepartment::TYPE_AGENT)
+            ->where('pid', $currentDepartmentId)
+            ->where('deleted_at', null)
             ->get();
 
+        $agentDepartmentIds = $agentDepartments->pluck('id')->toArray();
+
+        // 2. 获取所有店家部门（pid = 代理部门id）
+        $storeDepartments = AdminDepartment::query()
+            ->where('type', AdminDepartment::TYPE_STORE)
+            ->whereIn('pid', $agentDepartmentIds)
+            ->where('deleted_at', null)
+            ->get()
+            ->keyBy('id');
+
+        $storeDepartmentIds = $storeDepartments->pluck('id')->toArray();
+
+        // 3. 获取店家的AdminUser记录
+        $storeAdmins = AdminUser::query()
+            ->where('type', AdminUser::TYPE_STORE)
+            ->whereIn('department_id', $storeDepartmentIds)
+            ->where('status', 1)
+            ->get();
+
+        // 4. 构建树形结构数据（代理 -> 店家）
         $storeOptions = [];
-        /** @var PlayerPromoter $item */
-        foreach ($storeMachines as $item) {
+
+        // 先添加代理节点
+        foreach ($agentDepartments as $agentDept) {
             $storeOptions[] = [
-                'id' => $item->player_id,
-                'name' => $item->name,
-                'pid' => $item->recommend_id
+                'id' => 'agent_' . $agentDept->id, // 使用特殊标识，避免与店家ID冲突
+                'name' => $agentDept->name . ' (代理)',
+                'pid' => 0,
+                'disabled' => true // 禁止选择代理，只能选择店家
             ];
         }
+
+        // 再添加店家节点
+        foreach ($storeAdmins as $storeAdmin) {
+            $department = $storeDepartments->get($storeAdmin->department_id);
+            if ($department) {
+                $storeOptions[] = [
+                    'id' => $storeAdmin->id,
+                    'name' => $storeAdmin->nickname ?: $storeAdmin->username,
+                    'pid' => 'agent_' . $department->pid // 父节点是代理
+                ];
+            }
+        }
+
         $storeTreeOptions = Arr::tree($storeOptions);
 
         return Form::create([], function (Form $form) use ($storeTreeOptions) {
@@ -3883,14 +3920,30 @@ class ChannelPlayerController
             return message_error(admin_trans('offline_channel.error_password_mismatch'));
         }
 
-        // 验证绑定的店家是否存在
-        /** @var PlayerPromoter $promoter */
-        $promoter = PlayerPromoter::query()->where('player_id', $recommendId)->first();
-        if (empty($promoter)) {
+        // 验证绑定的店家是否存在（新架构：使用AdminUser）
+        /** @var AdminUser $storeAdmin */
+        $storeAdmin = AdminUser::query()
+            ->where('id', $recommendId)
+            ->where('type', AdminUser::TYPE_STORE)
+            ->where('status', 1)
+            ->first();
+
+        if (empty($storeAdmin)) {
             return message_error(admin_trans('offline_channel.error_store_machine_not_exist'));
         }
 
-        DB::beginTransaction();
+        // 获取店家所属的代理
+        $storeDepartment = AdminDepartment::query()->where('id', $storeAdmin->department_id)->first();
+        $agentDepartmentId = $storeDepartment ? $storeDepartment->pid : 0;
+        $agentAdmin = null;
+        if ($agentDepartmentId > 0) {
+            $agentAdmin = AdminUser::query()
+                ->where('department_id', $agentDepartmentId)
+                ->where('type', AdminUser::TYPE_AGENT)
+                ->first();
+        }
+
+        Db::beginTransaction();
         try {
             $successCount = 0;
             $failedAccounts = [];
@@ -3917,12 +3970,18 @@ class ChannelPlayerController
                 $player->avatar = $avatar; // 使用选择的头像
                 $player->country_code = PhoneSmsLog::COUNTRY_CODE_CH; // 默认中国
                 $player->type = Player::TYPE_PLAYER;
+                $player->player_type = Player::PLAYER_TYPE_NORMAL; // 批量生成的都是普通玩家
                 $player->currency = $channel->currency;
                 $player->password = $password;
                 $player->uuid = generate15DigitUniqueId();
                 $player->department_id = Admin::user()->department_id;
                 $player->recommend_code = createCode();
-                $player->recommend_id = $recommendId; // 绑定店家
+                $player->recommend_id = 0; // 新架构：不使用推荐系统，设为 0
+
+                // 新架构：关联到店家和代理
+                $player->store_admin_id = $storeAdmin->id; // 归属店家
+                $player->agent_admin_id = $agentAdmin ? $agentAdmin->id : 0; // 归属代理
+
                 $player->save();
 
                 // 创建默认店家配置 - home_notice
@@ -3966,7 +4025,7 @@ class ChannelPlayerController
                 $successCount++;
             }
 
-            DB::commit();
+            Db::commit();
 
             $message = "成功生成 {$successCount} 个玩家账号";
             if (count($failedAccounts) > 0) {
@@ -3976,7 +4035,7 @@ class ChannelPlayerController
             return message_success($message);
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
             return message_error('批量生成失败：' . $e->getMessage());
         }
     }
@@ -4090,7 +4149,7 @@ class ChannelPlayerController
             return message_error(strtr(admin_trans('offline_channel.error_admin_username_exists'), ['{username}' => $adminUsername]));
         }
 
-        DB::beginTransaction();
+        Db::beginTransaction();
         try {
             // 1. 创建代理部门
             $agentDepartment = new AdminDepartment();
@@ -4155,7 +4214,7 @@ class ChannelPlayerController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
-            DB::commit();
+            Db::commit();
 
             return message_success(strtr(admin_trans('offline_channel.success_create_agent'), [
                 '{name}' => $name,
@@ -4164,7 +4223,7 @@ class ChannelPlayerController
             ]));
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
             return message_error('创建代理失败：' . $e->getMessage());
         }
     }
@@ -4317,7 +4376,7 @@ class ChannelPlayerController
             return message_error(strtr(admin_trans('offline_channel.error_admin_username_exists'), ['{username}' => $adminUsername]));
         }
 
-        DB::beginTransaction();
+        Db::beginTransaction();
         try {
             // 1. 创建店家部门
             $storeDepartment = new AdminDepartment();
@@ -4383,7 +4442,7 @@ class ChannelPlayerController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
-            DB::commit();
+            Db::commit();
 
             return message_success(strtr(admin_trans('offline_channel.success_create_store_machine'), [
                 '{name}' => $name,
@@ -4393,7 +4452,7 @@ class ChannelPlayerController
             ]));
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
             return message_error('创建店家失败：' . $e->getMessage());
         }
     }
