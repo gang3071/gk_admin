@@ -95,11 +95,11 @@ class MTServiceInterface extends GameServiceFactory implements GameServiceInterf
                 'APISI' => md5($timestamp . $config['client_secret'] . $config['client_id'] . $reqBase64),
                 'APITS' => $timestamp
             ],'params' => ['msg'=>$reqBase64,'origin'=>$params],'config'=>$config,'response'=>$response->body()]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         $res = $response->json();
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         return $res;
     }

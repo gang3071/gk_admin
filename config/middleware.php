@@ -19,6 +19,5 @@ return [
     // 全局中间件
     '' => [
         AccessControl::class,  // CORS跨域支持
-        Lang::class,           // 多语言支持
     ],
 ];

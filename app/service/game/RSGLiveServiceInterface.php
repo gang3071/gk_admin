@@ -190,11 +190,11 @@ class RSGLiveServiceInterface extends GameServiceFactory implements GameServiceI
 
         if (!$response->ok()) {
             $this->log->error($url,['config'=>$config,'params'=>$params,'response'=>$data]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         if (empty($data)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         return json_decode($data, true);

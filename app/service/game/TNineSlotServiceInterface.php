@@ -107,19 +107,19 @@ class TNineSlotServiceInterface extends GameServiceFactory implements GameServic
 
         if (!$response->ok()) {
             $this->log->error($url, ['params' => $params, 'response' => $response->body()]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $res = json_decode($response->body(), true);
 
 
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         if ($res['resultCode'] != 'OK') {
             $this->log->error($url, ['params' => $params, 'response' => $response->body()]);
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         return $res;

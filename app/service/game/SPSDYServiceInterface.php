@@ -362,14 +362,14 @@ class SPSDYServiceInterface extends GameServiceFactory implements GameServiceInt
             ->post($url, $params);
 
         if (!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $result = json_decode($response->body(), true);
         dump('result', $params,$result);
 
         if (empty($result)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         return $result;

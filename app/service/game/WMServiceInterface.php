@@ -118,8 +118,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
         $res = $this->doCurl($this->apiDomain, $params);
         $this->log->error('wm -> depositAmount', ['res' => $res]);
         if ($res['errorCode'] != $this->successCode) {
-            throw new GameException(!empty($res['errorMessage']) ? $res['errorMessage'] : trans('system_busy', [],
-                'message'), 0);
+            throw new GameException(!empty($res['errorMessage']) ? $res['errorMessage'] : admin_trans('message.system_busy'), 0);
         }
         Cache::set('depositAmount_' . $this->player->id, $this->platform->id, 3 * 24 * 60 * 60);
         Cache::delete('withdrawAmount_' . $this->player->id);
@@ -170,7 +169,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
     public function createPlayer(string $prefix = 'J', int $retryCount = 0): array
     {
         if ($retryCount > 10) {
-            throw new GameException(trans('system_busy', [], 'message'), 0);
+            throw new GameException(admin_trans('message.system_busy'), 0);
         }
         
         $params = [
@@ -187,7 +186,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
         $res = $this->doCurl($this->apiDomain, $params);
         $this->log->info('wm -> createPlayer', ['res' => $res]);
         if ($res['errorCode'] != $this->successCode && $res['errorCode'] != $this->userError) {
-            throw new GameException(trans('system_busy', [], 'message'), 0);
+            throw new GameException(admin_trans('message.system_busy'), 0);
         }
         if ($res['errorCode'] == $this->userError) {
             return $this->createPlayer(generateRandomString(), $retryCount + 1); // 增加重试计数
@@ -228,11 +227,11 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
             ])
             ->post($url . '?' . http_build_query($params), $params);
         if (!$response->ok()) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         $data = $response->json();
         if (empty($data)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         return $data;
@@ -262,7 +261,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
         $res = $this->doCurl($this->apiDomain, $params);
         $this->log->info('wm -> lobbyLogin', ['res' => $res]);
         if ($res['errorCode'] != $this->successCode) {
-            throw new GameException(trans('system_busy', [], 'message'), 0);
+            throw new GameException(admin_trans('message.system_busy'), 0);
         }
 
         return $res['result'] ?? 0;
@@ -294,7 +293,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
         $res = $this->doCurl($this->apiDomain, $params);
         $this->log->info('wm -> withdrawAmount', ['res' => $res]);
         if ($res['errorCode'] != $this->successCode) {
-            throw new GameException(trans('system_busy', [], 'message'), 0);
+            throw new GameException(admin_trans('message.system_busy'), 0);
         }
         Cache::set('withdrawAmount_' . $this->player->id, $this->platform->id, 3 * 24 * 60 * 60);
         Cache::delete('depositAmount_' . $this->player->id);
@@ -406,7 +405,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
             if ($res['errorCode'] == '107') {
                 return [];
             }
-            throw new GameException(trans('system_busy', [], 'message'), 0);
+            throw new GameException(admin_trans('message.system_busy'), 0);
         }
         return $res;
     }
@@ -442,7 +441,7 @@ class WMServiceInterface extends GameServiceFactory implements GameServiceInterf
         $res = $this->doCurl($this->apiDomain, $params);
         $this->log->info('wm -> gameLogin', [$res]);
         if ($res['errorCode'] != $this->successCode) {
-            throw new GameException(trans('system_busy', [], 'message'), 0);
+            throw new GameException(admin_trans('message.system_busy'), 0);
         }
 
         return $res['result'] ?? 0;

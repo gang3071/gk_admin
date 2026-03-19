@@ -231,7 +231,7 @@ class YZGServiceInterface extends GameServiceFactory implements GameServiceInter
         }
 
         if (empty($res)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         return $res;
     }

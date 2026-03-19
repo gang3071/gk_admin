@@ -167,12 +167,12 @@ class RSGServiceInterface extends GameServiceFactory implements GameServiceInter
 
         if (!$response->ok()) {
             Log::channel('rsg_server')->error($url,['config'=>$config,'params'=>$params,'response'=>$response->body()]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         $data = openssl_decrypt(base64_decode($response->body()), 'DES-CBC', $config['DesKey'], OPENSSL_RAW_DATA,
             $config['DesIV']);
         if (empty($data)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         return json_decode($data, true);

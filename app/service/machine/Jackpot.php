@@ -535,7 +535,7 @@ class Jackpot extends MachineServices implements BaseMachine
         $uid = $this->machine->domain . ':' . $this->machine->port;
         try {
             if (!Gateway::isUidOnline($uid)) {
-                throw new Exception(trans('machine_has_offline', ['{code}' => $this->machine->code], 'message'));
+                throw new Exception(admin_trans('message.machine_has_offline', null, ['{code}' => $this->machine->code]));
             }
             switch ($cmd) {
                 case self::TESTING:
@@ -576,8 +576,7 @@ class Jackpot extends MachineServices implements BaseMachine
                     break;
                 case self::SCORE_TO_POINT:
                     if ($this->reward_status == 1) {
-                        throw new Exception(trans('machine_reward_drawing', ['{code}' => $this->machine->code],
-                            'message'));
+                        throw new Exception(admin_trans('message.machine_reward_drawing', null, ['{code}' => $this->machine->code]));
                     }
                     $this->machineAction($uid, $cmd, $source, $source_id);
                     break;
@@ -596,12 +595,10 @@ class Jackpot extends MachineServices implements BaseMachine
                     break;
                 case self::AUTO_UP_TURN:
                     if ($this->reward_status == 1) {
-                        throw new Exception(trans('machine_reward_drawing', ['{code}' => $this->machine->code],
-                            'message'));
+                        throw new Exception(admin_trans('message.machine_reward_drawing', null, ['{code}' => $this->machine->code]));
                     }
                     if ($this->score > 0) {
-                        throw new Exception(trans('machine_sore_exist',
-                            ['{code}' => $this->machine->code, '{score}' => $this->score], 'message'));
+                        throw new Exception(admin_trans('message.machine_sore_exist', null, ['{code}' => $this->machine->code, '{score}' => $this->score]));
                     }
                     Gateway::sendToUid($uid, hex2bin($this->createCmd(self::PREFIX . $cmd, $data)));
                     break;
@@ -650,29 +647,24 @@ class Jackpot extends MachineServices implements BaseMachine
     {
         locale(Str::replace('-', '_', $this->lang));
         $description = '';
-        $autoStatus = $this->auto == 1 ? trans('machine_status_yes', [], 'machine_action') : trans('machine_status_no',
-            [], 'machine_action');
-        $lotteryStatus = $this->reward_status == 1 ? trans('machine_status_yes', [],
-            'machine_action') : trans('machine_status_no', [], 'machine_action');
-        $bbStatus = $this->bb_status == 1 ? trans('machine_status_yes', [],
-            'machine_action') : trans('machine_status_no', [], 'machine_action');
-        $rushStatus = $this->rush_status == 1 ? trans('machine_status_yes', [],
-            'machine_action') : trans('machine_status_no', [], 'machine_action');
+        $autoStatus = $this->auto == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no');
+        $lotteryStatus = $this->reward_status == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no');
+        $bbStatus = $this->bb_status == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no');
+        $rushStatus = $this->rush_status == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no');
         if (empty($fun)) {
             $nowTurn = $this->now_turn;
-            $description .= trans('machine_auto_status', [], 'machine_action') . $autoStatus . PHP_EOL;
-            $description .= trans('machine_lottery_status', [], 'machine_action') . $lotteryStatus . PHP_EOL;
-            $description .= trans('machine_bb_status', [], 'machine_action') . $bbStatus . PHP_EOL;
-            $description .= trans('machine_rush_status', [], 'machine_action') . $rushStatus . PHP_EOL;
-            $description .= trans('machine_point', [], 'machine_action') . ($this->point ?? 0) . PHP_EOL;
-            $description .= trans('machine_score', [], 'machine_action') . ($this->score ?? 0) . PHP_EOL;
-            $description .= trans('machine_turn', [], 'machine_action') . ($this->turn ?? 0) . PHP_EOL;
-            $description .= trans('now_turn', [], 'machine_action') . ($nowTurn ?? 0) . PHP_EOL;
-            $description .= trans('machine_open_point', [], 'machine_action') . ($this->open_point ?? 0) . PHP_EOL;
-            $description .= trans('machine_wash_point', [], 'machine_action') . ($this->wash_point ?? 0);
+            $description .= admin_trans('machine_action.machine_auto_status') . $autoStatus . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_lottery_status') . $lotteryStatus . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_bb_status') . $bbStatus . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_rush_status') . $rushStatus . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_point') . ($this->point ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_score') . ($this->score ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_turn') . ($this->turn ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.now_turn') . ($nowTurn ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_open_point') . ($this->open_point ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_wash_point') . ($this->wash_point ?? 0);
         } else {
-            $description .= trans('function.' . GameType::TYPE_STEEL_BALL . '_' . Machine::CONTROL_TYPE_SONG . '.' . $fun,
-                [], 'machine_action');
+            $description .= admin_trans('machine_action.function.' . GameType::TYPE_STEEL_BALL . '_' . Machine::CONTROL_TYPE_SONG . '.' . $fun);
             switch ($fun) {
                 case Jackpot::MACHINE_POINT:
                     $description .= ': ' . $this->point;
@@ -738,7 +730,7 @@ class Jackpot extends MachineServices implements BaseMachine
                 }
                 if ($handleDuration >= $this->expirationTime) { // 只跑1.5秒钟
                     $this->log->error('指令超时异常', ['jackpot -> openPoint', [$this->machine->code]]);
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
@@ -790,7 +782,7 @@ class Jackpot extends MachineServices implements BaseMachine
                     return;
                 }
                 if ($handleDuration >= $expirationTime) {
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
@@ -799,7 +791,7 @@ class Jackpot extends MachineServices implements BaseMachine
             $attempts++;
             if ($attempts >= $maxRetries) {
                 $this->log->error('指令超时异常', ['jackpot -> machineAction -> ' . $cmd, [$this->machine->code]]);
-                throw new Exception(trans('machine_action_fail', [], 'message'));
+                throw new Exception(admin_trans('message.machine_action_fail'));
             }
             usleep(50000);
             $this->machineAction($uid, $cmd, $source, $source_id, $attempts);

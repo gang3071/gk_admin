@@ -192,13 +192,13 @@ class KYServiceInterface extends GameServiceFactory implements GameServiceInterf
 
 
         if(!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $result = json_decode($response->body(), true);
 
         if(empty($result)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         return $result;

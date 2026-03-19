@@ -224,7 +224,7 @@ class BTGServiceInterface extends GameServiceFactory implements GameServiceInter
             throw new GameException($this->failCode[$res['status']['code']], 0);
         }
         if (empty($res['data']['order_id'])) {
-            throw new GameException(trans('transfer_fail', [], 'message'), 0);
+            throw new GameException(admin_trans('message.transfer_fail'), 0);
         }
         Cache::set('depositAmount_' . $this->player->id, $this->platform->id, 3 * 24 * 60 * 60);
         Cache::delete('withdrawAmount_' . $this->player->id);
@@ -267,10 +267,10 @@ class BTGServiceInterface extends GameServiceFactory implements GameServiceInter
             throw new GameException($this->failCode[$res['status']['code']], 0);
         }
         if (empty($res['data']['order_id'])) {
-            throw new GameException(trans('transfer_fail', [], 'message'), 0);
+            throw new GameException(admin_trans('message.transfer_fail'), 0);
         }
         if ($res['data']['amount'] <= 0) {
-            throw new GameException(trans('withdraw_amount_zero', [], 'message'), 0);
+            throw new GameException(admin_trans('message.withdraw_amount_zero'), 0);
         }
         Cache::set('withdrawAmount_' . $this->player->id, $this->platform->id, 3 * 24 * 60 * 60);
         Cache::delete('depositAmount_' . $this->player->id);

@@ -224,7 +224,7 @@ class DGServiceInterface extends GameServiceFactory implements GameServiceInterf
             ->withBody(json_encode($params), 'application/json')
             ->post($url);
         if (!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         return $response->json();

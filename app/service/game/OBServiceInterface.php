@@ -92,11 +92,11 @@ class OBServiceInterface extends GameServiceFactory implements GameServiceInterf
             ->post($url, $params);
 
         if (!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         $res = $response->json();
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         return $res;
     }

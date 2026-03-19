@@ -64,9 +64,9 @@ class MachineServices
     public static function getAttributeDes($attribute, $data, $machineId): string
     {
         $result = str_replace(MachineServices::MACHINE_DATA_PREFIX . $machineId . '_', '', $attribute);
-        $key = 'machine_data.' . $result;
+        $key = 'machine_action.machine_data.' . $result;
         if ($result == 'action_time') {
-            return trans($key, ['{data}' => millisecondsToTimeFormat($data)], 'machine_action');
+            return admin_trans($key, null, ['{data}' => millisecondsToTimeFormat($data)]);
         }
         if (in_array($result,
             [
@@ -77,16 +77,15 @@ class MachineServices
                 'gaming',
                 'change_point_card_status',
             ])) {
-            return trans($key, [
-                '{data}' => $data == 1 ? trans('machine_status_yes', [], 'machine_action') : trans('machine_status_no',
-                    [], 'machine_action')
-            ], 'machine_action');
+            return admin_trans($key, null, [
+                '{data}' => $data == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no')
+            ]);
         }
         if (in_array($result, ['play_start_time', 'last_play_time', 'last_keep_at', 'last_point_at'])) {
-            return trans($key, ['{data}' => $data > 0 ? date('Y-m-d H:i:s', $data) : ''], 'machine_action');
+            return admin_trans($key, null, ['{data}' => $data > 0 ? date('Y-m-d H:i:s', $data) : '']);
         }
-        
-        return trans($key, ['{data}' => $data], 'machine_action');
+
+        return admin_trans($key, null, ['{data}' => $data]);
     }
     
     /**

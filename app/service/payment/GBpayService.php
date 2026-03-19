@@ -85,11 +85,11 @@ class GBpayService
         $setting = ChannelRechargeSetting::query()->where('department_id', $player->department_id)->where('type',
             ChannelRechargeMethod::TYPE_GB)->first();
         if (empty($setting) || empty($setting->gb_token) || empty($setting->gb_secret)) {
-            throw new PaymentException(trans('gb_payment_not_setting', [], 'message'));
+            throw new PaymentException(admin_trans('message.gb_payment_not_setting'));
         }
         $this->api_domain = config('payment.GB.api_domain');
         if (empty($this->api_domain)) {
-            throw new PaymentException(trans('gb_payment_not_setting', [], 'message'));
+            throw new PaymentException(admin_trans('message.gb_payment_not_setting'));
         }
         $this->player = $player;
         $this->secret = $setting->gb_secret;
@@ -144,20 +144,20 @@ class GBpayService
             ->post($url, $params);
         $this->log->info('doCurl -> 请求结果', [$url, $response]);
         if (!$response->ok()) {
-            throw new PaymentException(trans('system_busy', [], 'message'));
+            throw new PaymentException(admin_trans('message.system_busy'));
         }
         
         $data = $response->json();
         if ($data['errorCode'] != $this->successCode) {
             if ($data['errorCode'] == '998') {
-                throw new PaymentException(trans('gb_maintenance',
-                    ['{startAt}' => $data['startAt'], '{endAt}' => $data['endAt']], 'message'));
+                throw new PaymentException(admin_trans('message.gb_maintenance',
+                    null, ['{startAt}' => $data['startAt'], '{endAt}' => $data['endAt']]));
             }
             if ($data['errorCode'] == '10119') {
-                throw new Exception(trans('gb_phone_code_invalid', [], 'message'), '10119');
+                throw new Exception(admin_trans('message.gb_phone_code_invalid'), '10119');
             }
             if ($data['errorCode'] == '10787') {
-                throw new Exception(trans('gb_phone_not_setting', [], 'message'), '10787');
+                throw new Exception(admin_trans('message.gb_phone_not_setting'), '10787');
             }
             throw new PaymentException($this->failCode[$data['errorCode']]);
         }

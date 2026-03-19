@@ -99,14 +99,14 @@ class SPServiceInterface extends GameServiceFactory implements GameServiceInterf
 
         if (!$response->ok()) {
             $this->log->error($this->config['api_domain']."/$url", ['params' => $params,'body'=>['q'=>$requestStr,'s'=>$md5],'response'=>$response->body()]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $xml = simplexml_load_string($response->body());
         $res = json_decode(json_encode($xml), true);
 
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         return $res;
     }

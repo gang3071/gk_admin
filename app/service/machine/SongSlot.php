@@ -582,16 +582,16 @@ class SongSlot extends MachineServices implements BaseMachine
         $uid = $this->machine->domain . ':' . $this->machine->port;
         try {
             if (!Gateway::isUidOnline($uid)) {
-                throw new Exception(trans('machine_has_offline', ['{code}' => $this->machine->code], 'message'));
+                throw new Exception(admin_trans('message.machine_has_offline', null, ['{code}' => $this->machine->code]));
             }
             if ($this->has_lock == 1 && $cmd != self::CHECK) {
-                throw new Exception(trans('machine_lock', ['{code}' => $this->machine->code], 'message'));
+                throw new Exception(admin_trans('message.machine_lock', null, ['{code}' => $this->machine->code]));
             }
             switch ($cmd) {
                 case self::OUT_ON:
                     $nowPoint = $this->point;
                     if ($nowPoint <= 6) {
-                        throw new Exception(trans('point_not_enough', ['{code}' => $this->machine->code], 'message'));
+                        throw new Exception(admin_trans('message.point_not_enough', null, ['{code}' => $this->machine->code]));
                     }
                     $this->autoOn($uid, $cmd, $data, $source, $source_id);
                     break;
@@ -702,7 +702,7 @@ class SongSlot extends MachineServices implements BaseMachine
                     ]
                 ]);
                 if ($handleDuration >= $expirationTime) {
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
@@ -710,7 +710,7 @@ class SongSlot extends MachineServices implements BaseMachine
             }
         } catch (Exception) {
             $this->log->error('指令超时异常', ['slot -> machineAction', [$this->machine->code]]);
-            throw new Exception(trans('machine_action_fail', [], 'message'));
+            throw new Exception(admin_trans('message.machine_action_fail'));
         }
     }
     
@@ -772,19 +772,16 @@ class SongSlot extends MachineServices implements BaseMachine
     {
         locale(Str::replace('-', '_', $this->lang));
         $description = '';
-        $autoStatus = $this->auto == 1 ? trans('machine_status_yes', [], 'machine_action') : trans('machine_status_no',
-            [], 'machine_action');
-        $lotteryStatus = $this->reward_status == 1 ? trans('machine_status_yes', [],
-            'machine_action') : trans('machine_status_no', [], 'machine_action');
+        $autoStatus = $this->auto == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no');
+        $lotteryStatus = $this->reward_status == 1 ? admin_trans('machine_action.machine_status_yes') : admin_trans('machine_action.machine_status_no');
         if (empty($fun)) {
-            $description .= trans('machine_auto_status', [], 'machine_action') . $autoStatus . PHP_EOL;
-            $description .= trans('machine_lottery_status', [], 'machine_action') . $lotteryStatus . PHP_EOL;
-            $description .= trans('machine_point', [], 'machine_action') . ($this->point ?? 0) . PHP_EOL;
-            $description .= trans('machine_bet', [], 'machine_action') . ($this->bet ?? 0) . PHP_EOL;
-            $description .= trans('machine_win', [], 'machine_action') . ($this->win ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_auto_status') . $autoStatus . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_lottery_status') . $lotteryStatus . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_point') . ($this->point ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_bet') . ($this->bet ?? 0) . PHP_EOL;
+            $description .= admin_trans('machine_action.machine_win') . ($this->win ?? 0) . PHP_EOL;
         } else {
-            $description .= trans('function.' . GameType::TYPE_SLOT . '_' . Machine::CONTROL_TYPE_SONG . '.' . $fun, [],
-                'machine_action');
+            $description .= admin_trans('machine_action.function.' . GameType::TYPE_SLOT . '_' . Machine::CONTROL_TYPE_SONG . '.' . $fun);
             switch ($fun) {
                 case SongSlot::READ_SCORE:
                     $description .= ': ' . $this->point;
@@ -847,7 +844,7 @@ class SongSlot extends MachineServices implements BaseMachine
                     ]
                 ]);
                 if ($handleDuration >= $expirationTime) {
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
@@ -855,7 +852,7 @@ class SongSlot extends MachineServices implements BaseMachine
             }
         } catch (Exception) {
             $this->log->error('指令超时异常', ['slot -> machineAction', [$this->machine->code]]);
-            throw new Exception(trans('machine_action_fail', [], 'message'));
+            throw new Exception(admin_trans('message.machine_action_fail'));
         }
     }
     
@@ -896,14 +893,14 @@ class SongSlot extends MachineServices implements BaseMachine
                     return;
                 }
                 if ($handleDuration >= $expirationTime) {
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
             }
         } catch (Exception) {
             $this->log->error('指令超时异常', ['slot -> machineAction', [$this->machine->code]]);
-            throw new Exception(trans('machine_action_fail', [], 'message'));
+            throw new Exception(admin_trans('message.machine_action_fail'));
         }
     }
     
@@ -957,7 +954,7 @@ class SongSlot extends MachineServices implements BaseMachine
                     return;
                 }
                 if ($handleDuration >= $expirationTime) {
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
@@ -966,7 +963,7 @@ class SongSlot extends MachineServices implements BaseMachine
             $attempts++;
             if ($attempts >= $maxRetries) {
                 $this->log->error('指令超时异常', ['slot -> machineAction', [$this->machine->code]]);
-                throw new Exception(trans('machine_action_fail', [], 'message'));
+                throw new Exception(admin_trans('message.machine_action_fail'));
             }
             usleep(50000);
             $this->washPoint($uid, $cmd, $data, $source, $source_id, $attempts);
@@ -1011,7 +1008,7 @@ class SongSlot extends MachineServices implements BaseMachine
                     return;
                 }
                 if ($handleDuration >= $expirationTime) {
-                    throw new Exception(trans('machine_action_fail', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_action_fail'));
                 }
                 usleep($sleep);
                 $handleDuration += $sleep;
@@ -1020,7 +1017,7 @@ class SongSlot extends MachineServices implements BaseMachine
             $attempts++;
             if ($attempts >= $maxRetries) {
                 $this->log->error('指令超时异常', ['slot -> machineAction', [$this->machine->code]]);
-                throw new Exception(trans('machine_action_fail', [], 'message'));
+                throw new Exception(admin_trans('message.machine_action_fail'));
             }
             usleep(50000);
             $this->machineAction($uid, $cmd, $source, $source_id, $attempts);

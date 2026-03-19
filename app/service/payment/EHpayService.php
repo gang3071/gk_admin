@@ -69,7 +69,7 @@ class EHpayService
             ->post($url, $params);
         $this->log->info('doCurl -> 请求结果', [$url, $response]);
         if (!$response->ok()) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         $data = $response->json();
         if (!in_array($data['http_status_code'], $this->successCode)) {

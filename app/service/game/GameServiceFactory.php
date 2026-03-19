@@ -119,11 +119,11 @@ class GameServiceFactory
             ->asJson()
             ->post($url, $params);
         if (!$response->ok()) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         $data = $response->json();
         if (empty($data)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         return $data;

@@ -197,13 +197,13 @@ class KYSServiceInterface extends GameServiceFactory implements GameServiceInter
 
         // dump("response = ", $response);
         if(!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $result = json_decode($response->body(), true);
 
         if(empty($result)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         // dump("KYS-docurl请求接口返回参数为：", $result);

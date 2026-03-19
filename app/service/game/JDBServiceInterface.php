@@ -243,14 +243,14 @@ class JDBServiceInterface extends GameServiceFactory implements GameServiceInter
 
 
         if (!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         $result = $response->body();
         $data = json_decode($result,true);
 
 
         if (empty($data)) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         return $data;

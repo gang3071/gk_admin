@@ -107,19 +107,19 @@ class TNineServiceInterface extends GameServiceFactory implements GameServiceInt
 
         if (!$response->ok()) {
             $this->log->error($url, ['params' => $params, 'response' => $response->body()]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $res = json_decode($response->body(), true);
 
 
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         if ($res['Error']['Code'] != 0) {
             $this->log->error($url, ['params' => $params, 'response' => $response->body()]);
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         return $res;

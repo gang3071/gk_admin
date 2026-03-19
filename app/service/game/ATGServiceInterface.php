@@ -166,11 +166,11 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
                 ])
                 ->get($config['api_domain'] . '/token');
             if (!$tokenResponse->ok()) {
-                throw new GameException(trans('system_busy', [], 'message'));
+                throw new GameException(admin_trans('message.system_busy'));
             }
             $data = $tokenResponse->json();
             if (empty($data['data']['token'])) {
-                throw new GameException(trans('system_busy', [], 'message'));
+                throw new GameException(admin_trans('message.system_busy'));
             }
             $token = $data['data']['token'];
             Cache::set($cacheKey, $token, 4 * 60);
@@ -189,7 +189,7 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
             if ($res['status'] == '400' && $res['message'] == 'user exists') {
                 return [];
             }
-            throw new GameException(empty($res['message']) ? trans('system_busy', [], 'message') : $res['message']);
+            throw new GameException(empty($res['message']) ? admin_trans('message.system_busy') : $res['message']);
         }
 
         return $response->json();
@@ -222,7 +222,7 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
             'transferId' => $data['order_no'] ?? '',
         ]);
         if ($res['status'] != 'success') {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         Cache::set('depositAmount_' . $this->player->id, $this->platform->id, 3 * 24 * 60 * 60);
         Cache::delete('withdrawAmount_' . $this->player->id);
@@ -260,7 +260,7 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
             'transferId' => $data['order_no'] ?? '',
         ]);
         if ($res['status'] != 'success') {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         Cache::set('withdrawAmount_' . $this->player->id, $this->platform->id, 3 * 24 * 60 * 60);
         Cache::delete('depositAmount_' . $this->player->id);
@@ -363,7 +363,7 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
         
         $req = $this->doCurl($this->createUrl('gameLogin'), $params, 'get');
         if (empty($req['data']['url'])) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
         $url = $req['data']['url'] . '&uniwebview=1&view_mode=portrait';
 //        if ($game->display_mode == 3 || $game->display_mode == 1) {

@@ -102,14 +102,14 @@ class O8ServiceInterface extends GameServiceFactory implements GameServiceInterf
 
         if (!$response->ok()) {
             $this->log->error($url, ['params' => $params, 'response' => $response->body()]);
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $res = json_decode($response->body(), true);
 
 
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
         return $res;
     }
@@ -168,14 +168,14 @@ class O8ServiceInterface extends GameServiceFactory implements GameServiceInterf
             ->post($this->config['api_domain'] . '/api/oauth/token', $params);
 
         if (!$response->ok()) {
-            throw new GameException(trans('system_busy', [], 'message'));
+            throw new GameException(admin_trans('message.system_busy'));
         }
 
         $res = json_decode($response->body(), true);
 
 
         if (empty($res)) {
-            throw new Exception(trans('system_busy', [], 'message'));
+            throw new Exception(admin_trans('message.system_busy'));
         }
 
         $accessToken = $res['access_token'];
