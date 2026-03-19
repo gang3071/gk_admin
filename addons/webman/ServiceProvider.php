@@ -7,6 +7,8 @@ use ExAdmin\ui\plugin\Plugin;
 use support\Db;
 use Webman\Route;
 
+// 加载辅助函数
+require_once __DIR__ . '/helpers.php';
 
 class ServiceProvider extends Plugin
 {
@@ -16,8 +18,6 @@ class ServiceProvider extends Plugin
      */
     public function register()
     {
-        include_once 'helpers.php';
-
         //上传初始化
         Admin::uploadInit();
 
