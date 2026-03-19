@@ -3,18 +3,28 @@
 namespace addons\webman\model;
 
 use support\Model;
-use think\model\concern\SoftDelete;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * 自动交班配置模型
  */
 class StoreAutoShiftConfig extends Model
 {
-    use SoftDelete;
+    use SoftDeletes;
 
     protected $table = 'store_auto_shift_config';
-    protected $pk = 'id';
-    protected $deleteTime = 'deleted_at';
+    protected $primaryKey = 'id';
+
+    /**
+     * 追加到模型数组的访问器
+     * @var array
+     */
+    protected $appends = [
+        'shift_mode_text',
+        'status_text',
+        'shift_weekdays_array',
+        'is_enabled_text'
+    ];
 
     // 交班模式常量
     const MODE_DAILY = 1;      // 每日
@@ -62,45 +72,45 @@ class StoreAutoShiftConfig extends Model
     /**
      * 获取交班模式文本
      */
-    public function getShiftModeTextAttr($value, $data)
+    public function getShiftModeTextAttribute()
     {
         $modes = [
             self::MODE_DAILY => '每日',
             self::MODE_WEEKLY => '每周',
             self::MODE_CUSTOM => '自定义周期'
         ];
-        return $modes[$data['shift_mode']] ?? '未知';
+        return $modes[$this->shift_mode] ?? '未知';
     }
 
     /**
      * 获取状态文本
      */
-    public function getStatusTextAttr($value, $data)
+    public function getStatusTextAttribute()
     {
         $statuses = [
             self::STATUS_NORMAL => '正常',
             self::STATUS_PAUSED => '暂停',
             self::STATUS_ERROR => '异常'
         ];
-        return $statuses[$data['status']] ?? '未知';
+        return $statuses[$this->status] ?? '未知';
     }
 
     /**
      * 获取每周交班日期数组
      */
-    public function getShiftWeekdaysArrayAttr($value, $data)
+    public function getShiftWeekdaysArrayAttribute()
     {
-        if (empty($data['shift_weekdays'])) {
+        if (empty($this->shift_weekdays)) {
             return [];
         }
-        return array_map('intval', explode(',', $data['shift_weekdays']));
+        return array_map('intval', explode(',', $this->shift_weekdays));
     }
 
     /**
      * 获取启用状态文本
      */
-    public function getIsEnabledTextAttr($value, $data)
+    public function getIsEnabledTextAttribute()
     {
-        return $data['is_enabled'] ? '已启用' : '未启用';
+        return $this->is_enabled ? '已启用' : '未启用';
     }
 }
