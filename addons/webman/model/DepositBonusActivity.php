@@ -3,7 +3,7 @@
 namespace addons\webman\model;
 
 use support\Model;
-use think\model\concern\SoftDelete;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * 充值满赠活动配置模型
@@ -30,11 +30,10 @@ use think\model\concern\SoftDelete;
  */
 class DepositBonusActivity extends Model
 {
-    use SoftDelete;
+    use SoftDeletes;
 
     protected $table = 'deposit_bonus_activity';
-    protected $pk = 'id';
-    protected $deleteTime = 'deleted_at';
+    protected $primaryKey = 'id';
 
     // 活动类型常量
     const TYPE_DEPOSIT_BONUS = 1; // 充值满赠
