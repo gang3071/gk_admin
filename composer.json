@@ -32,7 +32,8 @@
     "webman/redis-queue": "^1.2",
     "jenssegers/mongodb": "3.8.0",
     "ext-mongodb": "*",
-    "webman/gateway-worker": "^1.0"
+    "webman/gateway-worker": "^1.0",
+    "google/cloud-storage": "^1.48"
   },
   "autoload": {
     "psr-4": {
