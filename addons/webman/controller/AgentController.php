@@ -45,11 +45,11 @@ class AgentController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 查询条件：代理类型 + 属于当前渠道部门
+            // 查询条件：代理类型 + 部门的父级是当前渠道
             $grid->model()
                 ->join('admin_department', 'admin_users.department_id', '=', 'admin_department.id')
                 ->where('admin_users.type', AdminDepartment::TYPE_AGENT)
-                ->where('admin_users.department_id', $currentDepartmentId)
+                ->where('admin_department.pid', $currentDepartmentId)
                 ->select([
                     'admin_users.*',
                     'admin_department.name as department_name',
@@ -215,7 +215,7 @@ class AgentController
             return message_error("登录账号 {$adminUsername} 已存在");
         }
 
-        DB::beginTransaction();
+        Db::beginTransaction();
         try {
             // 1. 创建代理部门
             $agentDepartment = new AdminDepartment();
@@ -276,12 +276,12 @@ class AgentController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
-            DB::commit();
+            Db::commit();
 
             return message_success("代理 {$name} 创建成功！登录账号：{$adminUsername}");
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
             return message_error('创建代理失败：' . $e->getMessage());
         }
     }
