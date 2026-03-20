@@ -1,4 +1,4 @@
-name: Auto Deploy on ADMIN Main Branch
+name: Admin
 
 # 1. 触发条件：只有当 push 到 main 分支时才触发
 on:
