@@ -95,7 +95,8 @@
       this.scriptLoading = true;
       this.scriptPromise = new Promise((resolve, reject) => {
         var script = document.createElement('script');
-        script.src = '/plugin/webman/push/push.js';
+        // 从 API 服务器加载 push.js
+        script.src = 'https://api.supergames9.com/plugin/webman/push/push.js';
         script.onload = () => {
           this.scriptLoaded = true;
           this.scriptLoading = false;
