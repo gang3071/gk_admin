@@ -23,7 +23,9 @@ use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerPromoter;
+use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerWashRecord;
+use addons\webman\model\SystemSetting;
 use addons\webman\service\FishServices;
 use addons\webman\service\JackpotService;
 use addons\webman\service\MediaServer;
@@ -2129,5 +2131,100 @@ if (!function_exists('decrypt_sensitive')) {
         $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, 0, $iv);
 
         return $decrypted !== false ? $decrypted : $value;
+    }
+}
+
+if (!function_exists('addPlayerExtend')) {
+    /**
+     * 创建玩家扩展信息
+     * @param Player $player
+     * @return void
+     */
+    function addPlayerExtend(Player $player)
+    {
+        $registerPresent = SystemSetting::where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
+
+        PlayerPlatformCash::firstOrCreate([
+            'player_id' => $player->id,
+            'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
+            'money' => $registerPresent,
+        ]);
+
+        PlayerExtend::firstOrCreate([
+            'player_id' => $player->id,
+        ]);
+
+        if (isset($registerPresent) && $registerPresent > 0) {
+            //添加玩家钱包日志
+            $playerMoneyEditLog = new PlayerMoneyEditLog;
+            $playerMoneyEditLog->player_id = $player->id;
+            $playerMoneyEditLog->department_id = $player->department_id;
+            $playerMoneyEditLog->type = PlayerMoneyEditLog::TYPE_INCREASE;
+            $playerMoneyEditLog->action = PlayerMoneyEditLog::OTHER;
+            $playerMoneyEditLog->tradeno = date('YmdHis') . rand(10000, 99999);
+            $playerMoneyEditLog->currency = $player->currency;
+            $playerMoneyEditLog->money = $registerPresent;
+            $playerMoneyEditLog->inmoney = $registerPresent;
+            $playerMoneyEditLog->remark = '';
+            $playerMoneyEditLog->user_id = 0;
+            $playerMoneyEditLog->user_name = '系统自动';
+            $playerMoneyEditLog->save();
+
+            //寫入金流明細
+            $playerDeliveryRecord = new PlayerDeliveryRecord;
+            $playerDeliveryRecord->player_id = $player->id;
+            $playerDeliveryRecord->department_id = $player->department_id;
+            $playerDeliveryRecord->target = $playerMoneyEditLog->getTable();
+            $playerDeliveryRecord->target_id = $playerMoneyEditLog->id;
+            $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_REGISTER_PRESENT;
+            $playerDeliveryRecord->source = 'register_present';
+            $playerDeliveryRecord->amount = $playerMoneyEditLog->money;
+            $playerDeliveryRecord->amount_before = 0;
+            $playerDeliveryRecord->amount_after = $registerPresent;
+            $playerDeliveryRecord->tradeno = $playerMoneyEditLog->tradeno ?? '';
+            $playerDeliveryRecord->remark = $playerMoneyEditLog->remark ?? '';
+            $playerDeliveryRecord->save();
+        }
+    }
+}
+
+if (!function_exists('addRegisterRecord')) {
+    /**
+     * 创建玩家注册记录
+     * @param int $id 玩家ID
+     * @param int $type 类型（1=管理后台，2=客户端，3=QTalk）
+     * @param int $department_id 部门ID
+     * @return PlayerRegisterRecord
+     */
+    function addRegisterRecord($id, $type, $department_id)
+    {
+        $ip = request()->getRealIp();
+        $country_name = '';
+        $city_name = '';
+
+        // 尝试获取IP地理位置信息（如果安装了相关包）
+        if (!empty($ip) && class_exists('\Workbunny\WebmanIpAttribution\Location')) {
+            try {
+                $location = new \Workbunny\WebmanIpAttribution\Location();
+                $result = $location->getLocation($ip);
+                $country_name = ($result['country'] ?? '') . ($result['city'] ?? '');
+                $city_name = $result['city'] ?? '';
+            } catch (\Exception $exception) {
+                Log::error('获取ip信息错误: ' . $exception->getMessage());
+            }
+        }
+
+        $domain = isset($_SERVER['HTTP_ORIGIN']) ? parse_url($_SERVER['HTTP_ORIGIN']) : null;
+
+        return PlayerRegisterRecord::create([
+            'player_id' => $id,
+            'register_domain' => !empty($domain) ? $domain['host'] : null,
+            'ip' => $ip,
+            'country_name' => $country_name,
+            'city_name' => $city_name,
+            'device' => 'admin',
+            'type' => $type,
+            'department_id' => $department_id,
+        ]);
     }
 }

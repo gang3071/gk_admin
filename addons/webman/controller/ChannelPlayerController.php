@@ -68,7 +68,6 @@ use Illuminate\Validation\Rule;
 use support\Cache;
 use support\Db;
 use support\Log;
-use think\Exception;
 
 /**
  * 渠道玩家
@@ -1863,7 +1862,7 @@ class ChannelPlayerController
                     $playerDeliveryRecord->save();
 
                     Db::commit();
-                } catch (Exception|GameException $e) {
+                } catch (\Exception|GameException $e) {
                     Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
                 }
@@ -1964,7 +1963,7 @@ class ChannelPlayerController
                     $playerDeliveryRecord->save();
 
                     Db::commit();
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
                 } catch (GameException $e) {
@@ -2056,7 +2055,7 @@ class ChannelPlayerController
                         [], 'message');
                     $playerDeliveryRecord->save();
                     Db::commit();
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     Db::rollBack();
                     return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
                 } catch (GameException $e) {
@@ -3894,10 +3893,10 @@ class ChannelPlayerController
         }
 
         $phonePrefix = $form->input('phone_prefix');
-        $phoneStartNumber = $form->input('phone_start_number');
+        $phoneStartNumber = (int)$form->input('phone_start_number');
         $namePrefix = $form->input('name_prefix');
-        $nameStartNumber = $form->input('name_start_number');
-        $generateCount = $form->input('generate_count');
+        $nameStartNumber = (int)$form->input('name_start_number');
+        $generateCount = (int)$form->input('generate_count');
         $password = $form->input('password');
         $recommendId = $form->input('recommend_id');
 
