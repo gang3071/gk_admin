@@ -1,10 +1,10 @@
 <?php
-namespace support\log;
+namespace app\service;
 
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Logger;
 
-class TelegramHandler extends AbstractProcessingHandler
+class TelegramService extends AbstractProcessingHandler
 {
     protected $token;
     protected $chatId;

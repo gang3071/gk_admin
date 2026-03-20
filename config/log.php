@@ -30,7 +30,7 @@ $handlers = [
 // 添加 Telegram Handler（如果配置了 Token 和 Chat ID）
 if (env('TELEGRAM_BOT_TOKEN') && env('TELEGRAM_CHAT_ID')) {
     $handlers[] = [
-        'class' => support\log\TelegramHandler::class,
+        'class' => app\service\TelegramService::class,
         'constructor' => [
             env('TELEGRAM_BOT_TOKEN'),
             env('TELEGRAM_CHAT_ID'),
