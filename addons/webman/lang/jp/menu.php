@@ -188,6 +188,9 @@ return [
         'agent_deposit_bonus_statistics' => '統計レポート',
         'agent_deposit_bonus_bet_detail' => 'ベット詳細',
         'agent_deposit_bonus_task' => 'ベット量タスク',
+        //店舗デバイス管理
+        'store_player' => 'デバイス管理',
+        'store_player_list' => 'デバイスリスト',
         //店舗入金ボーナス管理
         'store_deposit_bonus_manage' => '入金ボーナス管理',
         'store_deposit_bonus_activity' => '活動管理',

@@ -188,6 +188,9 @@ return [
         'agent_deposit_bonus_statistics' => '统计报表',
         'agent_deposit_bonus_bet_detail' => '押码明细',
         'agent_deposit_bonus_task' => '打码量任务',
+        //店机后台设备管理
+        'store_player' => '设备管理',
+        'store_player_list' => '设备列表',
         //店机后台充值满赠管理
         'store_deposit_bonus_manage' => '充值满赠管理',
         'store_deposit_bonus_activity' => '活动管理',

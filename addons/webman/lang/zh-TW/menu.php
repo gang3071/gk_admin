@@ -187,6 +187,9 @@ return [
         'agent_deposit_bonus_statistics' => '統計報表',
         'agent_deposit_bonus_bet_detail' => '押碼明細',
         'agent_deposit_bonus_task' => '打碼量任務',
+        //店機後台設備管理
+        'store_player' => '設備管理',
+        'store_player_list' => '設備列表',
         //店機後台充值滿贈管理
         'store_deposit_bonus_manage' => '充值滿贈管理',
         'store_deposit_bonus_activity' => '活動管理',
