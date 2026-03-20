@@ -7,7 +7,7 @@ use addons\webman\model\Channel;
 use addons\webman\model\Machine;
 use addons\webman\model\Player;
 use addons\webman\traits\HasDateTimeFormatter;
-use MongoDB\Laravel\Eloquent\Model;
+use Jenssegers\Mongodb\Eloquent\Model;
 
 /**
  * Class MachineOperationLog

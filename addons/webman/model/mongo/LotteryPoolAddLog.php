@@ -3,7 +3,7 @@
 namespace addons\webman\model\mongo;
 
 
-use MongoDB\Laravel\Eloquent\Model;
+use Jenssegers\Mongodb\Eloquent\Model;
 
 /**
  * Class LotteryPoolAddLog
