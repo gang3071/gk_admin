@@ -36,7 +36,8 @@
     "ext-mongodb": "*",
     "webman/gateway-worker": "^1.0",
     "google/cloud-storage": "^1.48",
-    "superbalist/flysystem-google-storage": "^7.2"
+    "superbalist/flysystem-google-storage": "^7.2",
+    "ext-curl": "*"
   },
   "autoload": {
     "psr-4": {

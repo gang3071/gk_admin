@@ -12,22 +12,36 @@
  * @license   http://www.opensource.org/licenses/mit-license.php MIT License
  */
 
+$handlers = [
+    [
+        'class' => Monolog\Handler\RotatingFileHandler::class,
+        'constructor' => [
+            runtime_path() . '/logs/webman.log',
+            7, //$maxFiles
+            Monolog\Logger::DEBUG,
+        ],
+        'formatter' => [
+            'class' => Monolog\Formatter\LineFormatter::class,
+            'constructor' => [null, 'Y-m-d H:i:s', true],
+        ],
+    ]
+];
+
+// 添加 Telegram Handler（如果配置了 Token 和 Chat ID）
+if (env('TELEGRAM_BOT_TOKEN') && env('TELEGRAM_CHAT_ID')) {
+    $handlers[] = [
+        'class' => support\log\TelegramHandler::class,
+        'constructor' => [
+            env('TELEGRAM_BOT_TOKEN'),
+            env('TELEGRAM_CHAT_ID'),
+            Monolog\Logger::ERROR, // 只发送 ERROR 及以上级别
+        ],
+    ];
+}
+
 return [
     'default' => [
-        'handlers' => [
-            [
-                'class' => Monolog\Handler\RotatingFileHandler::class,
-                'constructor' => [
-                    runtime_path() . '/logs/webman.log',
-                    7, //$maxFiles
-                    Monolog\Logger::DEBUG,
-                ],
-                'formatter' => [
-                    'class' => Monolog\Formatter\LineFormatter::class,
-                    'constructor' => [null, 'Y-m-d H:i:s', true],
-                ],
-            ]
-        ],
+        'handlers' => $handlers,
     ],
     'plugin.webman.redis-queue.default' => [
         'handlers' => [
