@@ -176,8 +176,8 @@ return [
         'store_game_log_list' => '报表列表',
         //代理后台财务管理
         'agent_financial_management' => '财务管理',
-        'agent_recharge_record' => '充值记录',
-        'agent_withdraw_record' => '提现记录',
+        'agent_recharge_record' => '开分记录',
+        'agent_withdraw_record' => '洗分记录',
         //代理后台电子游戏管理
         'agent_game_management' => '电子游戏管理',
         'agent_game_record' => '游戏记录',
