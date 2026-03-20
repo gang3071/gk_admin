@@ -3,7 +3,7 @@
 use addons\webman\model\PlayerWithdrawRecord;
 
 return [
-    'title' => '提现记录',
+    'title' => '洗分记录',
     'talk_title' => 'QTalk提现记录',
     'payment_title' => '提现打款记录',
     'examine_title' => '提现审核记录',

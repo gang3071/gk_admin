@@ -3,7 +3,7 @@
 use addons\webman\model\PlayerRechargeRecord;
 
 return [
-    'title' => '充值记录',
+    'title' => '开分记录',
     'talk_title' => 'QTalk充值记录',
     'coin_title' => '币商充值记录',
     'examine_title' => '充值审核记录',
