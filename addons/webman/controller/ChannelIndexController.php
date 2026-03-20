@@ -1373,7 +1373,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title('总充值')->value(floatval($statisticsData['recharge_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_recharge'))->value(floatval($statisticsData['recharge_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1382,7 +1382,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title('总提现')->value(floatval($statisticsData['withdraw_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_withdraw'))->value(floatval($statisticsData['withdraw_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1408,7 +1408,7 @@ class ChannelIndexController
                         'color' => '#e91e63',
                         'marginRight' => '20px'
                     ]), 6),
-                    Row::create()->column(Statistic::create()->title('总投钞')->value(floatval($statisticsData['machine_put_point'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_machine_put'))->value(floatval($statisticsData['machine_put_point'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1571,10 +1571,10 @@ class ChannelIndexController
         return LineChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('充值/提现趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.recharge_withdraw_trend'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('充值', $yAxisA)
-            ->data('提现', $yAxisB);
+            ->data(admin_trans('data_center.recharge'), $yAxisA)
+            ->data(admin_trans('data_center.withdraw'), $yAxisB);
     }
 
     /**
@@ -1620,9 +1620,9 @@ class ChannelIndexController
         return LineChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('投钞趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.machine_put_trend'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('投钞', $yAxis);
+            ->data(admin_trans('data_center.machine_put'), $yAxis);
     }
 
     /**
@@ -1695,10 +1695,10 @@ class ChannelIndexController
         return BarChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('营收趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.revenue_trend'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('充值', $yAxisA)
-            ->data('投钞', $yAxisB);
+            ->data(admin_trans('data_center.recharge'), $yAxisA)
+            ->data(admin_trans('data_center.machine_put'), $yAxisB);
     }
 
     /**
@@ -2100,7 +2100,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('投钞总和')->style([
+                        Html::create(admin_trans('data_center.machine_put_total'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2193,7 +2193,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title('总转入(开分)')->value(floatval($playerDeliveryRecord[0]['present_in_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_present_in'))->value(floatval($playerDeliveryRecord[0]['present_in_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2202,7 +2202,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title('总转出(洗分)')->value(floatval($playerDeliveryRecord[0]['present_out_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_present_out'))->value(floatval($playerDeliveryRecord[0]['present_out_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2237,7 +2237,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title('总投钞')->value(floatval($playerDeliveryRecord[0]['machine_put_point'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_machine_put'))->value(floatval($playerDeliveryRecord[0]['machine_put_point'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2255,7 +2255,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title('当期转入(开分)')->value(floatval($info['present_in_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_present_in'))->value(floatval($info['present_in_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2264,7 +2264,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 7),
-                    Row::create()->column(Statistic::create()->title('当期转出(洗分)')->value('-' . floatval($info['present_out_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_present_out'))->value('-' . floatval($info['present_out_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2274,7 +2274,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 7),
-                    Row::create()->column(Statistic::create()->title('当期总投钞')->value(floatval($info['machine_put_point'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_machine_put'))->value(floatval($info['machine_put_point'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
