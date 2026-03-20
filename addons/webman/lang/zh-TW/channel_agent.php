@@ -20,7 +20,7 @@ return [
     'current_data' => '當期數據',
     'present_in' => '轉入(開分)',
     'present_out' => '轉出(洗分)',
-    'machine_put' => '投鈔(充值)',
+    'machine_put' => '投鈔(開分)',
     'total_revenue' => '總計(營業額)',
     'store_profit_rate' => '店家分潤',
     'store_profit_amount' => '店家拆賬',
@@ -32,7 +32,7 @@ return [
 
     // 開分相關
     'open_score' => '開分',
-    'recharge_amount' => '充值金額',
+    'recharge_amount' => '開分金額',
     'quick_amount' => '快捷金額',
     'custom_amount' => '自定義金額',
     'preset_amount' => '預設金額',

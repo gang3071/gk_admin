@@ -176,8 +176,8 @@ return [
         'store_game_log_list' => '报表列表',
         //代理后台财务管理
         'agent_financial_management' => '财务管理',
-        'agent_recharge_record' => '充值记录',
-        'agent_withdraw_record' => '提现记录',
+        'agent_recharge_record' => '开分记录',
+        'agent_withdraw_record' => '洗分记录',
         //代理后台电子游戏管理
         'agent_game_management' => '电子游戏管理',
         'agent_game_record' => '游戏记录',
@@ -188,6 +188,9 @@ return [
         'agent_deposit_bonus_statistics' => '统计报表',
         'agent_deposit_bonus_bet_detail' => '押码明细',
         'agent_deposit_bonus_task' => '打码量任务',
+        //店机后台设备管理
+        'store_player' => '设备管理',
+        'store_player_list' => '设备列表',
         //店机后台充值满赠管理
         'store_deposit_bonus_manage' => '充值满赠管理',
         'store_deposit_bonus_activity' => '活动管理',

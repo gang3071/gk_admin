@@ -10,6 +10,7 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerGameLog;
 use addons\webman\model\PlayerLoginRecord;
+use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWithdrawRecord;
@@ -1373,7 +1374,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title('总充值')->value(floatval($statisticsData['recharge_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_recharge'))->value(floatval($statisticsData['recharge_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1382,7 +1383,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title('总提现')->value(floatval($statisticsData['withdraw_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_withdraw'))->value(floatval($statisticsData['withdraw_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1408,7 +1409,7 @@ class ChannelIndexController
                         'color' => '#e91e63',
                         'marginRight' => '20px'
                     ]), 6),
-                    Row::create()->column(Statistic::create()->title('总投钞')->value(floatval($statisticsData['machine_put_point'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_machine_put'))->value(floatval($statisticsData['machine_put_point'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1571,10 +1572,10 @@ class ChannelIndexController
         return LineChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('充值/提现趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.recharge_withdraw_trend'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('充值', $yAxisA)
-            ->data('提现', $yAxisB);
+            ->data(admin_trans('data_center.recharge'), $yAxisA)
+            ->data(admin_trans('data_center.withdraw'), $yAxisB);
     }
 
     /**
@@ -1620,9 +1621,9 @@ class ChannelIndexController
         return LineChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('投钞趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.machine_put_trend'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('投钞', $yAxis);
+            ->data(admin_trans('data_center.machine_put'), $yAxis);
     }
 
     /**
@@ -1695,10 +1696,10 @@ class ChannelIndexController
         return BarChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('营收趋势')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.revenue_trend'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('充值', $yAxisA)
-            ->data('投钞', $yAxisB);
+            ->data(admin_trans('data_center.recharge'), $yAxisA)
+            ->data(admin_trans('data_center.machine_put'), $yAxisB);
     }
 
     /**
@@ -1885,6 +1886,26 @@ class ChannelIndexController
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
         ];
 
+        // 拉彩统计数据（受时间筛选影响）
+        $lotteryStatisticsQuery = PlayerLotteryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
+            ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
+                $query->where(getDateWhere($dateType, 'created_at'));
+            })
+            ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+            ->selectRaw("
+                COUNT(*) as lottery_count,
+                SUM(`amount`) as lottery_amount
+            ")
+            ->first();
+
+        $lotteryStatistics = [
+            'lottery_count' => $lotteryStatisticsQuery->lottery_count ?? 0,
+            'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
+        ];
+
         // 总数据统计（不受时间筛选影响，用于"总转入"、"总转出"、"总投钞"卡片）
         $totalStatisticsQuery = PlayerDeliveryRecord::query()
             ->when(!empty($playerIds), function ($query) use ($playerIds) {
@@ -1976,6 +1997,7 @@ class ChannelIndexController
             $playerNum,
             $playerDeliveryRecord,
             $operationStatistics,
+            $lotteryStatistics,
             $playerIds,
             $store,
             $info,
@@ -2100,7 +2122,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('投钞总和')->style([
+                        Html::create(admin_trans('data_center.machine_put_total'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2151,6 +2173,85 @@ class ChannelIndexController
                     'height' => '54px'
                 ])
             , 4);
+
+            // 拉彩统计标题
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('拉彩统计')->style([
+                            'fontSize' => '14px',
+                            'fontWeight' => 'bold',
+                            'color' => '#303133',
+                            'marginRight' => '10px'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 6);
+
+            // 拉彩次数
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('拉彩次数')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(intval($lotteryStatistics['lottery_count'] ?? 0)))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#E6A23C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 9);
+
+            // 拉彩金额
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('拉彩金额')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($lotteryStatistics['lottery_amount'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#E6A23C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 9);
+
             $row->column(
                 Card::create([
                     Row::create()->column(Icon::create('fas fa-television')->style([
@@ -2184,158 +2285,7 @@ class ChannelIndexController
                     'border-bottom' => '0px',
                     'min-height' => '0px'
                 ])
-                , 8);
-
-            $row->column(
-                Card::create([
-                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
-                        'fontSize' => '45px',
-                        'color' => '#409eff',
-                        'marginRight' => '20px'
-                    ]), 4),
-                    Row::create()->column(Statistic::create()->title('总转入(开分)')->value(floatval($playerDeliveryRecord[0]['present_in_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 10),
-                    Row::create()->column(Statistic::create()->title('总转出(洗分)')->value(floatval($playerDeliveryRecord[0]['present_out_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 10),
-                ])->bodyStyle([
-                    'display' => 'flex',
-                    'align-items' => 'center'
-                ])->hoverable()->headStyle([
-                    'height' => '0px',
-                    'border-bottom' => '0px',
-                    'min-height' => '0px'
-                ])
-                , 8);
-
-            $row->column(
-                Card::create([
-                    Row::create()->column(Icon::create('fas fa-money-bill-alt')->style([
-                        'fontSize' => '45px',
-                        'color' => '#e91e63',
-                        'marginRight' => '20px'
-                    ]), 4),
-                    Row::create()->column(Statistic::create()->title('店家余额')->value(floatval($storePlatformCash->money ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 10),
-                    Row::create()->column(Statistic::create()->title('总投钞')->value(floatval($playerDeliveryRecord[0]['machine_put_point'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 10),
-                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()
-                , 8);
-            $row->column(
-                Card::create([
-                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
-                        'fontSize' => '45px',
-                        'color' => '#409eff',
-                        'marginRight' => '20px'
-                    ]), 4),
-                    Row::create()->column(Statistic::create()->title('当期转入(开分)')->value(floatval($info['present_in_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 7),
-                    Row::create()->column(Statistic::create()->title('当期转出(洗分)')->value('-' . floatval($info['present_out_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center',
-                            'color' => 'red !important',
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 7),
-                    Row::create()->column(Statistic::create()->title('当期总投钞')->value(floatval($info['machine_put_point'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 7),
-                ])->bodyStyle([
-                    'display' => 'flex',
-                    'align-items' => 'center'
-                ])->hoverable()->headStyle([
-                    'height' => '0px',
-                    'border-bottom' => '0px',
-                    'min-height' => '0px'
-                ])
-                , 8);
-
-            $row->column(
-                Card::create([
-                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
-                        'fontSize' => '45px',
-                        'color' => '#409eff',
-                        'marginRight' => '20px'
-                    ]), 4),
-                    Row::create()->column(Statistic::create()->title('当期分润金额')->value(floatval($info['self_profit_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 7),
-                    Row::create()->column(Statistic::create()->title('当期调整分润')->value(floatval($info['adjust_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 7),
-                    Row::create()->column(Statistic::create()->title('当期营收')->value(floatval($info['total_point'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '20px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'fontSize' => '45px',
-                            'textAlign' => 'center'
-                        ]), 7),
-                ])->bodyStyle([
-                    'display' => 'flex',
-                    'align-items' => 'center'
-                ])->hoverable()->headStyle([
-                    'height' => '0px',
-                    'border-bottom' => '0px',
-                    'min-height' => '0px'
-                ])
-                , 8);
+                , 12);
 
             $row->column(
                 Card::create([
@@ -2370,7 +2320,7 @@ class ChannelIndexController
                     'border-bottom' => '0px',
                     'min-height' => '0px'
                 ])
-                , 8);
+                , 12);
             $row->column(Card::create($this->openWashChart([$store->id]))->hoverable(), 16);
             $row->column(Card::create($this->moneyChart([$store->id]))->hoverable(), 8);
             $row->column(Card::create($this->revenueChart([$store->id]))->hoverable(), 12);

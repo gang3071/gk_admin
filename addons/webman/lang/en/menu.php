@@ -187,6 +187,9 @@ return [
         'agent_deposit_bonus_statistics' => 'Statistics Report',
         'agent_deposit_bonus_bet_detail' => 'Betting Details',
         'agent_deposit_bonus_task' => 'Wagering Tasks',
+        //Store Device Management
+        'store_player' => 'Device Management',
+        'store_player_list' => 'Device List',
         //Store Deposit Bonus Management
         'store_deposit_bonus_manage' => 'Deposit Bonus Management',
         'store_deposit_bonus_activity' => 'Activity Management',
