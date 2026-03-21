@@ -22,7 +22,6 @@ use ExAdmin\ui\support\Container;
 use Exception;
 use Illuminate\Support\Str;
 use support\Db;
-use Tinywan\Jwt\JwtToken;
 
 /**
  * 电子游戏平台
@@ -232,21 +231,20 @@ class GamePlatformController
         $lang = $this->getCurrentLang();
 
         try {
-            // 调用 gk_work API 代理
-            $apiUrl = env('GAME_API_URL', 'http://10.140.0.10:8788');
-
-            // 生成 JWT token
-            $tokenData = JwtToken::generateToken(['id' => $player->id]);
-            $token = $tokenData['access_token'];
+            // 调用 gk_work 管理后台专用 API
+            $workerHost = env('GAME_PLATFORM_PROXY_HOST', '10.140.0.10');
+            $workerPort = env('GAME_PLATFORM_PROXY_PORT', '8788');
+            $endpoint = '/api/admin/lobby-login';
+            $proxyUrl = "http://{$workerHost}:{$workerPort}{$endpoint}";
 
             $response = \WebmanTech\LaravelHttpClient\Facades\Http::timeout(10)
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $token,
+                    'X-Player-Id' => $player->id,
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                     'Accept-Language' => $lang,
                 ])
-                ->post($apiUrl . '/api/v1/lobby-login', [
+                ->post($proxyUrl, [
                     'game_platform_id' => $gamePlatform->id,
                 ]);
 
@@ -354,21 +352,20 @@ class GamePlatformController
         $lang = $this->getCurrentLang();
 
         try {
-            // 调用 gk_work API 代理获取并保存游戏列表
-            $apiUrl = env('GAME_API_URL', 'http://10.140.0.10:8788');
-
-            // 生成 JWT token
-            $tokenData = JwtToken::generateToken(['id' => $player->id]);
-            $token = $tokenData['access_token'];
+            // 调用 gk_work 管理后台专用 API 获取并保存游戏列表
+            $workerHost = env('GAME_PLATFORM_PROXY_HOST', '10.140.0.10');
+            $workerPort = env('GAME_PLATFORM_PROXY_PORT', '8788');
+            $endpoint = '/api/admin/get-game-list';
+            $proxyUrl = "http://{$workerHost}:{$workerPort}{$endpoint}";
 
             $response = \WebmanTech\LaravelHttpClient\Facades\Http::timeout(30)
                 ->withHeaders([
-                    'Authorization' => 'Bearer ' . $token,
+                    'X-Player-Id' => $player->id,
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                     'Accept-Language' => $lang,
                 ])
-                ->post($apiUrl . '/api/v1/get-game-list', [
+                ->post($proxyUrl, [
                     'game_platform_id' => $gamePlatform->id,
                 ]);
 
