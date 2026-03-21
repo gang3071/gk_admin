@@ -253,7 +253,7 @@ class ChannelDepositBonusStatisticsController
             $grid->expandFilter();
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->hideCreateButton();
+            $grid->hideAdd();
             $grid->hideTrashed();
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
