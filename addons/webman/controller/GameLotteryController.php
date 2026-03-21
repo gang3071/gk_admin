@@ -581,7 +581,6 @@ class GameLotteryController
                     ->span(24);
             });
             $form->row(function (Form $form) use ($burstTriggerConfig) {
-                Log::error('ccc', [$burstTriggerConfig]);
                 $form->number('burst_trigger_20', '彩池占比 20% - 30%')->style(['width' => '100%'])
                     ->min(0)
                     ->max(100)

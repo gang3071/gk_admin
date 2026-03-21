@@ -903,7 +903,6 @@ class PlayerLotteryRecordController
                     DB::commit();
                 } catch (\Exception $e) {
                     DB::rollBack();
-                    Log::error('DB::rollBack', [$e->getMessage()]);
                     return message_error(admin_trans('player_lottery_record.action_error'));
                 }
 

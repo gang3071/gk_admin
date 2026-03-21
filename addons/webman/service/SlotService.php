@@ -154,7 +154,6 @@ class SlotService
                 throw new Exception(trans('exception_msg.action_not_fount', [], 'message'));
         }
         if (!isset($result['result']) || $result['result'] == 0) {
-            Log::error('SlotService---machine_connection_failed', [$result, $action, $param, $this->machine->code]);
             saveMachineOperationLog($this->machine, $this->machine->gamingPlayer, json_encode($result), $action, 0, $isSystem);
             throw new Exception(trans('exception_msg.machine_connection_failed', [], 'message'));
         }

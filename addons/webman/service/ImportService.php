@@ -83,7 +83,6 @@ class ImportService
             } catch (\Exception $e) {
                 DB::rollBack();
                 $failNum++;
-                Log::error('Import error: ' . $e->getMessage());
             }
         });
         

@@ -220,7 +220,6 @@ class BTGServiceInterface extends GameServiceFactory implements GameServiceInter
         $params['check_code'] = $this->createSign($params);
         $res = $this->doCurl($this->createUrl('depositAmount'), $params);
         if ($res['status']['code'] != $this->successCode) {
-            Log::error($this->failCode[$res['status']['code']], ['res' => $res]);
             throw new GameException($this->failCode[$res['status']['code']], 0);
         }
         if (empty($res['data']['order_id'])) {
