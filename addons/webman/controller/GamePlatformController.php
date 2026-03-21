@@ -256,10 +256,27 @@ class GamePlatformController
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
+            // 检查 curl 错误
+            if ($curlError) {
+                throw new Exception(admin_trans('message.system_busy') . ': ' . $curlError);
+            }
+
+            // 检查 HTTP 状态码
             if ($httpCode !== 200) {
-                throw new Exception(admin_trans('message.system_busy'));
+                $errorMsg = admin_trans('message.system_busy') . ' (HTTP ' . $httpCode . ')';
+
+                // 尝试解析响应中的错误信息
+                if ($response) {
+                    $errorData = json_decode($response, true);
+                    if (!empty($errorData['msg'])) {
+                        $errorMsg = $errorData['msg'] . ' (HTTP ' . $httpCode . ')';
+                    }
+                }
+
+                throw new Exception($errorMsg);
             }
 
             $data = json_decode($response, true);
@@ -387,10 +404,27 @@ class GamePlatformController
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
             curl_close($ch);
 
+            // 检查 curl 错误
+            if ($curlError) {
+                throw new Exception(admin_trans('message.system_busy') . ': ' . $curlError);
+            }
+
+            // 检查 HTTP 状态码
             if ($httpCode !== 200) {
-                throw new Exception(admin_trans('message.system_busy'));
+                $errorMsg = admin_trans('message.system_busy') . ' (HTTP ' . $httpCode . ')';
+
+                // 尝试解析响应中的错误信息
+                if ($response) {
+                    $errorData = json_decode($response, true);
+                    if (!empty($errorData['msg'])) {
+                        $errorMsg = $errorData['msg'] . ' (HTTP ' . $httpCode . ')';
+                    }
+                }
+
+                throw new Exception($errorMsg);
             }
 
             $data = json_decode($response, true);
