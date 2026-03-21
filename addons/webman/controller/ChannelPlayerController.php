@@ -194,7 +194,6 @@ class ChannelPlayerController
 
         // 执行 count 查询
         $total = $countQuery->count('player.id');
-        Log::error('dddd', [$total]);
         // 执行分页查询
         $list = $query->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
