@@ -18,9 +18,11 @@ use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
+use ExAdmin\ui\support\Container;
 use Exception;
 use Illuminate\Support\Str;
 use support\Db;
+use Tinywan\Jwt\JwtToken;
 
 /**
  * 电子游戏平台
@@ -35,6 +37,32 @@ class GamePlatformController
     {
         $this->model = plugin()->webman->config('database.game_platform_model');
         $this->gameExtend = plugin()->webman->config('database.game_extend_model');
+    }
+
+    /**
+     * 获取当前语言
+     * @return string
+     */
+    private function getCurrentLang(): string
+    {
+        try {
+            // 优先从 ExAdmin Container 获取
+            $locale = Container::getInstance()->translator->getLocale();
+            if ($locale) {
+                return Str::replace('_', '-', $locale);
+            }
+        } catch (Exception $e) {
+            // 忽略错误，继续尝试其他方式
+        }
+
+        // 从 cookie 获取
+        $lang = request()->cookie('ex_admin_lang');
+        if ($lang) {
+            return Str::replace('_', '-', $lang);
+        }
+
+        // 默认返回中文
+        return 'zh-CN';
     }
 
     /**
@@ -82,14 +110,19 @@ class GamePlatformController
             $grid->setForm()->drawer($this->form());
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
-                $actions->prepend(
-                    Button::create(admin_trans('game_platform.enter_game'))->ajax([$this, 'enterGame'],
-                        ['id' => $data['id']])
-                );
-                $actions->prepend(
-                    Button::create(admin_trans('game_platform.view_game'))->modal([$this, 'getGameList'],
-                        ['id' => $data['id']])->width('70%')
-                );
+                // has_lobby = 1 只显示进入游戏大厅
+                if (!empty($data['has_lobby'])) {
+                    $actions->prepend(
+                        Button::create(admin_trans('game_platform.enter_game'))->ajax([$this, 'enterGame'],
+                            ['id' => $data['id']])
+                    );
+                } else {
+                    // has_lobby = 0 只显示查看游戏
+                    $actions->prepend(
+                        Button::create(admin_trans('game_platform.view_game'))->modal([$this, 'getGameList'],
+                            ['id' => $data['id']])->width('70%')
+                    );
+                }
             })->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
@@ -196,12 +229,37 @@ class GamePlatformController
             return notification_error(admin_trans('admin.error'),
                 admin_trans('game_platform.player_not_fount'));
         }
-        $lang = locale();
-        $lang = Str::replace('_', '-', $lang);
+        $lang = $this->getCurrentLang();
+
         try {
-            $res = GameServiceFactory::createService(strtoupper($gamePlatform->code), $player)->lobbyLogin([
-                'lang' => $lang
-            ]);
+            // 调用 gk_work API 代理
+            $apiUrl = env('GAME_API_URL', 'http://10.140.0.10:8788');
+
+            // 生成 JWT token
+            $tokenData = JwtToken::generateToken(['id' => $player->id]);
+            $token = $tokenData['access_token'];
+
+            $response = \WebmanTech\LaravelHttpClient\Facades\Http::timeout(10)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $token,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Accept-Language' => $lang,
+                ])
+                ->post($apiUrl . '/api/v1/lobby-login', [
+                    'game_platform_id' => $gamePlatform->id,
+                ]);
+
+            if (!$response->ok()) {
+                throw new Exception(admin_trans('message.system_busy'));
+            }
+
+            $data = $response->json();
+            if (empty($data) || $data['code'] != 200) {
+                throw new Exception($data['msg'] ?? admin_trans('game_platform.action_error'));
+            }
+
+            $res = $data['data']['url'] ?? '';
         } catch (Exception $e) {
             return notification_error(admin_trans('admin.error'),
                 $e->getMessage() ?? admin_trans('game_platform.action_error'));
@@ -293,10 +351,35 @@ class GamePlatformController
             return notification_error(admin_trans('admin.error'),
                 admin_trans('game_platform.player_not_fount'));
         }
-        $lang = locale();
-        $lang = Str::replace('_', '-', $lang);
+        $lang = $this->getCurrentLang();
+
         try {
-            GameServiceFactory::createService(strtoupper($gamePlatform->code), $player)->getGameList($lang);
+            // 调用 gk_work API 代理获取并保存游戏列表
+            $apiUrl = env('GAME_API_URL', 'http://10.140.0.10:8788');
+
+            // 生成 JWT token
+            $tokenData = JwtToken::generateToken(['id' => $player->id]);
+            $token = $tokenData['access_token'];
+
+            $response = \WebmanTech\LaravelHttpClient\Facades\Http::timeout(30)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $token,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                    'Accept-Language' => $lang,
+                ])
+                ->post($apiUrl . '/api/v1/get-game-list', [
+                    'game_platform_id' => $gamePlatform->id,
+                ]);
+
+            if (!$response->ok()) {
+                throw new Exception(admin_trans('message.system_busy'));
+            }
+
+            $data = $response->json();
+            if (empty($data) || $data['code'] != 200) {
+                throw new Exception($data['msg'] ?? admin_trans('game_platform.action_error'));
+            }
         } catch (Exception $e) {
             return notification_error(admin_trans('admin.error'),
                 $e->getMessage() ?? admin_trans('game_platform.action_error'));
