@@ -9,7 +9,6 @@ use addons\webman\model\GameContent;
 use addons\webman\model\GameExtend;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\Player;
-use app\service\game\GameServiceFactory;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -132,7 +131,33 @@ class GameController
     }
     
     /**
-     * 进入游戏大厅
+     * 获取当前语言
+     * @return string
+     */
+    private function getCurrentLang(): string
+    {
+        // 优先从 ExAdmin 容器获取
+        try {
+            $locale = Container::getInstance()->translator->getLocale();
+            if ($locale) {
+                return Str::replace('_', '-', $locale);
+            }
+        } catch (Exception $e) {
+            // 忽略异常，继续尝试其他方式
+        }
+
+        // 从 cookie 获取
+        $lang = request()->cookie('ex_admin_lang');
+        if ($lang) {
+            return Str::replace('_', '-', $lang);
+        }
+
+        // 默认值
+        return 'zh-CN';
+    }
+
+    /**
+     * 进入游戏
      * @param $id
      * @auth true
      * @return Notification
@@ -157,15 +182,73 @@ class GameController
             return notification_error(admin_trans('admin.error'),
                 admin_trans('game_platform.player_not_fount'));
         }
-        $lang = locale();
-        $lang = Str::replace('_', '-', $lang);
-        try {
-            $res = GameServiceFactory::createService(strtoupper($game->gamePlatform->code), $player)->gameLogin($game,
-                $lang);
-        } catch (Exception $e) {
+
+        // 获取语言
+        $lang = $this->getCurrentLang();
+
+        // 构建 API 请求 URL
+        $workerHost = env('GAME_PLATFORM_PROXY_HOST', '10.140.0.10');
+        $workerPort = env('GAME_PLATFORM_PROXY_PORT', '8788');
+        $endpoint = '/api/admin/enter-game';
+        $proxyUrl = "http://{$workerHost}:{$workerPort}{$endpoint}";
+
+        // 使用 curl 发送请求
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $proxyUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+            'game_id' => $game->id,
+        ]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'X-Player-Id: ' . $player->id,
+            'Accept: application/json',
+            'Content-Type: application/json',
+            'Accept-Language: ' . $lang,
+        ]);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        // 第一层：检查 curl 错误
+        if ($curlError) {
             return notification_error(admin_trans('admin.error'),
-                $e->getMessage() ?? admin_trans('game_platform.action_error'))->redirect('');
+                admin_trans('message.system_busy') . ': ' . $curlError)->redirect('');
         }
+
+        // 第二层：检查 HTTP 状态码
+        if ($httpCode !== 200) {
+            $errorMsg = admin_trans('message.system_busy') . ' (HTTP ' . $httpCode . ')';
+
+            // 尝试解析响应中的错误信息
+            if ($response) {
+                $errorData = json_decode($response, true);
+                if (!empty($errorData['msg'])) {
+                    $errorMsg = $errorData['msg'] . ' (HTTP ' . $httpCode . ')';
+                }
+            }
+
+            return notification_error(admin_trans('admin.error'), $errorMsg)->redirect('');
+        }
+
+        // 第三层：检查业务逻辑
+        $data = json_decode($response, true);
+        if (empty($data) || $data['code'] != 200) {
+            return notification_error(admin_trans('admin.error'),
+                $data['msg'] ?? admin_trans('game_platform.action_error'))->redirect('');
+        }
+
+        // 获取游戏 URL
+        $res = $data['data']['url'] ?? '';
+        if (empty($res)) {
+            return notification_error(admin_trans('admin.error'),
+                admin_trans('game_platform.action_error'))->redirect('');
+        }
+
         return notification_success(admin_trans('admin.success'),
             admin_trans('game_platform.action_success'))->redirect($res);
     }
