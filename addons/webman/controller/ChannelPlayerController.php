@@ -4310,6 +4310,7 @@ class ChannelPlayerController
                         ->min(0)
                         ->max(100)
                         ->step(0.01)
+                        ->default(0)
                         ->help('代理从店家收益中抽取的比例，范围 0-100')
                         ->required();
                 })->span(12);
@@ -4320,6 +4321,7 @@ class ChannelPlayerController
                         ->min(0)
                         ->max(100)
                         ->step(0.01)
+                        ->default(0)
                         ->help('渠道从店家收益中抽取的比例，范围 0-100')
                         ->required();
                 })->span(12);
@@ -4372,8 +4374,22 @@ class ChannelPlayerController
         $recommendId = $form->input('recommend_id');
         $password = $form->input('password');
         $avatar = $form->input('avatar');
-        $agentCommission = $form->input('agent_commission', 0);
-        $channelCommission = $form->input('channel_commission', 0);
+
+        // 获取抽成比例，确保有效值
+        $agentCommission = $form->input('agent_commission');
+        $channelCommission = $form->input('channel_commission');
+
+        // 处理空值和无效值
+        $agentCommission = is_numeric($agentCommission) ? floatval($agentCommission) : 0.00;
+        $channelCommission = is_numeric($channelCommission) ? floatval($channelCommission) : 0.00;
+
+        // 验证范围
+        if ($agentCommission < 0 || $agentCommission > 100) {
+            return message_error('代理抽成比例必须在 0-100 之间');
+        }
+        if ($channelCommission < 0 || $channelCommission > 100) {
+            return message_error('渠道抽成比例必须在 0-100 之间');
+        }
 
         if (empty($avatar)) {
             return message_error(admin_trans('offline_channel.error_please_upload_avatar'));
