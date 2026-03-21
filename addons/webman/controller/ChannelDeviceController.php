@@ -109,7 +109,7 @@ class ChannelDeviceController
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
-                $actions->hideView();
+                $actions->hideDetail();
                 $actions->prepend([
                     Button::create(admin_trans('device.manage_ip'))
                         ->icon(Icon::create('SettingOutlined'))
@@ -326,7 +326,7 @@ class ChannelDeviceController
             ]);
 
             $grid->actions(function (Actions $actions) {
-                $actions->hideView();
+                $actions->hideDetail();
             });
         });
     }

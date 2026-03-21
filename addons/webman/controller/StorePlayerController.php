@@ -47,8 +47,8 @@ class StorePlayerController
                 ->select([
                     'player.*',
                     'cash.money as wallet_money',
-                    'player_extend.total_recharge',
-                    'player_extend.total_withdraw'
+                    'player_extend.present_in_amount',
+                    'player_extend.present_out_amount'
                 ])
                 ->orderBy('player.id', 'desc');
 
@@ -70,11 +70,11 @@ class StorePlayerController
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('total_recharge', '累计开分')->display(function ($value) {
+            $grid->column('present_in_amount', '累计开分')->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('total_withdraw', '累计洗分')->display(function ($value) {
+            $grid->column('present_out_amount', '累计洗分')->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
@@ -86,16 +86,7 @@ class StorePlayerController
                 };
             })->width(80)->align('center');
 
-            $grid->column('is_online', '在线状态')->display(function ($value) {
-                return match ($value) {
-                    0 => Tag::create('离线')->color('default'),
-                    1 => Tag::create('在线')->color('green'),
-                    default => Tag::create('未知')->color('default'),
-                };
-            })->width(100)->align('center');
-
             $grid->column('created_at', '创建时间')->width(160)->align('center');
-            $grid->column('last_login_at', '最后登录')->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) {
                 $filter->eq()->select('player.status')
@@ -103,14 +94,6 @@ class StorePlayerController
                     ->options([
                         1 => '正常',
                         0 => '已禁用'
-                    ])
-                    ->style(['width' => '150px']);
-
-                $filter->eq()->select('player.is_online')
-                    ->placeholder('在线状态')
-                    ->options([
-                        1 => '在线',
-                        0 => '离线'
                     ])
                     ->style(['width' => '150px']);
 
@@ -124,10 +107,9 @@ class StorePlayerController
             $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
                 $actions->hideDel();
-                $actions->hideView();
             });
 
-            $grid->disableCreate();
+            $grid->hideAdd();
             $grid->expandFilter();
         });
     }

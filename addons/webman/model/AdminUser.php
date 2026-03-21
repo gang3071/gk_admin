@@ -28,6 +28,8 @@ use support\Cache;
  * @property bool $is_super 是否渠道超级管理员：0=否，1=是
  * @property array $post 岗位ID数组（JSON格式）
  * @property float $ratio 分润比例（百分比，仅代理/店家使用）
+ * @property float $agent_commission 代理抽成比例（百分比，仅店家使用）
+ * @property float $channel_commission 渠道抽成比例（百分比，仅店家使用）
  * @property float $adjust_amount 分润调整金额
  * @property int $last_settlement_timestamp 上次结算时间戳
  * @property float $settlement_amount 已结算金额
@@ -85,6 +87,8 @@ class AdminUser extends Model
         'is_super',
         'post',
         'ratio',
+        'agent_commission',
+        'channel_commission',
         'adjust_amount',
         'last_settlement_timestamp',
         'settlement_amount',
@@ -116,6 +120,8 @@ class AdminUser extends Model
         'is_super' => 'boolean',
         'post' => 'array',
         'ratio' => 'float',
+        'agent_commission' => 'float',
+        'channel_commission' => 'float',
         'adjust_amount' => 'float',
         'last_settlement_timestamp' => 'integer',
         'settlement_amount' => 'float',

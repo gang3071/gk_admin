@@ -111,7 +111,7 @@ class ChannelDeviceAccessLogController
             });
 
             // 隐藏操作按钮
-            $grid->hideActions();
+            $grid->hideAction();
             $grid->hideDelete();
             $grid->hideSelection();
 

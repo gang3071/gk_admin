@@ -162,7 +162,6 @@ class StoreDepositBonusOrderController
 
             $grid->expandFilter();
             $grid->setForm()->drawer($this->form());
-            $grid->hideEditButton();
             $grid->hideDelete();
             $grid->hideTrashed();
             $grid->actions(function ($actions) {
