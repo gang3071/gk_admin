@@ -1,10 +1,10 @@
 name: Admin
 
-# 1. 触发条件：只有当 push 到 main 分支时才触发
+# 1. 触发条件：只有当 push 到 master 分支时才触发
 on:
   push:
     branches:
-      - main
+      - master
       # 如果你的后台项目是 master，就把上面那行改成 - master
 
 jobs:
