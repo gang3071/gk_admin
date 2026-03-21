@@ -18,6 +18,7 @@ use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
+use ExAdmin\ui\support\Container;
 use Exception;
 use Illuminate\Support\Str;
 use support\Db;
@@ -36,6 +37,32 @@ class GamePlatformController
     {
         $this->model = plugin()->webman->config('database.game_platform_model');
         $this->gameExtend = plugin()->webman->config('database.game_extend_model');
+    }
+
+    /**
+     * 获取当前语言
+     * @return string
+     */
+    private function getCurrentLang(): string
+    {
+        try {
+            // 优先从 ExAdmin Container 获取
+            $locale = Container::getInstance()->translator->getLocale();
+            if ($locale) {
+                return Str::replace('_', '-', $locale);
+            }
+        } catch (Exception $e) {
+            // 忽略错误，继续尝试其他方式
+        }
+
+        // 从 cookie 获取
+        $lang = request()->cookie('ex_admin_lang');
+        if ($lang) {
+            return Str::replace('_', '-', $lang);
+        }
+
+        // 默认返回中文
+        return 'zh-CN';
     }
 
     /**
@@ -202,8 +229,7 @@ class GamePlatformController
             return notification_error(admin_trans('admin.error'),
                 admin_trans('game_platform.player_not_fount'));
         }
-        $lang = locale();
-        $lang = Str::replace('_', '-', $lang);
+        $lang = $this->getCurrentLang();
 
         try {
             // 调用 gk_work API 代理
@@ -325,8 +351,7 @@ class GamePlatformController
             return notification_error(admin_trans('admin.error'),
                 admin_trans('game_platform.player_not_fount'));
         }
-        $lang = locale();
-        $lang = Str::replace('_', '-', $lang);
+        $lang = $this->getCurrentLang();
 
         try {
             // 调用 gk_work API 代理获取并保存游戏列表
