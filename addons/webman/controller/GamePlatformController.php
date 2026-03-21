@@ -237,27 +237,37 @@ class GamePlatformController
             $endpoint = '/api/admin/lobby-login';
             $proxyUrl = "http://{$workerHost}:{$workerPort}{$endpoint}";
 
-            $response = \WebmanTech\LaravelHttpClient\Facades\Http::timeout(10)
-                ->withHeaders([
-                    'X-Player-Id' => $player->id,
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Accept-Language' => $lang,
-                ])
-                ->post($proxyUrl, [
-                    'game_platform_id' => $gamePlatform->id,
-                ]);
+            // 使用 curl 发送请求
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $proxyUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                'game_platform_id' => $gamePlatform->id,
+            ]));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'X-Player-Id: ' . $player->id,
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'Accept-Language: ' . $lang,
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-            if (!$response->ok()) {
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
                 throw new Exception(admin_trans('message.system_busy'));
             }
 
-            $data = $response->json();
+            $data = json_decode($response, true);
             if (empty($data) || $data['code'] != 200) {
                 throw new Exception($data['msg'] ?? admin_trans('game_platform.action_error'));
             }
 
-            $res = $data['data']['url'] ?? '';
+            $res = $data['data']['url'] ?? $data['data']['lobby_url'] ?? '';
         } catch (Exception $e) {
             return notification_error(admin_trans('admin.error'),
                 $e->getMessage() ?? admin_trans('game_platform.action_error'));
@@ -358,22 +368,32 @@ class GamePlatformController
             $endpoint = '/api/admin/get-game-list';
             $proxyUrl = "http://{$workerHost}:{$workerPort}{$endpoint}";
 
-            $response = \WebmanTech\LaravelHttpClient\Facades\Http::timeout(30)
-                ->withHeaders([
-                    'X-Player-Id' => $player->id,
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
-                    'Accept-Language' => $lang,
-                ])
-                ->post($proxyUrl, [
-                    'game_platform_id' => $gamePlatform->id,
-                ]);
+            // 使用 curl 发送请求
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $proxyUrl);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode([
+                'game_platform_id' => $gamePlatform->id,
+            ]));
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'X-Player-Id: ' . $player->id,
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'Accept-Language: ' . $lang,
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 
-            if (!$response->ok()) {
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode !== 200) {
                 throw new Exception(admin_trans('message.system_busy'));
             }
 
-            $data = $response->json();
+            $data = json_decode($response, true);
             if (empty($data) || $data['code'] != 200) {
                 throw new Exception($data['msg'] ?? admin_trans('game_platform.action_error'));
             }
