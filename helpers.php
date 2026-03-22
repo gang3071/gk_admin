@@ -518,16 +518,12 @@ function getUSDTExchangeRate($currency)
 function sendSocketMessage($channels, $content, string $form = 'system')
 {
     try {
-        // 获取 Push API 配置，优先使用环境变量，其次使用配置文件
-        $apiUrl = env('PUSH_API_URL') ?: config('plugin.webman.push.app.api');
-        $appKey = env('PUSH_APP_KEY') ?: config('plugin.webman.push.app.app_key');
-        $appSecret = env('PUSH_APP_SECRET') ?: config('plugin.webman.push.app.app_secret');
-
-        // 如果配置的是 0.0.0.0，替换为 127.0.0.1
-        $apiUrl = str_replace('0.0.0.0', '127.0.0.1', $apiUrl);
-
         // 发送 WebSocket 消息
-        $api = new \Webman\Push\Api($apiUrl, $appKey, $appSecret);
+        $api = new \Webman\Push\Api(
+            env('PUSH_API_URL', 'http://10.140.0.6:3232'),
+            env('PUSH_APP_KEY', '20f94408fc4c52845f162e92a253c7a3'),
+            env('PUSH_APP_SECRET', '3151f8648a6ccd9d4515386f34127e28')
+        );
         return $api->trigger($channels, 'message', [
             'from_uid' => $form,
             'content' => json_encode($content)
