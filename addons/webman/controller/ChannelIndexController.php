@@ -1487,6 +1487,9 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'agentIndex'], ['data_type' => 'month']);
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_month']);
 
+        // 计算盈余小计（充值 - 提现）
+        $subtotal = bcsub($statisticsData['recharge_amount'] ?? 0, $statisticsData['withdraw_amount'] ?? 0, 2);
+
         $layout = Layout::create();
         $layout->row(function (Row $row) use (
             $agent,
@@ -1495,7 +1498,8 @@ class ChannelIndexController
             $statisticsData,
             $storeIds,
             $info,
-            $dropdown
+            $dropdown,
+            $subtotal
         ) {
             $row->gutter([10, 10]);
             $row->column(
@@ -1688,6 +1692,31 @@ class ChannelIndexController
                             'fontSize' => '20px',
                             'fontWeight' => '500',
                             'textAlign' => 'center'
+                        ])->style([
+                            'fontSize' => '45px',
+                            'text-align' => 'center'
+                        ]), 18),
+                ])->bodyStyle(['display' => 'flex', 'align-items' => 'center'])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
+                ])
+                , 6);
+
+            //盈余小计
+            $row->column(
+                Card::create([
+                    Row::create()->column(Icon::create('fas fa-balance-scale')->style([
+                        'fontSize' => '45px',
+                        'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C',
+                        'marginRight' => '20px'
+                    ]), 6),
+                    Row::create()->column(Statistic::create()->title('盈余小计')->value(number_format(floatval($subtotal), 2))
+                        ->valueStyle([
+                            'fontSize' => '20px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center',
+                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C'
                         ])->style([
                             'fontSize' => '45px',
                             'text-align' => 'center'
