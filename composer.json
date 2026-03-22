@@ -37,7 +37,9 @@
     "webman/gateway-worker": "^1.0",
     "google/cloud-storage": "^1.48",
     "superbalist/flysystem-google-storage": "^7.2",
-    "ext-curl": "*"
+    "ext-curl": "*",
+    "webman/gateway-worker": "^1.0",
+    "yzh52521/webman-lock": "^1.0"
   },
   "autoload": {
     "psr-4": {

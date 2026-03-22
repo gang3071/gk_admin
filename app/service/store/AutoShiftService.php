@@ -18,11 +18,11 @@ class AutoShiftService
     /**
      * 检查是否启用自动交班
      */
-    public function isAutoShiftEnabled(int $departmentId, int $bindPlayerId): bool
+    public function isAutoShiftEnabled(int $departmentId, int $bindAdminUserId): bool
     {
         $config = StoreAutoShiftConfig::query()
             ->where('department_id', $departmentId)
-            ->where('bind_player_id', $bindPlayerId)
+            ->where('bind_admin_user_id', $bindAdminUserId)
             ->where('is_enabled', 1)
             ->where('status', StoreAutoShiftConfig::STATUS_NORMAL)
             ->first();
@@ -33,11 +33,11 @@ class AutoShiftService
     /**
      * 获取自动交班配置
      */
-    public function getConfig(int $departmentId, int $bindPlayerId)
+    public function getConfig(int $departmentId, int $bindAdminUserId)
     {
         return StoreAutoShiftConfig::query()
             ->where('department_id', $departmentId)
-            ->where('bind_player_id', $bindPlayerId)
+            ->where('bind_admin_user_id', $bindAdminUserId)
             ->first();
     }
 
@@ -51,13 +51,13 @@ class AutoShiftService
 
             $config = StoreAutoShiftConfig::query()
                 ->where('department_id', $data['department_id'])
-                ->where('bind_player_id', $data['bind_player_id'])
+                ->where('bind_admin_user_id', $data['bind_admin_user_id'])
                 ->first();
 
             if (!$config) {
                 $config = new StoreAutoShiftConfig();
                 $config->department_id = $data['department_id'];
-                $config->bind_player_id = $data['bind_player_id'];
+                $config->bind_admin_user_id = $data['bind_admin_user_id'];
             }
 
             // 更新配置
@@ -91,7 +91,7 @@ class AutoShiftService
 
             \Log::info('保存自动交班配置成功', [
                 'department_id' => $data['department_id'],
-                'bind_player_id' => $data['bind_player_id'],
+                'bind_admin_user_id' => $data['bind_admin_user_id'],
                 'is_enabled' => $config->is_enabled,
                 'next_shift_time' => $config->next_shift_time
             ]);
@@ -242,7 +242,7 @@ class AutoShiftService
             // 如果有上次交班时间，从上次结束时间开始
             if ($config->last_shift_time) {
                 $lastRecord = StoreAgentShiftHandoverRecord::query()
-                    ->where('bind_player_id', $config->bind_player_id)
+                    ->where('bind_admin_user_id', $config->bind_admin_user_id)
                     ->where('is_auto_shift', 1)
                     ->orderBy('id', 'desc')
                     ->first();
@@ -269,7 +269,7 @@ class AutoShiftService
 
             // 4. 统计账变数据
             $statistics = $this->calculateShiftStatistics(
-                $config->bind_player_id,
+                $config->bind_admin_user_id,
                 $startTime->toDateTimeString(),
                 $endTime->toDateTimeString()
             );
@@ -277,13 +277,14 @@ class AutoShiftService
             // 5. 创建交班记录
             $shiftRecord = new StoreAgentShiftHandoverRecord();
             $shiftRecord->department_id = $config->department_id;
-            $shiftRecord->bind_player_id = $config->bind_player_id;
+            $shiftRecord->bind_admin_user_id = $config->bind_admin_user_id;
             $shiftRecord->start_time = $startTime;
             $shiftRecord->end_time = $endTime;
             $shiftRecord->machine_amount = $statistics['machine_amount'];
             $shiftRecord->machine_point = $statistics['machine_point'];
             $shiftRecord->total_in = $statistics['total_in'];
             $shiftRecord->total_out = $statistics['total_out'];
+            $shiftRecord->lottery_amount = $statistics['lottery_amount'];
             $shiftRecord->total_profit_amount = $statistics['total_profit'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
@@ -294,7 +295,7 @@ class AutoShiftService
             $log = new StoreAutoShiftLog();
             $log->config_id = $config->id;
             $log->department_id = $config->department_id;
-            $log->bind_player_id = $config->bind_player_id;
+            $log->bind_admin_user_id = $config->bind_admin_user_id;
             $log->shift_record_id = $shiftRecord->id;
             $log->start_time = $startTime;
             $log->end_time = $endTime;
@@ -305,6 +306,7 @@ class AutoShiftService
             $log->machine_point = $statistics['machine_point'];
             $log->total_in = $statistics['total_in'];
             $log->total_out = $statistics['total_out'];
+            $log->lottery_amount = $statistics['lottery_amount'];
             $log->total_profit = $statistics['total_profit'];
             $log->save();
 
@@ -346,7 +348,7 @@ class AutoShiftService
                 $log = new StoreAutoShiftLog();
                 $log->config_id = $config->id;
                 $log->department_id = $config->department_id;
-                $log->bind_player_id = $config->bind_player_id;
+                $log->bind_admin_user_id = $config->bind_admin_user_id;
                 $log->start_time = $startTime ?? Carbon::now();
                 $log->end_time = $endTime ?? Carbon::now();
                 $log->execute_time = Carbon::now();
@@ -376,7 +378,7 @@ class AutoShiftService
     /**
      * 统计交班数据
      */
-    private function calculateShiftStatistics(int $bindPlayerId, string $startTime, string $endTime): array
+    private function calculateShiftStatistics(int $bindAdminUserId, string $startTime, string $endTime): array
     {
         $currency = Currency::query()->first();
 
@@ -388,17 +390,19 @@ class AutoShiftService
             ->selectRaw('
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as present_in_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as present_out_amount,
-                SUM(CASE WHEN type = ? THEN point ELSE 0 END) as machine_put_point
+                SUM(CASE WHEN type = ? THEN point ELSE 0 END) as machine_put_point,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount
             ', [
                 PlayerDeliveryRecord::TYPE_PRESENT_IN,
                 PlayerDeliveryRecord::TYPE_PRESENT_OUT,
-                PlayerDeliveryRecord::TYPE_MACHINE
+                PlayerDeliveryRecord::TYPE_MACHINE,
+                PlayerDeliveryRecord::TYPE_LOTTERY
             ])
             ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
-            ->where('player.department_id', function($query) use ($bindPlayerId) {
+            ->where('player.department_id', function($query) use ($bindAdminUserId) {
                 $query->select('department_id')
-                    ->from('player')
-                    ->where('id', $bindPlayerId)
+                    ->from('admin_users')
+                    ->where('id', $bindAdminUserId)
                     ->limit(1);
             })
             ->where('player_delivery_record.created_at', '>', $startTime)
@@ -408,7 +412,8 @@ class AutoShiftService
         $data = $result ? $result->toArray() : [
             'present_in_amount' => 0,
             'present_out_amount' => 0,
-            'machine_put_point' => 0
+            'machine_put_point' => 0,
+            'lottery_amount' => 0
         ];
 
         $machineAmount = bcdiv($data['machine_put_point'], $currency->rate, 2);
@@ -419,6 +424,7 @@ class AutoShiftService
             'machine_point' => (int)$data['machine_put_point'],
             'total_in' => (float)$data['present_in_amount'],
             'total_out' => (float)$data['present_out_amount'],
+            'lottery_amount' => (float)$data['lottery_amount'],
             'total_profit' => (float)$totalProfit
         ];
     }
@@ -463,13 +469,13 @@ class AutoShiftService
     /**
      * 获取执行统计
      */
-    public function getExecutionStats(int $departmentId, int $bindPlayerId, int $days = 7): array
+    public function getExecutionStats(int $departmentId, int $bindAdminUserId, int $days = 7): array
     {
         $startDate = Carbon::now()->subDays($days)->startOfDay();
 
         $logs = StoreAutoShiftLog::query()
             ->where('department_id', $departmentId)
-            ->where('bind_player_id', $bindPlayerId)
+            ->where('bind_admin_user_id', $bindAdminUserId)
             ->where('created_at', '>=', $startDate)
             ->get();
 

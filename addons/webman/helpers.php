@@ -3,9 +3,10 @@
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
 use addons\webman\model\GameType;
-use addons\webman\model\LotteryPool;
+use addons\webman\model\LevelList;
 use addons\webman\model\Machine;
 use addons\webman\model\MachineCategory;
+use addons\webman\model\MachineKeepingLog;
 use addons\webman\model\MachineLabel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineMediaPush;
@@ -48,7 +49,6 @@ use support\Cache;
 use support\Db;
 use support\Log;
 use support\Translation;
-use think\Exception;
 use Webman\Push\PushException;
 use Webman\RedisQueue\Client as queueClient;
 
@@ -61,7 +61,7 @@ if (!function_exists('admin_sysconf')) {
      * @param string|null $value 无值为获取
      * @return mixed
      */
-    function admin_sysconf(string $name = null, string $value = null)
+    function admin_sysconf(string $name = null, string $value = null): mixed
     {
         $model = plugin()->webman->config('database.config_model');
         if (is_null($name)) {
@@ -79,9 +79,6 @@ if (!function_exists('admin_sysconf')) {
                 return $value;
             }
         } else {
-            if (is_array($value)) {
-                $value = json_encode($value, JSON_UNESCAPED_UNICODE);
-            }
             return $model::updateOrCreate(['name' => $name], ['value' => $value]);
         }
     }
@@ -155,6 +152,7 @@ if (!function_exists('saveMachineOperationLog')) {
      * @param string $action 功能
      * @param int $status 状态
      * @param int $isSystem
+     * @param int $point
      * @return bool
      */
     function saveMachineOperationLog(
@@ -186,8 +184,7 @@ if (!function_exists('saveMachineOperationLog')) {
         $machineOperationLog->action = $action;
         $machineOperationLog->remark = request()?->input('data')['remark'] ?? '';
         $machineOperationLog->user_id = Admin::id() ?? 0;
-        $machineOperationLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-            [], 'message');
+        $machineOperationLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
         if ($action == 41) {
             $point = 100;
         } elseif ($action == 42) {
@@ -252,14 +249,14 @@ if (!function_exists('machineOpenAnyFree')) {
         try {
             $services = MachineServices::createServices($machine, Container::getInstance()->translator->getLocale());
             if (strtotime($services->last_point_at) + 5 >= time()) {
-                throw new Exception(trans('exception_msg.point_must_5seconds', [], 'message'));
+                throw new Exception(admin_trans('message.exception_msg.point_must_5seconds'));
             }
             $openScore = checkMachineOpenAny($machine, $openScore, 0);
             //測試連線
             if ($machine->type == GameType::TYPE_STEEL_BALL) {
             } else {
                 if ($services->point + $openScore > 4000) {
-                    throw new Exception(trans('machine_wash_limit_msg1', [], 'message'));
+                    throw new Exception(admin_trans('message.machine_wash_limit_msg1'));
                 }
             }
             //上任意分
@@ -268,7 +265,7 @@ if (!function_exists('machineOpenAnyFree')) {
                 $odds = $machine->machineCategory->name;
             }
             /** @var PlayerPlatformCash $player_platform_wallet */
-            $player_platform_wallet = PlayerPlatformCash::where([
+            $player_platform_wallet = PlayerPlatformCash::query()->where([
                 'player_id' => $player->id,
                 'platform_id' => PlayerPlatformCash::PLATFORM_SELF
             ])->first();
@@ -319,7 +316,38 @@ if (!function_exists('machineOpenAnyFree')) {
         return true;
     }
 }
+if (!function_exists('checkMachineOpenAny')) {
+    /**
+     * 上任意分
+     * @param Machine $machine
+     * @param int $money
+     * @param int $giftScore
+     * @return float|int
+     * @throws Exception
+     */
+    function checkMachineOpenAny(Machine $machine, int $money, int $giftScore): float|int
+    {
+        if (!is_numeric($money) || $money <= 0) {
+            throw new InvalidArgumentException('Invalid money value');
+        }
+        if (!is_numeric($machine->odds_x) || $machine->odds_x <= 0) {
+            throw new InvalidArgumentException('Invalid odds_x value');
+        }
+        if (!is_numeric($machine->odds_y) || $machine->odds_y <= 0) {
+            throw new InvalidArgumentException('Invalid odds_y value');
+        }
+        if ($machine->odds_x == 0) {
+            throw new Exception(admin_trans('message.machine_odds_error'));
+        }
+        $yx = $machine->odds_y / $machine->odds_x;
+        if ($machine->odds_y > $machine->odds_x && floor($yx) != $yx) {
+            throw new Exception(admin_trans('message.machine_odds_error'));
+        }
+        $open_score = $money * $machine->odds_y / $machine->odds_x;
 
+        return floor($open_score) + $giftScore;
+    }
+}
 //斯洛 下分限制
 if (!function_exists('checkSlotWashLimit')) {
     /**
@@ -374,7 +402,18 @@ if (!function_exists('checkJackPotWashLimit')) {
         return $machine;
     }
 }
-
+if (!function_exists('getGivePoints')) {
+    /**
+     * 获取增点缓存
+     * @param $playerId
+     * @param $machineId
+     * @return mixed
+     */
+    function getGivePoints($playerId, $machineId): mixed
+    {
+        return Cache::get('gift_cache_' . $machineId . '_' . $playerId);
+    }
+}
 
 if (!function_exists('machineWash')) {
     /**
@@ -394,13 +433,13 @@ if (!function_exists('machineWash')) {
         string  $path = 'leave',
         int     $is_system = 0,
         bool    $hasLottery = false
-    )
+    ): bool|PlayerLotteryRecord
     {
         try {
             $lang = Translation::getLocale();
             $services = MachineServices::createServices($machine, $lang);
             if ($services->last_point_at + 5 >= time()) {
-                throw new Exception(trans('exception_msg.point_must_5seconds', [], 'message', $lang));
+                throw new Exception(admin_trans('message.exception_msg.point_must_5seconds'));
             }
             // 洗分限制（强制退出洗分）
             $giftPoint = getGivePoints($player->id, $machine->id);
@@ -597,6 +636,29 @@ if (!function_exists('machineWash')) {
     }
 }
 
+if (!function_exists('updateKeepingLog')) {
+    /**
+     * 更新保留日志
+     * @param $machineId
+     * @param $playerId
+     * @return void
+     */
+    function updateKeepingLog($machineId, $playerId): void
+    {
+        /** @var MachineKeepingLog $machineKeepingLog */
+        $machineKeepingLog = MachineKeepingLog::query()->where([
+            'machine_id' => $machineId,
+            'player_id' => $playerId
+        ])->where('status', MachineKeepingLog::STATUS_STAR)->first();
+        if ($machineKeepingLog) {
+            // 更新保留日志
+            $machineKeepingLog->keep_seconds = time() - strtotime($machineKeepingLog->created_at);
+            $machineKeepingLog->status = MachineKeepingLog::STATUS_END;
+            $machineKeepingLog->save();
+        }
+    }
+}
+
 if (!function_exists('machineWashRemainder')) {
     /**
      * 洗分餘數算法
@@ -610,7 +672,7 @@ if (!function_exists('machineWashRemainder')) {
     {
         //记录游戏局记录
         /** @var PlayerGameRecord $gameRecord */
-        $gameRecord = PlayerGameRecord::where('machine_id', $machine->id)
+        $gameRecord = PlayerGameRecord::query()->where('machine_id', $machine->id)
             ->where('player_id', $player->id)
             ->where('status', PlayerGameRecord::STATUS_START)
             ->orderBy('created_at', 'desc')
@@ -627,7 +689,7 @@ if (!function_exists('machineWashRemainder')) {
             $game_amount = floor($floor_money * ($machine->odds_x ?? 1) / ($machine->odds_y ?? 1));
 
             /** @var PlayerPlatformCash $machineWallet */
-            $machineWallet = PlayerPlatformCash::where('platform_id',
+            $machineWallet = PlayerPlatformCash::query()->where('platform_id',
                 PlayerPlatformCash::PLATFORM_SELF)->where('player_id', $player->id)->first();
             $beforeGameAmount = $machineWallet->money;
             $machineWallet->money = bcadd($machineWallet->money, $game_amount, 2);
@@ -722,9 +784,6 @@ if (!function_exists('isGivePoint')) {
     function isGivePoint(PlayerGameLog $playerGameLog): bool
     {
         //下分时，是否参与开分赠点
-        if (empty($playerGameLog)) {
-            throw new Exception(trans('no_open_recode_err', [], 'message'));
-        }
         $giftPoint = $playerGameLog->gift_point;
         if ($giftPoint > 0) { // 参与了开分赠点
             return true;
@@ -938,6 +997,64 @@ if (!function_exists('machineWashZero')) {
     }
 }
 
+if (!function_exists('nationalPromoterSettlement')) {
+    /**
+     * 全民代理返佣
+     * @param $data
+     * @return true
+     */
+    function nationalPromoterSettlement($data): bool
+    {
+        foreach ($data as $item) {
+            /** @var Player $player */
+            $player = Player::query()->find($item['player_id']);
+            //玩家上级详情
+            $recommendPromoter = Player::query()->find($player->recommend_id);
+            //计算所有玩家打码量
+            if ($item['bet'] > 0) {
+                //当前玩家打码量
+                $player->national_promoter->chip_amount = bcadd($player->national_promoter->chip_amount, $item['bet'],
+                    2);
+                //根据打码量查询玩家当前全民代理等级
+                $levelId = LevelList::query()->where('department_id', $player->department_id)
+                    ->where('must_chip_amount', '<=',
+                        $player->national_promoter->chip_amount)->orderBy('must_chip_amount', 'desc')->first();
+                if (!empty($levelId) && isset($levelId->id)) {
+                    //根据打码量提升玩家全民代理等级
+                    $player->national_promoter->level = $levelId->id;
+                }
+                $player->push();
+            }
+            //当前玩家渠道未开通全民代理功能
+            if ($player->channel->national_promoter_status == 0) {
+                continue;
+            }
+            //上级是全民代理,并且当前玩家已充值激活全民代理身份
+            if (!empty($recommendPromoter) && !empty($recommendPromoter->national_promoter) && $item['diff'] != 0 && !empty($player->national_promoter) && $player->national_promoter->status == 1 && $recommendPromoter->is_promoter < 1) {
+                $damageRebateRatio = isset($recommendPromoter->national_promoter->level_list->damage_rebate_ratio) ? $recommendPromoter->national_promoter->level_list->damage_rebate_ratio : 0;
+                $money = bcdiv(bcmul(-$item['diff'], $damageRebateRatio, 2), 100, 2);
+                $recommendPromoter->national_promoter->pending_amount = bcadd($recommendPromoter->national_promoter->pending_amount,
+                    $money, 2);
+                $recommendPromoter->push();
+                /** @var NationalProfitRecord $nationalProfitRecord */
+                $nationalProfitRecord = NationalProfitRecord::query()->where('uid', $player->id)
+                    ->where('type', 1)
+                    ->whereDate('created_at', date('Y-m-d'))->first();
+                if (!empty($nationalProfitRecord)) {
+                    $nationalProfitRecord->money = bcadd($nationalProfitRecord->money, $money, 2);
+                } else {
+                    $nationalProfitRecord = new NationalProfitRecord();
+                    $nationalProfitRecord->uid = $player->id;
+                    $nationalProfitRecord->recommend_id = $player->recommend_id;
+                    $nationalProfitRecord->money = $money;
+                    $nationalProfitRecord->type = 1;
+                }
+                $nationalProfitRecord->save();
+            }
+        }
+        return true;
+    }
+}
 if (!function_exists('resetMachineTrans')) {
     /**
      * 重置机台(开启事务)
@@ -1010,14 +1127,14 @@ if (!function_exists('resetMachineTrans')) {
                 }
             }
 
-            $player_platform_wallet = PlayerPlatformCash::where([
+            $player_platform_wallet = PlayerPlatformCash::query()->where([
                 'player_id' => $player->id,
                 'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
             ])->first();
 
             //记录游戏局记录
             /** @var PlayerGameRecord $gameRecord */
-            $gameRecord = PlayerGameRecord::where('machine_id', $machine->id)
+            $gameRecord = PlayerGameRecord::query()->where('machine_id', $machine->id)
                 ->where('player_id', $player->id)
                 ->where('status', PlayerGameRecord::STATUS_START)
                 ->orderBy('created_at', 'desc')
@@ -1122,7 +1239,7 @@ if (!function_exists('playerManualSystem')) {
      * @param $data
      * @throws Exception
      */
-    function playerManualSystem($data)
+    function playerManualSystem($data): void
     {
         $money = (float)$data['money'];
         if ($money <= 0) {
@@ -1179,8 +1296,7 @@ if (!function_exists('playerManualSystem')) {
         $playerMoneyEditLog->activity = $data['activity'];
         $playerMoneyEditLog->remark = $data['remark'] ?? '';
         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-            [], 'message');
+        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
         $playerMoneyEditLog->save();
 
         $afterMoney = playerUpdateMoney($player, $playerMoneyEditLog, $data['type'], $money,
@@ -1212,7 +1328,7 @@ if (!function_exists('playerUpdateMoney')) {
         string $source,
         int    $deliveryType,
         int    $action = null
-    )
+    ): float|string
     {
         if (!in_array($type, [PlayerMoneyEditLog::TYPE_DEDUCT, PlayerMoneyEditLog::TYPE_INCREASE])) {
             throw new Exception(admin_trans('player.wallet.wallet_type_error'));
@@ -1228,7 +1344,7 @@ if (!function_exists('playerUpdateMoney')) {
 
         //玩家加點數
         /** @var PlayerPlatformCash $machineWallet */
-        $machineWallet = PlayerPlatformCash::where('platform_id', PlayerPlatformCash::PLATFORM_SELF)->where('player_id',
+        $machineWallet = PlayerPlatformCash::query()->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)->where('player_id',
             $player->id)->lockForUpdate()->first();
         $originMoney = $machineWallet->money;
         if ($type == PlayerMoneyEditLog::TYPE_INCREASE) {
@@ -1351,8 +1467,7 @@ if (!function_exists('playerUpdateMoney')) {
         $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
         $playerDeliveryRecord->remark = $target->remark ?? '';
         $playerDeliveryRecord->user_id = Admin::id() ?? 0;
-        $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-            [], 'message');
+        $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
         $playerDeliveryRecord->save();
 
         return $machineWallet->money;
@@ -1464,11 +1579,11 @@ if (!function_exists('fishMachineWash')) {
     {
         $lang = Translation::getLocale();
         if (strtotime($machine->last_point_at) + 5 >= time()) {
-            throw new Exception(trans('exception_msg.point_must_5seconds', [], 'message', $lang));
+            throw new Exception(admin_trans('message.exception_msg.point_must_5seconds'));
         }
 
         /** @var PlayerGameRecord $gameRecord */
-        $gameRecord = PlayerGameRecord::where('machine_id', $machine->id)
+        $gameRecord = PlayerGameRecord::query()->where('machine_id', $machine->id)
             ->where('player_id', $player->id)
             ->where('status', PlayerGameRecord::STATUS_START)
             ->orderBy('created_at', 'desc')
@@ -1890,6 +2005,44 @@ if (!function_exists('machineMedia')) {
         return true;
     }
 }
+
+if (!function_exists('getPushUrl')) {
+
+    /**
+     *  获取推流地址
+     *  如果不传key和过期时间，将返回不含防盗链的url
+     * @param $machineCode
+     * @param string $pushDomain
+     * @param string $pushKey
+     * @return array
+     */
+    function getPushUrl($machineCode, string $pushDomain = '', string $pushKey = ''): array
+    {
+        $pushUrl = '';
+        $endpointServiceId = uniqid();
+        if (!empty($machineCode) && !empty($pushDomain)) {
+            $name = $machineCode . '_' . $endpointServiceId;
+            if (!empty($pushKey)) {
+                $time = date('Y-m-d H:i:s'); // 获取当前时间
+                $timePlus24Hours = date('Y-m-d H:i:s', strtotime($time) + 24 * 60 * 60 * 30 * 24);
+                $txTime = strtoupper(base_convert(strtotime($timePlus24Hours), 10, 16));
+                $txSecret = md5($pushKey . $name . $txTime);
+                $ext_str = "?" . http_build_query(array(
+                        "txSecret" => $txSecret,
+                        "txTime" => $txTime
+                    ));
+            }
+            $pushUrl = [
+                'rtmp_url' => "rtmp://" . $pushDomain . "/live/" . $name . ($ext_str ?? ""),
+                'expiration_date' => $timePlus24Hours ?? '',
+                'endpoint_service_id' => $endpointServiceId,
+                'machine_code' => $machineCode,
+            ];
+        }
+
+        return $pushUrl;
+    }
+}
 if (!function_exists('formatWinRatio')) {
     /**
      * 专门处理 decimal(10,9) 格式胜率的转换函数
@@ -2091,7 +2244,7 @@ if (!function_exists('encrypt_sensitive')) {
         }
 
         $key = config('app.key', 'base64:' . base64_encode('webman_secret_key_32_chars!!'));
-        if (strpos($key, 'base64:') === 0) {
+        if (str_starts_with($key, 'base64:')) {
             $key = base64_decode(substr($key, 7));
         }
 
@@ -2120,7 +2273,7 @@ if (!function_exists('decrypt_sensitive')) {
         }
 
         $key = config('app.key', 'base64:' . base64_encode('webman_secret_key_32_chars!!'));
-        if (strpos($key, 'base64:') === 0) {
+        if (str_starts_with($key, 'base64:')) {
             $key = base64_decode(substr($key, 7));
         }
 
@@ -2140,17 +2293,17 @@ if (!function_exists('addPlayerExtend')) {
      * @param Player $player
      * @return void
      */
-    function addPlayerExtend(Player $player)
+    function addPlayerExtend(Player $player): void
     {
-        $registerPresent = SystemSetting::where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
+        $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
 
-        PlayerPlatformCash::firstOrCreate([
+        PlayerPlatformCash::query()->firstOrCreate([
             'player_id' => $player->id,
             'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
             'money' => $registerPresent,
         ]);
 
-        PlayerExtend::firstOrCreate([
+        PlayerExtend::query()->firstOrCreate([
             'player_id' => $player->id,
         ]);
 
@@ -2196,7 +2349,7 @@ if (!function_exists('addRegisterRecord')) {
      * @param int $department_id 部门ID
      * @return PlayerRegisterRecord
      */
-    function addRegisterRecord($id, $type, $department_id)
+    function addRegisterRecord(int $id, int $type, int $department_id): PlayerRegisterRecord
     {
         $ip = request()->getRealIp();
         $country_name = '';
@@ -2216,7 +2369,7 @@ if (!function_exists('addRegisterRecord')) {
 
         $domain = isset($_SERVER['HTTP_ORIGIN']) ? parse_url($_SERVER['HTTP_ORIGIN']) : null;
 
-        return PlayerRegisterRecord::create([
+        return PlayerRegisterRecord::query()->create([
             'player_id' => $id,
             'register_domain' => !empty($domain) ? $domain['host'] : null,
             'ip' => $ip,
