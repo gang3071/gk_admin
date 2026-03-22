@@ -3,7 +3,7 @@
 use addons\webman\model\PlayerMoneyEditLog;
 
 return [
-    'title' => '玩家列表',
+    'title' => '设备列表',
     'coin_title' => '币商列表',
     'details' => '玩家详情',
     'coin_merchant' => '币商',

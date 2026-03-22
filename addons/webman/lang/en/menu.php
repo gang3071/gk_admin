@@ -183,6 +183,7 @@ return [
         //Agent Deposit Bonus Management
         'agent_deposit_bonus_manage' => 'Deposit Bonus Management',
         'agent_deposit_bonus_activity' => 'Activity Management',
+        'agent_deposit_bonus_qrcode' => 'Order Management',
         'agent_deposit_bonus_order' => 'Order Management',
         'agent_deposit_bonus_statistics' => 'Statistics Report',
         'agent_deposit_bonus_bet_detail' => 'Betting Details',

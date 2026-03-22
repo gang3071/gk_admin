@@ -798,7 +798,7 @@ return [
         'method' => 'get',
         'group' => 'department',
         'url' => 'ex-admin/addons-webman-controller-PlayerController/index',
-        'title' => '玩家列表',
+        'title' => '设备列表',
     ],
     [
         'id' => 'ex-admin\addons-webman-controller-PlayerController\playerGameWallet',

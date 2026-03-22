@@ -677,7 +677,7 @@ return [
         'method' => 'get',
         'group' => 'channel',
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/index',
-        'title' => '玩家列表',
+        'title' => '设备列表',
     ],
     [
         'id' => 'ex-admin\addons-webman-controller-ChannelPlayerController\playerGameWallet',
