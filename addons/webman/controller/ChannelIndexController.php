@@ -1554,7 +1554,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 6),
-                    Row::create()->column(Statistic::create()->title('总玩家数')->value(floatval($playerNum))
+                    Row::create()->column(Statistic::create()->title('总设备数')->value(floatval($playerNum))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
