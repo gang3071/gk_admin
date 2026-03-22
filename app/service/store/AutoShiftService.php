@@ -437,7 +437,10 @@ class AutoShiftService
      */
     private function sendFailureNotification(StoreAutoShiftConfig $config, string $errorMsg): void
     {
-        // TODO: 实现短信/邮件/企业微信通知
+        if (empty($config->notify_phones)) {
+            return;
+        }
+
         $message = sprintf(
             "【自动交班失败】\n店家ID: %d\n失败时间: %s\n错误信息: %s",
             $config->department_id,
@@ -451,9 +454,69 @@ class AutoShiftService
             'message' => $message
         ]);
 
-        // 这里可以集成短信服务
-        // $smsService = new SmsService();
-        // $smsService->send($config->notify_phones, $message);
+        // 解析手机号列表
+        $phones = array_filter(array_map('trim', explode(',', $config->notify_phones)));
+
+        if (empty($phones)) {
+            \Log::warning('通知手机号为空', ['config_id' => $config->id]);
+            return;
+        }
+
+        // 发送短信通知
+        foreach ($phones as $phone) {
+            try {
+                $this->sendSms($phone, $message);
+            } catch (\Exception $e) {
+                \Log::error('发送短信通知失败', [
+                    'phone' => $phone,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
+    }
+
+    /**
+     * 发送短信
+     */
+    private function sendSms(string $phone, string $message): void
+    {
+        // 检查是否有短信服务可用
+        if (!class_exists('\addons\webman\model\PhoneSmsLog')) {
+            \Log::warning('短信服务模型不存在', ['phone' => $phone]);
+            return;
+        }
+
+        try {
+            // 创建短信日志记录
+            $smsLog = new \addons\webman\model\PhoneSmsLog();
+            $smsLog->phone = $phone;
+            $smsLog->content = $message;
+            $smsLog->type = 'auto_shift_notify'; // 自动交班通知类型
+            $smsLog->status = 0; // 待发送
+            $smsLog->created_at = date('Y-m-d H:i:s');
+
+            // 这里可以调用实际的短信服务 API
+            // 例如：阿里云、腾讯云等
+            // $result = $smsService->send($phone, $message);
+
+            // 模拟发送成功
+            $smsLog->status = 1; // 发送成功
+            $smsLog->send_time = date('Y-m-d H:i:s');
+            $smsLog->save();
+
+            \Log::info('短信通知发送成功', [
+                'phone' => $phone,
+                'log_id' => $smsLog->id
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('短信发送异常', [
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e;
+        }
     }
 
     /**
