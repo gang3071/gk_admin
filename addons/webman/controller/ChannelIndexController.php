@@ -2228,7 +2228,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('拉彩金额')->style([
+                        Html::create('拉彩分数')->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
