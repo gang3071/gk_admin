@@ -51,7 +51,7 @@ return [
     'machine_put_trend' => '投钞趋势',
     'machine_put' => '投钞',
     'revenue_trend' => '营收趋势',
-    'machine_put_total' => '投钞总和',
+    'machine_put_total' => '总投钞',
     'total_present_in' => '总转入(开分)',
     'total_present_out' => '总转出(洗分)',
     'current_present_in' => '当期转入(开分)',

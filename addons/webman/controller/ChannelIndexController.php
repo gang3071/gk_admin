@@ -52,6 +52,60 @@ class ChannelIndexController
         $withdrawData = $this->withdrawData($data_type);
         $playerData = $this->playerData();
         $loginData = $this->loginData();
+
+        // 获取当前渠道下的玩家ID
+        $departmentId = Admin::user()->department_id;
+        $playerIds = Player::query()
+            ->where('department_id', $departmentId)
+            ->where('is_promoter', 0)
+            ->pluck('id');
+
+        // 运营统计数据（受时间筛选影响）
+        $operationStatisticsQuery = PlayerDeliveryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
+            ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
+                $this->applyDateWhere($query, $data_type, 'created_at');
+            })
+            ->whereIn('type', [
+                PlayerDeliveryRecord::TYPE_PRESENT_IN,
+                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
+                PlayerDeliveryRecord::TYPE_MACHINE,
+            ])
+            ->selectRaw("
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+            ")
+            ->first();
+
+        $operationStatistics = [
+            'present_in_amount' => $operationStatisticsQuery->present_in_amount ?? 0,
+            'present_out_amount' => $operationStatisticsQuery->present_out_amount ?? 0,
+            'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
+        ];
+
+        // 拉彩统计数据（受时间筛选影响）
+        $lotteryStatisticsQuery = PlayerLotteryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
+            ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
+                $this->applyDateWhere($query, $data_type, 'created_at');
+            })
+            ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+            ->selectRaw("
+                COUNT(*) as lottery_count,
+                SUM(`amount`) as lottery_amount
+            ")
+            ->first();
+
+        $lotteryStatistics = [
+            'lottery_count' => $lotteryStatisticsQuery->lottery_count ?? 0,
+            'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
+        ];
+
         $dropdown = Dropdown::create(
             Button::create(admin_trans('data_center.data_cycle') . ' (' . admin_trans('data_center.data_type.' . ($data_type == null || $data_type == 'all' ? 'all' : $data_type)) . ')')
         )->trigger(['click']);
@@ -68,15 +122,167 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'index'],
             ['data_type' => 'last_month']);
         $layout = Layout::create();
-        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown) {
+        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
             $row->gutter([10, 10]);
+            // 计算运营统计的小计（基于时间筛选的数据）
+            $subtotal = bcsub(
+                $operationStatistics['present_in_amount'] ?? 0,
+                $operationStatistics['present_out_amount'] ?? 0,
+                2
+            );
+
+            // 数据周期筛选
             $row->column(
                 Card::create([
-                    Row::create()->column($dropdown, 3),
+                    Row::create()->column($dropdown, 4),
                 ])->bodyStyle([
-                    'padding' => '13px'
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
                 ])
-            );
+            , 4);
+
+            // 总开分
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create(admin_trans('data_center.total_recharge'))->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($operationStatistics['present_in_amount'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#67C23A'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 总洗分
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create(admin_trans('data_center.total_withdraw'))->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($operationStatistics['present_out_amount'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#F56C6C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 总投钞
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create(admin_trans('data_center.total_machine_put'))->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($operationStatistics['machine_put_point'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#409EFF'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 总拉彩
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('总拉彩')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($lotteryStatistics['lottery_amount'] ?? 0), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => '#E6A23C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
+            // 盈余小计
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Html::create('盈余小计')->style([
+                            'fontSize' => '14px',
+                            'color' => '#909399',
+                            'marginRight' => 'auto'
+                        ]),
+                        Html::create(number_format(floatval($subtotal), 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => '600',
+                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center',
+                        'justifyContent' => 'space-between',
+                        'width' => '100%'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '13px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'height' => '54px'
+                ])
+            , 4);
+
             $row->column(
                 Card::create([
                     Row::create()->column(Icon::create('fas fa-globe')->style([
@@ -2588,5 +2794,50 @@ class ChannelIndexController
                 }
             });
         });
+    }
+
+    /**
+     * 应用日期筛选条件到查询
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $data_type
+     * @param string $field
+     */
+    private function applyDateWhere($query, $data_type, $field = 'created_at')
+    {
+        switch ($data_type) {
+            case 'today': // 今天
+                $query->where($field, '>=', Carbon::today()->startOfDay());
+                break;
+            case 'yesterday': // 昨天
+                $query->where($field, '>=', Carbon::yesterday()->startOfDay())
+                      ->where($field, '<=', Carbon::yesterday()->endOfDay());
+                break;
+            case 'week': // 本周
+                $query->where($field, '>=', Carbon::today()->startOfWeek()->startOfDay());
+                break;
+            case 'last_week': // 上周
+                $query->where($field, '>=', Carbon::today()->subWeek()->startOfWeek()->startOfDay())
+                      ->where($field, '<=', Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                break;
+            case 'month': // 本月
+                $query->where($field, '>=', Carbon::today()->firstOfMonth()->startOfDay());
+                break;
+            case 'last_month': // 上月
+                $startDate = Carbon::create(
+                    Carbon::now()->subMonthNoOverflow()->year,
+                    Carbon::now()->subMonthNoOverflow()->month,
+                    1,
+                    0, 0, 0
+                );
+                $endDate = Carbon::create(
+                    Carbon::now()->subMonthNoOverflow()->year,
+                    Carbon::now()->subMonthNoOverflow()->month,
+                    Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                    23, 59, 59
+                );
+                $query->where($field, '>=', $startDate)
+                      ->where($field, '<=', $endDate);
+                break;
+        }
     }
 }
