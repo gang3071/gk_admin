@@ -386,6 +386,12 @@ class AutoShiftService
             throw new \Exception('系统配置错误：货币配置不存在');
         }
 
+        // 获取管理员的部门ID（用于双重验证）
+        $admin = \addons\webman\model\AdminUser::query()->find($bindAdminUserId);
+        if (!$admin) {
+            throw new \Exception('管理员不存在：' . $bindAdminUserId);
+        }
+
         $result = PlayerDeliveryRecord::query()
             ->selectRaw('
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as present_in_amount,
@@ -399,12 +405,9 @@ class AutoShiftService
                 PlayerDeliveryRecord::TYPE_LOTTERY
             ])
             ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
-            ->where('player.department_id', function($query) use ($bindAdminUserId) {
-                $query->select('department_id')
-                    ->from('admin_users')
-                    ->where('id', $bindAdminUserId)
-                    ->limit(1);
-            })
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
             ->where('player_delivery_record.created_at', '>', $startTime)
             ->where('player_delivery_record.created_at', '<=', $endTime)
             ->first();

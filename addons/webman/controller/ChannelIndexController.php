@@ -2479,7 +2479,7 @@ class ChannelIndexController
                         return message_error(admin_trans('shift_handover.error.duplicate_record'));
                     }
 
-                    // 5. 统计数据（修复时间边界和软删除问题）
+                    // 5. 统计数据（修复时间边界和软删除问题，添加彩金统计）
                     $result = PlayerDeliveryRecord::query()
                         ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
                         ->where('player.department_id', $admin->department_id)
@@ -2489,6 +2489,7 @@ class ChannelIndexController
                             PlayerDeliveryRecord::TYPE_PRESENT_IN,
                             PlayerDeliveryRecord::TYPE_PRESENT_OUT,
                             PlayerDeliveryRecord::TYPE_MACHINE,
+                            PlayerDeliveryRecord::TYPE_LOTTERY,
                         ])
                         ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
                         ->where('player_delivery_record.created_at', '<=', $endTime)
@@ -2498,7 +2499,9 @@ class ChannelIndexController
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS present_out_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . "
-                                THEN player_delivery_record.amount ELSE 0 END) AS machine_put_point
+                                THEN player_delivery_record.amount ELSE 0 END) AS machine_put_point,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS lottery_amount
                         ")
                         ->first();
 
@@ -2506,7 +2509,8 @@ class ChannelIndexController
                     $playerDeliveryRecord = $result ? $result->toArray() : [
                         'present_in_amount' => 0,
                         'present_out_amount' => 0,
-                        'machine_put_point' => 0
+                        'machine_put_point' => 0,
+                        'lottery_amount' => 0
                     ];
 
                     // 7. 获取货币配置并验证
@@ -2536,11 +2540,14 @@ class ChannelIndexController
                         $playerDeliveryRecord['present_in_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->total_out =
                         $playerDeliveryRecord['present_out_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->lottery_amount =
+                        $playerDeliveryRecord['lottery_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->start_time = $startTime;
                     $storeAgentShiftHandoverRecord->end_time = $endTime;
                     $storeAgentShiftHandoverRecord->user_id = $admin->id;
                     $storeAgentShiftHandoverRecord->user_name = $admin->username;
                     $storeAgentShiftHandoverRecord->bind_admin_user_id = $admin->id;
+                    $storeAgentShiftHandoverRecord->is_auto_shift = 0;
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
                         bcadd($storeAgentShiftHandoverRecord->machine_point,
                               $storeAgentShiftHandoverRecord->total_in, 2),
@@ -2550,7 +2557,7 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->save();
 
                     // 9. 记录日志
-                    \Log::info('店家交班成功', [
+                    \Log::info('店家手动交班成功', [
                         'record_id' => $storeAgentShiftHandoverRecord->id,
                         'bind_admin_user_id' => $admin->id,
                         'user_id' => $admin->id,
@@ -2560,7 +2567,9 @@ class ChannelIndexController
                         'machine_point' => $storeAgentShiftHandoverRecord->machine_point,
                         'total_in' => $storeAgentShiftHandoverRecord->total_in,
                         'total_out' => $storeAgentShiftHandoverRecord->total_out,
-                        'total_profit_amount' => $storeAgentShiftHandoverRecord->total_profit_amount
+                        'lottery_amount' => $storeAgentShiftHandoverRecord->lottery_amount,
+                        'total_profit_amount' => $storeAgentShiftHandoverRecord->total_profit_amount,
+                        'is_auto_shift' => 0
                     ]);
 
                     DB::commit();
