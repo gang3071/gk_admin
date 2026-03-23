@@ -183,6 +183,7 @@ return [
         //代理後台充值滿贈管理
         'agent_deposit_bonus_manage' => '充值滿贈管理',
         'agent_deposit_bonus_activity' => '活動管理',
+        'agent_deposit_bonus_qrcode' => '訂單管理',
         'agent_deposit_bonus_order' => '訂單管理',
         'agent_deposit_bonus_statistics' => '統計報表',
         'agent_deposit_bonus_bet_detail' => '押碼明細',

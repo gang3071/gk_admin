@@ -51,7 +51,7 @@ return [
     'machine_put_trend' => '投鈔趨勢',
     'machine_put' => '投鈔',
     'revenue_trend' => '營收趨勢',
-    'machine_put_total' => '投鈔總和',
+    'machine_put_total' => '總投鈔',
     'total_present_in' => '總轉入(開分)',
     'total_present_out' => '總轉出(洗分)',
     'current_present_in' => '當期轉入(開分)',

@@ -47,7 +47,7 @@ return [
         'data_center' => '数据中心',
         //用户管理
         'user_manage' => '玩家管理',
-        'user_manage_list' => '玩家列表',
+        'user_manage_list' => '设备列表',
         'accounting_change_records' => '账变记录',
         //游戏管理
         'game_manager' => '游戏管理',
@@ -83,7 +83,7 @@ return [
         'channel_coin_merchant_transaction_records' => '币商交易记录',
         //玩家管理
         'channel_player_manage' => '玩家管理',
-        'channel_player_list' => '玩家列表',
+        'channel_player_list' => '设备列表',
         'channel_player_accounting_change_records' => '账变记录',
         //机台管理
         'channel_machine_manage' => '机台管理',
@@ -184,6 +184,7 @@ return [
         //代理后台充值满赠管理
         'agent_deposit_bonus_manage' => '充值满赠管理',
         'agent_deposit_bonus_activity' => '活动管理',
+        'agent_deposit_bonus_qrcode' => '订单管理',
         'agent_deposit_bonus_order' => '订单管理',
         'agent_deposit_bonus_statistics' => '统计报表',
         'agent_deposit_bonus_bet_detail' => '押码明细',

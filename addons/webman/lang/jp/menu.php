@@ -184,6 +184,7 @@ return [
         //代理店入金ボーナス管理
         'agent_deposit_bonus_manage' => '入金ボーナス管理',
         'agent_deposit_bonus_activity' => '活動管理',
+        'agent_deposit_bonus_qrcode' => '注文管理',
         'agent_deposit_bonus_order' => '注文管理',
         'agent_deposit_bonus_statistics' => '統計レポート',
         'agent_deposit_bonus_bet_detail' => 'ベット詳細',
