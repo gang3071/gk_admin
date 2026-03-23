@@ -114,13 +114,10 @@ class ChannelAutoShiftController
 
             // 快捷操作
             if ($config) {
-                $logsUrl = admin_url('addons-webman-controller-ChannelAutoShiftController-logs');
-
                 $form->push(Card::create([
                     Button::create('查看执行日志')
                         ->type('default')
-                        ->link($logsUrl)
-                        ->target('_blank')
+                        ->modal([$this, 'logs'])
                 ])->title('快捷操作'));
             }
 
