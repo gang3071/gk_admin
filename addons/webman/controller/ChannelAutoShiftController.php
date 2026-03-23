@@ -31,7 +31,7 @@ class ChannelAutoShiftController
      * @group store
      * @auth true
      */
-    public function config(Request $request): Form
+    public function config(): Form
     {
         $admin = Admin::user();
         $service = new AutoShiftService();
@@ -253,7 +253,7 @@ class ChannelAutoShiftController
      * @group store
      * @auth true
      */
-    public function logs(Request $request): Grid
+    public function logs(): Grid
     {
         $admin = Admin::user();
 
