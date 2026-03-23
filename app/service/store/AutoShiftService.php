@@ -84,14 +84,6 @@ class AutoShiftService
             $config->save();
 
             DB::commit();
-
-            Log::info('保存自动交班配置成功', [
-                'department_id' => $data['department_id'],
-                'bind_admin_user_id' => $data['bind_admin_user_id'],
-                'is_enabled' => $config->is_enabled,
-                'next_shift_time' => $config->next_shift_time
-            ]);
-
             return ['code' => 0, 'msg' => '保存成功', 'data' => $config];
 
         } catch (\Exception $e) {
