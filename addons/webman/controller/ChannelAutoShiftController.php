@@ -117,7 +117,7 @@ class ChannelAutoShiftController
                 $form->push(Card::create([
                     Button::create('查看执行日志')
                         ->type('default')
-                        ->modal([$this, 'logs'])
+                        ->modal([$this, 'logs'])->width('70%')
                 ])->title('快捷操作'));
             }
 
