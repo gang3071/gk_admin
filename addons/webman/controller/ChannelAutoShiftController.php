@@ -112,23 +112,14 @@ class ChannelAutoShiftController
 
             // 快捷操作
             if ($config) {
-                $manualTriggerUrl = admin_url('addons-webman-controller-ChannelAutoShiftController-manualTrigger');
                 $logsUrl = admin_url('addons-webman-controller-ChannelAutoShiftController-logs');
 
                 $form->push(Card::create([
                     Html::create('
                         <div style="padding: 10px 0;">
-                            <a href="' . $logsUrl . '" class="ant-btn ant-btn-default" target="_blank" style="margin-right: 10px;">
+                            <a href="' . $logsUrl . '" class="ant-btn ant-btn-default" target="_blank">
                                 <span>查看执行日志</span>
                             </a>
-                            ' . ($config->is_enabled ? '
-                            <a href="' . $manualTriggerUrl . '"
-                               class="ant-btn ant-btn-primary"
-                               onclick="return confirm(\'确定要立即执行一次自动交班吗？\n\n这不会影响定时执行计划。\')"
-                               style="margin-right: 10px;">
-                                <span>手动触发一次</span>
-                            </a>
-                            ' : '') . '
                         </div>
                     ')->tag('div')
                 ])->title('快捷操作'));
@@ -346,46 +337,6 @@ class ChannelAutoShiftController
             'code' => 0,
             'data' => $log
         ]);
-    }
-
-    /**
-     * 手动触发一次
-     * @group store
-     * @auth true
-     */
-    public function manualTrigger(Request $request): Response
-    {
-        $admin = Admin::user();
-        $service = new AutoShiftService();
-
-        $config = $service->getConfig($admin->department_id, $admin->id);
-
-        if (!$config) {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-config'))
-                ->with('error', '未找到自动交班配置，请先完成配置');
-        }
-
-        if (!$config->is_enabled) {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-config'))
-                ->with('error', '自动交班未启用，请先启用后再手动触发');
-        }
-
-        \Log::info('手动触发自动交班', [
-            'admin_id' => $admin->id,
-            'department_id' => $admin->department_id,
-            'config_id' => $config->id
-        ]);
-
-        $result = $service->executeAutoShift($config);
-
-        // 重定向到日志页面
-        if ($result['code'] === 0) {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-logs'))
-                ->with('success', '手动触发成功！交班已完成，请查看执行日志。');
-        } else {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-config'))
-                ->with('error', '手动触发失败：' . ($result['msg'] ?? '未知错误'));
-        }
     }
 
     /**
