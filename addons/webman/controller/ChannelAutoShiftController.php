@@ -99,14 +99,6 @@ class ChannelAutoShiftController
                 $form->time('shift_time_3', '晚班交班时间')
                     ->default('00:00:00')
                     ->help('晚班交班时间（中班 → 晚班），建议：00:00'),
-
-                $form->divider()->content('其他设置'),
-
-                $form->switch('auto_settlement', '自动结算')
-                    ->checkedValue(1)
-                    ->unCheckedValue(0)
-                    ->default(1)
-                    ->help('交班后是否自动进行结算'),
             ])->title('交班配置'));
 
             // 显示下次交班时间
@@ -153,7 +145,7 @@ class ChannelAutoShiftController
                     'shift_time_1' => $form->input('shift_time_1', '08:00:00'),
                     'shift_time_2' => $form->input('shift_time_2', '16:00:00'),
                     'shift_time_3' => $form->input('shift_time_3', '00:00:00'),
-                    'auto_settlement' => $form->input('auto_settlement', 1),
+                    'auto_settlement' => 1, // 总是自动结算
                 ];
 
                 $result = $service->saveConfig($data);
@@ -183,7 +175,7 @@ class ChannelAutoShiftController
             'shift_time_1' => $request->post('shift_time_1', '08:00:00'),
             'shift_time_2' => $request->post('shift_time_2', '16:00:00'),
             'shift_time_3' => $request->post('shift_time_3', '00:00:00'),
-            'auto_settlement' => $request->post('auto_settlement', 1),
+            'auto_settlement' => 1, // 总是自动结算
         ];
 
         $service = new AutoShiftService();
@@ -422,7 +414,7 @@ class ChannelAutoShiftController
             'shift_time_1' => $config->shift_time_1 ?? '08:00:00',
             'shift_time_2' => $config->shift_time_2 ?? '16:00:00',
             'shift_time_3' => $config->shift_time_3 ?? '00:00:00',
-            'auto_settlement' => $config->auto_settlement ?? 1,
+            'auto_settlement' => 1, // 总是自动结算
         ]);
 
         return json($result);
