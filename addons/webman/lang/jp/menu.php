@@ -64,6 +64,7 @@ return [
         'report_center' => 'レポート センター',
         'machine_report' => 'マシンレポート',
         'up_and_down_report' => 'アップアンドダウンレポート',
+        'store_profit_report' => 'ストア利益レポート',
         //クライアント管理
         'client_manager' => 'クライアント管理',
         'rotation_chart_manager' => 'ローテーションチャート管理',

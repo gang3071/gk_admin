@@ -134,6 +134,15 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-AgentPlayerGameLogController/index',
                 'title' => '上下分报表',
             ],
+            [
+                'id' => 'addons\webman\controller\AgentStoreProfitReportController\index',
+                'pid' => 'addons\webman\controller\AgentPlayerGameLogController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentStoreProfitReportController/index',
+                'title' => '店家分润报表',
+            ],
         ]
     ],
 

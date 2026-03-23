@@ -124,6 +124,21 @@ class ChannelAgentController
 
             $grid->column('department_name', '部门名称')->width(150)->ellipsis(true);
 
+            // 分润比例
+            $grid->column('agent_commission', '代理抽成')->display(function ($value) {
+                if (is_null($value) || $value === '') {
+                    return Tag::create('未设置')->color('default');
+                }
+                return Tag::create($value . '%')->color('orange');
+            })->width(100)->align('center');
+
+            $grid->column('channel_commission', '渠道抽成')->display(function ($value) {
+                if (is_null($value) || $value === '') {
+                    return Tag::create('未设置')->color('default');
+                }
+                return Tag::create($value . '%')->color('blue');
+            })->width(100)->align('center');
+
             $grid->column('status', '状态')->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create('已禁用')->color('red'),

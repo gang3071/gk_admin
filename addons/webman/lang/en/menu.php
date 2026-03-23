@@ -64,6 +64,7 @@ return [
         'report_center' => 'Report Center',
         'machine_report' => 'Machine report',
         'up_and_down_report' => 'Up and down report',
+        'store_profit_report' => 'Store Profit Report',
         //Client management
         'client_manager' => 'Client management',
         'rotation_chart_manager' => 'rotation chart management',

@@ -64,6 +64,7 @@ return [
         'report_center' => '报表中心',
         'machine_report' => '机台报表',
         'up_and_down_report' => '上下分报表',
+        'store_profit_report' => '店家分润报表',
         //客户端管理
         'client_manager' => '客户端管理',
         'rotation_chart_manager' => '轮播图管理',
