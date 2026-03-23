@@ -36,4 +36,88 @@ return [
         'total_out' => '合計出金',
         'total_profit_amount' => '合計利益',
     ],
+
+    // 自動交代
+    'auto' => [
+        'title' => '自動交代設定',
+        'enable' => '自動交代を有効にする',
+        'enable_help' => '有効にすると、システムは毎日指定された時刻に自動的に交代を実行し、リアルタイムで店舗バックエンドに通知をプッシュします',
+        'shift_time_1' => '早番交代時間',
+        'shift_time_1_help' => '早番交代時間（夜勤 → 早番）、推奨：08:00',
+        'shift_time_2' => '昼番交代時間',
+        'shift_time_2_help' => '昼番交代時間（早番 → 昼番）、推奨：16:00',
+        'shift_time_3' => '夜番交代時間',
+        'shift_time_3_help' => '夜番交代時間（昼番 → 夜勤）、推奨：00:00',
+        'config_title' => '交代設定',
+        'exec_info' => '実行情報',
+        'next_shift_time' => '次回の交代時間',
+        'config_save_hint' => '設定を保存すると、システムは自動的に次回の交代時間を計算します',
+        'quick_actions' => 'クイックアクション',
+        'view_logs' => '実行ログを表示',
+        'manual_trigger' => '手動トリガー',
+        'manual_trigger_confirm' => '今すぐ自動交代を実行しますか？\n\nこれはスケジュールされた実行計画に影響しません。',
+        'save_success' => '保存成功',
+        'save_failed' => '保存失敗',
+
+        // 実行統計
+        'stats_title' => '過去7日間の実行統計',
+        'stats_total' => '合計実行回数',
+        'stats_success' => '成功回数',
+        'stats_failed' => '失敗回数',
+        'stats_success_rate' => '成功率',
+        'stats_times' => '回',
+
+        // ログリスト
+        'logs_title' => '自動交代実行ログ',
+        'log_id' => 'ID',
+        'execute_time' => '実行時間',
+        'time_range' => '統計期間',
+        'time_start' => '開始',
+        'time_end' => '終了',
+        'status' => '実行ステータス',
+        'status_success' => '成功',
+        'status_failed' => '失敗',
+        'status_partial' => '部分的成功',
+        'status_unknown' => '不明',
+        'machine_point' => '投入ポイント',
+        'total_in' => '合計収入',
+        'total_out' => '合計支出',
+        'lottery_amount' => '宝くじ金額',
+        'total_profit' => '合計利益',
+        'execution_duration' => '実行時間',
+        'error_message' => 'エラーメッセージ',
+
+        // ログ詳細
+        'detail_title' => '実行詳細',
+        'config_id' => '設定ID',
+        'shift_record_id' => '交代記録ID',
+        'time_range_start' => '統計開始時間',
+        'time_range_end' => '統計終了時間',
+        'machine_amount' => 'マシン投入金額',
+        'machine_point_detail' => 'マシン投入ポイント',
+        'total_in_detail' => '合計収入（入金）',
+        'total_out_detail' => '合計支出（出金）',
+        'lottery_amount_detail' => '宝くじ支払い',
+        'total_profit_detail' => '合計利益',
+        'execute_time_detail' => '実行時間',
+        'execution_duration_detail' => '実行時間',
+        'error_message_detail' => 'エラーメッセージ',
+        'seconds' => '秒',
+
+        // フィルター
+        'filter_status' => '実行ステータス',
+        'filter_date_start' => '開始日',
+        'filter_date_end' => '終了日',
+        'filter_execute_time' => '実行時間',
+
+        // 手動トリガー
+        'trigger_no_config' => '自動交代設定が見つかりません。まず設定を完了してください',
+        'trigger_not_enabled' => '自動交代が有効になっていません。手動でトリガーする前に有効にしてください',
+        'trigger_success' => '手動トリガー成功！交代が完了しました。実行ログを確認してください。',
+        'trigger_failed' => '手動トリガー失敗',
+
+        // その他
+        'log_not_found' => 'ログが見つかりません',
+        'config_not_found' => '設定が見つかりません',
+    ],
 ];

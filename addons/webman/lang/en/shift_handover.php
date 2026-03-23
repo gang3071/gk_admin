@@ -36,4 +36,88 @@ return [
         'total_out' => 'Total Out',
         'total_profit_amount' => 'Total Profit',
     ],
+
+    // Auto Shift
+    'auto' => [
+        'title' => 'Auto Shift Configuration',
+        'enable' => 'Enable Auto Shift',
+        'enable_help' => 'When enabled, the system will automatically execute shifts at specified times each day and push notifications to the store backend',
+        'shift_time_1' => 'Morning Shift Time',
+        'shift_time_1_help' => 'Morning shift time (Night → Morning), Recommended: 08:00',
+        'shift_time_2' => 'Afternoon Shift Time',
+        'shift_time_2_help' => 'Afternoon shift time (Morning → Afternoon), Recommended: 16:00',
+        'shift_time_3' => 'Night Shift Time',
+        'shift_time_3_help' => 'Night shift time (Afternoon → Night), Recommended: 00:00',
+        'config_title' => 'Shift Configuration',
+        'exec_info' => 'Execution Info',
+        'next_shift_time' => 'Next Shift Time',
+        'config_save_hint' => 'After saving the configuration, the system will automatically calculate the next shift time',
+        'quick_actions' => 'Quick Actions',
+        'view_logs' => 'View Execution Logs',
+        'manual_trigger' => 'Manual Trigger',
+        'manual_trigger_confirm' => 'Are you sure you want to execute an automatic shift now?\n\nThis will not affect the scheduled execution plan.',
+        'save_success' => 'Save Successful',
+        'save_failed' => 'Save Failed',
+
+        // Execution Statistics
+        'stats_title' => 'Last 7 Days Execution Statistics',
+        'stats_total' => 'Total Executions',
+        'stats_success' => 'Successful',
+        'stats_failed' => 'Failed',
+        'stats_success_rate' => 'Success Rate',
+        'stats_times' => 'times',
+
+        // Log List
+        'logs_title' => 'Auto Shift Execution Logs',
+        'log_id' => 'ID',
+        'execute_time' => 'Execution Time',
+        'time_range' => 'Statistics Period',
+        'time_start' => 'Start',
+        'time_end' => 'End',
+        'status' => 'Execution Status',
+        'status_success' => 'Success',
+        'status_failed' => 'Failed',
+        'status_partial' => 'Partial Success',
+        'status_unknown' => 'Unknown',
+        'machine_point' => 'Cash-in Points',
+        'total_in' => 'Total Income',
+        'total_out' => 'Total Expense',
+        'lottery_amount' => 'Lottery Amount',
+        'total_profit' => 'Total Profit',
+        'execution_duration' => 'Execution Duration',
+        'error_message' => 'Error Message',
+
+        // Log Details
+        'detail_title' => 'Execution Details',
+        'config_id' => 'Config ID',
+        'shift_record_id' => 'Shift Record ID',
+        'time_range_start' => 'Statistics Start Time',
+        'time_range_end' => 'Statistics End Time',
+        'machine_amount' => 'Machine Cash-in Amount',
+        'machine_point_detail' => 'Machine Cash-in Points',
+        'total_in_detail' => 'Total Income (Deposit)',
+        'total_out_detail' => 'Total Expense (Withdrawal)',
+        'lottery_amount_detail' => 'Lottery Payout',
+        'total_profit_detail' => 'Total Profit',
+        'execute_time_detail' => 'Execution Time',
+        'execution_duration_detail' => 'Execution Duration',
+        'error_message_detail' => 'Error Message',
+        'seconds' => 'seconds',
+
+        // Filter
+        'filter_status' => 'Execution Status',
+        'filter_date_start' => 'Start Date',
+        'filter_date_end' => 'End Date',
+        'filter_execute_time' => 'Execution Time',
+
+        // Manual Trigger
+        'trigger_no_config' => 'Auto shift configuration not found, please complete the configuration first',
+        'trigger_not_enabled' => 'Auto shift is not enabled, please enable it before manually triggering',
+        'trigger_success' => 'Manual trigger successful! Shift completed, please check the execution logs.',
+        'trigger_failed' => 'Manual trigger failed',
+
+        // Others
+        'log_not_found' => 'Log not found',
+        'config_not_found' => 'Configuration not found',
+    ],
 ];
