@@ -12,7 +12,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id 主键ID
  * @property int $department_id 部门/渠道ID
- * @property int $bind_player_id 绑定玩家ID（已废弃，请使用 bind_admin_user_id）
  * @property int $bind_admin_user_id 绑定的管理员用户ID（代理/店家）
  * @property string $start_time 统计开始时间
  * @property string $end_time 统计结束时间

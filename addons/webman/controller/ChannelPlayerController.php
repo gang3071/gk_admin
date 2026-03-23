@@ -33,6 +33,7 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWalletTransfer;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreSetting;
 use addons\webman\service\ImportService;
 use app\exception\GameException;
@@ -4441,6 +4442,7 @@ class ChannelPlayerController
             $adminUser->status = 1;
             $adminUser->type = AdminDepartment::TYPE_STORE; // 店家类型账号
             $adminUser->department_id = $storeDepartment->id; // 绑定到店家部门
+            $adminUser->parent_admin_id = $parentAgent->id; // 上级代理ID
             $adminUser->player_id = 0; // 店家不绑定玩家
             $adminUser->is_super = 1; // 店家后台超管
             $adminUser->agent_commission = $agentCommission; // 代理抽成比例
@@ -4483,6 +4485,38 @@ class ChannelPlayerController
             $storeSettingBaccarat->num = 1; // 默认启用
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
+
+            // 5. 创建默认自动交班配置（早中晚三班）
+            $autoShiftConfigs = [
+                [
+                    'title' => '早班',
+                    'shift_time' => '08:00:00',
+                    'description' => '早班自动交班（08:00-16:00）'
+                ],
+                [
+                    'title' => '中班',
+                    'shift_time' => '16:00:00',
+                    'description' => '中班自动交班（16:00-24:00）'
+                ],
+                [
+                    'title' => '晚班',
+                    'shift_time' => '00:00:00',
+                    'description' => '晚班自动交班（00:00-08:00）'
+                ],
+            ];
+
+            foreach ($autoShiftConfigs as $configData) {
+                $autoShiftConfig = new StoreAutoShiftConfig();
+                $autoShiftConfig->department_id = $storeDepartment->id;
+                $autoShiftConfig->bind_admin_user_id = $adminUser->id;
+                $autoShiftConfig->is_enabled = 1; // 默认启用
+                $autoShiftConfig->shift_mode = StoreAutoShiftConfig::MODE_DAILY; // 每日交班
+                $autoShiftConfig->shift_time = $configData['shift_time'];
+                $autoShiftConfig->auto_settlement = 1; // 自动结算
+                $autoShiftConfig->notify_on_failure = 1; // 失败通知
+                $autoShiftConfig->status = 1; // 正常状态
+                $autoShiftConfig->save();
+            }
 
             Db::commit();
 

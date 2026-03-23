@@ -206,5 +206,9 @@ return [
         'store_game_manage' => 'ゲーム管理',
         'store_game_record' => 'ゲーム記録',
         'store_deposit_bonus_qrcode' => '注文管理',
+        //自動シフト管理
+        'auto_shift_management' => '自動シフト',
+        'auto_shift_config' => 'シフト設定',
+        'auto_shift_logs' => '実行ログ',
     ]
 ];

@@ -205,6 +205,10 @@ return [
         'store_game_manage' => 'Game Management',
         'store_game_record' => 'Game Records',
         'store_deposit_bonus_qrcode' => 'Order Management',
+        //Auto Shift Management
+        'auto_shift_management' => 'Auto Shift',
+        'auto_shift_config' => 'Shift Configuration',
+        'auto_shift_logs' => 'Execution Logs',
         /** TODO end translation */
     ]
 ];

@@ -205,5 +205,9 @@ return [
         'store_game_manage' => '電子遊戲管理',
         'store_game_record' => '遊戲記錄',
         'store_deposit_bonus_qrcode' => '訂單管理',
+        //自動交班管理
+        'auto_shift_management' => '自動交班',
+        'auto_shift_config' => '交班配置',
+        'auto_shift_logs' => '執行日誌',
     ]
 ];

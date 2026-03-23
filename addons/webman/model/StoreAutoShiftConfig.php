@@ -11,7 +11,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  *
  * @property int $id 主键ID
  * @property int $department_id 部门/渠道ID
- * @property int $bind_player_id 绑定玩家ID（已废弃，请使用 bind_admin_user_id）
  * @property int $bind_admin_user_id 绑定的管理员用户ID（代理/店家）
  * @property int $is_enabled 是否启用（0=未启用，1=已启用）
  * @property int $shift_mode 交班模式（1=每日，2=每周，3=自定义周期）
@@ -72,15 +71,6 @@ class StoreAutoShiftConfig extends Model
     public function department()
     {
         return $this->belongsTo(Department::class, 'department_id', 'id');
-    }
-
-    /**
-     * 关联绑定玩家（旧方法，已废弃）
-     * @deprecated 使用 bindAdminUser() 替代
-     */
-    public function bindPlayer()
-    {
-        return $this->belongsTo(Player::class, 'bind_player_id', 'id');
     }
 
     /**

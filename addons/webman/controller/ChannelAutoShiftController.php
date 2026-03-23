@@ -22,13 +22,13 @@ use support\Response;
 
 /**
  * 自动交班控制器
- * @group channel
+ * @group store
  */
 class ChannelAutoShiftController
 {
     /**
      * 配置页面
-     * @group channel
+     * @group store
      * @auth true
      */
     public function config(Request $request): Form
@@ -216,7 +216,7 @@ class ChannelAutoShiftController
 
     /**
      * 保存配置
-     * @group channel
+     * @group store
      * @auth true
      */
     public function saveConfig(Request $request): Response
@@ -250,7 +250,7 @@ class ChannelAutoShiftController
 
     /**
      * 执行日志列表
-     * @group channel
+     * @group store
      * @auth true
      */
     public function logs(Request $request): Grid
@@ -387,7 +387,7 @@ class ChannelAutoShiftController
 
     /**
      * 日志详情
-     * @group channel
+     * @group store
      * @auth true
      */
     public function logDetail(Request $request): Response
@@ -416,7 +416,7 @@ class ChannelAutoShiftController
 
     /**
      * 手动触发一次
-     * @group channel
+     * @group store
      * @auth true
      */
     public function manualTrigger(Request $request): Response
@@ -456,7 +456,7 @@ class ChannelAutoShiftController
 
     /**
      * 切换启用状态
-     * @group channel
+     * @group store
      * @auth true
      */
     public function toggleEnabled(Request $request): Response
@@ -489,7 +489,7 @@ class ChannelAutoShiftController
 
     /**
      * 获取执行统计
-     * @group channel
+     * @group store
      * @auth true
      */
     public function stats(Request $request): Response

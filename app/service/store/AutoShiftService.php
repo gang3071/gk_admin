@@ -419,7 +419,7 @@ class AutoShiftService
             'lottery_amount' => 0
         ];
 
-        $machineAmount = bcdiv($data['machine_put_point'], $currency->rate, 2);
+        $machineAmount = bcdiv($data['machine_put_point'], $currency->ratio, 2);
         $totalProfit = bcsub($data['present_in_amount'], $data['present_out_amount'], 2);
 
         return [
