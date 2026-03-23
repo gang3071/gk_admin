@@ -4,7 +4,6 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use app\service\store\AutoShiftService;
-use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -16,7 +15,6 @@ use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\layout\Row;
-use ExAdmin\ui\component\layout\Divider;
 use support\Request;
 use support\Response;
 
