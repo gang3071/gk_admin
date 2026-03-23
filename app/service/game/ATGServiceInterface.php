@@ -165,8 +165,6 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
                     'X-key' => $config['key'],
                 ])
                 ->get($config['api_domain'] . '/token');
-
-            throw new GameException(json_encode($tokenResponse->json()));
             if (!$tokenResponse->ok()) {
                 throw new GameException(admin_trans('message.system_busy'));
             }
@@ -186,8 +184,6 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
         } else {
             $response = $request->get($url . '?' . http_build_query($params));
         }
-
-        throw new GameException(json_encode($response->json()));
         if (!$response->ok()) {
             $res = $response->json();
             if ($res['status'] == '400' && $res['message'] == 'user exists') {

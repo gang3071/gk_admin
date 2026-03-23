@@ -9,6 +9,7 @@ use addons\webman\model\GameContent;
 use addons\webman\model\GameExtend;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\Player;
+use app\exception\GameException;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -214,6 +215,7 @@ class GameController
         $curlError = curl_error($ch);
         curl_close($ch);
 
+        return notification_error($response,'response');
         // 第一层：检查 curl 错误
         if ($curlError) {
             return notification_error(admin_trans('admin.error'),
@@ -237,6 +239,7 @@ class GameController
 
         // 第三层：检查业务逻辑
         $data = json_decode($response, true);
+        return notification_error(json_encode($data),'1');
         if (empty($data) || $data['code'] != 200) {
             return notification_error(admin_trans('admin.error'),
                 $data['msg'] ?? admin_trans('game_platform.action_error'))->redirect('');
