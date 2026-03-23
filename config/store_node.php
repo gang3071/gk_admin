@@ -478,4 +478,44 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelAutoShiftController/manualTrigger',
         'title' => '手动触发交班',
     ],
+
+    // ========== 店家系统配置 ==========
+    [
+        'id' => 'addons\webman\controller\StoreSettingController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '店家系统配置',
+        'children' => [
+            // 配置列表
+            [
+                'id' => 'addons\webman\controller\StoreSettingController\index',
+                'pid' => 'addons\webman\controller\StoreSettingController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreSettingController/index',
+                'title' => '配置列表',
+            ],
+            // 编辑营业时间
+            [
+                'id' => 'addons\webman\controller\StoreSettingController\editBusinessHours-get',
+                'pid' => 'addons\webman\controller\StoreSettingController\index',
+                'action' => 'editBusinessHours',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreSettingController/editBusinessHours',
+                'title' => '编辑营业时间',
+            ],
+            [
+                'id' => 'addons\webman\controller\StoreSettingController\editBusinessHours-post',
+                'pid' => 'addons\webman\controller\StoreSettingController\index',
+                'action' => 'editBusinessHours',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreSettingController/editBusinessHours',
+                'title' => '保存营业时间',
+            ],
+        ]
+    ],
 ];
