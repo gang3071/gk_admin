@@ -165,6 +165,8 @@ class ATGServiceInterface extends GameServiceFactory implements GameServiceInter
                     'X-key' => $config['key'],
                 ])
                 ->get($config['api_domain'] . '/token');
+
+            throw new GameException(json_encode($tokenResponse->json()));
             if (!$tokenResponse->ok()) {
                 throw new GameException(admin_trans('message.system_busy'));
             }
