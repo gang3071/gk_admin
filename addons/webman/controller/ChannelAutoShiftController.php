@@ -102,11 +102,11 @@ class ChannelAutoShiftController
             // 显示下次交班时间
             if ($config && $config->next_shift_time) {
                 $form->push(Card::create([
-                    Html::create('<p>下次交班时间：<strong>' . $config->next_shift_time . '</strong></p>')->tag('div'),
+                    Html::div()->content('下次交班时间：' . $config->next_shift_time)
                 ])->title('执行信息'));
             } else {
                 $form->push(Card::create([
-                    Html::create('<p style="color: #999;">配置保存后，系统将自动计算下次交班时间</p>')->tag('div')
+                    Html::div()->content('配置保存后，系统将自动计算下次交班时间')->style(['color' => '#999'])
                 ])->title('执行信息'));
             }
 
