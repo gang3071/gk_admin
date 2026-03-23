@@ -117,13 +117,10 @@ class ChannelAutoShiftController
                 $logsUrl = admin_url('addons-webman-controller-ChannelAutoShiftController-logs');
 
                 $form->push(Card::create([
-                    Html::create('
-                        <div style="padding: 10px 0;">
-                            <a href="' . $logsUrl . '" class="ant-btn ant-btn-default" target="_blank">
-                                <span>查看执行日志</span>
-                            </a>
-                        </div>
-                    ')->tag('div')
+                    Button::create('查看执行日志')
+                        ->type('default')
+                        ->link($logsUrl)
+                        ->target('_blank')
                 ])->title('快捷操作'));
             }
 
