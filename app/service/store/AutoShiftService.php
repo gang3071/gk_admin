@@ -84,8 +84,6 @@ class AutoShiftService
             $config->save();
 
             DB::commit();
-            return ['code' => 0, 'msg' => '保存成功', 'data' => $config];
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('保存自动交班配置失败', [
@@ -95,6 +93,7 @@ class AutoShiftService
             ]);
             return ['code' => 1, 'msg' => '保存失败: ' . $e->getMessage()];
         }
+        return ['code' => 0, 'msg' => '保存成功', 'data' => $config];
     }
 
     /**
