@@ -84,56 +84,33 @@ class ChannelAutoShiftController
                 $form->switch('is_enabled', '启用自动交班')
                     ->checkedValue(1)
                     ->unCheckedValue(0)
-                    ->help('启用后，系统将按照配置的规则自动执行交班'),
+                    ->help('启用后，系统将在每天的指定时间自动执行交班'),
 
-                $form->radio('shift_mode', '交班模式')
-                    ->options([
-                        StoreAutoShiftConfig::MODE_DAILY => '每日交班',
-                        StoreAutoShiftConfig::MODE_WEEKLY => '每周交班',
-                        StoreAutoShiftConfig::MODE_CUSTOM => '自定义周期'
-                    ])
-                    ->default(StoreAutoShiftConfig::MODE_DAILY),
+                $form->divider()->content('交班时间设置'),
 
-                $form->time('shift_time', '交班时间')
-                    ->default('02:00:00')
-                    ->help('每日交班和每周交班模式下生效，建议选择凌晨时段，避免影响正常营业'),
+                $form->time('shift_time_1', '交班时间 1')
+                    ->help('第一个交班时间点，留空表示不设置'),
 
-                $form->checkbox('shift_weekdays', '每周交班日期')
-                    ->options([
-                        0 => '周日',
-                        1 => '周一',
-                        2 => '周二',
-                        3 => '周三',
-                        4 => '周四',
-                        5 => '周五',
-                        6 => '周六',
-                    ])
-                    ->help('每周交班模式下生效，选择每周哪几天执行交班'),
+                $form->time('shift_time_2', '交班时间 2')
+                    ->help('第二个交班时间点，留空表示不设置'),
 
-                $form->number('shift_interval_hours', '交班周期（小时）')
-                    ->min(1)
-                    ->max(168)
-                    ->default(24)
-                    ->help('自定义周期模式下生效，每隔多少小时执行一次交班（1-168小时）'),
-            ])->title('交班规则配置'));
+                $form->time('shift_time_3', '交班时间 3')
+                    ->help('第三个交班时间点，留空表示不设置'),
 
-            // 高级配置
-            $form->push(Card::create([
+                $form->divider()->content('其他设置'),
+
                 $form->switch('auto_settlement', '自动结算')
                     ->checkedValue(1)
                     ->unCheckedValue(0)
                     ->default(1)
                     ->help('交班后是否自动进行结算'),
 
-                $form->switch('notify_on_failure', '失败通知')
+                $form->switch('enable_notification', '启用通知')
                     ->checkedValue(1)
                     ->unCheckedValue(0)
                     ->default(1)
-                    ->help('交班失败时是否发送通知'),
-
-                $form->text('notify_phones', '通知手机号')
-                    ->help('失败通知启用时生效，多个手机号用英文逗号分隔，如：13800138000,13900139000'),
-            ])->title('高级设置'));
+                    ->help('交班成功或失败后，是否向店家后台推送实时通知'),
+            ])->title('交班配置'));
 
             // 显示下次交班时间
             if ($config && $config->next_shift_time) {
@@ -172,24 +149,21 @@ class ChannelAutoShiftController
 
             // 处理表单提交
             $form->saving(function (Form $form) use ($admin, $service) {
-                // 处理每周交班日期
-                $weekdays = $form->input('shift_weekdays');
-                if (is_array($weekdays)) {
-                    $weekdays = implode(',', $weekdays);
-                }
-
                 $data = [
                     'department_id' => $admin->department_id,
                     'bind_admin_user_id' => $admin->id,
                     'is_enabled' => $form->input('is_enabled', 0),
-                    'shift_mode' => $form->input('shift_mode', 1),
-                    'shift_time' => $form->input('shift_time', '02:00:00'),
-                    'shift_weekdays' => $weekdays,
-                    'shift_interval_hours' => $form->input('shift_interval_hours'),
+                    'shift_time_1' => $form->input('shift_time_1'),
+                    'shift_time_2' => $form->input('shift_time_2'),
+                    'shift_time_3' => $form->input('shift_time_3'),
                     'auto_settlement' => $form->input('auto_settlement', 1),
-                    'notify_on_failure' => $form->input('notify_on_failure', 1),
-                    'notify_phones' => $form->input('notify_phones'),
+                    'enable_notification' => $form->input('enable_notification', 1),
                 ];
+
+                // 至少要设置一个交班时间
+                if (empty($data['shift_time_1']) && empty($data['shift_time_2']) && empty($data['shift_time_3'])) {
+                    return message_error('请至少设置一个交班时间');
+                }
 
                 $result = $service->saveConfig($data);
 
@@ -211,23 +185,15 @@ class ChannelAutoShiftController
     {
         $admin = Admin::user();
 
-        // 处理每周交班日期
-        $weekdays = $request->post('weekdays');
-        if (is_array($weekdays)) {
-            $weekdays = implode(',', $weekdays);
-        }
-
         $data = [
             'department_id' => $admin->department_id,
             'bind_admin_user_id' => $admin->id,
             'is_enabled' => $request->post('is_enabled', 0),
-            'shift_mode' => $request->post('shift_mode', 1),
-            'shift_time' => $request->post('shift_time', '02:00:00'),
-            'shift_weekdays' => $weekdays,
-            'shift_interval_hours' => $request->post('shift_interval_hours'),
+            'shift_time_1' => $request->post('shift_time_1'),
+            'shift_time_2' => $request->post('shift_time_2'),
+            'shift_time_3' => $request->post('shift_time_3'),
             'auto_settlement' => $request->post('auto_settlement', 1),
-            'notify_on_failure' => $request->post('notify_on_failure', 1),
-            'notify_phones' => $request->post('notify_phones'),
+            'enable_notification' => $request->post('enable_notification', 1),
         ];
 
         $service = new AutoShiftService();
@@ -463,13 +429,11 @@ class ChannelAutoShiftController
             'department_id' => $admin->department_id,
             'bind_admin_user_id' => $admin->id,
             'is_enabled' => $enabled,
-            'shift_mode' => $config->shift_mode,
-            'shift_time' => $config->shift_time,
-            'shift_weekdays' => $config->shift_weekdays,
-            'shift_interval_hours' => $config->shift_interval_hours,
+            'shift_time_1' => $config->shift_time_1,
+            'shift_time_2' => $config->shift_time_2,
+            'shift_time_3' => $config->shift_time_3,
             'auto_settlement' => $config->auto_settlement,
-            'notify_on_failure' => $config->notify_on_failure,
-            'notify_phones' => $config->notify_phones,
+            'enable_notification' => $config->enable_notification ?? 1,
         ]);
 
         return json($result);
