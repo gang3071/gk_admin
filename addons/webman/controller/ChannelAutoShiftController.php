@@ -46,37 +46,39 @@ class ChannelAutoShiftController
             if ($config && $config->is_enabled) {
                 $stats = $service->getExecutionStats($admin->department_id, $admin->id, 7);
 
-                $form->push(Card::create([
-                    Html::create('<h4>最近7天执行统计</h4>')->tag('div'),
-                    Row::create()->gutter(16)->content([
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('总执行次数')
-                                ->value($stats['total'] ?? 0)
-                                ->suffix('次')
-                        ),
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('成功次数')
-                                ->value($stats['success'] ?? 0)
-                                ->suffix('次')
-                                ->valueStyle(['color' => '#3f8600'])
-                        ),
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('失败次数')
-                                ->value($stats['failed'] ?? 0)
-                                ->suffix('次')
-                                ->valueStyle(['color' => '#cf1322'])
-                        ),
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('成功率')
-                                ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
-                                ->suffix('%')
-                        ),
-                    ])
-                ])->title('执行统计')->style(['margin-bottom' => '20px']));
+                $form->push(Card::create()
+                    ->title('最近7天执行统计')
+                    ->style(['margin-bottom' => '20px'])
+                    ->content(
+                        Row::create()->gutter(16)->content([
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('总执行次数')
+                                    ->value($stats['total'] ?? 0)
+                                    ->suffix('次')
+                            ),
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('成功次数')
+                                    ->value($stats['success'] ?? 0)
+                                    ->suffix('次')
+                                    ->valueStyle(['color' => '#3f8600'])
+                            ),
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('失败次数')
+                                    ->value($stats['failed'] ?? 0)
+                                    ->suffix('次')
+                                    ->valueStyle(['color' => '#cf1322'])
+                            ),
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('成功率')
+                                    ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
+                                    ->suffix('%')
+                            ),
+                        ])
+                    ));
             }
 
             // 基础配置
@@ -102,35 +104,23 @@ class ChannelAutoShiftController
             // 显示下次交班时间
             if ($config && $config->next_shift_time) {
                 $form->push(Card::create([
-                    Html::create('<p>下次交班时间：<strong>' . $config->next_shift_time . '</strong></p>')->tag('div'),
+                    Html::div()->content('下次交班时间：' . $config->next_shift_time)
                 ])->title('执行信息'));
             } else {
                 $form->push(Card::create([
-                    Html::create('<p style="color: #999;">配置保存后，系统将自动计算下次交班时间</p>')->tag('div')
+                    Html::div()->content('配置保存后，系统将自动计算下次交班时间')->style(['color' => '#999'])
                 ])->title('执行信息'));
             }
 
             // 快捷操作
             if ($config) {
-                $manualTriggerUrl = admin_url('addons-webman-controller-ChannelAutoShiftController-manualTrigger');
                 $logsUrl = admin_url('addons-webman-controller-ChannelAutoShiftController-logs');
 
                 $form->push(Card::create([
-                    Html::create('
-                        <div style="padding: 10px 0;">
-                            <a href="' . $logsUrl . '" class="ant-btn ant-btn-default" target="_blank" style="margin-right: 10px;">
-                                <span>查看执行日志</span>
-                            </a>
-                            ' . ($config->is_enabled ? '
-                            <a href="' . $manualTriggerUrl . '"
-                               class="ant-btn ant-btn-primary"
-                               onclick="return confirm(\'确定要立即执行一次自动交班吗？\n\n这不会影响定时执行计划。\')"
-                               style="margin-right: 10px;">
-                                <span>手动触发一次</span>
-                            </a>
-                            ' : '') . '
-                        </div>
-                    ')->tag('div')
+                    Button::create('查看执行日志')
+                        ->type('default')
+                        ->link($logsUrl)
+                        ->target('_blank')
                 ])->title('快捷操作'));
             }
 
@@ -346,46 +336,6 @@ class ChannelAutoShiftController
             'code' => 0,
             'data' => $log
         ]);
-    }
-
-    /**
-     * 手动触发一次
-     * @group store
-     * @auth true
-     */
-    public function manualTrigger(Request $request): Response
-    {
-        $admin = Admin::user();
-        $service = new AutoShiftService();
-
-        $config = $service->getConfig($admin->department_id, $admin->id);
-
-        if (!$config) {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-config'))
-                ->with('error', '未找到自动交班配置，请先完成配置');
-        }
-
-        if (!$config->is_enabled) {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-config'))
-                ->with('error', '自动交班未启用，请先启用后再手动触发');
-        }
-
-        \Log::info('手动触发自动交班', [
-            'admin_id' => $admin->id,
-            'department_id' => $admin->department_id,
-            'config_id' => $config->id
-        ]);
-
-        $result = $service->executeAutoShift($config);
-
-        // 重定向到日志页面
-        if ($result['code'] === 0) {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-logs'))
-                ->with('success', '手动触发成功！交班已完成，请查看执行日志。');
-        } else {
-            return redirect(admin_url('addons-webman-controller-ChannelAutoShiftController-config'))
-                ->with('error', '手动触发失败：' . ($result['msg'] ?? '未知错误'));
-        }
     }
 
     /**

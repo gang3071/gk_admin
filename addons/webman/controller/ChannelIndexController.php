@@ -33,6 +33,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use MongoDB\BSON\UTCDateTime;
 use support\Db;
+use support\Log;
 use support\Response;
 
 /**
@@ -2756,7 +2757,7 @@ class ChannelIndexController
 
                     if (!$currency) {
                         DB::rollBack();
-                        \Log::error('交班失败：货币配置不存在', [
+                        Log::error('交班失败：货币配置不存在', [
                             'currency_code' => $admin->department->channel->currency,
                             'department_id' => $admin->department_id,
                             'user_id' => $admin->id
@@ -2792,7 +2793,7 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->save();
 
                     // 9. 记录日志
-                    \Log::info('店家手动交班成功', [
+                    Log::info('店家手动交班成功', [
                         'record_id' => $storeAgentShiftHandoverRecord->id,
                         'bind_admin_user_id' => $admin->id,
                         'user_id' => $admin->id,
@@ -2812,7 +2813,7 @@ class ChannelIndexController
 
                 } catch (\Exception $e) {
                     DB::rollBack();
-                    \Log::error('交班失败', [
+                    Log::error('交班失败', [
                         'error' => $e->getMessage(),
                         'trace' => $e->getTraceAsString(),
                         'user_id' => Admin::id(),
