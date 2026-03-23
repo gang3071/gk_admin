@@ -79,26 +79,6 @@ class ChannelAutoShiftController
                 ])->title('执行统计')->style(['margin-bottom' => '20px']));
             }
 
-            // 基础配置
-            $form->push(Card::create([
-                $form->switch('is_enabled', '启用自动交班')
-                    ->checkedValue(1)
-                    ->unCheckedValue(0)
-                    ->help('启用后，系统将在每天的指定时间自动执行交班，并实时推送通知到店家后台'),
-
-                $form->time('shift_time_1', '早班交班时间')
-                    ->default('08:00:00')
-                    ->help('早班交班时间（晚班 → 早班），建议：08:00'),
-
-                $form->time('shift_time_2', '中班交班时间')
-                    ->default('16:00:00')
-                    ->help('中班交班时间（早班 → 中班），建议：16:00'),
-
-                $form->time('shift_time_3', '晚班交班时间')
-                    ->default('00:00:00')
-                    ->help('晚班交班时间（中班 → 晚班），建议：00:00'),
-            ])->title('交班配置'));
-
             // 显示下次交班时间
             if ($config && $config->next_shift_time) {
                 $form->push(Card::create([
