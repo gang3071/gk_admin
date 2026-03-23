@@ -46,37 +46,39 @@ class ChannelAutoShiftController
             if ($config && $config->is_enabled) {
                 $stats = $service->getExecutionStats($admin->department_id, $admin->id, 7);
 
-                $form->push(Card::create([
-                    Html::create('<h4>最近7天执行统计</h4>')->tag('div'),
-                    Row::create()->gutter(16)->content([
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('总执行次数')
-                                ->value($stats['total'] ?? 0)
-                                ->suffix('次')
-                        ),
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('成功次数')
-                                ->value($stats['success'] ?? 0)
-                                ->suffix('次')
-                                ->valueStyle(['color' => '#3f8600'])
-                        ),
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('失败次数')
-                                ->value($stats['failed'] ?? 0)
-                                ->suffix('次')
-                                ->valueStyle(['color' => '#cf1322'])
-                        ),
-                        Row::col(6)->content(
-                            Statistic::create()
-                                ->title('成功率')
-                                ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
-                                ->suffix('%')
-                        ),
-                    ])
-                ])->title('执行统计')->style(['margin-bottom' => '20px']));
+                $form->push(Card::create()
+                    ->title('最近7天执行统计')
+                    ->style(['margin-bottom' => '20px'])
+                    ->content(
+                        Row::create()->gutter(16)->content([
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('总执行次数')
+                                    ->value($stats['total'] ?? 0)
+                                    ->suffix('次')
+                            ),
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('成功次数')
+                                    ->value($stats['success'] ?? 0)
+                                    ->suffix('次')
+                                    ->valueStyle(['color' => '#3f8600'])
+                            ),
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('失败次数')
+                                    ->value($stats['failed'] ?? 0)
+                                    ->suffix('次')
+                                    ->valueStyle(['color' => '#cf1322'])
+                            ),
+                            Row::col(6)->content(
+                                Statistic::create()
+                                    ->title('成功率')
+                                    ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
+                                    ->suffix('%')
+                            ),
+                        ])
+                    ));
             }
 
             // 基础配置
