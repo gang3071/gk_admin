@@ -84,18 +84,21 @@ class ChannelAutoShiftController
                 $form->switch('is_enabled', '启用自动交班')
                     ->checkedValue(1)
                     ->unCheckedValue(0)
-                    ->help('启用后，系统将在每天的指定时间自动执行交班'),
+                    ->help('启用后，系统将在每天的指定时间自动执行交班，并实时推送通知到店家后台'),
 
                 $form->divider()->content('交班时间设置'),
 
-                $form->time('shift_time_1', '交班时间 1')
-                    ->help('第一个交班时间点，留空表示不设置'),
+                $form->time('shift_time_1', '早班交班时间')
+                    ->default('08:00:00')
+                    ->help('早班交班时间（晚班 → 早班），建议：08:00'),
 
-                $form->time('shift_time_2', '交班时间 2')
-                    ->help('第二个交班时间点，留空表示不设置'),
+                $form->time('shift_time_2', '中班交班时间')
+                    ->default('16:00:00')
+                    ->help('中班交班时间（早班 → 中班），建议：16:00'),
 
-                $form->time('shift_time_3', '交班时间 3')
-                    ->help('第三个交班时间点，留空表示不设置'),
+                $form->time('shift_time_3', '晚班交班时间')
+                    ->default('00:00:00')
+                    ->help('晚班交班时间（中班 → 晚班），建议：00:00'),
 
                 $form->divider()->content('其他设置'),
 
@@ -104,12 +107,6 @@ class ChannelAutoShiftController
                     ->unCheckedValue(0)
                     ->default(1)
                     ->help('交班后是否自动进行结算'),
-
-                $form->switch('enable_notification', '启用通知')
-                    ->checkedValue(1)
-                    ->unCheckedValue(0)
-                    ->default(1)
-                    ->help('交班成功或失败后，是否向店家后台推送实时通知'),
             ])->title('交班配置'));
 
             // 显示下次交班时间
@@ -153,17 +150,11 @@ class ChannelAutoShiftController
                     'department_id' => $admin->department_id,
                     'bind_admin_user_id' => $admin->id,
                     'is_enabled' => $form->input('is_enabled', 0),
-                    'shift_time_1' => $form->input('shift_time_1'),
-                    'shift_time_2' => $form->input('shift_time_2'),
-                    'shift_time_3' => $form->input('shift_time_3'),
+                    'shift_time_1' => $form->input('shift_time_1', '08:00:00'),
+                    'shift_time_2' => $form->input('shift_time_2', '16:00:00'),
+                    'shift_time_3' => $form->input('shift_time_3', '00:00:00'),
                     'auto_settlement' => $form->input('auto_settlement', 1),
-                    'enable_notification' => $form->input('enable_notification', 1),
                 ];
-
-                // 至少要设置一个交班时间
-                if (empty($data['shift_time_1']) && empty($data['shift_time_2']) && empty($data['shift_time_3'])) {
-                    return message_error('请至少设置一个交班时间');
-                }
 
                 $result = $service->saveConfig($data);
 
@@ -189,11 +180,10 @@ class ChannelAutoShiftController
             'department_id' => $admin->department_id,
             'bind_admin_user_id' => $admin->id,
             'is_enabled' => $request->post('is_enabled', 0),
-            'shift_time_1' => $request->post('shift_time_1'),
-            'shift_time_2' => $request->post('shift_time_2'),
-            'shift_time_3' => $request->post('shift_time_3'),
+            'shift_time_1' => $request->post('shift_time_1', '08:00:00'),
+            'shift_time_2' => $request->post('shift_time_2', '16:00:00'),
+            'shift_time_3' => $request->post('shift_time_3', '00:00:00'),
             'auto_settlement' => $request->post('auto_settlement', 1),
-            'enable_notification' => $request->post('enable_notification', 1),
         ];
 
         $service = new AutoShiftService();
@@ -429,11 +419,10 @@ class ChannelAutoShiftController
             'department_id' => $admin->department_id,
             'bind_admin_user_id' => $admin->id,
             'is_enabled' => $enabled,
-            'shift_time_1' => $config->shift_time_1,
-            'shift_time_2' => $config->shift_time_2,
-            'shift_time_3' => $config->shift_time_3,
-            'auto_settlement' => $config->auto_settlement,
-            'enable_notification' => $config->enable_notification ?? 1,
+            'shift_time_1' => $config->shift_time_1 ?? '08:00:00',
+            'shift_time_2' => $config->shift_time_2 ?? '16:00:00',
+            'shift_time_3' => $config->shift_time_3 ?? '00:00:00',
+            'auto_settlement' => $config->auto_settlement ?? 1,
         ]);
 
         return json($result);
