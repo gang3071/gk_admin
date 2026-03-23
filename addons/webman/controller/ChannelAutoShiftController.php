@@ -96,10 +96,7 @@ class ChannelAutoShiftController
 
                 $form->time('shift_time', '交班时间')
                     ->default('02:00:00')
-                    ->help('建议选择凌晨时段，避免影响正常营业')
-                    ->when('shift_mode', '!=', StoreAutoShiftConfig::MODE_CUSTOM, function (Form $form) {
-                        $form->show();
-                    }),
+                    ->help('每日交班和每周交班模式下生效，建议选择凌晨时段，避免影响正常营业'),
 
                 $form->checkbox('shift_weekdays', '每周交班日期')
                     ->options([
@@ -111,19 +108,13 @@ class ChannelAutoShiftController
                         5 => '周五',
                         6 => '周六',
                     ])
-                    ->help('选择每周哪几天执行交班')
-                    ->when('shift_mode', '==', StoreAutoShiftConfig::MODE_WEEKLY, function (Form $form) {
-                        $form->show();
-                    }),
+                    ->help('每周交班模式下生效，选择每周哪几天执行交班'),
 
                 $form->number('shift_interval_hours', '交班周期（小时）')
                     ->min(1)
                     ->max(168)
                     ->default(24)
-                    ->help('每隔多少小时执行一次交班（1-168小时）')
-                    ->when('shift_mode', '==', StoreAutoShiftConfig::MODE_CUSTOM, function (Form $form) {
-                        $form->show();
-                    }),
+                    ->help('自定义周期模式下生效，每隔多少小时执行一次交班（1-168小时）'),
             ])->title('交班规则配置'));
 
             // 高级配置
@@ -141,10 +132,7 @@ class ChannelAutoShiftController
                     ->help('交班失败时是否发送通知'),
 
                 $form->text('notify_phones', '通知手机号')
-                    ->help('多个手机号用英文逗号分隔，如：13800138000,13900139000')
-                    ->when('notify_on_failure', '==', 1, function (Form $form) {
-                        $form->show();
-                    }),
+                    ->help('失败通知启用时生效，多个手机号用英文逗号分隔，如：13800138000,13900139000'),
             ])->title('高级设置'));
 
             // 显示下次交班时间
