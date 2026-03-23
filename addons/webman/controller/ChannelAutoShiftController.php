@@ -15,6 +15,7 @@ use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\component\layout\Divider;
 use support\Request;
 use support\Response;
 
@@ -80,24 +81,24 @@ class ChannelAutoShiftController
             }
 
             // 基础配置
-            $form->push(Card::create([
-                $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
-                    ->checkedValue(1)
-                    ->unCheckedValue(0)
-                    ->help(admin_trans('shift_handover.auto.enable_help')),
+            $form->push(Divider::create(admin_trans('shift_handover.auto.config_title')));
 
-                $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
-                    ->default('08:00:00')
-                    ->help(admin_trans('shift_handover.auto.shift_time_1_help')),
+            $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
+                ->checkedValue(1)
+                ->unCheckedValue(0)
+                ->help(admin_trans('shift_handover.auto.enable_help'));
 
-                $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
-                    ->default('16:00:00')
-                    ->help(admin_trans('shift_handover.auto.shift_time_2_help')),
+            $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
+                ->default('08:00:00')
+                ->help(admin_trans('shift_handover.auto.shift_time_1_help'));
 
-                $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
-                    ->default('00:00:00')
-                    ->help(admin_trans('shift_handover.auto.shift_time_3_help')),
-            ])->title(admin_trans('shift_handover.auto.config_title')));
+            $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
+                ->default('16:00:00')
+                ->help(admin_trans('shift_handover.auto.shift_time_2_help'));
+
+            $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
+                ->default('00:00:00')
+                ->help(admin_trans('shift_handover.auto.shift_time_3_help'));
 
             // 显示下次交班时间
             if ($config && $config->next_shift_time) {
@@ -128,7 +129,6 @@ class ChannelAutoShiftController
                     'shift_time_1' => $form->input('shift_time_1', '08:00:00'),
                     'shift_time_2' => $form->input('shift_time_2', '16:00:00'),
                     'shift_time_3' => $form->input('shift_time_3', '00:00:00'),
-                    'auto_settlement' => 1, // 总是自动结算
                 ];
 
                 $result = $service->saveConfig($data);
