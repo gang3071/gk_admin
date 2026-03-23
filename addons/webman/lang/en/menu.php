@@ -148,6 +148,7 @@ return [
         'game_platform_profit' => 'Game platform profit sharing',
         //Store Configuration
         'store_setting_manage' => 'Store System Configuration',
+        'store_open_score_setting' => 'Store Credit Configuration',
         //Agent Management
         'agent_management' => 'Agent Management',
         //Store Management

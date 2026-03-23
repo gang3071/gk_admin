@@ -149,6 +149,7 @@ return [
         'game_platform_profit' => 'ゲームプラットフォームの分潤',
         //店舗設定
         'store_setting_manage' => '店舗システム設定',
+        'store_open_score_setting' => '店舗チャージ設定',
         //代理店管理
         'agent_management' => '代理店管理',
         //店舗管理

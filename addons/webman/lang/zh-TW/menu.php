@@ -148,6 +148,7 @@ return [
         'game_platform_profit' => '遊戲平臺分潤',
         //店機配置
         'store_setting_manage' => '店機系統配置',
+        'store_open_score_setting' => '店機開分配置',
         //代理管理
         'agent_management' => '代理管理',
         //店機管理

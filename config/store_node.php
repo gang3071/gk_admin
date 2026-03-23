@@ -518,4 +518,64 @@ return [
             ],
         ]
     ],
+
+    // ========== 店家开分配置 ==========
+    [
+        'id' => 'addons\webman\controller\ChannelOpenScoreSettingController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '店家开分配置',
+        'children' => [
+            // 配置列表
+            [
+                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/index',
+                'title' => '配置列表',
+            ],
+            // 添加配置
+            [
+                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-get',
+                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+                'title' => '添加配置',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-post',
+                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+                'title' => '保存配置',
+            ],
+            // 编辑配置
+            [
+                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-put',
+                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'put',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+                'title' => '编辑配置',
+            ],
+            // 删除配置
+            [
+                'id' => 'addons\webman\controller\ChannelOpenScoreSettingController\form-delete',
+                'pid' => 'addons\webman\controller\ChannelOpenScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'delete',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelOpenScoreSettingController/form',
+                'title' => '删除配置',
+            ],
+        ]
+    ],
 ];
