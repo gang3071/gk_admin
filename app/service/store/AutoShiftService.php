@@ -25,7 +25,6 @@ class AutoShiftService
             ->where('department_id', $departmentId)
             ->where('bind_admin_user_id', $bindAdminUserId)
             ->where('is_enabled', 1)
-            ->where('status', StoreAutoShiftConfig::STATUS_NORMAL)
             ->first();
 
         return $config !== null;
@@ -63,14 +62,10 @@ class AutoShiftService
 
             // 更新配置
             $config->is_enabled = $data['is_enabled'] ?? 0;
-            $config->shift_mode = $data['shift_mode'] ?? StoreAutoShiftConfig::MODE_DAILY;
-            $config->shift_time = $data['shift_time'] ?? '02:00:00';
-            $config->shift_weekdays = $data['shift_weekdays'] ?? null;
-            $config->shift_interval_hours = $data['shift_interval_hours'] ?? null;
+            $config->shift_time_1 = $data['shift_time_1'] ?? '08:00:00';
+            $config->shift_time_2 = $data['shift_time_2'] ?? '16:00:00';
+            $config->shift_time_3 = $data['shift_time_3'] ?? '00:00:00';
             $config->auto_settlement = $data['auto_settlement'] ?? 1;
-            $config->notify_on_failure = $data['notify_on_failure'] ?? 1;
-            $config->notify_phones = $data['notify_phones'] ?? null;
-            $config->status = StoreAutoShiftConfig::STATUS_NORMAL;
 
             // 验证配置
             $validation = $this->validateConfig($config);
@@ -115,41 +110,11 @@ class AutoShiftService
      */
     private function validateConfig(StoreAutoShiftConfig $config): array
     {
-        // 验证交班时间格式
-        if (!preg_match('/^\d{2}:\d{2}:\d{2}$/', $config->shift_time)) {
-            return ['valid' => false, 'message' => '交班时间格式错误'];
-        }
-
-        // 验证每周模式
-        if ($config->shift_mode == StoreAutoShiftConfig::MODE_WEEKLY) {
-            if (empty($config->shift_weekdays)) {
-                return ['valid' => false, 'message' => '每周模式必须选择至少一天'];
-            }
-            $weekdays = explode(',', $config->shift_weekdays);
-            foreach ($weekdays as $day) {
-                if (!in_array($day, [0, 1, 2, 3, 4, 5, 6])) {
-                    return ['valid' => false, 'message' => '每周交班日期值无效'];
-                }
-            }
-        }
-
-        // 验证自定义周期
-        if ($config->shift_mode == StoreAutoShiftConfig::MODE_CUSTOM) {
-            if (empty($config->shift_interval_hours) || $config->shift_interval_hours < 1) {
-                return ['valid' => false, 'message' => '自定义周期必须大于0小时'];
-            }
-            if ($config->shift_interval_hours > 168) {
-                return ['valid' => false, 'message' => '自定义周期不能超过168小时（7天）'];
-            }
-        }
-
-        // 验证通知手机号
-        if ($config->notify_on_failure && !empty($config->notify_phones)) {
-            $phones = explode(',', $config->notify_phones);
-            foreach ($phones as $phone) {
-                $phone = trim($phone);
-                if (!preg_match('/^1[3-9]\d{9}$/', $phone)) {
-                    return ['valid' => false, 'message' => '手机号格式错误: ' . $phone];
+        // 验证时间格式
+        foreach (['shift_time_1', 'shift_time_2', 'shift_time_3'] as $field) {
+            if (!empty($config->$field)) {
+                if (!preg_match('/^\d{2}:\d{2}:\d{2}$/', $config->$field)) {
+                    return ['valid' => false, 'message' => '交班时间格式错误'];
                 }
             }
         }
@@ -159,59 +124,39 @@ class AutoShiftService
 
     /**
      * 计算下次交班时间
+     * 从3个交班时间（早班08:00、中班16:00、晚班00:00）中找到最近的一个
      */
-    public function calculateNextShiftTime(StoreAutoShiftConfig $config): Carbon
+    public function calculateNextShiftTime(StoreAutoShiftConfig $config): ?Carbon
     {
         $now = Carbon::now();
-        $time = Carbon::parse($config->shift_time);
+        $times = [];
 
-        switch ($config->shift_mode) {
-            case StoreAutoShiftConfig::MODE_DAILY: // 每日
+        // 收集所有设置的交班时间（早班、中班、晚班）
+        foreach (['shift_time_1', 'shift_time_2', 'shift_time_3'] as $field) {
+            if (!empty($config->$field)) {
+                $time = Carbon::parse($config->$field);
                 $next = Carbon::today()->setTime($time->hour, $time->minute, $time->second);
+
+                // 如果时间已过，则为明天同一时间
                 if ($next->lte($now)) {
                     $next->addDay();
                 }
-                return $next;
 
-            case StoreAutoShiftConfig::MODE_WEEKLY: // 每周
-                $weekdays = array_map('intval', explode(',', $config->shift_weekdays));
-                sort($weekdays);
-                $currentWeekday = $now->dayOfWeek;
-
-                // 找到下一个交班日
-                $nextWeekday = null;
-                foreach ($weekdays as $day) {
-                    if ($day > $currentWeekday) {
-                        $nextWeekday = $day;
-                        break;
-                    } elseif ($day == $currentWeekday) {
-                        // 今天有交班，检查时间是否已过
-                        $todayShift = Carbon::today()->setTime($time->hour, $time->minute, $time->second);
-                        if ($todayShift->gt($now)) {
-                            $nextWeekday = $day;
-                            break;
-                        }
-                    }
-                }
-
-                // 如果本周没有了，取下周第一个
-                if ($nextWeekday === null) {
-                    $nextWeekday = $weekdays[0];
-                    $daysToAdd = 7 - $currentWeekday + $nextWeekday;
-                } else {
-                    $daysToAdd = $nextWeekday - $currentWeekday;
-                }
-
-                $next = Carbon::today()->addDays($daysToAdd)->setTime($time->hour, $time->minute, $time->second);
-                return $next;
-
-            case StoreAutoShiftConfig::MODE_CUSTOM: // 自定义周期
-                $lastShift = $config->last_shift_time ? Carbon::parse($config->last_shift_time) : $now;
-                return $lastShift->copy()->addHours($config->shift_interval_hours);
-
-            default:
-                return $now->addDay();
+                $times[] = $next;
+            }
         }
+
+        // 如果没有设置任何时间，返回null（理论上不会发生，因为有默认值）
+        if (empty($times)) {
+            return null;
+        }
+
+        // 返回最近的时间
+        usort($times, function($a, $b) {
+            return $a->timestamp <=> $b->timestamp;
+        });
+
+        return $times[0];
     }
 
     /**
@@ -367,11 +312,6 @@ class AutoShiftService
                 'trace' => $e->getTraceAsString()
             ]);
 
-            // 发送告警通知
-            if ($config->notify_on_failure && $config->notify_phones) {
-                $this->sendFailureNotification($config, $e->getMessage());
-            }
-
             return ['code' => 1, 'msg' => '自动交班失败: ' . $e->getMessage()];
         }
     }
@@ -434,100 +374,12 @@ class AutoShiftService
     }
 
     /**
-     * 发送失败通知
-     */
-    private function sendFailureNotification(StoreAutoShiftConfig $config, string $errorMsg): void
-    {
-        if (empty($config->notify_phones)) {
-            return;
-        }
-
-        $message = sprintf(
-            "【自动交班失败】\n店家ID: %d\n失败时间: %s\n错误信息: %s",
-            $config->department_id,
-            date('Y-m-d H:i:s'),
-            $errorMsg
-        );
-
-        Log::info('发送自动交班失败通知', [
-            'config_id' => $config->id,
-            'phones' => $config->notify_phones,
-            'message' => $message
-        ]);
-
-        // 解析手机号列表
-        $phones = array_filter(array_map('trim', explode(',', $config->notify_phones)));
-
-        if (empty($phones)) {
-            Log::warning('通知手机号为空', ['config_id' => $config->id]);
-            return;
-        }
-
-        // 发送短信通知
-        foreach ($phones as $phone) {
-            try {
-                $this->sendSms($phone, $message);
-            } catch (\Exception $e) {
-                Log::error('发送短信通知失败', [
-                    'phone' => $phone,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-    }
-
-    /**
-     * 发送短信
-     */
-    private function sendSms(string $phone, string $message): void
-    {
-        // 检查是否有短信服务可用
-        if (!class_exists('\addons\webman\model\PhoneSmsLog')) {
-            Log::warning('短信服务模型不存在', ['phone' => $phone]);
-            return;
-        }
-
-        try {
-            // 创建短信日志记录
-            $smsLog = new \addons\webman\model\PhoneSmsLog();
-            $smsLog->phone = $phone;
-            $smsLog->content = $message;
-            $smsLog->type = 'auto_shift_notify'; // 自动交班通知类型
-            $smsLog->status = 0; // 待发送
-            $smsLog->created_at = date('Y-m-d H:i:s');
-
-            // 这里可以调用实际的短信服务 API
-            // 例如：阿里云、腾讯云等
-            // $result = $smsService->send($phone, $message);
-
-            // 模拟发送成功
-            $smsLog->status = 1; // 发送成功
-            $smsLog->send_time = date('Y-m-d H:i:s');
-            $smsLog->save();
-
-            Log::info('短信通知发送成功', [
-                'phone' => $phone,
-                'log_id' => $smsLog->id
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('短信发送异常', [
-                'phone' => $phone,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            throw $e;
-        }
-    }
-
-    /**
      * 获取待执行的配置列表
      */
     public function getPendingConfigs(): array
     {
         return StoreAutoShiftConfig::query()
             ->where('is_enabled', 1)
-            ->where('status', StoreAutoShiftConfig::STATUS_NORMAL)
             ->where('next_shift_time', '<=', Carbon::now())
             ->get()
             ->toArray();
