@@ -36,4 +36,88 @@ return [
         'total_out' => '总下分',
         'total_profit_amount' => '总盈利',
     ],
+
+    // 自动交班
+    'auto' => [
+        'title' => '自动交班配置',
+        'enable' => '启用自动交班',
+        'enable_help' => '启用后，系统将在每天的指定时间自动执行交班，并实时推送通知到店家后台',
+        'shift_time_1' => '早班交班时间',
+        'shift_time_1_help' => '早班交班时间（晚班 → 早班），建议：08:00',
+        'shift_time_2' => '中班交班时间',
+        'shift_time_2_help' => '中班交班时间（早班 → 中班），建议：16:00',
+        'shift_time_3' => '晚班交班时间',
+        'shift_time_3_help' => '晚班交班时间（中班 → 晚班），建议：00:00',
+        'config_title' => '交班配置',
+        'exec_info' => '执行信息',
+        'next_shift_time' => '下次交班时间',
+        'config_save_hint' => '配置保存后，系统将自动计算下次交班时间',
+        'quick_actions' => '快捷操作',
+        'view_logs' => '查看执行日志',
+        'manual_trigger' => '手动触发一次',
+        'manual_trigger_confirm' => '确定要立即执行一次自动交班吗？\n\n这不会影响定时执行计划。',
+        'save_success' => '保存成功',
+        'save_failed' => '保存失败',
+
+        // 执行统计
+        'stats_title' => '最近7天执行统计',
+        'stats_total' => '总执行次数',
+        'stats_success' => '成功次数',
+        'stats_failed' => '失败次数',
+        'stats_success_rate' => '成功率',
+        'stats_times' => '次',
+
+        // 日志列表
+        'logs_title' => '自动交班执行日志',
+        'log_id' => 'ID',
+        'execute_time' => '执行时间',
+        'time_range' => '统计时间段',
+        'time_start' => '开始',
+        'time_end' => '结束',
+        'status' => '执行状态',
+        'status_success' => '成功',
+        'status_failed' => '失败',
+        'status_partial' => '部分成功',
+        'status_unknown' => '未知',
+        'machine_point' => '投钞点数',
+        'total_in' => '总收入',
+        'total_out' => '总支出',
+        'lottery_amount' => '彩金金额',
+        'total_profit' => '总利润',
+        'execution_duration' => '执行耗时',
+        'error_message' => '错误信息',
+
+        // 日志详情
+        'detail_title' => '执行详情',
+        'config_id' => '配置ID',
+        'shift_record_id' => '交班记录ID',
+        'time_range_start' => '统计开始时间',
+        'time_range_end' => '统计结束时间',
+        'machine_amount' => '机台投钞金额',
+        'machine_point_detail' => '机台投钞点数',
+        'total_in_detail' => '总收入（送分）',
+        'total_out_detail' => '总支出（取分）',
+        'lottery_amount_detail' => '彩金发放',
+        'total_profit_detail' => '总利润',
+        'execute_time_detail' => '执行时间',
+        'execution_duration_detail' => '执行耗时',
+        'error_message_detail' => '错误信息',
+        'seconds' => '秒',
+
+        // 筛选
+        'filter_status' => '执行状态',
+        'filter_date_start' => '开始日期',
+        'filter_date_end' => '结束日期',
+        'filter_execute_time' => '执行时间',
+
+        // 手动触发
+        'trigger_no_config' => '未找到自动交班配置，请先完成配置',
+        'trigger_not_enabled' => '自动交班未启用，请先启用后再手动触发',
+        'trigger_success' => '手动触发成功！交班已完成，请查看执行日志。',
+        'trigger_failed' => '手动触发失败',
+
+        // 其他
+        'log_not_found' => '日志不存在',
+        'config_not_found' => '未找到配置',
+    ],
 ];
