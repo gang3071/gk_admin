@@ -132,7 +132,7 @@ class ChannelAutoShiftController
                 ];
 
                 $result = $service->saveConfig($data);
-
+                return message_success($data);
                 if ($result['code'] === 0) {
                     return message_success($result['msg'] ?? admin_trans('shift_handover.auto.save_success'));
                 } else {
