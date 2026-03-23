@@ -370,7 +370,7 @@ class ChannelAutoShiftController
 
                 $filter->form()->hidden('start_date');
                 $filter->form()->hidden('end_date');
-                $filter->form()->dateRange('start_date', 'end_date', '')
+                $filter->form()->dateRange('start_date', 'end_date', '执行时间')
                     ->placeholder(['开始日期', '结束日期']);
             });
 
