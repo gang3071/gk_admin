@@ -9,6 +9,7 @@ use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
 use Carbon\Carbon;
 use support\Db;
+use support\Log;
 
 /**
  * 自动交班服务
@@ -89,7 +90,7 @@ class AutoShiftService
 
             DB::commit();
 
-            \Log::info('保存自动交班配置成功', [
+            Log::info('保存自动交班配置成功', [
                 'department_id' => $data['department_id'],
                 'bind_admin_user_id' => $data['bind_admin_user_id'],
                 'is_enabled' => $config->is_enabled,
@@ -100,7 +101,7 @@ class AutoShiftService
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('保存自动交班配置失败', [
+            Log::error('保存自动交班配置失败', [
                 'data' => $data,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -320,7 +321,7 @@ class AutoShiftService
 
             DB::commit();
 
-            \Log::info('自动交班成功', [
+            Log::info('自动交班成功', [
                 'config_id' => $config->id,
                 'shift_record_id' => $shiftRecord->id,
                 'time_range' => $startTime->toDateTimeString() . ' ~ ' . $endTime->toDateTimeString(),
@@ -357,10 +358,10 @@ class AutoShiftService
                 $log->execution_duration = (int)$duration;
                 $log->save();
             } catch (\Exception $logError) {
-                \Log::error('记录失败日志时出错', ['error' => $logError->getMessage()]);
+                Log::error('记录失败日志时出错', ['error' => $logError->getMessage()]);
             }
 
-            \Log::error('自动交班失败', [
+            Log::error('自动交班失败', [
                 'config_id' => $config->id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
@@ -448,7 +449,7 @@ class AutoShiftService
             $errorMsg
         );
 
-        \Log::info('发送自动交班失败通知', [
+        Log::info('发送自动交班失败通知', [
             'config_id' => $config->id,
             'phones' => $config->notify_phones,
             'message' => $message
@@ -458,7 +459,7 @@ class AutoShiftService
         $phones = array_filter(array_map('trim', explode(',', $config->notify_phones)));
 
         if (empty($phones)) {
-            \Log::warning('通知手机号为空', ['config_id' => $config->id]);
+            Log::warning('通知手机号为空', ['config_id' => $config->id]);
             return;
         }
 
@@ -467,7 +468,7 @@ class AutoShiftService
             try {
                 $this->sendSms($phone, $message);
             } catch (\Exception $e) {
-                \Log::error('发送短信通知失败', [
+                Log::error('发送短信通知失败', [
                     'phone' => $phone,
                     'error' => $e->getMessage()
                 ]);
@@ -482,7 +483,7 @@ class AutoShiftService
     {
         // 检查是否有短信服务可用
         if (!class_exists('\addons\webman\model\PhoneSmsLog')) {
-            \Log::warning('短信服务模型不存在', ['phone' => $phone]);
+            Log::warning('短信服务模型不存在', ['phone' => $phone]);
             return;
         }
 
@@ -504,13 +505,13 @@ class AutoShiftService
             $smsLog->send_time = date('Y-m-d H:i:s');
             $smsLog->save();
 
-            \Log::info('短信通知发送成功', [
+            Log::info('短信通知发送成功', [
                 'phone' => $phone,
                 'log_id' => $smsLog->id
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('短信发送异常', [
+            Log::error('短信发送异常', [
                 'phone' => $phone,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
