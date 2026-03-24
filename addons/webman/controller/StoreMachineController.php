@@ -49,10 +49,9 @@ class StoreMachineController
 
             // 查询条件：店家类型 + 数据权限过滤（通过代理的 department_id）
             $grid->model()
-                ->join('admin_department as dept', 'admin_users.department_id', '=', 'dept.id')
                 ->leftJoin('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
                 ->where('admin_users.type', AdminDepartment::TYPE_STORE)
-                ->where('parent_admin.department_id', $currentDepartmentId)  // 通过代理的 department_id 过滤
+                ->where('admin_users.department_id', $currentDepartmentId)  // 通过代理的 department_id 过滤
                 ->select([
                     'admin_users.*',
                     'dept.name as department_name',
