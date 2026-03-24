@@ -49,7 +49,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Db;
-use think\Exception;
+use Exception;
 
 /**
  * 机台
@@ -196,17 +196,25 @@ class MachineController
         $grid->column('now_status', admin_trans('machine.fields.now_status'))
             ->display(function ($val, Machine $data) {
                 $machineStatus = 'offline';
-                switch ($data->type) {
-                    case GameType::TYPE_SLOT:
-                        if (Gateway::isUidOnline($data->domain . ':' . $data->port) && Gateway::isUidOnline($data->auto_card_domain . ':' . $data->auto_card_port)) {
-                            $machineStatus = 'online';
-                        }
-                        break;
-                    case GameType::TYPE_STEEL_BALL:
-                        if (Gateway::isUidOnline($data->domain . ':' . $data->port)) {
-                            $machineStatus = 'online';
-                        }
-                        break;
+                try {
+                    switch ($data->type) {
+                        case GameType::TYPE_SLOT:
+                            if (Gateway::isUidOnline($data->domain . ':' . $data->port) && Gateway::isUidOnline($data->auto_card_domain . ':' . $data->auto_card_port)) {
+                                $machineStatus = 'online';
+                            }
+                            break;
+                        case GameType::TYPE_STEEL_BALL:
+                            if (Gateway::isUidOnline($data->domain . ':' . $data->port)) {
+                                $machineStatus = 'online';
+                            }
+                            break;
+                    }
+                } catch (\Exception $e) {
+                    // Gateway 服务不可用时默认显示离线
+                    \support\Log::warning('Gateway connection failed', [
+                        'register_address' => Gateway::$registerAddress ?? 'not set',
+                        'error' => $e->getMessage()
+                    ]);
                 }
                 return admin_view(plugin()->webman->getPath() . '/views/machine_status.vue')->attrs([
                     'id' => $data->id,
