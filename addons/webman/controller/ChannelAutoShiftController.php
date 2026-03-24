@@ -45,46 +45,33 @@ class ChannelAutoShiftController
             if ($config && $config->is_enabled) {
                 $stats = $service->getExecutionStats($admin->department_id, $admin->id, 7);
 
-                $form->html('<div style="margin-bottom: 24px;">');
-                $form->push(Card::create()
-                    ->title(admin_trans('shift_handover.auto.stats_title'))
-                    ->content(
-                        Row::create()->gutter(16)->content([
-                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_total'))
-                                    ->value($stats['total'] ?? 0)
-                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                            ),
-                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_success'))
-                                    ->value($stats['success'] ?? 0)
-                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                                    ->valueStyle(['color' => '#3f8600'])
-                            ),
-                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_failed'))
-                                    ->value($stats['failed'] ?? 0)
-                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                                    ->valueStyle(['color' => '#cf1322'])
-                            ),
-                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_success_rate'))
-                                    ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
-                                    ->suffix('%')
-                            ),
-                        ])
-                    ));
-                $form->html('</div>');
+                $form->divider()->content(admin_trans('shift_handover.auto.stats_title'));
+
+                $form->row(function (Form $form) use ($stats) {
+                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                        <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_total') . '</div>
+                        <div style="font-size: 24px; font-weight: 500;">' . ($stats['total'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times') . '</div>
+                    </div>')->span(6);
+
+                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                        <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_success') . '</div>
+                        <div style="font-size: 24px; font-weight: 500; color: #3f8600;">' . ($stats['success'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times') . '</div>
+                    </div>')->span(6);
+
+                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                        <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_failed') . '</div>
+                        <div style="font-size: 24px; font-weight: 500; color: #cf1322;">' . ($stats['failed'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times') . '</div>
+                    </div>')->span(6);
+
+                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                        <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_success_rate') . '</div>
+                        <div style="font-size: 24px; font-weight: 500;">' . ($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0) . '%</div>
+                    </div>')->span(6);
+                })->gutter(16);
             }
 
             // 基础配置
-            $form->html('<div style="margin-top: 24px;">');
             $form->divider()->content(admin_trans('shift_handover.auto.config_title'));
-            $form->html('</div>');
 
             $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
                 ->checkedValue(1)
@@ -92,45 +79,43 @@ class ChannelAutoShiftController
                 ->help(admin_trans('shift_handover.auto.enable_help'));
 
             // 三个时间字段（横向排列）
-            $form->html('<div style="margin-top: 16px;">');
-            $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
-                ->default('08:00:00')
-                ->help(admin_trans('shift_handover.auto.shift_time_1_help'))
-                ->col(8);
+            $form->row(function (Form $form) {
+                $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
+                    ->default('08:00:00')
+                    ->help(admin_trans('shift_handover.auto.shift_time_1_help'))
+                    ->span(8);
 
-            $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
-                ->default('16:00:00')
-                ->help(admin_trans('shift_handover.auto.shift_time_2_help'))
-                ->col(8);
+                $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
+                    ->default('16:00:00')
+                    ->help(admin_trans('shift_handover.auto.shift_time_2_help'))
+                    ->span(8);
 
-            $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
-                ->default('00:00:00')
-                ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
-                ->col(8);
-            $form->html('</div>');
+                $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
+                    ->default('00:00:00')
+                    ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
+                    ->span(8);
+            })->gutter(16);
 
             // 显示下次交班时间
-            $form->html('<div style="margin-top: 24px;">');
+            $form->divider()->content(admin_trans('shift_handover.auto.exec_info'));
             if ($config && $config->next_shift_time) {
-                $form->push(Card::create([
-                    Html::div()->content(admin_trans('shift_handover.auto.next_shift_time') . '：' . $config->next_shift_time)
-                ])->title(admin_trans('shift_handover.auto.exec_info')));
+                $form->html('<div style="padding: 16px; background: #f0f9ff; border: 1px solid #bae7ff; border-radius: 4px;">
+                    <strong>' . admin_trans('shift_handover.auto.next_shift_time') . '：</strong>' . $config->next_shift_time . '
+                </div>');
             } else {
-                $form->push(Card::create([
-                    Html::div()->content(admin_trans('shift_handover.auto.config_save_hint'))->style(['color' => '#999'])
-                ])->title(admin_trans('shift_handover.auto.exec_info')));
+                $form->html('<div style="padding: 16px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; color: #999;">
+                    ' . admin_trans('shift_handover.auto.config_save_hint') . '
+                </div>');
             }
-            $form->html('</div>');
 
             // 快捷操作
             if ($config) {
-                $form->html('<div style="margin-top: 24px;">');
-                $form->push(Card::create([
+                $form->divider()->content(admin_trans('shift_handover.auto.quick_actions'));
+                $form->push(
                     Button::create(admin_trans('shift_handover.auto.view_logs'))
                         ->type('default')
                         ->modal([$this, 'logs'])->width('80%')
-                ])->title(admin_trans('shift_handover.auto.quick_actions')));
-                $form->html('</div>');
+                );
             }
 
             // 处理表单提交
