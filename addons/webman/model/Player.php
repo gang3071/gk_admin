@@ -79,7 +79,7 @@ use support\Cache;
  */
 class Player extends Model
 {
-    use SoftDeletes, HasDateTimeFormatter;
+    use SoftDeletes, HasDateTimeFormatter, DataPermissions;
 
     const STATUS_ENABLE = 1; // 启用状态
     const STATUS_STOP = 0; // 停用状态
@@ -91,7 +91,8 @@ class Player extends Model
     const PLAYER_TYPE_AGENT = 2; // 代理
     const PLAYER_TYPE_STORE_MACHINE = 3; // 店家
 
-
+    //数据权限字段
+    protected $dataAuth = ['department_id' => 'department_id'];
     //简写省略id，默认后台用户表的id
 
     /**
