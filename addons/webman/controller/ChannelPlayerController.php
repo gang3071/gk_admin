@@ -3692,40 +3692,33 @@ class ChannelPlayerController
         // 获取当前渠道下的所有代理和店家（新架构）
         $currentDepartmentId = Admin::user()->department_id;
 
-        // 1. 获取所有代理部门（pid = 当前渠道的department_id）
-        $agentDepartments = AdminDepartment::query()
-            ->where('type', AdminDepartment::TYPE_AGENT)
-            ->where('pid', $currentDepartmentId)
-            ->where('deleted_at', null)
-            ->get();
-
-        $agentDepartmentIds = $agentDepartments->pluck('id')->toArray();
-
-        // 2. 获取所有店家部门（pid = 代理部门id）
-        $storeDepartments = AdminDepartment::query()
-            ->where('type', AdminDepartment::TYPE_STORE)
-            ->whereIn('pid', $agentDepartmentIds)
-            ->where('deleted_at', null)
-            ->get()
-            ->keyBy('id');
-
-        $storeDepartmentIds = $storeDepartments->pluck('id')->toArray();
-
-        // 3. 获取店家的AdminUser记录
-        $storeAdmins = AdminUser::query()
-            ->where('type', AdminUser::TYPE_STORE)
-            ->whereIn('department_id', $storeDepartmentIds)
+        // 1. 获取当前渠道下的所有代理账号
+        $agentAdmins = AdminUser::query()
+            ->where('type', AdminUser::TYPE_AGENT)
+            ->where('department_id', $currentDepartmentId)
             ->where('status', 1)
             ->get();
 
-        // 4. 构建树形结构数据（代理 -> 店家）
+        $agentAdminIds = $agentAdmins->pluck('id')->toArray();
+
+        // 2. 获取这些代理下的所有店家账号
+        $storeAdmins = [];
+        if (!empty($agentAdminIds)) {
+            $storeAdmins = AdminUser::query()
+                ->where('type', AdminUser::TYPE_STORE)
+                ->whereIn('parent_admin_id', $agentAdminIds)
+                ->where('status', 1)
+                ->get();
+        }
+
+        // 3. 构建树形结构数据（代理 -> 店家）
         $storeOptions = [];
 
         // 先添加代理节点
-        foreach ($agentDepartments as $agentDept) {
+        foreach ($agentAdmins as $agent) {
             $storeOptions[] = [
-                'id' => 'agent_' . $agentDept->id, // 使用特殊标识，避免与店家ID冲突
-                'name' => $agentDept->name . ' (代理)',
+                'id' => 'agent_' . $agent->id, // 使用特殊标识，避免与店家ID冲突
+                'name' => ($agent->nickname ?: $agent->username) . ' (代理)',
                 'pid' => 0,
                 'disabled' => true // 禁止选择代理，只能选择店家
             ];
@@ -3733,14 +3726,11 @@ class ChannelPlayerController
 
         // 再添加店家节点
         foreach ($storeAdmins as $storeAdmin) {
-            $department = $storeDepartments->get($storeAdmin->department_id);
-            if ($department) {
-                $storeOptions[] = [
-                    'id' => $storeAdmin->id,
-                    'name' => $storeAdmin->nickname ?: $storeAdmin->username,
-                    'pid' => 'agent_' . $department->pid // 父节点是代理
-                ];
-            }
+            $storeOptions[] = [
+                'id' => $storeAdmin->id,
+                'name' => $storeAdmin->nickname ?: $storeAdmin->username,
+                'pid' => 'agent_' . $storeAdmin->parent_admin_id // 父节点是代理
+            ];
         }
 
         $storeTreeOptions = Arr::tree($storeOptions);
