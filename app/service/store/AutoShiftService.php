@@ -345,12 +345,12 @@ class AutoShiftService
         /** @var object|null $result */
         $result = PlayerDeliveryRecord::query()
             ->selectRaw('
-                SUM(CASE WHEN type = ? THEN point ELSE 0 END) as machine_put_point,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_deduct_amount
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.point ELSE 0 END) as machine_put_point,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as lottery_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as recharge_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as withdrawal_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as modified_add_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as modified_deduct_amount
             ', [
                 PlayerDeliveryRecord::TYPE_MACHINE,
                 PlayerDeliveryRecord::TYPE_LOTTERY,
