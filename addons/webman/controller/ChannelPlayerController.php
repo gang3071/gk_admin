@@ -4248,7 +4248,7 @@ class ChannelPlayerController
             ->join('admin_department', 'admin_users.department_id', '=', 'admin_department.id')
             ->where('admin_users.type', AdminDepartment::TYPE_AGENT) // 代理类型
             ->where('admin_users.status', 1)
-            ->where('admin_department.pid', Admin::user()->department_id) // 属于当前渠道
+            ->where('admin_users.department_id', Admin::user()->department_id) // 属于当前渠道
             ->select('admin_users.id', 'admin_users.nickname as name')
             ->get();
 
