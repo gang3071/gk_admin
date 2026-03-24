@@ -130,7 +130,7 @@ class ChannelAutoShiftController
             if ($config && $config->next_shift_time) {
                 $form->push(Html::div()->content(
                     Html::create()->content([
-                        Html::create('<strong>' . admin_trans('shift_handover.auto.next_shift_time') . '：</strong>'),
+                        Html::create()->tag('strong')->content(admin_trans('shift_handover.auto.next_shift_time') . '：'),
                         $config->next_shift_time
                     ])
                 )->style(['padding' => '16px', 'background' => '#f0f9ff', 'border' => '1px solid #bae7ff', 'border-radius' => '4px', 'margin-bottom' => '24px']));
