@@ -229,7 +229,6 @@ class AgentController
             $adminUser->status = 1;
             $adminUser->type = AdminDepartment::TYPE_AGENT;
             $adminUser->department_id = $departmentId;
-            $adminUser->player_id = 0;
             $adminUser->is_super = 0;  // 代理不是超级管理员
             $adminUser->save();
 
@@ -258,7 +257,6 @@ class AgentController
 
             $storeSettingBaccarat = new StoreSetting();
             $storeSettingBaccarat->department_id = $departmentId;
-            $storeSettingBaccarat->player_id = 0;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1;

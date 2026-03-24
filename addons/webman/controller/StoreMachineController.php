@@ -325,6 +325,34 @@ class StoreMachineController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
+            // 4. 创建默认自动交班配置（早中晚三班）
+            $autoShiftConfigs = [
+                [
+                    'title' => '早班',
+                    'shift_time' => '08:00:00',
+                    'description' => '早班自动交班（08:00-16:00）'
+                ],
+                [
+                    'title' => '中班',
+                    'shift_time' => '16:00:00',
+                    'description' => '中班自动交班（16:00-24:00）'
+                ],
+                [
+                    'title' => '晚班',
+                    'shift_time' => '00:00:00',
+                    'description' => '晚班自动交班（00:00-08:00）'
+                ],
+            ];
+
+            foreach ($autoShiftConfigs as $configData) {
+                $autoShiftConfig = new \addons\webman\model\StoreAutoShiftConfig();
+                $autoShiftConfig->department_id = $departmentId;
+                $autoShiftConfig->bind_admin_user_id = $adminUser->id;
+                $autoShiftConfig->is_enabled = 0; // 默认不启用
+                $autoShiftConfig->auto_settlement = 1;
+                $autoShiftConfig->save();
+            }
+
             DB::commit();
 
             return message_success("店家 {$name} 创建成功！登录账号：{$adminUsername}，" . admin_trans('admin.agent') . "：{$parentAgent->nickname}");
