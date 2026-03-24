@@ -161,7 +161,7 @@ class StoreMachineController
             ->join('admin_department', 'admin_users.department_id', '=', 'admin_department.id')
             ->where('admin_users.type', AdminDepartment::TYPE_AGENT)
             ->where('admin_users.status', 1)
-            ->where('admin_department.pid', Admin::user()->department_id)
+            ->where('admin_users.department_id', Admin::user()->department_id)
             ->select('admin_users.id', 'admin_users.nickname as name')
             ->get();
 
