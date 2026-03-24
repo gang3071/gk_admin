@@ -2608,19 +2608,21 @@ class ChannelIndexController
                 $form->layout('vertical');
                 $form->push(Html::div()->content(
                     Html::create()->content([
-                        Html::create('<i class="fa fa-info-circle"></i>')->style([
+                        Icon::create('info-circle')->style([
                             'fontSize' => '48px',
                             'color' => '#1890ff'
                         ]),
-                        Html::create('已开启自动交班')->tag('h3')->style([
+                        Html::div()->content('已开启自动交班')->style([
                             'marginTop' => '20px',
-                            'color' => '#1890ff'
+                            'color' => '#1890ff',
+                            'fontSize' => '20px',
+                            'fontWeight' => 'bold'
                         ]),
-                        Html::create('系统已启用自动交班功能，无法进行手动交班操作。')->tag('p')->style([
+                        Html::div()->content('系统已启用自动交班功能，无法进行手动交班操作。')->style([
                             'color' => '#666',
                             'marginTop' => '10px'
                         ]),
-                        Html::create('如需手动交班，请先到"自动交班配置"中关闭自动交班功能。')->tag('p')->style([
+                        Html::div()->content('如需手动交班，请先到"自动交班配置"中关闭自动交班功能。')->style([
                             'color' => '#999',
                             'marginTop' => '5px'
                         ]),
