@@ -61,7 +61,7 @@ class StorePlayerController
             // 查询条件：店家管理的玩家（设备）
             // 关闭数据权限，因为我们手动控制了权限（department_id + store_admin_id）
             $grid->model()
-                ->offDataAuth()
+                ->scopeOffDataAuth()
                 ->leftJoin('player_platform_cash as cash', function ($join) {
                     $join->on('player.id', '=', 'cash.player_id')
                         ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
