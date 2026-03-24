@@ -217,19 +217,10 @@ class AgentController
 
         Db::beginTransaction();
         try {
-            // 1. 创建代理部门
-            $agentDepartment = new AdminDepartment();
-            $agentDepartment->name = $name;
-            $agentDepartment->leader = $name;
-            $agentDepartment->phone = $phone ?? '';
-            $agentDepartment->type = AdminDepartment::TYPE_AGENT;
-            $agentDepartment->pid = Admin::user()->department_id;
-            $agentDepartment->save();
+            // 代理直接使用渠道的 department_id，不创建新的部门
+            $departmentId = Admin::user()->department_id;
 
-            $agentDepartment->path = Admin::user()->department_id . ',' . $agentDepartment->id;
-            $agentDepartment->save();
-
-            // 2. 创建后台管理员账号
+            // 1. 创建后台管理员账号
             $adminUser = new AdminUser();
             $adminUser->username = $adminUsername;
             $adminUser->password = $password;
@@ -237,21 +228,20 @@ class AgentController
             $adminUser->avatar = $avatar;
             $adminUser->status = 1;
             $adminUser->type = AdminDepartment::TYPE_AGENT;
-            $adminUser->department_id = $agentDepartment->id;
+            $adminUser->department_id = $departmentId;
             $adminUser->player_id = 0;
-            $adminUser->is_super = 1;
+            $adminUser->is_super = 0;  // 代理不是超级管理员
             $adminUser->save();
 
-            // 3. 分配代理角色
+            // 2. 分配代理角色
             $adminRole = new AdminRoleUsers();
             $adminRole->role_id = config('app.agent_role');
             $adminRole->user_id = $adminUser->id;
             $adminRole->save();
 
-            // 4. 创建代理配置
+            // 3. 创建代理配置（可选）
             $storeSetting = new StoreSetting();
-            $storeSetting->department_id = $agentDepartment->id;
-            $storeSetting->player_id = 0;
+            $storeSetting->department_id = $departmentId;
             $storeSetting->admin_user_id = $adminUser->id;
             $storeSetting->feature = 'home_notice';
             $storeSetting->content = '欢迎使用代理后台系统！';
@@ -259,8 +249,7 @@ class AgentController
             $storeSetting->save();
 
             $storeSettingMachine = new StoreSetting();
-            $storeSettingMachine->department_id = $agentDepartment->id;
-            $storeSettingMachine->player_id = 0;
+            $storeSettingMachine->department_id = $departmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1;
@@ -268,7 +257,7 @@ class AgentController
             $storeSettingMachine->save();
 
             $storeSettingBaccarat = new StoreSetting();
-            $storeSettingBaccarat->department_id = $agentDepartment->id;
+            $storeSettingBaccarat->department_id = $departmentId;
             $storeSettingBaccarat->player_id = 0;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';

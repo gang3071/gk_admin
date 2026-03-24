@@ -4419,21 +4419,10 @@ class ChannelPlayerController
 
         Db::beginTransaction();
         try {
-            // 1. 创建店家部门
-            $storeDepartment = new AdminDepartment();
-            $storeDepartment->name = $name;
-            $storeDepartment->leader = $name;
-            $storeDepartment->phone = $phone ?? ''; // 手机号选填
-            $storeDepartment->type = AdminDepartment::TYPE_STORE; // 店家类型
-            $storeDepartment->pid = $parentAgent->department_id; // 上级是代理部门
-            $storeDepartment->save();
+            // 店家直接使用渠道的 department_id，不创建新的部门
+            $departmentId = $parentAgent->department_id;
 
-            // 设置部门路径
-            $parentDept = AdminDepartment::find($parentAgent->department_id);
-            $storeDepartment->path = $parentDept->path . ',' . $storeDepartment->id;
-            $storeDepartment->save();
-
-            // 2. 创建后台管理员账号（店家后台超管）
+            // 1. 创建后台管理员账号（店家后台超管）
             $adminUser = new AdminUser();
             $adminUser->username = $adminUsername;
             $adminUser->password = $password;
@@ -4441,15 +4430,14 @@ class ChannelPlayerController
             $adminUser->avatar = $avatar;
             $adminUser->status = 1;
             $adminUser->type = AdminDepartment::TYPE_STORE; // 店家类型账号
-            $adminUser->department_id = $storeDepartment->id; // 绑定到店家部门
+            $adminUser->department_id = $departmentId; // 使用渠道部门ID
             $adminUser->parent_admin_id = $parentAgent->id; // 上级代理ID
-            $adminUser->player_id = 0; // 店家不绑定玩家
-            $adminUser->is_super = 1; // 店家后台超管
+            $adminUser->is_super = 0; // 店家不是超级管理员
             $adminUser->agent_commission = $agentCommission; // 代理抽成比例
             $adminUser->channel_commission = $channelCommission; // 渠道抽成比例
             $adminUser->save();
 
-            // 3. 分配店家超管角色
+            // 2. 分配店家超管角色
             $adminRole = new AdminRoleUsers();
             $adminRole->role_id = config('app.store_role'); // 店家超管角色ID（19）
             $adminRole->user_id = $adminUser->id;
@@ -4458,8 +4446,7 @@ class ChannelPlayerController
             // 4. 创建店家配置（StoreSetting绑定到admin_user_id）
             // home_notice
             $storeSetting = new StoreSetting();
-            $storeSetting->department_id = $storeDepartment->id;
-            $storeSetting->player_id = 0; // 店家不绑定玩家
+            $storeSetting->department_id = $departmentId;
             $storeSetting->admin_user_id = $adminUser->id; // 绑定到后台账号
             $storeSetting->feature = 'home_notice';
             $storeSetting->content = '欢迎使用店家后台系统！';
@@ -4468,8 +4455,7 @@ class ChannelPlayerController
 
             // enable_physical_machine
             $storeSettingMachine = new StoreSetting();
-            $storeSettingMachine->department_id = $storeDepartment->id;
-            $storeSettingMachine->player_id = 0;
+            $storeSettingMachine->department_id = $departmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1; // 默认启用
@@ -4478,8 +4464,7 @@ class ChannelPlayerController
 
             // enable_live_baccarat
             $storeSettingBaccarat = new StoreSetting();
-            $storeSettingBaccarat->department_id = $storeDepartment->id;
-            $storeSettingBaccarat->player_id = 0;
+            $storeSettingBaccarat->department_id = $departmentId;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1; // 默认启用
@@ -4507,14 +4492,10 @@ class ChannelPlayerController
 
             foreach ($autoShiftConfigs as $configData) {
                 $autoShiftConfig = new StoreAutoShiftConfig();
-                $autoShiftConfig->department_id = $storeDepartment->id;
+                $autoShiftConfig->department_id = $departmentId;
                 $autoShiftConfig->bind_admin_user_id = $adminUser->id;
                 $autoShiftConfig->is_enabled = 1; // 默认启用
-                $autoShiftConfig->shift_mode = StoreAutoShiftConfig::MODE_DAILY; // 每日交班
-                $autoShiftConfig->shift_time = $configData['shift_time'];
                 $autoShiftConfig->auto_settlement = 1; // 自动结算
-                $autoShiftConfig->notify_on_failure = 1; // 失败通知
-                $autoShiftConfig->status = 1; // 正常状态
                 $autoShiftConfig->save();
             }
 

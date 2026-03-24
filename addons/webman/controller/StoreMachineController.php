@@ -49,9 +49,10 @@ class StoreMachineController
 
             // 查询条件：店家类型 + 数据权限过滤（通过代理的 department_id）
             $grid->model()
+                ->join('admin_department as dept', 'admin_users.department_id', '=', 'dept.id')
                 ->leftJoin('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
                 ->where('admin_users.type', AdminDepartment::TYPE_STORE)
-                ->where('admin_users.department_id', $currentDepartmentId)  // 通过代理的 department_id 过滤
+                ->where('parent_admin.department_id', $currentDepartmentId)  // 通过代理的 department_id 过滤
                 ->select([
                     'admin_users.*',
                     'dept.name as department_name',
@@ -245,7 +246,6 @@ class StoreMachineController
             return message_error('此功能仅限线下渠道使用');
         }
 
-        $phone = $form->input('phone');
         $adminUsername = $form->input('admin_username');
         $name = $form->input('name');
         $recommendId = $form->input('recommend_id');
@@ -278,20 +278,10 @@ class StoreMachineController
 
         DB::beginTransaction();
         try {
-            // 1. 创建店家部门
-            $storeDepartment = new AdminDepartment();
-            $storeDepartment->name = $name;
-            $storeDepartment->leader = $name;
-            $storeDepartment->phone = $phone ?? '';
-            $storeDepartment->type = AdminDepartment::TYPE_STORE;
-            $storeDepartment->pid = $parentAgent->department_id;
-            $storeDepartment->save();
+            // 店家直接使用渠道的 department_id，不创建新的部门
+            $departmentId = $parentAgent->department_id;
 
-            $parentDept = AdminDepartment::find($parentAgent->department_id);
-            $storeDepartment->path = $parentDept->path . ',' . $storeDepartment->id;
-            $storeDepartment->save();
-
-            // 2. 创建后台管理员账号（店家后台超管）
+            // 1. 创建后台管理员账号（店家后台超管）
             $adminUser = new AdminUser();
             $adminUser->username = $adminUsername;
             $adminUser->password = $password;
@@ -299,22 +289,20 @@ class StoreMachineController
             $adminUser->avatar = $avatar;
             $adminUser->status = 1;
             $adminUser->type = AdminDepartment::TYPE_STORE;
-            $adminUser->department_id = $storeDepartment->id;
-            $adminUser->player_id = 0; // 店家不绑定玩家
+            $adminUser->department_id = $departmentId;
             $adminUser->parent_admin_id = $parentAgent->id; // 保存上级代理ID
-            $adminUser->is_super = 1; // 店家后台超管
+            $adminUser->is_super = 0; // 店家不是超级管理员
             $adminUser->save();
 
-            // 3. 分配店家超管角色
+            // 2. 分配店家超管角色
             $adminRole = new AdminRoleUsers();
             $adminRole->role_id = config('app.store_role'); // 店家超管角色ID（19）
             $adminRole->user_id = $adminUser->id;
             $adminRole->save();
 
-            // 4. 创建店家配置
+            // 3. 创建店家配置
             $storeSetting = new StoreSetting();
-            $storeSetting->department_id = $storeDepartment->id;
-            $storeSetting->player_id = 0; // 店家不绑定玩家
+            $storeSetting->department_id = $departmentId;
             $storeSetting->admin_user_id = $adminUser->id;
             $storeSetting->feature = 'home_notice';
             $storeSetting->content = '欢迎使用店家后台系统！';
@@ -322,8 +310,7 @@ class StoreMachineController
             $storeSetting->save();
 
             $storeSettingMachine = new StoreSetting();
-            $storeSettingMachine->department_id = $storeDepartment->id;
-            $storeSettingMachine->player_id = 0;
+            $storeSettingMachine->department_id = $departmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1;
@@ -331,8 +318,7 @@ class StoreMachineController
             $storeSettingMachine->save();
 
             $storeSettingBaccarat = new StoreSetting();
-            $storeSettingBaccarat->department_id = $storeDepartment->id;
-            $storeSettingBaccarat->player_id = 0;
+            $storeSettingBaccarat->department_id = $departmentId;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1;
