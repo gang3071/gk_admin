@@ -48,36 +48,34 @@ class ChannelAutoShiftController
                 $form->push(Card::create()
                     ->title(admin_trans('shift_handover.auto.stats_title'))
                     ->style(['margin-bottom' => '20px'])
-                    ->content(
-                        Row::create()->gutter(16)->content([
-                            Row::col(6)->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_total'))
-                                    ->value($stats['total'] ?? 0)
-                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                            ),
-                            Row::col(6)->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_success'))
-                                    ->value($stats['success'] ?? 0)
-                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                                    ->valueStyle(['color' => '#3f8600'])
-                            ),
-                            Row::col(6)->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_failed'))
-                                    ->value($stats['failed'] ?? 0)
-                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                                    ->valueStyle(['color' => '#cf1322'])
-                            ),
-                            Row::col(6)->content(
-                                Statistic::create()
-                                    ->title(admin_trans('shift_handover.auto.stats_success_rate'))
-                                    ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
-                                    ->suffix('%')
-                            ),
-                        ])
-                    ));
+                    ->content([
+                        Row::create()->column(
+                            Statistic::create()
+                                ->title(admin_trans('shift_handover.auto.stats_total'))
+                                ->value($stats['total'] ?? 0)
+                                ->suffix(admin_trans('shift_handover.auto.stats_times'))
+                        ),
+                        Row::create()->column(
+                            Statistic::create()
+                                ->title(admin_trans('shift_handover.auto.stats_success'))
+                                ->value($stats['success'] ?? 0)
+                                ->suffix(admin_trans('shift_handover.auto.stats_times'))
+                                ->valueStyle(['color' => '#3f8600'])
+                        ),
+                        Row::create()->column(
+                            Statistic::create()
+                                ->title(admin_trans('shift_handover.auto.stats_failed'))
+                                ->value($stats['failed'] ?? 0)
+                                ->suffix(admin_trans('shift_handover.auto.stats_times'))
+                                ->valueStyle(['color' => '#cf1322'])
+                        ),
+                        Row::create()->column(
+                            Statistic::create()
+                                ->title(admin_trans('shift_handover.auto.stats_success_rate'))
+                                ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
+                                ->suffix('%')
+                        ),
+                    ]));
             }
 
             // 基础配置
