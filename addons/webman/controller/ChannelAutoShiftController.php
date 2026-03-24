@@ -48,48 +48,52 @@ class ChannelAutoShiftController
 
                 $form->row(function (Form $form) use ($stats) {
                     // 总执行次数
-                    $form->push(Html::div()->content(
-                        Html::create()->content([
-                            Html::div()->content(admin_trans('shift_handover.auto.stats_total'))
-                                ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
-                            Html::div()->content(($stats['total'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
-                                ->style(['font-size' => '24px', 'font-weight' => '500'])
-                        ])
-                    )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px'])
-                    )->span(6);
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_total'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['total'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
+                                    ->style(['font-size' => '24px', 'font-weight' => '500'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
 
                     // 成功次数
-                    $form->push(Html::div()->content(
-                        Html::create()->content([
-                            Html::div()->content(admin_trans('shift_handover.auto.stats_success'))
-                                ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
-                            Html::div()->content(($stats['success'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
-                                ->style(['font-size' => '24px', 'font-weight' => '500', 'color' => '#3f8600'])
-                        ])
-                    )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px'])
-                    )->span(6);
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_success'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['success'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
+                                    ->style(['font-size' => '24px', 'font-weight' => '500', 'color' => '#3f8600'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
 
                     // 失败次数
-                    $form->push(Html::div()->content(
-                        Html::create()->content([
-                            Html::div()->content(admin_trans('shift_handover.auto.stats_failed'))
-                                ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
-                            Html::div()->content(($stats['failed'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
-                                ->style(['font-size' => '24px', 'font-weight' => '500', 'color' => '#cf1322'])
-                        ])
-                    )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px'])
-                    )->span(6);
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_failed'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['failed'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
+                                    ->style(['font-size' => '24px', 'font-weight' => '500', 'color' => '#cf1322'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
 
                     // 成功率
-                    $form->push(Html::div()->content(
-                        Html::create()->content([
-                            Html::div()->content(admin_trans('shift_handover.auto.stats_success_rate'))
-                                ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
-                            Html::div()->content(($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0) . '%')
-                                ->style(['font-size' => '24px', 'font-weight' => '500'])
-                        ])
-                    )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px'])
-                    )->span(6);
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_success_rate'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0) . '%')
+                                    ->style(['font-size' => '24px', 'font-weight' => '500'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
                 })->gutter(16);
             }
 
