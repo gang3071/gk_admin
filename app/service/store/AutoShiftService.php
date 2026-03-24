@@ -170,21 +170,7 @@ class AutoShiftService
         $endTime = null;
 
         try {
-            DB::beginTransaction();
-
-            // 1. 锁定配置记录（防止并发执行）
-            /** @var StoreAutoShiftConfig|null $config */
-            $config = StoreAutoShiftConfig::query()
-                ->where('id', $config->id)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$config || !$config->is_enabled) {
-                DB::rollBack();
-                return ['code' => 1, 'msg' => '配置已禁用'];
-            }
-
-            // 2. 计算交班时间范围
+            // 1. 预先计算交班时间范围和统计数据（在事务外）
             /** @var Carbon $endTime */
             $endTime = Carbon::now();
 
@@ -207,26 +193,39 @@ class AutoShiftService
                 $startTime = $endTime->copy()->subDay();
             }
 
-            // 3. 检查时间有效性
+            // 2. 检查时间有效性
             if ($startTime->gte($endTime)) {
-                DB::rollBack();
                 return ['code' => 1, 'msg' => '交班时间范围无效'];
             }
 
             // 限制最大时间跨度（30天）
             if ($startTime->diffInDays($endTime) > 30) {
-                DB::rollBack();
                 return ['code' => 1, 'msg' => '交班时间跨度不能超过30天'];
             }
 
-            // 4. 统计账变数据
+            // 3. 统计账变数据（在事务外执行，避免长时间持锁）
             $statistics = $this->calculateShiftStatistics(
                 $config->bind_admin_user_id,
                 $startTime->toDateTimeString(),
                 $endTime->toDateTimeString()
             );
 
-            // 5. 创建交班记录
+            // 4. 开启事务，快速完成写入操作
+            DB::beginTransaction();
+
+            // 锁定配置记录（防止并发执行）
+            /** @var StoreAutoShiftConfig|null $config */
+            $config = StoreAutoShiftConfig::query()
+                ->where('id', $config->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$config || !$config->is_enabled) {
+                DB::rollBack();
+                return ['code' => 1, 'msg' => '配置已禁用'];
+            }
+
+            // 5. 创建交班记录（事务内快速写入）
             /** @var StoreAgentShiftHandoverRecord $shiftRecord */
             $shiftRecord = new StoreAgentShiftHandoverRecord();
             $shiftRecord->department_id = $config->department_id;

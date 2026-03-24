@@ -2674,18 +2674,15 @@ class ChannelIndexController
                 Html::create(admin_trans('shift_handover.end_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))->tag('p'),
             ])->title(admin_trans('shift_handover.last_shift_time')));
             $form->saving(function (Form $form) {
-                // 使用事务保护整个交班流程
-                DB::beginTransaction();
                 try {
                     $admin = Admin::user();
                     $endTime = $form->input('end_time');
 
-                    // 1. 加锁查询最后一条交班记录（防止并发问题）
+                    // 1. 查询最后一条交班记录（在事务外）
                     /** @var StoreAgentShiftHandoverRecord $storeAgentShiftHandover */
                     $storeAgentShiftHandover = StoreAgentShiftHandoverRecord::query()
                         ->where('bind_admin_user_id', $admin->id)
                         ->orderBy('id', 'desc')
-                        ->lockForUpdate()  // 行锁，防止并发
                         ->first();
 
                     // 2. 确定开始时间
@@ -2695,37 +2692,33 @@ class ChannelIndexController
                         $startTime = $form->input('start_time');
                     }
 
-                    // 3. 时间验证
+                    // 3. 时间验证（在事务外）
                     $start = Carbon::parse($startTime);
                     $end = Carbon::parse($endTime);
                     $now = Carbon::now();
 
                     // 验证结束时间不能超过当前时间
                     if ($end->gt($now)) {
-                        DB::rollBack();
                         return message_error(admin_trans('shift_handover.error.end_time_future'));
                     }
 
                     // 验证第一次交班时开始时间不能是未来
                     if (empty($storeAgentShiftHandover) && $start->gt($now)) {
-                        DB::rollBack();
                         return message_error(admin_trans('shift_handover.error.start_time_future'));
                     }
 
                     // 验证时间顺序（修复并发导致时间倒置的问题）
                     if ($start->gte($end)) {
-                        DB::rollBack();
                         return message_error(admin_trans('shift_handover.error.start_gte_end'));
                     }
 
                     // 验证时间跨度不超过30天
                     $diffInDays = $start->diffInDays($end);
                     if ($diffInDays > 30) {
-                        DB::rollBack();
                         return message_error(admin_trans('shift_handover.error.time_range_too_long'));
                     }
 
-                    // 4. 检查是否存在重复的交班记录
+                    // 4. 检查是否存在重复的交班记录（在事务外）
                     $exists = StoreAgentShiftHandoverRecord::query()
                         ->where('bind_admin_user_id', $admin->id)
                         ->where(function($query) use ($startTime, $endTime) {
@@ -2747,11 +2740,10 @@ class ChannelIndexController
                         ->exists();
 
                     if ($exists) {
-                        DB::rollBack();
                         return message_error(admin_trans('shift_handover.error.duplicate_record'));
                     }
 
-                    // 5. 统计数据（修复时间边界和软删除问题，添加彩金统计，添加开分/洗分/后台加扣点统计）
+                    // 5. 统计数据（在事务外执行，避免长时间持锁）
                     $result = PlayerDeliveryRecord::query()
                         ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
                         ->where('player.department_id', $admin->department_id)
@@ -2793,14 +2785,13 @@ class ChannelIndexController
                         'modified_deduct_amount' => 0,
                     ];
 
-                    // 7. 获取货币配置并验证
+                    // 7. 获取货币配置并验证（在事务外）
                     /** @var Currency $currency */
                     $currency = Currency::query()
                         ->where('identifying', $admin->department->channel->currency)
                         ->first();
 
                     if (!$currency) {
-                        DB::rollBack();
                         Log::error('交班失败：货币配置不存在', [
                             'currency_code' => $admin->department->channel->currency,
                             'department_id' => $admin->department_id,
@@ -2809,7 +2800,23 @@ class ChannelIndexController
                         return message_error(admin_trans('shift_handover.error.config_error'));
                     }
 
-                    // 8. 创建交班记录
+                    // 8. 开启事务，快速完成写入操作
+                    DB::beginTransaction();
+
+                    // 9. 再次加锁查询最后一条记录（防止并发）
+                    $storeAgentShiftHandoverLocked = StoreAgentShiftHandoverRecord::query()
+                        ->where('bind_admin_user_id', $admin->id)
+                        ->orderBy('id', 'desc')
+                        ->lockForUpdate()
+                        ->first();
+
+                    // 验证开始时间未被其他交班占用
+                    if ($storeAgentShiftHandoverLocked && $storeAgentShiftHandoverLocked->end_time != $startTime && !$form->input('start_time')) {
+                        DB::rollBack();
+                        return message_error(admin_trans('shift_handover.error.concurrent_shift'));
+                    }
+
+                    // 10. 创建交班记录
                     $storeAgentShiftHandoverRecord = new StoreAgentShiftHandoverRecord();
                     $storeAgentShiftHandoverRecord->department_id = $admin->department_id;
                     $storeAgentShiftHandoverRecord->machine_amount =
