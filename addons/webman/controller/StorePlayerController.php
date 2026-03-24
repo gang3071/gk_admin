@@ -26,13 +26,37 @@ class StorePlayerController
      */
     public function index(): Grid
     {
-        $storeAdminId = Admin::user()->id;
-        $departmentId = Admin::user()->department_id;
+        $admin = Admin::user();
+        $storeAdminId = $admin->id;
+        $departmentId = $admin->department_id;
 
-        return Grid::create(new Player(), function (Grid $grid) use ($storeAdminId, $departmentId) {
-            $grid->title('设备列表');
+        return Grid::create(new Player(), function (Grid $grid) use ($storeAdminId, $departmentId, $admin) {
+            // 显示当前管理员信息
+            $playerCount = Player::query()
+                ->where('department_id', $departmentId)
+                ->where('store_admin_id', $storeAdminId)
+                ->where('is_promoter', 0)
+                ->count();
+
+            $grid->title('设备列表 (当前店家: ' . $admin->username . ' | 设备数: ' . $playerCount . ')');
             $grid->autoHeight();
             $grid->bordered(true);
+
+            // 调试信息（显示查询条件）
+            if (request()->input('debug') == 1) {
+                $count = Player::query()
+                    ->where('department_id', $departmentId)
+                    ->where('store_admin_id', $storeAdminId)
+                    ->where('is_promoter', 0)
+                    ->count();
+
+                \support\Log::info('设备列表查询', [
+                    'admin_id' => $admin->id,
+                    'department_id' => $departmentId,
+                    'store_admin_id' => $storeAdminId,
+                    'player_count' => $count
+                ]);
+            }
 
             // 查询条件：店家管理的玩家（设备）
             $grid->model()
@@ -111,6 +135,16 @@ class StorePlayerController
 
             $grid->hideAdd();
             $grid->expandFilter();
+
+            // 如果没有数据，显示提示信息
+            if ($playerCount == 0) {
+                $totalPlayers = Player::query()
+                    ->where('department_id', $departmentId)
+                    ->where('is_promoter', 0)
+                    ->count();
+
+                $grid->emptyText('暂无设备数据<br><small style="color: #999;">部门ID: ' . $departmentId . ' | 店家ID: ' . $storeAdminId . '<br>该部门下总玩家数: ' . $totalPlayers . ' | 分配给当前店家: 0</small>');
+            }
         });
     }
 }
