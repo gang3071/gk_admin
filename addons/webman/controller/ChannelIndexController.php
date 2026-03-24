@@ -2674,6 +2674,7 @@ class ChannelIndexController
                 Html::create(admin_trans('shift_handover.end_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))->tag('p'),
             ])->title(admin_trans('shift_handover.last_shift_time')));
             $form->saving(function (Form $form) {
+                $transactionStarted = false;
                 try {
                     $admin = Admin::user();
                     $endTime = $form->input('end_time');
@@ -2802,6 +2803,7 @@ class ChannelIndexController
 
                     // 8. 开启事务，快速完成写入操作
                     DB::beginTransaction();
+                    $transactionStarted = true;
 
                     // 9. 再次加锁查询最后一条记录（防止并发）
                     $storeAgentShiftHandoverLocked = StoreAgentShiftHandoverRecord::query()
@@ -2930,15 +2932,19 @@ class ChannelIndexController
                     return message_success(admin_trans('shift_handover.error.shift_success'));
 
                 } catch (\Exception $e) {
-                    DB::rollBack();
-                    Log::error('交班失败', [
+                    if ($transactionStarted) {
+                        DB::rollBack();
+                    }
+                    Log::error('手动交班失败', [
                         'error' => $e->getMessage(),
                         'trace' => $e->getTraceAsString(),
                         'user_id' => Admin::id(),
                         'file' => $e->getFile(),
-                        'line' => $e->getLine()
+                        'line' => $e->getLine(),
+                        'start_time' => $startTime ?? null,
+                        'end_time' => $endTime ?? null
                     ]);
-                    return message_error(admin_trans('shift_handover.error.shift_failed'));
+                    return message_error('交班失败：' . $e->getMessage());
                 }
             });
         });
