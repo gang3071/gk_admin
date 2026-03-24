@@ -2622,7 +2622,7 @@ class ChannelIndexController
                             'color' => '#666',
                             'marginTop' => '10px'
                         ]),
-                        Html::div()->content('如需手动交班，请先到"自动交班配置"中关闭自动交班功能。')->style([
+                        Html::div()->content('如需手动交班，请先到【自动交班配置】中关闭自动交班功能。')->style([
                             'color' => '#999',
                             'marginTop' => '5px'
                         ]),
