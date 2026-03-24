@@ -122,17 +122,22 @@ class ChannelAutoShiftController
 
             // 处理表单提交
             $form->saving(function (Form $form) use ($admin, $service) {
+                // 直接从 request 获取数据
+                $request = request();
+                $formData = $request->post('data', []);
+
                 $data = [
                     'department_id' => $admin->department_id,
                     'bind_admin_user_id' => $admin->id,
-                    'is_enabled' => $form->input('is_enabled', 0),
-                    'shift_time_1' => $form->input('shift_time_1', '08:00:00'),
-                    'shift_time_2' => $form->input('shift_time_2', '16:00:00'),
-                    'shift_time_3' => $form->input('shift_time_3', '00:00:00'),
+                    'is_enabled' => isset($formData['is_enabled']) ? (int)$formData['is_enabled'] : 0,
+                    'shift_time_1' => $formData['shift_time_1'] ?? '08:00:00',
+                    'shift_time_2' => $formData['shift_time_2'] ?? '16:00:00',
+                    'shift_time_3' => $formData['shift_time_3'] ?? '00:00:00',
+                    'auto_settlement' => 1, // 总是自动结算
                 ];
 
                 $result = $service->saveConfig($data);
-                return message_success($data);
+
                 if ($result['code'] === 0) {
                     return message_success($result['msg'] ?? admin_trans('shift_handover.auto.save_success'));
                 } else {
