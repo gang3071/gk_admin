@@ -79,7 +79,7 @@ use support\Cache;
  */
 class Player extends Model
 {
-    use SoftDeletes, HasDateTimeFormatter, DataPermissions;
+    use SoftDeletes, HasDateTimeFormatter;
 
     const STATUS_ENABLE = 1; // 启用状态
     const STATUS_STOP = 0; // 停用状态
