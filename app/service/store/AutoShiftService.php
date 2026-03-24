@@ -345,7 +345,7 @@ class AutoShiftService
         /** @var object|null $result */
         $result = PlayerDeliveryRecord::query()
             ->selectRaw('
-                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.point ELSE 0 END) as machine_put_point,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as machine_put_point,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as lottery_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as recharge_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as withdrawal_amount,
@@ -376,7 +376,7 @@ class AutoShiftService
             'modified_deduct_amount' => 0,
         ];
 
-        $machineAmount = bcdiv($data['machine_put_point'], $currency->ratio, 2);
+        $machineAmount = bcmul($data['machine_put_point'], $currency->ratio, 2);
 
         // 计算总收入（开分 + 后台加点）
         $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
