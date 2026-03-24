@@ -67,9 +67,6 @@ class ChannelPlayerGameLogController
             if (!empty($exAdminFilter['created_at_end'])) {
                 $grid->model()->where('created_at', '<=', $exAdminFilter['created_at_end']);
             }
-            if (!empty($exAdminFilter['created_at_start'])) {
-                $grid->model()->where('created_at', '>=', $exAdminFilter['created_at_start']);
-            }
             if (!empty($exAdminFilter['department_id'])) {
                 $grid->model()->where('department_id', $exAdminFilter['department_id']);
             }
@@ -132,14 +129,12 @@ class ChannelPlayerGameLogController
             
             $grid->model()->orderBy('id', 'desc');
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($exAdminFilter, $agentPlayerId, $parentPlayerId) {
+            $layout->row(function (Row $row) use ($exAdminFilter) {
                 $row->gutter([10, 0]);
                 $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
                     'ex_admin_filter' => $exAdminFilter,
                     'type' => 'PlayerGameLog',
                     'department_id' => Admin::user()->department_id,
-                    'parent_player_id' => $parentPlayerId,
-                    'agent_player_id' => $agentPlayerId,
                 ]));
             })->style(['background' => '#fff']);
             $grid->header($layout);
