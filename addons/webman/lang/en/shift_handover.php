@@ -37,6 +37,30 @@ return [
         'total_profit_amount' => 'Total Profit',
     ],
 
+    // Shift Handover Records
+    'record' => [
+        'title' => 'Shift Handover Records',
+        'id' => 'ID',
+        'time_range' => 'Statistical Time Range',
+        'start_time' => 'Start Time',
+        'end_time' => 'End Time',
+        'shift_type' => 'Shift Type',
+        'auto_shift' => 'Auto Shift',
+        'manual_shift' => 'Manual Shift',
+        'machine_amount' => 'Machine Amount',
+        'machine_point' => 'Machine Points',
+        'total_in' => 'Total Income',
+        'total_out' => 'Total Outgo',
+        'total_profit' => 'Total Profit',
+        'created_at' => 'Created At',
+        'detail_title' => 'Shift Details',
+        'auto_shift_log_id' => 'Auto Shift Log ID',
+        'filter_shift_type' => 'Shift Type',
+        'filter_time_range' => 'Time Range',
+        'filter_start_date' => 'Start Date',
+        'filter_end_date' => 'End Date',
+    ],
+
     // Auto Shift
     'auto' => [
         'title' => 'Auto Shift Configuration',

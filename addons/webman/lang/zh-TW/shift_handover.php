@@ -37,6 +37,30 @@ return [
         'total_profit_amount' => '總盈利',
     ],
 
+    // 交班記錄
+    'record' => [
+        'title' => '交班記錄',
+        'id' => 'ID',
+        'time_range' => '統計時間段',
+        'start_time' => '開始時間',
+        'end_time' => '結束時間',
+        'shift_type' => '交班類型',
+        'auto_shift' => '自動交班',
+        'manual_shift' => '手動交班',
+        'machine_amount' => '機台投鈔金額',
+        'machine_point' => '機台投鈔點數',
+        'total_in' => '總收入',
+        'total_out' => '總支出',
+        'total_profit' => '總利潤',
+        'created_at' => '建立時間',
+        'detail_title' => '交班詳情',
+        'auto_shift_log_id' => '自動交班日誌ID',
+        'filter_shift_type' => '交班類型',
+        'filter_time_range' => '統計時間',
+        'filter_start_date' => '開始日期',
+        'filter_end_date' => '結束日期',
+    ],
+
     // 自動交班
     'auto' => [
         'title' => '自動交班配置',

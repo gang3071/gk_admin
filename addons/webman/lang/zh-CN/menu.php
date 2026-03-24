@@ -151,6 +151,7 @@ return [
         //店家配置
         'store_setting_manage' => '店家系统配置',
         'store_open_score_setting' => '店家开分配置',
+        'store_shift_handover_record' => '交班记录',
         //代理管理
         'agent_management' => '代理管理',
         //店家管理

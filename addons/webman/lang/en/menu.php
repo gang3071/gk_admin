@@ -150,6 +150,7 @@ return [
         //Store Configuration
         'store_setting_manage' => 'Store System Configuration',
         'store_open_score_setting' => 'Store Credit Configuration',
+        'store_shift_handover_record' => 'Shift Handover Record',
         //Agent Management
         'agent_management' => 'Agent Management',
         //Store Management

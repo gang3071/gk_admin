@@ -37,6 +37,30 @@ return [
         'total_profit_amount' => '合計利益',
     ],
 
+    // 引継記録
+    'record' => [
+        'title' => '引継記録',
+        'id' => 'ID',
+        'time_range' => '統計期間',
+        'start_time' => '開始時間',
+        'end_time' => '終了時間',
+        'shift_type' => '交代タイプ',
+        'auto_shift' => '自動交代',
+        'manual_shift' => '手動交代',
+        'machine_amount' => 'マシン投入金額',
+        'machine_point' => 'マシン投入ポイント',
+        'total_in' => '総収入',
+        'total_out' => '総支出',
+        'total_profit' => '総利益',
+        'created_at' => '作成日時',
+        'detail_title' => '交代詳細',
+        'auto_shift_log_id' => '自動交代ログID',
+        'filter_shift_type' => '交代タイプ',
+        'filter_time_range' => '統計時間',
+        'filter_start_date' => '開始日',
+        'filter_end_date' => '終了日',
+    ],
+
     // 自動交代
     'auto' => [
         'title' => '自動交代設定',

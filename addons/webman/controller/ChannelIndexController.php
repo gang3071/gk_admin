@@ -17,6 +17,7 @@ use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
+use addons\webman\model\StoreAutoShiftLog;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -2085,8 +2086,8 @@ class ChannelIndexController
         $dateType = isset($exAdminFilter['date_type']) && $exAdminFilter['date_type'] !== '' ? intval($exAdminFilter['date_type']) : null;
 
         // 获取自动交班配置状态
-        /** @var \addons\webman\model\StoreAutoShiftConfig|null $autoShiftConfig */
-        $autoShiftConfig = \addons\webman\model\StoreAutoShiftConfig::query()
+        /** @var StoreAutoShiftConfig|null $autoShiftConfig */
+        $autoShiftConfig = StoreAutoShiftConfig::query()
             ->where('department_id', $store->department_id)
             ->where('bind_admin_user_id', $store->id)
             ->first();
@@ -2178,12 +2179,7 @@ class ChannelIndexController
                 'machine_put_point' => $totalStatisticsQuery->machine_put_point ?? 0,
             ]
         ];
-        $presentInAmount = 0;
-        $machinePutPoint = 0;
-        $presentOutAmount = 0;
         $selfProfitAmount = 0;
-        $totalPoint = 0;
-
         // 店家的配置直接从 AdminUser 读取
         $ratio = $store->ratio ?? 0;
         $adjustAmount = $store->adjust_amount ?? 0;
@@ -2243,13 +2239,11 @@ class ChannelIndexController
         $layout = Layout::create();
         $layout->row(function (Row $row) use (
             $playerNum,
-            $playerDeliveryRecord,
             $operationStatistics,
             $lotteryStatistics,
             $playerIds,
             $store,
             $info,
-            $storePlatformCash,
             $dateType,
             $timeDropdown,
             $autoShiftStatusText,
@@ -2860,8 +2854,7 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->save();
 
                     // 9. 创建执行日志（与自动交班保持一致）
-                    /** @var \addons\webman\model\StoreAutoShiftLog $manualLog */
-                    $manualLog = new \addons\webman\model\StoreAutoShiftLog();
+                    $manualLog = new StoreAutoShiftLog();
                     $manualLog->config_id = 0; // 手动交班没有配置ID
                     $manualLog->department_id = $admin->department_id;
                     $manualLog->bind_admin_user_id = $admin->id;
@@ -2869,7 +2862,7 @@ class ChannelIndexController
                     $manualLog->start_time = $startTime;
                     $manualLog->end_time = $endTime;
                     $manualLog->execute_time = Carbon::now();
-                    $manualLog->status = \addons\webman\model\StoreAutoShiftLog::STATUS_SUCCESS;
+                    $manualLog->status = StoreAutoShiftLog::STATUS_SUCCESS;
                     $manualLog->execution_duration = 0; // 手动交班无执行时长
                     $manualLog->machine_amount = $storeAgentShiftHandoverRecord->machine_amount;
                     $manualLog->machine_point = $storeAgentShiftHandoverRecord->machine_point;

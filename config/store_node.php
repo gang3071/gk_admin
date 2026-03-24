@@ -479,6 +479,27 @@ return [
         'title' => '手动触发交班',
     ],
 
+    // ========== 交班记录 ==========
+    [
+        'id' => 'addons\webman\controller\StoreShiftHandoverRecordController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '交班记录',
+        'children' => [
+            // 记录列表
+            [
+                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/index',
+                'title' => '记录列表',
+            ],
+        ]
+    ],
+
     // ========== 店家系统配置 ==========
     [
         'id' => 'addons\webman\controller\StoreSettingController-',
