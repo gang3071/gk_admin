@@ -2787,18 +2787,45 @@ class ChannelIndexController
                     ];
 
                     // 7. 获取货币配置并验证（在事务外）
+                    // 验证管理员关联数据
+                    if (!$admin->department) {
+                        Log::error('交班失败：管理员未关联部门', [
+                            'user_id' => $admin->id,
+                            'department_id' => $admin->department_id
+                        ]);
+                        return message_error('交班失败：管理员未关联部门');
+                    }
+
+                    if (!$admin->department->channel) {
+                        Log::error('交班失败：部门未关联渠道', [
+                            'user_id' => $admin->id,
+                            'department_id' => $admin->department_id
+                        ]);
+                        return message_error('交班失败：部门未关联渠道');
+                    }
+
+                    $currencyCode = $admin->department->channel->currency;
+                    if (!$currencyCode) {
+                        Log::error('交班失败：渠道未配置货币', [
+                            'user_id' => $admin->id,
+                            'department_id' => $admin->department_id,
+                            'channel_id' => $admin->department->channel->id
+                        ]);
+                        return message_error('交班失败：渠道未配置货币');
+                    }
+
                     /** @var Currency $currency */
                     $currency = Currency::query()
-                        ->where('identifying', $admin->department->channel->currency)
+                        ->where('identifying', $currencyCode)
                         ->first();
 
                     if (!$currency) {
                         Log::error('交班失败：货币配置不存在', [
-                            'currency_code' => $admin->department->channel->currency,
+                            'currency_code' => $currencyCode,
                             'department_id' => $admin->department_id,
                             'user_id' => $admin->id
                         ]);
-                        return message_error(admin_trans('shift_handover.error.config_error'));
+                        return message_error('交班失败：货币配置不存在(' . $currencyCode . ')');
                     }
 
                     // 8. 开启事务，快速完成写入操作
