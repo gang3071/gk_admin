@@ -49,7 +49,7 @@ class AgentController
             $grid->model()
                 ->join('admin_department', 'admin_users.department_id', '=', 'admin_department.id')
                 ->where('admin_users.type', AdminDepartment::TYPE_AGENT)
-                ->where('admin_department.pid', $currentDepartmentId)
+                ->where('admin_users.department_id', $currentDepartmentId)
                 ->select([
                     'admin_users.*',
                     'admin_department.name as department_name',
