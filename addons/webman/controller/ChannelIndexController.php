@@ -1300,15 +1300,7 @@ class ChannelIndexController
             ->where('is_promoter', 0)
             ->count();
 
-        // 4. 构建玩家筛选闭包（通过店家关联）
-        $playerFilter = function ($query) use ($storeIds) {
-            $query->whereHas('player', function ($q) use ($storeIds) {
-                $q->whereIn('store_admin_id', $storeIds)
-                    ->where('is_promoter', 0);
-            });
-        };
-
-        // 5. 构建时间筛选闭包
+        // 4. 构建时间筛选闭包
         $timeFilter = function ($query) use ($data_type) {
             if ($data_type) {
                 switch ($data_type) {
@@ -1351,40 +1343,36 @@ class ChannelIndexController
             }
         };
 
-        // 6. 查询全部历史数据（充值、提现、投钞）
-        // 查询充值数据（不包括投钞）
-        $rechargeAmount = PlayerRechargeRecord::query()
-            ->when(true, $playerFilter)
-            ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
-            ->whereIn('type', [
-                PlayerRechargeRecord::TYPE_THIRD,
-                PlayerRechargeRecord::TYPE_SELF,
-                PlayerRechargeRecord::TYPE_BUSINESS,
-                PlayerRechargeRecord::TYPE_ARTIFICIAL,
-                PlayerRechargeRecord::TYPE_GB,
-                PlayerRechargeRecord::TYPE_EH,
-            ])
-            ->when($data_type, $timeFilter)
-            ->sum('point') ?? 0;
+        // 5. 查询全部历史数据（充值、提现、投钞）- 优化为与渠道后台一致，使用 PlayerDeliveryRecord
+        // 获取下级店家的所有玩家ID
+        $playerIds = Player::query()
+            ->where('department_id', $agent->department_id)
+            ->whereIn('store_admin_id', $storeIds)
+            ->where('is_promoter', 0)
+            ->pluck('id');
 
-        // 查询投钞数据
-        $machinePutPoint = PlayerRechargeRecord::query()
-            ->when(true, $playerFilter)
-            ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
-            ->where('type', PlayerRechargeRecord::TYPE_MACHINE)
+        // 统一使用 PlayerDeliveryRecord 查询
+        $deliveryStatisticsQuery = PlayerDeliveryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
             ->when($data_type, $timeFilter)
-            ->sum('point') ?? 0;
+            ->selectRaw("
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+            ")
+            ->first();
 
-        // 查询提现数据
-        $withdrawAmount = PlayerWithdrawRecord::query()
-            ->when(true, $playerFilter)
-            ->where('status', PlayerWithdrawRecord::STATUS_SUCCESS)
-            ->when($data_type, $timeFilter)
-            ->sum('point') ?? 0;
+        $rechargeAmount = $deliveryStatisticsQuery->recharge_total ?? 0;
+        $withdrawAmount = $deliveryStatisticsQuery->withdrawal_total ?? 0;
+        $machinePutPoint = $deliveryStatisticsQuery->machine_put_point ?? 0;
 
         // 查询电子游戏总押注
         $electronicBetTotal = PlayGameRecord::query()
-            ->when(true, $playerFilter)
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
             ->when($data_type, $timeFilter)
             ->sum('bet') ?? 0;
 
@@ -1421,7 +1409,7 @@ class ChannelIndexController
             'slot_bet' => $slotBetTotal,
         ];
 
-        // 7. 查询当期数据（按下级店家分组统计）
+        // 6. 查询当期数据（按下级店家分组统计）
         $totalData = PlayerDeliveryRecord::query()
             ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
             ->join('admin_users', 'player.store_admin_id', '=', 'admin_users.id')
@@ -2105,7 +2093,7 @@ class ChannelIndexController
             ->get()
             ->pluck('id');
 
-        // 运营统计数据（受时间筛选影响）
+        // 运营统计数据（受时间筛选影响）- 优化为与渠道后台一致
         $operationStatisticsQuery = PlayerDeliveryRecord::query()
             ->when(!empty($playerIds), function ($query) use ($playerIds) {
                 $query->whereIn('player_id', $playerIds);
@@ -2113,21 +2101,16 @@ class ChannelIndexController
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'created_at'));
             })
-            ->whereIn('type', [
-                PlayerDeliveryRecord::TYPE_PRESENT_IN,
-                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
-                PlayerDeliveryRecord::TYPE_MACHINE,
-            ])
             ->selectRaw("
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
             ")
             ->first();
 
         $operationStatistics = [
-            'present_in_amount' => $operationStatisticsQuery->present_in_amount ?? 0,
-            'present_out_amount' => $operationStatisticsQuery->present_out_amount ?? 0,
+            'recharge_total' => $operationStatisticsQuery->recharge_total ?? 0,
+            'withdrawal_total' => $operationStatisticsQuery->withdrawal_total ?? 0,
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
         ];
 
@@ -2151,27 +2134,22 @@ class ChannelIndexController
             'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
         ];
 
-        // 总数据统计（不受时间筛选影响，用于"总转入"、"总转出"、"总投钞"卡片）
+        // 总数据统计（不受时间筛选影响，用于"总充值"、"总提现"、"总投钞"卡片）
         $totalStatisticsQuery = PlayerDeliveryRecord::query()
             ->when(!empty($playerIds), function ($query) use ($playerIds) {
                 $query->whereIn('player_id', $playerIds);
             })
-            ->whereIn('type', [
-                PlayerDeliveryRecord::TYPE_PRESENT_IN,
-                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
-                PlayerDeliveryRecord::TYPE_MACHINE,
-            ])
             ->selectRaw("
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
             ")
             ->first();
 
         $playerDeliveryRecord = [
             [
-                'present_in_amount' => $totalStatisticsQuery->present_in_amount ?? 0,
-                'present_out_amount' => $totalStatisticsQuery->present_out_amount ?? 0,
+                'recharge_total' => $totalStatisticsQuery->recharge_total ?? 0,
+                'withdrawal_total' => $totalStatisticsQuery->withdrawal_total ?? 0,
                 'machine_put_point' => $totalStatisticsQuery->machine_put_point ?? 0,
             ]
         ];
@@ -2314,7 +2292,7 @@ class ChannelIndexController
                 ])
             , 3);
 
-            // 上分总和（运营统计，受时间筛选影响）
+            // 上分总和（运营统计，受时间筛选影响）- 对应充值总额
             $row->column(
                 Card::create([
                     Row::create()->column([
@@ -2323,7 +2301,7 @@ class ChannelIndexController
                             'color' => '#909399',
                             'marginRight' => 'auto'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['present_in_amount'] ?? 0), 2))->style([
+                        Html::create(number_format(floatval($operationStatistics['recharge_total'] ?? 0), 2))->style([
                             'fontSize' => '20px',
                             'fontWeight' => '600',
                             'color' => '#67C23A'
@@ -2342,7 +2320,7 @@ class ChannelIndexController
                 ])
             , 4);
 
-            // 下分总和（运营统计，受时间筛选影响）
+            // 下分总和（运营统计，受时间筛选影响）- 对应提现总额
             $row->column(
                 Card::create([
                     Row::create()->column([
@@ -2351,7 +2329,7 @@ class ChannelIndexController
                             'color' => '#909399',
                             'marginRight' => 'auto'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['present_out_amount'] ?? 0), 2))->style([
+                        Html::create(number_format(floatval($operationStatistics['withdrawal_total'] ?? 0), 2))->style([
                             'fontSize' => '20px',
                             'fontWeight' => '600',
                             'color' => '#F56C6C'
