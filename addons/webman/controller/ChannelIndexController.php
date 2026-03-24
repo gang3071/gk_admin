@@ -2715,38 +2715,46 @@ class ChannelIndexController
                         return message_error(admin_trans('shift_handover.error.duplicate_record'));
                     }
 
-                    // 5. 统计数据（修复时间边界和软删除问题，添加彩金统计）
+                    // 5. 统计数据（修复时间边界和软删除问题，添加彩金统计，添加开分/洗分/后台加扣点统计）
                     $result = PlayerDeliveryRecord::query()
                         ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
                         ->where('player.department_id', $admin->department_id)
                         ->where('player.store_admin_id', $admin->id)
                         ->where('player.is_promoter', 0)
                         ->whereIn('player_delivery_record.type', [
-                            PlayerDeliveryRecord::TYPE_PRESENT_IN,
-                            PlayerDeliveryRecord::TYPE_PRESENT_OUT,
                             PlayerDeliveryRecord::TYPE_MACHINE,
                             PlayerDeliveryRecord::TYPE_LOTTERY,
+                            PlayerDeliveryRecord::TYPE_RECHARGE,            // 开分
+                            PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分
+                            PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD, // 后台加点
+                            PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT, // 后台扣点
                         ])
                         ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->selectRaw("
-                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . "
-                                THEN player_delivery_record.amount ELSE 0 END) AS present_in_amount,
-                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . "
-                                THEN player_delivery_record.amount ELSE 0 END) AS present_out_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS machine_put_point,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY . "
-                                THEN player_delivery_record.amount ELSE 0 END) AS lottery_amount
+                                THEN player_delivery_record.amount ELSE 0 END) AS lottery_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS withdrawal_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS modified_add_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS modified_deduct_amount
                         ")
                         ->first();
 
                     // 6. 安全处理查询结果（防止null错误）
                     $playerDeliveryRecord = $result ? $result->toArray() : [
-                        'present_in_amount' => 0,
-                        'present_out_amount' => 0,
                         'machine_put_point' => 0,
-                        'lottery_amount' => 0
+                        'lottery_amount' => 0,
+                        'recharge_amount' => 0,
+                        'withdrawal_amount' => 0,
+                        'modified_add_amount' => 0,
+                        'modified_deduct_amount' => 0,
                     ];
 
                     // 7. 获取货币配置并验证
@@ -2772,10 +2780,21 @@ class ChannelIndexController
                         ($playerDeliveryRecord['machine_put_point'] ?? 0) * $currency->ratio;
                     $storeAgentShiftHandoverRecord->machine_point =
                         $playerDeliveryRecord['machine_put_point'] ?? 0;
-                    $storeAgentShiftHandoverRecord->total_in =
-                        $playerDeliveryRecord['present_in_amount'] ?? 0;
-                    $storeAgentShiftHandoverRecord->total_out =
-                        $playerDeliveryRecord['present_out_amount'] ?? 0;
+
+                    // 计算总收入（开分 + 后台加点）
+                    $storeAgentShiftHandoverRecord->total_in = bcadd(
+                        $playerDeliveryRecord['recharge_amount'] ?? 0,
+                        $playerDeliveryRecord['modified_add_amount'] ?? 0,
+                        2
+                    );
+
+                    // 计算总支出（洗分 + 后台扣点）
+                    $storeAgentShiftHandoverRecord->total_out = bcadd(
+                        $playerDeliveryRecord['withdrawal_amount'] ?? 0,
+                        $playerDeliveryRecord['modified_deduct_amount'] ?? 0,
+                        2
+                    );
+
                     $storeAgentShiftHandoverRecord->lottery_amount =
                         $playerDeliveryRecord['lottery_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->start_time = $startTime;
@@ -2784,10 +2803,16 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->user_name = $admin->username;
                     $storeAgentShiftHandoverRecord->bind_admin_user_id = $admin->id;
                     $storeAgentShiftHandoverRecord->is_auto_shift = 0;
+
+                    // 计算利润（投钞 + 总收入 - 总支出 - 彩金）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
-                        bcadd($storeAgentShiftHandoverRecord->machine_point,
-                              $storeAgentShiftHandoverRecord->total_in, 2),
-                        $storeAgentShiftHandoverRecord->total_out,
+                        bcsub(
+                            bcadd($storeAgentShiftHandoverRecord->machine_point,
+                                  $storeAgentShiftHandoverRecord->total_in, 2),
+                            $storeAgentShiftHandoverRecord->total_out,
+                            2
+                        ),
+                        $storeAgentShiftHandoverRecord->lottery_amount,
                         2
                     );
                     $storeAgentShiftHandoverRecord->save();
@@ -2805,7 +2830,14 @@ class ChannelIndexController
                         'total_out' => $storeAgentShiftHandoverRecord->total_out,
                         'lottery_amount' => $storeAgentShiftHandoverRecord->lottery_amount,
                         'total_profit_amount' => $storeAgentShiftHandoverRecord->total_profit_amount,
-                        'is_auto_shift' => 0
+                        'is_auto_shift' => 0,
+                        // 详细分类数据
+                        'detail' => [
+                            'recharge' => $playerDeliveryRecord['recharge_amount'] ?? 0,
+                            'withdrawal' => $playerDeliveryRecord['withdrawal_amount'] ?? 0,
+                            'modified_add' => $playerDeliveryRecord['modified_add_amount'] ?? 0,
+                            'modified_deduct' => $playerDeliveryRecord['modified_deduct_amount'] ?? 0,
+                        ]
                     ]);
 
                     DB::commit();

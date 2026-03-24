@@ -2,9 +2,11 @@
 
 namespace process;
 
+use addons\webman\model\StoreAutoShiftConfig;
 use app\service\store\AutoShiftService;
 use Workerman\Timer;
 use Workerman\Worker;
+use support\Log;
 
 /**
  * 自动交班定时任务
@@ -35,6 +37,7 @@ class AutoShiftTask
     private function checkAndExecuteAutoShift(): void
     {
         try {
+            /** @var AutoShiftService $service */
             $service = new AutoShiftService();
             $configs = $service->getPendingConfigs();
 
@@ -42,21 +45,21 @@ class AutoShiftTask
                 return;
             }
 
-            \Log::info('检测到待执行的自动交班配置', [
+            Log::info('检测到待执行的自动交班配置', [
                 'count' => count($configs),
                 'time' => date('Y-m-d H:i:s')
             ]);
 
             foreach ($configs as $configData) {
                 try {
-                    // 重新获取配置对象（避免使用数组）
-                    $config = \addons\webman\model\StoreAutoShiftConfig::query()->find($configData['id']);
+                    /** @var StoreAutoShiftConfig|null $config */
+                    $config = StoreAutoShiftConfig::query()->find($configData['id']);
 
                     if (!$config || !$config->is_enabled) {
                         continue;
                     }
 
-                    \Log::info('开始执行自动交班', [
+                    Log::info('开始执行自动交班', [
                         'config_id' => $config->id,
                         'department_id' => $config->department_id,
                         'bind_admin_user_id' => $config->bind_admin_user_id
@@ -71,7 +74,7 @@ class AutoShiftTask
                     }
 
                 } catch (\Exception $e) {
-                    \Log::error('执行单个自动交班任务失败', [
+                    Log::error('执行单个自动交班任务失败', [
                         'config_id' => $configData['id'] ?? 'unknown',
                         'error' => $e->getMessage(),
                         'trace' => $e->getTraceAsString()
@@ -82,7 +85,7 @@ class AutoShiftTask
             }
 
         } catch (\Exception $e) {
-            \Log::error('自动交班定时任务执行异常', [
+            Log::error('自动交班定时任务执行异常', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

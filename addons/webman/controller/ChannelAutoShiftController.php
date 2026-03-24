@@ -3,6 +3,8 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
+use addons\webman\model\StoreAutoShiftConfig;
 use app\service\store\AutoShiftService;
 use addons\webman\model\StoreAutoShiftLog;
 use ExAdmin\ui\component\form\Form;
@@ -32,9 +34,13 @@ class ChannelAutoShiftController
      */
     public function config(): Form
     {
+        /** @var AdminUser $admin */
         $admin = Admin::user();
+
+        /** @var AutoShiftService $service */
         $service = new AutoShiftService();
 
+        /** @var StoreAutoShiftConfig|null $config */
         $config = $service->getConfig($admin->department_id, $admin->id);
 
         return Form::create($config ? $config->toArray() : [], function (Form $form) use ($admin, $config, $service) {
@@ -184,6 +190,7 @@ class ChannelAutoShiftController
      */
     public function saveConfig(Request $request): Response
     {
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
         $data = [
@@ -209,6 +216,7 @@ class ChannelAutoShiftController
      */
     public function logs(): Grid
     {
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
         return Grid::create(new StoreAutoShiftLog(), function (Grid $grid) use ($admin) {
@@ -346,9 +354,11 @@ class ChannelAutoShiftController
      */
     public function logDetail(Request $request): Response
     {
+        /** @var AdminUser $admin */
         $admin = Admin::user();
         $id = $request->get('id');
 
+        /** @var StoreAutoShiftLog|null $log */
         $log = StoreAutoShiftLog::query()
             ->where('id', $id)
             ->where('department_id', $admin->department_id)
@@ -375,10 +385,13 @@ class ChannelAutoShiftController
      */
     public function toggleEnabled(Request $request): Response
     {
+        /** @var AdminUser $admin */
         $admin = Admin::user();
         $enabled = $request->post('enabled', 0);
 
         $service = new AutoShiftService();
+
+        /** @var StoreAutoShiftConfig|null $config */
         $config = $service->getConfig($admin->department_id, $admin->id);
 
         if (!$config) {
@@ -405,6 +418,7 @@ class ChannelAutoShiftController
      */
     public function stats(Request $request): Response
     {
+        /** @var AdminUser $admin */
         $admin = Admin::user();
         $days = $request->get('days', 7);
 

@@ -21,6 +21,7 @@ class AutoShiftService
      */
     public function isAutoShiftEnabled(int $departmentId, int $bindAdminUserId): bool
     {
+        /** @var StoreAutoShiftConfig|null $config */
         $config = StoreAutoShiftConfig::query()
             ->where('department_id', $departmentId)
             ->where('bind_admin_user_id', $bindAdminUserId)
@@ -32,13 +33,17 @@ class AutoShiftService
 
     /**
      * 获取自动交班配置
+     * @return StoreAutoShiftConfig|null
      */
     public function getConfig(int $departmentId, int $bindAdminUserId)
     {
-        return StoreAutoShiftConfig::query()
+        /** @var StoreAutoShiftConfig|null $config */
+        $config = StoreAutoShiftConfig::query()
             ->where('department_id', $departmentId)
             ->where('bind_admin_user_id', $bindAdminUserId)
             ->first();
+
+        return $config;
     }
 
     /**
@@ -49,12 +54,14 @@ class AutoShiftService
         try {
             DB::beginTransaction();
 
+            /** @var StoreAutoShiftConfig|null $config */
             $config = StoreAutoShiftConfig::query()
                 ->where('department_id', $data['department_id'])
                 ->where('bind_admin_user_id', $data['bind_admin_user_id'])
                 ->first();
 
             if (!$config) {
+                /** @var StoreAutoShiftConfig $config */
                 $config = new StoreAutoShiftConfig();
                 $config->department_id = $data['department_id'];
                 $config->bind_admin_user_id = $data['bind_admin_user_id'];
@@ -128,8 +135,9 @@ class AutoShiftService
                 $time = Carbon::parse($config->$field);
                 $next = Carbon::today()->setTime($time->hour, $time->minute, $time->second);
 
-                // 如果时间已过，则为明天同一时间
-                if ($next->lte($now)) {
+                // 如果时间已过（早于当前时间1分钟），则为明天同一时间
+                // 使用 lt 而不是 lte，避免刚好到达交班时间就跳到明天
+                if ($next->lt($now)) {
                     $next->addDay();
                 }
 
@@ -156,13 +164,16 @@ class AutoShiftService
     public function executeAutoShift(StoreAutoShiftConfig $config): array
     {
         $startExecute = microtime(true);
+        /** @var Carbon|null $startTime */
         $startTime = null;
+        /** @var Carbon|null $endTime */
         $endTime = null;
 
         try {
             DB::beginTransaction();
 
             // 1. 锁定配置记录（防止并发执行）
+            /** @var StoreAutoShiftConfig|null $config */
             $config = StoreAutoShiftConfig::query()
                 ->where('id', $config->id)
                 ->lockForUpdate()
@@ -174,21 +185,25 @@ class AutoShiftService
             }
 
             // 2. 计算交班时间范围
+            /** @var Carbon $endTime */
             $endTime = Carbon::now();
 
             // 如果有上次交班时间，从上次结束时间开始
             if ($config->last_shift_time) {
+                /** @var StoreAgentShiftHandoverRecord|null $lastRecord */
                 $lastRecord = StoreAgentShiftHandoverRecord::query()
                     ->where('bind_admin_user_id', $config->bind_admin_user_id)
                     ->where('is_auto_shift', 1)
                     ->orderBy('id', 'desc')
                     ->first();
 
+                /** @var Carbon $startTime */
                 $startTime = $lastRecord
                     ? Carbon::parse($lastRecord->end_time)
                     : Carbon::parse($config->last_shift_time);
             } else {
                 // 第一次交班，默认统计最近24小时
+                /** @var Carbon $startTime */
                 $startTime = $endTime->copy()->subDay();
             }
 
@@ -212,6 +227,7 @@ class AutoShiftService
             );
 
             // 5. 创建交班记录
+            /** @var StoreAgentShiftHandoverRecord $shiftRecord */
             $shiftRecord = new StoreAgentShiftHandoverRecord();
             $shiftRecord->department_id = $config->department_id;
             $shiftRecord->bind_admin_user_id = $config->bind_admin_user_id;
@@ -229,6 +245,7 @@ class AutoShiftService
             // 6. 创建执行日志
             $duration = (microtime(true) - $startExecute) * 1000;
 
+            /** @var StoreAutoShiftLog $log */
             $log = new StoreAutoShiftLog();
             $log->config_id = $config->id;
             $log->department_id = $config->department_id;
@@ -312,6 +329,7 @@ class AutoShiftService
      */
     private function calculateShiftStatistics(int $bindAdminUserId, string $startTime, string $endTime): array
     {
+        /** @var Currency|null $currency */
         $currency = Currency::query()->first();
 
         if (!$currency) {
@@ -319,22 +337,28 @@ class AutoShiftService
         }
 
         // 获取管理员的部门ID（用于双重验证）
+        /** @var \addons\webman\model\AdminUser|null $admin */
         $admin = \addons\webman\model\AdminUser::query()->find($bindAdminUserId);
         if (!$admin) {
             throw new \Exception('管理员不存在：' . $bindAdminUserId);
         }
 
+        /** @var object|null $result */
         $result = PlayerDeliveryRecord::query()
             ->selectRaw('
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as present_in_amount,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as present_out_amount,
                 SUM(CASE WHEN type = ? THEN point ELSE 0 END) as machine_put_point,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_deduct_amount
             ', [
-                PlayerDeliveryRecord::TYPE_PRESENT_IN,
-                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
                 PlayerDeliveryRecord::TYPE_MACHINE,
-                PlayerDeliveryRecord::TYPE_LOTTERY
+                PlayerDeliveryRecord::TYPE_LOTTERY,
+                PlayerDeliveryRecord::TYPE_RECHARGE,            // 开分
+                PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分
+                PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD, // 后台加点
+                PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT // 后台扣点
             ])
             ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
             ->where('player.department_id', $admin->department_id)
@@ -345,22 +369,45 @@ class AutoShiftService
             ->first();
 
         $data = $result ? $result->toArray() : [
-            'present_in_amount' => 0,
-            'present_out_amount' => 0,
             'machine_put_point' => 0,
-            'lottery_amount' => 0
+            'lottery_amount' => 0,
+            'recharge_amount' => 0,
+            'withdrawal_amount' => 0,
+            'modified_add_amount' => 0,
+            'modified_deduct_amount' => 0,
         ];
 
         $machineAmount = bcdiv($data['machine_put_point'], $currency->ratio, 2);
-        $totalProfit = bcsub($data['present_in_amount'], $data['present_out_amount'], 2);
+
+        // 计算总收入（开分 + 后台加点）
+        $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
+
+        // 计算总支出（洗分 + 后台扣点）
+        $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
+
+        // 计算利润（投钞 + 总收入 - 总支出 - 彩金）
+        $totalProfit = bcsub(
+            bcsub(
+                bcadd($data['machine_put_point'], $totalIn, 2),
+                $totalOut,
+                2
+            ),
+            $data['lottery_amount'],
+            2
+        );
 
         return [
             'machine_amount' => (float)$machineAmount,
             'machine_point' => (int)$data['machine_put_point'],
-            'total_in' => (float)$data['present_in_amount'],
-            'total_out' => (float)$data['present_out_amount'],
+            'total_in' => (float)$totalIn,
+            'total_out' => (float)$totalOut,
             'lottery_amount' => (float)$data['lottery_amount'],
-            'total_profit' => (float)$totalProfit
+            'total_profit' => (float)$totalProfit,
+            // 详细分类数据（用于日志和调试）
+            'recharge_amount' => (float)$data['recharge_amount'],
+            'withdrawal_amount' => (float)$data['withdrawal_amount'],
+            'modified_add_amount' => (float)$data['modified_add_amount'],
+            'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
         ];
     }
 
@@ -369,9 +416,12 @@ class AutoShiftService
      */
     public function getPendingConfigs(): array
     {
+        $now = Carbon::now();
+
         return StoreAutoShiftConfig::query()
             ->where('is_enabled', 1)
-            ->where('next_shift_time', '<=', Carbon::now())
+            ->where('next_shift_time', '<=', $now)
+            ->whereNotNull('next_shift_time')
             ->get()
             ->toArray();
     }
