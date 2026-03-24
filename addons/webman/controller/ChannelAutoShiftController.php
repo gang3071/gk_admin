@@ -45,9 +45,9 @@ class ChannelAutoShiftController
             if ($config && $config->is_enabled) {
                 $stats = $service->getExecutionStats($admin->department_id, $admin->id, 7);
 
+                $form->html('<div style="margin-bottom: 24px;">');
                 $form->push(Card::create()
                     ->title(admin_trans('shift_handover.auto.stats_title'))
-                    ->style(['margin-bottom' => '24px'])
                     ->content(
                         Row::create()->gutter(16)->content([
                             Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
@@ -78,19 +78,21 @@ class ChannelAutoShiftController
                             ),
                         ])
                     ));
+                $form->html('</div>');
             }
 
             // 基础配置
-            $form->push(Divider::create(admin_trans('shift_handover.auto.config_title'))
-                ->style(['margin' => '24px 0 16px 0']));
+            $form->html('<div style="margin-top: 24px;">');
+            $form->divider()->content(admin_trans('shift_handover.auto.config_title'));
+            $form->html('</div>');
 
             $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
                 ->checkedValue(1)
                 ->unCheckedValue(0)
-                ->help(admin_trans('shift_handover.auto.enable_help'))
-                ->style(['margin-bottom' => '24px']);
+                ->help(admin_trans('shift_handover.auto.enable_help'));
 
             // 三个时间字段（横向排列）
+            $form->html('<div style="margin-top: 16px;">');
             $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
                 ->default('08:00:00')
                 ->help(admin_trans('shift_handover.auto.shift_time_1_help'))
@@ -105,28 +107,30 @@ class ChannelAutoShiftController
                 ->default('00:00:00')
                 ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
                 ->col(8);
+            $form->html('</div>');
 
             // 显示下次交班时间
+            $form->html('<div style="margin-top: 24px;">');
             if ($config && $config->next_shift_time) {
                 $form->push(Card::create([
                     Html::div()->content(admin_trans('shift_handover.auto.next_shift_time') . '：' . $config->next_shift_time)
-                ])->title(admin_trans('shift_handover.auto.exec_info'))
-                    ->style(['margin-top' => '24px']));
+                ])->title(admin_trans('shift_handover.auto.exec_info')));
             } else {
                 $form->push(Card::create([
                     Html::div()->content(admin_trans('shift_handover.auto.config_save_hint'))->style(['color' => '#999'])
-                ])->title(admin_trans('shift_handover.auto.exec_info'))
-                    ->style(['margin-top' => '24px']));
+                ])->title(admin_trans('shift_handover.auto.exec_info')));
             }
+            $form->html('</div>');
 
             // 快捷操作
             if ($config) {
+                $form->html('<div style="margin-top: 24px;">');
                 $form->push(Card::create([
                     Button::create(admin_trans('shift_handover.auto.view_logs'))
                         ->type('default')
                         ->modal([$this, 'logs'])->width('80%')
-                ])->title(admin_trans('shift_handover.auto.quick_actions'))
-                    ->style(['margin-top' => '24px']));
+                ])->title(admin_trans('shift_handover.auto.quick_actions')));
+                $form->html('</div>');
             }
 
             // 处理表单提交
