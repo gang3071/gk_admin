@@ -16,6 +16,7 @@ use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\StoreAutoShiftConfig;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -56,22 +57,10 @@ class ChannelIndexController
 
         // 获取当前渠道下的玩家ID
         $departmentId = Admin::user()->department_id;
-        $admin = Admin::user();
         $playerIds = Player::query()
             ->where('department_id', $departmentId)
             ->where('is_promoter', 0)
             ->pluck('id');
-
-        // 获取自动交班配置状态
-        /** @var \addons\webman\model\StoreAutoShiftConfig|null $autoShiftConfig */
-        $autoShiftConfig = \addons\webman\model\StoreAutoShiftConfig::query()
-            ->where('department_id', $admin->department_id)
-            ->where('bind_admin_user_id', $admin->id)
-            ->first();
-
-        $autoShiftEnabled = $autoShiftConfig && $autoShiftConfig->is_enabled == 1;
-        $autoShiftStatusText = $autoShiftEnabled ? '自动交班：已开启' : '自动交班：已关闭';
-        $autoShiftStatusColor = $autoShiftEnabled ? '#67C23A' : '#909399';
 
         // 运营统计数据（受时间筛选影响）
         $operationStatisticsQuery = PlayerDeliveryRecord::query()
@@ -135,7 +124,7 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'index'],
             ['data_type' => 'last_month']);
         $layout = Layout::create();
-        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics, $autoShiftStatusText, $autoShiftStatusColor) {
+        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
             $subtotal = bcsub(
@@ -144,24 +133,10 @@ class ChannelIndexController
                 2
             );
 
-            // 数据周期筛选 + 自动交班状态
+            // 数据周期筛选
             $row->column(
                 Card::create([
-                    Row::create()->gutter(12)->column([
-                        $dropdown
-                    ], 12)->column([
-                        Html::create()->content([
-                            Icon::create('clock-circle')->style(['marginRight' => '4px', 'fontSize' => '14px']),
-                            Html::create($autoShiftStatusText)->style([
-                                'fontSize' => '13px',
-                                'color' => $autoShiftStatusColor
-                            ])
-                        ])->style([
-                            'display' => 'flex',
-                            'alignItems' => 'center',
-                            'justifyContent' => 'flex-end'
-                        ])
-                    ], 12)
+                    Row::create()->column($dropdown, 4),
                 ])->bodyStyle([
                     'padding' => '13px',
                     'display' => 'flex',
@@ -2109,6 +2084,17 @@ class ChannelIndexController
         $exAdminFilter = Request::input('ex_admin_filter', []);
         $dateType = isset($exAdminFilter['date_type']) && $exAdminFilter['date_type'] !== '' ? intval($exAdminFilter['date_type']) : null;
 
+        // 获取自动交班配置状态
+        /** @var \addons\webman\model\StoreAutoShiftConfig|null $autoShiftConfig */
+        $autoShiftConfig = \addons\webman\model\StoreAutoShiftConfig::query()
+            ->where('department_id', $store->department_id)
+            ->where('bind_admin_user_id', $store->id)
+            ->first();
+
+        $autoShiftEnabled = $autoShiftConfig && $autoShiftConfig->is_enabled == 1;
+        $autoShiftStatusText = $autoShiftEnabled ? '自动交班：已开启' : '自动交班：已关闭';
+        $autoShiftStatusColor = $autoShiftEnabled ? '#67C23A' : '#909399';
+
         // 查询店家下的玩家（使用 store_admin_id）
         $playerNum = Player::query()
             ->where('department_id', $store->department_id)
@@ -2265,7 +2251,9 @@ class ChannelIndexController
             $info,
             $storePlatformCash,
             $dateType,
-            $timeDropdown
+            $timeDropdown,
+            $autoShiftStatusText,
+            $autoShiftStatusColor
         ) {
             /** @var StoreAgentShiftHandoverRecord $storeAgentShiftHandoverRecord */
             $storeAgentShiftHandoverRecord = StoreAgentShiftHandoverRecord::query()->where('bind_admin_user_id',
@@ -2288,7 +2276,18 @@ class ChannelIndexController
                                 'fontSize' => '16px',
                                 'marginLeft' => '20px',
                                 'fontWeight' => 'bold',
+                            ]),
+                        Html::create()->content([
+                            Icon::create('clock-circle')->style(['marginRight' => '4px', 'fontSize' => '14px']),
+                            Html::create($autoShiftStatusText)->style([
+                                'fontSize' => '13px',
+                                'color' => $autoShiftStatusColor
                             ])
+                        ])->style([
+                            'display' => 'flex',
+                            'alignItems' => 'center',
+                            'marginLeft' => '20px'
+                        ])
                     ])->style([
                         'display' => 'flex',
                         'alignItems' => 'center'
@@ -2861,7 +2860,6 @@ class ChannelIndexController
                     $manualLog->total_out = $storeAgentShiftHandoverRecord->total_out;
                     $manualLog->lottery_amount = $storeAgentShiftHandoverRecord->lottery_amount;
                     $manualLog->total_profit = $storeAgentShiftHandoverRecord->total_profit_amount;
-                    $manualLog->remark = '手动交班';
                     $manualLog->save();
 
                     // 10. 关联日志ID
@@ -2869,8 +2867,8 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->save();
 
                     // 11. 更新自动交班配置（实现无缝切换）
-                    /** @var \addons\webman\model\StoreAutoShiftConfig|null $autoShiftConfig */
-                    $autoShiftConfig = \addons\webman\model\StoreAutoShiftConfig::query()
+                    /** @var StoreAutoShiftConfig|null $autoShiftConfig */
+                    $autoShiftConfig = StoreAutoShiftConfig::query()
                         ->where('department_id', $admin->department_id)
                         ->where('bind_admin_user_id', $admin->id)
                         ->first();
