@@ -49,7 +49,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Db;
-use think\Exception;
+use Exception;
 
 /**
  * 机台

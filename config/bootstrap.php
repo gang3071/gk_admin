@@ -15,6 +15,5 @@
 return [
     support\bootstrap\Session::class,
     support\bootstrap\LaravelDb::class,
-    // Webman\ThinkOrm\ThinkOrm::class,  // 已移除，项目使用 Laravel DB
-    // Webman\ThinkCache\ThinkCache::class,  // 已移除，项目使用 Laravel DB
+    support\bootstrap\GatewayClient::class,  // GatewayWorker 客户端配置
 ];

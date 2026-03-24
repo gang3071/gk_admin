@@ -3973,40 +3973,6 @@ class ChannelPlayerController
 
                 $player->save();
 
-                // 创建默认店家配置 - home_notice
-                $storeSetting = new StoreSetting();
-                $storeSetting->department_id = $player->department_id;
-                $storeSetting->player_id = $player->id;
-                $storeSetting->feature = 'home_notice';
-                $storeSetting->content = '欢迎使用店家后台系统！';
-                $storeSetting->status = 1;
-                $storeSetting->save();
-
-                // 创建默认店家配置 - enable_physical_machine
-                $storeSettingMachine = new StoreSetting();
-                $storeSettingMachine->department_id = $player->department_id;
-                $storeSettingMachine->player_id = $player->id;
-                $storeSettingMachine->feature = 'enable_physical_machine';
-                $storeSettingMachine->num = 1; // 默认启用
-                $storeSettingMachine->status = 1;
-                $storeSettingMachine->save();
-
-                // 创建默认店家配置 - enable_live_baccarat
-                $storeSettingBaccarat = new StoreSetting();
-                $storeSettingBaccarat->department_id = $player->department_id;
-                $storeSettingBaccarat->player_id = $player->id;
-                $storeSettingBaccarat->feature = 'enable_live_baccarat';
-                $storeSettingBaccarat->num = 1; // 默认启用
-                $storeSettingBaccarat->status = 1;
-                $storeSettingBaccarat->save();
-
-                // 创建玩家全民代理身份
-                $national_promoter = new NationalPromoter;
-                $national_promoter->uid = $player->id;
-                $level_min = LevelList::where('department_id', $player->department_id)->orderBy('must_chip_amount')->first();
-                $national_promoter->level = $level_min->id;
-                $national_promoter->save();
-
                 addPlayerExtend($player);
 
                 addRegisterRecord($player->id, PlayerRegisterRecord::TYPE_ADMIN, $player->department_id);
@@ -4112,7 +4078,7 @@ class ChannelPlayerController
     private function createAgentSaving(Form $form)
     {
         /** @var Channel $channel */
-        $channel = Channel::where('department_id', Admin::user()->department_id)->first();
+        $channel = Channel::query()->where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return message_error(admin_trans('offline_channel.error_offline_channel_only'));
         }
@@ -4140,19 +4106,7 @@ class ChannelPlayerController
 
         Db::beginTransaction();
         try {
-            // 1. 创建代理部门
-            $agentDepartment = new AdminDepartment();
-            $agentDepartment->name = $name;
-            $agentDepartment->leader = $name;
-            $agentDepartment->phone = $phone ?? ''; // 手机号选填
-            $agentDepartment->type = AdminDepartment::TYPE_AGENT; // 代理类型
-            $agentDepartment->pid = Admin::user()->department_id; // 上级是渠道
-            $agentDepartment->save();
-
-            // 设置部门路径
-            $agentDepartment->path = Admin::user()->department_id . ',' . $agentDepartment->id;
-            $agentDepartment->save();
-
+            $currentDepartmentId = Admin::user()->department_id;
             // 2. 创建后台管理员账号（代理后台超管）
             $adminUser = new AdminUser();
             $adminUser->username = $adminUsername;
@@ -4161,8 +4115,7 @@ class ChannelPlayerController
             $adminUser->avatar = $avatar;
             $adminUser->status = 1;
             $adminUser->type = AdminDepartment::TYPE_AGENT; // 代理类型账号
-            $adminUser->department_id = $agentDepartment->id; // 绑定到代理部门
-            $adminUser->player_id = 0; // 代理不绑定玩家
+            $adminUser->department_id = $currentDepartmentId;
             $adminUser->is_super = 1; // 代理后台超管
             $adminUser->save();
 
@@ -4175,8 +4128,7 @@ class ChannelPlayerController
             // 4. 创建代理配置（StoreSetting绑定到admin_user_id）
             // home_notice
             $storeSetting = new StoreSetting();
-            $storeSetting->department_id = $agentDepartment->id;
-            $storeSetting->player_id = 0; // 代理不绑定玩家
+            $storeSetting->department_id = $currentDepartmentId;
             $storeSetting->admin_user_id = $adminUser->id; // 绑定到后台账号
             $storeSetting->feature = 'home_notice';
             $storeSetting->content = '欢迎使用代理后台系统！';
@@ -4185,8 +4137,7 @@ class ChannelPlayerController
 
             // enable_physical_machine
             $storeSettingMachine = new StoreSetting();
-            $storeSettingMachine->department_id = $agentDepartment->id;
-            $storeSettingMachine->player_id = 0;
+            $storeSetting->department_id = $currentDepartmentId;
             $storeSettingMachine->admin_user_id = $adminUser->id;
             $storeSettingMachine->feature = 'enable_physical_machine';
             $storeSettingMachine->num = 1; // 默认启用
@@ -4195,8 +4146,7 @@ class ChannelPlayerController
 
             // enable_live_baccarat
             $storeSettingBaccarat = new StoreSetting();
-            $storeSettingBaccarat->department_id = $agentDepartment->id;
-            $storeSettingBaccarat->player_id = 0;
+            $storeSetting->department_id = $currentDepartmentId;
             $storeSettingBaccarat->admin_user_id = $adminUser->id;
             $storeSettingBaccarat->feature = 'enable_live_baccarat';
             $storeSettingBaccarat->num = 1; // 默认启用
