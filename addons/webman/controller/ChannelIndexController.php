@@ -2606,17 +2606,15 @@ class ChannelIndexController
             // 如果启用了自动交班，显示提示信息并阻止手动交班
             return Form::create([], function (Form $form) {
                 $form->layout('vertical');
-                $form->push(Card::create([
-                    Html::create('<div style="text-align: center; padding: 40px 0;">
-                        <i class="fa fa-info-circle" style="font-size: 48px; color: #1890ff;"></i>
-                        <h3 style="margin-top: 20px; color: #1890ff;">' . admin_trans('shift_handover.auto_shift_enabled') . '</h3>
-                        <p style="color: #666; margin-top: 10px;">' . admin_trans('shift_handover.auto_shift_enabled_desc') . '</p>
-                        <p style="color: #999; margin-top: 5px;">' . admin_trans('shift_handover.auto_shift_close_hint') . '</p>
-                        <div style="margin-top: 30px;">
-                            <a href="/channel-auto-shift/config" class="btn btn-primary">' . admin_trans('shift_handover.goto_auto_shift_config') . '</a>
-                        </div>
-                    </div>')->tag('div')
-                ])->title(admin_trans('shift_handover.manual_shift_disabled')));
+                $form->push(Html::create('<div style="text-align: center; padding: 40px 0;">
+                    <i class="fa fa-info-circle" style="font-size: 48px; color: #1890ff;"></i>
+                    <h3 style="margin-top: 20px; color: #1890ff;">已开启自动交班</h3>
+                    <p style="color: #666; margin-top: 10px;">系统已启用自动交班功能，无法进行手动交班操作。</p>
+                    <p style="color: #999; margin-top: 5px;">如需手动交班，请先到"自动交班配置"中关闭自动交班功能。</p>
+                    <div style="margin-top: 30px;">
+                        <a href="/channel-auto-shift/config" class="btn btn-primary">前往自动交班配置</a>
+                    </div>
+                </div>'));
 
                 // 禁用提交按钮
                 $form->disableSubmit();
