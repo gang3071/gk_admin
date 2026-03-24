@@ -47,7 +47,7 @@ class ChannelAutoShiftController
 
                 $form->push(Card::create()
                     ->title(admin_trans('shift_handover.auto.stats_title'))
-                    ->style(['margin-bottom' => '20px'])
+                    ->style(['margin-bottom' => '24px'])
                     ->content(
                         Row::create()->gutter(16)->content([
                             Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
@@ -81,12 +81,14 @@ class ChannelAutoShiftController
             }
 
             // 基础配置
-            $form->push(Divider::create(admin_trans('shift_handover.auto.config_title')));
+            $form->push(Divider::create(admin_trans('shift_handover.auto.config_title'))
+                ->style(['margin' => '24px 0 16px 0']));
 
             $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
                 ->checkedValue(1)
                 ->unCheckedValue(0)
-                ->help(admin_trans('shift_handover.auto.enable_help'));
+                ->help(admin_trans('shift_handover.auto.enable_help'))
+                ->style(['margin-bottom' => '24px']);
 
             // 三个时间字段（横向排列）
             $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
@@ -108,11 +110,13 @@ class ChannelAutoShiftController
             if ($config && $config->next_shift_time) {
                 $form->push(Card::create([
                     Html::div()->content(admin_trans('shift_handover.auto.next_shift_time') . '：' . $config->next_shift_time)
-                ])->title(admin_trans('shift_handover.auto.exec_info')));
+                ])->title(admin_trans('shift_handover.auto.exec_info'))
+                    ->style(['margin-top' => '24px']));
             } else {
                 $form->push(Card::create([
                     Html::div()->content(admin_trans('shift_handover.auto.config_save_hint'))->style(['color' => '#999'])
-                ])->title(admin_trans('shift_handover.auto.exec_info')));
+                ])->title(admin_trans('shift_handover.auto.exec_info'))
+                    ->style(['margin-top' => '24px']));
             }
 
             // 快捷操作
@@ -121,7 +125,8 @@ class ChannelAutoShiftController
                     Button::create(admin_trans('shift_handover.auto.view_logs'))
                         ->type('default')
                         ->modal([$this, 'logs'])->width('80%')
-                ])->title(admin_trans('shift_handover.auto.quick_actions')));
+                ])->title(admin_trans('shift_handover.auto.quick_actions'))
+                    ->style(['margin-top' => '24px']));
             }
 
             // 处理表单提交
