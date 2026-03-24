@@ -212,7 +212,12 @@ class ChannelPlayerReportController
         $summaryData['modified_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD)
             ->sum('player_delivery_record.amount');
-        
+
+        //投钞总额
+        $summaryData['machine_chip_total'] = $playerDeliveryRecordBaseQuery->clone()
+            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE)
+            ->sum('player_delivery_record.amount');
+
         //送输赢
         $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['activity_total'] + $summaryData['lottery_total'] + $summaryData['modified_total'];
         
@@ -228,6 +233,7 @@ class ChannelPlayerReportController
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_DOWN . " THEN player_delivery_record.amount ELSE 0 END) AS machine_down_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN player_delivery_record.amount ELSE 0 END) AS coin_withdraw,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN player_delivery_record.amount ELSE 0 END) AS coin_transfer,
+            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN player_delivery_record.amount ELSE 0 END) AS machine_chip_total,
             
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_DOWN . " THEN player_delivery_record.amount ELSE 0 END) -
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_UP . " THEN player_delivery_record.amount ELSE 0 END) -
@@ -429,7 +435,15 @@ class ChannelPlayerReportController
                         ])->style([
                             'font-size' => '10px',
                             'text-align' => 'center'
-                        ]), 24),
+                        ]), 12),
+                        Divider::create()->type('vertical')->style(['height' => '3em']),
+                        Row::create()->column(Statistic::create()->title('投钞总额')->value(!empty($summaryData['machine_chip_total']) ? floatval($summaryData['machine_chip_total']) : 0)->valueStyle([
+                            'font-size' => '15px',
+                            'text-align' => 'center'
+                        ])->style([
+                            'font-size' => '10px',
+                            'text-align' => 'center'
+                        ]), 12),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
@@ -559,6 +573,12 @@ class ChannelPlayerReportController
             $grid->column('machine_down_total', admin_trans('player.machine_down_total'))
                 ->display(function ($value) {
                     return Html::create(number_format($value, 2))->style(['color' => 'red']);
+                })
+                ->align('center')->sortable();
+            // 投钞总额
+            $grid->column('machine_chip_total', '投钞总额')
+                ->display(function ($value) {
+                    return Html::create(number_format($value, 2))->style(['color' => 'green']);
                 })
                 ->align('center')->sortable();
             // 机台盈利
@@ -744,6 +764,7 @@ class ChannelPlayerReportController
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_DOWN . " THEN player_delivery_record.amount ELSE 0 END) AS machine_down_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN player_delivery_record.amount ELSE 0 END) AS coin_withdraw,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN player_delivery_record.amount ELSE 0 END) AS coin_transfer,
+            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN player_delivery_record.amount ELSE 0 END) AS machine_chip_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_DOWN . " THEN player_delivery_record.amount ELSE 0 END) -
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_UP . " THEN player_delivery_record.amount ELSE 0 END) -
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY . " THEN player_delivery_record.amount ELSE 0 END) -
@@ -800,6 +821,7 @@ class ChannelPlayerReportController
             admin_trans('player.coin_withdraw'),
             admin_trans('player.machine_up_total'),
             admin_trans('player.machine_down_total'),
+            '投钞总额',
             admin_trans('player.winn_los_total'),
             admin_trans('player.lottery_total'),
             admin_trans('player.activity_total'),
@@ -857,6 +879,7 @@ class ChannelPlayerReportController
                 number_format($item['coin_withdraw'] ?? 0, 2, '.', ''),
                 number_format($item['machine_up_total'] ?? 0, 2, '.', ''),
                 number_format($item['machine_down_total'] ?? 0, 2, '.', ''),
+                number_format($item['machine_chip_total'] ?? 0, 2, '.', ''),
                 number_format($item['winn_los_total'] ?? 0, 2, '.', ''),
                 number_format($item['lottery_total'] ?? 0, 2, '.', ''),
                 number_format($item['activity_total'] ?? 0, 2, '.', ''),

@@ -63,7 +63,7 @@ class ChannelIndexController
             ->where('is_promoter', 0)
             ->pluck('id');
 
-        // 运营统计数据（受时间筛选影响）
+        // 运营统计数据（受时间筛选影响）- 优化为与玩家报表一致
         $operationStatisticsQuery = PlayerDeliveryRecord::query()
             ->when(!empty($playerIds), function ($query) use ($playerIds) {
                 $query->whereIn('player_id', $playerIds);
@@ -71,21 +71,16 @@ class ChannelIndexController
             ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
                 $this->applyDateWhere($query, $data_type, 'created_at');
             })
-            ->whereIn('type', [
-                PlayerDeliveryRecord::TYPE_PRESENT_IN,
-                PlayerDeliveryRecord::TYPE_PRESENT_OUT,
-                PlayerDeliveryRecord::TYPE_MACHINE,
-            ])
             ->selectRaw("
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
             ")
             ->first();
 
         $operationStatistics = [
-            'present_in_amount' => $operationStatisticsQuery->present_in_amount ?? 0,
-            'present_out_amount' => $operationStatisticsQuery->present_out_amount ?? 0,
+            'recharge_total' => $operationStatisticsQuery->recharge_total ?? 0,
+            'withdrawal_total' => $operationStatisticsQuery->withdrawal_total ?? 0,
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
         ];
 
@@ -128,9 +123,10 @@ class ChannelIndexController
         $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
+            // 盈余小计 = 充值 - 提现
             $subtotal = bcsub(
-                $operationStatistics['present_in_amount'] ?? 0,
-                $operationStatistics['present_out_amount'] ?? 0,
+                $operationStatistics['recharge_total'] ?? 0,
+                $operationStatistics['withdrawal_total'] ?? 0,
                 2
             );
 
@@ -146,7 +142,7 @@ class ChannelIndexController
                 ])
             , 4);
 
-            // 总开分
+            // 总开分（对应玩家报表的总充值点数）
             $row->column(
                 Card::create([
                     Row::create()->column([
@@ -155,7 +151,7 @@ class ChannelIndexController
                             'color' => '#909399',
                             'marginRight' => 'auto'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['present_in_amount'] ?? 0), 2))->style([
+                        Html::create(number_format(floatval($operationStatistics['recharge_total'] ?? 0), 2))->style([
                             'fontSize' => '20px',
                             'fontWeight' => '600',
                             'color' => '#67C23A'
@@ -174,7 +170,7 @@ class ChannelIndexController
                 ])
             , 4);
 
-            // 总洗分
+            // 总洗分（对应玩家报表的总提现点数）
             $row->column(
                 Card::create([
                     Row::create()->column([
@@ -183,7 +179,7 @@ class ChannelIndexController
                             'color' => '#909399',
                             'marginRight' => 'auto'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['present_out_amount'] ?? 0), 2))->style([
+                        Html::create(number_format(floatval($operationStatistics['withdrawal_total'] ?? 0), 2))->style([
                             'fontSize' => '20px',
                             'fontWeight' => '600',
                             'color' => '#F56C6C'
@@ -2254,9 +2250,10 @@ class ChannelIndexController
                 Admin::user()->id)->orderBy('id', 'desc')->first();
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
+            // 盈余小计 = 充值 - 提现
             $subtotal = bcsub(
-                $operationStatistics['present_in_amount'] ?? 0,
-                $operationStatistics['present_out_amount'] ?? 0,
+                $operationStatistics['recharge_total'] ?? 0,
+                $operationStatistics['withdrawal_total'] ?? 0,
                 2
             );
 
