@@ -2796,22 +2796,28 @@ class ChannelIndexController
                         return message_error('交班失败：管理员未关联部门');
                     }
 
-                    if (!$admin->department->channel) {
+                    // 直接通过 department_id 查询 channel（避免关联加载问题）
+                    /** @var \addons\webman\model\Channel|null $channel */
+                    $channel = \addons\webman\model\Channel::query()
+                        ->where('department_id', $admin->department_id)
+                        ->first();
+
+                    if (!$channel) {
                         Log::error('交班失败：部门未关联渠道', [
                             'user_id' => $admin->id,
                             'department_id' => $admin->department_id
                         ]);
-                        return message_error('交班失败：部门未关联渠道');
+                        return message_error('交班失败：部门未关联渠道(department_id=' . $admin->department_id . ')');
                     }
 
-                    $currencyCode = $admin->department->channel->currency;
+                    $currencyCode = $channel->currency;
                     if (!$currencyCode) {
                         Log::error('交班失败：渠道未配置货币', [
                             'user_id' => $admin->id,
                             'department_id' => $admin->department_id,
-                            'channel_id' => $admin->department->channel->id
+                            'channel_id' => $channel->id
                         ]);
-                        return message_error('交班失败：渠道未配置货币');
+                        return message_error('交班失败：渠道未配置货币(channel_id=' . $channel->id . ')');
                     }
 
                     /** @var Currency $currency */
