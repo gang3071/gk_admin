@@ -39,7 +39,6 @@ class ChannelAutoShiftController
 
         return Form::create($config ? $config->toArray() : [], function (Form $form) use ($admin, $config, $service) {
             $form->title(admin_trans('shift_handover.auto.title'));
-            $form->layout('vertical');
 
             // 显示执行统计
             if ($config && $config->is_enabled) {
@@ -47,27 +46,25 @@ class ChannelAutoShiftController
 
                 $form->divider()->content(admin_trans('shift_handover.auto.stats_title'));
 
-                $form->row(function (Form $form) use ($stats) {
-                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                $statsHtml = '<div style="display: flex; gap: 16px; margin-bottom: 24px;">
+                    <div style="flex: 1; text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
                         <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_total') . '</div>
                         <div style="font-size: 24px; font-weight: 500;">' . ($stats['total'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times') . '</div>
-                    </div>')->span(6);
-
-                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
                         <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_success') . '</div>
                         <div style="font-size: 24px; font-weight: 500; color: #3f8600;">' . ($stats['success'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times') . '</div>
-                    </div>')->span(6);
-
-                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
                         <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_failed') . '</div>
                         <div style="font-size: 24px; font-weight: 500; color: #cf1322;">' . ($stats['failed'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times') . '</div>
-                    </div>')->span(6);
-
-                    $form->html('<div style="text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
+                    </div>
+                    <div style="flex: 1; text-align: center; padding: 16px; border: 1px solid #f0f0f0; border-radius: 4px;">
                         <div style="color: rgba(0,0,0,0.45); font-size: 14px; margin-bottom: 4px;">' . admin_trans('shift_handover.auto.stats_success_rate') . '</div>
                         <div style="font-size: 24px; font-weight: 500;">' . ($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0) . '%</div>
-                    </div>')->span(6);
-                })->gutter(16);
+                    </div>
+                </div>';
+                $form->html($statsHtml);
             }
 
             // 基础配置
@@ -94,16 +91,16 @@ class ChannelAutoShiftController
                     ->default('00:00:00')
                     ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
                     ->span(8);
-            })->gutter(16);
+            });
 
             // 显示下次交班时间
             $form->divider()->content(admin_trans('shift_handover.auto.exec_info'));
             if ($config && $config->next_shift_time) {
-                $form->html('<div style="padding: 16px; background: #f0f9ff; border: 1px solid #bae7ff; border-radius: 4px;">
+                $form->html('<div style="padding: 16px; background: #f0f9ff; border: 1px solid #bae7ff; border-radius: 4px; margin-bottom: 24px;">
                     <strong>' . admin_trans('shift_handover.auto.next_shift_time') . '：</strong>' . $config->next_shift_time . '
                 </div>');
             } else {
-                $form->html('<div style="padding: 16px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; color: #999;">
+                $form->html('<div style="padding: 16px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; color: #999; margin-bottom: 24px;">
                     ' . admin_trans('shift_handover.auto.config_save_hint') . '
                 </div>');
             }
@@ -111,11 +108,13 @@ class ChannelAutoShiftController
             // 快捷操作
             if ($config) {
                 $form->divider()->content(admin_trans('shift_handover.auto.quick_actions'));
+                $form->html('<div style="margin-bottom: 24px;">');
                 $form->push(
                     Button::create(admin_trans('shift_handover.auto.view_logs'))
                         ->type('default')
                         ->modal([$this, 'logs'])->width('80%')
                 );
+                $form->html('</div>');
             }
 
             // 处理表单提交
