@@ -64,10 +64,11 @@ class ChannelAutoShiftController
                         <div style="font-size: 24px; font-weight: 500;">' . ($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0) . '%</div>
                     </div>
                 </div>';
-                $form->html($statsHtml);
+                $form->push(Html::create($statsHtml));
             }
 
             // 基础配置
+            $form->push(Html::create('<div style="margin-top: 24px;"></div>'));
             $form->divider()->content(admin_trans('shift_handover.auto.config_title'));
 
             $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
@@ -94,27 +95,27 @@ class ChannelAutoShiftController
             });
 
             // 显示下次交班时间
+            $form->push(Html::create('<div style="margin-top: 24px;"></div>'));
             $form->divider()->content(admin_trans('shift_handover.auto.exec_info'));
             if ($config && $config->next_shift_time) {
-                $form->html('<div style="padding: 16px; background: #f0f9ff; border: 1px solid #bae7ff; border-radius: 4px; margin-bottom: 24px;">
+                $form->push(Html::create('<div style="padding: 16px; background: #f0f9ff; border: 1px solid #bae7ff; border-radius: 4px; margin-bottom: 24px;">
                     <strong>' . admin_trans('shift_handover.auto.next_shift_time') . '：</strong>' . $config->next_shift_time . '
-                </div>');
+                </div>'));
             } else {
-                $form->html('<div style="padding: 16px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; color: #999; margin-bottom: 24px;">
+                $form->push(Html::create('<div style="padding: 16px; background: #f5f5f5; border: 1px solid #d9d9d9; border-radius: 4px; color: #999; margin-bottom: 24px;">
                     ' . admin_trans('shift_handover.auto.config_save_hint') . '
-                </div>');
+                </div>'));
             }
 
             // 快捷操作
             if ($config) {
+                $form->push(Html::create('<div style="margin-top: 24px;"></div>'));
                 $form->divider()->content(admin_trans('shift_handover.auto.quick_actions'));
-                $form->html('<div style="margin-bottom: 24px;">');
                 $form->push(
                     Button::create(admin_trans('shift_handover.auto.view_logs'))
                         ->type('default')
                         ->modal([$this, 'logs'])->width('80%')
                 );
-                $form->html('</div>');
             }
 
             // 处理表单提交
