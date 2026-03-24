@@ -123,12 +123,18 @@ class ChannelIndexController
         $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = 充值 - 提现
-            $subtotal = bcsub(
+            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金)
+            $incomeTotal = bcadd(
                 $operationStatistics['recharge_total'] ?? 0,
-                $operationStatistics['withdrawal_total'] ?? 0,
+                $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
+            $outcomeTotal = bcadd(
+                $operationStatistics['withdrawal_total'] ?? 0,
+                $lotteryStatistics['lottery_amount'] ?? 0,
+                2
+            );
+            $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // 数据周期筛选
             $row->column(
@@ -1400,6 +1406,24 @@ class ChannelIndexController
             ->when($data_type, $timeFilter)
             ->sum('pressure') ?? 0;
 
+        // 查询拉彩统计数据
+        $lotteryStatisticsQuery = PlayerLotteryRecord::query()
+            ->when(!empty($playerIds), function ($query) use ($playerIds) {
+                $query->whereIn('player_id', $playerIds);
+            })
+            ->when($data_type, $timeFilter)
+            ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+            ->selectRaw("
+                COUNT(*) as lottery_count,
+                SUM(`amount`) as lottery_amount
+            ")
+            ->first();
+
+        $lotteryStatistics = [
+            'lottery_count' => $lotteryStatisticsQuery->lottery_count ?? 0,
+            'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
+        ];
+
         $statisticsData = [
             'recharge_amount' => $rechargeAmount,
             'withdraw_amount' => $withdrawAmount,
@@ -1407,6 +1431,7 @@ class ChannelIndexController
             'electronic_bet' => $electronicBetTotal,
             'steel_ball_bet' => $steelBallBetTotal,
             'slot_bet' => $slotBetTotal,
+            'lottery_amount' => $lotteryStatistics['lottery_amount'],
         ];
 
         // 6. 查询当期数据（按下级店家分组统计）
@@ -1474,8 +1499,18 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'agentIndex'], ['data_type' => 'month']);
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_month']);
 
-        // 计算盈余小计（充值 - 提现）
-        $subtotal = bcsub($statisticsData['recharge_amount'] ?? 0, $statisticsData['withdraw_amount'] ?? 0, 2);
+        // 计算盈余小计 = (开分 + 投钞) - (洗分 + 彩金)
+        $incomeTotal = bcadd(
+            $statisticsData['recharge_amount'] ?? 0,
+            $statisticsData['machine_put_point'] ?? 0,
+            2
+        );
+        $outcomeTotal = bcadd(
+            $statisticsData['withdraw_amount'] ?? 0,
+            $statisticsData['lottery_amount'] ?? 0,
+            2
+        );
+        $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
         $layout = Layout::create();
         $layout->row(function (Row $row) use (
@@ -2228,12 +2263,18 @@ class ChannelIndexController
                 Admin::user()->id)->orderBy('id', 'desc')->first();
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = 充值 - 提现
-            $subtotal = bcsub(
+            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金)
+            $incomeTotal = bcadd(
                 $operationStatistics['recharge_total'] ?? 0,
-                $operationStatistics['withdrawal_total'] ?? 0,
+                $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
+            $outcomeTotal = bcadd(
+                $operationStatistics['withdrawal_total'] ?? 0,
+                $lotteryStatistics['lottery_amount'] ?? 0,
+                2
+            );
+            $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             $row->column(
                 Card::create([
