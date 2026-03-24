@@ -48,34 +48,36 @@ class ChannelAutoShiftController
                 $form->push(Card::create()
                     ->title(admin_trans('shift_handover.auto.stats_title'))
                     ->style(['margin-bottom' => '20px'])
-                    ->content([
-                        Row::create()->column(
-                            Statistic::create()
-                                ->title(admin_trans('shift_handover.auto.stats_total'))
-                                ->value($stats['total'] ?? 0)
-                                ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                        ),
-                        Row::create()->column(
-                            Statistic::create()
-                                ->title(admin_trans('shift_handover.auto.stats_success'))
-                                ->value($stats['success'] ?? 0)
-                                ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                                ->valueStyle(['color' => '#3f8600'])
-                        ),
-                        Row::create()->column(
-                            Statistic::create()
-                                ->title(admin_trans('shift_handover.auto.stats_failed'))
-                                ->value($stats['failed'] ?? 0)
-                                ->suffix(admin_trans('shift_handover.auto.stats_times'))
-                                ->valueStyle(['color' => '#cf1322'])
-                        ),
-                        Row::create()->column(
-                            Statistic::create()
-                                ->title(admin_trans('shift_handover.auto.stats_success_rate'))
-                                ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
-                                ->suffix('%')
-                        ),
-                    ]));
+                    ->content(
+                        Row::create()->gutter(16)->content([
+                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
+                                Statistic::create()
+                                    ->title(admin_trans('shift_handover.auto.stats_total'))
+                                    ->value($stats['total'] ?? 0)
+                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
+                            ),
+                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
+                                Statistic::create()
+                                    ->title(admin_trans('shift_handover.auto.stats_success'))
+                                    ->value($stats['success'] ?? 0)
+                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
+                                    ->valueStyle(['color' => '#3f8600'])
+                            ),
+                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
+                                Statistic::create()
+                                    ->title(admin_trans('shift_handover.auto.stats_failed'))
+                                    ->value($stats['failed'] ?? 0)
+                                    ->suffix(admin_trans('shift_handover.auto.stats_times'))
+                                    ->valueStyle(['color' => '#cf1322'])
+                            ),
+                            Card::create()->bodyStyle(['padding' => '16px', 'text-align' => 'center'])->content(
+                                Statistic::create()
+                                    ->title(admin_trans('shift_handover.auto.stats_success_rate'))
+                                    ->value($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0)
+                                    ->suffix('%')
+                            ),
+                        ])
+                    ));
             }
 
             // 基础配置
@@ -86,17 +88,21 @@ class ChannelAutoShiftController
                 ->unCheckedValue(0)
                 ->help(admin_trans('shift_handover.auto.enable_help'));
 
+            // 三个时间字段（横向排列）
             $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
                 ->default('08:00:00')
-                ->help(admin_trans('shift_handover.auto.shift_time_1_help'));
+                ->help(admin_trans('shift_handover.auto.shift_time_1_help'))
+                ->col(8);
 
             $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
                 ->default('16:00:00')
-                ->help(admin_trans('shift_handover.auto.shift_time_2_help'));
+                ->help(admin_trans('shift_handover.auto.shift_time_2_help'))
+                ->col(8);
 
             $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
                 ->default('00:00:00')
-                ->help(admin_trans('shift_handover.auto.shift_time_3_help'));
+                ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
+                ->col(8);
 
             // 显示下次交班时间
             if ($config && $config->next_shift_time) {
