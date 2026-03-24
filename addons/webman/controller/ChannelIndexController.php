@@ -2796,42 +2796,32 @@ class ChannelIndexController
                         return message_error('交班失败：管理员未关联部门');
                     }
 
-                    // 直接通过 department_id 查询 channel（避免关联加载问题）
+                    // 获取货币配置（优先从渠道获取，如果没有渠道则使用默认配置）
+                    /** @var Currency|null $currency */
+                    $currency = null;
+
+                    // 尝试从渠道获取货币配置
                     /** @var \addons\webman\model\Channel|null $channel */
                     $channel = \addons\webman\model\Channel::query()
                         ->where('department_id', $admin->department_id)
                         ->first();
 
-                    if (!$channel) {
-                        Log::error('交班失败：部门未关联渠道', [
-                            'user_id' => $admin->id,
-                            'department_id' => $admin->department_id
-                        ]);
-                        return message_error('交班失败：部门未关联渠道(department_id=' . $admin->department_id . ')');
+                    if ($channel && $channel->currency) {
+                        $currency = Currency::query()
+                            ->where('identifying', $channel->currency)
+                            ->first();
                     }
 
-                    $currencyCode = $channel->currency;
-                    if (!$currencyCode) {
-                        Log::error('交班失败：渠道未配置货币', [
-                            'user_id' => $admin->id,
-                            'department_id' => $admin->department_id,
-                            'channel_id' => $channel->id
-                        ]);
-                        return message_error('交班失败：渠道未配置货币(channel_id=' . $channel->id . ')');
-                    }
-
-                    /** @var Currency $currency */
-                    $currency = Currency::query()
-                        ->where('identifying', $currencyCode)
-                        ->first();
-
+                    // 如果没有找到货币配置，使用默认配置（ratio=1）
                     if (!$currency) {
-                        Log::error('交班失败：货币配置不存在', [
-                            'currency_code' => $currencyCode,
-                            'department_id' => $admin->department_id,
-                            'user_id' => $admin->id
-                        ]);
-                        return message_error('交班失败：货币配置不存在(' . $currencyCode . ')');
+                        $currency = Currency::query()->first();
+                        if (!$currency) {
+                            Log::error('交班失败：系统没有任何货币配置', [
+                                'user_id' => $admin->id,
+                                'department_id' => $admin->department_id
+                            ]);
+                            return message_error('交班失败：系统货币配置缺失');
+                        }
                     }
 
                     // 8. 开启事务，快速完成写入操作
