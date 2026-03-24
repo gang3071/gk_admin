@@ -56,10 +56,22 @@ class ChannelIndexController
 
         // 获取当前渠道下的玩家ID
         $departmentId = Admin::user()->department_id;
+        $admin = Admin::user();
         $playerIds = Player::query()
             ->where('department_id', $departmentId)
             ->where('is_promoter', 0)
             ->pluck('id');
+
+        // 获取自动交班配置状态
+        /** @var \addons\webman\model\StoreAutoShiftConfig|null $autoShiftConfig */
+        $autoShiftConfig = \addons\webman\model\StoreAutoShiftConfig::query()
+            ->where('department_id', $admin->department_id)
+            ->where('bind_admin_user_id', $admin->id)
+            ->first();
+
+        $autoShiftEnabled = $autoShiftConfig && $autoShiftConfig->is_enabled == 1;
+        $autoShiftStatusText = $autoShiftEnabled ? '自动交班：已开启' : '自动交班：已关闭';
+        $autoShiftStatusColor = $autoShiftEnabled ? '#67C23A' : '#909399';
 
         // 运营统计数据（受时间筛选影响）
         $operationStatisticsQuery = PlayerDeliveryRecord::query()
@@ -123,7 +135,7 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'index'],
             ['data_type' => 'last_month']);
         $layout = Layout::create();
-        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
+        $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics, $autoShiftStatusText, $autoShiftStatusColor) {
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
             $subtotal = bcsub(
@@ -132,10 +144,24 @@ class ChannelIndexController
                 2
             );
 
-            // 数据周期筛选
+            // 数据周期筛选 + 自动交班状态
             $row->column(
                 Card::create([
-                    Row::create()->column($dropdown, 4),
+                    Row::create()->gutter(12)->column([
+                        $dropdown
+                    ], 12)->column([
+                        Html::create()->content([
+                            Icon::create('clock-circle')->style(['marginRight' => '4px', 'fontSize' => '14px']),
+                            Html::create($autoShiftStatusText)->style([
+                                'fontSize' => '13px',
+                                'color' => $autoShiftStatusColor
+                            ])
+                        ])->style([
+                            'display' => 'flex',
+                            'alignItems' => 'center',
+                            'justifyContent' => 'flex-end'
+                        ])
+                    ], 12)
                 ])->bodyStyle([
                     'padding' => '13px',
                     'display' => 'flex',
@@ -2817,9 +2843,52 @@ class ChannelIndexController
                     );
                     $storeAgentShiftHandoverRecord->save();
 
-                    // 9. 记录日志
+                    // 9. 创建执行日志（与自动交班保持一致）
+                    /** @var \addons\webman\model\StoreAutoShiftLog $manualLog */
+                    $manualLog = new \addons\webman\model\StoreAutoShiftLog();
+                    $manualLog->config_id = 0; // 手动交班没有配置ID
+                    $manualLog->department_id = $admin->department_id;
+                    $manualLog->bind_admin_user_id = $admin->id;
+                    $manualLog->shift_record_id = $storeAgentShiftHandoverRecord->id;
+                    $manualLog->start_time = $startTime;
+                    $manualLog->end_time = $endTime;
+                    $manualLog->execute_time = Carbon::now();
+                    $manualLog->status = \addons\webman\model\StoreAutoShiftLog::STATUS_SUCCESS;
+                    $manualLog->execution_duration = 0; // 手动交班无执行时长
+                    $manualLog->machine_amount = $storeAgentShiftHandoverRecord->machine_amount;
+                    $manualLog->machine_point = $storeAgentShiftHandoverRecord->machine_point;
+                    $manualLog->total_in = $storeAgentShiftHandoverRecord->total_in;
+                    $manualLog->total_out = $storeAgentShiftHandoverRecord->total_out;
+                    $manualLog->lottery_amount = $storeAgentShiftHandoverRecord->lottery_amount;
+                    $manualLog->total_profit = $storeAgentShiftHandoverRecord->total_profit_amount;
+                    $manualLog->remark = '手动交班';
+                    $manualLog->save();
+
+                    // 10. 关联日志ID
+                    $storeAgentShiftHandoverRecord->auto_shift_log_id = $manualLog->id;
+                    $storeAgentShiftHandoverRecord->save();
+
+                    // 11. 更新自动交班配置（实现无缝切换）
+                    /** @var \addons\webman\model\StoreAutoShiftConfig|null $autoShiftConfig */
+                    $autoShiftConfig = \addons\webman\model\StoreAutoShiftConfig::query()
+                        ->where('department_id', $admin->department_id)
+                        ->where('bind_admin_user_id', $admin->id)
+                        ->first();
+
+                    if ($autoShiftConfig) {
+                        // 更新最后交班时间，确保下次自动交班从这里开始
+                        $autoShiftConfig->last_shift_time = $endTime;
+
+                        // 重新计算下次交班时间
+                        $service = new \app\service\store\AutoShiftService();
+                        $autoShiftConfig->next_shift_time = $service->calculateNextShiftTime($autoShiftConfig);
+                        $autoShiftConfig->save();
+                    }
+
+                    // 12. 记录日志
                     Log::info('店家手动交班成功', [
                         'record_id' => $storeAgentShiftHandoverRecord->id,
+                        'log_id' => $manualLog->id,
                         'bind_admin_user_id' => $admin->id,
                         'user_id' => $admin->id,
                         'user_name' => $admin->username,
@@ -2831,6 +2900,8 @@ class ChannelIndexController
                         'lottery_amount' => $storeAgentShiftHandoverRecord->lottery_amount,
                         'total_profit_amount' => $storeAgentShiftHandoverRecord->total_profit_amount,
                         'is_auto_shift' => 0,
+                        'auto_shift_updated' => $autoShiftConfig ? true : false,
+                        'next_shift_time' => $autoShiftConfig ? $autoShiftConfig->next_shift_time : null,
                         // 详细分类数据
                         'detail' => [
                             'recharge' => $playerDeliveryRecord['recharge_amount'] ?? 0,
