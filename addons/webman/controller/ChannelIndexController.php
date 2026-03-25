@@ -18,6 +18,7 @@ use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
+use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -2901,6 +2902,15 @@ class ChannelIndexController
                     );
                     $storeAgentShiftHandoverRecord->save();
 
+                    // 8.5 保存设备明细
+                    $this->saveDeviceDetails(
+                        $storeAgentShiftHandoverRecord->id,
+                        $admin->department_id,
+                        $admin->id,
+                        $startTime,
+                        $endTime
+                    );
+
                     // 9. 创建执行日志（与自动交班保持一致）
                     $manualLog = new StoreAutoShiftLog();
                     $manualLog->config_id = 0; // 手动交班没有配置ID
@@ -3031,6 +3041,95 @@ class ChannelIndexController
                 $query->where($field, '>=', $startDate)
                       ->where($field, '<=', $endDate);
                 break;
+        }
+    }
+
+    /**
+     * 保存交班设备明细
+     */
+    private function saveDeviceDetails(
+        int $shiftRecordId,
+        int $departmentId,
+        int $bindAdminUserId,
+        string $startTime,
+        string $endTime
+    ): void
+    {
+        // 获取该店家的所有设备
+        $players = Player::query()
+            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('is_promoter', 0)
+            ->select(['id', 'name', 'phone'])
+            ->get();
+
+        foreach ($players as $player) {
+            // 统计该设备在此时间段的数据
+            $result = PlayerDeliveryRecord::query()
+                ->selectRaw('
+                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as machine_point,
+                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
+                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
+                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
+                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
+                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_deduct_amount
+                ', [
+                    PlayerDeliveryRecord::TYPE_MACHINE,
+                    PlayerDeliveryRecord::TYPE_LOTTERY,
+                    PlayerDeliveryRecord::TYPE_RECHARGE,
+                    PlayerDeliveryRecord::TYPE_WITHDRAWAL,
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
+                ])
+                ->where('player_id', $player->id)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->first();
+
+            $data = $result ? $result->toArray() : [
+                'machine_point' => 0,
+                'lottery_amount' => 0,
+                'recharge_amount' => 0,
+                'withdrawal_amount' => 0,
+                'modified_add_amount' => 0,
+                'modified_deduct_amount' => 0,
+            ];
+
+            // 计算总收入、总支出、利润
+            $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
+            $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
+            $profit = bcsub(
+                bcsub(
+                    bcadd($data['machine_point'], $totalIn, 2),
+                    $totalOut,
+                    2
+                ),
+                $data['lottery_amount'],
+                2
+            );
+
+            // 只保存有数据的设备（至少有一项不为0）
+            if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
+                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0) {
+
+                StoreShiftDeviceDetail::create([
+                    'shift_record_id' => $shiftRecordId,
+                    'department_id' => $departmentId,
+                    'bind_admin_user_id' => $bindAdminUserId,
+                    'player_id' => $player->id,
+                    'player_name' => $player->name,
+                    'player_phone' => $player->phone,
+                    'machine_point' => (int)$data['machine_point'],
+                    'recharge_amount' => (float)$data['recharge_amount'],
+                    'withdrawal_amount' => (float)$data['withdrawal_amount'],
+                    'modified_add_amount' => (float)$data['modified_add_amount'],
+                    'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
+                    'lottery_amount' => (float)$data['lottery_amount'],
+                    'total_in' => (float)$totalIn,
+                    'total_out' => (float)$totalOut,
+                    'profit' => (float)$profit,
+                ]);
+            }
         }
     }
 }

@@ -6,6 +6,7 @@ use addons\webman\traits\DataPermissions;
 use addons\webman\traits\HasDateTimeFormatter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * 店家交班记录模型
@@ -74,5 +75,14 @@ class StoreAgentShiftHandoverRecord extends Model
     public function bindAdminUser(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'bind_admin_user_id');
+    }
+
+    /**
+     * 设备明细
+     * @return HasMany
+     */
+    public function deviceDetails(): HasMany
+    {
+        return $this->hasMany(StoreShiftDeviceDetail::class, 'shift_record_id');
     }
 }
