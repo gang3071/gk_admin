@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\model\GameLottery;
 use addons\webman\model\Lottery;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
@@ -158,15 +159,17 @@ class GameLotteryController
             $grid->hideSelection();
 
             // 添加清理统计数据按钮
-            $grid->toolBarRight(function () {
-                return Html::create()->content([
+            $grid->tools([
+                Html::create()->content([
                     Html::button('清理统计数据')
                         ->onClick('clearAllStats()')
                         ->style([
-                            'margin-left' => '10px',
                             'background' => '#ff4d4f',
                             'border-color' => '#ff4d4f',
-                            'color' => '#fff'
+                            'color' => '#fff',
+                            'padding' => '4px 15px',
+                            'border-radius' => '2px',
+                            'cursor' => 'pointer'
                         ]),
                     Html::script()->content("
                         function clearAllStats() {
@@ -194,8 +197,8 @@ class GameLotteryController
                             }
                         }
                     ")
-                ]);
-            });
+                ])
+            ]);
 
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
