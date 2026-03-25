@@ -147,8 +147,11 @@ class ShiftReportExporter extends Excel
 
                 // 设备明细数据
                 $detailStartRow = $this->currentRow;
+                $detailCount = 0;
                 foreach ($deviceDetails as $index => $detail) {
-                    $this->sheet->setCellValue('A' . $this->currentRow, $detail->player_name);
+                    $detailCount++;
+
+                    $this->sheet->setCellValue('A' . $this->currentRow, $detail->player_name . ' [调试:profit=' . $detail->profit . ']');
                     $this->sheet->setCellValue('B' . $this->currentRow, $detail->player_phone);
                     $this->sheet->setCellValue('C' . $this->currentRow, number_format($detail->machine_point, 0));
                     $this->sheet->setCellValue('D' . $this->currentRow, number_format($detail->recharge_amount, 2));
@@ -176,7 +179,8 @@ class ShiftReportExporter extends Excel
                     $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($profitColor);
                     $this->sheet->getStyle('K' . $this->currentRow)->getFont()->setBold(true);
 
-                    // 累加小计
+                    // 累加小计（添加调试）
+                    $beforeSubtotalProfit = $subtotal['profit'];
                     $subtotal['machine_point'] += $detail->machine_point;
                     $subtotal['recharge_amount'] += $detail->recharge_amount;
                     $subtotal['withdrawal_amount'] += $detail->withdrawal_amount;
@@ -186,9 +190,23 @@ class ShiftReportExporter extends Excel
                     $subtotal['total_in'] += $detail->total_in;
                     $subtotal['total_out'] += $detail->total_out;
                     $subtotal['profit'] += $detail->profit;
+                    $afterSubtotalProfit = $subtotal['profit'];
 
                     $this->currentRow++;
                 }
+
+                // 在设备明细后添加累加过程调试信息
+                $this->sheet->setCellValue('A' . $this->currentRow, '【设备累加完成】');
+                $this->sheet->setCellValue('B' . $this->currentRow, '设备数:' . $detailCount);
+                $this->sheet->setCellValue('C' . $this->currentRow, 'subtotal[profit]:' . $subtotal['profit']);
+                $this->sheet->setCellValue('D' . $this->currentRow, 'subtotal[total_in]:' . $subtotal['total_in']);
+                $this->sheet->setCellValue('E' . $this->currentRow, 'subtotal[machine_point]:' . $subtotal['machine_point']);
+                $this->sheet->mergeCells('E' . $this->currentRow . ':K' . $this->currentRow);
+                $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFD700']],
+                    'font' => ['size' => 10, 'color' => ['rgb' => 'FF0000'], 'bold' => true]
+                ]);
+                $this->currentRow++;
 
                 // 准备累加调试信息（在累加之前记录）
                 $beforeGrandProfit = floatval($this->grandTotal['profit'] ?? 0);
