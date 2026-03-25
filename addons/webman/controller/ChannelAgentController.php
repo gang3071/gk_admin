@@ -406,11 +406,6 @@ class ChannelAgentController
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
-                $actions->prepend(Button::create(admin_trans('offline_channel.electronic_game_disabled'))
-                    ->drawer([$this, 'playerGameList'], ['player_id' => $data['id']])
-                    ->type('primary'));
-                $actions->prepend(Button::create(admin_trans('channel_agent.open_score'))
-                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px'));
             });
 
             $grid->hideDelete();

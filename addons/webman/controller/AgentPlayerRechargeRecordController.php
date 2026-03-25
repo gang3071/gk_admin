@@ -266,37 +266,8 @@ class AgentPlayerRechargeRecordController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        PlayerRechargeRecord::TYPE_SELF => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_SELF),
                         PlayerRechargeRecord::TYPE_ARTIFICIAL => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_ARTIFICIAL),
-                        PlayerRechargeRecord::TYPE_BUSINESS => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_BUSINESS),
-                        PlayerRechargeRecord::TYPE_GB => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_GB),
                         PlayerRechargeRecord::TYPE_MACHINE => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_MACHINE),
-                        PlayerRechargeRecord::TYPE_EH => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_EH),
-                    ]);
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('player_recharge_record.fields.status'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerRechargeRecord::STATUS_WAIT => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_WAIT),
-                        PlayerRechargeRecord::STATUS_RECHARGING => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGING),
-                        PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS),
-                        PlayerRechargeRecord::STATUS_RECHARGED_CANCEL => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_CANCEL),
-                        PlayerRechargeRecord::STATUS_RECHARGED_REJECT => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_REJECT),
-                        PlayerRechargeRecord::STATUS_RECHARGED_SYSTEM_CANCEL => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_SYSTEM_CANCEL),
-                        PlayerRechargeRecord::STATUS_RECHARGED_FAIL => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_FAIL),
-                    ]);
-
-                $filter->select('search_type')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player.fields.type'))
-                    ->options([
-                        0 => admin_trans('player.player'),
-                        1 => admin_trans('player.fields.is_test'),
                     ]);
 
                 $filter->select('date_type')

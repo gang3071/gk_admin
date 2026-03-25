@@ -295,32 +295,8 @@ class AgentPlayerWithdrawRecordController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        PlayerWithdrawRecord::TYPE_THIRD => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_THIRD),
                         PlayerWithdrawRecord::TYPE_SELF => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_SELF),
                         PlayerWithdrawRecord::TYPE_GB => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_GB),
-                    ]);
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('player_withdraw_record.fields.status'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerWithdrawRecord::STATUS_WAIT => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_WAIT),
-                        PlayerWithdrawRecord::STATUS_SUCCESS => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_SUCCESS),
-                        PlayerWithdrawRecord::STATUS_PENDING_REJECT => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_PENDING_REJECT),
-                        PlayerWithdrawRecord::STATUS_PENDING_PAYMENT => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_PENDING_PAYMENT),
-                        PlayerWithdrawRecord::STATUS_FAIL => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_FAIL),
-                    ]);
-
-                $filter->select('search_type')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player.fields.type'))
-                    ->options([
-                        0 => admin_trans('player.player'),
-                        1 => admin_trans('player.fields.is_test'),
                     ]);
 
                 $filter->select('date_type')

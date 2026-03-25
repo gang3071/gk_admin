@@ -246,11 +246,13 @@ class AgentPlayGameRecordController
             $grid->actions(function (Actions $action, $data) {
                 $action->hideDel();
                 $action->hideEdit();
-                $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code ?? ''))->replay($data->toArray());
-                if (!empty($url)) {
-                    $action->prepend(
-                        Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'], ['url' => $url])
-                    );
+                if (!empty($data->gamePlatform) && !empty($data->gamePlatform->code)) {
+                    $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code))->replay($data->toArray());
+                    if (!empty($url)) {
+                        $action->prepend(
+                            Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'], ['url' => $url])
+                        );
+                    }
                 }
             })->align('center');
 
