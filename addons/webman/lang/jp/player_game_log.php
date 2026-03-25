@@ -5,6 +5,8 @@ use addons\webman\model\PlayerGameLog;
 return [
     'title' => 'ゲームログ',
     'point_title' => '上下ポイント記録',
+    'device_info' => 'デバイス情報',
+    'device_wallet_info' => 'デバイスウォレット',
     'player_info' => 'プレイヤー情報',
     'machine_info' => 'マシン情報',
     'player_wallet_info' => 'プレイヤーウォレット',

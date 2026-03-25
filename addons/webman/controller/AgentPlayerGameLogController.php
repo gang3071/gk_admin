@@ -119,11 +119,6 @@ class AgentPlayerGameLogController
                     $query->where('uuid', $exAdminFilter['player']['uuid']);
                 });
             }
-            if (!empty($exAdminFilter['player']['phone'])) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('phone', 'like', '%' . $exAdminFilter['player']['phone'] . '%');
-                });
-            }
 
             if (isset($exAdminFilter['date_type'])) {
                 $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
@@ -164,7 +159,7 @@ class AgentPlayerGameLogController
                 ) {
                     return $data->player->channel->name ?? '';
                 })->width('150px')->align('center');
-            }, admin_trans('player_game_log.player_info'));
+            }, admin_trans('player_game_log.device_info'));
             $grid->column(function (Grid $grid) {
                 $grid->column('machine.machineLabel.name', admin_trans('machine.fields.name'))->display(function (
                     $val,
@@ -206,7 +201,7 @@ class AgentPlayerGameLogController
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');
                 $grid->column('after_game_amount',
                     admin_trans('player_game_log.fields.after_game_amount'))->align('center');
-            }, admin_trans('player_game_log.player_wallet_info'));
+            }, admin_trans('player_game_log.device_wallet_info'));
             $grid->column(function (Grid $grid) {
                 $grid->column('open_point',
                     admin_trans('player_game_log.fields.open_point'))->sortable()->align('center');
@@ -269,12 +264,10 @@ class AgentPlayerGameLogController
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
-                $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('machine.machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
 
-                // 所属店家筛选
                 // 所属店家筛选
                 $filter->eq()->select('player.store_admin_id')
                     ->showSearch()

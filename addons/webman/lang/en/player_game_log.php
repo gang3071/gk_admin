@@ -5,6 +5,8 @@ use addons\webman\model\PlayerGameLog;
 return [
     'title' => 'Game log',
     'point_title' => 'Up and down points record',
+    'device_info' => 'Device information',
+    'device_wallet_info' => 'Device wallet',
     'player_info' => 'Player information',
     'machine_info' => 'Machine information',
     'player_wallet_info' => 'Player wallet',
