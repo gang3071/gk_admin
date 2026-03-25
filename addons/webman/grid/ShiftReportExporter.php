@@ -237,19 +237,22 @@ class ShiftReportExporter extends Excel
                     'machine_point' => $this->grandTotal['machine_point']
                 ];
 
-                // 写入调试信息到空白区域
-                $debugMsg = sprintf(
-                    '交班#%d: 小计利润=%.2f, 累加前=%.2f, 累加后=%.2f, 设备数=%d',
-                    $originalRecord->id,
-                    $subtotal['profit'],
-                    $beforeTotal['profit'],
-                    $afterTotal['profit'],
-                    $deviceDetails->count()
-                );
+                // 写入调试信息到明显位置（在空行处）
+                $debugRow = $this->currentRow;
+                $this->sheet->setCellValue('A' . $debugRow, '【调试】');
+                $this->sheet->setCellValue('B' . $debugRow, sprintf('交班#%d', $originalRecord->id));
+                $this->sheet->setCellValue('C' . $debugRow, sprintf('小计: %.2f', $subtotal['profit']));
+                $this->sheet->setCellValue('D' . $debugRow, sprintf('累加前: %.2f', $beforeTotal['profit']));
+                $this->sheet->setCellValue('E' . $debugRow, sprintf('累加后: %.2f', $afterTotal['profit']));
+                $this->sheet->setCellValue('F' . $debugRow, sprintf('设备: %d', $deviceDetails->count()));
+                $this->sheet->setCellValue('G' . $debugRow, sprintf('已处理: %d/%d', $this->processedRecords, $this->count));
 
-                // 在 L 列（通常是空的）写入调试信息
-                $this->sheet->setCellValue('L' . ($this->currentRow - 1), $debugMsg);
-                $this->sheet->getStyle('L' . ($this->currentRow - 1))->getFont()->setSize(8);
+                // 调试行样式
+                $this->sheet->getStyle('A' . $debugRow . ':G' . $debugRow)->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFF00']],
+                    'font' => ['size' => 9, 'color' => ['rgb' => 'FF0000'], 'bold' => true]
+                ]);
+                $this->currentRow++;
 
                 // 累加设备数量
                 $this->totalDevices += $deviceDetails->count();
