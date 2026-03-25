@@ -97,102 +97,6 @@ class AgentPlayerWithdrawRecordController
                 });
             }
 
-            // 统计数据
-            $query = clone $grid->model();
-            $totalData = $query->selectRaw(
-                'sum(IF(status = 1, point, 0)) as wait_point,
-                 sum(IF(status = 4, point, 0)) as pending_payment_point,
-                 sum(IF(status = 2, point, 0)) as success_point,
-                 sum(IF(status IN (3, 5, 6, 7), point, 0)) as fail_point'
-            )->first();
-
-            $layout = Layout::create();
-            $layout->row(function (Row $row) use ($totalData) {
-                $row->gutter([10, 0]);
-
-                // 待审核金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['wait_point']) ? floatval($totalData['wait_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.status.1'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-
-                // 待打款金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['pending_payment_point']) ? floatval($totalData['pending_payment_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.status.4'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-
-                // 提现成功金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['success_point']) ? floatval($totalData['success_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.status.2'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-
-                // 失败/拒绝金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['fail_point']) ? floatval($totalData['fail_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.total_data.total_fail'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#ff4d4f'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-            })->style(['background' => '#fff']);
-
-            $grid->tools($layout);
-
             $grid->column('id', admin_trans('player_withdraw_record.fields.id'))->align('center')->width(80);
             $grid->column('tradeno', admin_trans('player_withdraw_record.fields.tradeno'))->copy()->width(180);
             $grid->column('player.uuid', admin_trans('player.fields.uuid'))->copy()->width(150);
@@ -288,16 +192,6 @@ class AgentPlayerWithdrawRecordController
 
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('tradeno')->placeholder(admin_trans('player_withdraw_record.fields.tradeno'));
-
-                $filter->select('type')
-                    ->placeholder(admin_trans('player_withdraw_record.fields.type'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerWithdrawRecord::TYPE_SELF => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_SELF),
-                        PlayerWithdrawRecord::TYPE_GB => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_GB),
-                    ]);
 
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
