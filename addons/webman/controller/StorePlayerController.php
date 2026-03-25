@@ -197,6 +197,9 @@ class StorePlayerController
             });
 
             $grid->hideAdd();
+            $grid->hideDelete();
+            $grid->hideDeleteSelection();
+            $grid->hideSelection();
             $grid->expandFilter();
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $playerCount);
