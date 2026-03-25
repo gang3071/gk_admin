@@ -4573,9 +4573,41 @@ class ChannelPlayerController
             $grid->column('sort', '排序')->align('center')->width('80px');
 
             $grid->hideDelete();
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
                 $actions->hideDel();
                 $actions->hideEdit();
+
+                // 判断当前游戏是否被禁用
+                $isDisabled = in_array($data->id, $selectedGameIds);
+
+                if ($isDisabled) {
+                    // 已禁用，显示"取消禁用"按钮
+                    $actions->prepend(
+                        Button::create('取消禁用')
+                            ->type('default')
+                            ->size('small')
+                            ->confirm('确认取消禁用该游戏？', [$this, 'toggleGameDisable'], [
+                                'player_id' => $player_id,
+                                'game_id' => $data->id,
+                                'action' => 'enable'
+                            ])
+                            ->gridRefresh()
+                    );
+                } else {
+                    // 未禁用，显示"禁用游戏"按钮
+                    $actions->prepend(
+                        Button::create('禁用游戏')
+                            ->type('primary')
+                            ->size('small')
+                            ->danger()
+                            ->confirm('确认禁用该游戏？', [$this, 'toggleGameDisable'], [
+                                'player_id' => $player_id,
+                                'game_id' => $data->id,
+                                'action' => 'disable'
+                            ])
+                            ->gridRefresh()
+                    );
+                }
             });
 
             $grid->pagination()->pageSize(50);
@@ -4639,8 +4671,9 @@ class ChannelPlayerController
      */
     public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [])
     {
-        // 允许 $selected 为空，表示清空所有授权（禁用所有游戏）
-        $selected = $selected ?? [];
+        if (!isset($selected)) {
+            return message_error('请选择要授权的游戏');
+        }
 
         /** @var Player $player */
         $player = Player::query()->with('channel')->find($player_id);
@@ -4660,19 +4693,16 @@ class ChannelPlayerController
             return message_error('该渠道未开启任何电子游戏平台');
         }
 
-        // 验证选择的游戏（如果有选择）
-        $selectedGames = collect([]);
-        if (!empty($selected)) {
-            $selectedGames = Game::query()->whereIn('id', $selected)->get();
-            if ($selectedGames->isEmpty()) {
-                return message_error('未找到选择的游戏');
-            }
+        // 验证选择的游戏
+        $selectedGames = Game::query()->whereIn('id', $selected)->get();
+        if ($selectedGames->isEmpty()) {
+            return message_error('未找到选择的游戏');
+        }
 
-            // 验证游戏是否都在渠道允许的范围内
-            foreach ($selectedGames as $game) {
-                if (!in_array($game->platform_id, $channelGamePlatformIds)) {
-                    return message_error('选择的游戏不在渠道允许的范围内');
-                }
+        // 验证游戏是否都在渠道允许的范围内
+        foreach ($selectedGames as $game) {
+            if (!in_array($game->platform_id, $channelGamePlatformIds)) {
+                return message_error('选择的游戏不在渠道允许的范围内');
             }
         }
 
@@ -4748,12 +4778,88 @@ class ChannelPlayerController
             Db::commit();
 
             $count = count($selected);
-            $message = $count > 0 ? "成功设置了 {$count} 个游戏权限" : "已清空所有游戏授权";
+            $message = $count > 0 ? "成功禁用了 {$count} 个游戏" : "已取消所有游戏禁用";
             return message_success($message)->refresh();
         } catch (Exception $e) {
             Db::rollBack();
             Log::error('save_player_games', [$e->getMessage(), $e->getTrace()]);
             return message_error($e->getMessage() ?? '保存失败');
+        }
+    }
+
+    /**
+     * 切换单个游戏的禁用状态
+     * @auth true
+     * @group channel
+     * @param int $player_id
+     * @param int $game_id
+     * @param string $action
+     * @return Msg
+     */
+    public function toggleGameDisable(int $player_id, int $game_id, string $action): Msg
+    {
+        try {
+            /** @var Player $player */
+            $player = Player::query()->with('channel')->find($player_id);
+
+            if (empty($player)) {
+                return message_error('玩家不存在');
+            }
+
+            // 只有线下渠道才支持游戏级别权限管理
+            if ($player->channel->is_offline != 1) {
+                return message_error('该功能仅适用于线下渠道');
+            }
+
+            // 验证游戏是否存在
+            $game = Game::query()->find($game_id);
+            if (empty($game)) {
+                return message_error('游戏不存在');
+            }
+
+            // 获取渠道允许的游戏平台
+            $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+            if (empty($channelGamePlatformIds) || !in_array($game->platform_id, $channelGamePlatformIds)) {
+                return message_error('该游戏不在渠道允许的范围内');
+            }
+
+            Db::beginTransaction();
+            try {
+                if ($action === 'disable') {
+                    // 禁用游戏 - 添加到 PlayerDisabledGame 表
+                    PlayerDisabledGame::query()->updateOrCreate(
+                        [
+                            'player_id' => $player_id,
+                            'game_id' => $game_id,
+                        ],
+                        [
+                            'platform_id' => $game->platform_id,
+                            'status' => 1,
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]
+                    );
+                    $message = '成功禁用该游戏';
+                } elseif ($action === 'enable') {
+                    // 取消禁用 - 从 PlayerDisabledGame 表删除
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->where('game_id', $game_id)
+                        ->delete();
+                    $message = '成功取消禁用该游戏';
+                } else {
+                    return message_error('无效的操作');
+                }
+
+                Db::commit();
+                return message_success($message)->refresh();
+            } catch (Exception $e) {
+                Db::rollBack();
+                Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
+                return message_error($e->getMessage() ?? '操作失败');
+            }
+        } catch (Exception $e) {
+            Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
+            return message_error('操作失败：' . $e->getMessage());
         }
     }
 

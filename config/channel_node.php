@@ -931,6 +931,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/bindPromoter',
         'title' => '绑定推广员',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelPlayerController\toggleGameDisable',
+        'pid' => 'addons\webman\controller\ChannelPlayerController\index',
+        'action' => 'toggleGameDisable',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/toggleGameDisable',
+        'title' => '切换游戏禁用状态',
+    ],
     //机台管理
     [
         'id' => 'addons\webman\controller\ChannelMachineController-',
