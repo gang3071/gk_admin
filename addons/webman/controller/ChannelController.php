@@ -616,7 +616,7 @@ class ChannelController
                         $channel->promotion_status = in_array('promotion_status', $channelFunction);
                         $channel->wallet_action_status = in_array('wallet_action_status', $channelFunction);
                         $channel->coin_status = in_array('coin_status', $channelFunction);
-                        $channel->line_login_status = in_array(1, $channelFunction);
+                        $channel->line_login_status = in_array('line_login_status', $channelFunction);
                         $channel->line_client_id = $form->input('line_client_id');
                         $channel->game_platform = json_encode($form->input('game_platform'));
                         $channel->national_promoter_status = in_array('national_promoter_status', $channelFunction);
@@ -651,7 +651,9 @@ class ChannelController
                         }
 
                         //批量生成关联关系
-                        ChannelGameWeb::query()->insert($insert);
+                        if (!empty($insert)) {
+                            ChannelGameWeb::query()->insert($insert);
+                        }
 
                         /** @var ExternalApp $externalApp */
                         $externalApp = new ExternalApp();
@@ -678,14 +680,17 @@ class ChannelController
                             $externalApp->notify_url = $notifyUrl;
                         }
                         $externalApp->save();
+
+                        // 更新部门path（必须在事务内完成）
+                        $adminDepartment->path = $adminDepartment->id;
+                        $adminDepartment->save();
+
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();
-                        var_dump($e->getMessage());
-                        return message_error(admin_trans('channel.save_error'));
+                        Log::error('渠道新增失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+                        return message_error(admin_trans('channel.save_error') . ': ' . $e->getMessage());
                     }
-                    $adminDepartment->path = $adminDepartment->id;
-                    $adminDepartment->save();
                     return message_success(admin_trans('channel.save_success'));
                 } else {
                     $orgData = $form->driver()->get();
@@ -694,6 +699,24 @@ class ChannelController
                     if (empty($channel)) {
                         return message_error(admin_trans('channel.not_fount'));
                     }
+
+                    // 提前准备游戏平台数据（事务外执行，避免长时间持有锁）
+                    $existsList = ChannelGameWeb::query()->where('channel_id', $channel->id)->pluck('platform_id')->toArray();
+                    $platformList = GamePlatform::query()->whereNotIn('id',$existsList)->pluck('id','code')->toArray();
+                    $channelId = $channel->id;
+                    $webIds = getWebIds(array_keys($platformList));
+                    $insert = [];
+                    $time = Carbon::now()->toDateTimeString();
+                    foreach ($platformList as $code => $id) {
+                        $insert[] = [
+                            'platform_id' => $id,
+                            'channel_id' => $channelId,
+                            'web_id' => $webIds[$code],
+                            'created_at' => $time,
+                            'updated_at' => $time,
+                        ];
+                    }
+
                     DB::beginTransaction();
                     try {
                         $channel->name = $form->input('name');
@@ -724,7 +747,7 @@ class ChannelController
                         $channel->promotion_status = in_array('promotion_status', $channelFunction);
                         $channel->wallet_action_status = in_array('wallet_action_status', $channelFunction);
                         $channel->coin_status = in_array('coin_status', $channelFunction);
-                        $channel->line_login_status = in_array(1, $channelFunction);
+                        $channel->line_login_status = in_array('line_login_status', $channelFunction);
                         $channel->line_client_id = $form->input('line_client_id');
                         $channel->game_platform = $form->input('game_platform');
                         $channel->national_promoter_status = in_array('national_promoter_status', $channelFunction);
@@ -775,26 +798,10 @@ class ChannelController
                         $externalApp->app_name = $channel->name;
                         $externalApp->save();
 
-                        // 修改渠道时检查是否有遗漏web_id未生成
-                        //获取游戏平台列表
-                        $existsList = ChannelGameWeb::query()->where('channel_id', $channel->id)->pluck('platform_id')->toArray();
-                        $platformList = GamePlatform::query()->whereNotIn('id',$existsList)->pluck('id','code')->toArray();
-                        $channelId = $channel->id;
-                        $webIds = getWebIds(array_keys($platformList));
-                        $insert = [];
-                        $time = Carbon::now()->toDateTimeString();
-                        foreach ($platformList as $code => $id) {
-                            $insert[] = [
-                                'platform_id' => $id,
-                                'channel_id' => $channelId,
-                                'web_id' => $webIds[$code],
-                                'created_at' => $time,
-                                'updated_at' => $time,
-                            ];
+                        // 批量生成关联关系（数据已在事务外准备好）
+                        if (!empty($insert)) {
+                            ChannelGameWeb::query()->insert($insert);
                         }
-
-                        //批量生成关联关系
-                        ChannelGameWeb::query()->insert($insert);
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();
