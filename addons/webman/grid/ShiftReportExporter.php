@@ -141,15 +141,15 @@ class ShiftReportExporter extends Excel
             $this->cache->set([
                 'status' => 2,
                 'error' => $e->getMessage(),
-                'file' => $e->getFile(),
+                'file' => str_replace('D:\\gk_admin\\', '', $e->getFile()),
                 'line' => $e->getLine(),
-                'trace' => $e->getTraceAsString()
+                'trace' => substr($e->getTraceAsString(), 0, 1000)
             ]);
             $this->cache->expiresAfter(60);
             $this->filesystemAdapter->save($this->cache);
 
-            // 重新抛出异常
-            throw $e;
+            // 不要重新抛出，让错误信息保存在缓存中供前端显示
+            return;
         }
     }
 
