@@ -70,6 +70,21 @@ class StoreShiftHandoverRecordController
 
             $grid->column('created_at', '创建时间')->width(180)->align('center');
 
+            // 操作列 - 查看设备明细
+            $grid->column('device_detail', '操作')->display(function ($val, $data) {
+                return Button::make('设备明细')
+                    ->type('primary')
+                    ->size('small')
+                    ->handler(
+                        Button::HANDLER_DRAWER,
+                        admin_url([
+                            'addons-webman-controller-StoreShiftHandoverRecordController',
+                            'deviceDetails'
+                        ]),
+                        ['shift_record_id' => $data['id']]
+                    );
+            })->width(120)->align('center');
+
             // 行展开 - 显示详细信息
             $grid->expandRow(function ($row) {
                 $profitColor = $row['total_profit_amount'] >= 0 ? '#3f8600' : '#cf1322';
@@ -153,25 +168,10 @@ class StoreShiftHandoverRecordController
                     ->placeholder(['开始时间', '结束时间']);
             });
 
-            // 操作
+            // 隐藏默认操作列
             $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
                 $actions->hideDel();
-
-                // 查看设备明细按钮
-                $actions->add(
-                    Button::make('设备明细')
-                        ->type('primary')
-                        ->size('small')
-                        ->handler(
-                            Button::HANDLER_DRAWER,
-                            admin_url([
-                                'addons-webman-controller-StoreShiftHandoverRecordController',
-                                'deviceDetails'
-                            ]),
-                            ['shift_record_id' => '__id__']
-                        )
-                );
             });
 
             $grid->hideDelete();
