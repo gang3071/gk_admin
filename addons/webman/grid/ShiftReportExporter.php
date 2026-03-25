@@ -14,6 +14,9 @@ class ShiftReportExporter extends Excel
     // 跟踪已处理的记录数（用于判断是否完成）
     protected $processedRecords = 0;
 
+    // 跟踪设备数量
+    protected $totalDevices = 0;
+
     // 总计数据
     protected $grandTotal = [
         'machine_point' => 0,
@@ -218,6 +221,9 @@ class ShiftReportExporter extends Excel
                 foreach ($subtotal as $key => $value) {
                     $this->grandTotal[$key] += $value;
                 }
+
+                // 累加设备数量
+                $this->totalDevices += $deviceDetails->count();
             } else {
                 $this->sheet->setCellValue('A' . $this->currentRow, '暂无设备数据');
                 $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
@@ -242,28 +248,28 @@ class ShiftReportExporter extends Excel
             ]);
             $this->cache->expiresAfter(60);
             $this->filesystemAdapter->save($this->cache);
+        }
 
-            // 检查是否所有记录都已处理完成
-            if ($this->processedRecords >= $this->count) {
-                // 添加总计行
-                $this->addGrandTotalRow();
+        // 在 foreach 循环外部检查是否所有记录都已处理完成
+        if ($this->processedRecords >= $this->count) {
+            // 添加总计行
+            $this->addGrandTotalRow();
 
-                // 设置列宽
-                $this->setColumnWidths();
+            // 设置列宽
+            $this->setColumnWidths();
 
-                // 冻结首行
-                $this->sheet->freezePane('A2');
+            // 冻结首行
+            $this->sheet->freezePane('A2');
 
-                // 完成回调 - 只在所有数据处理完成后调用
-                if ($finish) {
-                    $result = call_user_func($finish, $this);
-                    $this->cache->set([
-                        'status' => 1,
-                        'url' => $result
-                    ]);
-                    $this->cache->expiresAfter(60);
-                    $this->filesystemAdapter->save($this->cache);
-                }
+            // 完成回调 - 只在所有数据处理完成后调用
+            if ($finish) {
+                $result = call_user_func($finish, $this);
+                $this->cache->set([
+                    'status' => 1,
+                    'url' => $result
+                ]);
+                $this->cache->expiresAfter(60);
+                $this->filesystemAdapter->save($this->cache);
             }
         }
         } catch (\Throwable $e) {
@@ -291,7 +297,7 @@ class ShiftReportExporter extends Excel
         $this->currentRow += 1;
 
         // 总计标题
-        $this->sheet->setCellValue('A' . $this->currentRow, '═══ 总计 ═══');
+        $this->sheet->setCellValue('A' . $this->currentRow, '═══ 总计 ═══ (共 ' . $this->processedRecords . ' 次交班, ' . $this->totalDevices . ' 台设备)');
         $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
         $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 14],
