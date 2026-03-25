@@ -1441,15 +1441,6 @@ class ChannelAgentController
                     $query->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
                 });
             }
-            if (isset($exAdminFilter['search_type']) && $exAdminFilter['search_type'] != 0) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->when($exAdminFilter['search_type'] == 1, function ($query) use ($exAdminFilter) {
-                        $query->where('is_promoter', 1);
-                    })->when($exAdminFilter['search_type'] == 0, function ($query) use ($exAdminFilter) {
-                        $query->where('is_promoter', 0);
-                    });
-                });
-            }
             if (!empty($exAdminFilter['search_source'])) {
                 $searchSource = $exAdminFilter['search_source'];
                 $grid->model()->where(function ($query) use ($searchSource) {
@@ -1551,15 +1542,6 @@ class ChannelAgentController
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
             $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
             $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->align('center');
-            $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
-                $val,
-                PlayerDeliveryRecord $data
-            ) {
-                return Html::create()->content([
-                    $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : '',
-                    $data->player->is_promoter == 1 ? Tag::create(admin_trans('channel_agent.player_type_store'))->color('green') : Tag::create(admin_trans('channel_agent.player_type_device'))->color('blue'),
-                ]);
-            })->fixed(true)->align('center');
             $grid->column('player.storeAdmin.nickname', admin_trans('admin.store'))->display(function ($val, PlayerDeliveryRecord $data) {
                 if (!empty($data->player->storeAdmin)) {
                     return Html::create()->content([
