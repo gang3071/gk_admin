@@ -159,22 +159,16 @@ class GameLotteryController
             $grid->hideSelection();
 
             // 添加清理统计数据按钮
+            $clearStatsUrl = admin_url('/webman/game-lottery/clear-stats');
             $grid->tools([
-                Html::create()->content([
-                    Html::button('清理统计数据')
-                        ->onClick('clearAllStats()')
-                        ->style([
-                            'background' => '#ff4d4f',
-                            'border-color' => '#ff4d4f',
-                            'color' => '#fff',
-                            'padding' => '4px 15px',
-                            'border-radius' => '2px',
-                            'cursor' => 'pointer'
-                        ]),
-                    Html::script()->content("
+                Html::create()->html("
+                    <button onclick=\"clearAllStats()\" style=\"background: #ff4d4f; border: 1px solid #ff4d4f; color: #fff; padding: 4px 15px; border-radius: 2px; cursor: pointer; margin-right: 8px;\">
+                        清理统计数据
+                    </button>
+                    <script>
                         function clearAllStats() {
                             if (confirm('确定要清理所有彩金的统计数据吗？\\n\\n这将重置：\\n• 总检查次数\\n• 总中奖次数\\n• 今日检查次数\\n• 今日中奖次数\\n\\n清理后统计将从0重新开始计算。')) {
-                                fetch('" . admin_url('/webman/game-lottery/clear-stats') . "', {
+                                fetch('{$clearStatsUrl}', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
@@ -196,8 +190,8 @@ class GameLotteryController
                                 });
                             }
                         }
-                    ")
-                ])
+                    </script>
+                ")
             ]);
 
             $grid->setForm()->drawer($this->form());
