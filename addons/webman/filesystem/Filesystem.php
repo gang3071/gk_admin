@@ -23,9 +23,8 @@ class Filesystem
         if (isset($config['url']) && $config['url'] === 'dynamic') {
             $request = request();
             if ($request) {
-                $scheme = $request->header('x-forwarded-proto') ?: ($request->header('scheme') ?: 'https');
                 $host = $request->header('x-forwarded-host') ?: $request->header('host');
-                $config['url'] = $scheme . '://' . $host . '/storage';
+                $config['url'] = 'https://' . $host . '/storage';
             } else {
                 $config['url'] = env('APP_URL', 'https://zhu.supergames9.com') . '/storage';
             }
