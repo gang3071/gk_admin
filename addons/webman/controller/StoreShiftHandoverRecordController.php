@@ -184,9 +184,9 @@ class StoreShiftHandoverRecordController
      * @auth true
      * @group store
      */
-    public function deviceDetails(Request $request): Grid
+    public function deviceDetails(int $shift_record_id): Grid
     {
-        $shiftRecordId = $request->get('shift_record_id');
+        $shiftRecordId = $shift_record_id;
 
         return Grid::create(new StoreShiftDeviceDetail(), function (Grid $grid) use ($shiftRecordId) {
             // 获取交班记录信息
