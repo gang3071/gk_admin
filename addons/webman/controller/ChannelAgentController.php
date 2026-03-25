@@ -209,8 +209,8 @@ class ChannelAgentController
         $query = Player::query()->with(['the_last_player_login_record', 'storeAdmin'])
             ->select([
                 'player.*',
-                'player_extend.present_out_amount',
-                'player_extend.present_in_amount',
+                'player_extend.recharge_amount',
+                'player_extend.withdraw_amount',
                 'player_extend.machine_put_point',
                 'player_platform_cash.money',
                 'player_promoter.name as promoter_name',
@@ -283,39 +283,6 @@ class ChannelAgentController
             ->get()
             ->toArray();
 
-        // 获取当前账号的最后结算时间（从 AdminUser 读取）
-        $lastSettlementTimestamp = $admin->last_settlement_timestamp;
-
-        foreach ($list as &$item) {
-            $totalModel = PlayerDeliveryRecord::query()->whereHas('player', function ($query) use ($item) {
-                $query->where('recommend_id', $item['id']);
-            })->when(!empty($lastSettlementTimestamp),
-                function ($query) use ($lastSettlementTimestamp) {
-                    $query->where('created_at', '>=', $lastSettlementTimestamp);
-                });
-            $totalData = $totalModel->selectRaw('
-                    sum(IF(type = ' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ', amount, 0)) as total_in,
-                    sum(IF(type = ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ', amount, 0)) as total_out,
-                    sum(IF(type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ', amount, 0)) as total_point
-                ')->first();
-
-            // 注意：machineList 显示的是设备（普通玩家），不计算推广员分润
-            // 这里的统计数据是该设备的推荐下级玩家的数据
-            $ratio = $admin->ratio ?? 0;  // 使用当前登录账号的分润比例
-
-            $presentInAmount = bcadd(0, $totalData['total_in'] ?? 0, 2);
-            $machinePutPoint = bcadd(0, $totalData['total_point'] ?? 0, 2);
-            $presentOutAmount = bcadd(0, $totalData['total_out'] ?? 0, 2);
-            $totalPoint = bcsub(bcadd($machinePutPoint, $presentInAmount, 2), $presentOutAmount, 2);
-            $profitAmount = bcmul($totalPoint, $ratio / 100, 2);
-            $item['now_present_in_amount'] = $presentInAmount;
-            $item['now_present_out_amount'] = $presentOutAmount;
-            $item['now_machine_put_point'] = $machinePutPoint;
-            $item['now_profit_amount'] = $profitAmount;
-            $item['now_total_point'] = $totalPoint;
-            $item['store_ratio'] = $ratio;
-        }
-
         return Grid::create($list, function (Grid $grid) use ($admin, $total, $list) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
@@ -335,18 +302,6 @@ class ChannelAgentController
             ) {
                 return Tag::create($val)->color('orange');
             })->sortable()->align('center');
-            $grid->column(function (Grid $grid) {
-                $grid->column('now_present_in_amount', admin_trans('channel_agent.present_in'))->width('100px')->align('center');
-                $grid->column('now_present_out_amount', admin_trans('channel_agent.present_out'))->width('100px')->align('center');
-                $grid->column('now_machine_put_point', admin_trans('channel_agent.machine_put'))->width('100px')->align('center');
-                $grid->column('now_total_point', admin_trans('channel_agent.total_revenue'))->display(function ($value) {
-                    return Html::create(number_format($value, 2))->style(['color' => $value >= 0 ? 'green' : 'red']);
-                })->width('100px')->align('center');
-                $grid->column('store_ratio', admin_trans('channel_agent.store_profit_rate'))->width('100px')->append('%')->align('center');
-                $grid->column('now_profit_amount', admin_trans('channel_agent.store_profit_amount'))->display(function ($value) {
-                    return Html::create(number_format($value, 2))->style(['color' => $value >= 0 ? 'green' : 'red']);
-                })->width('100px')->align('center');
-            }, admin_trans('channel_agent.current_data'))->ellipsis(true);
             $grid->column('store_admin_name', admin_trans('admin.store'))->display(function ($val, $data) {
                 $storeName = $data['store_admin_nickname'] ?: $data['store_admin_username'];
                 if (!empty($storeName)) {
@@ -358,9 +313,15 @@ class ChannelAgentController
                     Tag::create(admin_trans('admin.unassigned'))->color('default')
                 ]);
             })->ellipsis(true)->align('center');
-            $grid->column('present_in_amount', admin_trans('channel_agent.present_in'))->width('100px')->align('center');
-            $grid->column('present_out_amount', admin_trans('channel_agent.present_out'))->width('100px')->align('center');
-            $grid->column('machine_put_point', admin_trans('channel_agent.machine_put'))->width('100px')->align('center');
+            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
+            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
+            $grid->column('machine_put_point', '累计投钞')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('admin.close'))->color('red'),

@@ -72,8 +72,8 @@ class StorePlayerController
                 ->select([
                     'player.*',
                     'cash.money as wallet_money',
-                    'player_extend.present_in_amount',
-                    'player_extend.present_out_amount'
+                    'player_extend.recharge_amount',
+                    'player_extend.withdraw_amount'
                 ])
                 ->orderBy('player.id', 'desc');
 
@@ -95,11 +95,11 @@ class StorePlayerController
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('present_in_amount', '累计开分')->display(function ($value) {
+            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('present_out_amount', '累计洗分')->display(function ($value) {
+            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
