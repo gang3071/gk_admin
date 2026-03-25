@@ -4510,7 +4510,7 @@ class ChannelPlayerController
         // 获取当前语言环境
         $lang = Container::getInstance()->translator->getLocale();
 
-        return Grid::create(new Game(), function (Grid $grid) use ($player_id, $channelGamePlatformIds, $lang, $player) {
+        return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
             $grid->title('玩家游戏权限管理 - ' . $player->name);
             $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
