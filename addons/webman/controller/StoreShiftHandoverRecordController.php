@@ -15,14 +15,6 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Row;
-use ExAdmin\ui\support\Excel;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
-use support\Request;
-use support\Response;
 
 /**
  * 店家后台 - 交班记录
@@ -77,25 +69,19 @@ class StoreShiftHandoverRecordController
 
             $grid->column('created_at', '创建时间')->width(180)->align('center');
 
-            // 操作列 - 查看设备明细和导出
-            $grid->column('device_detail', '操作')->display(function ($val, $data) {
-                return Html::create()->content([
-                    Button::create('设备明细')
-                        ->type('primary')
-                        ->size('small')
-                        ->modal(
-                            admin_url([
-                                'addons-webman-controller-StoreShiftHandoverRecordController',
-                                'deviceDetails'
-                            ]),
-                            ['shift_record_id' => $data['id']]
-                        )->width('80%'),
-                    Html::create(' '),
-                    Button::create('导出报表')
-                        ->size('small')
-                        ->href('ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/exportReport?shift_record_id=' . $data['id'])
-                ]);
-            })->width(200)->align('center');
+            // 操作列 - 查看设备明细
+            $grid->column('device_detail', '设备明细')->display(function ($val, $data) {
+                return Button::create('查看明细')
+                    ->type('primary')
+                    ->size('small')
+                    ->modal(
+                        admin_url([
+                            'addons-webman-controller-StoreShiftHandoverRecordController',
+                            'deviceDetails'
+                        ]),
+                        ['shift_record_id' => $data['id']]
+                    )->width('80%');
+            })->width(120)->align('center');
 
             // 行展开 - 显示详细信息
             $grid->expandRow(function ($row) {
@@ -189,6 +175,7 @@ class StoreShiftHandoverRecordController
             $grid->hideDelete();
             $grid->hideCreate();
             $grid->expandFilter();
+            $grid->export();
         });
     }
 
@@ -381,70 +368,4 @@ class StoreShiftHandoverRecordController
         });
     }
 
-    /**
-     * 导出交班报表（包含设备明细）
-     * @auth true
-     * @group store
-     */
-    public function exportReport()
-    {
-        $shift_record_id = Request::input('shift_record_id');
-
-        // 获取交班记录
-        $shiftRecord = StoreAgentShiftHandoverRecord::find($shift_record_id);
-
-        if (!$shiftRecord) {
-            return json(['code' => 1, 'msg' => '交班记录不存在']);
-        }
-
-        // 权限验证：只能导出自己的交班记录
-        $admin = Admin::user();
-        if ($shiftRecord->bind_admin_user_id != $admin->id) {
-            return json(['code' => 1, 'msg' => '无权导出此记录']);
-        }
-
-        // 获取设备明细
-        $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $shift_record_id)
-            ->orderBy('profit', 'desc')
-            ->get()
-            ->toArray();
-
-        // 准备导出数据（二维数组，第一行是表头）
-        $exportData = [];
-
-        // 表头行
-        $exportData[] = [
-            '设备名称',
-            '设备编号',
-            '投钞点数',
-            '开分',
-            '洗分',
-            '后台加点',
-            '后台扣点',
-            '彩金',
-            '总收入',
-            '总支出',
-            '利润',
-        ];
-
-        // 数据行
-        foreach ($deviceDetails as $detail) {
-            $exportData[] = [
-                $detail['player_name'],
-                $detail['player_phone'],
-                $detail['machine_point'],
-                number_format($detail['recharge_amount'], 2, '.', ''),
-                number_format($detail['withdrawal_amount'], 2, '.', ''),
-                number_format($detail['modified_add_amount'], 2, '.', ''),
-                number_format($detail['modified_deduct_amount'], 2, '.', ''),
-                number_format($detail['lottery_amount'], 2, '.', ''),
-                number_format($detail['total_in'], 2, '.', ''),
-                number_format($detail['total_out'], 2, '.', ''),
-                number_format($detail['profit'], 2, '.', ''),
-            ];
-        }
-
-        $filename = 'shift_report_' . date('YmdHis', strtotime($shiftRecord->start_time)) . '.xlsx';
-        return Excel::export($exportData, $filename);
-    }
 }
