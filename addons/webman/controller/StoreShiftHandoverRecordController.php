@@ -15,7 +15,11 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Row;
-use ExAdmin\ui\support\Excel;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use support\Request;
 use support\Response;
 
