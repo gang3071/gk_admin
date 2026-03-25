@@ -13,6 +13,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\result\Notification;
 use ExAdmin\ui\support\Request;
 use support\Log;
 
@@ -159,39 +160,12 @@ class GameLotteryController
             $grid->hideSelection();
 
             // 添加清理统计数据按钮
-            $clearStatsUrl = admin_url('/webman/game-lottery/clear-stats');
             $grid->tools([
-                Html::create()->html("
-                    <button onclick=\"clearAllStats()\" style=\"background: #ff4d4f; border: 1px solid #ff4d4f; color: #fff; padding: 4px 15px; border-radius: 2px; cursor: pointer; margin-right: 8px;\">
-                        清理统计数据
-                    </button>
-                    <script>
-                        function clearAllStats() {
-                            if (confirm('确定要清理所有彩金的统计数据吗？\\n\\n这将重置：\\n• 总检查次数\\n• 总中奖次数\\n• 今日检查次数\\n• 今日中奖次数\\n\\n清理后统计将从0重新开始计算。')) {
-                                fetch('{$clearStatsUrl}', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    },
-                                    body: JSON.stringify({})
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.code === 1) {
-                                        alert('✓ 统计数据清理成功！\\n\\n清理了 ' + data.data.cleared_count + ' 个彩金的统计数据');
-                                        window.location.reload();
-                                    } else {
-                                        alert('✗ 清理失败：' + data.msg);
-                                    }
-                                })
-                                .catch(error => {
-                                    alert('✗ 清理失败：' + error.message);
-                                });
-                            }
-                        }
-                    </script>
-                ")
+                Button::create('清理统计数据')
+                    ->icon(Icon::create('DeleteOutlined'))
+                    ->type('danger')
+                    ->confirm('确定要清理所有彩金的统计数据吗？\n\n这将重置：\n• 总检查次数\n• 总中奖次数\n• 今日检查次数\n• 今日中奖次数\n\n清理后统计将从0重新开始计算。', [$this, 'clearStats'])
+                    ->gridRefresh()
             ]);
 
             $grid->setForm()->drawer($this->form());
@@ -718,9 +692,9 @@ class GameLotteryController
     /**
      * 清理统计数据
      * @auth true
-     * @return \support\Response
+     * @return Notification
      */
-    public function clearStats(): \support\Response
+    public function clearStats(): Notification
     {
         try {
             $redis = \support\Redis::connection()->client();
@@ -781,21 +755,17 @@ class GameLotteryController
                 'details' => $details
             ]);
 
-            return json([
-                'code' => 1,
-                'msg' => '清理成功',
-                'data' => [
-                    'cleared_count' => $clearedCount,
-                    'details' => $details
-                ]
-            ]);
+            return notification_success(
+                '清理成功',
+                "成功清理了 {$clearedCount} 个彩金的统计数据\n\n已重置：\n• 总检查次数\n• 总中奖次数\n• 今日检查次数\n• 今日中奖次数"
+            );
 
         } catch (\Exception $e) {
             Log::error('清理彩金统计数据异常', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-            return json(['code' => 0, 'msg' => '清理失败：' . $e->getMessage()]);
+            return notification_error('清理失败', $e->getMessage());
         }
     }
 }
