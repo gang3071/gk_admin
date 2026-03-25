@@ -49,16 +49,12 @@ class StoreShiftHandoverRecordController
                     Html::div()->content('开始：' . $data['start_time']),
                     Html::div()->content('结束：' . $data['end_time'])
                 ]);
-            })->export(function ($val, $data) {
-                return $data['start_time'] . ' ~ ' . $data['end_time'];
             })->width(200);
 
             $grid->column('is_auto_shift', '交班类型')->display(function ($value) {
                 return $value == 1
                     ? Tag::create('自动交班')->color('blue')
                     : Tag::create('手动交班')->color('default');
-            })->export(function ($value) {
-                return $value == 1 ? '自动交班' : '手动交班';
             })->width(100)->align('center');
 
             $grid->column('machine_point', '投钞点数')->width(100)->align('center');
@@ -69,14 +65,12 @@ class StoreShiftHandoverRecordController
                 ->display(function ($value) {
                     $color = $value >= 0 ? '#3f8600' : '#cf1322';
                     return Html::create($value)->style(['color' => $color]);
-                })->export(function ($value) {
-                    return $value;
                 });
 
             $grid->column('created_at', '创建时间')->width(180)->align('center');
 
             // 操作列 - 查看设备明细
-            $grid->column('device_detail', '设备明细')->display(function ($val, $data) {
+            $grid->column('device_detail', '操作')->display(function ($val, $data) {
                 return Button::create('查看明细')
                     ->type('primary')
                     ->size('small')
@@ -87,7 +81,7 @@ class StoreShiftHandoverRecordController
                         ]),
                         ['shift_record_id' => $data['id']]
                     )->width('80%');
-            })->width(120)->align('center')->closeExport();
+            })->width(120)->align('center');
 
             // 行展开 - 显示详细信息
             $grid->expandRow(function ($row) {
@@ -181,7 +175,10 @@ class StoreShiftHandoverRecordController
             $grid->hideDelete();
             $grid->hideCreate();
             $grid->expandFilter();
-            $grid->export();
+
+            // 使用自定义导出驱动
+            $grid->export(new \addons\webman\grid\ShiftReportExporter())
+                ->filename('shift_report_' . date('YmdHis'));
         });
     }
 
