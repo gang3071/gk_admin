@@ -5,6 +5,8 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\StoreShiftDeviceDetail;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -155,11 +157,215 @@ class StoreShiftHandoverRecordController
             $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                // 查看设备明细按钮
+                $actions->add(
+                    Button::make('设备明细')
+                        ->type('primary')
+                        ->size('small')
+                        ->handler(
+                            Button::HANDLER_DRAWER,
+                            admin_url([
+                                'addons-webman-controller-StoreShiftHandoverRecordController',
+                                'deviceDetails'
+                            ]),
+                            ['shift_record_id' => '__id__']
+                        )
+                );
             });
 
             $grid->hideDelete();
             $grid->hideCreate();
             $grid->expandFilter();
+        });
+    }
+
+    /**
+     * 设备明细列表
+     * @auth true
+     * @group store
+     */
+    public function deviceDetails(Request $request): Grid
+    {
+        $shiftRecordId = $request->get('shift_record_id');
+
+        return Grid::create(new StoreShiftDeviceDetail(), function (Grid $grid) use ($shiftRecordId) {
+            // 获取交班记录信息
+            $shiftRecord = StoreAgentShiftHandoverRecord::find($shiftRecordId);
+
+            if (!$shiftRecord) {
+                $grid->title('设备明细 - 记录不存在');
+                return;
+            }
+
+            $grid->title('设备明细 - ' . $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time);
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 查询该交班记录的设备明细
+            $grid->model()
+                ->where('shift_record_id', $shiftRecordId)
+                ->orderBy('profit', 'desc');
+
+            $grid->column('id', 'ID')->width(80)->align('center');
+
+            $grid->column('player_name', '设备名称')->width(150);
+
+            $grid->column('player_phone', '设备编号')->width(120)->align('center');
+
+            $grid->column('machine_point', '投钞点数')->width(100)->align('center');
+
+            $grid->column('recharge_amount', '开分')->width(100)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
+            $grid->column('withdrawal_amount', '洗分')->width(100)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
+            $grid->column('modified_add_amount', '后台加点')->width(100)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
+            $grid->column('modified_deduct_amount', '后台扣点')->width(100)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
+            $grid->column('lottery_amount', '彩金')->width(100)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
+            $grid->column('total_in', '总收入')->width(100)->align('center')
+                ->display(function ($value) {
+                    $color = '#3f8600';
+                    return Html::create(number_format($value, 2))->style(['color' => $color]);
+                });
+
+            $grid->column('total_out', '总支出')->width(100)->align('center')
+                ->display(function ($value) {
+                    $color = '#cf1322';
+                    return Html::create(number_format($value, 2))->style(['color' => $color]);
+                });
+
+            $grid->column('profit', '利润')->width(120)->align('center')
+                ->display(function ($value) {
+                    $color = $value >= 0 ? '#3f8600' : '#cf1322';
+                    $formatted = number_format($value, 2);
+                    return Html::create($formatted)->style(['color' => $color, 'fontWeight' => 'bold']);
+                });
+
+            // 统计卡片
+            $grid->header(function () use ($shiftRecord) {
+                $deviceCount = StoreShiftDeviceDetail::where('shift_record_id', $shiftRecord->id)->count();
+
+                return Row::make([
+                    Statistic::make('设备数量', $deviceCount)->span(4),
+                    Statistic::make('投钞点数', number_format($shiftRecord->machine_point))->span(4),
+                    Statistic::make('总收入', number_format($shiftRecord->total_in, 2))
+                        ->valueStyle(['color' => '#3f8600'])
+                        ->span(4),
+                    Statistic::make('总支出', number_format($shiftRecord->total_out, 2))
+                        ->valueStyle(['color' => '#cf1322'])
+                        ->span(4),
+                    Statistic::make('彩金', number_format($shiftRecord->lottery_amount, 2))
+                        ->valueStyle(['color' => '#fa8c16'])
+                        ->span(4),
+                    Statistic::make('总利润', number_format($shiftRecord->total_profit_amount, 2))
+                        ->valueStyle(['color' => $shiftRecord->total_profit_amount >= 0 ? '#3f8600' : '#cf1322'])
+                        ->span(4),
+                ])->gutter(16)->style(['marginBottom' => '16px']);
+            });
+
+            // 行展开 - 显示详细分类数据
+            $grid->expandRow(function ($row) {
+                return Card::create([
+                    Html::div()->content([
+                        Html::create('设备详细数据')->tag('h4')->style(['marginBottom' => '10px']),
+                        Html::create()->content([
+                            // 第1行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('设备名称：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($row['player_name'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('设备编号：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($row['player_phone'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第2行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('投钞点数：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($row['machine_point'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('开分金额：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['recharge_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第3行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('洗分金额：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['withdrawal_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('后台加点：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['modified_add_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第4行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('后台扣点：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['modified_deduct_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('彩金发放：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['lottery_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第5行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('总收入：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['total_in'], 2))->style(['color' => '#3f8600'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('总支出：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['total_out'], 2))->style(['color' => '#cf1322'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第6行 - 利润
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('设备利润：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['profit'], 2))->style([
+                                        'color' => $row['profit'] >= 0 ? '#3f8600' : '#cf1322',
+                                        'fontWeight' => 'bold',
+                                        'fontSize' => '16px'
+                                    ])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '100%'])
+                            ])
+                        ])
+                    ])->style(['padding' => '20px'])
+                ]);
+            });
+
+            $grid->actions(function (Actions $actions) {
+                $actions->hideEdit();
+                $actions->hideDel();
+            });
+
+            $grid->hideDelete();
+            $grid->hideCreate();
+            $grid->disableSelection();
         });
     }
 }
