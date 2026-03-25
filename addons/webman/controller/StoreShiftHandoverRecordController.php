@@ -15,6 +15,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\support\Excel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -385,8 +386,10 @@ class StoreShiftHandoverRecordController
      * @auth true
      * @group store
      */
-    public function exportReport(int $shift_record_id): Response
+    public function exportReport()
     {
+        $shift_record_id = Request::input('shift_record_id');
+
         // 获取交班记录
         $shiftRecord = StoreAgentShiftHandoverRecord::find($shift_record_id);
 
@@ -405,108 +408,42 @@ class StoreShiftHandoverRecordController
             ->orderBy('profit', 'desc')
             ->get();
 
-        // 创建 Excel
-        $spreadsheet = new Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('交班报表');
+        // 准备导出数据
+        $title = 'shift_report_' . date('YmdHis', strtotime($shiftRecord->start_time));
 
-        $row = 1;
-
-        // 交班信息
-        $sheet->setCellValue('A' . $row, '交班时间');
-        $sheet->setCellValue('B' . $row, $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time);
-        $row++;
-
-        $sheet->setCellValue('A' . $row, '交班类型');
-        $sheet->setCellValue('B' . $row, $shiftRecord->is_auto_shift ? '自动交班' : '手动交班');
-        $row++;
-
-        $sheet->setCellValue('A' . $row, '创建时间');
-        $sheet->setCellValue('B' . $row, $shiftRecord->created_at);
-        $row += 2;
-
-        // 汇总统计
-        $sheet->setCellValue('A' . $row, '汇总统计');
-        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
-        $row++;
-
-        $summaryData = [
-            ['投钞点数', $shiftRecord->machine_point],
-            ['投钞金额', number_format($shiftRecord->machine_amount, 2)],
-            ['总收入', number_format($shiftRecord->total_in, 2)],
-            ['总支出', number_format($shiftRecord->total_out, 2)],
-            ['彩金发放', number_format($shiftRecord->lottery_amount, 2)],
-            ['总利润', number_format($shiftRecord->total_profit_amount, 2)],
+        // 列标题
+        $columnTitle = [
+            'device_name' => '设备名称',
+            'device_code' => '设备编号',
+            'machine_point' => '投钞点数',
+            'recharge' => '开分',
+            'withdrawal' => '洗分',
+            'add_point' => '后台加点',
+            'deduct_point' => '后台扣点',
+            'lottery' => '彩金',
+            'total_in' => '总收入',
+            'total_out' => '总支出',
+            'profit' => '利润',
         ];
 
-        foreach ($summaryData as $data) {
-            $sheet->setCellValue('A' . $row, $data[0]);
-            $sheet->setCellValue('B' . $row, $data[1]);
-            $row++;
-        }
-        $row += 2;
-
-        // 设备明细表头
-        $sheet->setCellValue('A' . $row, '设备明细（共 ' . $deviceDetails->count() . ' 台）');
-        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
-        $row++;
-
-        $headers = [
-            'A' => '设备名称',
-            'B' => '设备编号',
-            'C' => '投钞点数',
-            'D' => '开分',
-            'E' => '洗分',
-            'F' => '后台加点',
-            'G' => '后台扣点',
-            'H' => '彩金',
-            'I' => '总收入',
-            'J' => '总支出',
-            'K' => '利润',
-        ];
-
-        foreach ($headers as $col => $header) {
-            $sheet->setCellValue($col . $row, $header);
-            $sheet->getStyle($col . $row)->getFont()->setBold(true);
-        }
-        $row++;
-
-        // 设备明细数据
+        // 数据行
+        $data = [];
         foreach ($deviceDetails as $detail) {
-            $sheet->setCellValue('A' . $row, $detail->player_name);
-            $sheet->setCellValue('B' . $row, $detail->player_phone);
-            $sheet->setCellValue('C' . $row, $detail->machine_point);
-            $sheet->setCellValue('D' . $row, number_format($detail->recharge_amount, 2));
-            $sheet->setCellValue('E' . $row, number_format($detail->withdrawal_amount, 2));
-            $sheet->setCellValue('F' . $row, number_format($detail->modified_add_amount, 2));
-            $sheet->setCellValue('G' . $row, number_format($detail->modified_deduct_amount, 2));
-            $sheet->setCellValue('H' . $row, number_format($detail->lottery_amount, 2));
-            $sheet->setCellValue('I' . $row, number_format($detail->total_in, 2));
-            $sheet->setCellValue('J' . $row, number_format($detail->total_out, 2));
-            $sheet->setCellValue('K' . $row, number_format($detail->profit, 2));
-            $row++;
+            $data[] = [
+                'device_name' => $detail->player_name,
+                'device_code' => $detail->player_phone,
+                'machine_point' => $detail->machine_point,
+                'recharge' => number_format($detail->recharge_amount, 2, '.', ''),
+                'withdrawal' => number_format($detail->withdrawal_amount, 2, '.', ''),
+                'add_point' => number_format($detail->modified_add_amount, 2, '.', ''),
+                'deduct_point' => number_format($detail->modified_deduct_amount, 2, '.', ''),
+                'lottery' => number_format($detail->lottery_amount, 2, '.', ''),
+                'total_in' => number_format($detail->total_in, 2, '.', ''),
+                'total_out' => number_format($detail->total_out, 2, '.', ''),
+                'profit' => number_format($detail->profit, 2, '.', ''),
+            ];
         }
 
-        // 设置列宽
-        foreach (range('A', 'K') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
-        }
-
-        // 生成文件
-        $filename = 'shift_report_' . date('YmdHis', strtotime($shiftRecord->start_time)) . '.xlsx';
-        $writer = new Xlsx($spreadsheet);
-
-        // 直接输出到 php://output
-        ob_start();
-        $writer->save('php://output');
-        $content = ob_get_clean();
-
-        // 返回响应
-        return response($content, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Cache-Control' => 'max-age=0',
-            'Pragma' => 'public',
-        ]);
+        return Excel::export($title, $columnTitle, $data);
     }
 }
