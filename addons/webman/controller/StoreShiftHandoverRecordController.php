@@ -81,8 +81,8 @@ class StoreShiftHandoverRecordController
                             'deviceDetails'
                         ]),
                         ['shift_record_id' => $data['id']]
-                    );
-            })->width('80%')->align('center');
+                    )->width('80%');
+            })->width(120)->align('center');
 
             // 行展开 - 显示详细信息
             $grid->expandRow(function ($row) {
