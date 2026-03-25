@@ -136,8 +136,8 @@ class AgentLotteryController
             $grid->header($layout);
 
             // 列定义
-            $grid->column('id', admin_trans('player_lottery_record.fields.id'))->align('center');
-            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
+            $grid->column('id', admin_trans('player_lottery_record.fields.id'))->align('center')->fixed(true);
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->fixed(true)->width(120);
             $grid->column('uuid', admin_trans('player.fields.device_uuid'))
                 ->display(function ($val, PlayerLotteryRecord $data) {
                     return Html::create()->content([
