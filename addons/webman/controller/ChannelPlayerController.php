@@ -10,15 +10,20 @@ use addons\webman\model\AdminRoleUsers;
 use addons\webman\model\AdminUser;
 use addons\webman\model\Channel;
 use addons\webman\model\ChannelRechargeMethod;
+use addons\webman\model\Currency;
+use addons\webman\model\Game;
+use addons\webman\model\GamePlatform;
 use addons\webman\model\LevelList;
 use addons\webman\model\NationalInvite;
 use addons\webman\model\NationalProfitRecord;
 use addons\webman\model\NationalPromoter;
+use addons\webman\model\OpenScoreSetting;
 use addons\webman\model\PhoneSmsLog;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerActivityPhaseRecord;
 use addons\webman\model\PlayerBank;
 use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\model\PlayerDisabledGame;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerGameLog;
 use addons\webman\model\PlayerGamePlatform;
@@ -69,6 +74,7 @@ use Illuminate\Validation\Rule;
 use support\Cache;
 use support\Db;
 use support\Log;
+use Webman\RedisQueue\Client as queueClient;
 
 /**
  * 渠道玩家
@@ -483,6 +489,11 @@ class ChannelPlayerController
                 $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
                 $dropdown = $actions->dropdown();
+                $actions->prepend(Button::create(admin_trans('offline_channel.electronic_game_disabled'))
+                    ->drawer([$this, 'playerGameList'], ['player_id' => $data['id']])
+                    ->type('primary'));
+                $actions->prepend(Button::create(admin_trans('channel_agent.open_score'))
+                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px'));
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
                     $dropdown->prepend($data['is_coin'] == 0 ? admin_trans('player.set_coin') : admin_trans('player.cancel_coin'),
@@ -4448,5 +4459,663 @@ class ChannelPlayerController
         } catch (\Exception $e) {
             return message_error(admin_trans('player.action_error'));
         }
+    }
+
+    /**
+     * 玩家游戏列表（Grid方式，仅线下渠道）
+     * @auth true
+     * @param int $player_id
+     * @return Grid
+     */
+    public function playerGameList(int $player_id): Grid
+    {
+        /** @var Player $player */
+        $player = Player::query()->with('channel')->find($player_id);
+
+        if (empty($player)) {
+            // 返回空Grid并显示错误
+            return Grid::create([], function (Grid $grid) {
+                $grid->title('玩家不存在');
+            });
+        }
+
+        // 只有线下渠道才支持游戏级别权限管理
+        if ($player->channel->is_offline != 1) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->title('该功能仅适用于线下渠道');
+            });
+        }
+
+        // 获取玩家所在渠道开启的游戏平台
+        if (empty($player->channel->game_platform)) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->title('该渠道未开启任何电子游戏平台');
+            });
+        }
+
+        $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+        if (empty($channelGamePlatformIds)) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->title('该渠道未开启任何电子游戏平台');
+            });
+        }
+
+        // 获取玩家已选择的游戏ID
+        $selectedGameIds = PlayerDisabledGame::query()
+            ->where('player_id', $player_id)
+            ->where('status', 1)
+            ->pluck('game_id')
+            ->toArray();
+
+        // 获取当前语言环境
+        $lang = Container::getInstance()->translator->getLocale();
+
+        return Grid::create(new Game(), function (Grid $grid) use ($player_id, $channelGamePlatformIds, $lang, $player) {
+            $grid->title('玩家游戏权限管理 - ' . $player->name);
+            $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
+                ->where('status', 1)
+                ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
+                    $query->where('lang', $lang);
+                }])
+                ->orderBy('platform_id', 'asc')
+                ->orderBy('sort', 'desc')
+                ->orderBy('id', 'desc');
+
+            $grid->driver()->setPk('id');
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+            $page = Request::input('ex_admin_page', 1);
+            $size = Request::input('ex_admin_size', 50);
+            $param = [
+                'size' => $size,
+                'page' => $page,
+                'ex_admin_filter' => $exAdminFilter,
+                'player_id' => $player_id,
+            ];
+
+            $grid->autoHeight();
+            $grid->bordered(true);
+            $grid->column('id', 'ID')->align('center')->width('80px');
+
+            $grid->column('platform_id', '游戏平台')->display(function ($val, Game $data) {
+                return Tag::create($data->gamePlatform->name ?? '未知平台')->color('blue');
+            })->align('center')->width('120px');
+
+            $grid->column('game_content', '游戏名称')->display(function ($val, Game $data) use ($lang) {
+                $content = $data->gameContent ? $data->gameContent->where('lang', $lang)->first() : null;
+                $gameName = $content->name ?? '游戏 ID: ' . $data->id;
+
+                if ($content && $content->picture) {
+                    $image = Image::create()
+                        ->width(50)
+                        ->height(50)
+                        ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
+                        ->src($content->picture);
+                    return Html::create()->content([
+                        $image,
+                        Html::div()->content($gameName)->style(['margin-left' => '8px'])
+                    ])->style(['display' => 'flex', 'align-items' => 'center']);
+                }
+                return $gameName;
+            })->align('left');
+
+            $grid->column('cate_id', '游戏分类')->display(function ($val, Game $data) {
+                return Tag::create(getGameTypeName($val))->color('green');
+            })->align('center')->width('100px');
+
+            $grid->column('is_hot', '热门')->display(function ($val) {
+                return $val == 1 ? Tag::create('热门')->color('red') : '';
+            })->align('center')->width('80px');
+
+            $grid->column('is_new', '新游戏')->display(function ($val) {
+                return $val == 1 ? Tag::create('新')->color('orange') : '';
+            })->align('center')->width('80px');
+
+            $grid->column('sort', '排序')->align('center')->width('80px');
+
+            $grid->hideDelete();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+
+            $grid->pagination()->pageSize(50);
+            $grid->hideDeleteSelection();
+            $grid->hideTrashed();
+
+            $grid->tools(
+                Button::create('保存选择的游戏')
+                    ->icon(Icon::create('fas fa-save'))
+                    ->confirm('确认保存？',
+                        [
+                            $this,
+                            'savePlayerGames?' . http_build_query($param)
+                        ])
+                    ->gridBatch()->gridRefresh()
+                    ->type('primary')
+            );
+
+            $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
+                $filter->eq()->select('platform_id')
+                    ->placeholder('游戏平台')
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options(GamePlatform::query()
+                        ->whereIn('id', $channelGamePlatformIds)
+                        ->pluck('name', 'id')
+                        ->toArray());
+
+                $filter->eq()->select('is_hot')
+                    ->placeholder('是否热门')
+                    ->style(['width' => '120px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        1 => '热门游戏',
+                        0 => '普通游戏'
+                    ]);
+
+                $filter->eq()->select('is_new')
+                    ->placeholder('是否新游戏')
+                    ->style(['width' => '120px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        1 => '新游戏',
+                        0 => '旧游戏'
+                    ]);
+            });
+
+            $grid->expandFilter();
+        })->selection($selectedGameIds);
+    }
+
+    /**
+     * 保存玩家游戏权限
+     * @auth true
+     * @param $selected
+     * @param $player_id
+     * @param $size
+     * @param $page
+     * @param array $ex_admin_filter
+     * @return \ExAdmin\ui\response\Msg
+     */
+    public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [])
+    {
+        if (!isset($selected)) {
+            return message_error('请选择要授权的游戏');
+        }
+
+        /** @var Player $player */
+        $player = Player::query()->with('channel')->find($player_id);
+
+        if (empty($player)) {
+            return message_error('玩家不存在');
+        }
+
+        // 只有线下渠道才支持游戏级别权限管理
+        if ($player->channel->is_offline != 1) {
+            return message_error('该功能仅适用于线下渠道');
+        }
+
+        // 获取渠道允许的游戏平台
+        $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+        if (empty($channelGamePlatformIds)) {
+            return message_error('该渠道未开启任何电子游戏平台');
+        }
+
+        // 验证选择的游戏
+        $selectedGames = Game::query()->whereIn('id', $selected)->get();
+        if ($selectedGames->isEmpty()) {
+            return message_error('未找到选择的游戏');
+        }
+
+        // 验证游戏是否都在渠道允许的范围内
+        foreach ($selectedGames as $game) {
+            if (!in_array($game->platform_id, $channelGamePlatformIds)) {
+                return message_error('选择的游戏不在渠道允许的范围内');
+            }
+        }
+
+        // 处理筛选条件（如果有筛选，只删除筛选结果中未选中的）
+        $filteredIds = [];
+        $filterAdd = false;
+
+        if (!empty($ex_admin_filter['platform_id']) || !empty($ex_admin_filter['cate_id']) ||
+            isset($ex_admin_filter['is_hot']) || isset($ex_admin_filter['is_new'])) {
+
+            $gameList = Game::query()
+                ->whereIn('platform_id', $channelGamePlatformIds)
+                ->where('status', 1)
+                ->when(!empty($ex_admin_filter['platform_id']), function ($query) use ($ex_admin_filter) {
+                    $query->where('platform_id', $ex_admin_filter['platform_id']);
+                })
+                ->when(!empty($ex_admin_filter['cate_id']), function ($query) use ($ex_admin_filter) {
+                    $query->where('cate_id', $ex_admin_filter['cate_id']);
+                })
+                ->when(isset($ex_admin_filter['is_hot']), function ($query) use ($ex_admin_filter) {
+                    $query->where('is_hot', $ex_admin_filter['is_hot']);
+                })
+                ->when(isset($ex_admin_filter['is_new']), function ($query) use ($ex_admin_filter) {
+                    $query->where('is_new', $ex_admin_filter['is_new']);
+                })
+                ->orderBy('id', 'desc')
+                ->forPage($page, $size)
+                ->pluck('id')
+                ->toArray();
+
+            $filteredIds = array_diff($gameList, $selected);
+            $filterAdd = true;
+        }
+
+        Db::beginTransaction();
+        try {
+            if ($filterAdd) {
+                // 如果有筛选条件，只删除筛选结果中未选中的
+                if (!empty($filteredIds)) {
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->whereIn('game_id', $filteredIds)
+                        ->delete();
+                }
+            } else {
+                // 没有筛选条件，清空该玩家所有游戏权限
+                PlayerDisabledGame::query()
+                    ->where('player_id', $player_id)
+                    ->delete();
+            }
+
+            // 批量插入或更新选中的游戏
+            $insertData = [];
+            foreach ($selectedGames as $game) {
+                $insertData[] = [
+                    'player_id' => $player_id,
+                    'game_id' => $game->id,
+                    'platform_id' => $game->platform_id,
+                    'status' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ];
+            }
+
+            if (!empty($insertData)) {
+                PlayerDisabledGame::query()->upsert(
+                    $insertData,
+                    ['player_id', 'game_id'],
+                    ['platform_id', 'status', 'updated_at']
+                );
+            }
+
+            Db::commit();
+
+            $count = count($selected);
+            return message_success("成功设置了 {$count} 个游戏权限")->refresh();
+        } catch (Exception $e) {
+            Db::rollBack();
+            Log::error('save_player_games', [$e->getMessage(), $e->getTrace()]);
+            return message_error($e->getMessage() ?? '保存失败');
+        }
+    }
+
+    /**
+     * 玩家钱包
+     * @auth true
+     * @param $data
+     * @return Form
+     */
+    public function presentNoPassword($data): Form
+    {
+
+        return Form::create([], function (Form $form) use ($data) {
+            $form->hidden('id')->default($data['id']);
+
+            // 获取当前店家账号信息（AdminUser）
+            /** @var \addons\webman\model\AdminUser $store */
+            $store = Admin::user();
+
+            // 货币符号映射
+            $currencySymbols = [
+                'CNY' => '¥',
+                'USD' => '$',
+                'VND' => '₫',
+                'THB' => '฿',
+                'KRW' => '₩',
+                'JPY' => '¥',
+            ];
+
+            // 默认值
+            $currencySymbol = '¥';
+            $ratio = 1;
+
+            /** @var Channel $channel */
+            $channel = Channel::query()->where('department_id', $store->department_id)->first();
+            if ($channel) {
+                /** @var Currency $currency */
+                $currency = Currency::query()->where('identifying', $channel->currency ?? 'CNY')
+                    ->where('status', 1)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if ($currency) {
+                    $currencySymbol = $currencySymbols[$currency->identifying] ?? $currency->identifying;
+                    $ratio = $currency->ratio ?? 1;
+                }
+            }
+
+            // 店家不再有 PlayerPlatformCash，设为 null
+            $storePlatformCash = null;
+            /** @var PlayerPlatformCash $machinePlatformCash */
+            $machinePlatformCash = PlayerPlatformCash::query()->where('player_id', $data['id'])->first();
+
+            $deviceMoneyAmount = bcdiv($machinePlatformCash->money ?? 0, $ratio, 2);
+            $tipMessage = admin_trans('channel_agent.tip_device_balance', null, [
+                    '{balance}' => $deviceMoneyAmount,
+                    '{currency}' => $currencySymbol,
+                    '{points}' => $machinePlatformCash->money
+                ]) . ' <br>' . admin_trans('channel_agent.tip_exchange_rate', null, [
+                    '{currency}' => $currencySymbol,
+                    '{ratio}' => $ratio
+                ]);
+            $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . $tipMessage . '</font>'));
+
+            // 获取开分配置（使用 admin_user_id）
+            /** @var OpenScoreSetting $openScoreSetting */
+            $openScoreSetting = OpenScoreSetting::query()->where('admin_user_id', $store->id)->first();
+
+            // 如果有开分配置，显示预设金额选项
+            if ($openScoreSetting) {
+                $presetOptions = ['0' => admin_trans('channel_agent.custom_amount')];
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $scoreKey = 'score_' . $i;
+                    if ($openScoreSetting->$scoreKey > 0) {
+                        // 将游戏点数转换成货币金额显示
+                        $moneyAmount = bcdiv($openScoreSetting->$scoreKey, $ratio, 2);
+                        $presetOptions[$moneyAmount] = admin_trans('channel_agent.preset_amount') . " {$i}: {$currencySymbol}{$moneyAmount} ({$openScoreSetting->$scoreKey}" . admin_trans('channel_agent.points') . ")";
+                    }
+                }
+
+                // 添加默认分数选项
+                if ($openScoreSetting->default_scores > 0) {
+                    $defaultMoney = bcdiv($openScoreSetting->default_scores, $ratio, 2);
+                    $presetOptions[$defaultMoney] = admin_trans('channel_agent.default_amount') . ": {$currencySymbol}{$defaultMoney} ({$openScoreSetting->default_scores}" . admin_trans('channel_agent.points') . ")";
+                }
+
+                if (count($presetOptions) > 1) {
+                    $form->select('preset_amount', admin_trans('channel_agent.quick_amount'))
+                        ->options($presetOptions)
+                        ->default('0')
+                        ->required()
+                        ->help(admin_trans('channel_agent.tip_select_preset', null, ['{currency}' => $currencySymbol, '{ratio}' => $ratio]))
+                        ->when(['0'], function (Form $form) use ($deviceMoneyAmount, $currencySymbol, $ratio) {
+                            // 当选择"自定义金额"时显示输入框
+                            // 生成参考金额表
+                            $referenceAmounts = [10, 50, 100, 500, 1000];
+                            $referenceText = admin_trans('channel_agent.reference') . "：";
+                            foreach ($referenceAmounts as $amount) {
+                                $points = $amount * $ratio;
+                                $referenceText .= " {$amount}{$currencySymbol}={$points}" . admin_trans('channel_agent.points');
+                            }
+
+                            $form->number('amount', admin_trans('channel_agent.recharge_amount'))
+                                ->min(1)
+                                ->max(10000000)
+                                ->precision(2)
+                                ->style(['width' => '100%'])
+                                ->addonBefore("{$currencySymbol}")
+                                ->help(admin_trans('channel_agent.tip_reference', null, [
+                                    '{currency}' => $currencySymbol,
+                                    '{balance}' => $deviceMoneyAmount,
+                                    '{ratio}' => $ratio,
+                                    '{reference}' => $referenceText
+                                ]))
+                                ->required();
+                        });
+                } else {
+                    // 如果没有预设金额配置，直接显示输入框
+                    $form->number('amount', admin_trans('channel_agent.recharge_amount'))
+                        ->min(1)
+                        ->max(10000000)
+                        ->precision(2)
+                        ->style(['width' => '100%'])
+                        ->addonBefore("{$currencySymbol}")
+                        ->help(admin_trans('channel_agent.device_balance') . ": {$currencySymbol}{$deviceMoneyAmount}，1{$currencySymbol} = {$ratio}" . admin_trans('channel_agent.points'))
+                        ->required();
+
+                    // 添加实时计算提示
+                    $form->push(Html::markdown(
+                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>转换预览：</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">请输入金额</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 点</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">汇率：1 ' . $currencySymbol . ' = ' . $ratio . ' 游戏点数</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '";function u(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" 点",p.style.color="#0ea5e9"):(m.textContent="请输入金额",p.textContent="0 点",p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
+                    ));
+                }
+            } else {
+                // 如果没有开分配置，直接显示输入框
+                $form->number('amount', admin_trans('channel_agent.recharge_amount'))
+                    ->min(1)
+                    ->max(10000000)
+                    ->precision(2)
+                    ->style(['width' => '100%'])
+                    ->addonBefore("{$currencySymbol}")
+                    ->help(admin_trans('channel_agent.device_balance') . ": {$currencySymbol}{$deviceMoneyAmount}，1{$currencySymbol} = {$ratio}" . admin_trans('channel_agent.points'))
+                    ->required();
+            }
+            $form->textarea('remark', admin_trans('player.wallet.textarea'))->maxlength(255)->bindAttr('rows',
+                4)->required();
+            $form->saving(function (Form $form) {
+                $acceptId = $form->input('id');
+                $presetAmount = $form->input('preset_amount');
+                $customAmount = $form->input('amount');
+                $remark = $form->input('remark');
+
+                // 确定最终使用的货币金额
+                // 情况1: 有预设金额字段
+                if ($presetAmount !== null) {
+                    if ($presetAmount === '0') {
+                        // 选择了自定义金额，使用输入框的值
+                        if (!$customAmount) {
+                            return message_error(admin_trans('channel_agent.error_amount_required'));
+                        }
+                        $moneyAmount = $customAmount;
+                    } else {
+                        // 选择了预设金额（已经是货币金额）
+                        $moneyAmount = $presetAmount;
+                    }
+                } else {
+                    // 情况2: 没有预设金额字段（没有配置或只有一个选项）
+                    if (!$customAmount) {
+                        return message_error(admin_trans('channel_agent.error_amount_required'));
+                    }
+                    $moneyAmount = $customAmount;
+                }
+
+                // 验证货币金额
+                if (!is_numeric($moneyAmount) || $moneyAmount <= 0) {
+                    return message_error(admin_trans('channel_agent.error_amount_invalid'));
+                }
+
+                // 获取店家账号信息（AdminUser）
+                /** @var \addons\webman\model\AdminUser $store */
+                $store = Admin::user();
+
+                // 获取设备玩家信息
+                /** @var Player $devicePlayer */
+                $devicePlayer = Player::where('id', $acceptId)->whereNull('deleted_at')->where('department_id',
+                    $store->department_id)->first();
+                if (empty($devicePlayer)) {
+                    return message_error(admin_trans('channel_agent.error_device_not_found'));
+                }
+
+                // 检查设备账号状态
+                if ($devicePlayer->status == 0) {
+                    return message_error(trans('present_account_disabled', [], 'message'));
+                }
+
+                // 获取渠道信息
+                /** @var Channel $channel */
+                $channel = Channel::query()->where('department_id', $store->department_id)->first();
+                if (empty($channel)) {
+                    return message_error(trans('channel_not_found', [], 'message'));
+                }
+                if ($channel->recharge_status == 0) {
+                    return message_error(trans('recharge_closed', [], 'message'));
+                }
+
+                // 获取货币配置
+                /** @var Currency $currency */
+                $currency = Currency::query()->where('identifying', $channel->currency)->where('status',
+                    1)->whereNull('deleted_at')->select(['id', 'identifying', 'ratio'])->first();
+                if (empty($currency)) {
+                    return message_error(trans('currency_no_setting', [], 'message'));
+                }
+
+                // 将货币金额转换成游戏点数
+                $money = $moneyAmount; // 用户输入的货币金额
+                $scoreAmount = bcmul($money, $currency->ratio, 0); // 转换成游戏点数（整数）
+                if ($scoreAmount <= 0) {
+                    return message_error('转换后的游戏点数无效');
+                }
+                // 开分逻辑
+                DB::beginTransaction();
+                try {
+                    /** @var PlayerPlatformCash $deviceWallet */
+                    $deviceWallet = PlayerPlatformCash::query()->where('player_id', $devicePlayer->id)->lockForUpdate()->first();
+
+                    // 生成充值订单
+                    $playerRechargeRecord = new PlayerRechargeRecord();
+                    $playerRechargeRecord->player_id = $devicePlayer->id;
+                    $playerRechargeRecord->talk_user_id = $devicePlayer->talk_user_id;
+                    $playerRechargeRecord->department_id = $devicePlayer->department_id;
+                    $playerRechargeRecord->tradeno = createOrderNo();
+                    $playerRechargeRecord->player_name = $devicePlayer->name ?? '';
+                    $playerRechargeRecord->player_phone = $devicePlayer->phone ?? '';
+                    $playerRechargeRecord->money = $money;
+                    $playerRechargeRecord->inmoney = $money;
+                    $playerRechargeRecord->currency = $currency->identifying;
+                    $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_ARTIFICIAL;
+                    $playerRechargeRecord->point = $scoreAmount;
+                    $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
+                    $playerRechargeRecord->remark = "店家后台开分" . ($remark ? "：{$remark}" : "");
+                    $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
+                    $playerRechargeRecord->user_id = Admin::user()->id;
+                    $playerRechargeRecord->user_name = Admin::user()->name ?? '';
+                    $playerRechargeRecord->save();
+
+                    // 更新玩家钱包
+                    $deviceWallet->money = bcadd($deviceWallet->money, $playerRechargeRecord->point, 2);
+                    $deviceWallet->save();
+
+                    // 更新玩家充值总额
+                    $devicePlayer->player_extend->recharge_amount = bcadd($devicePlayer->player_extend->recharge_amount,
+                        $playerRechargeRecord->point, 2);
+
+                    // 全民代理首充返佣逻辑
+                    if (isset($devicePlayer->national_promoter->status) && $devicePlayer->national_promoter->status == 0) {
+                        $devicePlayer->national_promoter->created_at = $playerRechargeRecord->finish_time;
+                        $devicePlayer->national_promoter->status = 1;
+                        if (!empty($devicePlayer->recommend_id) && $devicePlayer->channel->national_promoter_status == 1) {
+                            // 玩家上级推广员信息
+                            /** @var Player $recommendPlayer */
+                            $recommendPlayer = Player::query()->find($devicePlayer->recommend_id);
+                            // 推广员为全民代理
+                            if (!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1) {
+                                // 首充返佣金额
+                                /** @var PlayerPlatformCash $recommendPlayerWallet */
+                                $recommendPlayerWallet = PlayerPlatformCash::query()->where('player_id',
+                                    $devicePlayer->recommend_id)->lockForUpdate()->first();
+                                $beforeRechargeAmount = $recommendPlayerWallet->money;
+                                $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
+                                $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $rechargeRebate, 2);
+
+                                // 写入首充金流明细
+                                $playerDeliveryRecord = new PlayerDeliveryRecord;
+                                $playerDeliveryRecord->player_id = $recommendPlayer->id;
+                                $playerDeliveryRecord->department_id = $recommendPlayer->department_id;
+                                $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
+                                $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
+                                $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE_REWARD;
+                                $playerDeliveryRecord->source = 'national_promoter';
+                                $playerDeliveryRecord->amount = $rechargeRebate;
+                                $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
+                                $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
+                                $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
+                                $playerDeliveryRecord->save();
+
+                                // 首充成功之后全民代理邀请奖励
+                                $recommendPlayer->national_promoter->invite_num = bcadd($recommendPlayer->national_promoter->invite_num, 1, 0);
+                                $recommendPlayer->national_promoter->settlement_amount = bcadd($recommendPlayer->national_promoter->settlement_amount, $rechargeRebate, 2);
+                                /** @var NationalInvite $national_invite */
+                                $national_invite = NationalInvite::query()->where('min', '<=',
+                                    $recommendPlayer->national_promoter->invite_num)
+                                    ->where('max', '>=', $recommendPlayer->national_promoter->invite_num)->first();
+
+                                if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
+                                    $inviteMoney = $national_invite->money;
+                                    $amount_before = $recommendPlayerWallet->money;
+                                    $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $inviteMoney, 2);
+                                    // 写入金流明细
+                                    $inviteDeliveryRecord = new PlayerDeliveryRecord;
+                                    $inviteDeliveryRecord->player_id = $recommendPlayer->id;
+                                    $inviteDeliveryRecord->department_id = $recommendPlayer->department_id;
+                                    $inviteDeliveryRecord->target = $national_invite->getTable();
+                                    $inviteDeliveryRecord->target_id = $national_invite->id;
+                                    $inviteDeliveryRecord->type = PlayerDeliveryRecord::TYPE_NATIONAL_INVITE;
+                                    $inviteDeliveryRecord->source = 'national_promoter';
+                                    $inviteDeliveryRecord->amount = $inviteMoney;
+                                    $inviteDeliveryRecord->amount_before = $amount_before;
+                                    $inviteDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                    $inviteDeliveryRecord->tradeno = '';
+                                    $inviteDeliveryRecord->remark = '';
+                                    $inviteDeliveryRecord->save();
+                                }
+                                $recommendPlayer->push();
+                                $recommendPlayerWallet->save();
+
+                                // 全民代理收益记录
+                                $nationalProfitRecord = new NationalProfitRecord();
+                                $nationalProfitRecord->uid = $playerRechargeRecord->player_id;
+                                $nationalProfitRecord->recommend_id = $playerRechargeRecord->player->recommend_id;
+                                $nationalProfitRecord->money = $rechargeRebate;
+                                $nationalProfitRecord->type = 0;
+                                $nationalProfitRecord->status = 1;
+                                $nationalProfitRecord->save();
+                            }
+                        }
+                    }
+
+                    $devicePlayer->push();
+
+                    // 写入充值金流明细
+                    $rechargeDeliveryRecord = new PlayerDeliveryRecord;
+                    $rechargeDeliveryRecord->player_id = $playerRechargeRecord->player_id;
+                    $rechargeDeliveryRecord->department_id = $playerRechargeRecord->department_id;
+                    $rechargeDeliveryRecord->target = $playerRechargeRecord->getTable();
+                    $rechargeDeliveryRecord->target_id = $playerRechargeRecord->id;
+                    $rechargeDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
+                    $rechargeDeliveryRecord->source = 'artificial_recharge';
+                    $rechargeDeliveryRecord->amount = $playerRechargeRecord->point;
+                    $rechargeDeliveryRecord->amount_before = $deviceWallet->money - $playerRechargeRecord->point;
+                    $rechargeDeliveryRecord->amount_after = $deviceWallet->money;
+                    $rechargeDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
+                    $rechargeDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
+                    $rechargeDeliveryRecord->save();
+
+                    // 注意：旧的推荐系统营收统计已移除
+                    // 新架构中，营收统计通过 StoreAgentProfitRecord 表记录
+                    // 可通过查询相关记录表实时计算，而不是在此累加
+
+                    DB::commit();
+                } catch (Exception $e) {
+                    DB::rollBack();
+                    Log::error('store_open_score', [$e->getTrace()]);
+                    return message_error($e->getMessage() ?? trans('system_error', [], 'message'));
+                }
+
+                // 发送充值通知（发送游戏点数）
+                queueClient::send('game-depositAmount', [
+                    'player_id' => $devicePlayer->id,
+                    'amount' => $scoreAmount
+                ]);
+
+                return message_success(admin_trans('channel_agent.success_open_score'));
+            });
+            $form->layout('vertical');
+        });
     }
 }
