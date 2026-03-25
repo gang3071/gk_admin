@@ -17,17 +17,17 @@ class ShiftReportExporter extends Excel
     // 跟踪设备数量
     protected $totalDevices = 0;
 
-    // 总计数据
+    // 总计数据（累加所有设备明细）
     protected $grandTotal = [
         'machine_point' => 0,
-        'recharge_amount' => 0,
-        'withdrawal_amount' => 0,
-        'modified_add_amount' => 0,
-        'modified_deduct_amount' => 0,
-        'lottery_amount' => 0,
-        'total_in' => 0,
-        'total_out' => 0,
-        'profit' => 0
+        'recharge_amount' => 0,      // 开分
+        'withdrawal_amount' => 0,    // 洗分
+        'modified_add_amount' => 0,  // 后台加点
+        'modified_deduct_amount' => 0, // 后台扣点
+        'lottery_amount' => 0,       // 彩金
+        'total_in' => 0,             // 总收入
+        'total_out' => 0,            // 总支出
+        'profit' => 0                // 利润
     ];
 
     public function columns(array $columns)
@@ -39,19 +39,6 @@ class ShiftReportExporter extends Excel
 
     public function write(array $data, \Closure $finish = null)
     {
-        // 在第一行写入超级明显的标记
-        if ($this->currentRow == 1) {
-            $this->sheet->setCellValue('A1', '【！！！调试版本！！！】这是调试版本的导出');
-            $this->sheet->mergeCells('A1:K1');
-            $this->sheet->getStyle('A1')->applyFromArray([
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FF0000']],
-                'font' => ['size' => 16, 'color' => ['rgb' => 'FFFFFF'], 'bold' => true],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
-            ]);
-            $this->sheet->getRowDimension(1)->setRowHeight(30);
-            $this->currentRow = 2;
-        }
-
         try {
         foreach ($data as $record) {
             // 从数据库查询原始记录（因为 parseColumn 后的数据没有所有字段）
@@ -66,7 +53,7 @@ class ShiftReportExporter extends Excel
             }
 
             // 交班记录标题行
-            $this->sheet->setCellValue('A' . $this->currentRow, '交班ID: ' . $originalRecord->id);
+            $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.shift_id') . ': ' . $originalRecord->id);
             $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                 'font' => ['bold' => true, 'size' => 14],
@@ -79,10 +66,10 @@ class ShiftReportExporter extends Excel
 
             // 交班汇总信息（改为更清晰的布局）
             $summaryData = [
-                ['交班时间:', $originalRecord->start_time . ' ~ ' . $originalRecord->end_time, '交班类型:', $originalRecord->is_auto_shift == 1 ? '自动交班' : '手动交班'],
-                ['投钞点数:', number_format($originalRecord->machine_point, 0), '彩金:', number_format($originalRecord->lottery_amount, 2)],
-                ['总收入:', number_format($originalRecord->total_in, 2), '总支出:', number_format($originalRecord->total_out, 2)],
-                ['利润:', number_format($originalRecord->total_profit_amount, 2), '', '']
+                [admin_trans('shift.shift_time') . ':', $originalRecord->start_time . ' ~ ' . $originalRecord->end_time, admin_trans('shift.shift_type') . ':', $originalRecord->is_auto_shift == 1 ? admin_trans('shift.auto_shift') : admin_trans('shift.manual_shift')],
+                [admin_trans('shift.machine_point') . ':', number_format($originalRecord->machine_point, 0), admin_trans('shift.lottery_amount') . ':', number_format($originalRecord->lottery_amount, 2)],
+                [admin_trans('shift.total_in') . ':', number_format($originalRecord->total_in, 2), admin_trans('shift.total_out') . ':', number_format($originalRecord->total_out, 2)],
+                [admin_trans('shift.profit') . ':', number_format($originalRecord->total_profit_amount, 2), '', '']
             ];
 
             $summaryStartRow = $this->currentRow;
@@ -129,7 +116,19 @@ class ShiftReportExporter extends Excel
 
             if ($deviceDetails->isNotEmpty()) {
                 // 设备明细表头
-                $headers = ['设备名称', '设备编号', '投钞点数', '开分', '洗分', '后台加点', '后台扣点', '彩金', '总收入', '总支出', '利润'];
+                $headers = [
+                    admin_trans('shift.device_name'),
+                    admin_trans('shift.device_number'),
+                    admin_trans('shift.machine_point'),
+                    admin_trans('shift.recharge_amount'),
+                    admin_trans('shift.withdrawal_amount'),
+                    admin_trans('shift.modified_add_amount'),
+                    admin_trans('shift.modified_deduct_amount'),
+                    admin_trans('shift.lottery_amount'),
+                    admin_trans('shift.total_in'),
+                    admin_trans('shift.total_out'),
+                    admin_trans('shift.profit')
+                ];
                 $headerRow = $this->currentRow;
 
                 foreach ($headers as $index => $header) {
@@ -160,11 +159,9 @@ class ShiftReportExporter extends Excel
 
                 // 设备明细数据
                 $detailStartRow = $this->currentRow;
-                $detailCount = 0;
                 foreach ($deviceDetails as $index => $detail) {
-                    $detailCount++;
 
-                    $this->sheet->setCellValue('A' . $this->currentRow, $detail->player_name . ' [调试:profit=' . $detail->profit . ']');
+                    $this->sheet->setCellValue('A' . $this->currentRow, $detail->player_name);
                     $this->sheet->setCellValue('B' . $this->currentRow, $detail->player_phone);
                     $this->sheet->setCellValue('C' . $this->currentRow, number_format($detail->machine_point, 0));
                     $this->sheet->setCellValue('D' . $this->currentRow, number_format($detail->recharge_amount, 2));
@@ -192,8 +189,7 @@ class ShiftReportExporter extends Excel
                     $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($profitColor);
                     $this->sheet->getStyle('K' . $this->currentRow)->getFont()->setBold(true);
 
-                    // 累加小计（添加调试）
-                    $beforeSubtotalProfit = $subtotal['profit'];
+                    // 累加小计
                     $subtotal['machine_point'] += $detail->machine_point;
                     $subtotal['recharge_amount'] += $detail->recharge_amount;
                     $subtotal['withdrawal_amount'] += $detail->withdrawal_amount;
@@ -203,38 +199,12 @@ class ShiftReportExporter extends Excel
                     $subtotal['total_in'] += $detail->total_in;
                     $subtotal['total_out'] += $detail->total_out;
                     $subtotal['profit'] += $detail->profit;
-                    $afterSubtotalProfit = $subtotal['profit'];
 
                     $this->currentRow++;
                 }
 
-                // 在设备明细后添加累加过程调试信息
-                $this->sheet->setCellValue('A' . $this->currentRow, '【设备累加完成】');
-                $this->sheet->setCellValue('B' . $this->currentRow, '设备数:' . $detailCount);
-                $this->sheet->setCellValue('C' . $this->currentRow, 'subtotal[profit]:' . $subtotal['profit']);
-                $this->sheet->setCellValue('D' . $this->currentRow, 'subtotal[total_in]:' . $subtotal['total_in']);
-                $this->sheet->setCellValue('E' . $this->currentRow, 'subtotal[machine_point]:' . $subtotal['machine_point']);
-                $this->sheet->mergeCells('E' . $this->currentRow . ':K' . $this->currentRow);
-                $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFD700']],
-                    'font' => ['size' => 10, 'color' => ['rgb' => 'FF0000'], 'bold' => true]
-                ]);
-                $this->currentRow++;
-
-                // 准备累加调试信息（在累加之前记录）
-                $beforeGrandProfit = floatval($this->grandTotal['profit'] ?? 0);
-                $subtotalProfit = floatval($subtotal['profit'] ?? 0);
-                $expectedAfter = $beforeGrandProfit + $subtotalProfit;
-
-                // 小计行（添加完整调试信息）
-                $debugMsg = sprintf(
-                    '小计(#%d) [小计利润:%.2f 总计累加前:%.2f 预期累加后:%.2f]',
-                    $originalRecord->id,
-                    $subtotalProfit,
-                    $beforeGrandProfit,
-                    $expectedAfter
-                );
-                $this->sheet->setCellValue('A' . $this->currentRow, $debugMsg);
+                // 小计行
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.subtotal') . ' (' . admin_trans('shift.shift_id') . '#' . $originalRecord->id . ')');
                 $this->sheet->setCellValue('B' . $this->currentRow, '');
                 $this->sheet->setCellValue('C' . $this->currentRow, number_format($subtotal['machine_point'], 0));
                 $this->sheet->setCellValue('D' . $this->currentRow, number_format($subtotal['recharge_amount'], 2));
@@ -260,44 +230,30 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 累加到总计
+                // 累加小计到总计
                 foreach ($subtotal as $key => $value) {
-                    // 确保数值类型
-                    $currentValue = floatval($this->grandTotal[$key] ?? 0);
-                    $addValue = floatval($value ?? 0);
-                    $this->grandTotal[$key] = $currentValue + $addValue;
+                    $this->grandTotal[$key] += floatval($value ?? 0);
                 }
-
-                // 验证累加结果
-                $actualAfter = floatval($this->grandTotal['profit']);
-                $diff = $actualAfter - $beforeGrandProfit;
-
-                // 添加累加验证调试行（绿色）
-                $verifyMsg = sprintf(
-                    '【累加验证】实际累加后:%.2f 差值:%.2f %s',
-                    $actualAfter,
-                    $diff,
-                    abs($diff - $subtotalProfit) < 0.01 ? '✓正确' : '✗错误！应该是' . $expectedAfter
-                );
-                $this->sheet->setCellValue('A' . $this->currentRow, $verifyMsg);
-                $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
-                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'CCFFCC']],
-                    'font' => ['size' => 10, 'color' => ['rgb' => '009900'], 'bold' => true],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]
-                ]);
-                $this->currentRow++;
 
                 // 累加设备数量
                 $this->totalDevices += $deviceDetails->count();
             } else {
-                $this->sheet->setCellValue('A' . $this->currentRow, '暂无设备数据');
+                // 没有设备明细数据，使用交班记录的汇总数据
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.no_device_data'));
                 $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
                 $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFF4E6']]
                 ]);
                 $this->currentRow++;
+
+                // 使用交班记录的汇总数据累加（这些字段在交班记录中有）
+                $this->grandTotal['machine_point'] += floatval($originalRecord->machine_point ?? 0);
+                $this->grandTotal['lottery_amount'] += floatval($originalRecord->lottery_amount ?? 0);
+                $this->grandTotal['total_in'] += floatval($originalRecord->total_in ?? 0);
+                $this->grandTotal['total_out'] += floatval($originalRecord->total_out ?? 0);
+                $this->grandTotal['profit'] += floatval($originalRecord->total_profit_amount ?? 0);
             }
 
             // 空行分隔
@@ -362,8 +318,17 @@ class ShiftReportExporter extends Excel
     {
         $this->currentRow += 1;
 
-        // 总计标题
-        $this->sheet->setCellValue('A' . $this->currentRow, '═══ 总计 ═══ (共 ' . $this->processedRecords . ' 次交班, ' . $this->totalDevices . ' 台设备)');
+        // 总计标题（添加说明）
+        $totalTitle = sprintf(
+            '═══ %s ═══  【%s %d %s | %d %s】',
+            admin_trans('shift.grand_total'),
+            admin_trans('shift.total_shifts'),
+            $this->processedRecords,
+            admin_trans('shift.shifts'),
+            $this->totalDevices,
+            admin_trans('shift.devices')
+        );
+        $this->sheet->setCellValue('A' . $this->currentRow, $totalTitle);
         $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
         $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 14],
@@ -375,13 +340,8 @@ class ShiftReportExporter extends Excel
         $this->sheet->getRowDimension($this->currentRow)->setRowHeight(30);
         $this->currentRow++;
 
-        // 总计数据行（完整调试信息）
-        $debugLines = [];
-        foreach ($this->grandTotal as $key => $value) {
-            $debugLines[] = $key . '=' . $value;
-        }
-        $debugInfo = implode(', ', $debugLines);
-        $this->sheet->setCellValue('A' . $this->currentRow, '全部交班记录');
+        // 总计数据行
+        $this->sheet->setCellValue('A' . $this->currentRow, sprintf('%s (%d%s)', admin_trans('shift.all_devices_summary'), $this->totalDevices, admin_trans('shift.devices_unit')));
         $this->sheet->setCellValue('B' . $this->currentRow, '');
         $this->sheet->setCellValue('C' . $this->currentRow, number_format($this->grandTotal['machine_point'], 0));
         $this->sheet->setCellValue('D' . $this->currentRow, number_format($this->grandTotal['recharge_amount'], 2));
@@ -406,18 +366,14 @@ class ShiftReportExporter extends Excel
         $grandProfitColor = $this->grandTotal['profit'] >= 0 ? '3f8600' : 'cf1322';
         $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($grandProfitColor);
 
-        // 添加调试行显示完整的 grandTotal 数据
+        // 添加说明行
         $this->currentRow += 2;
-        $this->sheet->setCellValue('A' . $this->currentRow, '【调试信息】grandTotal 数组内容:');
-        $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true)->getColor()->setRGB('FF0000');
-        $this->currentRow++;
-
-        foreach ($this->grandTotal as $key => $value) {
-            $this->sheet->setCellValue('A' . $this->currentRow, $key);
-            $this->sheet->setCellValue('B' . $this->currentRow, $value);
-            $this->sheet->setCellValue('C' . $this->currentRow, gettype($value));
-            $this->currentRow++;
-        }
+        $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.export_note'));
+        $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
+        $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
+            'font' => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '666666']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]
+        ]);
     }
 
     /**
