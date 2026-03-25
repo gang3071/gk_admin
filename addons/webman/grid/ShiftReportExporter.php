@@ -190,8 +190,8 @@ class ShiftReportExporter extends Excel
                     $this->currentRow++;
                 }
 
-                // 小计行
-                $this->sheet->setCellValue('A' . $this->currentRow, '小计');
+                // 小计行（添加调试信息）
+                $this->sheet->setCellValue('A' . $this->currentRow, '小计 (交班#' . $originalRecord->id . ')');
                 $this->sheet->setCellValue('B' . $this->currentRow, '');
                 $this->sheet->setCellValue('C' . $this->currentRow, number_format($subtotal['machine_point'], 0));
                 $this->sheet->setCellValue('D' . $this->currentRow, number_format($subtotal['recharge_amount'], 2));
@@ -217,42 +217,13 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 累加到总计（添加详细调试）
-                $beforeTotal = [
-                    'profit' => $this->grandTotal['profit'],
-                    'total_in' => $this->grandTotal['total_in'],
-                    'machine_point' => $this->grandTotal['machine_point']
-                ];
-
+                // 累加到总计
                 foreach ($subtotal as $key => $value) {
                     // 确保数值类型
                     $currentValue = floatval($this->grandTotal[$key] ?? 0);
                     $addValue = floatval($value ?? 0);
                     $this->grandTotal[$key] = $currentValue + $addValue;
                 }
-
-                $afterTotal = [
-                    'profit' => $this->grandTotal['profit'],
-                    'total_in' => $this->grandTotal['total_in'],
-                    'machine_point' => $this->grandTotal['machine_point']
-                ];
-
-                // 写入调试信息到明显位置（在空行处）
-                $debugRow = $this->currentRow;
-                $this->sheet->setCellValue('A' . $debugRow, '【调试】');
-                $this->sheet->setCellValue('B' . $debugRow, sprintf('交班#%d', $originalRecord->id));
-                $this->sheet->setCellValue('C' . $debugRow, sprintf('小计: %.2f', $subtotal['profit']));
-                $this->sheet->setCellValue('D' . $debugRow, sprintf('累加前: %.2f', $beforeTotal['profit']));
-                $this->sheet->setCellValue('E' . $debugRow, sprintf('累加后: %.2f', $afterTotal['profit']));
-                $this->sheet->setCellValue('F' . $debugRow, sprintf('设备: %d', $deviceDetails->count()));
-                $this->sheet->setCellValue('G' . $debugRow, sprintf('已处理: %d/%d', $this->processedRecords, $this->count));
-
-                // 调试行样式
-                $this->sheet->getStyle('A' . $debugRow . ':G' . $debugRow)->applyFromArray([
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFFF00']],
-                    'font' => ['size' => 9, 'color' => ['rgb' => 'FF0000'], 'bold' => true]
-                ]);
-                $this->currentRow++;
 
                 // 累加设备数量
                 $this->totalDevices += $deviceDetails->count();
@@ -341,9 +312,13 @@ class ShiftReportExporter extends Excel
         $this->sheet->getRowDimension($this->currentRow)->setRowHeight(30);
         $this->currentRow++;
 
-        // 总计数据行（添加调试信息）
-        $debugInfo = json_encode($this->grandTotal);
-        $this->sheet->setCellValue('A' . $this->currentRow, '全部交班记录 [调试: ' . substr($debugInfo, 0, 50) . '...]');
+        // 总计数据行（完整调试信息）
+        $debugLines = [];
+        foreach ($this->grandTotal as $key => $value) {
+            $debugLines[] = $key . '=' . $value;
+        }
+        $debugInfo = implode(', ', $debugLines);
+        $this->sheet->setCellValue('A' . $this->currentRow, '全部交班记录');
         $this->sheet->setCellValue('B' . $this->currentRow, '');
         $this->sheet->setCellValue('C' . $this->currentRow, number_format($this->grandTotal['machine_point'], 0));
         $this->sheet->setCellValue('D' . $this->currentRow, number_format($this->grandTotal['recharge_amount'], 2));
@@ -367,6 +342,19 @@ class ShiftReportExporter extends Excel
         // 总计利润颜色
         $grandProfitColor = $this->grandTotal['profit'] >= 0 ? '3f8600' : 'cf1322';
         $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($grandProfitColor);
+
+        // 添加调试行显示完整的 grandTotal 数据
+        $this->currentRow += 2;
+        $this->sheet->setCellValue('A' . $this->currentRow, '【调试信息】grandTotal 数组内容:');
+        $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true)->getColor()->setRGB('FF0000');
+        $this->currentRow++;
+
+        foreach ($this->grandTotal as $key => $value) {
+            $this->sheet->setCellValue('A' . $this->currentRow, $key);
+            $this->sheet->setCellValue('B' . $this->currentRow, $value);
+            $this->sheet->setCellValue('C' . $this->currentRow, gettype($value));
+            $this->currentRow++;
+        }
     }
 
     /**
