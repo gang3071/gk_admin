@@ -217,9 +217,16 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 累加到总计
+                // 累加到总计（调试：记录累加前后的值）
+                $beforeProfit = $this->grandTotal['profit'];
                 foreach ($subtotal as $key => $value) {
                     $this->grandTotal[$key] += $value;
+                }
+                $afterProfit = $this->grandTotal['profit'];
+
+                // 在第一行写入调试信息
+                if ($this->currentRow == 1 || !isset($this->debugRow)) {
+                    $this->debugRow = 1;
                 }
 
                 // 累加设备数量
@@ -309,8 +316,9 @@ class ShiftReportExporter extends Excel
         $this->sheet->getRowDimension($this->currentRow)->setRowHeight(30);
         $this->currentRow++;
 
-        // 总计数据行
-        $this->sheet->setCellValue('A' . $this->currentRow, '全部交班记录');
+        // 总计数据行（添加调试信息）
+        $debugInfo = json_encode($this->grandTotal);
+        $this->sheet->setCellValue('A' . $this->currentRow, '全部交班记录 [调试: ' . substr($debugInfo, 0, 50) . '...]');
         $this->sheet->setCellValue('B' . $this->currentRow, '');
         $this->sheet->setCellValue('C' . $this->currentRow, number_format($this->grandTotal['machine_point'], 0));
         $this->sheet->setCellValue('D' . $this->currentRow, number_format($this->grandTotal['recharge_amount'], 2));
