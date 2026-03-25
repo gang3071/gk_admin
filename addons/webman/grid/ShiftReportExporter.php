@@ -190,8 +190,20 @@ class ShiftReportExporter extends Excel
                     $this->currentRow++;
                 }
 
-                // 小计行（添加调试信息）
-                $this->sheet->setCellValue('A' . $this->currentRow, '小计 (交班#' . $originalRecord->id . ')');
+                // 准备累加调试信息（在累加之前记录）
+                $beforeGrandProfit = floatval($this->grandTotal['profit'] ?? 0);
+                $subtotalProfit = floatval($subtotal['profit'] ?? 0);
+                $expectedAfter = $beforeGrandProfit + $subtotalProfit;
+
+                // 小计行（添加完整调试信息）
+                $debugMsg = sprintf(
+                    '小计(#%d) [小计利润:%.2f 总计累加前:%.2f 预期累加后:%.2f]',
+                    $originalRecord->id,
+                    $subtotalProfit,
+                    $beforeGrandProfit,
+                    $expectedAfter
+                );
+                $this->sheet->setCellValue('A' . $this->currentRow, $debugMsg);
                 $this->sheet->setCellValue('B' . $this->currentRow, '');
                 $this->sheet->setCellValue('C' . $this->currentRow, number_format($subtotal['machine_point'], 0));
                 $this->sheet->setCellValue('D' . $this->currentRow, number_format($subtotal['recharge_amount'], 2));
@@ -217,35 +229,31 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 添加 subtotal 调试行
-                $this->sheet->setCellValue('A' . $this->currentRow, '【调试】subtotal 数据:');
-                $this->sheet->setCellValue('B' . $this->currentRow, 'profit=' . $subtotal['profit']);
-                $this->sheet->setCellValue('C' . $this->currentRow, 'total_in=' . $subtotal['total_in']);
-                $this->sheet->setCellValue('D' . $this->currentRow, 'machine_point=' . $subtotal['machine_point']);
-                $this->sheet->getStyle('A' . $this->currentRow . ':D' . $this->currentRow)->applyFromArray([
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFCCCC']],
-                    'font' => ['size' => 9, 'color' => ['rgb' => '0000FF']]
-                ]);
-                $this->currentRow++;
-
-                // 累加到总计（添加调试）
-                $beforeProfit = $this->grandTotal['profit'];
+                // 累加到总计
                 foreach ($subtotal as $key => $value) {
                     // 确保数值类型
                     $currentValue = floatval($this->grandTotal[$key] ?? 0);
                     $addValue = floatval($value ?? 0);
                     $this->grandTotal[$key] = $currentValue + $addValue;
                 }
-                $afterProfit = $this->grandTotal['profit'];
 
-                // 添加累加结果调试行
-                $this->sheet->setCellValue('A' . $this->currentRow, '【调试】累加结果:');
-                $this->sheet->setCellValue('B' . $this->currentRow, '累加前profit=' . $beforeProfit);
-                $this->sheet->setCellValue('C' . $this->currentRow, '累加后profit=' . $afterProfit);
-                $this->sheet->setCellValue('D' . $this->currentRow, '差值=' . ($afterProfit - $beforeProfit));
-                $this->sheet->getStyle('A' . $this->currentRow . ':D' . $this->currentRow)->applyFromArray([
+                // 验证累加结果
+                $actualAfter = floatval($this->grandTotal['profit']);
+                $diff = $actualAfter - $beforeGrandProfit;
+
+                // 添加累加验证调试行（绿色）
+                $verifyMsg = sprintf(
+                    '【累加验证】实际累加后:%.2f 差值:%.2f %s',
+                    $actualAfter,
+                    $diff,
+                    abs($diff - $subtotalProfit) < 0.01 ? '✓正确' : '✗错误！应该是' . $expectedAfter
+                );
+                $this->sheet->setCellValue('A' . $this->currentRow, $verifyMsg);
+                $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
+                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'CCFFCC']],
-                    'font' => ['size' => 9, 'color' => ['rgb' => '009900']]
+                    'font' => ['size' => 10, 'color' => ['rgb' => '009900'], 'bold' => true],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]
                 ]);
                 $this->currentRow++;
 
