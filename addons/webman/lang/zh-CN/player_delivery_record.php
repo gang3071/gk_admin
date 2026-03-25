@@ -57,7 +57,7 @@ return [
     ],
     'detail' => '详情',
     'chart' => '图表',
-    'total_in_amount' => '转入',
-    'total_out_amount' => '转出',
+    'total_in_amount' => '充值',
+    'total_out_amount' => '提现',
     'total_machine_amount' => '投钞',
 ];

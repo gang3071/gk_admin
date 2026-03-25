@@ -26,7 +26,6 @@ use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
-use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\image\Image;
 use ExAdmin\ui\component\grid\statistic\Statistic;
@@ -1436,11 +1435,6 @@ class ChannelAgentController
                     $query->where('uuid', $exAdminFilter['player']['uuid']);
                 });
             }
-            if (!empty($exAdminFilter['player']['phone'])) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('phone', $exAdminFilter['player']['phone']);
-                });
-            }
             // 店家筛选
             if (!empty($exAdminFilter['player']['store_admin_id'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
@@ -1556,18 +1550,6 @@ class ChannelAgentController
             $grid->autoHeight();
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
             $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
-            $grid->column('player.phone', admin_trans('channel_agent.account'))->display(function (
-                $val,
-                PlayerDeliveryRecord $data
-            ) {
-                $image = $data->player->avatar ? Avatar::create()->src(is_numeric($data->player->avatar) ? config('def_avatar.' . $data->player->avatar) : $data->player->avatar) : Avatar::create()->icon(Icon::create('UserOutlined'));
-                return Html::create()->content([
-                    $image,
-                    Html::div()->content($data->player->name)
-                ]);
-            })->align('center')->filter(
-                FilterColumn::like()->text('player.phone')
-            );
             $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->align('center');
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
                 $val,
@@ -1831,7 +1813,6 @@ class ChannelAgentController
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
-                $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('search_source')->placeholder(admin_trans('player_delivery_record.fields.source'));
                 $filter->select('search_type')
                     ->showSearch()

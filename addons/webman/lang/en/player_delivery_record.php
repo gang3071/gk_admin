@@ -57,7 +57,7 @@ return [
     ],
     'detail' => 'details',
     'chart' => 'chart',
-    'total_in_amount' => 'Transfer in',
-    'total_out_amount' => 'Transfer out',
+    'total_in_amount' => 'Recharge',
+    'total_out_amount' => 'Withdraw',
     'total_machine_amount' => 'Money feeding',
 ];

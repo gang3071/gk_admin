@@ -57,7 +57,7 @@ return [
     ],
     'detail' => '詳情',
     'chart' => '圖表',
-    'total_in_amount' => '転入',
-    'total_out_amount' => '轉出',
+    'total_in_amount' => '充值',
+    'total_out_amount' => '提現',
     'total_machine_amount' => '投札',
 ];

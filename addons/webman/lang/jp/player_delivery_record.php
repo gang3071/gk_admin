@@ -57,7 +57,7 @@ return [
     ],
     'detail' => '詳細',
     'chart' => 'チャート',
-    'total_in_amount' => '転出',
-    'total_out_amount' => '転出',
+    'total_in_amount' => 'チャージ',
+    'total_out_amount' => '引き出し',
     'total_machine_amount' => '投鈔',
 ];
