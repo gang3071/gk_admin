@@ -4570,12 +4570,7 @@ class ChannelPlayerController
                 return $val == 1 ? Tag::create('新')->color('orange') : '';
             })->align('center')->width('80px');
 
-            $grid->column('sort', '排序')->align('center')->width('80px');
-
             $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
-                $actions->hideDel();
-                $actions->hideEdit();
-
                 // 判断当前游戏是否被禁用
                 $isDisabled = in_array($data->id, $selectedGameIds);
                 // 已禁用，显示"取消禁用"按钮
