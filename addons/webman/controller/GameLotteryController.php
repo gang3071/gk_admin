@@ -164,7 +164,7 @@ class GameLotteryController
                 Button::create('清理统计数据')
                     ->icon(Icon::create('DeleteOutlined'))
                     ->type('danger')
-                    ->confirm('确定要清理所有彩金的统计数据吗？\n\n这将重置：\n• 总检查次数\n• 总中奖次数\n• 今日检查次数\n• 今日中奖次数\n\n清理后统计将从0重新开始计算。', [$this, 'clearStats'])
+                    ->confirm('确定要清理所有彩金的统计数据吗？清理后统计将从0重新开始计算（包括总检查次数、总中奖次数、今日检查次数、今日中奖次数）', [$this, 'clearStats'])
                     ->gridRefresh()
             ]);
 
