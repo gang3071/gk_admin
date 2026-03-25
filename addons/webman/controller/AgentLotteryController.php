@@ -7,8 +7,6 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\Lottery;
 use addons\webman\model\PlayerLotteryRecord;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -80,9 +78,6 @@ class AgentLotteryController
             if (!empty($requestFilter['machine_name'])) {
                 $grid->model()->where('machine_name', 'like', '%' . $requestFilter['machine_name'] . '%');
             }
-            if (!empty($requestFilter['player_phone'])) {
-                $grid->model()->where('player_phone', 'like', '%' . $requestFilter['player_phone'] . '%');
-            }
             if (!empty($requestFilter['player']['name'])) {
                 $grid->model()->whereHas('player', function ($query) use ($requestFilter) {
                     $query->where('name', 'like', '%' . $requestFilter['player']['name'] . '%');
@@ -141,7 +136,7 @@ class AgentLotteryController
             $grid->header($layout);
 
             // 列定义
-            $grid->column('id', admin_trans('player_lottery_record.fields.id'))->align('center')->fixed(true);
+            $grid->column('id', admin_trans('player_lottery_record.fields.id'))->align('center');
             $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
             $grid->column('uuid', admin_trans('player.fields.device_uuid'))
                 ->display(function ($val, PlayerLotteryRecord $data) {
@@ -151,34 +146,6 @@ class AgentLotteryController
                     ]);
                 })
                 ->align('center')->fixed(true)->copy();
-
-            $grid->column('player_phone', admin_trans('player_lottery_record.fields.player_phone'))
-                ->display(function ($val, PlayerLotteryRecord $data) {
-                    $image = isset($data->player->avatar) && !empty($data->player->avatar)
-                        ? Avatar::create()->src($data->player->avatar)
-                        : Avatar::create()->icon(Icon::create('UserOutlined'));
-                    return Html::create()->content([
-                        $image,
-                        Html::div()->content($val)
-                    ]);
-                })->align('center')->fixed(true)->ellipsis(true);
-
-            $grid->column('type', admin_trans('player.fields.type'))
-                ->display(function ($val, $data) {
-                    $tags = [];
-                    if ($data['is_test'] == 1) {
-                        $tags[] = Tag::create(admin_trans('player.fields.is_test'))->color('red');
-                    } else {
-                        $tags[] = Tag::create(admin_trans('player.player'))->color('green');
-                    }
-                    if ($data['is_coin'] == 1) {
-                        $tags[] = Tag::create(admin_trans('player.coin_merchant'))->color('#3b5999');
-                    }
-                    if ($data['is_promoter'] == 1) {
-                        $tags[] = Tag::create(admin_trans('player.promoter'))->color('purple');
-                    }
-                    return Html::create()->content($tags)->style(['display' => 'inline-flex', 'text-align' => 'center']);
-                })->ellipsis(true)->width(200)->align('center');
 
             $grid->column('player.agentAdmin.username', admin_trans('admin.agent'))->display(function ($val, PlayerLotteryRecord $data) {
                 if (!empty($data->player->agentAdmin)) {
@@ -306,7 +273,6 @@ class AgentLotteryController
                 $filter->like()->text('machine_code')->placeholder(admin_trans('player_lottery_record.fields.machine_code'));
                 $filter->like()->text('lottery_name')->placeholder(admin_trans('player_lottery_record.fields.lottery_name'));
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
-                $filter->like()->text('player_phone')->placeholder(admin_trans('player_lottery_record.fields.player_phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->eq()->number('amount')->precision(2)->style(['width' => '150px'])
                     ->placeholder(admin_trans('player_lottery_record.fields.amount'));
