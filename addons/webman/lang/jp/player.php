@@ -51,6 +51,7 @@ return [
         'uuid' => 'プレイヤーUID',
         'device_uuid' => 'デバイスUUID',
         'device_name' => 'デバイス名',
+        'store_admin' => '所属店舗',
         'type' => 'プレイヤータイプ',
         'player_type_normal' => '通常プレーヤー',
         'player_type_agent' => 'エージェント',

@@ -51,6 +51,7 @@ return [
         'uuid' => 'Player UID',
         'device_uuid' => 'Device UUID',
         'device_name' => 'Device Name',
+        'store_admin' => 'Store',
         'type' => 'Player type',
         'player_type_normal' => 'Normal Player',
         'player_type_agent' => 'Agent',

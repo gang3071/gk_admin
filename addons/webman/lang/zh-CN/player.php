@@ -51,6 +51,7 @@ return [
         'uuid' => '玩家UID',
         'device_uuid' => '设备UUID',
         'device_name' => '设备名称',
+        'store_admin' => '所属店家',
         'type' => '玩家类型',
         'player_type_normal' => '普通玩家',
         'player_type_agent' => '代理',
