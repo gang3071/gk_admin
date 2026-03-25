@@ -3,7 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\model\GameLottery;
-use addons\webman\model\Lottery;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
@@ -72,24 +72,24 @@ class GameLotteryController
                 })
                 ->align('center');
             $grid->column('max_amount', admin_trans('lottery.max_amount'))->align('center');
-            $grid->column('max_pool_amount', '最大彩池金额')->align('center');
+            $grid->column('max_pool_amount', admin_trans('lottery.max_pool_amount'))->align('center');
             $grid->column('double_amount', admin_trans('lottery.double_amount'))->align('center');
 
             // 保底金额列
-            $grid->column('auto_refill_amount', '保底金额')->display(function ($val, GameLottery $data) {
+            $grid->column('auto_refill_amount', admin_trans('lottery.auto_refill_amount'))->display(function ($val, GameLottery $data) {
                 if ($data->auto_refill_status == 1 && $val > 0) {
                     return Html::create()->content([
                         Html::div()
                             ->content(number_format($val, 2))
                             ->style(['color' => '#1890ff', 'font-weight' => 'bold']),
                         Html::div()
-                            ->content('(已启用)')
+                            ->content('(' . admin_trans('lottery.enabled') . ')')
                             ->style(['color' => '#52c41a', 'font-size' => '12px'])
                     ]);
                 } else {
                     return Html::create()->content([
                         Html::div()
-                            ->content('未启用')
+                            ->content(admin_trans('lottery.disabled'))
                             ->style(['color' => '#999', 'font-size' => '12px'])
                     ]);
                 }
@@ -115,7 +115,7 @@ class GameLotteryController
             })->align('center');
 
             // 开奖次数和中奖次数统计
-            $grid->column('lottery_stats', '开奖统计')->display(function ($val, GameLottery $data) {
+            $grid->column('lottery_stats', admin_trans('lottery.lottery_stats'))->display(function ($val, GameLottery $data) {
                 try {
                     $redis = \support\Redis::connection()->client();
                     $today = date('Y-m-d');
@@ -134,15 +134,15 @@ class GameLotteryController
 
                     return Html::create()->content([
                         // 总统计
-                        Html::div()->content('总计: ' . $totalChecks . '次 / ' . $totalWins . '中 (' . $totalWinRate . '%)')
+                        Html::div()->content(admin_trans('lottery.stats_total') . ': ' . $totalChecks . admin_trans('lottery.stats_times') . ' / ' . $totalWins . admin_trans('lottery.stats_win') . ' (' . $totalWinRate . '%)')
                             ->style(['font-size' => '12px', 'color' => '#1890ff']),
                         // 今日统计
-                        Html::div()->content('今日: ' . $dailyChecks . '次 / ' . $dailyWins . '中 (' . $dailyWinRate . '%)')
+                        Html::div()->content(admin_trans('lottery.stats_today') . ': ' . $dailyChecks . admin_trans('lottery.stats_times') . ' / ' . $dailyWins . admin_trans('lottery.stats_win') . ' (' . $dailyWinRate . '%)')
                             ->style(['font-size' => '12px', 'color' => '#52c41a', 'margin-top' => '4px']),
                     ]);
                 } catch (\Exception $e) {
                     return Html::create()->content([
-                        Html::div()->content('统计数据获取失败')
+                        Html::div()->content(admin_trans('lottery.stats_error'))
                             ->style(['color' => '#ff4d4f', 'font-size' => '12px'])
                     ]);
                 }
@@ -156,6 +156,16 @@ class GameLotteryController
             $grid->column('created_at', admin_trans('lottery.fields.created_at'))->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
+
+            // 添加清理统计数据按钮
+            $grid->tools([
+                Button::create(admin_trans('lottery.clear_stats'))
+                    ->icon(Icon::create('DeleteOutlined'))
+                    ->type('danger')
+                    ->confirm(admin_trans('lottery.clear_stats_confirm'), [$this, 'clearStats'])
+                    ->gridRefresh()
+            ]);
+
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('lottery.fields.name'));
@@ -675,5 +685,85 @@ class GameLotteryController
                 $form->input('burst_trigger_config', json_encode($triggerConfig));
             });
         })->labelWidth('150');
+    }
+
+    /**
+     * 清理统计数据
+     * @auth true
+     * @return Notification
+     */
+    public function clearStats(): Notification
+    {
+        try {
+            $redis = \support\Redis::connection()->client();
+            $today = date('Y-m-d');
+
+            // 获取所有启用的彩金ID
+            $lotteries = GameLottery::query()
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->pluck('id')
+                ->toArray();
+
+            $clearedCount = 0;
+            $details = [];
+
+            foreach ($lotteries as $id) {
+                $cleared = [];
+
+                // 清理每日统计
+                $dailyTotalKey = 'game_lottery_stats:daily:total:' . $id . ':' . $today;
+                $dailyWinKey = 'game_lottery_stats:daily:win:' . $id . ':' . $today;
+
+                if ($redis->exists($dailyTotalKey)) {
+                    $redis->del($dailyTotalKey);
+                    $cleared[] = 'daily_total';
+                }
+
+                if ($redis->exists($dailyWinKey)) {
+                    $redis->del($dailyWinKey);
+                    $cleared[] = 'daily_win';
+                }
+
+                // 清理总统计
+                $totalKey = 'game_lottery_stats:total:' . $id;
+                $winKey = 'game_lottery_stats:win:' . $id;
+
+                if ($redis->exists($totalKey)) {
+                    $redis->del($totalKey);
+                    $cleared[] = 'total';
+                }
+
+                if ($redis->exists($winKey)) {
+                    $redis->del($winKey);
+                    $cleared[] = 'win';
+                }
+
+                if (!empty($cleared)) {
+                    $clearedCount++;
+                    $details[] = [
+                        'lottery_id' => $id,
+                        'cleared_keys' => $cleared,
+                    ];
+                }
+            }
+
+            Log::info('清理彩金统计数据成功', [
+                'cleared_count' => $clearedCount,
+                'details' => $details
+            ]);
+
+            return notification_success(
+                admin_trans('lottery.clear_stats_success_title'),
+                admin_trans('lottery.clear_stats_success_message', null, ['{count}' => $clearedCount]) . "\n\n已重置：\n• 总检查次数\n• 总中奖次数\n• 今日检查次数\n• 今日中奖次数"
+            );
+
+        } catch (\Exception $e) {
+            Log::error('清理彩金统计数据异常', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return notification_error(admin_trans('lottery.clear_stats_error_title'), $e->getMessage());
+        }
     }
 }

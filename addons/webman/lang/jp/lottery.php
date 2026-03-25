@@ -121,4 +121,20 @@ return [
     'base_bet_amount_100000000' => '最高ベット額制限を1億に設定',
 
     'base_bet_amount_help' => 'ベット額制限。抽選に参加するには、各ベット額がこの設定額以上である必要があります',
+    // 新規フィールド
+    'max_pool_amount' => '最大プール金額',
+    'auto_refill_amount' => '保証金額',
+    'enabled' => '有効',
+    'disabled' => '無効',
+    'lottery_stats' => '抽選統計',
+    'stats_total' => '合計',
+    'stats_today' => '本日',
+    'stats_times' => '回',
+    'stats_win' => '当選',
+    'stats_error' => '統計データの取得に失敗しました',
+    'clear_stats' => '統計データをクリア',
+    'clear_stats_confirm' => 'すべての宝くじの統計データをクリアしてもよろしいですか？クリア後、統計は0から再開されます（総チェック回数、総当選回数、本日のチェック回数、本日の当選回数を含む）',
+    'clear_stats_success_title' => 'クリア成功',
+    'clear_stats_success_message' => '{count} 個の宝くじの統計データを正常にクリアしました',
+    'clear_stats_error_title' => 'クリア失敗',
 ];

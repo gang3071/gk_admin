@@ -36,6 +36,23 @@ return [
     'placeholder_start_num' => '请输入起始数',
     'placeholder_end_num' => '请输入终点数',
     'placeholder_max_amount' => '请输入封顶金额',
+    // 新增字段
+    'max_pool_amount' => '最大彩池金额',
+    'auto_refill_amount' => '保底金额',
+    'enabled' => '已启用',
+    'disabled' => '未启用',
+    'lottery_stats' => '开奖统计',
+    'stats_total' => '总计',
+    'stats_today' => '今日',
+    'stats_times' => '次',
+    'stats_win' => '中',
+    'stats_error' => '统计数据获取失败',
+    'clear_stats' => '清理统计数据',
+    'clear_stats_confirm' => '确定要清理所有彩金的统计数据吗？清理后统计将从0重新开始计算（包括总检查次数、总中奖次数、今日检查次数、今日中奖次数）',
+    'clear_stats_success_title' => '清理成功',
+    'clear_stats_success_message' => '成功清理了 {count} 个彩金的统计数据',
+    'clear_stats_error_title' => '清理失败',
+
     'rul' => [
         'start_num_required' => '起始数必填',
         'start_num_min_1' => '起始数不能为0',
