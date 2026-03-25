@@ -76,6 +76,11 @@ class AgentPlayerRechargeRecordController
             if (!empty($exAdminFilter['created_at_end'])) {
                 $grid->model()->where('created_at', '<=', $exAdminFilter['created_at_end']);
             }
+            if (!empty($exAdminFilter['player']['name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                });
+            }
             if (!empty($exAdminFilter['player']['uuid'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
                     $query->where('uuid', $exAdminFilter['player']['uuid']);
@@ -176,7 +181,8 @@ class AgentPlayerRechargeRecordController
 
             $grid->column('id', admin_trans('player_recharge_record.fields.id'))->align('center')->width(80);
             $grid->column('tradeno', admin_trans('player_recharge_record.fields.tradeno'))->copy()->width(180);
-            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->copy()->width(150);
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->copy()->width(150);
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerRechargeRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1
@@ -257,7 +263,8 @@ class AgentPlayerRechargeRecordController
                     ->placeholder(admin_trans('admin.store'))
                     ->remoteOptions(admin_url([ChannelAgentController::class, 'getStoreOptions']));
 
-                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('tradeno')->placeholder(admin_trans('player_recharge_record.fields.tradeno'));
 
                 $filter->select('type')

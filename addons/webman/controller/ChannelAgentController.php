@@ -1426,6 +1426,11 @@ class ChannelAgentController
             if (!empty($exAdminFilter['platform_id'])) {
                 $grid->model()->where('platform_id', $exAdminFilter['platform_id']);
             }
+            if (!empty($exAdminFilter['player']['name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                });
+            }
             if (!empty($exAdminFilter['player']['uuid'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
                     $query->where('uuid', $exAdminFilter['player']['uuid']);
@@ -1550,6 +1555,7 @@ class ChannelAgentController
             $grid->bordered();
             $grid->autoHeight();
             $grid->column('id', admin_trans('player_delivery_record.fields.id'))->align('center');
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
             $grid->column('player.phone', admin_trans('channel_agent.account'))->display(function (
                 $val,
                 PlayerDeliveryRecord $data
@@ -1562,7 +1568,7 @@ class ChannelAgentController
             })->align('center')->filter(
                 FilterColumn::like()->text('player.phone')
             );
-            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->align('center');
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->align('center');
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
                 $val,
                 PlayerDeliveryRecord $data
@@ -1823,7 +1829,8 @@ class ChannelAgentController
                 $actions->hideEdit();
             });
             $grid->filter(function (Filter $filter) use ($admin) {
-                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('search_source')->placeholder(admin_trans('player_delivery_record.fields.source'));
                 $filter->select('search_type')

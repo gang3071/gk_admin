@@ -49,6 +49,8 @@ return [
         'country_code' => 'Country/region code',
         'player_tag' => 'tag',
         'uuid' => 'Player UID',
+        'device_uuid' => 'Device UUID',
+        'device_name' => 'Device Name',
         'type' => 'Player type',
         'player_type_normal' => 'Normal Player',
         'player_type_agent' => 'Agent',

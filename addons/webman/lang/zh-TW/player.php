@@ -49,6 +49,8 @@ return [
         'country_code' => '國家/地區號',
         'player_tag' => '標籤',
         'uuid' => '玩家UID',
+        'device_uuid' => '設備UUID',
+        'device_name' => '設備名稱',
         'type' => '玩家類型',
         'player_type_normal' => '普通玩家',
         'player_type_agent' => '代理',

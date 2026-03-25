@@ -49,6 +49,8 @@ return [
         'country_code' => '国/地域コード',
         'player_tag' => 'タグ',
         'uuid' => 'プレイヤーUID',
+        'device_uuid' => 'デバイスUUID',
+        'device_name' => 'デバイス名',
         'type' => 'プレイヤータイプ',
         'player_type_normal' => '通常プレーヤー',
         'player_type_agent' => 'エージェント',

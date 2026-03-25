@@ -78,6 +78,11 @@ class AgentPlayGameRecordController
             if (!empty($exAdminFilter['order_no'])) {
                 $grid->model()->where('order_no', 'like', '%' . $exAdminFilter['order_no'] . '%');
             }
+            if (!empty($exAdminFilter['player']['name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                });
+            }
             if (!empty($exAdminFilter['player']['uuid'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
                     $query->where('uuid', 'like', $exAdminFilter['player']['uuid'] . '%');
@@ -114,19 +119,8 @@ class AgentPlayGameRecordController
             $grid->header($layout);
 
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center')->width(80);
-            $grid->column('player.name', admin_trans('player.fields.name'))->display(function (
-                $val,
-                PlayGameRecord $data
-            ) {
-                $image = $data->player->avatar
-                    ? Avatar::create()->src(is_numeric($data->player->avatar) ? config('def_avatar.' . $data->player->avatar) : $data->player->avatar)
-                    : Avatar::create()->icon(Icon::create('UserOutlined'));
-                return Html::create()->content([
-                    $image,
-                    Html::div()->content($data->player->name)
-                ]);
-            })->fixed(true)->align('center')->width(150);
-            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->fixed(true)->copy()->align('center')->width(150);
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->copy()->align('center')->width(150);
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayGameRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1
@@ -180,7 +174,8 @@ class AgentPlayGameRecordController
                     ->placeholder(admin_trans('admin.store'))
                     ->remoteOptions(admin_url([ChannelAgentController::class, 'getStoreOptions']));
 
-                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('order_no')->placeholder(admin_trans('play_game_record.fields.order_no'));
                 $filter->like()->text('game_code')->placeholder(admin_trans('play_game_record.fields.game_code'));
 

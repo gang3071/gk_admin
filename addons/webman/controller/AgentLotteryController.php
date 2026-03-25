@@ -83,6 +83,11 @@ class AgentLotteryController
             if (!empty($requestFilter['player_phone'])) {
                 $grid->model()->where('player_phone', 'like', '%' . $requestFilter['player_phone'] . '%');
             }
+            if (!empty($requestFilter['player']['name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($requestFilter) {
+                    $query->where('name', 'like', '%' . $requestFilter['player']['name'] . '%');
+                });
+            }
             if (!empty($requestFilter['status'])) {
                 $grid->model()->where('status', $requestFilter['status']);
             }
@@ -137,7 +142,8 @@ class AgentLotteryController
 
             // 列定义
             $grid->column('id', admin_trans('player_lottery_record.fields.id'))->align('center')->fixed(true);
-            $grid->column('uuid', admin_trans('player_lottery_record.fields.uuid'))
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
+            $grid->column('uuid', admin_trans('player.fields.device_uuid'))
                 ->display(function ($val, PlayerLotteryRecord $data) {
                     return Html::create()->content([
                         Html::div()->content($val),
@@ -299,8 +305,9 @@ class AgentLotteryController
                 $filter->like()->text('machine_name')->placeholder(admin_trans('player_lottery_record.fields.machine_name'));
                 $filter->like()->text('machine_code')->placeholder(admin_trans('player_lottery_record.fields.machine_code'));
                 $filter->like()->text('lottery_name')->placeholder(admin_trans('player_lottery_record.fields.lottery_name'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('player_phone')->placeholder(admin_trans('player_lottery_record.fields.player_phone'));
-                $filter->like()->text('uuid')->placeholder(admin_trans('player_lottery_record.fields.uuid'));
+                $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->eq()->number('amount')->precision(2)->style(['width' => '150px'])
                     ->placeholder(admin_trans('player_lottery_record.fields.amount'));
 
