@@ -4,14 +4,34 @@ namespace addons\webman\grid;
 
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\grid\grid\excel\AbstractExporter;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class ShiftReportExporter extends AbstractExporter
 {
+    protected $spreadsheet;
+    protected $sheet;
+
+    public function init()
+    {
+        $this->spreadsheet = new Spreadsheet();
+        $this->sheet = $this->spreadsheet->getActiveSheet();
+        $this->sheet->setTitle('交班报表');
+    }
+
+    public function columns(array $columns)
+    {
+        parent::columns($columns);
+        // 不需要默认表头，我们自定义表头
+        return $this;
+    }
+
     public function write(array $data, \Closure $finish = null)
     {
-        $currentRow = $this->currentRow + 1;
+        // 从第1行开始（不要表头）
+        $currentRow = ($this->currentRow == 1) ? 1 : $this->currentRow + 1;
 
         foreach ($data as $record) {
             // 交班记录标题行
@@ -121,5 +141,19 @@ class ShiftReportExporter extends AbstractExporter
             $this->cache->expiresAfter(60);
             $this->filesystemAdapter->save($this->cache);
         }
+    }
+
+    /**
+     * 保存文件
+     * @param string $path 保存目录
+     * @return string
+     */
+    public function save(string $path)
+    {
+        $writer = IOFactory::createWriter($this->spreadsheet, ucfirst($this->extension));
+        $path = rtrim($path, DIRECTORY_SEPARATOR);
+        $filename = $path . DIRECTORY_SEPARATOR . $this->filename . '.' . $this->extension;
+        $writer->save($filename);
+        return $filename;
     }
 }
