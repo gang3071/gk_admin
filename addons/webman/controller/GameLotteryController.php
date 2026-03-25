@@ -156,6 +156,47 @@ class GameLotteryController
             $grid->column('created_at', admin_trans('lottery.fields.created_at'))->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
+
+            // 添加清理统计数据按钮
+            $grid->toolBarRight(function () {
+                return Html::create()->content([
+                    Html::button('清理统计数据')
+                        ->onClick('clearAllStats()')
+                        ->style([
+                            'margin-left' => '10px',
+                            'background' => '#ff4d4f',
+                            'border-color' => '#ff4d4f',
+                            'color' => '#fff'
+                        ]),
+                    Html::script()->content("
+                        function clearAllStats() {
+                            if (confirm('确定要清理所有彩金的统计数据吗？\\n\\n这将重置：\\n• 总检查次数\\n• 总中奖次数\\n• 今日检查次数\\n• 今日中奖次数\\n\\n清理后统计将从0重新开始计算。')) {
+                                fetch('" . admin_url('/webman/game-lottery/clear-stats') . "', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    },
+                                    body: JSON.stringify({})
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.code === 1) {
+                                        alert('✓ 统计数据清理成功！\\n\\n清理了 ' + data.data.cleared_count + ' 个彩金的统计数据');
+                                        window.location.reload();
+                                    } else {
+                                        alert('✗ 清理失败：' + data.msg);
+                                    }
+                                })
+                                .catch(error => {
+                                    alert('✗ 清理失败：' + error.message);
+                                });
+                            }
+                        }
+                    ")
+                ]);
+            });
+
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('lottery.fields.name'));
@@ -675,5 +716,89 @@ class GameLotteryController
                 $form->input('burst_trigger_config', json_encode($triggerConfig));
             });
         })->labelWidth('150');
+    }
+
+    /**
+     * 清理统计数据
+     * @auth true
+     * @return \support\Response
+     */
+    public function clearStats(): \support\Response
+    {
+        try {
+            $redis = \support\Redis::connection()->client();
+            $today = date('Y-m-d');
+
+            // 获取所有启用的彩金ID
+            $lotteries = GameLottery::query()
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->pluck('id')
+                ->toArray();
+
+            $clearedCount = 0;
+            $details = [];
+
+            foreach ($lotteries as $id) {
+                $cleared = [];
+
+                // 清理每日统计
+                $dailyTotalKey = 'game_lottery_stats:daily:total:' . $id . ':' . $today;
+                $dailyWinKey = 'game_lottery_stats:daily:win:' . $id . ':' . $today;
+
+                if ($redis->exists($dailyTotalKey)) {
+                    $redis->del($dailyTotalKey);
+                    $cleared[] = 'daily_total';
+                }
+
+                if ($redis->exists($dailyWinKey)) {
+                    $redis->del($dailyWinKey);
+                    $cleared[] = 'daily_win';
+                }
+
+                // 清理总统计
+                $totalKey = 'game_lottery_stats:total:' . $id;
+                $winKey = 'game_lottery_stats:win:' . $id;
+
+                if ($redis->exists($totalKey)) {
+                    $redis->del($totalKey);
+                    $cleared[] = 'total';
+                }
+
+                if ($redis->exists($winKey)) {
+                    $redis->del($winKey);
+                    $cleared[] = 'win';
+                }
+
+                if (!empty($cleared)) {
+                    $clearedCount++;
+                    $details[] = [
+                        'lottery_id' => $id,
+                        'cleared_keys' => $cleared,
+                    ];
+                }
+            }
+
+            Log::info('清理彩金统计数据成功', [
+                'cleared_count' => $clearedCount,
+                'details' => $details
+            ]);
+
+            return json([
+                'code' => 1,
+                'msg' => '清理成功',
+                'data' => [
+                    'cleared_count' => $clearedCount,
+                    'details' => $details
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('清理彩金统计数据异常', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return json(['code' => 0, 'msg' => '清理失败：' . $e->getMessage()]);
+        }
     }
 }
