@@ -78,6 +78,11 @@ class StoreShiftHandoverRecordController
 
             // 操作列 - 查看设备明细和导出
             $grid->column('device_detail', '操作')->display(function ($val, $data) {
+                $exportUrl = admin_url([
+                    'addons-webman-controller-StoreShiftHandoverRecordController',
+                    'exportReport'
+                ]) . '?shift_record_id=' . $data['id'];
+
                 return Html::create()->content([
                     Button::create('设备明细')
                         ->type('primary')
@@ -92,13 +97,7 @@ class StoreShiftHandoverRecordController
                     Html::create(' '),
                     Button::create('导出报表')
                         ->size('small')
-                        ->ajax(
-                            admin_url([
-                                'addons-webman-controller-StoreShiftHandoverRecordController',
-                                'exportReport'
-                            ]),
-                            ['shift_record_id' => $data['id']]
-                        )
+                        ->href($exportUrl)
                 ]);
             })->width(200)->align('center');
 
@@ -499,22 +498,20 @@ class StoreShiftHandoverRecordController
         }
 
         // 生成文件
-        $filename = '交班报表_' . date('YmdHis', strtotime($shiftRecord->start_time)) . '.xlsx';
+        $filename = 'shift_report_' . date('YmdHis', strtotime($shiftRecord->start_time)) . '.xlsx';
         $writer = new Xlsx($spreadsheet);
 
-        // 输出到临时文件
-        $tempFile = tempnam(sys_get_temp_dir(), 'shift_');
-        $writer->save($tempFile);
-
-        // 读取文件
-        $content = file_get_contents($tempFile);
-        unlink($tempFile);
+        // 直接输出到 php://output
+        ob_start();
+        $writer->save('php://output');
+        $content = ob_get_clean();
 
         // 返回响应
         return response($content, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
             'Cache-Control' => 'max-age=0',
+            'Pragma' => 'public',
         ]);
     }
 }
