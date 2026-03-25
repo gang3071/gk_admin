@@ -839,7 +839,16 @@ return [
         'method' => '',
         'group' => 'channel',
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/artificialRecharge',
-        'title' => '人工充值',
+        'title' => '开分',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelPlayerController\toggleGamePlatform',
+        'pid' => 'addons\webman\controller\ChannelPlayerController\index',
+        'action' => 'toggleGamePlatform',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/toggleGamePlatform',
+        'title' => '电子游戏禁用/启用',
     ],
     [
         'id' => 'addons\webman\controller\ChannelPlayerController\setPromoter',
