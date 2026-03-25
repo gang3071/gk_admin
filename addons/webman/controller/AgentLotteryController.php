@@ -158,7 +158,7 @@ class AgentLotteryController
                 ]);
             })->width(120)->align('center');
 
-            $grid->column('player.storeAdmin.username', admin_trans('admin.store'))->display(function ($val, PlayerLotteryRecord $data) {
+            $grid->column('player.storeAdmin.nickname', admin_trans('player.fields.store_admin'))->display(function ($val, PlayerLotteryRecord $data) {
                 if (!empty($data->player->storeAdmin)) {
                     return Html::create()->content([
                         Tag::create($data->player->storeAdmin->nickname ?: $data->player->storeAdmin->username)->color('blue')
