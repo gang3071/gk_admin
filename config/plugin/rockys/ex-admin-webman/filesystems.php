@@ -32,7 +32,7 @@ return [
         'local' => [
             'driver' => \addons\webman\filesystem\driver\Local::class,
             'root' => public_path('storage'),
-            'url' => env('APP_URL','http://127.0.0.1:8787').'/storage',
+            'url' => 'dynamic', // 标记为动态获取
             'visibility' => 'public',
         ],
         'google_oss' => [
