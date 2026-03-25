@@ -17,13 +17,17 @@ class ShiftReportExporter extends Excel
     // 跟踪设备数量
     protected $totalDevices = 0;
 
-    // 总计数据（使用交班记录的汇总字段）
+    // 总计数据（累加所有设备明细）
     protected $grandTotal = [
         'machine_point' => 0,
-        'lottery_amount' => 0,
-        'total_in' => 0,
-        'total_out' => 0,
-        'profit' => 0
+        'recharge_amount' => 0,      // 开分
+        'withdrawal_amount' => 0,    // 洗分
+        'modified_add_amount' => 0,  // 后台加点
+        'modified_deduct_amount' => 0, // 后台扣点
+        'lottery_amount' => 0,       // 彩金
+        'total_in' => 0,             // 总收入
+        'total_out' => 0,            // 总支出
+        'profit' => 0                // 利润
     ];
 
     public function columns(array $columns)
@@ -213,9 +217,17 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
 
                 $this->currentRow++;
+
+                // 累加小计到总计
+                foreach ($subtotal as $key => $value) {
+                    $this->grandTotal[$key] += floatval($value ?? 0);
+                }
+
+                // 累加设备数量
+                $this->totalDevices += $deviceDetails->count();
             } else {
-                // 没有设备明细数据
-                $this->sheet->setCellValue('A' . $this->currentRow, '暂无设备明细数据');
+                // 没有设备明细数据，使用交班记录的汇总数据
+                $this->sheet->setCellValue('A' . $this->currentRow, '暂无设备明细数据（使用交班汇总）');
                 $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
                 $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
@@ -223,18 +235,13 @@ class ShiftReportExporter extends Excel
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFF4E6']]
                 ]);
                 $this->currentRow++;
-            }
 
-            // 直接使用交班记录的汇总数据累加到总计（不管有没有设备明细）
-            $this->grandTotal['machine_point'] += floatval($originalRecord->machine_point ?? 0);
-            $this->grandTotal['lottery_amount'] += floatval($originalRecord->lottery_amount ?? 0);
-            $this->grandTotal['total_in'] += floatval($originalRecord->total_in ?? 0);
-            $this->grandTotal['total_out'] += floatval($originalRecord->total_out ?? 0);
-            $this->grandTotal['profit'] += floatval($originalRecord->total_profit_amount ?? 0);
-
-            // 累加设备数量（如果有设备明细）
-            if ($deviceDetails->isNotEmpty()) {
-                $this->totalDevices += $deviceDetails->count();
+                // 使用交班记录的汇总数据累加（这些字段在交班记录中有）
+                $this->grandTotal['machine_point'] += floatval($originalRecord->machine_point ?? 0);
+                $this->grandTotal['lottery_amount'] += floatval($originalRecord->lottery_amount ?? 0);
+                $this->grandTotal['total_in'] += floatval($originalRecord->total_in ?? 0);
+                $this->grandTotal['total_out'] += floatval($originalRecord->total_out ?? 0);
+                $this->grandTotal['profit'] += floatval($originalRecord->total_profit_amount ?? 0);
             }
 
             // 空行分隔
@@ -299,8 +306,13 @@ class ShiftReportExporter extends Excel
     {
         $this->currentRow += 1;
 
-        // 总计标题
-        $this->sheet->setCellValue('A' . $this->currentRow, '═══ 总计 ═══ (共 ' . $this->processedRecords . ' 次交班, ' . $this->totalDevices . ' 台设备)');
+        // 总计标题（添加说明）
+        $totalTitle = sprintf(
+            '═══ 总计 ═══  【共 %d 次交班 | %d 台设备】',
+            $this->processedRecords,
+            $this->totalDevices
+        );
+        $this->sheet->setCellValue('A' . $this->currentRow, $totalTitle);
         $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
         $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 14],
@@ -313,13 +325,13 @@ class ShiftReportExporter extends Excel
         $this->currentRow++;
 
         // 总计数据行
-        $this->sheet->setCellValue('A' . $this->currentRow, '全部交班记录汇总');
+        $this->sheet->setCellValue('A' . $this->currentRow, sprintf('全部设备汇总 (%d台)', $this->totalDevices));
         $this->sheet->setCellValue('B' . $this->currentRow, '');
         $this->sheet->setCellValue('C' . $this->currentRow, number_format($this->grandTotal['machine_point'], 0));
-        $this->sheet->setCellValue('D' . $this->currentRow, '');
-        $this->sheet->setCellValue('E' . $this->currentRow, '');
-        $this->sheet->setCellValue('F' . $this->currentRow, '');
-        $this->sheet->setCellValue('G' . $this->currentRow, '');
+        $this->sheet->setCellValue('D' . $this->currentRow, number_format($this->grandTotal['recharge_amount'], 2));
+        $this->sheet->setCellValue('E' . $this->currentRow, number_format($this->grandTotal['withdrawal_amount'], 2));
+        $this->sheet->setCellValue('F' . $this->currentRow, number_format($this->grandTotal['modified_add_amount'], 2));
+        $this->sheet->setCellValue('G' . $this->currentRow, number_format($this->grandTotal['modified_deduct_amount'], 2));
         $this->sheet->setCellValue('H' . $this->currentRow, number_format($this->grandTotal['lottery_amount'], 2));
         $this->sheet->setCellValue('I' . $this->currentRow, number_format($this->grandTotal['total_in'], 2));
         $this->sheet->setCellValue('J' . $this->currentRow, number_format($this->grandTotal['total_out'], 2));
@@ -337,6 +349,15 @@ class ShiftReportExporter extends Excel
         // 总计利润颜色
         $grandProfitColor = $this->grandTotal['profit'] >= 0 ? '3f8600' : 'cf1322';
         $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($grandProfitColor);
+
+        // 添加说明行
+        $this->currentRow += 2;
+        $this->sheet->setCellValue('A' . $this->currentRow, '说明：总计数据来源于所有设备明细的累加；若交班记录无设备明细，则使用交班汇总数据。');
+        $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
+        $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
+            'font' => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '666666']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]
+        ]);
     }
 
     /**
