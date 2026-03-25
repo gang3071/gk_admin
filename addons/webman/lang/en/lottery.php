@@ -120,4 +120,20 @@ return [
     'base_bet_amount_100000000' => 'Maximum bet amount limit set to 100 million',
 
     'base_bet_amount_help' => 'Bet amount limit, each bet must be greater than or equal to this setting to participate in the lottery',
+    // New fields
+    'max_pool_amount' => 'Maximum Pool Amount',
+    'auto_refill_amount' => 'Guaranteed Amount',
+    'enabled' => 'Enabled',
+    'disabled' => 'Disabled',
+    'lottery_stats' => 'Draw Statistics',
+    'stats_total' => 'Total',
+    'stats_today' => 'Today',
+    'stats_times' => 'times',
+    'stats_win' => 'Win',
+    'stats_error' => 'Failed to get statistics',
+    'clear_stats' => 'Clear Statistics',
+    'clear_stats_confirm' => 'Are you sure you want to clear all lottery statistics? After clearing, statistics will start from 0 (including total checks, total wins, today\'s checks, today\'s wins)',
+    'clear_stats_success_title' => 'Cleared Successfully',
+    'clear_stats_success_message' => 'Successfully cleared statistics for {count} lotteries',
+    'clear_stats_error_title' => 'Clear Failed',
 ];
