@@ -47,8 +47,7 @@ class PlayerDeliveryRecordController
      */
     public function index(): Grid
     {
-        $lang = Container::getInstance()->translator->getLocale();
-        return Grid::create(new $this->model(), function (Grid $grid) use ($lang) {
+        return Grid::create(new $this->model(), function (Grid $grid) {
             $grid->title(admin_trans('player_delivery_record.title'));
             $grid->model()->with(['player', 'machine', 'player.recommend_promoter'])->orderBy('created_at', 'desc');
             $exAdminFilter = Request::input('ex_admin_filter', []);
@@ -203,7 +202,7 @@ class PlayerDeliveryRecordController
             $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
                 $val,
                 PlayerDeliveryRecord $data
-            ) use ($lang) {
+            ) {
                 switch ($data->type) {
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
@@ -215,7 +214,7 @@ class PlayerDeliveryRecordController
                     case PlayerDeliveryRecord::COIN_DEDUCT:
                     case PlayerDeliveryRecord::TYPE_SPECIAL:
                     case PlayerDeliveryRecord::TYPE_MACHINE:
-                        return Tag::create(trans($val, [], 'message', $lang))->color('red');
+                        return Tag::create($val)->color('red');
                     case PlayerDeliveryRecord::TYPE_PRESENT_IN:
                     case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
                         return Tag::create($val)->color('green');
@@ -240,10 +239,10 @@ class PlayerDeliveryRecordController
                         }
                         break;
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
-                        return Tag::create(trans($val, [], 'message', $lang))->color('blue');
+                        return Tag::create($val)->color('blue');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
-                        return Tag::create(trans($val, [], 'message', $lang))->color('purple');
+                        return Tag::create($val)->color('purple');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
@@ -252,7 +251,7 @@ class PlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
                     case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
                     case PlayerDeliveryRecord::TYPE_LOTTERY:
-                        return Tag::create(trans($val, [], 'message', $lang))->color('orange');
+                        return Tag::create($val)->color('orange');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
