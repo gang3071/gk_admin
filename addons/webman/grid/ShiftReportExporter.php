@@ -39,6 +39,19 @@ class ShiftReportExporter extends Excel
 
     public function write(array $data, \Closure $finish = null)
     {
+        // 在第一行写入超级明显的标记
+        if ($this->currentRow == 1) {
+            $this->sheet->setCellValue('A1', '【！！！调试版本！！！】这是调试版本的导出');
+            $this->sheet->mergeCells('A1:K1');
+            $this->sheet->getStyle('A1')->applyFromArray([
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FF0000']],
+                'font' => ['size' => 16, 'color' => ['rgb' => 'FFFFFF'], 'bold' => true],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+            ]);
+            $this->sheet->getRowDimension(1)->setRowHeight(30);
+            $this->currentRow = 2;
+        }
+
         try {
         foreach ($data as $record) {
             // 从数据库查询原始记录（因为 parseColumn 后的数据没有所有字段）
