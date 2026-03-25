@@ -4572,7 +4572,6 @@ class ChannelPlayerController
 
             $grid->column('sort', '排序')->align('center')->width('80px');
 
-            $grid->hideDelete();
             $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -4608,9 +4607,10 @@ class ChannelPlayerController
                             ->gridRefresh()
                     );
                 }
-            });
+            })->align('center');
 
             $grid->pagination()->pageSize(50);
+            $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
