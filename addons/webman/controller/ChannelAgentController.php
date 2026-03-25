@@ -185,6 +185,7 @@ class ChannelAgentController
             });
 
             $grid->hideDelete();
+            $grid->hideSelection();
             $grid->expandFilter();
         });
     }
@@ -408,6 +409,7 @@ class ChannelAgentController
             });
 
             $grid->hideDelete();
+            $grid->hideSelection();
             $grid->expandFilter();
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $total);

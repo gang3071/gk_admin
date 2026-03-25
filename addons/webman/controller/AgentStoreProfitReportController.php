@@ -11,9 +11,7 @@ use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\support\Request;
-use Illuminate\Support\Facades\DB;
 
 /**
  * 代理后台 - 店家分润报表
@@ -210,6 +208,7 @@ class AgentStoreProfitReportController
 
             $grid->hideAction();
             $grid->hideDelete();
+            $grid->hideSelection();
             $grid->hideAdd();
             $grid->expandFilter();
             $grid->attr('is_mongo', true);
