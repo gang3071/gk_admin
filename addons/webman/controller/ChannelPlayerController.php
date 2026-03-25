@@ -219,7 +219,7 @@ class ChannelPlayerController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('id', admin_trans('player.fields.id'))->fixed(true)->align('center');
-            $grid->column('phone', admin_trans('player.fields.phone'))->display(function ($val, $data) {
+            $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $image = !empty($data['avatar']) ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar']) : Avatar::create()->icon(Icon::create('UserOutlined'));
                 return Html::create()->content([
                     $image,
@@ -227,15 +227,7 @@ class ChannelPlayerController
                     $data['is_test'] == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
                 ]);
             })->fixed(true)->align('center');
-            $grid->column('uuid', admin_trans('player.fields.uuid'))->fixed(true)->ellipsis(true)->align('center');
-            $grid->column('name', admin_trans('player.fields.name'))
-                ->editable(
-                    (new Editable)
-                        ->textarea('name')
-                        ->showCount()
-                        ->rows(5)
-                        ->rule(['max:50' => admin_trans('player.fields.name')])
-                )->fixed(true)->ellipsis(true)->align('center');
+            $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center');
             $grid->column('recommend_promoter_uuid',
                 admin_trans('player.fields.recommend_promoter_name'))->display(function ($value, $data) {
                 if (!empty($data['recommend_id'])) {
@@ -420,45 +412,15 @@ class ChannelPlayerController
             $grid->column('status_baccarat',
                 admin_trans('player.fields.status_baccarat'))->switch()->ellipsis(true)->align('center');
             $grid->filter(function (Filter $filter) use ($channel) {
+                $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
-                $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));
-                $filter->like()->text('name')->placeholder(admin_trans('player.fields.name'));
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
 
-                // 线下渠道：按 player_type 筛选
+                // 线下渠道：代理和店家筛选
                 if ($channel && $channel->is_offline == 1) {
-                    $filter->select('search_player_type')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.type'))
-                        ->options([
-                            Player::PLAYER_TYPE_NORMAL => admin_trans('player.fields.player_type_normal'),
-                            Player::PLAYER_TYPE_AGENT => admin_trans('player.fields.player_type_agent'),
-                            Player::PLAYER_TYPE_STORE_MACHINE => admin_trans('player.fields.player_type_store_machine'),
-                        ]);
-                    // 线下渠道：是否测试账户筛选
-                    $filter->select('search_is_test')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.is_test'))
-                        ->options([
-                            0 => admin_trans('player.not_test'),
-                            1 => admin_trans('player.fields.is_test'),
-                        ]);
-                    // 线下渠道：是否币商筛选
-                    $filter->select('search_is_coin')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.coin_merchant'))
-                        ->options([
-                            0 => admin_trans('player.not_coin'),
-                            1 => admin_trans('player.coin_merchant'),
-                        ]);
                     // 线下渠道：代理筛选
                     $filter->eq()->select('agent_admin_id')
                         ->showSearch()
@@ -469,30 +431,6 @@ class ChannelPlayerController
                         ->showSearch()
                         ->placeholder(admin_trans('admin.store'))
                         ->remoteOptions(admin_url([ChannelPlayerController::class, 'getStoreOptions']));
-                } else {
-                    // 线上渠道：原有的筛选方式
-                    $filter->select('search_type')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.type'))
-                        ->options([
-                            0 => admin_trans('player.player'),
-                            1 => admin_trans('player.coin_merchant'),
-                            2 => admin_trans('player.fields.is_test'),
-                        ]);
-                }
-
-                if ($channel->promotion_status == 1) {
-                    $filter->select('search_is_promoter')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.is_promoter'))
-                        ->options([
-                            0 => admin_trans('player.not_promoter'),
-                            1 => admin_trans('player.promoter'),
-                        ]);
                 }
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
@@ -544,8 +482,6 @@ class ChannelPlayerController
             $grid->actions(function (Actions $actions, $data) use ($channel) {
                 $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
-                $actions->prepend(Button::create(admin_trans('player.wallet.player_game_wallet'))
-                    ->drawer([$this, 'playerGameWallet'], ['id' => $data['id']]));
                 $dropdown = $actions->dropdown();
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
@@ -559,6 +495,27 @@ class ChannelPlayerController
                     $dropdown->prepend(admin_trans('player.set_promoter'), 'fas fa-key')
                         ->modal([$this, 'setPromoter'], ['id' => $data['id']])->width('25%');
                 }
+                // 电子游戏禁用/启用
+                $gamePlatformText = $data['status_game_platform'] == 1
+                    ? admin_trans('admin.disable') . admin_trans('player.fields.status_game_platform')
+                    : admin_trans('admin.open') . admin_trans('player.fields.status_game_platform');
+                $dropdown->prepend($gamePlatformText, 'GamepadOutlined')
+                    ->confirm('是否确认' . $gamePlatformText . '？', [$this, 'toggleGamePlatform'],
+                        ['id' => $data['id'], 'status' => $data['status_game_platform'] == 1 ? 0 : 1])
+                    ->gridRefresh();
+
+                // 开分（人工充值）
+                $dropdown->prepend(admin_trans('player.wallet.artificial_recharge'), 'TransactionOutlined')
+                    ->modal($this->artificialRecharge([
+                        'id' => $data['id'],
+                        'money' => $data['money'] ?? 0,
+                    ]))->width('600px')->title(Html::create(admin_trans('player.wallet.artificial_recharge'))->content(
+                        ToolTip::create(Icon::create('QuestionCircleOutlined')->style([
+                            'marginLeft' => '5px',
+                            'cursor' => 'pointer'
+                        ]))->title(admin_trans('player.wallet.artificial_recharge_tip'))
+                    ));
+
                 if ($channel->wallet_action_status == 1) {
                     $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
                         ->modal($this->playerWallet([
@@ -566,36 +523,17 @@ class ChannelPlayerController
                             'money' => $data['money'] ?? 0,
                         ]))->width('600px');
                 }
-                $dropdown->append(admin_trans('player.wallet.artificial_recharge'), 'TransactionOutlined')
-                    ->modal($this->artificialRecharge([
-                        'id' => $data['id'],
-                        'money' => $data['machine_wallet']['money'] ?? 0,
-                    ]))->width('600px')->title(Html::create(admin_trans('player.wallet.artificial_recharge'))->content(
-                        ToolTip::create(Icon::create('QuestionCircleOutlined')->style([
-                            'marginLeft' => '5px',
-                            'cursor' => 'pointer'
-                        ]))->title(admin_trans('player.wallet.artificial_recharge_tip'))
-                    ));
+
                 $dropdown->append(admin_trans('player.wallet.artificial_withdrawal'), 'PayCircleOutlined')
                     ->modal($this->artificialWithdrawal([
                         'id' => $data['id'],
-                        'money' => $data['machine_wallet']['money'] ?? 0,
+                        'money' => $data['money'] ?? 0,
                     ]))->width('600px')->title(Html::create(admin_trans('player.wallet.artificial_withdrawal'))->content(
                         ToolTip::create(Icon::create('QuestionCircleOutlined')->style([
                             'marginLeft' => '5px',
                             'cursor' => 'pointer'
                         ]))->title(admin_trans('player.wallet.artificial_withdrawal_tip'))
                     ));
-                $dropdown->append(admin_trans('player.player_bank'), 'BankFilled')
-                    ->modal($this->playerBank($data['id']))
-                    ->width('70%')
-                    ->title(Html::create(admin_trans('player.player_bank'))
-                        ->content(
-                            ToolTip::create(Icon::create('BankFilled')->style([
-                                'marginLeft' => '5px',
-                                'cursor' => 'pointer'
-                            ]))->title(admin_trans('player.player_bank'))
-                        ));
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -4507,4 +4445,28 @@ class ChannelPlayerController
         return Response::success($stores);
     }
 
+    /**
+     * 切换电子游戏状态
+     * @auth true
+     * @group channel
+     * @param int $id
+     * @param int $status
+     * @return Msg
+     */
+    public function toggleGamePlatform(int $id, int $status): Msg
+    {
+        try {
+            $player = Player::query()->find($id);
+            if (!$player) {
+                return message_error(admin_trans('player.not_fount'));
+            }
+
+            $player->status_game_platform = $status;
+            $player->save();
+
+            return message_success(admin_trans('form.save_success'));
+        } catch (\Exception $e) {
+            return message_error(admin_trans('player.action_error'));
+        }
+    }
 }
