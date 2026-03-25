@@ -59,5 +59,5 @@ return [
     'chart' => '圖表',
     'total_in_amount' => '充值',
     'total_out_amount' => '提現',
-    'total_machine_amount' => '投札',
+    'total_machine_amount' => '投鈔',
 ];

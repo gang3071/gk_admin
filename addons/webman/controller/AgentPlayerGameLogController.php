@@ -148,22 +148,9 @@ class AgentPlayerGameLogController
                     PlayerGameLog $data
                 ) {
                     return Html::create()->content([
-                        Html::div()->content($data->player->uuid)
+                        Html::div()->content($data->player->uuid),
+                        $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
                     ]);
-                })->align('center');
-                $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
-                    $val,
-                    PlayerGameLog $data
-                ) {
-                    return Html::create()->content([
-                        $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
-                    ]);
-                })->align('center');
-                $grid->column('player.phone', admin_trans('player.fields.phone'))->display(function (
-                    $val,
-                    PlayerGameLog $data
-                ) {
-                    return $data->player->phone;
                 })->align('center');
                 $grid->column('player.storeAdmin.nickname', admin_trans('player.fields.store_admin'))->display(function (
                     $val,
