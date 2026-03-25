@@ -7,7 +7,7 @@ use ExAdmin\ui\component\grid\grid\excel\AbstractExporter;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 
-abstract class ShiftReportExporter extends AbstractExporter
+class ShiftReportExporter extends AbstractExporter
 {
     public function write(array $data, \Closure $finish = null)
     {
