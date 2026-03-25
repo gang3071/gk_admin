@@ -2381,3 +2381,20 @@ if (!function_exists('addRegisterRecord')) {
         ]);
     }
 }
+
+if (!function_exists('getWebIds')) {
+    /**
+     * 批量生成游戏平台的web_id
+     * @param array $platformCodes 平台代码数组
+     * @return array 平台代码 => web_id 的关联数组
+     */
+    function getWebIds(array $platformCodes): array
+    {
+        $webIds = [];
+        foreach ($platformCodes as $code) {
+            // 生成10位随机web_id（与GameServiceFactory::generateWebId()相同）
+            $webIds[$code] = substr(md5(\Illuminate\Support\Str::uuid()), 3, 10);
+        }
+        return $webIds;
+    }
+}
