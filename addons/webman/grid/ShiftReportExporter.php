@@ -2,6 +2,7 @@
 
 namespace addons\webman\grid;
 
+use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -23,8 +24,19 @@ class ShiftReportExporter extends Excel
     {
         try {
         foreach ($data as $record) {
+            // 从数据库查询原始记录（因为 parseColumn 后的数据没有所有字段）
+            $recordId = $record['id'] ?? null;
+            if (!$recordId) {
+                continue;
+            }
+
+            $originalRecord = StoreAgentShiftHandoverRecord::find($recordId);
+            if (!$originalRecord) {
+                continue;
+            }
+
             // 交班记录标题行
-            $this->sheet->setCellValue('A' . $this->currentRow, '交班ID: ' . $record['id']);
+            $this->sheet->setCellValue('A' . $this->currentRow, '交班ID: ' . $originalRecord->id);
             $this->sheet->mergeCells('A' . $this->currentRow . ':L' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true)->setSize(12);
             $this->sheet->getStyle('A' . $this->currentRow)->getFill()
@@ -34,17 +46,17 @@ class ShiftReportExporter extends Excel
 
             // 交班汇总信息行
             $this->sheet->setCellValue('A' . $this->currentRow, '交班时间');
-            $this->sheet->setCellValue('B' . $this->currentRow, $record['start_time'] . ' ~ ' . $record['end_time']);
+            $this->sheet->setCellValue('B' . $this->currentRow, $originalRecord->start_time . ' ~ ' . $originalRecord->end_time);
             $this->sheet->setCellValue('C' . $this->currentRow, '类型');
-            $this->sheet->setCellValue('D' . $this->currentRow, $record['is_auto_shift'] == 1 ? '自动交班' : '手动交班');
+            $this->sheet->setCellValue('D' . $this->currentRow, $originalRecord->is_auto_shift == 1 ? '自动交班' : '手动交班');
             $this->sheet->setCellValue('E' . $this->currentRow, '投钞');
-            $this->sheet->setCellValue('F' . $this->currentRow, $record['machine_point']);
+            $this->sheet->setCellValue('F' . $this->currentRow, $originalRecord->machine_point);
             $this->sheet->setCellValue('G' . $this->currentRow, '收入');
-            $this->sheet->setCellValue('H' . $this->currentRow, number_format($record['total_in'], 2));
+            $this->sheet->setCellValue('H' . $this->currentRow, number_format($originalRecord->total_in, 2));
             $this->sheet->setCellValue('I' . $this->currentRow, '支出');
-            $this->sheet->setCellValue('J' . $this->currentRow, number_format($record['total_out'], 2));
+            $this->sheet->setCellValue('J' . $this->currentRow, number_format($originalRecord->total_out, 2));
             $this->sheet->setCellValue('K' . $this->currentRow, '利润');
-            $this->sheet->setCellValue('L' . $this->currentRow, number_format($record['total_profit_amount'], 2));
+            $this->sheet->setCellValue('L' . $this->currentRow, number_format($originalRecord->total_profit_amount, 2));
 
             $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->getFont()->setBold(true);
             $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->getFill()
@@ -53,7 +65,7 @@ class ShiftReportExporter extends Excel
             $this->currentRow++;
 
             // 获取设备明细
-            $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $record['id'])
+            $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $originalRecord->id)
                 ->orderBy('profit', 'desc')
                 ->get();
 
