@@ -6,8 +6,6 @@ use addons\webman\Admin;
 use addons\webman\model\ChannelRechargeMethod;
 use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -102,6 +100,60 @@ class AgentPlayerWithdrawRecordController
                 });
             }
 
+            // 统计数据
+            $query = clone $grid->model();
+            $totalData = $query->selectRaw(
+                'sum(IF(type = ' . PlayerWithdrawRecord::TYPE_SELF . ' AND status = 2, point, 0)) as self_point,
+                 sum(IF(type = ' . PlayerWithdrawRecord::TYPE_GB . ' AND status = 2, point, 0)) as gb_point'
+            )->first();
+
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($totalData) {
+                $row->gutter([10, 0]);
+
+                // 自充
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($totalData['self_point']) ? floatval($totalData['self_point']) : 0)
+                            ->prefix(admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_SELF))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#52c41a'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 12);
+
+                // GB
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($totalData['gb_point']) ? floatval($totalData['gb_point']) : 0)
+                            ->prefix(admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_GB))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#1890ff'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 12);
+            })->style(['background' => '#fff']);
+
+            $grid->tools($layout);
+
             $grid->column('id', admin_trans('player_withdraw_record.fields.id'))->align('center')->width(80);
             $grid->column('tradeno', admin_trans('player_withdraw_record.fields.tradeno'))->copy()->width(180);
             $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
@@ -119,18 +171,6 @@ class AgentPlayerWithdrawRecordController
             ) {
                 return $data->player->storeAdmin->nickname ?? $data->player->storeAdmin->username ?? '';
             })->width(150)->align('center');
-            $grid->column('player_phone', admin_trans('player_withdraw_record.fields.player'))->display(function (
-                $val,
-                PlayerWithdrawRecord $data
-            ) {
-                $image = isset($data->player->avatar) && !empty($data->player->avatar)
-                    ? Avatar::create()->src($data->player->avatar)
-                    : Avatar::create()->icon(Icon::create('UserOutlined'));
-                return Html::create()->content([
-                    $image,
-                    Html::div()->content($val)
-                ]);
-            })->align('center')->width(150);
             $grid->column('money', admin_trans('player_withdraw_record.fields.money'))->display(function (
                 $val,
                 PlayerWithdrawRecord $data

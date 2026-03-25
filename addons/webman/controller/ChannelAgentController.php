@@ -309,14 +309,14 @@ class ChannelAgentController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('id', admin_trans('player.fields.id'))->fixed(true)->align('center');
-            $grid->column('name', admin_trans('channel_agent.account'))->display(function ($val, $data) {
+            $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $image = !empty($data['avatar']) ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar']) : Avatar::create()->icon(Icon::create('UserOutlined'));
                 return Html::create()->content([
                     $image,
                     Html::div()->content($val)
                 ]);
             })->width('100px')->ellipsis(true)->fixed(true)->align('center');
-            $grid->column('uuid', admin_trans('player.fields.uuid'))->fixed(true)->ellipsis(true)->align('center');
+            $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center');
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
                 $val
@@ -383,9 +383,9 @@ class ChannelAgentController
             })->ellipsis(true)->align('center');
             $grid->column('created_at', admin_trans('player.fields.created_at'))->ellipsis(true)->align('center');
             $grid->filter(function (Filter $filter) use ($admin) {
+                $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
-                $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));
-                $filter->like()->text('name')->placeholder(admin_trans('player.fields.name'));
+                $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([

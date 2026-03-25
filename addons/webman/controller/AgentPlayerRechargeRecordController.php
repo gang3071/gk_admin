@@ -5,8 +5,6 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\PlayerRechargeRecord;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -107,41 +105,20 @@ class AgentPlayerRechargeRecordController
             // 统计数据
             $query = clone $grid->model();
             $totalData = $query->selectRaw(
-                'sum(IF(status IN (0, 1), point, 0)) as pending_point,
-                 sum(IF(status = 2, point, 0)) as success_point,
-                 sum(IF(status IN (3, 4, 5, 6), point, 0)) as fail_point'
+                'sum(IF(type = ' . PlayerRechargeRecord::TYPE_ARTIFICIAL . ' AND status = 2, point, 0)) as artificial_point,
+                 sum(IF(type = ' . PlayerRechargeRecord::TYPE_MACHINE . ' AND status = 2, point, 0)) as machine_point'
             )->first();
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
                 $row->gutter([10, 0]);
 
-                // 待支付/充值中
+                // 人工充值
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['pending_point']) ? floatval($totalData['pending_point']) : 0)
-                            ->prefix(admin_trans('player_recharge_record.total_data.total_pending'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-
-                // 充值成功
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['success_point']) ? floatval($totalData['success_point']) : 0)
-                            ->prefix(admin_trans('player_recharge_record.status.2'))
+                            ->value(!empty($totalData['artificial_point']) ? floatval($totalData['artificial_point']) : 0)
+                            ->prefix(admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_ARTIFICIAL))
                             ->valueStyle([
                                 'font-size' => '14px',
                                 'font-weight' => '500',
@@ -154,19 +131,19 @@ class AgentPlayerRechargeRecordController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
+                    , 12);
 
-                // 失败/拒绝/取消
+                // 投钞
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['fail_point']) ? floatval($totalData['fail_point']) : 0)
-                            ->prefix(admin_trans('player_recharge_record.total_data.total_fail'))
+                            ->value(!empty($totalData['machine_point']) ? floatval($totalData['machine_point']) : 0)
+                            ->prefix(admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_MACHINE))
                             ->valueStyle([
                                 'font-size' => '14px',
                                 'font-weight' => '500',
                                 'text-align' => 'center',
-                                'color' => '#ff4d4f'
+                                'color' => '#1890ff'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
@@ -174,7 +151,7 @@ class AgentPlayerRechargeRecordController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
+                    , 12);
             })->style(['background' => '#fff']);
 
             $grid->tools($layout);
@@ -196,18 +173,6 @@ class AgentPlayerRechargeRecordController
             ) {
                 return $data->player->storeAdmin->nickname ?? $data->player->storeAdmin->username ?? '';
             })->width(150)->align('center');
-            $grid->column('player_phone', admin_trans('player_recharge_record.fields.player_phone'))->display(function (
-                $val,
-                PlayerRechargeRecord $data
-            ) {
-                $image = isset($data->player->avatar) && !empty($data->player->avatar)
-                    ? Avatar::create()->src($data->player->avatar)
-                    : Avatar::create()->icon(Icon::create('UserOutlined'));
-                return Html::create()->content([
-                    $image,
-                    Html::div()->content($val)
-                ]);
-            })->align('center')->width(150);
             $grid->column('money', admin_trans('player_recharge_record.fields.money'))->display(function (
                 $val,
                 PlayerRechargeRecord $data
