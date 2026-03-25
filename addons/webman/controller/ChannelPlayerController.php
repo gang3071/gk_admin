@@ -419,38 +419,8 @@ class ChannelPlayerController
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
 
-                // 线下渠道：按 player_type 筛选
+                // 线下渠道：代理和店家筛选
                 if ($channel && $channel->is_offline == 1) {
-                    $filter->select('search_player_type')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.type'))
-                        ->options([
-                            Player::PLAYER_TYPE_NORMAL => admin_trans('player.fields.player_type_normal'),
-                            Player::PLAYER_TYPE_AGENT => admin_trans('player.fields.player_type_agent'),
-                            Player::PLAYER_TYPE_STORE_MACHINE => admin_trans('player.fields.player_type_store_machine'),
-                        ]);
-                    // 线下渠道：是否测试账户筛选
-                    $filter->select('search_is_test')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.is_test'))
-                        ->options([
-                            0 => admin_trans('player.not_test'),
-                            1 => admin_trans('player.fields.is_test'),
-                        ]);
-                    // 线下渠道：是否币商筛选
-                    $filter->select('search_is_coin')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.coin_merchant'))
-                        ->options([
-                            0 => admin_trans('player.not_coin'),
-                            1 => admin_trans('player.coin_merchant'),
-                        ]);
                     // 线下渠道：代理筛选
                     $filter->eq()->select('agent_admin_id')
                         ->showSearch()
@@ -461,30 +431,6 @@ class ChannelPlayerController
                         ->showSearch()
                         ->placeholder(admin_trans('admin.store'))
                         ->remoteOptions(admin_url([ChannelPlayerController::class, 'getStoreOptions']));
-                } else {
-                    // 线上渠道：原有的筛选方式
-                    $filter->select('search_type')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.type'))
-                        ->options([
-                            0 => admin_trans('player.player'),
-                            1 => admin_trans('player.coin_merchant'),
-                            2 => admin_trans('player.fields.is_test'),
-                        ]);
-                }
-
-                if ($channel->promotion_status == 1) {
-                    $filter->select('search_is_promoter')
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->placeholder(admin_trans('player.fields.is_promoter'))
-                        ->options([
-                            0 => admin_trans('player.not_promoter'),
-                            1 => admin_trans('player.promoter'),
-                        ]);
                 }
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');

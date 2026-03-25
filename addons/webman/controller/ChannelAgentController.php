@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\Channel;
 use addons\webman\model\Currency;
 use addons\webman\model\Game;
@@ -67,10 +68,10 @@ class ChannelAgentController
      */
     public function index(): Grid
     {
-        /** @var \addons\webman\model\AdminUser $admin */
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
-        return Grid::create(new \addons\webman\model\AdminUser(), function (Grid $grid) use ($admin) {
+        return Grid::create(new AdminUser(), function (Grid $grid) use ($admin) {
             $grid->title('店家管理');
             $grid->autoHeight();
             $grid->bordered(true);
@@ -79,7 +80,7 @@ class ChannelAgentController
             $grid->model()
                 ->join('admin_department as dept', 'admin_users.department_id', '=', 'dept.id')
                 ->leftJoin('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
-                ->where('admin_users.type', \addons\webman\model\AdminUser::TYPE_STORE)
+                ->where('admin_users.type', AdminUser::TYPE_STORE)
                 ->select([
                     'admin_users.*',
                     'dept.name as department_name',
@@ -89,10 +90,10 @@ class ChannelAgentController
                 ]);
 
             // 根据账号类型过滤店家
-            if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+            if ($admin->type === AdminUser::TYPE_AGENT) {
                 // 代理：查询本代理下的店家
                 $grid->model()->where('admin_users.parent_admin_id', $admin->id);
-            } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+            } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
                 // 渠道：查询同一部门下的所有店家
                 $grid->model()->where('parent_admin.department_id', $admin->department_id);
             }
@@ -163,7 +164,7 @@ class ChannelAgentController
                 $filter->like()->text('dept.phone')->placeholder('联系电话');
 
                 // 代理筛选（仅渠道可用）
-                if ($admin->type === \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+                if ($admin->type === AdminUser::TYPE_CHANNEL) {
                     $filter->eq()->select('admin_users.parent_admin_id')
                         ->showSearch()
                         ->style(['width' => '200px'])
@@ -198,7 +199,7 @@ class ChannelAgentController
      */
     public function machineList(): Grid
     {
-        /** @var \addons\webman\model\AdminUser $admin */
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
         $page = Request::input('ex_admin_page', 1);
@@ -227,13 +228,13 @@ class ChannelAgentController
             ->where('player.is_promoter', 0);
 
         // 根据账号类型过滤设备
-        if ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+        if ($admin->type === AdminUser::TYPE_STORE) {
             // 店家：查询本店家下的设备
             $query->where('player.store_admin_id', $admin->id);
-        } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+        } elseif ($admin->type === AdminUser::TYPE_AGENT) {
             // 代理：查询所有下级店家的设备
             $storeIds = $admin->childStores()
-                ->where('type', \addons\webman\model\AdminUser::TYPE_STORE)
+                ->where('type', AdminUser::TYPE_STORE)
                 ->pluck('id')
                 ->toArray();
             if (empty($storeIds)) {
@@ -242,7 +243,7 @@ class ChannelAgentController
             } else {
                 $query->whereIn('player.store_admin_id', $storeIds);
             }
-        } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+        } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
             // 渠道：查询同一部门下的所有设备
             $query->where('player.department_id', $admin->department_id);
         }
@@ -393,7 +394,7 @@ class ChannelAgentController
                     admin_trans('public_msg.created_at_end')
                 ]);
                 // 店家筛选
-                if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+                if ($admin->type === AdminUser::TYPE_AGENT) {
                     // 代理：显示下级店家筛选
                     $filter->eq()->select('store_admin_id')
                         ->showSearch()
@@ -935,7 +936,7 @@ class ChannelAgentController
             $form->hidden('id')->default($data['id']);
 
             // 获取当前店家账号信息（AdminUser）
-            /** @var \addons\webman\model\AdminUser $store */
+            /** @var AdminUser $store */
             $store = Admin::user();
 
             // 货币符号映射
@@ -1098,7 +1099,7 @@ class ChannelAgentController
                 }
 
                 // 获取店家账号信息（AdminUser）
-                /** @var \addons\webman\model\AdminUser $store */
+                /** @var AdminUser $store */
                 $store = Admin::user();
 
                 // 获取设备玩家信息
@@ -1296,7 +1297,7 @@ class ChannelAgentController
     {
         $request = Request::input();
 
-        /** @var \addons\webman\model\AdminUser $admin */
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
         // 查询下级推广员（Player 表中 is_promoter=1 的记录）
@@ -1305,13 +1306,13 @@ class ChannelAgentController
             ->orderBy('created_at', 'desc');
 
         // 根据账号类型过滤
-        if ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+        if ($admin->type === AdminUser::TYPE_STORE) {
             // 店家：查询本店家下的推广员
             $query->where('store_admin_id', $admin->id);
-        } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+        } elseif ($admin->type === AdminUser::TYPE_AGENT) {
             // 代理：查询所有下级店家的推广员
             $storeIds = $admin->childStores()
-                ->where('type', \addons\webman\model\AdminUser::TYPE_STORE)
+                ->where('type', AdminUser::TYPE_STORE)
                 ->pluck('id')
                 ->toArray();
             if (empty($storeIds)) {
@@ -1320,7 +1321,7 @@ class ChannelAgentController
             } else {
                 $query->whereIn('store_admin_id', $storeIds);
             }
-        } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+        } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
             // 渠道：查询同一部门下的所有推广员
             $query->where('department_id', $admin->department_id);
         }
@@ -1349,16 +1350,16 @@ class ChannelAgentController
      */
     public function getAgentOptionsForFilter(): Response
     {
-        /** @var \addons\webman\model\AdminUser $admin */
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
         // 只有渠道账号可以调用此方法筛选代理
-        if ($admin->type !== \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+        if ($admin->type !== AdminUser::TYPE_CHANNEL) {
             return Response::success([]);
         }
 
-        $agents = \addons\webman\model\AdminUser::query()
-            ->where('type', \addons\webman\model\AdminUser::TYPE_AGENT)
+        $agents = AdminUser::query()
+            ->where('type', AdminUser::TYPE_AGENT)
             ->where('status', 1)
             ->where('department_id', $admin->department_id)
             ->select(['id', 'nickname', 'username'])
@@ -1389,19 +1390,19 @@ class ChannelAgentController
             $grid->bordered(true);
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
 
             // 根据账号类型过滤账变记录
-            if ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+            if ($admin->type === AdminUser::TYPE_STORE) {
                 // 店家：查询本店家下的玩家账变记录
                 $grid->model()->whereHas('player', function ($query) use ($admin) {
                     $query->where('store_admin_id', $admin->id);
                 });
-            } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+            } elseif ($admin->type === AdminUser::TYPE_AGENT) {
                 // 代理：查询所有下级店家的玩家账变记录
                 $storeIds = $admin->childStores()
-                    ->where('type', \addons\webman\model\AdminUser::TYPE_STORE)
+                    ->where('type', AdminUser::TYPE_STORE)
                     ->pluck('id')
                     ->toArray();
                 if (empty($storeIds)) {
@@ -1412,7 +1413,7 @@ class ChannelAgentController
                         $query->whereIn('store_admin_id', $storeIds);
                     });
                 }
-            } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+            } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
                 // 渠道：查询同一部门下的所有玩家账变记录
                 $grid->model()->whereHas('player', function ($query) use ($admin) {
                     $query->where('department_id', $admin->department_id);
@@ -1810,7 +1811,7 @@ class ChannelAgentController
                     ]);
 
                 // 店家筛选
-                if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+                if ($admin->type === AdminUser::TYPE_AGENT) {
                     // 代理：显示下级店家筛选
                     $filter->eq()->select('player.store_admin_id')
                         ->showSearch()
@@ -1922,17 +1923,17 @@ class ChannelAgentController
      */
     public function getStoreOptions(): Response
     {
-        /** @var \addons\webman\model\AdminUser $admin */
+        /** @var AdminUser $admin */
         $admin = Admin::user();
 
-        $query = \addons\webman\model\AdminUser::query()
-            ->where('type', \addons\webman\model\AdminUser::TYPE_STORE)
-            ->where('status', \addons\webman\model\AdminUser::STATUS_ENABLED);
+        $query = AdminUser::query()
+            ->where('type', AdminUser::TYPE_STORE)
+            ->where('status', AdminUser::STATUS_ENABLED);
 
-        if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+        if ($admin->type === AdminUser::TYPE_AGENT) {
             // 代理：只显示自己的下级店家
             $query->where('parent_admin_id', $admin->id);
-        } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_CHANNEL) {
+        } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
             // 渠道：显示所属渠道的所有店家
             $query->where('department_id', $admin->department_id);
         }
