@@ -53,7 +53,7 @@ class ShiftReportExporter extends Excel
             }
 
             // 交班记录标题行
-            $this->sheet->setCellValue('A' . $this->currentRow, '交班ID: ' . $originalRecord->id);
+            $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.shift_id') . ': ' . $originalRecord->id);
             $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                 'font' => ['bold' => true, 'size' => 14],
@@ -66,10 +66,10 @@ class ShiftReportExporter extends Excel
 
             // 交班汇总信息（改为更清晰的布局）
             $summaryData = [
-                ['交班时间:', $originalRecord->start_time . ' ~ ' . $originalRecord->end_time, '交班类型:', $originalRecord->is_auto_shift == 1 ? '自动交班' : '手动交班'],
-                ['投钞点数:', number_format($originalRecord->machine_point, 0), '彩金:', number_format($originalRecord->lottery_amount, 2)],
-                ['总收入:', number_format($originalRecord->total_in, 2), '总支出:', number_format($originalRecord->total_out, 2)],
-                ['利润:', number_format($originalRecord->total_profit_amount, 2), '', '']
+                [admin_trans('shift.shift_time') . ':', $originalRecord->start_time . ' ~ ' . $originalRecord->end_time, admin_trans('shift.shift_type') . ':', $originalRecord->is_auto_shift == 1 ? admin_trans('shift.auto_shift') : admin_trans('shift.manual_shift')],
+                [admin_trans('shift.machine_point') . ':', number_format($originalRecord->machine_point, 0), admin_trans('shift.lottery_amount') . ':', number_format($originalRecord->lottery_amount, 2)],
+                [admin_trans('shift.total_in') . ':', number_format($originalRecord->total_in, 2), admin_trans('shift.total_out') . ':', number_format($originalRecord->total_out, 2)],
+                [admin_trans('shift.profit') . ':', number_format($originalRecord->total_profit_amount, 2), '', '']
             ];
 
             $summaryStartRow = $this->currentRow;
@@ -116,7 +116,19 @@ class ShiftReportExporter extends Excel
 
             if ($deviceDetails->isNotEmpty()) {
                 // 设备明细表头
-                $headers = ['设备名称', '设备编号', '投钞点数', '开分', '洗分', '后台加点', '后台扣点', '彩金', '总收入', '总支出', '利润'];
+                $headers = [
+                    admin_trans('shift.device_name'),
+                    admin_trans('shift.device_number'),
+                    admin_trans('shift.machine_point'),
+                    admin_trans('shift.recharge_amount'),
+                    admin_trans('shift.withdrawal_amount'),
+                    admin_trans('shift.modified_add_amount'),
+                    admin_trans('shift.modified_deduct_amount'),
+                    admin_trans('shift.lottery_amount'),
+                    admin_trans('shift.total_in'),
+                    admin_trans('shift.total_out'),
+                    admin_trans('shift.profit')
+                ];
                 $headerRow = $this->currentRow;
 
                 foreach ($headers as $index => $header) {
@@ -192,7 +204,7 @@ class ShiftReportExporter extends Excel
                 }
 
                 // 小计行
-                $this->sheet->setCellValue('A' . $this->currentRow, '小计 (交班#' . $originalRecord->id . ')');
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.subtotal') . ' (' . admin_trans('shift.shift_id') . '#' . $originalRecord->id . ')');
                 $this->sheet->setCellValue('B' . $this->currentRow, '');
                 $this->sheet->setCellValue('C' . $this->currentRow, number_format($subtotal['machine_point'], 0));
                 $this->sheet->setCellValue('D' . $this->currentRow, number_format($subtotal['recharge_amount'], 2));
@@ -227,7 +239,7 @@ class ShiftReportExporter extends Excel
                 $this->totalDevices += $deviceDetails->count();
             } else {
                 // 没有设备明细数据，使用交班记录的汇总数据
-                $this->sheet->setCellValue('A' . $this->currentRow, '暂无设备明细数据（使用交班汇总）');
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.no_device_data'));
                 $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
                 $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
@@ -308,9 +320,13 @@ class ShiftReportExporter extends Excel
 
         // 总计标题（添加说明）
         $totalTitle = sprintf(
-            '═══ 总计 ═══  【共 %d 次交班 | %d 台设备】',
+            '═══ %s ═══  【%s %d %s | %d %s】',
+            admin_trans('shift.grand_total'),
+            admin_trans('shift.total_shifts'),
             $this->processedRecords,
-            $this->totalDevices
+            admin_trans('shift.shifts'),
+            $this->totalDevices,
+            admin_trans('shift.devices')
         );
         $this->sheet->setCellValue('A' . $this->currentRow, $totalTitle);
         $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
@@ -325,7 +341,7 @@ class ShiftReportExporter extends Excel
         $this->currentRow++;
 
         // 总计数据行
-        $this->sheet->setCellValue('A' . $this->currentRow, sprintf('全部设备汇总 (%d台)', $this->totalDevices));
+        $this->sheet->setCellValue('A' . $this->currentRow, sprintf('%s (%d%s)', admin_trans('shift.all_devices_summary'), $this->totalDevices, admin_trans('shift.devices_unit')));
         $this->sheet->setCellValue('B' . $this->currentRow, '');
         $this->sheet->setCellValue('C' . $this->currentRow, number_format($this->grandTotal['machine_point'], 0));
         $this->sheet->setCellValue('D' . $this->currentRow, number_format($this->grandTotal['recharge_amount'], 2));
@@ -352,7 +368,7 @@ class ShiftReportExporter extends Excel
 
         // 添加说明行
         $this->currentRow += 2;
-        $this->sheet->setCellValue('A' . $this->currentRow, '说明：总计数据来源于所有设备明细的累加；若交班记录无设备明细，则使用交班汇总数据。');
+        $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift.export_note'));
         $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
         $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
             'font' => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '666666']],
