@@ -78,11 +78,6 @@ class StoreShiftHandoverRecordController
 
             // 操作列 - 查看设备明细和导出
             $grid->column('device_detail', '操作')->display(function ($val, $data) {
-                $exportUrl = admin_url([
-                    'addons-webman-controller-StoreShiftHandoverRecordController',
-                    'exportReport'
-                ]) . '?shift_record_id=' . $data['id'];
-
                 return Html::create()->content([
                     Button::create('设备明细')
                         ->type('primary')
@@ -97,7 +92,7 @@ class StoreShiftHandoverRecordController
                     Html::create(' '),
                     Button::create('导出报表')
                         ->size('small')
-                        ->href($exportUrl)
+                        ->href('ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/exportReport?shift_record_id=' . $data['id'])
                 ]);
             })->width(200)->align('center');
 
