@@ -172,17 +172,59 @@ class StoreShiftHandoverRecordController
                 $actions->hideDel();
             });
 
+            // 交班时间格式化（导出用）
+            $grid->column('time_range', '交班时间')->export(function ($val, $data) {
+                return $data['start_time'] . ' ~ ' . $data['end_time'];
+            });
+
+            // 交班类型格式化（导出用）
+            $grid->column('is_auto_shift', '交班类型')->export(function ($value) {
+                return $value == 1 ? '自动交班' : '手动交班';
+            });
+
+            // 添加导出专用列 - 设备数量
+            $grid->column('device_count', '设备数量')->export(function ($val, $data) {
+                return StoreShiftDeviceDetail::where('shift_record_id', $data['id'])->count();
+            })->hideInTable();
+
+            // 添加导出专用列 - 利润最高设备
+            $grid->column('top_device', '利润最高设备')->export(function ($val, $data) {
+                $device = StoreShiftDeviceDetail::where('shift_record_id', $data['id'])
+                    ->orderBy('profit', 'desc')
+                    ->first();
+                if ($device) {
+                    return $device->player_name . '(' . $device->player_phone . ') 利润:' . $device->profit;
+                }
+                return '-';
+            })->hideInTable();
+
+            // 添加导出专用列 - 利润最低设备
+            $grid->column('bottom_device', '利润最低设备')->export(function ($val, $data) {
+                $device = StoreShiftDeviceDetail::where('shift_record_id', $data['id'])
+                    ->orderBy('profit', 'asc')
+                    ->first();
+                if ($device) {
+                    return $device->player_name . '(' . $device->player_phone . ') 利润:' . $device->profit;
+                }
+                return '-';
+            })->hideInTable();
+
+            // 添加导出专用列 - 设备列表
+            $grid->column('device_list', '设备列表')->export(function ($val, $data) {
+                $devices = StoreShiftDeviceDetail::where('shift_record_id', $data['id'])
+                    ->orderBy('profit', 'desc')
+                    ->get(['player_name', 'player_phone'])
+                    ->map(function($item) {
+                        return $item->player_name . '(' . $item->player_phone . ')';
+                    })
+                    ->toArray();
+                return implode('、', $devices);
+            })->hideInTable();
+
             $grid->hideDelete();
             $grid->hideCreate();
             $grid->expandFilter();
-
-            // 添加导出按钮
-            $grid->tools([
-                Button::create('导出报表')
-                    ->icon(\ExAdmin\ui\component\common\Icon::create('DownloadOutlined'))
-                    ->type('primary')
-                    ->href('ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/exportShiftReport')
-            ]);
+            $grid->export();
         });
     }
 
@@ -373,144 +415,6 @@ class StoreShiftHandoverRecordController
             $grid->hideCreate();
             $grid->disableSelection();
         });
-    }
-
-    /**
-     * 导出交班报表（含设备明细）
-     * @auth true
-     * @group store
-     */
-    public function exportShiftReport()
-    {
-        /** @var \addons\webman\model\AdminUser $admin */
-        $admin = Admin::user();
-
-        // 获取交班记录
-        $shiftRecords = StoreAgentShiftHandoverRecord::where('bind_admin_user_id', $admin->id)
-            ->orderBy('id', 'desc')
-            ->get();
-
-        if ($shiftRecords->isEmpty()) {
-            return json(['code' => 1, 'msg' => '暂无交班记录']);
-        }
-
-        // 创建 Excel
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('交班报表');
-
-        $row = 1;
-
-        // 遍历每个交班记录
-        foreach ($shiftRecords as $record) {
-            // 交班记录标题行
-            $sheet->setCellValue('A' . $row, '交班ID: ' . $record->id);
-            $sheet->mergeCells('A' . $row . ':K' . $row);
-            $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(12);
-            $sheet->getStyle('A' . $row)->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('E8F4F8');
-            $row++;
-
-            // 交班汇总信息
-            $sheet->setCellValue('A' . $row, '交班时间');
-            $sheet->setCellValue('B' . $row, $record->start_time . ' ~ ' . $record->end_time);
-            $sheet->setCellValue('C' . $row, '类型');
-            $sheet->setCellValue('D' . $row, $record->is_auto_shift ? '自动交班' : '手动交班');
-            $sheet->setCellValue('E' . $row, '投钞');
-            $sheet->setCellValue('F' . $row, $record->machine_point);
-            $sheet->setCellValue('G' . $row, '收入');
-            $sheet->setCellValue('H' . $row, number_format($record->total_in, 2));
-            $sheet->setCellValue('I' . $row, '支出');
-            $sheet->setCellValue('J' . $row, number_format($record->total_out, 2));
-            $sheet->setCellValue('K' . $row, '利润');
-            $sheet->setCellValue('L' . $row, number_format($record->total_profit_amount, 2));
-
-            $sheet->getStyle('A' . $row . ':L' . $row)->getFont()->setBold(true);
-            $sheet->getStyle('A' . $row . ':L' . $row)->getFill()
-                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                ->getStartColor()->setRGB('F0F0F0');
-            $row++;
-
-            // 获取设备明细
-            $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $record->id)
-                ->orderBy('profit', 'desc')
-                ->get();
-
-            if ($deviceDetails->isNotEmpty()) {
-                // 设备明细表头
-                $sheet->setCellValue('A' . $row, '设备名称');
-                $sheet->setCellValue('B' . $row, '设备编号');
-                $sheet->setCellValue('C' . $row, '投钞点数');
-                $sheet->setCellValue('D' . $row, '开分');
-                $sheet->setCellValue('E' . $row, '洗分');
-                $sheet->setCellValue('F' . $row, '后台加点');
-                $sheet->setCellValue('G' . $row, '后台扣点');
-                $sheet->setCellValue('H' . $row, '彩金');
-                $sheet->setCellValue('I' . $row, '总收入');
-                $sheet->setCellValue('J' . $row, '总支出');
-                $sheet->setCellValue('K' . $row, '利润');
-
-                $sheet->getStyle('A' . $row . ':K' . $row)->getFont()->setBold(true);
-                $sheet->getStyle('A' . $row . ':K' . $row)->getFill()
-                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-                    ->getStartColor()->setRGB('D0E8F2');
-                $sheet->getStyle('A' . $row . ':K' . $row)->getAlignment()
-                    ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER);
-                $row++;
-
-                // 设备明细数据
-                foreach ($deviceDetails as $detail) {
-                    $sheet->setCellValue('A' . $row, $detail->player_name);
-                    $sheet->setCellValue('B' . $row, $detail->player_phone);
-                    $sheet->setCellValue('C' . $row, $detail->machine_point);
-                    $sheet->setCellValue('D' . $row, number_format($detail->recharge_amount, 2));
-                    $sheet->setCellValue('E' . $row, number_format($detail->withdrawal_amount, 2));
-                    $sheet->setCellValue('F' . $row, number_format($detail->modified_add_amount, 2));
-                    $sheet->setCellValue('G' . $row, number_format($detail->modified_deduct_amount, 2));
-                    $sheet->setCellValue('H' . $row, number_format($detail->lottery_amount, 2));
-                    $sheet->setCellValue('I' . $row, number_format($detail->total_in, 2));
-                    $sheet->setCellValue('J' . $row, number_format($detail->total_out, 2));
-                    $sheet->setCellValue('K' . $row, number_format($detail->profit, 2));
-
-                    // 利润颜色
-                    if ($detail->profit >= 0) {
-                        $sheet->getStyle('K' . $row)->getFont()->getColor()->setRGB('3f8600');
-                    } else {
-                        $sheet->getStyle('K' . $row)->getFont()->getColor()->setRGB('cf1322');
-                    }
-                    $row++;
-                }
-            } else {
-                $sheet->setCellValue('A' . $row, '暂无设备数据');
-                $sheet->mergeCells('A' . $row . ':K' . $row);
-                $row++;
-            }
-
-            // 空行分隔
-            $row++;
-        }
-
-        // 设置列宽
-        foreach (range('A', 'L') as $col) {
-            $sheet->getColumnDimension($col)->setWidth(15);
-        }
-
-        // 生成文件
-        $filename = 'shift_report_' . date('YmdHis') . '.xlsx';
-        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-
-        // 直接输出到浏览器
-        ob_start();
-        $writer->save('php://output');
-        $content = ob_get_clean();
-
-        return response($content, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Cache-Control' => 'max-age=0',
-            'Pragma' => 'public',
-        ]);
     }
 
 }
