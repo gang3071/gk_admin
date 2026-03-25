@@ -495,26 +495,6 @@ class ChannelPlayerController
                     $dropdown->prepend(admin_trans('player.set_promoter'), 'fas fa-key')
                         ->modal([$this, 'setPromoter'], ['id' => $data['id']])->width('25%');
                 }
-                // 电子游戏禁用/启用
-                $gamePlatformText = $data['status_game_platform'] == 1
-                    ? admin_trans('admin.disable') . admin_trans('player.fields.status_game_platform')
-                    : admin_trans('admin.open') . admin_trans('player.fields.status_game_platform');
-                $dropdown->prepend($gamePlatformText, 'GamepadOutlined')
-                    ->confirm('是否确认' . $gamePlatformText . '？', [$this, 'toggleGamePlatform'],
-                        ['id' => $data['id'], 'status' => $data['status_game_platform'] == 1 ? 0 : 1])
-                    ->gridRefresh();
-
-                // 开分（人工充值）
-                $dropdown->prepend(admin_trans('player.wallet.artificial_recharge'), 'TransactionOutlined')
-                    ->modal($this->artificialRecharge([
-                        'id' => $data['id'],
-                        'money' => $data['money'] ?? 0,
-                    ]))->width('600px')->title(Html::create(admin_trans('player.wallet.artificial_recharge'))->content(
-                        ToolTip::create(Icon::create('QuestionCircleOutlined')->style([
-                            'marginLeft' => '5px',
-                            'cursor' => 'pointer'
-                        ]))->title(admin_trans('player.wallet.artificial_recharge_tip'))
-                    ));
 
                 if ($channel->wallet_action_status == 1) {
                     $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
