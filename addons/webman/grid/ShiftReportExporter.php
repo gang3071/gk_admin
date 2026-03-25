@@ -21,6 +21,7 @@ class ShiftReportExporter extends Excel
 
     public function write(array $data, \Closure $finish = null)
     {
+        try {
         foreach ($data as $record) {
             // 交班记录标题行
             $this->sheet->setCellValue('A' . $this->currentRow, '交班ID: ' . $record['id']);
@@ -135,5 +136,35 @@ class ShiftReportExporter extends Excel
                 }
             }
         }
+        } catch (\Throwable $e) {
+            // 捕获异常并保存错误信息到缓存
+            $this->cache->set([
+                'status' => 2,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $this->cache->expiresAfter(60);
+            $this->filesystemAdapter->save($this->cache);
+
+            // 重新抛出异常
+            throw $e;
+        }
+    }
+
+    /**
+     * 保存文件
+     * @param string $path 保存目录
+     * @return string|bool
+     */
+    public function save(string $path)
+    {
+        // 确保目录存在
+        if (!is_dir($path)) {
+            mkdir($path, 0755, true);
+        }
+
+        return parent::save($path);
     }
 }
