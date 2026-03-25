@@ -125,34 +125,25 @@ class ChannelPlayerController
         // 构建基础查询字段
         $selectFields = [
             'player.*',
-            'player_extend.email',
-            'player_extend.line',
             'player_extend.recharge_amount',
             'player_extend.withdraw_amount',
-            'player_extend.machine_put_amount',
+            'player_extend.machine_put_point',
             'player_extend.remark',
-            'player_extend.present_out_amount',
-            'player_extend.present_in_amount',
-            'player_extend.third_recharge_amount',
-            'player_extend.third_withdraw_amount',
             'channel.name as channel_name',
             'recommend_promoter.uuid as recommend_promoter_uuid',
             'recommend_promoter.phone as recommend_promoter_phone',
             'recommend_promoter.name as recommend_promoter_name',
-            'national_promoter.pending_amount',
-            'national_promoter.settlement_amount',
             'player_register_record.ip',
             'player_register_record.country_name',
             'player_register_record.city_name',
             'player_platform_cash.money',
-            'national_level.name as level_name',
-            'level_list.level as level',
-            'national_promoter.level as level_sort',
         ];
 
         // 线下渠道：添加代理和店家字段
         if ($channel && $channel->is_offline == 1) {
             $selectFields = array_merge($selectFields, [
+                'player.agent_admin_id',
+                'player.store_admin_id',
                 'agent_admin.username as agent_admin_username',
                 'agent_admin.nickname as agent_admin_nickname',
                 'store_admin.username as store_admin_username',
@@ -168,9 +159,6 @@ class ChannelPlayerController
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
             ->leftjoin('player_platform_cash', 'player.id', '=', 'player_platform_cash.player_id')
-            ->leftjoin('national_promoter', 'player.id', '=', 'national_promoter.uid')
-            ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
-            ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -205,6 +193,27 @@ class ChannelPlayerController
                 })
             ->get()
             ->toArray();
+
+        // 计算每个设备的彩金和小计
+        foreach ($list as &$item) {
+            // 查询该设备的累计彩金
+            $lotteryAmount = PlayerLotteryRecord::query()
+                ->where('player_id', $item['id'])
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                ->sum('amount') ?? 0;
+
+            $item['lottery_amount'] = $lotteryAmount;
+
+            // 计算小计 = (开分 + 投钞) - (洗分 + 彩金)
+            $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
+            $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+
+            $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
+            $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
+            $item['subtotal'] = bcsub($totalIn, $totalOut, 2);
+        }
+
         return Grid::create($list, function (Grid $grid) use ($total, $list, $channel) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
@@ -314,28 +323,6 @@ class ChannelPlayerController
                 })->width(120)->align('center');
             }
 
-            $grid->column('real_name', admin_trans('player.fields.real_name'))->display(function ($value) {
-                return Str::of($value)->limit(20, ' (...)');
-            })->editable(
-                (new Editable)
-                    ->textarea('real_name')
-                    ->showCount()
-                    ->rows(5)
-                    ->rule(['max:50' => admin_trans('player.fields.real_name')])
-            )->width('150px')->align('center');
-
-            $grid->column('level_sort',
-                admin_trans('national_promoter.level_list.name'))->display(function ($value, $data) {
-                if (!empty($data['level_name'])) {
-                    return $data['level_name'] . $data['level'];
-                }
-                return '';
-            })->sortable();
-
-            $grid->column('pending_amount',
-                admin_trans('national_promoter.fields.pending_amount'))->ellipsis(true)->sortable()->align('center');
-            $grid->column('settlement_amount',
-                admin_trans('national_promoter.fields.settlement_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
                 $val,
@@ -346,12 +333,28 @@ class ChannelPlayerController
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
             })->ellipsis(true)->sortable()->align('center');
-            $grid->column('recharge_amount',
-                admin_trans('player_extend.fields.recharge_amount'))->ellipsis(true)->sortable()->align('center');
-            $grid->column('machine_put_amount',
-                admin_trans('player_extend.fields.machine_put_amount'))->ellipsis(true)->sortable()->align('center');
-            $grid->column('withdraw_amount',
-                admin_trans('player_extend.fields.withdraw_amount'))->ellipsis(true)->sortable()->align('center');
+
+            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            $grid->column('machine_put_point', '投钞')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            $grid->column('subtotal', '小计')->display(function ($value) {
+                $color = $value >= 0 ? '#3f8600' : '#cf1322';
+                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
+            })->width(120)->align('center');
+
             $grid->column('remark', admin_trans('player_extend.fields.remark'))->display(function ($value) {
                 return ToolTip::create(Str::of($value)->limit(30, ' (...)'))->title($value);
             })->editable(
@@ -416,25 +419,12 @@ class ChannelPlayerController
                 admin_trans('player.fields.status_offline_open'))->switch()->ellipsis(true)->align('center');
             $grid->column('status_baccarat',
                 admin_trans('player.fields.status_baccarat'))->switch()->ellipsis(true)->align('center');
-            $grid->column('email', admin_trans('player_extend.fields.email'))->align('center')->ellipsis(true);
-            $grid->column('line', admin_trans('player_extend.fields.line'))->align('center')->ellipsis(true);
-            $grid->column('present_out_amount',
-                admin_trans('player_extend.fields.present_out_amount'))->ellipsis(true)->sortable()->align('center');
-            $grid->column('present_in_amount',
-                admin_trans('player_extend.fields.present_in_amount'))->ellipsis(true)->sortable()->align('center');
-            $grid->column('third_recharge_amount',
-                admin_trans('player_extend.fields.third_recharge_amount'))->ellipsis(true)->sortable()->align('center');
-            $grid->column('third_withdraw_amount',
-                admin_trans('player_extend.fields.third_withdraw_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->filter(function (Filter $filter) use ($channel) {
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.name'));
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
-                $filter->like()->text('email')->placeholder(admin_trans('player_extend.fields.email'));
-                $filter->like()->text('line')->placeholder(admin_trans('player_extend.fields.line'));
-                $filter->like()->text('real_name')->placeholder(admin_trans('player.fields.real_name'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
 
                 // 线下渠道：按 player_type 筛选
@@ -3921,13 +3911,11 @@ class ChannelPlayerController
             return message_error(admin_trans('offline_channel.error_store_machine_not_exist'));
         }
 
-        // 获取店家所属的代理
-        $storeDepartment = AdminDepartment::query()->where('id', $storeAdmin->department_id)->first();
-        $agentDepartmentId = $storeDepartment ? $storeDepartment->pid : 0;
+        // 获取店家所属的代理（通过parent_admin_id）
         $agentAdmin = null;
-        if ($agentDepartmentId > 0) {
+        if ($storeAdmin->parent_admin_id > 0) {
             $agentAdmin = AdminUser::query()
-                ->where('department_id', $agentDepartmentId)
+                ->where('id', $storeAdmin->parent_admin_id)
                 ->where('type', AdminUser::TYPE_AGENT)
                 ->first();
         }
