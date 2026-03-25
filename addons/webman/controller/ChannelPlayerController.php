@@ -4635,13 +4635,12 @@ class ChannelPlayerController
      * @param $size
      * @param $page
      * @param array $ex_admin_filter
-     * @return \ExAdmin\ui\response\Msg
+     * @return Msg
      */
     public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [])
     {
-        if (!isset($selected)) {
-            return message_error('请选择要授权的游戏');
-        }
+        // 允许 $selected 为空，表示清空所有授权（禁用所有游戏）
+        $selected = $selected ?? [];
 
         /** @var Player $player */
         $player = Player::query()->with('channel')->find($player_id);
@@ -4661,16 +4660,19 @@ class ChannelPlayerController
             return message_error('该渠道未开启任何电子游戏平台');
         }
 
-        // 验证选择的游戏
-        $selectedGames = Game::query()->whereIn('id', $selected)->get();
-        if ($selectedGames->isEmpty()) {
-            return message_error('未找到选择的游戏');
-        }
+        // 验证选择的游戏（如果有选择）
+        $selectedGames = collect([]);
+        if (!empty($selected)) {
+            $selectedGames = Game::query()->whereIn('id', $selected)->get();
+            if ($selectedGames->isEmpty()) {
+                return message_error('未找到选择的游戏');
+            }
 
-        // 验证游戏是否都在渠道允许的范围内
-        foreach ($selectedGames as $game) {
-            if (!in_array($game->platform_id, $channelGamePlatformIds)) {
-                return message_error('选择的游戏不在渠道允许的范围内');
+            // 验证游戏是否都在渠道允许的范围内
+            foreach ($selectedGames as $game) {
+                if (!in_array($game->platform_id, $channelGamePlatformIds)) {
+                    return message_error('选择的游戏不在渠道允许的范围内');
+                }
             }
         }
 
@@ -4746,7 +4748,8 @@ class ChannelPlayerController
             Db::commit();
 
             $count = count($selected);
-            return message_success("成功设置了 {$count} 个游戏权限")->refresh();
+            $message = $count > 0 ? "成功设置了 {$count} 个游戏权限" : "已清空所有游戏授权";
+            return message_success($message)->refresh();
         } catch (Exception $e) {
             Db::rollBack();
             Log::error('save_player_games', [$e->getMessage(), $e->getTrace()]);
