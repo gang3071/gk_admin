@@ -4588,10 +4588,9 @@ class ChannelPlayerController
                             'game_id' => $data->id,
                             'action' => 'enable'
                         ])
-                        ->gridRefresh()
+                        ->gridRefresh());
                 if ($isDisabled) {
 
-                    );
                 } else {
                     // 未禁用，显示"禁用游戏"按钮
                     $actions->prepend(
