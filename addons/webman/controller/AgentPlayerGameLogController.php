@@ -151,7 +151,14 @@ class AgentPlayerGameLogController
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->player->storeAdmin->nickname ?? $data->player->storeAdmin->username ?? '';
+                    if (!empty($data->player->storeAdmin)) {
+                        return Html::create()->content([
+                            Tag::create($data->player->storeAdmin->nickname ?: $data->player->storeAdmin->username)->color('blue')
+                        ]);
+                    }
+                    return Html::create()->content([
+                        Tag::create(admin_trans('admin.unassigned'))->color('default')
+                    ]);
                 })->width('150px')->align('center');
                 $grid->column('player.channel.name', admin_trans('player.fields.department_id'))->display(function (
                     $val,
