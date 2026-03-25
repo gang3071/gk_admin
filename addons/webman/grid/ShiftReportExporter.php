@@ -167,4 +167,24 @@ class ShiftReportExporter extends Excel
 
         return parent::save($path);
     }
+
+    /**
+     * 导出错误（带详细信息）
+     * @param \Throwable $exception
+     */
+    public function exportErrorWithDetails(\Throwable $exception = null)
+    {
+        $data = ['status' => 2];
+
+        if ($exception) {
+            $data['error'] = $exception->getMessage();
+            $data['file'] = $exception->getFile();
+            $data['line'] = $exception->getLine();
+            $data['trace'] = substr($exception->getTraceAsString(), 0, 2000);
+        }
+
+        $this->cache->set($data);
+        $this->cache->expiresAfter(60);
+        $this->filesystemAdapter->save($this->cache);
+    }
 }

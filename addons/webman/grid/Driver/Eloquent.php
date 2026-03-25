@@ -422,7 +422,12 @@ class Eloquent extends GridAbstract
                 });
             }
         } catch (\Throwable $exception) {
-            $export->exportError();
+            // 检查是否有自定义的错误处理方法
+            if (method_exists($export, 'exportErrorWithDetails')) {
+                $export->exportErrorWithDetails($exception);
+            } else {
+                $export->exportError();
+            }
         }
         return $export->export();
     }
