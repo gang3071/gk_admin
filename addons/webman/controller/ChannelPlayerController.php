@@ -4571,21 +4571,25 @@ class ChannelPlayerController
             })->align('center')->width('80px');
 
             $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
+                $actions->hideDel();
+                $actions->hideEdit();
+
                 // 判断当前游戏是否被禁用
                 $isDisabled = in_array($data->id, $selectedGameIds);
-                // 已禁用，显示"取消禁用"按钮
-                $actions->prepend(
-                    Button::create('取消禁用')
-                        ->type('default')
-                        ->size('small')
-                        ->confirm('确认取消禁用该游戏？', [$this, 'toggleGameDisable'], [
-                            'player_id' => $player_id,
-                            'game_id' => $data->id,
-                            'action' => 'enable'
-                        ])
-                        ->gridRefresh());
-                if ($isDisabled) {
 
+                if ($isDisabled) {
+                    // 已禁用，显示"取消禁用"按钮
+                    $actions->prepend(
+                        Button::create('取消禁用')
+                            ->type('default')
+                            ->size('small')
+                            ->confirm('确认取消禁用该游戏？', [$this, 'toggleGameDisable'], [
+                                'player_id' => $player_id,
+                                'game_id' => $data->id,
+                                'action' => 'enable'
+                            ])
+                            ->gridRefresh()
+                    );
                 } else {
                     // 未禁用，显示"禁用游戏"按钮
                     $actions->prepend(
