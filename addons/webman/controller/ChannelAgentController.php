@@ -13,6 +13,7 @@ use addons\webman\model\OpenScoreSetting;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerDisabledGame;
+use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRechargeRecord;
@@ -283,6 +284,26 @@ class ChannelAgentController
             ->get()
             ->toArray();
 
+        // 计算每个设备的彩金和小计
+        foreach ($list as &$item) {
+            // 查询该设备的累计彩金
+            $lotteryAmount = PlayerLotteryRecord::query()
+                ->where('player_id', $item['id'])
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                ->sum('amount') ?? 0;
+
+            $item['lottery_amount'] = $lotteryAmount;
+
+            // 计算小计 = (开分 + 投钞) - (洗分 + 彩金)
+            $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
+            $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+
+            $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
+            $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
+            $item['subtotal'] = bcsub($totalIn, $totalOut, 2);
+        }
+
         return Grid::create($list, function (Grid $grid) use ($admin, $total, $list) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
@@ -319,8 +340,15 @@ class ChannelAgentController
             $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width('100px')->align('center');
-            $grid->column('machine_put_point', '累计投钞')->display(function ($value) {
+            $grid->column('machine_put_point', '投钞')->display(function ($value) {
                 return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
+            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width('100px')->align('center');
+            $grid->column('subtotal', '小计')->display(function ($value) {
+                $color = $value >= 0 ? '#3f8600' : '#cf1322';
+                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width('100px')->align('center');
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
