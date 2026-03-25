@@ -41,6 +41,34 @@ class Filesystem
 
         return $adapter;
     }
+    /**
+     * 获取存储路径
+     * @param string $path
+     * @return string
+     */
+    public static function path(string $path = ''): string
+    {
+        return public_path('storage') . ($path ? DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR) : '');
+    }
+
+    /**
+     * 获取访问 URL
+     * @param string $path
+     * @return string
+     */
+    public static function url(string $path): string
+    {
+        $request = request();
+        if ($request) {
+            $host = $request->header('x-forwarded-host') ?: $request->header('host');
+            $baseUrl = 'https://' . $host;
+        } else {
+            $baseUrl = env('APP_URL', 'https://zhu.supergames9.com');
+        }
+
+        return $baseUrl . '/storage/' . ltrim($path, '/');
+    }
+
     public static function __callStatic($name, $arguments)
     {
         $self = new static();
