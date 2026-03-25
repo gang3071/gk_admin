@@ -172,59 +172,13 @@ class StoreShiftHandoverRecordController
                 $actions->hideDel();
             });
 
-            // 交班时间格式化（导出用）
-            $grid->column('time_range', '交班时间')->export(function ($val, $data) {
-                return $data['start_time'] . ' ~ ' . $data['end_time'];
-            });
-
-            // 交班类型格式化（导出用）
-            $grid->column('is_auto_shift', '交班类型')->export(function ($value) {
-                return $value == 1 ? '自动交班' : '手动交班';
-            });
-
-            // 添加导出专用列 - 设备数量
-            $grid->column('device_count', '设备数量')->export(function ($val, $data) {
-                return StoreShiftDeviceDetail::where('shift_record_id', $data['id'])->count();
-            })->hideInTable();
-
-            // 添加导出专用列 - 利润最高设备
-            $grid->column('top_device', '利润最高设备')->export(function ($val, $data) {
-                $device = StoreShiftDeviceDetail::where('shift_record_id', $data['id'])
-                    ->orderBy('profit', 'desc')
-                    ->first();
-                if ($device) {
-                    return $device->player_name . '(' . $device->player_phone . ') 利润:' . $device->profit;
-                }
-                return '-';
-            })->hideInTable();
-
-            // 添加导出专用列 - 利润最低设备
-            $grid->column('bottom_device', '利润最低设备')->export(function ($val, $data) {
-                $device = StoreShiftDeviceDetail::where('shift_record_id', $data['id'])
-                    ->orderBy('profit', 'asc')
-                    ->first();
-                if ($device) {
-                    return $device->player_name . '(' . $device->player_phone . ') 利润:' . $device->profit;
-                }
-                return '-';
-            })->hideInTable();
-
-            // 添加导出专用列 - 设备列表
-            $grid->column('device_list', '设备列表')->export(function ($val, $data) {
-                $devices = StoreShiftDeviceDetail::where('shift_record_id', $data['id'])
-                    ->orderBy('profit', 'desc')
-                    ->get(['player_name', 'player_phone'])
-                    ->map(function($item) {
-                        return $item->player_name . '(' . $item->player_phone . ')';
-                    })
-                    ->toArray();
-                return implode('、', $devices);
-            })->hideInTable();
-
             $grid->hideDelete();
             $grid->hideCreate();
             $grid->expandFilter();
-            $grid->export();
+
+            // 使用自定义导出驱动
+            $grid->export(new \addons\webman\grid\ShiftReportExporter())
+                ->filename('shift_report_' . date('YmdHis'));
         });
     }
 
