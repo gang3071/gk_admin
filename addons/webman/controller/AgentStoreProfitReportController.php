@@ -7,6 +7,8 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\model\PlayerWithdrawRecord;
+use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -65,24 +67,20 @@ class AgentStoreProfitReportController
                     'store_username' => $store->username,
                     'agent_commission' => $store->agent_commission ?? 0,
                     'channel_commission' => $store->channel_commission ?? 0,
-                    'present_in_amount' => 0,
-                    'present_out_amount' => 0,
+                    'recharge_amount' => 0,
+                    'withdraw_amount' => 0,
                     'machine_put_point' => 0,
                     'lottery_amount' => 0,
-                    'profit' => 0,
+                    'subtotal' => 0,
                     'agent_profit' => 0,
+                    'channel_profit' => 0,
                 ];
                 continue;
             }
 
             // 查询开分、洗分、投钞数据
             $deliveryQuery = PlayerDeliveryRecord::query()
-                ->whereIn('player_id', $playerIds)
-                ->whereIn('type', [
-                    PlayerDeliveryRecord::TYPE_PRESENT_IN,
-                    PlayerDeliveryRecord::TYPE_PRESENT_OUT,
-                    PlayerDeliveryRecord::TYPE_MACHINE,
-                ]);
+                ->whereIn('player_id', $playerIds);
 
             // 时间筛选
             if (!empty($createdAtStart)) {
@@ -93,8 +91,8 @@ class AgentStoreProfitReportController
             }
 
             $deliveryData = $deliveryQuery->selectRaw("
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN `amount` ELSE 0 END) AS present_in_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN `amount` ELSE 0 END) AS present_out_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
             ")->first();
 
@@ -116,34 +114,41 @@ class AgentStoreProfitReportController
             ")->first();
 
             // 提取数据
-            $presentInAmount = floatval($deliveryData->present_in_amount ?? 0);
-            $presentOutAmount = floatval($deliveryData->present_out_amount ?? 0);
+            $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
+            $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
-            // 计算盈余：(开分+投钞) - (洗分+彩金)
-            $profit = ($presentInAmount + $machinePutPoint) - ($presentOutAmount + $lotteryAmount);
+            // 计算小计：(开分+投钞) - (洗分+彩金)
+            $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
+            $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
+            $subtotal = bcsub($totalIn, $totalOut, 2);
 
-            // 计算代理分润：盈余 * 代理抽成比例
+            // 计算代理分润：小计 * 代理抽成比例
             $agentCommission = floatval($store->agent_commission ?? 0);
-            $agentProfit = $profit * ($agentCommission / 100);
+            $agentProfit = bcmul($subtotal, bcdiv($agentCommission, 100, 4), 2);
+
+            // 计算渠道分润：小计 * 渠道抽成比例
+            $channelCommission = floatval($store->channel_commission ?? 0);
+            $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
 
             $reportData[] = [
                 'id' => $store->id,
                 'store_name' => $store->nickname,
                 'store_username' => $store->username,
                 'agent_commission' => $agentCommission,
-                'channel_commission' => $store->channel_commission ?? 0,
-                'present_in_amount' => $presentInAmount,
-                'present_out_amount' => $presentOutAmount,
+                'channel_commission' => $channelCommission,
+                'recharge_amount' => $rechargeAmount,
+                'withdraw_amount' => $withdrawAmount,
                 'machine_put_point' => $machinePutPoint,
                 'lottery_amount' => $lotteryAmount,
-                'profit' => $profit,
+                'subtotal' => $subtotal,
                 'agent_profit' => $agentProfit,
+                'channel_profit' => $channelProfit,
             ];
         }
 
-        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter) {
+        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData) {
             $grid->title('店家分润报表');
             $grid->autoHeight();
             $grid->bordered(true);
@@ -154,38 +159,43 @@ class AgentStoreProfitReportController
 
             $grid->column('store_username', '登录账号')->width(120)->align('center');
 
-            $grid->column('present_in_amount', '开分')->display(function ($value) {
-                return number_format($value, 2);
+            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+                return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('present_out_amount', '洗分')->display(function ($value) {
-                return number_format($value, 2);
+            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+                return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
             $grid->column('machine_put_point', '投钞')->display(function ($value) {
-                return number_format($value, 2);
+                return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('lottery_amount', '拉彩')->display(function ($value) {
-                return number_format($value, 2);
+            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+                return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('profit', '盈余')->display(function ($value) {
-                $color = $value >= 0 ? 'green' : 'red';
-                return Tag::create(number_format($value, 2))->color($color);
+            $grid->column('subtotal', '小计')->display(function ($value) {
+                $color = $value >= 0 ? '#3f8600' : '#cf1322';
+                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
             $grid->column('agent_commission', '代理抽成比例')->display(function ($value) {
                 return $value . '%';
-            })->width(120)->align('center');
+            })->width(100)->align('center');
 
             $grid->column('agent_profit', '代理分润')->display(function ($value) {
-                $color = $value >= 0 ? 'blue' : 'orange';
-                return Tag::create(number_format($value, 2))->color($color);
+                $color = $value >= 0 ? '#1890ff' : '#fa8c16';
+                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
             $grid->column('channel_commission', '渠道抽成比例')->display(function ($value) {
                 return $value . '%';
+            })->width(100)->align('center');
+
+            $grid->column('channel_profit', '渠道分润')->display(function ($value) {
+                $color = $value >= 0 ? '#52c41a' : '#f5222d';
+                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
             // 筛选器
@@ -202,6 +212,9 @@ class AgentStoreProfitReportController
             $grid->hideDelete();
             $grid->hideAdd();
             $grid->expandFilter();
+            $grid->attr('is_mongo', true);
+            $grid->attr('is_mongo_total', count($reportData));
+            $grid->attr('mongo_model', $reportData);
         });
     }
 }
