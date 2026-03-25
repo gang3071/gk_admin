@@ -391,7 +391,7 @@ class StoreShiftHandoverRecordController
      * @auth true
      * @group store
      */
-    public function exportReport(int $shift_record_id)
+    public function exportReport(int $shift_record_id): Response
     {
         // 获取交班记录
         $shiftRecord = StoreAgentShiftHandoverRecord::find($shift_record_id);
@@ -409,88 +409,112 @@ class StoreShiftHandoverRecordController
         // 获取设备明细
         $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $shift_record_id)
             ->orderBy('profit', 'desc')
-            ->get()
-            ->toArray();
+            ->get();
 
-        // 准备导出数据 - 使用 Excel::export 需要的格式
-        $title = '交班报表_' . date('YmdHis', strtotime($shiftRecord->start_time));
+        // 创建 Excel
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('交班报表');
 
-        // 列标题（关联数组）
-        $columnTitle = [
-            'player_name' => '设备名称',
-            'player_phone' => '设备编号',
-            'machine_point' => '投钞点数',
-            'recharge_amount' => '开分',
-            'withdrawal_amount' => '洗分',
-            'modified_add_amount' => '后台加点',
-            'modified_deduct_amount' => '后台扣点',
-            'lottery_amount' => '彩金',
-            'total_in' => '总收入',
-            'total_out' => '总支出',
-            'profit' => '利润',
+        $row = 1;
+
+        // 交班信息
+        $sheet->setCellValue('A' . $row, '交班时间');
+        $sheet->setCellValue('B' . $row, $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time);
+        $row++;
+
+        $sheet->setCellValue('A' . $row, '交班类型');
+        $sheet->setCellValue('B' . $row, $shiftRecord->is_auto_shift ? '自动交班' : '手动交班');
+        $row++;
+
+        $sheet->setCellValue('A' . $row, '创建时间');
+        $sheet->setCellValue('B' . $row, $shiftRecord->created_at);
+        $row += 2;
+
+        // 汇总统计
+        $sheet->setCellValue('A' . $row, '汇总统计');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+
+        $summaryData = [
+            ['投钞点数', $shiftRecord->machine_point],
+            ['投钞金额', number_format($shiftRecord->machine_amount, 2)],
+            ['总收入', number_format($shiftRecord->total_in, 2)],
+            ['总支出', number_format($shiftRecord->total_out, 2)],
+            ['彩金发放', number_format($shiftRecord->lottery_amount, 2)],
+            ['总利润', number_format($shiftRecord->total_profit_amount, 2)],
         ];
 
-        // 处理数据 - 格式化数字
-        $data = [];
+        foreach ($summaryData as $data) {
+            $sheet->setCellValue('A' . $row, $data[0]);
+            $sheet->setCellValue('B' . $row, $data[1]);
+            $row++;
+        }
+        $row += 2;
+
+        // 设备明细表头
+        $sheet->setCellValue('A' . $row, '设备明细（共 ' . $deviceDetails->count() . ' 台）');
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $row++;
+
+        $headers = [
+            'A' => '设备名称',
+            'B' => '设备编号',
+            'C' => '投钞点数',
+            'D' => '开分',
+            'E' => '洗分',
+            'F' => '后台加点',
+            'G' => '后台扣点',
+            'H' => '彩金',
+            'I' => '总收入',
+            'J' => '总支出',
+            'K' => '利润',
+        ];
+
+        foreach ($headers as $col => $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+        }
+        $row++;
+
+        // 设备明细数据
         foreach ($deviceDetails as $detail) {
-            $data[] = [
-                'player_name' => $detail['player_name'],
-                'player_phone' => $detail['player_phone'],
-                'machine_point' => $detail['machine_point'],
-                'recharge_amount' => number_format($detail['recharge_amount'], 2, '.', ''),
-                'withdrawal_amount' => number_format($detail['withdrawal_amount'], 2, '.', ''),
-                'modified_add_amount' => number_format($detail['modified_add_amount'], 2, '.', ''),
-                'modified_deduct_amount' => number_format($detail['modified_deduct_amount'], 2, '.', ''),
-                'lottery_amount' => number_format($detail['lottery_amount'], 2, '.', ''),
-                'total_in' => number_format($detail['total_in'], 2, '.', ''),
-                'total_out' => number_format($detail['total_out'], 2, '.', ''),
-                'profit' => number_format($detail['profit'], 2, '.', ''),
-            ];
+            $sheet->setCellValue('A' . $row, $detail->player_name);
+            $sheet->setCellValue('B' . $row, $detail->player_phone);
+            $sheet->setCellValue('C' . $row, $detail->machine_point);
+            $sheet->setCellValue('D' . $row, number_format($detail->recharge_amount, 2));
+            $sheet->setCellValue('E' . $row, number_format($detail->withdrawal_amount, 2));
+            $sheet->setCellValue('F' . $row, number_format($detail->modified_add_amount, 2));
+            $sheet->setCellValue('G' . $row, number_format($detail->modified_deduct_amount, 2));
+            $sheet->setCellValue('H' . $row, number_format($detail->lottery_amount, 2));
+            $sheet->setCellValue('I' . $row, number_format($detail->total_in, 2));
+            $sheet->setCellValue('J' . $row, number_format($detail->total_out, 2));
+            $sheet->setCellValue('K' . $row, number_format($detail->profit, 2));
+            $row++;
         }
 
-        // 如果没有明细数据，至少导出汇总信息
-        if (empty($data)) {
-            $data[] = [
-                'player_name' => '无设备数据',
-                'player_phone' => '',
-                'machine_point' => '',
-                'recharge_amount' => '',
-                'withdrawal_amount' => '',
-                'modified_add_amount' => '',
-                'modified_deduct_amount' => '',
-                'lottery_amount' => '',
-                'total_in' => '',
-                'total_out' => '',
-                'profit' => '',
-            ];
+        // 设置列宽
+        foreach (range('A', 'K') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
         }
 
-        // 添加汇总行到备注
-        $callback = function($row, $worksheet, $rowNum) use ($shiftRecord, $deviceDetails) {
-            // 在最后一行后添加汇总信息
-            if ($rowNum == count($deviceDetails) + 2) {
-                $summaryRow = $rowNum + 2;
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow, '交班信息');
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 1, '交班时间');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 1, $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time);
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 2, '交班类型');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 2, $shiftRecord->is_auto_shift ? '自动交班' : '手动交班');
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 4, '汇总统计');
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 5, '投钞点数');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 5, $shiftRecord->machine_point);
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 6, '总收入');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 6, number_format($shiftRecord->total_in, 2));
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 7, '总支出');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 7, number_format($shiftRecord->total_out, 2));
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 8, '彩金发放');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 8, number_format($shiftRecord->lottery_amount, 2));
-                $worksheet->setCellValueByColumnAndRow(1, $summaryRow + 9, '总利润');
-                $worksheet->setCellValueByColumnAndRow(2, $summaryRow + 9, number_format($shiftRecord->total_profit_amount, 2));
-            }
-            return $row;
-        };
+        // 生成文件
+        $filename = '交班报表_' . date('YmdHis', strtotime($shiftRecord->start_time)) . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
 
-        // 导出Excel
-        return Excel::export($title, $columnTitle, $data, $callback);
+        // 输出到临时文件
+        $tempFile = tempnam(sys_get_temp_dir(), 'shift_');
+        $writer->save($tempFile);
+
+        // 读取文件
+        $content = file_get_contents($tempFile);
+        unlink($tempFile);
+
+        // 返回响应
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 }
