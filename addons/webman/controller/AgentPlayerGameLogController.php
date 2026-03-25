@@ -160,12 +160,6 @@ class AgentPlayerGameLogController
                         Tag::create(admin_trans('admin.unassigned'))->color('default')
                     ]);
                 })->width('150px')->align('center');
-                $grid->column('player.channel.name', admin_trans('player.fields.department_id'))->display(function (
-                    $val,
-                    PlayerGameLog $data
-                ) {
-                    return $data->player->channel->name ?? '';
-                })->width('150px')->align('center');
             }, admin_trans('player_game_log.device_info'));
             $grid->column(function (Grid $grid) {
                 $grid->column('machine.machineLabel.name', admin_trans('machine.fields.name'))->display(function (
