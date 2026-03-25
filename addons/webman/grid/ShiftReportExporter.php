@@ -9,6 +9,9 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 class ShiftReportExporter extends Excel
 {
+    // 跟踪已处理的记录数（用于判断是否完成）
+    protected $processedRecords = 0;
+
     public function columns(array $columns)
     {
         // 保存列配置，但不生成默认表头
@@ -101,30 +104,35 @@ class ShiftReportExporter extends Excel
             // 空行分隔
             $this->currentRow++;
 
-            // 更新缓存进度
+            // 递增已处理记录数
+            $this->processedRecords++;
+
+            // 更新缓存进度（基于已处理的记录数）
+            $progress = $this->count > 0 ? floor($this->processedRecords / $this->count * 100) : 0;
             $this->cache->set([
                 'status' => 0,
-                'progress' => $this->progress()
+                'progress' => $progress
             ]);
             $this->cache->expiresAfter(60);
             $this->filesystemAdapter->save($this->cache);
-        }
 
-        // 设置列宽（只需要设置一次，放在判断完成后）
-        if ($this->currentRow > $this->count) {
-            foreach (range('A', 'L') as $col) {
-                $this->sheet->getColumnDimension($col)->setWidth(15);
-            }
+            // 检查是否所有记录都已处理完成
+            if ($this->processedRecords >= $this->count) {
+                // 设置列宽
+                foreach (range('A', 'L') as $col) {
+                    $this->sheet->getColumnDimension($col)->setWidth(15);
+                }
 
-            // 完成回调 - 只在所有数据处理完成后调用
-            if ($finish) {
-                $result = call_user_func($finish, $this);
-                $this->cache->set([
-                    'status' => 1,
-                    'url' => $result
-                ]);
-                $this->cache->expiresAfter(60);
-                $this->filesystemAdapter->save($this->cache);
+                // 完成回调 - 只在所有数据处理完成后调用
+                if ($finish) {
+                    $result = call_user_func($finish, $this);
+                    $this->cache->set([
+                        'status' => 1,
+                        'url' => $result
+                    ]);
+                    $this->cache->expiresAfter(60);
+                    $this->filesystemAdapter->save($this->cache);
+                }
             }
         }
     }
