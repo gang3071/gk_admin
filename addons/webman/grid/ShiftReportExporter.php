@@ -217,17 +217,39 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 累加到总计（调试：记录累加前后的值）
-                $beforeProfit = $this->grandTotal['profit'];
-                foreach ($subtotal as $key => $value) {
-                    $this->grandTotal[$key] += $value;
-                }
-                $afterProfit = $this->grandTotal['profit'];
+                // 累加到总计（添加详细调试）
+                $beforeTotal = [
+                    'profit' => $this->grandTotal['profit'],
+                    'total_in' => $this->grandTotal['total_in'],
+                    'machine_point' => $this->grandTotal['machine_point']
+                ];
 
-                // 在第一行写入调试信息
-                if ($this->currentRow == 1 || !isset($this->debugRow)) {
-                    $this->debugRow = 1;
+                foreach ($subtotal as $key => $value) {
+                    // 确保数值类型
+                    $currentValue = floatval($this->grandTotal[$key] ?? 0);
+                    $addValue = floatval($value ?? 0);
+                    $this->grandTotal[$key] = $currentValue + $addValue;
                 }
+
+                $afterTotal = [
+                    'profit' => $this->grandTotal['profit'],
+                    'total_in' => $this->grandTotal['total_in'],
+                    'machine_point' => $this->grandTotal['machine_point']
+                ];
+
+                // 写入调试信息到空白区域
+                $debugMsg = sprintf(
+                    '交班#%d: 小计利润=%.2f, 累加前=%.2f, 累加后=%.2f, 设备数=%d',
+                    $originalRecord->id,
+                    $subtotal['profit'],
+                    $beforeTotal['profit'],
+                    $afterTotal['profit'],
+                    $deviceDetails->count()
+                );
+
+                // 在 L 列（通常是空的）写入调试信息
+                $this->sheet->setCellValue('L' . ($this->currentRow - 1), $debugMsg);
+                $this->sheet->getStyle('L' . ($this->currentRow - 1))->getFont()->setSize(8);
 
                 // 累加设备数量
                 $this->totalDevices += $deviceDetails->count();
