@@ -15,7 +15,13 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Row;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use support\Request;
+use support\Response;
 
 /**
  * 店家后台 - 交班记录
@@ -70,19 +76,31 @@ class StoreShiftHandoverRecordController
 
             $grid->column('created_at', '创建时间')->width(180)->align('center');
 
-            // 操作列 - 查看设备明细
+            // 操作列 - 查看设备明细和导出
             $grid->column('device_detail', '操作')->display(function ($val, $data) {
-                return Button::create('设备明细')
-                    ->type('primary')
-                    ->size('small')
-                    ->modal(
-                        admin_url([
-                            'addons-webman-controller-StoreShiftHandoverRecordController',
-                            'deviceDetails'
-                        ]),
-                        ['shift_record_id' => $data['id']]
-                    )->width('80%');
-            })->width(120)->align('center');
+                return Html::create()->content([
+                    Button::create('设备明细')
+                        ->type('primary')
+                        ->size('small')
+                        ->modal(
+                            admin_url([
+                                'addons-webman-controller-StoreShiftHandoverRecordController',
+                                'deviceDetails'
+                            ]),
+                            ['shift_record_id' => $data['id']]
+                        )->width('80%'),
+                    Html::create(' '),
+                    Button::create('导出报表')
+                        ->size('small')
+                        ->ajax(
+                            admin_url([
+                                'addons-webman-controller-StoreShiftHandoverRecordController',
+                                'exportReport'
+                            ]),
+                            ['shift_record_id' => $data['id']]
+                        )
+                ]);
+            })->width(200)->align('center');
 
             // 行展开 - 显示详细信息
             $grid->expandRow(function ($row) {
@@ -366,5 +384,202 @@ class StoreShiftHandoverRecordController
             $grid->hideCreate();
             $grid->disableSelection();
         });
+    }
+
+    /**
+     * 导出交班报表（包含设备明细）
+     * @auth true
+     * @group store
+     */
+    public function exportReport(int $shift_record_id): Response
+    {
+        // 获取交班记录
+        $shiftRecord = StoreAgentShiftHandoverRecord::find($shift_record_id);
+
+        if (!$shiftRecord) {
+            return json(['code' => 1, 'msg' => '交班记录不存在']);
+        }
+
+        // 权限验证：只能导出自己的交班记录
+        $admin = Admin::user();
+        if ($shiftRecord->bind_admin_user_id != $admin->id) {
+            return json(['code' => 1, 'msg' => '无权导出此记录']);
+        }
+
+        // 获取设备明细
+        $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $shift_record_id)
+            ->orderBy('profit', 'desc')
+            ->get();
+
+        // 创建 Excel
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+
+        // 设置标题
+        $sheet->setTitle('交班报表');
+
+        // 标题行
+        $row = 1;
+        $sheet->setCellValue('A' . $row, '交班报表');
+        $sheet->mergeCells('A' . $row . ':L' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(16);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $row++;
+
+        // 交班信息
+        $sheet->setCellValue('A' . $row, '交班时间：');
+        $sheet->setCellValue('B' . $row, $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time);
+        $sheet->mergeCells('B' . $row . ':D' . $row);
+        $row++;
+
+        $sheet->setCellValue('A' . $row, '交班类型：');
+        $sheet->setCellValue('B' . $row, $shiftRecord->is_auto_shift ? '自动交班' : '手动交班');
+        $sheet->mergeCells('B' . $row . ':D' . $row);
+        $row++;
+
+        $sheet->setCellValue('A' . $row, '创建时间：');
+        $sheet->setCellValue('B' . $row, $shiftRecord->created_at);
+        $sheet->mergeCells('B' . $row . ':D' . $row);
+        $row++;
+
+        $row++; // 空行
+
+        // 汇总统计
+        $sheet->setCellValue('A' . $row, '汇总统计');
+        $sheet->mergeCells('A' . $row . ':L' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E8E8E8');
+        $row++;
+
+        // 汇总数据表头
+        $headers = ['项目', '数值'];
+        $col = 'A';
+        foreach ($headers as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($col . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('D9D9D9');
+            $col++;
+        }
+        $row++;
+
+        // 汇总数据
+        $summaryData = [
+            ['投钞点数', $shiftRecord->machine_point],
+            ['投钞金额', number_format($shiftRecord->machine_amount, 2)],
+            ['总收入', number_format($shiftRecord->total_in, 2)],
+            ['总支出', number_format($shiftRecord->total_out, 2)],
+            ['彩金发放', number_format($shiftRecord->lottery_amount, 2)],
+            ['总利润', number_format($shiftRecord->total_profit_amount, 2)],
+        ];
+
+        foreach ($summaryData as $data) {
+            $sheet->setCellValue('A' . $row, $data[0]);
+            $sheet->setCellValue('B' . $row, $data[1]);
+
+            // 利润行使用颜色标注
+            if ($data[0] == '总利润') {
+                $color = $shiftRecord->total_profit_amount >= 0 ? '00B050' : 'FF0000';
+                $sheet->getStyle('B' . $row)->getFont()->getColor()->setRGB($color);
+                $sheet->getStyle('B' . $row)->getFont()->setBold(true);
+            }
+
+            $row++;
+        }
+
+        $row++; // 空行
+
+        // 设备明细
+        $sheet->setCellValue('A' . $row, '设备明细（共 ' . $deviceDetails->count() . ' 台设备）');
+        $sheet->mergeCells('A' . $row . ':L' . $row);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle('A' . $row)->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setRGB('E8E8E8');
+        $row++;
+
+        // 设备明细表头
+        $detailHeaders = [
+            '设备名称', '设备编号', '投钞点数', '开分', '洗分',
+            '后台加点', '后台扣点', '彩金', '总收入', '总支出', '利润'
+        ];
+        $col = 'A';
+        foreach ($detailHeaders as $header) {
+            $sheet->setCellValue($col . $row, $header);
+            $sheet->getStyle($col . $row)->getFont()->setBold(true);
+            $sheet->getStyle($col . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle($col . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('D9D9D9');
+            $col++;
+        }
+        $row++;
+
+        // 设备明细数据
+        foreach ($deviceDetails as $detail) {
+            $sheet->setCellValue('A' . $row, $detail->player_name);
+            $sheet->setCellValue('B' . $row, $detail->player_phone);
+            $sheet->setCellValue('C' . $row, $detail->machine_point);
+            $sheet->setCellValue('D' . $row, number_format($detail->recharge_amount, 2));
+            $sheet->setCellValue('E' . $row, number_format($detail->withdrawal_amount, 2));
+            $sheet->setCellValue('F' . $row, number_format($detail->modified_add_amount, 2));
+            $sheet->setCellValue('G' . $row, number_format($detail->modified_deduct_amount, 2));
+            $sheet->setCellValue('H' . $row, number_format($detail->lottery_amount, 2));
+            $sheet->setCellValue('I' . $row, number_format($detail->total_in, 2));
+            $sheet->setCellValue('J' . $row, number_format($detail->total_out, 2));
+            $sheet->setCellValue('K' . $row, number_format($detail->profit, 2));
+
+            // 利润列颜色
+            $color = $detail->profit >= 0 ? '00B050' : 'FF0000';
+            $sheet->getStyle('K' . $row)->getFont()->getColor()->setRGB($color);
+
+            $row++;
+        }
+
+        // 设置列宽
+        $sheet->getColumnDimension('A')->setWidth(20);
+        $sheet->getColumnDimension('B')->setWidth(15);
+        for ($col = 'C'; $col <= 'K'; $col++) {
+            $sheet->getColumnDimension($col)->setWidth(12);
+        }
+
+        // 设置边框
+        $styleArray = [
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
+        ];
+        $lastRow = $row - 1;
+        $sheet->getStyle('A6:B' . ($lastRow))->applyFromArray($styleArray);
+        $sheet->getStyle('A' . ($row - $deviceDetails->count() - 1) . ':K' . $lastRow)->applyFromArray($styleArray);
+
+        // 输出 Excel 文件
+        $filename = '交班报表_' . date('YmdHis', strtotime($shiftRecord->start_time)) . '.xlsx';
+
+        $writer = new Xlsx($spreadsheet);
+
+        // 输出到临时文件
+        $tempFile = tempnam(sys_get_temp_dir(), 'shift_report_');
+        $writer->save($tempFile);
+
+        // 读取文件内容
+        $content = file_get_contents($tempFile);
+        unlink($tempFile);
+
+        // 返回下载响应
+        return response($content, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . urlencode($filename) . '"',
+            'Cache-Control' => 'max-age=0',
+        ]);
     }
 }
