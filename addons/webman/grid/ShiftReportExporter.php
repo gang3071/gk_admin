@@ -217,13 +217,37 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 累加到总计
+                // 添加 subtotal 调试行
+                $this->sheet->setCellValue('A' . $this->currentRow, '【调试】subtotal 数据:');
+                $this->sheet->setCellValue('B' . $this->currentRow, 'profit=' . $subtotal['profit']);
+                $this->sheet->setCellValue('C' . $this->currentRow, 'total_in=' . $subtotal['total_in']);
+                $this->sheet->setCellValue('D' . $this->currentRow, 'machine_point=' . $subtotal['machine_point']);
+                $this->sheet->getStyle('A' . $this->currentRow . ':D' . $this->currentRow)->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFCCCC']],
+                    'font' => ['size' => 9, 'color' => ['rgb' => '0000FF']]
+                ]);
+                $this->currentRow++;
+
+                // 累加到总计（添加调试）
+                $beforeProfit = $this->grandTotal['profit'];
                 foreach ($subtotal as $key => $value) {
                     // 确保数值类型
                     $currentValue = floatval($this->grandTotal[$key] ?? 0);
                     $addValue = floatval($value ?? 0);
                     $this->grandTotal[$key] = $currentValue + $addValue;
                 }
+                $afterProfit = $this->grandTotal['profit'];
+
+                // 添加累加结果调试行
+                $this->sheet->setCellValue('A' . $this->currentRow, '【调试】累加结果:');
+                $this->sheet->setCellValue('B' . $this->currentRow, '累加前profit=' . $beforeProfit);
+                $this->sheet->setCellValue('C' . $this->currentRow, '累加后profit=' . $afterProfit);
+                $this->sheet->setCellValue('D' . $this->currentRow, '差值=' . ($afterProfit - $beforeProfit));
+                $this->sheet->getStyle('A' . $this->currentRow . ':D' . $this->currentRow)->applyFromArray([
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'CCFFCC']],
+                    'font' => ['size' => 9, 'color' => ['rgb' => '009900']]
+                ]);
+                $this->currentRow++;
 
                 // 累加设备数量
                 $this->totalDevices += $deviceDetails->count();
