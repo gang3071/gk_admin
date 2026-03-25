@@ -75,14 +75,14 @@ class StoreShiftHandoverRecordController
                 return Button::create('设备明细')
                     ->type('primary')
                     ->size('small')
-                    ->drawer(
+                    ->modal(
                         admin_url([
                             'addons-webman-controller-StoreShiftHandoverRecordController',
                             'deviceDetails'
                         ]),
                         ['shift_record_id' => $data['id']]
                     );
-            })->width(120)->align('center');
+            })->width('80%')->align('center');
 
             // 行展开 - 显示详细信息
             $grid->expandRow(function ($row) {
