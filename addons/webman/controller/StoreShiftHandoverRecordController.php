@@ -72,11 +72,10 @@ class StoreShiftHandoverRecordController
 
             // 操作列 - 查看设备明细
             $grid->column('device_detail', '操作')->display(function ($val, $data) {
-                return Button::make('设备明细')
+                return Button::create('设备明细')
                     ->type('primary')
                     ->size('small')
-                    ->handler(
-                        Button::HANDLER_DRAWER,
+                    ->drawer(
                         admin_url([
                             'addons-webman-controller-StoreShiftHandoverRecordController',
                             'deviceDetails'
