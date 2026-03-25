@@ -152,10 +152,10 @@ class RoleController
                     if ($isProtected) {
                         // 受保护角色不允许修改名称和类型
                         if ($form->input('name') != $role->name) {
-                            return message_error('系统内置角色不允许修改名称');
+                            return message_error(admin_trans('common.builtin_role_cannot_modify_name'));
                         }
                         if ($form->input('type') != $role->type) {
-                            return message_error('系统内置角色不允许修改类型');
+                            return message_error(admin_trans('common.builtin_role_cannot_modify_type'));
                         }
                     }
                 } else {
@@ -185,17 +185,17 @@ class RoleController
                 $role = $form->model()->find($form->input('id'));
 
                 if (!$role) {
-                    return message_error('角色不存在');
+                    return message_error(admin_trans('common.role_not_exist'));
                 }
 
                 // 检查是否为受保护的角色
                 if (($role->is_protected ?? 0) == 1) {
-                    return message_error('该角色为系统内置角色，不允许删除');
+                    return message_error(admin_trans('common.builtin_role_cannot_delete'));
                 }
 
                 // 检查特定角色ID（渠道、代理、店家超管）
                 if (in_array($role->id, [AdminRole::ROLE_CHANNEL, AdminRole::ROLE_AGENT, AdminRole::ROLE_STORE])) {
-                    return message_error('该角色为系统内置角色，不允许删除');
+                    return message_error(admin_trans('common.builtin_role_cannot_delete'));
                 }
             });
         });

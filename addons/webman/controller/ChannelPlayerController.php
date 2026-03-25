@@ -3448,7 +3448,7 @@ class ChannelPlayerController
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.default.admin');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),
@@ -3604,7 +3604,7 @@ class ChannelPlayerController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $form->push(Html::markdown(admin_trans('common.tips.offline_channel_only_notice')));
             });
         }
 
@@ -3657,7 +3657,7 @@ class ChannelPlayerController
         return Form::create([], function (Form $form) use ($storeTreeOptions) {
             $form->title(admin_trans('offline_channel.batch_generate_players_title'));
 
-            $form->push(Html::markdown('><font size=2 color="#1890ff">批量生成的账号将自动绑定到指定的店家</font>'));
+            $form->push(Html::markdown(admin_trans('common.tips.batch_generate_bind_notice')));
 
             $form->divider()->content(admin_trans('offline_channel.basic_config'));
 
@@ -3691,7 +3691,7 @@ class ChannelPlayerController
                     $form->text('phone_prefix', admin_trans('offline_channel.account_prefix'))
                         ->default('P')
                         ->maxlength(10)
-                        ->help('账号格式：前缀+编号，例如：P0001')
+                        ->help(admin_trans('common.help.account_format'))
                         ->required();
                 })->span(12);
 
@@ -3703,7 +3703,7 @@ class ChannelPlayerController
                         ->max(999999)
                         ->precision(0)
                         ->style(['width' => '100%'])
-                        ->help('编号将自动补齐为4位数字，例如：1 → 0001')
+                        ->help(admin_trans('common.help.number_auto_padding'))
                         ->required();
                 })->span(12);
             })->gutter(16);
@@ -3716,7 +3716,7 @@ class ChannelPlayerController
                     $form->text('name_prefix', admin_trans('offline_channel.nickname_prefix'))
                         ->default(admin_trans('offline_channel.player_default'))
                         ->maxlength(10)
-                        ->help('昵称格式：前缀+编号，例如：玩家0001')
+                        ->help(admin_trans('common.help.nickname_format'))
                         ->required();
                 })->span(12);
 
@@ -3728,7 +3728,7 @@ class ChannelPlayerController
                         ->max(999999)
                         ->precision(0)
                         ->style(['width' => '100%'])
-                        ->help('编号将自动补齐为4位数字')
+                        ->help(admin_trans('common.help.number_auto_padding_simple'))
                         ->required();
                 })->span(12);
             })->gutter(16);
@@ -3753,12 +3753,12 @@ class ChannelPlayerController
                     $form->select('default_avatar', admin_trans('offline_channel.select_default_avatar'))
                         ->default(config('def_avatar.1'))
                         ->options($avatarOptions)
-                        ->help('所有生成的玩家将使用此头像')
+                        ->help(admin_trans('common.help.all_players_use_this_avatar'))
                         ->required();
                 })
                 ->when(['upload'], function (Form $form) {
                     $form->image('custom_avatar', admin_trans('offline_channel.upload_avatar'))
-                        ->help('支持jpg、png格式，建议尺寸200x200，所有生成的玩家将使用此头像')
+                        ->help(admin_trans('common.help.avatar_format_recommendation'))
                         ->required();
                 })
                 ->required();
@@ -3770,7 +3770,7 @@ class ChannelPlayerController
                 ->rule([
                     'min:6' => admin_trans('offline_channel.error_password_min_6')
                 ])
-                ->help('所有生成的账号将使用此密码')
+                ->help(admin_trans('common.help.all_accounts_use_this_password'))
                 ->required();
 
             $form->password('password_confirmation', admin_trans('offline_channel.confirm_password'))
@@ -3865,7 +3865,7 @@ class ChannelPlayerController
                 // 检查账号是否已存在
                 $existingPlayer = Player::query()->where('phone', $phone)->first();
                 if (!empty($existingPlayer)) {
-                    $failedAccounts[] = $phone . '(已存在)';
+                    $failedAccounts[] = $phone . '(' . admin_trans('common.account_exists') . ')';
                     continue;
                 }
 
@@ -3899,16 +3899,21 @@ class ChannelPlayerController
 
             Db::commit();
 
-            $message = "成功生成 {$successCount} 个玩家账号";
             if (count($failedAccounts) > 0) {
-                $message .= "，失败 " . count($failedAccounts) . " 个：" . implode(', ', $failedAccounts);
+                $message = admin_trans('common.batch_generate_partial_success', null, [
+                    'success' => $successCount,
+                    'failed' => count($failedAccounts),
+                    'accounts' => implode(', ', $failedAccounts)
+                ]);
+            } else {
+                $message = admin_trans('common.batch_generate_success', null, ['count' => $successCount]);
             }
 
             return message_success($message);
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error('批量生成失败：' . $e->getMessage());
+            return message_error(admin_trans('common.batch_generation_failed', null, ['message' => $e->getMessage()]));
         }
     }
 
@@ -3924,7 +3929,7 @@ class ChannelPlayerController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $form->push(Html::markdown(admin_trans('common.tips.offline_channel_only_notice')));
             });
         }
 
@@ -3963,7 +3968,7 @@ class ChannelPlayerController
             $form->divider()->content(admin_trans('offline_channel.avatar_config'));
 
             $form->image('avatar', admin_trans('offline_channel.upload_avatar'))
-                ->help('支持jpg、png格式，建议尺寸200x200')
+                ->help(admin_trans('common.help.avatar_format'))
                 ->required();
 
             $form->divider()->content(admin_trans('offline_channel.password_config'));
@@ -3972,7 +3977,7 @@ class ChannelPlayerController
                 ->rule([
                     'min:6' => admin_trans('offline_channel.error_password_min_6')
                 ])
-                ->help('代理后台登录密码，至少6位')
+                ->help(admin_trans('common.help.agent_login_password'))
                 ->required();
 
             $form->password('password_confirmation', admin_trans('offline_channel.confirm_password'))
@@ -4048,7 +4053,7 @@ class ChannelPlayerController
             $storeSetting->department_id = $currentDepartmentId;
             $storeSetting->admin_user_id = $adminUser->id; // 绑定到后台账号
             $storeSetting->feature = 'home_notice';
-            $storeSetting->content = '欢迎使用代理后台系统！';
+            $storeSetting->content = admin_trans('common.default.welcome_agent_system');
             $storeSetting->status = 1;
             $storeSetting->save();
 
@@ -4074,13 +4079,13 @@ class ChannelPlayerController
 
             return message_success(strtr(admin_trans('offline_channel.success_create_agent'), [
                 '{name}' => $name,
-                '{phone}' => $phone ?: '未填写',
+                '{phone}' => $phone ?: admin_trans('common.default.not_filled'),
                 '{username}' => $adminUsername
             ]));
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error('创建代理失败：' . $e->getMessage());
+            return message_error(admin_trans('common.create_agent_failed', null, ['message' => $e->getMessage()]));
         }
     }
 
@@ -4096,7 +4101,7 @@ class ChannelPlayerController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $form->push(Html::markdown(admin_trans('common.tips.offline_channel_only_notice')));
             });
         }
 
@@ -4159,28 +4164,28 @@ class ChannelPlayerController
                 ->help(admin_trans('offline_channel.help_select_parent_agent'))
                 ->required();
 
-            $form->divider()->content('抽成设置');
+            $form->divider()->content(admin_trans('common.divider.commission_settings'));
 
             $form->row(function (Form $form) {
                 $form->column(function (Form $form) {
                     // 代理抽成
-                    $form->number('agent_commission', '代理抽成（%）')
+                    $form->number('agent_commission', admin_trans('offline_channel.agent_commission'))
                         ->min(0)
                         ->max(100)
                         ->step(0.01)
                         ->default(0)
-                        ->help('代理从店家收益中抽取的比例，范围 0-100')
+                        ->help(admin_trans('common.help.agent_commission_help'))
                         ->required();
                 })->span(12);
 
                 $form->column(function (Form $form) {
                     // 渠道抽成
-                    $form->number('channel_commission', '渠道抽成（%）')
+                    $form->number('channel_commission', admin_trans('offline_channel.channel_commission'))
                         ->min(0)
                         ->max(100)
                         ->step(0.01)
                         ->default(0)
-                        ->help('渠道从店家收益中抽取的比例，范围 0-100')
+                        ->help(admin_trans('common.help.channel_commission_help'))
                         ->required();
                 })->span(12);
             })->gutter(16);
@@ -4188,7 +4193,7 @@ class ChannelPlayerController
             $form->divider()->content(admin_trans('offline_channel.avatar_config'));
 
             $form->image('avatar', admin_trans('offline_channel.upload_avatar'))
-                ->help('支持jpg、png格式，建议尺寸200x200')
+                ->help(admin_trans('common.help.avatar_format'))
                 ->required();
 
             $form->divider()->content(admin_trans('offline_channel.password_config'));
@@ -4197,7 +4202,7 @@ class ChannelPlayerController
                 ->rule([
                     'min:6' => admin_trans('offline_channel.error_password_min_6')
                 ])
-                ->help('店家后台登录密码，至少6位')
+                ->help(admin_trans('common.help.store_login_password'))
                 ->required();
 
             $form->password('password_confirmation', admin_trans('offline_channel.confirm_password'))
@@ -4243,10 +4248,10 @@ class ChannelPlayerController
 
         // 验证范围
         if ($agentCommission < 0 || $agentCommission > 100) {
-            return message_error('代理抽成比例必须在 0-100 之间');
+            return message_error(admin_trans('common.agent_commission_range_error'));
         }
         if ($channelCommission < 0 || $channelCommission > 100) {
-            return message_error('渠道抽成比例必须在 0-100 之间');
+            return message_error(admin_trans('common.channel_commission_range_error'));
         }
 
         if (empty($avatar)) {
@@ -4306,7 +4311,7 @@ class ChannelPlayerController
             $storeSetting->department_id = $departmentId;
             $storeSetting->admin_user_id = $adminUser->id; // 绑定到后台账号
             $storeSetting->feature = 'home_notice';
-            $storeSetting->content = '欢迎使用店家后台系统！';
+            $storeSetting->content = admin_trans('common.default.welcome_store_system');
             $storeSetting->status = 1;
             $storeSetting->save();
 
@@ -4331,19 +4336,19 @@ class ChannelPlayerController
             // 5. 创建默认自动交班配置（早中晚三班）
             $autoShiftConfigs = [
                 [
-                    'title' => '早班',
+                    'title' => admin_trans('common.shift.morning'),
                     'shift_time' => '08:00:00',
-                    'description' => '早班自动交班（08:00-16:00）'
+                    'description' => admin_trans('common.shift.morning_desc')
                 ],
                 [
-                    'title' => '中班',
+                    'title' => admin_trans('common.shift.afternoon'),
                     'shift_time' => '16:00:00',
-                    'description' => '中班自动交班（16:00-24:00）'
+                    'description' => admin_trans('common.shift.afternoon_desc')
                 ],
                 [
-                    'title' => '晚班',
+                    'title' => admin_trans('common.shift.night'),
                     'shift_time' => '00:00:00',
-                    'description' => '晚班自动交班（00:00-08:00）'
+                    'description' => admin_trans('common.shift.night_desc')
                 ],
             ];
 
@@ -4360,14 +4365,14 @@ class ChannelPlayerController
 
             return message_success(strtr(admin_trans('offline_channel.success_create_store_machine'), [
                 '{name}' => $name,
-                '{phone}' => $phone ?: '未填写',
+                '{phone}' => $phone ?: admin_trans('common.default.not_filled'),
                 '{username}' => $adminUsername,
                 '{parent}' => $parentAgent->nickname
             ]));
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error('创建店家失败：' . $e->getMessage());
+            return message_error(admin_trans('common.create_store_failed', null, ['message' => $e->getMessage()]));
         }
     }
 
@@ -4670,37 +4675,37 @@ class ChannelPlayerController
     public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [])
     {
         if (!isset($selected)) {
-            return message_error('请选择要授权的游戏');
+            return message_error(admin_trans('common.please_select_games'));
         }
 
         /** @var Player $player */
         $player = Player::query()->with('channel')->find($player_id);
 
         if (empty($player)) {
-            return message_error('玩家不存在');
+            return message_error(admin_trans('common.player_not_exist'));
         }
 
         // 只有线下渠道才支持游戏级别权限管理
         if ($player->channel->is_offline != 1) {
-            return message_error('该功能仅适用于线下渠道');
+            return message_error(admin_trans('common.offline_channel_feature_only'));
         }
 
         // 获取渠道允许的游戏平台
         $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
         if (empty($channelGamePlatformIds)) {
-            return message_error('该渠道未开启任何电子游戏平台');
+            return message_error(admin_trans('common.channel_no_game_platform'));
         }
 
         // 验证选择的游戏
         $selectedGames = Game::query()->whereIn('id', $selected)->get();
         if ($selectedGames->isEmpty()) {
-            return message_error('未找到选择的游戏');
+            return message_error(admin_trans('common.games_not_found'));
         }
 
         // 验证游戏是否都在渠道允许的范围内
         foreach ($selectedGames as $game) {
             if (!in_array($game->platform_id, $channelGamePlatformIds)) {
-                return message_error('选择的游戏不在渠道允许的范围内');
+                return message_error(admin_trans('common.games_not_in_channel_scope'));
             }
         }
 
@@ -4801,24 +4806,24 @@ class ChannelPlayerController
             $player = Player::query()->with('channel')->find($player_id);
 
             if (empty($player)) {
-                return message_error('玩家不存在');
+                return message_error(admin_trans('common.player_not_exist'));
             }
 
             // 只有线下渠道才支持游戏级别权限管理
             if ($player->channel->is_offline != 1) {
-                return message_error('该功能仅适用于线下渠道');
+                return message_error(admin_trans('common.offline_channel_feature_only'));
             }
 
             // 验证游戏是否存在
             $game = Game::query()->find($game_id);
             if (empty($game)) {
-                return message_error('游戏不存在');
+                return message_error(admin_trans('common.game_not_exist'));
             }
 
             // 获取渠道允许的游戏平台
             $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
             if (empty($channelGamePlatformIds) || !in_array($game->platform_id, $channelGamePlatformIds)) {
-                return message_error('该游戏不在渠道允许的范围内');
+                return message_error(admin_trans('common.game_not_in_channel_scope'));
             }
 
             Db::beginTransaction();
@@ -4845,7 +4850,7 @@ class ChannelPlayerController
                         ->delete();
                     $message = '成功取消禁用该游戏';
                 } else {
-                    return message_error('无效的操作');
+                    return message_error(admin_trans('common.invalid_operation'));
                 }
 
                 Db::commit();
@@ -5075,7 +5080,7 @@ class ChannelPlayerController
                 $money = $moneyAmount; // 用户输入的货币金额
                 $scoreAmount = bcmul($money, $currency->ratio, 0); // 转换成游戏点数（整数）
                 if ($scoreAmount <= 0) {
-                    return message_error('转换后的游戏点数无效');
+                    return message_error(admin_trans('common.invalid_game_points'));
                 }
                 // 开分逻辑
                 DB::beginTransaction();

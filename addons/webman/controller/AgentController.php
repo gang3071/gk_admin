@@ -191,7 +191,7 @@ class AgentController
         /** @var Channel $channel */
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
-            return message_error('此功能仅限线下渠道使用');
+            return message_error(admin_trans('common.offline_channel_only'));
         }
 
         $phone = $form->input('phone');
@@ -201,18 +201,18 @@ class AgentController
         $avatar = $form->input('avatar');
 
         if (empty($avatar)) {
-            return message_error('请上传头像');
+            return message_error(admin_trans('common.please_upload_avatar'));
         }
 
         // 验证确认密码
         if ($password !== $form->input('password_confirmation')) {
-            return message_error('两次密码输入不一致');
+            return message_error(admin_trans('common.password_mismatch'));
         }
 
         // 检查后台账号是否已存在
         $existingAdmin = AdminUser::query()->where('username', $adminUsername)->first();
         if (!empty($existingAdmin)) {
-            return message_error("登录账号 {$adminUsername} 已存在");
+            return message_error(admin_trans('common.username_exists', null, ['username' => $adminUsername]));
         }
 
         Db::beginTransaction();
@@ -243,7 +243,7 @@ class AgentController
             $storeSetting->department_id = $departmentId;
             $storeSetting->admin_user_id = $adminUser->id;
             $storeSetting->feature = 'home_notice';
-            $storeSetting->content = '欢迎使用代理后台系统！';
+            $storeSetting->content = admin_trans('common.default.welcome_agent_system');
             $storeSetting->status = 1;
             $storeSetting->save();
 
@@ -265,7 +265,10 @@ class AgentController
 
             Db::commit();
 
-            return message_success("代理 {$name} 创建成功！登录账号：{$adminUsername}");
+            return message_success(admin_trans('common.agent_create_success', null, [
+                'name' => $name,
+                'username' => $adminUsername
+            ]));
 
         } catch (\Exception $e) {
             Db::rollBack();

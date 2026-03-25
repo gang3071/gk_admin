@@ -1,0 +1,45 @@
+<?php
+
+use addons\webman\model\PromoterProfitRecord;
+
+return [
+    'title' => 'Settlement Records',
+    'fields' => [
+        'id' => 'ID',
+        'total_withdraw_amount' => 'Withdrawal Amount',
+        'total_recharge_amount' => 'Recharge Amount',
+        'total_bonus_amount' => 'Activity Bonus Amount',
+        'total_admin_deduct_amount' => 'Admin Deduction',
+        'total_admin_add_amount' => 'Admin Addition',
+        'total_present_amount' => 'Gift Amount',
+        'total_machine_up_amount' => 'Machine Up Points',
+        'total_machine_down_amount' => 'Machine Down Points',
+        'total_lottery_amount' => 'Lottery Bonus',
+        'total_profit_amount' => 'Settlement Profit',
+        'total_game_amount' => 'Electronic Game Amount',
+        'tradeno' => 'Settlement Number',
+        'type' => 'Type',
+        'last_profit_amount' => 'Last Settlement Profit (Personal)',
+        'adjust_amount' => 'Settlement Adjustment Amount',
+        'actual_amount' => 'Actual Amount Received',
+        'user_id' => 'Machine Down Points',
+        'user_name' => 'Settlement Admin',
+        'created_at' => 'Settlement Time',
+        'updated_at' => 'Update Time',
+        'total_machine_amount' => 'Total Machine Bills',
+        'total_machine_point' => 'Total Bill Amount (Paper Currency)',
+    ],
+    'status' => [
+        PromoterProfitRecord::STATUS_UNCOMPLETED => 'Unsettled',
+        PromoterProfitRecord::STATUS_COMPLETED => 'Settled',
+    ],
+    'settlement_time_start' => 'Settlement Start Time',
+    'settlement_time_end' => 'Settlement End Time',
+    'profit_settlement_info' => 'Profit Data',
+    'settlement_data' => 'Settlement Data',
+    'settlement_detail' => 'Profit Report',
+    'channel_settlement_promoter_null' => 'No promoters need to be settled',
+    'success' => 'Promoter settlement successful',
+    'channel_promotion_closed' => 'Promoter function is closed',
+    'channel_closed' => 'This channel is closed',
+];

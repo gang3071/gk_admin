@@ -597,37 +597,37 @@ class ChannelAgentController
     public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [])
     {
         if (!isset($selected)) {
-            return message_error('请选择要授权的游戏');
+            return message_error(admin_trans('common.please_select_games'));
         }
 
         /** @var Player $player */
         $player = Player::query()->with('channel')->find($player_id);
 
         if (empty($player)) {
-            return message_error('玩家不存在');
+            return message_error(admin_trans('common.player_not_exist'));
         }
 
         // 只有线下渠道才支持游戏级别权限管理
         if ($player->channel->is_offline != 1) {
-            return message_error('该功能仅适用于线下渠道');
+            return message_error(admin_trans('common.offline_channel_feature_only'));
         }
 
         // 获取渠道允许的游戏平台
         $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
         if (empty($channelGamePlatformIds)) {
-            return message_error('该渠道未开启任何电子游戏平台');
+            return message_error(admin_trans('common.channel_no_game_platform'));
         }
 
         // 验证选择的游戏
         $selectedGames = Game::query()->whereIn('id', $selected)->get();
         if ($selectedGames->isEmpty()) {
-            return message_error('未找到选择的游戏');
+            return message_error(admin_trans('common.games_not_found'));
         }
 
         // 验证游戏是否都在渠道允许的范围内
         foreach ($selectedGames as $game) {
             if (!in_array($game->platform_id, $channelGamePlatformIds)) {
-                return message_error('选择的游戏不在渠道允许的范围内');
+                return message_error(admin_trans('common.games_not_in_channel_scope'));
             }
         }
 
@@ -703,7 +703,7 @@ class ChannelAgentController
             Db::commit();
 
             $count = count($selected);
-            return message_success("成功设置了 {$count} 个游戏权限")->refresh();
+            return message_success(admin_trans('common.game_permission_set_success', null, ['count' => $count]))->refresh();
         } catch (Exception $e) {
             Db::rollBack();
             Log::error('save_player_games', [$e->getMessage(), $e->getTrace()]);
@@ -865,7 +865,7 @@ class ChannelAgentController
                 // 验证选择的游戏是否都在允许的平台范围内
                 foreach ($allSelectedGames as $gameInfo) {
                     if (!in_array($gameInfo['platform_id'], $channelGamePlatformIds)) {
-                        return message_error('选择的游戏平台不在渠道允许的范围内');
+                        return message_error(admin_trans('common.game_platform_not_in_channel_scope'));
                     }
                 }
 
@@ -911,7 +911,7 @@ class ChannelAgentController
                     Db::commit();
 
                     $enabledCount = count($allSelectedGames);
-                    return message_success("成功设置了 {$enabledCount} 个电子游戏");
+                    return message_success(admin_trans('common.electronic_game_set_success', null, ['count' => $enabledCount]));
                 } catch (Exception $e) {
                     Db::rollBack();
                     Log::error('manage_player_electronic_game', [$e->getMessage(), $e->getTrace()]);
@@ -1137,7 +1137,7 @@ class ChannelAgentController
                 $money = $moneyAmount; // 用户输入的货币金额
                 $scoreAmount = bcmul($money, $currency->ratio, 0); // 转换成游戏点数（整数）
                 if ($scoreAmount <= 0) {
-                    return message_error('转换后的游戏点数无效');
+                    return message_error(admin_trans('common.invalid_game_points'));
                 }
                 // 开分逻辑
                 DB::beginTransaction();

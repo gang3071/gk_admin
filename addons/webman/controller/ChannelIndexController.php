@@ -2810,7 +2810,7 @@ class ChannelIndexController
                             'user_id' => $admin->id,
                             'department_id' => $admin->department_id
                         ]);
-                        return message_error('交班失败：管理员未关联部门');
+                        return message_error(admin_trans('common.shift_handover_failed_no_department'));
                     }
 
                     // 获取货币配置（优先从渠道获取，如果没有渠道则使用默认配置）
@@ -2837,7 +2837,7 @@ class ChannelIndexController
                                 'user_id' => $admin->id,
                                 'department_id' => $admin->department_id
                             ]);
-                            return message_error('交班失败：系统货币配置缺失');
+                            return message_error(admin_trans('common.shift_handover_failed_no_currency'));
                         }
                     }
 

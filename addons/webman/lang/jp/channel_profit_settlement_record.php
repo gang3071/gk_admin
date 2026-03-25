@@ -1,0 +1,45 @@
+<?php
+
+use addons\webman\model\PromoterProfitRecord;
+
+return [
+    'title' => '決済記録',
+    'fields' => [
+        'id' => 'ID',
+        'total_withdraw_amount' => '出金金額',
+        'total_recharge_amount' => '入金金額',
+        'total_bonus_amount' => 'アクティビティボーナス',
+        'total_admin_deduct_amount' => '管理者控除',
+        'total_admin_add_amount' => '管理者追加',
+        'total_present_amount' => 'ギフト金額',
+        'total_machine_up_amount' => 'マシンアップポイント',
+        'total_machine_down_amount' => 'マシンダウンポイント',
+        'total_lottery_amount' => '宝くじボーナス',
+        'total_profit_amount' => '決済利益',
+        'total_game_amount' => '電子ゲーム金額',
+        'tradeno' => '決済番号',
+        'type' => 'タイプ',
+        'last_profit_amount' => '前回決済利益（個人）',
+        'adjust_amount' => '決済調整金額',
+        'actual_amount' => '実際受取金額',
+        'user_id' => 'マシンダウンポイント',
+        'user_name' => '決済管理者',
+        'created_at' => '決済時間',
+        'updated_at' => '更新時間',
+        'total_machine_amount' => '合計マシン紙幣',
+        'total_machine_point' => '合計紙幣金額（紙幣）',
+    ],
+    'status' => [
+        PromoterProfitRecord::STATUS_UNCOMPLETED => '未決済',
+        PromoterProfitRecord::STATUS_COMPLETED => '決済済み',
+    ],
+    'settlement_time_start' => '決済開始時間',
+    'settlement_time_end' => '決済終了時間',
+    'profit_settlement_info' => '利益データ',
+    'settlement_data' => '決済データ',
+    'settlement_detail' => '利益レポート',
+    'channel_settlement_promoter_null' => '決済が必要なプロモーターがありません',
+    'success' => 'プロモーター決済が成功しました',
+    'channel_promotion_closed' => 'プロモーター機能が閉鎖されました',
+    'channel_closed' => 'このチャネルは閉鎖されました',
+];

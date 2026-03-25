@@ -394,14 +394,20 @@ class AgentPromoterController
                                 $recommendPromoter = PlayerPromoter::query()->where('player_id',
                                     $playerPromoter->recommend_id)->first();
                                 if ($recommendPromoter->ratio > $data['ratio']) {
-                                    return message_error("店家上缴比例设置不能小于代理 ({$recommendPromoter->name}) 的上缴比例,{$recommendPromoter->ratio}%");
+                                    return message_error(admin_trans('common.store_ratio_less_than_agent', null, [
+                                        'name' => $recommendPromoter->name,
+                                        'ratio' => $recommendPromoter->ratio
+                                    ]));
                                 }
                             } else {
                                 /** @var PlayerPromoter $storePromoter */
                                 $storePromoter = PlayerPromoter::query()->where('recommend_id',
                                     $playerPromoter->player_id)->orderBy('ratio', 'asc')->first();
                                 if ($storePromoter->ratio < $data['ratio']) {
-                                    return message_error("代理上缴比例设置不能大于店家 ({$storePromoter->name}) 的上缴比例,{$storePromoter->ratio}%");
+                                    return message_error(admin_trans('common.agent_ratio_greater_than_store', null, [
+                                        'name' => $storePromoter->name,
+                                        'ratio' => $storePromoter->ratio
+                                    ]));
                                 }
                             }
                         }
@@ -628,7 +634,7 @@ class AgentPromoterController
     public function batchSettlement($selected): Msg
     {
         if (!isset($selected)) {
-            return message_error('请选择需要结算的代理/店家');
+            return message_error(admin_trans('common.please_select_settlement_targets'));
         }
         $playerPromoter = PlayerPromoter::query()
             ->whereIn('id', $selected)
@@ -749,10 +755,10 @@ class AgentPromoterController
                     $end = Carbon::parse($endTime);
                     $now = Carbon::now();
                     if ($end->gt($now)) {
-                        return message_error('结算结束时间不能超过当前时间');
+                        return message_error(admin_trans('common.settlement_end_time_error'));
                     }
                 } catch (Exception) {
-                    return message_error('系统错误');
+                    return message_error(admin_trans('common.system_error'));
                 }
                 if (!empty($playerPromoter->last_settlement_timestamp)) {
                     $startTime = $playerPromoter->last_settlement_timestamp;
@@ -766,7 +772,7 @@ class AgentPromoterController
                     'user_id' => Admin::id() ?? 0,
                     'user_name' => !empty(Admin::user()) ? Admin::user()->toArray()['username'] : '',
                 ]);
-                return message_success('结算成功');
+                return message_success(admin_trans('common.settlement_success'));
             });
         });
     }

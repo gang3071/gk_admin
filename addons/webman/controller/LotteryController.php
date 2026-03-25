@@ -871,28 +871,28 @@ class LotteryController
                     $autoRefillAmount = $form->input('auto_refill_amount');
 
                     if (empty($poolRatio) || $poolRatio <= 0) {
-                        return message_error('入池比值必须大于0');
+                        return message_error(admin_trans('common.pool_ratio_must_greater_than_zero'));
                     }
                     if ($poolRatio > 100) {
-                        return message_error('入池比值不能超过100%');
+                        return message_error(admin_trans('common.pool_ratio_cannot_exceed_100'));
                     }
                     if (empty($winRatio) || $winRatio <= 0) {
-                        return message_error('中奖概率必须大于0');
+                        return message_error(admin_trans('common.win_probability_must_greater_than_zero'));
                     }
                     if ($winRatio > 1) {
-                        return message_error('中奖概率不能超过1（100%）');
+                        return message_error(admin_trans('common.win_probability_cannot_exceed_1'));
                     }
                     if (empty($maxPoolAmount) || $maxPoolAmount <= 0) {
-                        return message_error('最大彩池金额必须大于0');
+                        return message_error(admin_trans('common.max_pool_amount_must_greater_than_zero'));
                     }
 
                     // 验证保底金额
                     if ($autoRefillStatus == 1) {
                         if (empty($autoRefillAmount) || $autoRefillAmount <= 0) {
-                            return message_error('启用保底金额后，保底金额必须大于0');
+                            return message_error(admin_trans('common.minimum_amount_must_greater_than_zero'));
                         }
                         if ($autoRefillAmount > $maxPoolAmount) {
-                            return message_error('保底金额不能大于最大彩池金额');
+                            return message_error(admin_trans('common.minimum_amount_cannot_exceed_max'));
                         }
                     }
                 } else {
@@ -907,7 +907,7 @@ class LotteryController
                     if (empty($rate) && $rate !== '0') {
                         $form->input('rate', 100); // 默认100%
                     } elseif ($rate < 0 || $rate > 100) {
-                        return message_error('派发比例必须在0-100之间');
+                        return message_error(admin_trans('common.distribution_ratio_range_error'));
                     }
 
                     // 固定彩金不需要随机彩金的字段，设置默认值
