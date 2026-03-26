@@ -33,6 +33,9 @@ class ShiftReportExporter extends Excel
     // 存储所有交班记录数据，用于先计算总计再输出明细
     protected $allRecords = [];
 
+    // 存储每个设备的累计数据 [player_name => [...]]
+    protected $deviceTotals = [];
+
     public function columns(array $columns)
     {
         // 保存列配置，但不生成默认表头
@@ -43,9 +46,10 @@ class ShiftReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-        // 如果是第一次调用，预留顶部空间给总计（从行号20开始输出明细）
+        // 如果是第一次调用，预留顶部空间给总计和设备明细（从行号200开始输出交班明细）
+        // 顶部包含：标题、表头、设备明细行（可能有几十个设备）、总计、说明等
         if ($this->processedRecords == 0) {
-            $this->currentRow = 20;
+            $this->currentRow = 200;
         }
 
         foreach ($data as $record) {
@@ -207,6 +211,34 @@ class ShiftReportExporter extends Excel
                     $subtotal['total_in'] += $detail->total_in;
                     $subtotal['total_out'] += $detail->total_out;
                     $subtotal['profit'] += $detail->profit;
+
+                    // 累加到每个设备的总计（按设备名称分组）
+                    $deviceKey = $detail->player_name . '|' . $detail->player_phone; // 使用名称和编号组合作为唯一标识
+                    if (!isset($this->deviceTotals[$deviceKey])) {
+                        $this->deviceTotals[$deviceKey] = [
+                            'player_name' => $detail->player_name,
+                            'player_phone' => $detail->player_phone,
+                            'machine_point' => 0,
+                            'recharge_amount' => 0,
+                            'withdrawal_amount' => 0,
+                            'modified_add_amount' => 0,
+                            'modified_deduct_amount' => 0,
+                            'lottery_amount' => 0,
+                            'total_in' => 0,
+                            'total_out' => 0,
+                            'profit' => 0
+                        ];
+                    }
+
+                    $this->deviceTotals[$deviceKey]['machine_point'] += $detail->machine_point;
+                    $this->deviceTotals[$deviceKey]['recharge_amount'] += $detail->recharge_amount;
+                    $this->deviceTotals[$deviceKey]['withdrawal_amount'] += $detail->withdrawal_amount;
+                    $this->deviceTotals[$deviceKey]['modified_add_amount'] += $detail->modified_add_amount;
+                    $this->deviceTotals[$deviceKey]['modified_deduct_amount'] += $detail->modified_deduct_amount;
+                    $this->deviceTotals[$deviceKey]['lottery_amount'] += $detail->lottery_amount;
+                    $this->deviceTotals[$deviceKey]['total_in'] += $detail->total_in;
+                    $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
+                    $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
 
                     $this->currentRow++;
                 }
@@ -379,7 +411,47 @@ class ShiftReportExporter extends Excel
         $this->sheet->getRowDimension($topRow)->setRowHeight(22);
         $topRow++;
 
-        // ==================== 第3部分：总计数据行 ====================
+        // ==================== 第3部分：每个设备的明细行 ====================
+        // 按利润倒序排列设备
+        usort($this->deviceTotals, function($a, $b) {
+            return $b['profit'] <=> $a['profit'];
+        });
+
+        $deviceRowStart = $topRow;
+        foreach ($this->deviceTotals as $index => $device) {
+            $this->sheet->setCellValue('A' . $topRow, $device['player_name']);
+            $this->sheet->setCellValue('B' . $topRow, $device['player_phone']);
+            $this->sheet->setCellValue('C' . $topRow, number_format($device['machine_point'], 0));
+            $this->sheet->setCellValue('D' . $topRow, number_format($device['recharge_amount'], 2));
+            $this->sheet->setCellValue('E' . $topRow, number_format($device['withdrawal_amount'], 2));
+            $this->sheet->setCellValue('F' . $topRow, number_format($device['modified_add_amount'], 2));
+            $this->sheet->setCellValue('G' . $topRow, number_format($device['modified_deduct_amount'], 2));
+            $this->sheet->setCellValue('H' . $topRow, number_format($device['lottery_amount'], 2));
+            $this->sheet->setCellValue('I' . $topRow, number_format($device['total_in'], 2));
+            $this->sheet->setCellValue('J' . $topRow, number_format($device['total_out'], 2));
+            $this->sheet->setCellValue('K' . $topRow, number_format($device['profit'], 2));
+
+            // 数字列右对齐
+            $this->sheet->getStyle('C' . $topRow . ':K' . $topRow)
+                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            // 交替行背景色
+            $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
+            $this->sheet->getStyle('A' . $topRow . ':K' . $topRow)->applyFromArray([
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+            ]);
+
+            // 利润颜色
+            $profitColor = $device['profit'] >= 0 ? '3f8600' : 'cf1322';
+            $this->sheet->getStyle('K' . $topRow)->getFont()->getColor()->setRGB($profitColor);
+            $this->sheet->getStyle('K' . $topRow)->getFont()->setBold(true);
+
+            $this->sheet->getRowDimension($topRow)->setRowHeight(20);
+            $topRow++;
+        }
+
+        // ==================== 第4部分：总计数据行 ====================
         $this->sheet->setCellValue('A' . $topRow, admin_trans('shift_handover.all_devices_summary') . ' (' . $this->totalDevices . admin_trans('shift_handover.devices_unit') . ')');
         $this->sheet->setCellValue('B' . $topRow, '-');
         $this->sheet->setCellValue('C' . $topRow, number_format($this->grandTotal['machine_point'], 0));
@@ -410,7 +482,7 @@ class ShiftReportExporter extends Excel
         // 空行
         $topRow++;
 
-        // ==================== 第4部分：说明文字 ====================
+        // ==================== 第5部分：说明文字 ====================
         $this->sheet->setCellValue('A' . $topRow, admin_trans('shift_handover.export_note'));
         $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
         $this->sheet->getStyle('A' . $topRow)->applyFromArray([
@@ -423,7 +495,7 @@ class ShiftReportExporter extends Excel
         // 空行
         $topRow += 2;
 
-        // ==================== 第5部分：分隔线 ====================
+        // ==================== 第6部分：分隔线 ====================
         $separator = str_repeat('═', 120);
         $this->sheet->setCellValue('A' . $topRow, $separator);
         $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
@@ -437,7 +509,7 @@ class ShiftReportExporter extends Excel
         // 空行
         $topRow++;
 
-        // ==================== 第6部分：明细标题 ====================
+        // ==================== 第7部分：明细标题 ====================
         $this->sheet->setCellValue('A' . $topRow, admin_trans('shift_handover.details_title'));
         $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
         $this->sheet->getStyle('A' . $topRow)->applyFromArray([
