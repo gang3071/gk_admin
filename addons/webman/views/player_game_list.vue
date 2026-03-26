@@ -263,7 +263,7 @@ export default {
     loadGameList() {
       this.loading = true;
       this.$request({
-        url: 'ex-admin/channel-player/getPlayerGameListData',
+        url: 'ex-admin/addons-webman-controller-ChannelPlayerController/getPlayerGameListData',
         params: {
           player_id: this.player_id,
           page: this.pagination.current,
@@ -309,7 +309,7 @@ export default {
         content: `确定要${actionText}游戏"${record.name}"吗？`,
         onOk: () => {
           this.$request({
-            url: 'ex-admin/channel-player/toggleGameDisable',
+            url: 'ex-admin/addons-webman-controller-ChannelPlayerController/toggleGameDisable',
             method: 'post',
             data: {
               player_id: this.player_id,
@@ -344,7 +344,7 @@ export default {
         onOk: () => {
           this.saving = true;
           this.$request({
-            url: 'ex-admin/channel-player/savePlayerGamesVue',
+            url: 'ex-admin/addons-webman-controller-ChannelPlayerController/savePlayerGamesVue',
             method: 'post',
             data: {
               player_id: this.player_id,
