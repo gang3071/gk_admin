@@ -4315,10 +4315,10 @@ class ChannelPlayerController
             \support\Log::info('PlayerGameList - SQL Debug:', [
                 'tableName' => $tableName,
                 'selectedIdsStr' => $selectedIdsStr,
-                'sqlRaw' => "{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, NULL) as ex_selection_field"
+                'sqlRaw' => "{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, 0) as ex_selection_field"
             ]);
 
-            $grid->model()->selectRaw("{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, NULL) as ex_selection_field")
+            $grid->model()->selectRaw("{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, 0) as ex_selection_field")
                 ->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
                 ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
@@ -4470,17 +4470,8 @@ class ChannelPlayerController
 
             $grid->expandFilter();
 
-            // 设置选中字段（Grid 通过此字段判断哪些行被选中）
+            // 只使用 selectionField，不使用 selection() 方法（避免冲突）
             $grid->selectionField('ex_selection_field');
-
-            // 同时设置初始选中项（两者配合使用）
-            $grid->selection($selectedGameIds);
-
-            // 调试：在Grid内部再次记录
-            \support\Log::info('Grid内部 - Selection IDs:', [
-                'selectedGameIds' => $selectedGameIds,
-                'json' => json_encode($selectedGameIds)
-            ]);
         });
     }
 
