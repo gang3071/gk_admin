@@ -260,24 +260,19 @@ export default {
     },
 
     // 加载游戏列表
-    async loadGameList() {
+    loadGameList() {
       this.loading = true;
-      try {
-        const response = await this.$http.get('/ex-admin/channel-player/getPlayerGameListData', {
-          params: {
-            player_id: this.player_id,
-            page: this.pagination.current,
-            size: this.pagination.pageSize,
-            ...this.filters
-          },
-          headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Accept': 'application/json'
-          }
-        });
-
-        if (response.data.status === 1) {
-          const data = response.data.data;
+      this.$request({
+        url: 'ex-admin/channel-player/getPlayerGameListData',
+        params: {
+          player_id: this.player_id,
+          page: this.pagination.current,
+          size: this.pagination.pageSize,
+          ...this.filters
+        }
+      }).then(res => {
+        if (res.status === 1) {
+          const data = res.data;
           this.gameList = data.list || [];
           this.pagination.total = data.total || 0;
           this.platforms = data.platforms || [];
@@ -287,14 +282,14 @@ export default {
             .filter(game => game.is_selected)
             .map(game => game.id);
         } else {
-          this.$message.error(response.data.message || '加载失败');
+          this.$message.error(res.message || '加载失败');
         }
-      } catch (error) {
+      }).catch(error => {
         console.error('加载游戏列表失败:', error);
         this.$message.error('加载游戏列表失败');
-      } finally {
+      }).finally(() => {
         this.loading = false;
-      }
+      });
     },
 
     // 表格变化处理
@@ -312,30 +307,26 @@ export default {
       this.showConfirm({
         title: `确认${actionText}游戏`,
         content: `确定要${actionText}游戏"${record.name}"吗？`,
-        onOk: async () => {
-          try {
-            const response = await this.$http.post('/ex-admin/channel-player/toggleGameDisable', {
+        onOk: () => {
+          this.$request({
+            url: 'ex-admin/channel-player/toggleGameDisable',
+            method: 'post',
+            data: {
               player_id: this.player_id,
               game_id: record.id,
               action: action
-            }, {
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              }
-            });
-
-            if (response.data.status === 1) {
-              this.$message.success(response.data.message || `${actionText}成功`);
-              await this.loadGameList();
-            } else {
-              this.$message.error(response.data.message || `${actionText}失败`);
             }
-          } catch (error) {
+          }).then(res => {
+            if (res.status === 1) {
+              this.$message.success(res.message || `${actionText}成功`);
+              this.loadGameList();
+            } else {
+              this.$message.error(res.message || `${actionText}失败`);
+            }
+          }).catch(error => {
             console.error(`${actionText}游戏失败:`, error);
             this.$message.error(`${actionText}游戏失败`);
-          }
+          });
         }
       });
     },
@@ -350,32 +341,28 @@ export default {
       this.showConfirm({
         title: '确认保存',
         content: `确定要将选中的 ${this.selectedRowKeys.length} 个游戏设为禁用状态吗？`,
-        onOk: async () => {
+        onOk: () => {
           this.saving = true;
-          try {
-            const response = await this.$http.post('/ex-admin/channel-player/savePlayerGamesVue', {
+          this.$request({
+            url: 'ex-admin/channel-player/savePlayerGamesVue',
+            method: 'post',
+            data: {
               player_id: this.player_id,
               selected_game_ids: this.selectedRowKeys
-            }, {
-              headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-              }
-            });
-
-            if (response.data.status === 1) {
-              this.$message.success(response.data.message || '保存成功');
-              await this.loadGameList();
-            } else {
-              this.$message.error(response.data.message || '保存失败');
             }
-          } catch (error) {
+          }).then(res => {
+            if (res.status === 1) {
+              this.$message.success(res.message || '保存成功');
+              this.loadGameList();
+            } else {
+              this.$message.error(res.message || '保存失败');
+            }
+          }).catch(error => {
             console.error('保存失败:', error);
             this.$message.error('保存失败');
-          } finally {
+          }).finally(() => {
             this.saving = false;
-          }
+          });
         }
       });
     }
