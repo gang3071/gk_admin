@@ -4439,8 +4439,9 @@ class ChannelPlayerController
                         0 => admin_trans('player.old_game')
                     ]);
             });
+
             $grid->expandFilter();
-        });
+        })->selection($selectedGameIds);
     }
 
     /**
