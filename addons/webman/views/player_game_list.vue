@@ -271,37 +271,41 @@ export default {
         }
       }).then(res => {
         try {
-          console.log('API响应:', res);
+          console.log('✅ API响应:', res);
 
           if (res.status === 1) {
             const data = res.data;
-            console.log('游戏数据:', data);
+            console.log('✅ 游戏数据:', data);
 
             this.gameList = data.list || [];
-            this.pagination.total = data.total || 0;
-            this.platforms = data.platforms || [];
+            console.log('✅ 步骤1: 设置gameList，长度=', this.gameList.length);
 
-            console.log('游戏列表:', this.gameList.length, '条');
+            this.pagination.total = data.total || 0;
+            console.log('✅ 步骤2: 设置total=', this.pagination.total);
+
+            this.platforms = data.platforms || [];
+            console.log('✅ 步骤3: 设置platforms，长度=', this.platforms.length);
 
             // 更新选中的行（已禁用的游戏）
             this.selectedRowKeys = this.gameList
               .filter(game => game && game.is_selected)
               .map(game => game.id);
-            console.log('选中的游戏ID:', this.selectedRowKeys);
-            console.log('加载完成！');
+            console.log('✅ 步骤4: 设置selectedRowKeys=', this.selectedRowKeys);
+
+            console.log('🎉 加载完成！');
           } else {
-            console.error('API返回失败:', res.message);
+            console.error('❌ API返回失败:', res.message);
           }
         } catch (e) {
-          console.error('处理响应数据时出错:', e);
-          console.error('错误堆栈:', e.stack);
-          throw e; // 重新抛出以便外层catch捕获
+          console.error('❌ 处理响应数据时出错:', e);
+          console.error('❌ 错误消息:', e.message);
+          console.error('❌ 错误堆栈:', e.stack);
+          // 不要重新抛出，直接在这里处理
         }
       }).catch(error => {
-        console.error('请求失败或处理出错:', error);
-        console.error('错误类型:', typeof error);
-        console.error('错误对象:', error);
+        console.error('❌ catch块被触发:', error);
       }).finally(() => {
+        console.log('⏹ finally: 设置loading=false');
         this.loading = false;
       });
     },
