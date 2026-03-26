@@ -3303,7 +3303,7 @@ class ChannelPlayerController
                 $value,
                 Player $data
             ) {
-                if (isset($data->recommend_player) && !empty($data->recommend_player)) {
+                if (!empty($data->recommend_player)) {
                     return Html::create(Str::of($value)->limit(20, ' (...)'))
                         ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                         ->modal([$this, 'playerInfo'], ['player_id' => $data->recommend_player->id])
@@ -4296,6 +4296,7 @@ class ChannelPlayerController
 
         // 获取当前语言环境
         $lang = Container::getInstance()->translator->getLocale();
+
         return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
             $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
             $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
@@ -4308,6 +4309,15 @@ class ChannelPlayerController
                 ->orderBy('id', 'desc');
 
             $grid->driver()->setPk('id');
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+            $page = Request::input('ex_admin_page', 1);
+            $size = Request::input('ex_admin_size', 50);
+            $param = [
+                'size' => $size,
+                'page' => $page,
+                'ex_admin_filter' => $exAdminFilter,
+                'player_id' => $player_id,
+            ];
 
             $grid->autoHeight();
             $grid->bordered(true);
@@ -4389,6 +4399,18 @@ class ChannelPlayerController
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
+            $grid->tools(
+                Button::create(admin_trans('player.save_selected_games'))
+                    ->icon(Icon::create('fas fa-save'))
+                    ->confirm(admin_trans('common.confirm_save'),
+                        [
+                            $this,
+                            'savePlayerGames?' . http_build_query($param)
+                        ])
+                    ->gridBatch()->gridRefresh()
+                    ->type('primary')
+            );
+
             $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
                 $filter->eq()->select('platform_id')
                     ->placeholder(admin_trans('player.platform_placeholder'))
@@ -4425,21 +4447,18 @@ class ChannelPlayerController
     /**
      * 保存玩家游戏权限
      * @auth true
-     * @param $selected 当前选中的游戏ID
-     * @param $player_id 玩家ID
-     * @param $size 分页大小
-     * @param $page 当前页码
-     * @param array $ex_admin_filter 筛选条件
-     * @param string $selected_before 之前已选中的游戏ID（逗号分隔）
+     * @param $selected
+     * @param $player_id
+     * @param $size
+     * @param $page
+     * @param array $ex_admin_filter
      * @return Msg
      */
-    public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [], $selected_before = '')
+    public function savePlayerGames($selected, $player_id, $size, $page, array $ex_admin_filter = [])
     {
-        // $selected 为 null 表示未选中任何游戏，空数组也是有效值
-        // 因此不需要检查 isset($selected)
-
-        // 解析之前已选中的游戏ID
-        $selectedBeforeIds = !empty($selected_before) ? explode(',', $selected_before) : [];
+        if (!isset($selected)) {
+            return message_error(admin_trans('common.please_select_games'));
+        }
 
         /** @var Player $player */
         $player = Player::query()->with('channel')->find($player_id);
@@ -4459,14 +4478,27 @@ class ChannelPlayerController
             return message_error(admin_trans('common.channel_no_game_platform'));
         }
 
-        // 处理筛选条件，计算最终要禁用的游戏ID
-        $finalSelectedIds = [];
-        $hasFilter = !empty($ex_admin_filter['platform_id']) || !empty($ex_admin_filter['cate_id']) ||
-            isset($ex_admin_filter['is_hot']) || isset($ex_admin_filter['is_new']);
+        // 验证选择的游戏
+        $selectedGames = Game::query()->whereIn('id', $selected)->get();
+        if ($selectedGames->isEmpty()) {
+            return message_error(admin_trans('common.games_not_found'));
+        }
 
-        if ($hasFilter) {
-            // 查询所有符合筛选条件的游戏ID（不限制分页，获取全部）
-            $filteredGameIds = Game::query()
+        // 验证游戏是否都在渠道允许的范围内
+        foreach ($selectedGames as $game) {
+            if (!in_array($game->platform_id, $channelGamePlatformIds)) {
+                return message_error(admin_trans('common.games_not_in_channel_scope'));
+            }
+        }
+
+        // 处理筛选条件（如果有筛选，只删除筛选结果中未选中的）
+        $filteredIds = [];
+        $filterAdd = false;
+
+        if (!empty($ex_admin_filter['platform_id']) || !empty($ex_admin_filter['cate_id']) ||
+            isset($ex_admin_filter['is_hot']) || isset($ex_admin_filter['is_new'])) {
+
+            $gameList = Game::query()
                 ->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
                 ->when(!empty($ex_admin_filter['platform_id']), function ($query) use ($ex_admin_filter) {
@@ -4481,42 +4513,35 @@ class ChannelPlayerController
                 ->when(isset($ex_admin_filter['is_new']), function ($query) use ($ex_admin_filter) {
                     $query->where('is_new', $ex_admin_filter['is_new']);
                 })
+                ->orderBy('id', 'desc')
+                ->forPage($page, $size)
                 ->pluck('id')
                 ->toArray();
 
-            // 合并逻辑：
-            // 1. 当前筛选结果中选中的游戏
-            // 2. 不在筛选结果中但之前已选中的游戏（保持原状）
-            $notInFilterButSelectedBefore = array_diff($selectedBeforeIds, $filteredGameIds);
-            $finalSelectedIds = array_merge($selected ?? [], $notInFilterButSelectedBefore);
-        } else {
-            // 没有筛选条件，直接使用当前选中的游戏
-            $finalSelectedIds = $selected ?? [];
-        }
-
-        // 重新验证最终选中的游戏
-        $finalSelectedGames = collect();
-        if (!empty($finalSelectedIds)) {
-            $finalSelectedGames = Game::query()->whereIn('id', $finalSelectedIds)->get();
-
-            // 验证游戏是否都在渠道允许的范围内
-            foreach ($finalSelectedGames as $game) {
-                if (!in_array($game->platform_id, $channelGamePlatformIds)) {
-                    return message_error(admin_trans('common.games_not_in_channel_scope'));
-                }
-            }
+            $filteredIds = array_diff($gameList, $selected);
+            $filterAdd = true;
         }
 
         Db::beginTransaction();
         try {
-            // 清空该玩家所有游戏权限
-            PlayerDisabledGame::query()
-                ->where('player_id', $player_id)
-                ->delete();
+            if ($filterAdd) {
+                // 如果有筛选条件，只删除筛选结果中未选中的
+                if (!empty($filteredIds)) {
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->whereIn('game_id', $filteredIds)
+                        ->delete();
+                }
+            } else {
+                // 没有筛选条件，清空该玩家所有游戏权限
+                PlayerDisabledGame::query()
+                    ->where('player_id', $player_id)
+                    ->delete();
+            }
 
-            // 批量插入最终选中的游戏
+            // 批量插入或更新选中的游戏
             $insertData = [];
-            foreach ($finalSelectedGames as $game) {
+            foreach ($selectedGames as $game) {
                 $insertData[] = [
                     'player_id' => $player_id,
                     'game_id' => $game->id,
@@ -4528,12 +4553,16 @@ class ChannelPlayerController
             }
 
             if (!empty($insertData)) {
-                PlayerDisabledGame::query()->insert($insertData);
+                PlayerDisabledGame::query()->upsert(
+                    $insertData,
+                    ['player_id', 'game_id'],
+                    ['platform_id', 'status', 'updated_at']
+                );
             }
 
             Db::commit();
 
-            $count = count($finalSelectedIds);
+            $count = count($selected);
             $message = $count > 0
                 ? str_replace('{count}', $count, admin_trans('player.game_disabled_success'))
                 : admin_trans('player.game_enabled_all_success');
