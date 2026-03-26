@@ -125,9 +125,9 @@
 </template>
 
 <script>
-import {computed, h, onMounted, reactive, ref} from 'vue';
+import {computed, createVNode, h, onMounted, reactive, ref} from 'vue';
 import {message, Modal} from 'ant-design-vue';
-import {SaveOutlined} from '@ant-design/icons-vue';
+import {ExclamationCircleOutlined, SaveOutlined} from '@ant-design/icons-vue';
 import axios from 'axios';
 
 export default {
@@ -149,6 +149,40 @@ export default {
     const platforms = ref([]);
     const selectedRowKeys = ref([]);
     const title = computed(() => `${props.player_name} - 游戏权限管理`);
+
+    // 确认对话框辅助函数（兼容ExAdmin环境）
+    const showConfirm = (options) => {
+      return new Promise((resolve, reject) => {
+        try {
+          Modal.confirm({
+            icon: createVNode(ExclamationCircleOutlined),
+            okText: '确认',
+            cancelText: '取消',
+            ...options,
+            onOk: () => {
+              resolve(true);
+              if (options.onOk) {
+                return options.onOk();
+              }
+            },
+            onCancel: () => {
+              resolve(false);
+              if (options.onCancel) {
+                options.onCancel();
+              }
+            }
+          });
+        } catch (error) {
+          // Fallback到原生confirm
+          console.warn('Modal.confirm不可用，使用原生confirm', error);
+          const result = window.confirm(`${options.title}\n\n${options.content}`);
+          if (result && options.onOk) {
+            options.onOk();
+          }
+          resolve(result);
+        }
+      });
+    };
 
     const filters = reactive({
       platform_id: undefined,
@@ -236,6 +270,10 @@ export default {
             page: pagination.current,
             size: pagination.pageSize,
             ...filters
+          },
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
           }
         });
 
@@ -268,11 +306,11 @@ export default {
     };
 
     // 单个游戏切换
-    const toggleGame = async (record, disable) => {
+    const toggleGame = (record, disable) => {
       const action = disable ? 'disable' : 'enable';
       const actionText = disable ? '禁用' : '取消禁用';
 
-      Modal.confirm({
+      showConfirm({
         title: `确认${actionText}游戏`,
         content: `确定要${actionText}游戏"${record.name}"吗？`,
         onOk: async () => {
@@ -281,6 +319,12 @@ export default {
               player_id: props.player_id,
               game_id: record.id,
               action: action
+            }, {
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
             });
 
             if (response.data.status === 1) {
@@ -298,13 +342,13 @@ export default {
     };
 
     // 批量保存选中的游戏
-    const saveSelectedGames = async () => {
+    const saveSelectedGames = () => {
       if (selectedRowKeys.value.length === 0) {
         message.warning('请至少选择一个游戏');
         return;
       }
 
-      Modal.confirm({
+      showConfirm({
         title: '确认保存',
         content: `确定要将选中的 ${selectedRowKeys.value.length} 个游戏设为禁用状态吗？`,
         onOk: async () => {
@@ -313,6 +357,12 @@ export default {
             const response = await axios.post('/ex-admin/channel-player/savePlayerGamesVue', {
               player_id: props.player_id,
               selected_game_ids: selectedRowKeys.value
+            }, {
+              headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              }
             });
 
             if (response.data.status === 1) {

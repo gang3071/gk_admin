@@ -4409,39 +4409,52 @@ class ChannelPlayerController
     }
 
     /**
-     * 切换单个游戏的禁用状态
+     * 切换单个游戏的禁用状态（支持Grid和Vue组件两种调用方式）
      * @auth true
      * @group channel
      * @param int $player_id
      * @param int $game_id
      * @param string $action
-     * @return Msg
+     * @return Msg|\support\Response
      */
-    public function toggleGameDisable(int $player_id, int $game_id, string $action): Msg
+    public function toggleGameDisable(int $player_id, int $game_id, string $action)
     {
+        // 检测是否为Vue组件的AJAX请求（通过Content-Type或X-Requested-With判断）
+        $isAjaxRequest = Request::header('X-Requested-With') === 'XMLHttpRequest'
+            || Request::header('Content-Type') === 'application/json'
+            || strpos(Request::header('Accept'), 'application/json') !== false;
+
         try {
             /** @var Player $player */
             $player = Player::query()->with('channel')->find($player_id);
 
             if (empty($player)) {
-                return message_error(admin_trans('common.player_not_exist'));
+                return $isAjaxRequest
+                    ? json(['status' => 0, 'message' => admin_trans('common.player_not_exist')])
+                    : message_error(admin_trans('common.player_not_exist'));
             }
 
             // 只有线下渠道才支持游戏级别权限管理
             if ($player->channel->is_offline != 1) {
-                return message_error(admin_trans('common.offline_channel_feature_only'));
+                return $isAjaxRequest
+                    ? json(['status' => 0, 'message' => admin_trans('common.offline_channel_feature_only')])
+                    : message_error(admin_trans('common.offline_channel_feature_only'));
             }
 
             // 验证游戏是否存在
             $game = Game::query()->find($game_id);
             if (empty($game)) {
-                return message_error(admin_trans('common.game_not_exist'));
+                return $isAjaxRequest
+                    ? json(['status' => 0, 'message' => admin_trans('common.game_not_exist')])
+                    : message_error(admin_trans('common.game_not_exist'));
             }
 
             // 获取渠道允许的游戏平台
             $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
             if (empty($channelGamePlatformIds) || !in_array($game->platform_id, $channelGamePlatformIds)) {
-                return message_error(admin_trans('common.game_not_in_channel_scope'));
+                return $isAjaxRequest
+                    ? json(['status' => 0, 'message' => admin_trans('common.game_not_in_channel_scope')])
+                    : message_error(admin_trans('common.game_not_in_channel_scope'));
             }
 
             Db::beginTransaction();
@@ -4468,19 +4481,30 @@ class ChannelPlayerController
                         ->delete();
                     $message = admin_trans('player.single_game_enabled_success');
                 } else {
-                    return message_error(admin_trans('common.invalid_operation'));
+                    return $isAjaxRequest
+                        ? json(['status' => 0, 'message' => admin_trans('common.invalid_operation')])
+                        : message_error(admin_trans('common.invalid_operation'));
                 }
 
                 Db::commit();
-                return message_success($message)->refresh();
+
+                return $isAjaxRequest
+                    ? json(['status' => 1, 'message' => $message])
+                    : message_success($message)->refresh();
             } catch (Exception $e) {
                 Db::rollBack();
                 Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-                return message_error($e->getMessage() ?? admin_trans('player.operation_failed'));
+                $errorMessage = $e->getMessage() ?? admin_trans('player.operation_failed');
+                return $isAjaxRequest
+                    ? json(['status' => 0, 'message' => $errorMessage])
+                    : message_error($errorMessage);
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-            return message_error(admin_trans('common.operation_failed') . '：' . $e->getMessage());
+            $errorMessage = admin_trans('common.operation_failed') . '：' . $e->getMessage();
+            return $isAjaxRequest
+                ? json(['status' => 0, 'message' => $errorMessage])
+                : message_error($errorMessage);
         }
     }
 
