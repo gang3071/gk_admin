@@ -4294,6 +4294,13 @@ class ChannelPlayerController
             ->pluck('game_id')
             ->toArray();
 
+        // 调试：记录选中的游戏ID
+        \support\Log::info('PlayerGameList - Selected Game IDs:', [
+            'player_id' => $player_id,
+            'selectedGameIds' => $selectedGameIds,
+            'count' => count($selectedGameIds)
+        ]);
+
         // 获取当前语言环境
         $lang = Container::getInstance()->translator->getLocale();
 
@@ -4441,7 +4448,16 @@ class ChannelPlayerController
             });
 
             $grid->expandFilter();
-        })->selection($selectedGameIds);
+
+            // 设置选中项（必须在闭包内部！）
+            $grid->selection($selectedGameIds);
+
+            // 调试：在Grid内部再次记录
+            \support\Log::info('Grid内部 - Selection IDs:', [
+                'selectedGameIds' => $selectedGameIds,
+                'json' => json_encode($selectedGameIds)
+            ]);
+        });
     }
 
     /**
