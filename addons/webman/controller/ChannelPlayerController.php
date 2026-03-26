@@ -4310,6 +4310,14 @@ class ChannelPlayerController
             // 为每条记录添加选中标识字段（动态表名）
             $tableName = $grid->model()->getModel()->getTable();
             $selectedIdsStr = empty($selectedGameIds) ? '0' : implode(',', $selectedGameIds);
+
+            // 调试：记录SQL相关信息
+            \support\Log::info('PlayerGameList - SQL Debug:', [
+                'tableName' => $tableName,
+                'selectedIdsStr' => $selectedIdsStr,
+                'sqlRaw' => "{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, NULL) as ex_selection_field"
+            ]);
+
             $grid->model()->selectRaw("{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, NULL) as ex_selection_field")
                 ->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
@@ -4336,9 +4344,12 @@ class ChannelPlayerController
             $grid->column('id', 'ID')->align('center')->width('80px');
 
             // 临时调试列：显示 ex_selection_field 的值
-            $grid->column('ex_selection_field', '选中字段(调试)')->display(function ($val, $data) {
-                return $val ? "✓ {$val}" : '✗ null';
-            })->align('center')->width('150px');
+            $grid->column('ex_selection_field', '选中字段(调试)')->display(function ($val, $data) use ($selectedGameIds) {
+                $gameId = $data['id'] ?? 'N/A';
+                $inArray = in_array($gameId, $selectedGameIds) ? '是' : '否';
+                $valDisplay = $val ? "✓ {$val}" : '✗ null';
+                return "ID:{$gameId} | 在数组:{$inArray} | 字段值:{$valDisplay}";
+            })->align('center')->width('300px');
 
             $grid->column('platform_id', admin_trans('player.game_platform'))->display(function ($val, Game $data) {
                 return Tag::create($data->gamePlatform->name ?? admin_trans('player.unknown_platform'))->color('blue');
