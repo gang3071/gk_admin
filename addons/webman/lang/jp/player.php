@@ -48,6 +48,7 @@ return [
         'register_domain' => 'ドメイン名を登録',
         'country_code' => '国/地域コード',
         'player_tag' => 'タグ',
+        'tag_name' => 'タグ名',
         'uuid' => 'プレイヤーUID',
         'device_uuid' => 'デバイスUUID',
         'device_name' => 'デバイス名',
@@ -197,4 +198,69 @@ return [
     'coin_artificial_withdraw' => '貨幣商現金引出し',
     'login_ip' => 'ログインIP',
     'national_level_not_configure' => '全国民エージェントレベルが設定されていません',
+
+    // 統計フィールド
+    'total_recharge_amount' => '累計チャージ',
+    'total_withdraw_amount' => '累計キャッシュ',
+    'total_machine_put_point' => '現金預金',
+    'total_lottery_amount' => 'ジャックポット',
+    'subtotal' => '小計',
+
+    // ゲーム関連
+    'game_platform' => 'ゲームプラットフォーム',
+    'unknown_platform' => '不明なプラットフォーム',
+    'game_name' => 'ゲーム名',
+    'game_category' => 'ゲームカテゴリ',
+    'is_hot' => '人気',
+    'hot_tag' => '人気',
+    'is_new' => '新しいゲーム',
+    'new_tag' => '新',
+    'hot_game' => '人気ゲーム',
+    'normal_game' => '通常のゲーム',
+    'new_game' => '新しいゲーム',
+    'old_game' => '古いゲーム',
+
+    // ゲーム操作
+    'cancel_disable_game' => '有効化',
+    'disable_game' => 'ゲームを無効化',
+    'confirm_cancel_disable_game' => 'このゲームを有効化してもよろしいですか？',
+    'confirm_disable_game' => 'このゲームを無効化してもよろしいですか？',
+    'save_selected_games' => '選択したゲームを保存',
+    'game_disabled_success' => '{count} 個のゲームを正常に無効化しました',
+    'game_enabled_all_success' => 'すべてのゲーム制限が削除されました',
+    'single_game_disabled_success' => 'このゲームを正常に無効化しました',
+    'single_game_enabled_success' => 'このゲームを正常に有効化しました',
+
+    // プレースホルダー
+    'platform_placeholder' => 'ゲームプラットフォーム',
+    'is_hot_placeholder' => '人気かどうか',
+    'is_new_placeholder' => '新しいゲームかどうか',
+
+    // エラーメッセージ
+    'game_server_connection_failed' => 'ゲームサーバー接続失敗',
+    'game_server_http_error' => 'ゲームサーバーがエラーを返しました',
+    'game_server_response_error' => 'ゲームサーバー応答形式エラー',
+    'game_operation_failed' => 'ゲーム操作に失敗しました',
+    'save_failed' => '保存に失敗しました',
+    'operation_failed' => '操作に失敗しました',
+
+    // 備考テンプレート
+    'store_backend_recharge_remark' => 'ストアバックエンドチャージ{remark}',
+
+    // レポート関連
+    'machine_chip_total' => '現金預金総額',
+    'no_promoter' => 'プロモーターなし',
+
+    // 変換プレビュー
+    'conversion_preview' => '変換プレビュー：',
+    'please_enter_amount' => '金額を入力してください',
+    'points_unit' => 'ポイント',
+    'exchange_rate' => '為替レート：',
+    'game_points' => 'ゲームポイント',
+
+    // ストアバックエンド専用
+    'unnamed' => '未命名',
+    'game_id_label' => 'ゲーム ID: ',
+    'device_list_query_log' => 'デバイスリストクエリ',
+    'no_device_data' => 'デバイスデータがありません',
 ];

@@ -437,7 +437,7 @@ class ChannelPlayerReportController
                             'text-align' => 'center'
                         ]), 12),
                         Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title('投钞总额')->value(!empty($summaryData['machine_chip_total']) ? floatval($summaryData['machine_chip_total']) : 0)->valueStyle([
+                        Row::create()->column(Statistic::create()->title(admin_trans('player.machine_chip_total'))->value(!empty($summaryData['machine_chip_total']) ? floatval($summaryData['machine_chip_total']) : 0)->valueStyle([
                             'font-size' => '15px',
                             'text-align' => 'center'
                         ])->style([
@@ -492,7 +492,7 @@ class ChannelPlayerReportController
                             ->width('60%')
                             ->title(admin_trans('player.fields.uuid') . ': ' . $promoterUuid);
                     } else {
-                        return '暂无推广员';
+                        return admin_trans('player.no_promoter');
                     }
                 })
                 ->align('center')->width(80);
@@ -576,7 +576,7 @@ class ChannelPlayerReportController
                 })
                 ->align('center')->sortable();
             // 投钞总额
-            $grid->column('machine_chip_total', '投钞总额')
+            $grid->column('machine_chip_total', admin_trans('player.machine_chip_total'))
                 ->display(function ($value) {
                     return Html::create(number_format($value, 2))->style(['color' => 'green']);
                 })
@@ -821,7 +821,7 @@ class ChannelPlayerReportController
             admin_trans('player.coin_withdraw'),
             admin_trans('player.machine_up_total'),
             admin_trans('player.machine_down_total'),
-            '投钞总额',
+            admin_trans('player.machine_chip_total'),
             admin_trans('player.winn_los_total'),
             admin_trans('player.lottery_total'),
             admin_trans('player.activity_total'),
@@ -832,7 +832,7 @@ class ChannelPlayerReportController
 
         foreach ($list as $item) {
             // 获取推广员名称
-            $promoterName = '暂无推广员';
+            $promoterName = admin_trans('player.no_promoter');
             if (isset($item['recommend_promoter'])) {
                 $promoterName = $item['recommend_promoter']['player']['uuid'] ?? '';
             }

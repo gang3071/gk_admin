@@ -256,7 +256,7 @@ class PlayerReportController
                                 ->width('60%')
                                 ->title(admin_trans('player.fields.uuid') . ': ' . $promoterUuid);
                         } else {
-                            return '暂无推广员';
+                            return admin_trans('player.no_promoter');
                         }
                     })
                     ->align('center')->width(80);

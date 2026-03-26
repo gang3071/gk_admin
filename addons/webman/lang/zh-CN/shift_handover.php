@@ -2,11 +2,14 @@
 
 return [
     'title' => '交班管理',
+    'auto_shift_status_enabled' => '自动交班：已开启',
+    'auto_shift_status_disabled' => '自动交班：已关闭',
     'auto_shift_enabled' => '已开启自动交班',
     'auto_shift_enabled_desc' => '系统已启用自动交班功能，无法进行手动交班操作。',
     'auto_shift_close_hint' => '如需手动交班，请先到"自动交班配置"中关闭自动交班功能。',
     'goto_auto_shift_config' => '前往自动交班配置',
     'manual_shift_disabled' => '手动交班已禁用',
+    'shift_failed' => '交班失败：',
     'shift_time' => '交班时间',
     'shift_time_help' => '交班时间不能超过当前时间, 无法选择过去5天内的时间, 不能选择上次交班时间的范围',
     'start_time' => '开始时间',
@@ -218,5 +221,37 @@ return [
             'total_out' => '总支出：',
             'device_profit' => '设备利润：',
         ],
+    ],
+
+    // 设备明细导出
+    'export' => [
+        'title' => '设备明细导出 - 交班记录 ID: {id}',
+        'start_time_label' => '开始时间:',
+        'end_time_label' => '结束时间:',
+        'shift_type_label' => '交班类型:',
+        'machine_point_label' => '投钞点数:',
+        'lottery_amount_label' => '彩金:',
+        'total_in_label' => '总收入:',
+        'total_out_label' => '总支出:',
+        'total_profit_label' => '总利润:',
+        'no_device_data' => '暂无设备明细数据',
+        'device_detail_note' => '说明：本报表为设备明细导出，导出时间：{time}',
+        'subtotal_devices' => '小计 ({count}台设备)',
+    ],
+
+    // 交易明细
+    'transaction' => [
+        'detail_title' => '{name} - 交易明细（共 {count} 条）',
+        'time' => '时间',
+        'type' => '类型',
+        'amount' => '金额',
+        'remark' => '备注',
+
+        // 交易类型
+        'type_recharge' => '开分',
+        'type_withdrawal' => '洗分',
+        'type_lottery' => '彩金',
+        'type_add_point' => '后台加点',
+        'type_deduct_point' => '后台扣点',
     ],
 ];

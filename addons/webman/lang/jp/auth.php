@@ -24,6 +24,7 @@ return [
         'data_type' => 'データ範囲',
         'department' => '部門リスト',
         'type' => '役割の種類',
+        'is_protected' => 'システムロール',
     ],
     'options' => [
         'data_type' => [
@@ -41,5 +42,9 @@ return [
         AdminDepartment::TYPE_CHANNEL => 'チャネルの役割',
         AdminDepartment::TYPE_AGENT => 'エージェントの役割',
         AdminDepartment::TYPE_STORE => 'ストアの役割',
+    ],
+    'tag' => [
+        'built_in_role' => '組み込みロール',
+        'custom_role' => 'カスタム',
     ],
 ];

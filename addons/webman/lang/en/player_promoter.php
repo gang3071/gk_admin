@@ -77,4 +77,8 @@ return [
     'formula_tip' => 'Calculation formula: ({up} + {admin_sub}) - ({activity} + {present} + {admin_add} + {down} + {lottery}) * {ratio}% = {profit_amount}',
     'source_promoter_name' => 'Source promoter',
     'promoter_max_ratio' => 'The maximum profit sharing ratio can be set to {max_ratio}%',
+    'admin' => 'Admin',
+    'log' => [
+        'settlement_failed' => 'Settlement failed',
+    ],
 ];

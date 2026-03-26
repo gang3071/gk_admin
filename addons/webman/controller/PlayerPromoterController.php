@@ -1635,7 +1635,7 @@ class PlayerPromoterController
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.administrator');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),

@@ -213,5 +213,9 @@ return [
     'machine_lottery_record_title' => '機台大賞記錄',
     'lock' => '鎖定',
     'open' => '開啟',
+    'enable_auto' => '開啟自動',
+    'disable_auto' => '關閉自動',
+    'enable_lock' => '開啟鎖定',
+    'disable_lock' => '關閉鎖定',
     'machine_tencent_total_viewers' => '騰訊雲總播放人數: ',
 ];

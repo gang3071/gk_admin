@@ -9,7 +9,6 @@ use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\support\Excel;
 use PhpOffice\PhpSpreadsheet\Exception;
 use support\Db;
-use support\Log;
 
 class ImportService
 {
@@ -46,7 +45,7 @@ class ImportService
                 if ($player) {
                     $repeatNum++;
                     $failNum++;
-                    throw new \Exception('玩家已存在');
+                    throw new \Exception(admin_trans('common.player_already_exists'));
                 }
                 if (!empty($row['uuid'])) {
                     $recommendPlayer = Player::query()
@@ -56,7 +55,7 @@ class ImportService
                     if (!$recommendPlayer) {
                         $recommendErrorNum++;
                         $failNum++;
-                        throw new \Exception('推荐玩家玩家不存在');
+                        throw new \Exception(admin_trans('common.recommended_player_not_exist'));
                     }
                 }
                 $player = new Player();

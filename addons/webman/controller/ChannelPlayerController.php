@@ -142,20 +142,20 @@ class ChannelPlayerController
         curl_close($ch);
 
         if ($curlError) {
-            throw new \Exception('游戏服务器连接失败: ' . $curlError);
+            throw new \Exception(admin_trans('player.game_server_connection_failed') . ': ' . $curlError);
         }
 
         if ($httpCode !== 200) {
-            throw new \Exception('游戏服务器返回错误: HTTP ' . $httpCode);
+            throw new \Exception(admin_trans('player.game_server_http_error') . ': HTTP ' . $httpCode);
         }
 
         $result = json_decode($response, true);
         if (empty($result)) {
-            throw new \Exception('游戏服务器响应格式错误');
+            throw new \Exception(admin_trans('player.game_server_response_error'));
         }
 
         if (isset($result['code']) && $result['code'] != 200) {
-            throw new GameException($result['msg'] ?? '游戏操作失败');
+            throw new GameException($result['msg'] ?? admin_trans('player.game_operation_failed'));
         }
 
         return $result['data'] ?? [];
@@ -383,23 +383,23 @@ class ChannelPlayerController
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
             })->ellipsis(true)->sortable()->align('center');
 
-            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+            $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+            $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', '投钞')->display(function ($value) {
+            $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+            $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('subtotal', '小计')->display(function ($value) {
+            $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
@@ -4261,28 +4261,28 @@ class ChannelPlayerController
         if (empty($player)) {
             // 返回空Grid并显示错误
             return Grid::create([], function (Grid $grid) {
-                $grid->title('玩家不存在');
+                $grid->title(admin_trans('channel_player.error.player_not_found'));
             });
         }
 
         // 只有线下渠道才支持游戏级别权限管理
         if ($player->channel->is_offline != 1) {
             return Grid::create([], function (Grid $grid) {
-                $grid->title('该功能仅适用于线下渠道');
+                $grid->title(admin_trans('channel_player.error.offline_channel_only'));
             });
         }
 
         // 获取玩家所在渠道开启的游戏平台
         if (empty($player->channel->game_platform)) {
             return Grid::create([], function (Grid $grid) {
-                $grid->title('该渠道未开启任何电子游戏平台');
+                $grid->title(admin_trans('channel_player.error.no_game_platform'));
             });
         }
 
         $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
         if (empty($channelGamePlatformIds)) {
             return Grid::create([], function (Grid $grid) {
-                $grid->title('该渠道未开启任何电子游戏平台');
+                $grid->title(admin_trans('channel_player.error.no_game_platform'));
             });
         }
 
@@ -4297,7 +4297,7 @@ class ChannelPlayerController
         $lang = Container::getInstance()->translator->getLocale();
 
         return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
-            $grid->title('玩家游戏权限管理 - ' . $player->name);
+            $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
             $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
                 ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
@@ -4322,13 +4322,13 @@ class ChannelPlayerController
             $grid->bordered(true);
             $grid->column('id', 'ID')->align('center')->width('80px');
 
-            $grid->column('platform_id', '游戏平台')->display(function ($val, Game $data) {
-                return Tag::create($data->gamePlatform->name ?? '未知平台')->color('blue');
+            $grid->column('platform_id', admin_trans('player.game_platform'))->display(function ($val, Game $data) {
+                return Tag::create($data->gamePlatform->name ?? admin_trans('player.unknown_platform'))->color('blue');
             })->align('center')->width('120px');
 
-            $grid->column('game_content', '游戏名称')->display(function ($val, Game $data) use ($lang) {
+            $grid->column('game_content', admin_trans('player.game_name'))->display(function ($val, Game $data) use ($lang) {
                 $content = $data->gameContent ? $data->gameContent->where('lang', $lang)->first() : null;
-                $gameName = $content->name ?? '游戏 ID: ' . $data->id;
+                $gameName = $content->name ?? admin_trans('player.game_id_label') . $data->id;
 
                 if ($content && $content->picture) {
                     $image = Image::create()
@@ -4344,16 +4344,16 @@ class ChannelPlayerController
                 return $gameName;
             })->align('left');
 
-            $grid->column('cate_id', '游戏分类')->display(function ($val, Game $data) {
+            $grid->column('cate_id', admin_trans('player.game_category'))->display(function ($val, Game $data) {
                 return Tag::create(getGameTypeName($val))->color('green');
             })->align('center')->width('100px');
 
-            $grid->column('is_hot', '热门')->display(function ($val) {
-                return $val == 1 ? Tag::create('热门')->color('red') : '';
+            $grid->column('is_hot', admin_trans('player.is_hot'))->display(function ($val) {
+                return $val == 1 ? Tag::create(admin_trans('player.hot_tag'))->color('red') : '';
             })->align('center')->width('80px');
 
-            $grid->column('is_new', '新游戏')->display(function ($val) {
-                return $val == 1 ? Tag::create('新')->color('orange') : '';
+            $grid->column('is_new', admin_trans('player.is_new'))->display(function ($val) {
+                return $val == 1 ? Tag::create(admin_trans('player.new_tag'))->color('orange') : '';
             })->align('center')->width('80px');
 
             $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
@@ -4366,10 +4366,10 @@ class ChannelPlayerController
                 if ($isDisabled) {
                     // 已禁用，显示"取消禁用"按钮
                     $actions->prepend(
-                        Button::create('取消禁用')
+                        Button::create(admin_trans('player.cancel_disable_game'))
                             ->type('default')
                             ->size('small')
-                            ->confirm('确认取消禁用该游戏？', [$this, 'toggleGameDisable'], [
+                            ->confirm(admin_trans('player.confirm_cancel_disable_game'), [$this, 'toggleGameDisable'], [
                                 'player_id' => $player_id,
                                 'game_id' => $data->id,
                                 'action' => 'enable'
@@ -4379,11 +4379,11 @@ class ChannelPlayerController
                 } else {
                     // 未禁用，显示"禁用游戏"按钮
                     $actions->prepend(
-                        Button::create('禁用游戏')
+                        Button::create(admin_trans('player.disable_game'))
                             ->type('primary')
                             ->size('small')
                             ->danger()
-                            ->confirm('确认禁用该游戏？', [$this, 'toggleGameDisable'], [
+                            ->confirm(admin_trans('player.confirm_disable_game'), [$this, 'toggleGameDisable'], [
                                 'player_id' => $player_id,
                                 'game_id' => $data->id,
                                 'action' => 'disable'
@@ -4399,9 +4399,9 @@ class ChannelPlayerController
             $grid->hideTrashed();
 
             $grid->tools(
-                Button::create('保存选择的游戏')
+                Button::create(admin_trans('player.save_selected_games'))
                     ->icon(Icon::create('fas fa-save'))
-                    ->confirm('确认保存？',
+                    ->confirm(admin_trans('common.confirm_save'),
                         [
                             $this,
                             'savePlayerGames?' . http_build_query($param)
@@ -4412,7 +4412,7 @@ class ChannelPlayerController
 
             $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
                 $filter->eq()->select('platform_id')
-                    ->placeholder('游戏平台')
+                    ->placeholder(admin_trans('player.platform_placeholder'))
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options(GamePlatform::query()
@@ -4421,21 +4421,21 @@ class ChannelPlayerController
                         ->toArray());
 
                 $filter->eq()->select('is_hot')
-                    ->placeholder('是否热门')
+                    ->placeholder(admin_trans('player.is_hot_placeholder'))
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => '热门游戏',
-                        0 => '普通游戏'
+                        1 => admin_trans('player.hot_game'),
+                        0 => admin_trans('player.normal_game')
                     ]);
 
                 $filter->eq()->select('is_new')
-                    ->placeholder('是否新游戏')
+                    ->placeholder(admin_trans('player.is_new_placeholder'))
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => '新游戏',
-                        0 => '旧游戏'
+                        1 => admin_trans('player.new_game'),
+                        0 => admin_trans('player.old_game')
                     ]);
             });
 
@@ -4562,12 +4562,14 @@ class ChannelPlayerController
             Db::commit();
 
             $count = count($selected);
-            $message = $count > 0 ? "成功禁用了 {$count} 个游戏" : "已取消所有游戏禁用";
+            $message = $count > 0
+                ? str_replace('{count}', $count, admin_trans('player.game_disabled_success'))
+                : admin_trans('player.game_enabled_all_success');
             return message_success($message)->refresh();
         } catch (Exception $e) {
             Db::rollBack();
             Log::error('save_player_games', [$e->getMessage(), $e->getTrace()]);
-            return message_error($e->getMessage() ?? '保存失败');
+            return message_error($e->getMessage() ?? admin_trans('player.save_failed'));
         }
     }
 
@@ -4622,14 +4624,14 @@ class ChannelPlayerController
                             'updated_at' => date('Y-m-d H:i:s'),
                         ]
                     );
-                    $message = '成功禁用该游戏';
+                    $message = admin_trans('player.single_game_disabled_success');
                 } elseif ($action === 'enable') {
                     // 取消禁用 - 从 PlayerDisabledGame 表删除
                     PlayerDisabledGame::query()
                         ->where('player_id', $player_id)
                         ->where('game_id', $game_id)
                         ->delete();
-                    $message = '成功取消禁用该游戏';
+                    $message = admin_trans('player.single_game_enabled_success');
                 } else {
                     return message_error(admin_trans('common.invalid_operation'));
                 }
@@ -4639,11 +4641,11 @@ class ChannelPlayerController
             } catch (Exception $e) {
                 Db::rollBack();
                 Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-                return message_error($e->getMessage() ?? '操作失败');
+                return message_error($e->getMessage() ?? admin_trans('player.operation_failed'));
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.operation_failed') . '：' . $e->getMessage());
         }
     }
 
@@ -4773,8 +4775,13 @@ class ChannelPlayerController
                         ->required();
 
                     // 添加实时计算提示
+                    $conversionPreview = admin_trans('player.conversion_preview');
+                    $pleaseEnterAmount = admin_trans('player.please_enter_amount');
+                    $pointsUnit = admin_trans('player.points_unit');
+                    $exchangeRate = admin_trans('player.exchange_rate');
+                    $gamePoints = admin_trans('player.game_points');
                     $form->push(Html::markdown(
-                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>转换预览：</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">请输入金额</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 点</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">汇率：1 ' . $currencySymbol . ' = ' . $ratio . ' 游戏点数</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '";function u(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" 点",p.style.color="#0ea5e9"):(m.textContent="请输入金额",p.textContent="0 点",p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
+                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>' . $conversionPreview . '</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">' . $pleaseEnterAmount . '</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 ' . $pointsUnit . '</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">' . $exchangeRate . '1 ' . $currencySymbol . ' = ' . $ratio . ' ' . $gamePoints . '</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '",u="' . $pointsUnit . '",p="' . $pleaseEnterAmount . '";function init(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),pts=document.getElementById("points-preview-2");i&&m&&pts&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,points=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),pts.textContent=points.toLocaleString()+" "+u,pts.style.color="#0ea5e9"):(m.textContent=p,pts.textContent="0 "+u,pts.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",init):init()})();</script>'
                     ));
                 }
             } else {
@@ -4883,7 +4890,11 @@ class ChannelPlayerController
                     $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_ARTIFICIAL;
                     $playerRechargeRecord->point = $scoreAmount;
                     $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
-                    $playerRechargeRecord->remark = "店家后台开分" . ($remark ? "：{$remark}" : "");
+                    $playerRechargeRecord->remark = str_replace(
+                        '{remark}',
+                        ($remark ? "：{$remark}" : ""),
+                        admin_trans('player.store_backend_recharge_remark')
+                    );
                     $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
                     $playerRechargeRecord->user_id = Admin::user()->id;
                     $playerRechargeRecord->user_name = Admin::user()->name ?? '';

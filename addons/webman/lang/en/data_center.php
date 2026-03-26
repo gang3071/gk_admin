@@ -57,4 +57,29 @@ return [
     'current_present_in' => 'Current Transfer In (Credits)',
     'current_present_out' => 'Current Transfer Out (Cash Out)',
     'current_machine_put' => 'Current Total Cash In',
+
+    // Statistics Labels
+    'total_lottery' => 'Total Lottery',
+    'profit_subtotal' => 'Profit Subtotal',
+    'total_stores' => 'Total Stores',
+    'total_devices' => 'Total Devices',
+
+    // Analysis Titles
+    'profit_loss_analysis' => 'Profit & Loss Analysis',
+    'operation_statistics' => 'Operation Statistics',
+    'lottery_statistics' => 'Lottery Statistics',
+
+    // Statistics Items
+    'total_score_up' => 'Total Score Up',
+    'total_score_down' => 'Total Score Down',
+    'subtotal' => 'Subtotal',
+    'lottery_count' => 'Lottery Count',
+    'lottery_score' => 'Lottery Score',
+    'bound_agent' => 'Bound Agent',
+    'current_payment_amount' => 'Current Payment Amount',
+    'payment_ratio' => 'Payment Ratio',
+
+    // Buttons
+    'shift_handover' => 'Shift Handover',
+    'go_to_auto_shift_config' => 'Go to Auto Shift Config',
 ];

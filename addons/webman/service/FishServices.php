@@ -96,10 +96,10 @@ class FishServices
                     $result = [];
                     if (isset($status['status'][5]) && $status['status'][5] == 0) {
                         $result['result'] = 1;
-                        $result['message'] = '自動ON';
+                        $result['message'] = admin_trans('machine.auto');
                     } else {
                         $result['result'] = 0;
-                        $result['message'] = '自動OFF';
+                        $result['message'] = admin_trans('machine.stop_auto');
                     }
                     break;
                 case 'auto_on': // 啟動自動
@@ -114,7 +114,7 @@ class FishServices
                         $url = $status['status'][5] == 1 ? $this->domain . '/api/shuangmei/multifunction/v1/output_point_lo/' . $this->ip . '/' . $this->machine_port . '/6' : $this->domain . '/api/shuangmei/multifunction/v1/output_point_hi/' . $this->ip . '/' . $this->machine_port . '/6';
                         $result = $this->doMachineCurl($url);
                         if ($result['result'] == 1) {
-                            $result['message'] = $status['status'][5] == 1 ? '開啟自動' : '關閉自動';
+                            $result['message'] = $status['status'][5] == 1 ? admin_trans('machine.enable_auto') : admin_trans('machine.disable_auto');
                         }
                     }
                     break;
@@ -165,7 +165,7 @@ class FishServices
                         $url = $status['status'][1] == 1 ? $this->domain . '/api/shuangmei/multifunction/v1/output_point_lo/' . $this->ip . '/' . $this->machine_port . '/2' : $this->domain . '/api/shuangmei/multifunction/v1/output_point_hi/' . $this->ip . '/' . $this->machine_port . '/2';
                         $result = $this->doMachineCurl($url);
                         if ($result['result'] == 1) {
-                            $result['message'] = $status['status'][1] == 1 ? '開啟鎖定' : '關閉鎖定';
+                            $result['message'] = $status['status'][1] == 1 ? admin_trans('machine.enable_lock') : admin_trans('machine.disable_lock');
                         }
                     }
                     break;

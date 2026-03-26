@@ -12,6 +12,10 @@ return [
         'push_key' => '推流key',
         'pull_domain' => '拉流功能變數名稱',
         'pull_key' => '拉流key',
+        'pull_domain_international' => '播放域名（國際區）',
+        'pull_key_international' => '播放域名Key（國際區）',
+        'pull_domain_cn' => '播放域名（大陸地區）',
+        'pull_key_cn' => '播放域名Key（大陸地區）',
         'license' => '播放機URL',
         'license_key' => '播放機KEY',
         'api_appid' => '騰訊雲播APPID',
@@ -19,5 +23,9 @@ return [
         'play_domain' => '騰訊雲播放功能變數名稱',
         'created_at' => '創建時間',
         'updated_at' => '更新時間',
+    ],
+    'form' => [
+        'please_select_video_reset' => '請選擇重設的視訊直播',
+        'please_select_video_server' => '請選擇重設的視訊主機',
     ],
 ];

@@ -10,6 +10,7 @@ return [
     'channel_exist' => '通路功能變數名稱存在重複',
     'save_error' => '保存失敗',
     'save_success' => '保存成功',
+    'create_failed_log' => '渠道新增失敗',
     'not_fount' => '通路不存在',
     'fields' => [
         'id' => '通路ID',

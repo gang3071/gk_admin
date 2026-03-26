@@ -182,7 +182,7 @@ class ChannelPlayerDeliveryRecordController
                     Card::create([
                         Row::create()->column(Statistic::create()->value(bcsub(bcadd(($totalData['total_machine_amount'] ?? 0),
                             ($totalData['total_in_amount'] ?? 0), 2), ($totalData['total_out_amount'] ?? 0),
-                            2))->prefix('合计')->valueStyle([
+                            2))->prefix(admin_trans('common.total'))->valueStyle([
                             'font-size' => '14px',
                             'font-weight' => '500',
                             'text-align' => 'center'
@@ -430,15 +430,15 @@ class ChannelPlayerDeliveryRecordController
                 $val,
                 PlayerDeliveryRecord $data
             ) {
-                $name = '玩家';
+                $name = admin_trans('player.player');
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.default.admin');
                 }
                 if ($data->type == PlayerDeliveryRecord::TYPE_MACHINE_DOWN && !empty($data->user_id)) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.default.admin');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),
@@ -542,8 +542,8 @@ class ChannelPlayerDeliveryRecordController
     public function machineInfo($data): Card
     {
         $tabs = Tabs::create()
-            ->pane('详情', $this->detail($data))
-            ->pane('图表', $this->chart($data));
+            ->pane(admin_trans('common.detail'), $this->detail($data))
+            ->pane(admin_trans('common.chart'), $this->chart($data));
         return Card::create($tabs);
     }
 

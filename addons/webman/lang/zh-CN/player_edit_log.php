@@ -57,5 +57,10 @@ return [
         'status_game_platform_close' => '关闭电子游戏功能',
         'is_test_open' => '开启测试玩家',
         'is_test_close' => '关闭测试玩家',
-    ]
+    ],
+    'sex' => [
+        '1' => '男',
+        '2' => '女',
+        '0' => '未知',
+    ],
 ];

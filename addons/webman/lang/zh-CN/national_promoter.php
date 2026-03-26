@@ -48,4 +48,12 @@ return [
     ],
     'settlement' => '分润结算',
     'settlement_confirm' => '您正在对全民代理 {uuid} 进行结算操作, 当前可结算分润{amount}, 请确认是否结算?',
+    'level_prefix' => '等级',
+    'level_suffix' => '级',
+    'player' => '玩家',
+    'admin' => '管理员',
+
+    'log' => [
+        'settlement_failed' => '结算失败',
+    ],
 ];

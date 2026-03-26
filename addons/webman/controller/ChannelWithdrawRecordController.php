@@ -795,8 +795,12 @@ class ChannelWithdrawRecordController
                     $notice->type = Notice::TYPE_WITHDRAW_COMPLETE;
                     $notice->receiver = Notice::RECEIVER_PLAYER;
                     $notice->is_private = 1;
-                    $notice->title = '提現打款成功';
-                    $notice->content = '恭喜您的提現訂單已打款成功，提現遊戲點 ' . $playerWithdrawRecord->point . '， 共提現金額 ' . $playerWithdrawRecord->inmoney;
+                    $notice->title = admin_trans('player_withdraw_record.notice.withdraw_payment_success_title');
+                    $notice->content = str_replace(
+                        ['{point}', '{inmoney}'],
+                        [$playerWithdrawRecord->point, $playerWithdrawRecord->inmoney],
+                        admin_trans('player_withdraw_record.notice.withdraw_payment_success_content')
+                    );
                     $notice->save();
                 } catch (\Exception $e) {
                     return message_error(admin_trans('player_recharge_record.action_error'));
@@ -861,8 +865,12 @@ class ChannelWithdrawRecordController
                 $notice->type = Notice::TYPE_WITHDRAW_REJECT;
                 $notice->receiver = Notice::RECEIVER_PLAYER;
                 $notice->is_private = 1;
-                $notice->title = '提現稽核不通過';
-                $notice->content = '抱歉您的提現訂單稽核不通過，原因是: ' . $playerWithdrawRecord->reject_reason;
+                $notice->title = admin_trans('player_withdraw_record.notice.withdraw_reject_title');
+                $notice->content = str_replace(
+                    '{reason}',
+                    $playerWithdrawRecord->reject_reason,
+                    admin_trans('player_withdraw_record.notice.withdraw_reject_content')
+                );
                 $notice->save();
 
                 return message_success(admin_trans('player_withdraw_record.action_success'));
@@ -937,7 +945,7 @@ class ChannelWithdrawRecordController
             } else {
                 if ($playerWithdrawRecord->bank_type == 2) {
                     (new EHpayService($playerWithdrawRecord->player))->withdraw($playerWithdrawRecord->tradeno,
-                        $playerWithdrawRecord->money, $playerWithdrawRecord->account_name, $playerWithdrawRecord->account, '支付宝');
+                        $playerWithdrawRecord->money, $playerWithdrawRecord->account_name, $playerWithdrawRecord->account, admin_trans('player_withdraw_record.payment_method.alipay'));
                 } else {
                     // 发送站内信
                     $notice = new Notice();
@@ -947,8 +955,12 @@ class ChannelWithdrawRecordController
                     $notice->type = Notice::TYPE_WITHDRAW_PASS;
                     $notice->receiver = Notice::RECEIVER_PLAYER;
                     $notice->is_private = 1;
-                    $notice->title = '下分成功';
-                    $notice->content = '本次申請已成功處理，下分 ' . $playerWithdrawRecord->point . ' ，請查收。 ';
+                    $notice->title = admin_trans('player_withdraw_record.notice.withdraw_down_success_title');
+                    $notice->content = str_replace(
+                        '{point}',
+                        $playerWithdrawRecord->point,
+                        admin_trans('player_withdraw_record.notice.withdraw_down_success_content')
+                    );
                     $notice->save();
                 }
             }

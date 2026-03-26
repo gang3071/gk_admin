@@ -72,7 +72,7 @@ class ChannelAgentController
         $admin = Admin::user();
 
         return Grid::create(new AdminUser(), function (Grid $grid) use ($admin) {
-            $grid->title('店家管理');
+            $grid->title(admin_trans('channel_agent.store_management'));
             $grid->autoHeight();
             $grid->bordered(true);
 
@@ -102,7 +102,7 @@ class ChannelAgentController
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
-            $grid->column('nickname', '店家名称')->display(function ($val, $data) {
+            $grid->column('nickname', admin_trans('channel_agent.fields.store_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
                     ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
                     : Avatar::create()->text(mb_substr($val ?? '', 0, 1));
@@ -112,8 +112,8 @@ class ChannelAgentController
                 ]);
             })->width(150);
 
-            $grid->column('username', '登录账号')->width(120)->align('center');
-            $grid->column('department_phone', '联系电话')->width(120)->align('center');
+            $grid->column('username', admin_trans('channel_agent.fields.login_account'))->width(120)->align('center');
+            $grid->column('department_phone', admin_trans('channel_agent.fields.contact_phone'))->width(120)->align('center');
 
             $grid->column('parent_agent_name_display', admin_trans('admin.agent'))->display(function ($val, $data) {
                 $agentName = $data['parent_agent_name'] ?: $data['parent_agent_username'];
@@ -123,45 +123,45 @@ class ChannelAgentController
                 return Tag::create(admin_trans('admin.unassigned'))->color('default');
             })->width(120)->align('center');
 
-            $grid->column('department_name', '部门名称')->width(150)->ellipsis(true);
+            $grid->column('department_name', admin_trans('channel_agent.fields.department_name'))->width(150)->ellipsis(true);
 
             // 分润比例
-            $grid->column('agent_commission', '代理抽成')->display(function ($value) {
+            $grid->column('agent_commission', admin_trans('channel_agent.fields.agent_commission'))->display(function ($value) {
                 if (is_null($value) || $value === '') {
-                    return Tag::create('未设置')->color('default');
+                    return Tag::create(admin_trans('channel_agent.tag.not_set'))->color('default');
                 }
                 return Tag::create($value . '%')->color('orange');
             })->width(100)->align('center');
 
-            $grid->column('channel_commission', '渠道抽成')->display(function ($value) {
+            $grid->column('channel_commission', admin_trans('channel_agent.fields.channel_commission'))->display(function ($value) {
                 if (is_null($value) || $value === '') {
-                    return Tag::create('未设置')->color('default');
+                    return Tag::create(admin_trans('channel_agent.tag.not_set'))->color('default');
                 }
                 return Tag::create($value . '%')->color('blue');
             })->width(100)->align('center');
 
-            $grid->column('status', '状态')->display(function ($value) {
+            $grid->column('status', admin_trans('channel_agent.fields.status'))->display(function ($value) {
                 return match ($value) {
-                    0 => Tag::create('已禁用')->color('red'),
-                    1 => Tag::create('正常')->color('green'),
+                    0 => Tag::create(admin_trans('channel_agent.tag.disabled'))->color('red'),
+                    1 => Tag::create(admin_trans('channel_agent.tag.normal'))->color('green'),
                     default => '',
                 };
             })->width(80)->align('center');
 
-            $grid->column('created_at', '创建时间')->width(160)->align('center');
+            $grid->column('created_at', admin_trans('channel_agent.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->eq()->select('admin_users.status')
-                    ->placeholder('状态')
+                    ->placeholder(admin_trans('channel_agent.placeholder.status'))
                     ->options([
-                        1 => '正常',
-                        0 => '已禁用'
+                        1 => admin_trans('channel_agent.status_options.normal'),
+                        0 => admin_trans('channel_agent.status_options.disabled')
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('admin_users.username')->placeholder('登录账号');
-                $filter->like()->text('admin_users.nickname')->placeholder('店家名称');
-                $filter->like()->text('dept.phone')->placeholder('联系电话');
+                $filter->like()->text('admin_users.username')->placeholder(admin_trans('channel_agent.placeholder.login_account'));
+                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('channel_agent.placeholder.store_name'));
+                $filter->like()->text('dept.phone')->placeholder(admin_trans('channel_agent.placeholder.contact_phone'));
 
                 // 代理筛选（仅渠道可用）
                 if ($admin->type === AdminUser::TYPE_CHANNEL) {
@@ -177,7 +177,7 @@ class ChannelAgentController
                 }
 
                 $filter->between()->dateTimeRange('admin_users.created_at')
-                    ->placeholder(['开始时间', '结束时间']);
+                    ->placeholder([admin_trans('channel_agent.placeholder.start_time'), admin_trans('channel_agent.placeholder.end_time')]);
             });
 
             $grid->actions(function (Actions $actions) {
@@ -335,19 +335,19 @@ class ChannelAgentController
                     Tag::create(admin_trans('admin.unassigned'))->color('default')
                 ]);
             })->ellipsis(true)->align('center');
-            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+            $grid->column('recharge_amount', admin_trans('channel_agent.fields.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width('100px')->align('center');
-            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+            $grid->column('withdraw_amount', admin_trans('channel_agent.fields.withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width('100px')->align('center');
-            $grid->column('machine_put_point', '投钞')->display(function ($value) {
+            $grid->column('machine_put_point', admin_trans('channel_agent.fields.machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width('100px')->align('center');
-            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+            $grid->column('lottery_amount', admin_trans('channel_agent.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width('100px')->align('center');
-            $grid->column('subtotal', '小计')->display(function ($value) {
+            $grid->column('subtotal', admin_trans('channel_agent.fields.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width('100px')->align('center');
@@ -432,28 +432,28 @@ class ChannelAgentController
         if (empty($player)) {
             // 返回空Grid并显示错误
             return Grid::create([], function (Grid $grid) {
-                $grid->title('玩家不存在');
+                $grid->title(admin_trans('channel_agent.error_player_not_found'));
             });
         }
 
         // 只有线下渠道才支持游戏级别权限管理
         if ($player->channel->is_offline != 1) {
             return Grid::create([], function (Grid $grid) {
-                $grid->title('该功能仅适用于线下渠道');
+                $grid->title(admin_trans('channel_agent.error_offline_channel_only'));
             });
         }
 
         // 获取玩家所在渠道开启的游戏平台
         if (empty($player->channel->game_platform)) {
             return Grid::create([], function (Grid $grid) {
-                $grid->title('该渠道未开启任何电子游戏平台');
+                $grid->title(admin_trans('channel_agent.error_no_game_platform'));
             });
         }
 
         $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
         if (empty($channelGamePlatformIds)) {
             return Grid::create([], function (Grid $grid) {
-                $grid->title('该渠道未开启任何电子游戏平台');
+                $grid->title(admin_trans('channel_agent.error_no_game_platform'));
             });
         }
 
@@ -468,7 +468,7 @@ class ChannelAgentController
         $lang = Container::getInstance()->translator->getLocale();
 
         return Grid::create(new Game(), function (Grid $grid) use ($player_id, $channelGamePlatformIds, $lang, $player) {
-            $grid->title('玩家游戏权限管理 - ' . $player->name);
+            $grid->title(admin_trans('channel_agent.game_permission.title', null, ['name' => $player->name]));
             $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
                 ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
@@ -493,13 +493,13 @@ class ChannelAgentController
             $grid->bordered(true);
             $grid->column('id', 'ID')->align('center')->width('80px');
 
-            $grid->column('platform_id', '游戏平台')->display(function ($val, Game $data) {
-                return Tag::create($data->gamePlatform->name ?? '未知平台')->color('blue');
+            $grid->column('platform_id', admin_trans('channel_agent.fields.game_platform'))->display(function ($val, Game $data) {
+                return Tag::create($data->gamePlatform->name ?? admin_trans('channel_agent.tag.unknown_platform'))->color('blue');
             })->align('center')->width('120px');
 
-            $grid->column('game_content', '游戏名称')->display(function ($val, Game $data) use ($lang) {
+            $grid->column('game_content', admin_trans('channel_agent.fields.game_name'))->display(function ($val, Game $data) use ($lang) {
                 $content = $data->gameContent ? $data->gameContent->where('lang', $lang)->first() : null;
-                $gameName = $content->name ?? '游戏 ID: ' . $data->id;
+                $gameName = $content->name ?? admin_trans('channel_agent.game.game_id') . ': ' . $data->id;
 
                 if ($content && $content->picture) {
                     $image = Image::create()
@@ -515,19 +515,19 @@ class ChannelAgentController
                 return $gameName;
             })->align('left');
 
-            $grid->column('cate_id', '游戏分类')->display(function ($val, Game $data) {
+            $grid->column('cate_id', admin_trans('channel_agent.fields.game_category'))->display(function ($val, Game $data) {
                 return Tag::create(getGameTypeName($val))->color('green');
             })->align('center')->width('100px');
 
-            $grid->column('is_hot', '热门')->display(function ($val) {
-                return $val == 1 ? Tag::create('热门')->color('red') : '';
+            $grid->column('is_hot', admin_trans('channel_agent.fields.is_hot'))->display(function ($val) {
+                return $val == 1 ? Tag::create(admin_trans('channel_agent.tag.hot'))->color('red') : '';
             })->align('center')->width('80px');
 
-            $grid->column('is_new', '新游戏')->display(function ($val) {
-                return $val == 1 ? Tag::create('新')->color('orange') : '';
+            $grid->column('is_new', admin_trans('channel_agent.fields.is_new'))->display(function ($val) {
+                return $val == 1 ? Tag::create(admin_trans('channel_agent.tag.new'))->color('orange') : '';
             })->align('center')->width('80px');
 
-            $grid->column('sort', '排序')->align('center')->width('80px');
+            $grid->column('sort', admin_trans('channel_agent.fields.sort'))->align('center')->width('80px');
 
             $grid->hideDelete();
             $grid->actions(function (Actions $actions) {
@@ -540,9 +540,9 @@ class ChannelAgentController
             $grid->hideTrashed();
 
             $grid->tools(
-                Button::create('保存选择的游戏')
+                Button::create(admin_trans('channel_agent.button.save_selected_games'))
                     ->icon(Icon::create('fas fa-save'))
-                    ->confirm('确认保存？',
+                    ->confirm(admin_trans('channel_agent.confirm.save_games'),
                         [
                             $this,
                             'savePlayerGames?' . http_build_query($param)
@@ -553,7 +553,7 @@ class ChannelAgentController
 
             $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
                 $filter->eq()->select('platform_id')
-                    ->placeholder('游戏平台')
+                    ->placeholder(admin_trans('channel_agent.placeholder.game_platform'))
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options(GamePlatform::query()
@@ -562,21 +562,21 @@ class ChannelAgentController
                         ->toArray());
 
                 $filter->eq()->select('is_hot')
-                    ->placeholder('是否热门')
+                    ->placeholder(admin_trans('channel_agent.placeholder.is_hot'))
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => '热门游戏',
-                        0 => '普通游戏'
+                        1 => admin_trans('channel_agent.game_options.hot_games'),
+                        0 => admin_trans('channel_agent.game_options.normal_games')
                     ]);
 
                 $filter->eq()->select('is_new')
-                    ->placeholder('是否新游戏')
+                    ->placeholder(admin_trans('channel_agent.placeholder.is_new'))
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => '新游戏',
-                        0 => '旧游戏'
+                        1 => admin_trans('channel_agent.game_options.new_games'),
+                        0 => admin_trans('channel_agent.game_options.old_games')
                     ]);
             });
 
@@ -707,7 +707,7 @@ class ChannelAgentController
         } catch (Exception $e) {
             Db::rollBack();
             Log::error('save_player_games', [$e->getMessage(), $e->getTrace()]);
-            return message_error($e->getMessage() ?? '保存失败');
+            return message_error($e->getMessage() ?? admin_trans('channel_agent.error_save_failed'));
         }
     }
 
@@ -724,14 +724,14 @@ class ChannelAgentController
 
         if (empty($player)) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=1 color="#ff4d4f">玩家不存在</font>'));
+                $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('channel_agent.error_player_not_found') . '</font>'));
             });
         }
 
         // 只有线下渠道才支持游戏级别权限管理
         if ($player->channel->is_offline != 1) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=1 color="#ff4d4f">该功能仅适用于线下渠道</font>'));
+                $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('channel_agent.error_offline_channel_only') . '</font>'));
             });
         }
 
@@ -740,13 +740,13 @@ class ChannelAgentController
 
             // 获取玩家所在渠道开启的游戏平台
             if (empty($player->channel->game_platform)) {
-                $form->push(Html::markdown('><font size=1 color="#ff4d4f">该渠道未开启任何电子游戏平台</font>'));
+                $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('channel_agent.error_no_game_platform') . '</font>'));
                 return;
             }
 
             $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
             if (empty($channelGamePlatformIds)) {
-                $form->push(Html::markdown('><font size=1 color="#ff4d4f">该渠道未开启任何电子游戏平台</font>'));
+                $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('channel_agent.error_no_game_platform') . '</font>'));
                 return;
             }
 
@@ -758,7 +758,7 @@ class ChannelAgentController
                 ->get();
 
             if ($gamePlatformList->isEmpty()) {
-                $form->push(Html::markdown('><font size=1 color="#ff4d4f">该渠道未开启任何有效的电子游戏平台</font>'));
+                $form->push(Html::markdown('><font size=1 color="#ff4d4f">' . admin_trans('channel_agent.error_no_game_platform') . '</font>'));
                 return;
             }
 
@@ -773,7 +773,7 @@ class ChannelAgentController
                 ->toArray();
 
             $form->push(Html::markdown('><font size=1 color="#1890ff">' .
-                "提示: 选择该玩家可以使用的电子游戏。未选择的游戏将不会在客户端展示。" .
+                admin_trans('channel_agent.game.tip_select_games') .
                 '</font>'));
 
             // 按平台分组展示游戏
@@ -795,10 +795,10 @@ class ChannelAgentController
                 // 构建该平台的游戏选项列表
                 $gameOptions = [];
                 // 添加全选选项（使用特殊标识）
-                $gameOptions["select_all_{$platform->id}"] = "【全选该平台所有游戏】";
+                $gameOptions["select_all_{$platform->id}"] = admin_trans('channel_agent.game.select_all_platform');
 
                 foreach ($games as $game) {
-                    $gameName = $game->gameContent->first()?->name ?? "游戏 ID: {$game->id}";
+                    $gameName = $game->gameContent->first()?->name ?? admin_trans('channel_agent.game.game_id') . ': ' . $game->id;
                     $gameOptions[$game->id] = $gameName;
                 }
 
@@ -817,7 +817,7 @@ class ChannelAgentController
                     $selectedGamesInPlatform[] = "select_all_{$platform->id}";
                 }
 
-                $form->checkbox("games_{$platform->id}", $platform->name . ' - 游戏列表')
+                $form->checkbox("games_{$platform->id}", admin_trans('channel_agent.game.game_list_title', null, ['platform' => $platform->name]))
                     ->options($gameOptions)
                     ->value(array_values($selectedGamesInPlatform));
             }
@@ -915,7 +915,7 @@ class ChannelAgentController
                 } catch (Exception $e) {
                     Db::rollBack();
                     Log::error('manage_player_electronic_game', [$e->getMessage(), $e->getTrace()]);
-                    return message_error($e->getMessage() ?? '操作失败');
+                    return message_error($e->getMessage() ?? admin_trans('channel_agent.error_operation_failed'));
                 }
             });
 
@@ -1049,8 +1049,12 @@ class ChannelAgentController
                         ->required();
 
                     // 添加实时计算提示
+                    $jsConversionPreview = admin_trans('channel_agent.js.conversion_preview');
+                    $jsPleaseEnterAmount = admin_trans('channel_agent.js.please_enter_amount');
+                    $jsPointsUnit = admin_trans('channel_agent.js.points_unit');
+                    $jsExchangeRateLabel = admin_trans('channel_agent.js.exchange_rate_label');
                     $form->push(Html::markdown(
-                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>转换预览：</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">请输入金额</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 点</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">汇率：1 ' . $currencySymbol . ' = ' . $ratio . ' 游戏点数</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '";function u(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" 点",p.style.color="#0ea5e9"):(m.textContent="请输入金额",p.textContent="0 点",p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
+                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>' . $jsConversionPreview . '</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">' . $jsPleaseEnterAmount . '</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 ' . $jsPointsUnit . '</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">' . $jsExchangeRateLabel . ' 1 ' . $currencySymbol . ' = ' . $ratio . ' ' . admin_trans('channel_agent.game_points') . '</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '",pu="' . $jsPointsUnit . '",pea="' . $jsPleaseEnterAmount . '";function u(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" "+pu,p.style.color="#0ea5e9"):(m.textContent=pea,p.textContent="0 "+pu,p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
                     ));
                 }
             } else {
@@ -1159,7 +1163,7 @@ class ChannelAgentController
                     $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_ARTIFICIAL;
                     $playerRechargeRecord->point = $scoreAmount;
                     $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
-                    $playerRechargeRecord->remark = "店家后台开分" . ($remark ? "：{$remark}" : "");
+                    $playerRechargeRecord->remark = admin_trans('channel_agent.remark_store_open_score') . ($remark ? "：{$remark}" : "");
                     $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
                     $playerRechargeRecord->user_id = Admin::user()->id;
                     $playerRechargeRecord->user_name = Admin::user()->name ?? '';

@@ -12,6 +12,10 @@ return [
         'push_key' => 'Push stream key',
         'pull_domain' => 'Pull domain',
         'pull_key' => 'Pull domain key',
+        'pull_domain_international' => 'Play Domain (International)',
+        'pull_key_international' => 'Play Domain Key (International)',
+        'pull_domain_cn' => 'Play Domain (Mainland China)',
+        'pull_key_cn' => 'Play Domain Key (Mainland China)',
         'license' => 'Player URL',
         'license_key' => 'Player KEY',
         'api_appid' => 'Tencent Cloud Play APPID',
@@ -19,5 +23,9 @@ return [
         'play_domain' => 'Tencent Cloud Play Domain',
         'created_at' => 'Creation time',
         'updated_at' => 'update time',
+    ],
+    'form' => [
+        'please_select_video_reset' => 'Please select video streaming to reset',
+        'please_select_video_server' => 'Please select video server to reset',
     ],
 ];

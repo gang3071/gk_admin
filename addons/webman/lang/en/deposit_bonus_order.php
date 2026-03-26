@@ -31,6 +31,7 @@ return [
         'activity_id' => 'Select the activity to participate in',
         'deposit_amount' => 'Enter deposit amount, must match activity tier',
         'player_id' => 'Search and select player account',
+        'player_username' => 'Please enter player account',
     ],
 
     'status_pending' => 'Pending',
@@ -45,7 +46,10 @@ return [
     'tier_not_match' => 'Deposit amount does not match any activity tier',
     'player_not_found' => 'Player not found',
     'player_limit_exceeded' => 'Player participation limit exceeded',
+    'parent_agent_not_found' => 'Parent agent not found',
+    'no_available_activity' => 'Parent agent has no available deposit bonus activities',
     'generate_success' => 'Order generated successfully',
+    'generate_success_with_orderno' => 'Order generated successfully! Order No: {order_no}',
     'generate_fail' => 'Order generation failed',
 
     'stats' => [

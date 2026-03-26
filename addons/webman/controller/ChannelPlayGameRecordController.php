@@ -106,7 +106,7 @@ class ChannelPlayGameRecordController
             $grid->hideDeleteSelection();
             $grid->hideSelection();
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center');
-            $grid->column('player.name', '账号')->display(function (
+            $grid->column('player.name', admin_trans('player.fields.account'))->display(function (
                 $val,
                 PlayGameRecord $data
             ) {

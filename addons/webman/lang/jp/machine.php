@@ -215,5 +215,9 @@ return [
     'machine_lottery_record_title' => 'テーブル大賞記録',
     'lock' => 'ロック＃ロック＃',
     'open' => 'オープン',
+    'enable_auto' => '自動を有効化',
+    'disable_auto' => '自動を無効化',
+    'enable_lock' => 'ロックを有効化',
+    'disable_lock' => 'ロックを無効化',
     'machine_tencent_total_viewers' => 'テンセントクラウドの総再生人数: ',
 ];

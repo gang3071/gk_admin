@@ -106,7 +106,7 @@ class NationalPromoterController
                 $value,
                 $data
             ) {
-                return $data->national_level->name . ' ' . $value . '级';
+                return $data->national_level->name . ' ' . $value . admin_trans('national_promoter.level_suffix');
             })->width('20%')->align('center')->fixed('right');
             $grid->column('must_chip_amount',
                 admin_trans('national_promoter.level_list.must_chip_amount'))->width('20%')->align('center')->fixed('right');
@@ -474,15 +474,15 @@ class NationalPromoterController
                 $val,
                 PlayerDeliveryRecord $data
             ) {
-                $name = '玩家';
+                $name = admin_trans('national_promoter.player');
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('national_promoter.admin');
                 }
                 if ($data->type == PlayerDeliveryRecord::TYPE_MACHINE_DOWN && !empty($data->user_id)) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('national_promoter.admin');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),

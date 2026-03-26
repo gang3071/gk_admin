@@ -48,4 +48,12 @@ return [
     ],
     'settlement' => '分潤決済',
     'settlement_confirm' => '全国民エージェント {uuid} の決済操作を行っています。現在決済可能な利益 {amount} は、決済されているかどうかを確認してください?',
+    'level_prefix' => 'レベル',
+    'level_suffix' => '',
+    'player' => 'プレイヤー',
+    'admin' => '管理者',
+
+    'log' => [
+        'settlement_failed' => '清算失敗',
+    ],
 ];

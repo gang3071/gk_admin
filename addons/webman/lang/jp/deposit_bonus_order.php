@@ -31,6 +31,7 @@ return [
         'activity_id' => '参加するアクティビティを選択',
         'deposit_amount' => '入金金額を入力。アクティビティティアに一致する必要があります',
         'player_id' => 'プレーヤーアカウントを検索して選択',
+        'player_username' => 'プレーヤーアカウントを入力してください',
     ],
 
     'status_pending' => '保留中',
@@ -45,7 +46,10 @@ return [
     'tier_not_match' => '入金金額がどのアクティビティティアとも一致しません',
     'player_not_found' => 'プレーヤーが見つかりません',
     'player_limit_exceeded' => 'プレーヤーの参加制限を超えました',
+    'parent_agent_not_found' => '上位代理が見つかりません',
+    'no_available_activity' => '上位代理に利用可能な入金ボーナスアクティビティがありません',
     'generate_success' => '注文が正常に生成されました',
+    'generate_success_with_orderno' => '注文が正常に生成されました！注文番号：{order_no}',
     'generate_fail' => '注文生成に失敗しました',
 
     'stats' => [

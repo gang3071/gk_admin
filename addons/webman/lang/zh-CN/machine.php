@@ -213,5 +213,9 @@ return [
     'machine_lottery_record_title' => '机台大赏记录',
     'lock' => '锁定',
     'open' => '开启',
+    'enable_auto' => '开启自动',
+    'disable_auto' => '关闭自动',
+    'enable_lock' => '开启锁定',
+    'disable_lock' => '关闭锁定',
     'machine_tencent_total_viewers' => '腾讯云总播放人数: ',
 ];

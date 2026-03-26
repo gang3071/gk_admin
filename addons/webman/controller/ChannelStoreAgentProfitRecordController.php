@@ -81,23 +81,23 @@ class ChannelStoreAgentProfitRecordController
         $info['total_point'] = $totalPoint;
         $info['ratio'] = $playerPromoter->ratio ?? 0;
         return Detail::create($playerPromoter, function (Detail $detail) use ($info) {
-            $detail->item('name', '代理名称');
-            $detail->item('player.uuid', 'UUID')->copy();
-            $detail->item('ratio', '上缴比例')->append('%');
-            $detail->item('machine_put_point', '总投钞(充值)')->display(function () use ($info) {
+            $detail->item('name', admin_trans('store_agent_profit_record.detail.agent_name'));
+            $detail->item('player.uuid', admin_trans('store_agent_profit_record.detail.uuid'))->copy();
+            $detail->item('ratio', admin_trans('store_agent_profit_record.detail.submit_ratio'))->append('%');
+            $detail->item('machine_put_point', admin_trans('store_agent_profit_record.detail.machine_put_point'))->display(function () use ($info) {
                 return $info['machine_put_point'] ?? '--';
             });
-            $detail->item('present_out_amount', '转出(洗分)')->display(function () use ($info) {
+            $detail->item('present_out_amount', admin_trans('store_agent_profit_record.detail.present_out_amount'))->display(function () use ($info) {
                 return $info['present_out_amount'] ?? '--';
             });
-            $detail->item('present_in_amount', '总转入(开分)')->display(function () use ($info) {
+            $detail->item('present_in_amount', admin_trans('store_agent_profit_record.detail.present_in_amount'))->display(function () use ($info) {
                 return $info['present_in_amount'] ?? '--';
             });
-            $detail->item('total_point', '总营收')->display(function () use ($info) {
+            $detail->item('total_point', admin_trans('store_agent_profit_record.detail.total_point'))->display(function () use ($info) {
                 return $info['total_point'] ?? '--';
             });
-            $detail->item('settlement_amount', '已结算金额');
-            $detail->item('created_at', '创建时间')->display(function ($val) {
+            $detail->item('settlement_amount', admin_trans('store_agent_profit_record.detail.settlement_amount'));
+            $detail->item('created_at', admin_trans('store_agent_profit_record.detail.created_at'))->display(function ($val) {
                 return date('Y-m-d H:i:s', strtotime($val));
             });
             $detail->item('player.machine_wallet.money',
@@ -110,16 +110,16 @@ class ChannelStoreAgentProfitRecordController
                     'playerRecord'
                 ], ['id' => $data->player_id])->width('70%')->title($data->name);
             });
-            $detail->item('end_time', '最近结算时间')->display(function ($val, PlayerPromoter $data) {
+            $detail->item('end_time', admin_trans('store_agent_profit_record.detail.last_settlement_time'))->display(function ($val, PlayerPromoter $data) {
                 /** @var StoreAgentProfitRecord $storeAgentProfitRecord */
                 $storeAgentProfitRecord = StoreAgentProfitRecord::query()->where('player_id',
                     $data->player_id)->orderBy('id', 'desc')->first();
                 if ($storeAgentProfitRecord) {
-                    return '开始时间 : ' . date('Y-m-d H:i:s',
-                            strtotime($storeAgentProfitRecord->start_time)) . ' 结束时间 : ' . date('Y-m-d H:i:s',
+                    return admin_trans('store_agent_profit_record.label.start_time') . ' : ' . date('Y-m-d H:i:s',
+                            strtotime($storeAgentProfitRecord->start_time)) . ' ' . admin_trans('store_agent_profit_record.label.end_time') . ' : ' . date('Y-m-d H:i:s',
                             strtotime($storeAgentProfitRecord->end_time));
                 }
-                return '开始时间 : 无 结束时间 : 无';
+                return admin_trans('store_agent_profit_record.label.start_time') . ' : ' . admin_trans('store_agent_profit_record.label.no_time') . ' ' . admin_trans('store_agent_profit_record.label.end_time') . ' : ' . admin_trans('store_agent_profit_record.label.no_time');
             });
         })->bordered();
     }
@@ -132,7 +132,7 @@ class ChannelStoreAgentProfitRecordController
     public function index(): Grid
     {
         return Grid::create(new $this->settlement(), function (Grid $grid) {
-            $grid->title('下线分润结算记录');
+            $grid->title(admin_trans('store_agent_profit_record.title'));
             // TODO: 需要添加 admin_user_id 字段到 store_agent_profit_record 表
             // 暂时使用 player_id 匹配 admin_user_id（需要数据迁移）
             $grid->model()->with(['agent_promoter'])
@@ -141,30 +141,30 @@ class ChannelStoreAgentProfitRecordController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('id', 'ID')->fixed(true)->align('center');
-            $grid->column('agent_promoter.name', '代理/店家')
+            $grid->column('agent_promoter.name', admin_trans('store_agent_profit_record.label.agent_store'))
                 ->display(function ($value, StoreAgentProfitRecord $data) {
                     $value = !empty($value) ? $value : $data->player->uuid;
                     return Html::create(Str::of($value)->limit(20, ' (...)'))
                         ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                         ->modal([$this, 'playerInfo'], ['player_id' => $data['player_id']])
-                        ->width('60%')->title('代理账号' . ':' . $value);
+                        ->width('60%')->title(admin_trans('store_agent_profit_record.label.agent_account') . ':' . $value);
                 })
                 ->fixed(true)->align('center')->width(120)->ellipsis(true);
-            $grid->column('settlement_tradeno', '结算单号')->align('center')->ellipsis(true)->copy();
-            $grid->column('adjust_amount', '分润调整金额')->display(function ($val) {
+            $grid->column('settlement_tradeno', admin_trans('store_agent_profit_record.fields.settlement_tradeno'))->align('center')->ellipsis(true)->copy();
+            $grid->column('adjust_amount', admin_trans('store_agent_profit_record.fields.adjust_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('actual_amount', '实际分润金额')->display(function ($val) {
+            $grid->column('actual_amount', admin_trans('store_agent_profit_record.fields.actual_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('profit_amount', '分润金额')->display(function ($val) {
+            $grid->column('profit_amount', admin_trans('store_agent_profit_record.fields.profit_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('ratio', '分润比例')->append('%')->align('center')->width(120)->ellipsis(true);
-            $grid->column('sub_name', '上缴对象')
+            $grid->column('ratio', admin_trans('store_agent_profit_record.fields.ratio'))->append('%')->align('center')->width(120)->ellipsis(true);
+            $grid->column('sub_name', admin_trans('store_agent_profit_record.fields.sub_name'))
                 ->display(function ($value, StoreAgentProfitRecord $data) {
                     switch ($data['type']) {
                         case StoreAgentProfitRecord::TYPE_STORE:
@@ -175,50 +175,50 @@ class ChannelStoreAgentProfitRecordController
                             return Html::create(Str::of($value)->limit(20, ' (...)'))
                                 ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                                 ->modal([$this, 'playerInfo'], ['player_id' => $playerPromoter->player_id])
-                                ->width('60%')->title('代理账号' . ':' . $value);
+                                ->width('60%')->title(admin_trans('store_agent_profit_record.label.agent_account') . ':' . $value);
                         case StoreAgentProfitRecord::TYPE_AGENT:
-                            $tag = Tag::create('渠道')->color('#f50');
+                            $tag = Tag::create(admin_trans('store_agent_profit_record.type.channel'))->color('#f50');
                             return Html::create()->content([
                                 $tag,
                             ]);
                     }
                 });
-            $grid->column('sub_profit_amount', '上缴金额')->display(function ($val) {
+            $grid->column('sub_profit_amount', admin_trans('store_agent_profit_record.fields.sub_profit_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('sub_ratio', '上缴比例')->append('%')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_bet', '总押注')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_diff', '总输赢')->align('center')->width(120)->ellipsis(true);
-            $grid->column('machine_point', '投钞点数')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_income', '总营收')->display(function ($val) {
+            $grid->column('sub_ratio', admin_trans('store_agent_profit_record.fields.sub_ratio'))->append('%')->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_bet', admin_trans('store_agent_profit_record.fields.total_bet'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_diff', admin_trans('store_agent_profit_record.fields.total_diff'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('machine_point', admin_trans('store_agent_profit_record.fields.machine_point'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_income', admin_trans('store_agent_profit_record.fields.total_income'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_in', '转入(开分)')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_out', '转出(洗分)')->align('center')->width(120)->ellipsis(true);
-            $grid->column('user_name', '管理员')->align('center');
+            $grid->column('total_in', admin_trans('store_agent_profit_record.fields.total_in'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_out', admin_trans('store_agent_profit_record.fields.total_out'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('user_name', admin_trans('store_agent_profit_record.fields.user_name'))->align('center');
             $grid->column('type', admin_trans('admin.fields.type'))
                 ->display(function ($value) {
                     $tag = '';
                     switch ($value) {
                         case StoreAgentProfitRecord::TYPE_STORE:
-                            $tag = Tag::create('店家')->color('#108ee9');
+                            $tag = Tag::create(admin_trans('store_agent_profit_record.type.store'))->color('#108ee9');
                             break;
                         case StoreAgentProfitRecord::TYPE_AGENT:
-                            $tag = Tag::create('代理')->color('#f50');
+                            $tag = Tag::create(admin_trans('store_agent_profit_record.type.agent'))->color('#f50');
                             break;
                     }
                     return Html::create()->content([
                         $tag,
                     ]);
                 })->sortable();
-            $grid->column('start_time', '结算开始时间')->align('center')->fixed('right')->ellipsis(true);
-            $grid->column('end_time', '结算结束时间')->align('center')->fixed('right')->ellipsis(true);
-            $grid->column('created_at', '创建时间')->align('center')->fixed('right')->ellipsis(true);
+            $grid->column('start_time', admin_trans('store_agent_profit_record.fields.start_time'))->align('center')->fixed('right')->ellipsis(true);
+            $grid->column('end_time', admin_trans('store_agent_profit_record.fields.end_time'))->align('center')->fixed('right')->ellipsis(true);
+            $grid->column('created_at', admin_trans('store_agent_profit_record.fields.created_at'))->align('center')->fixed('right')->ellipsis(true);
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('tradeno')->placeholder('结算单号');
-                $filter->like()->text('agent_promoter.name')->placeholder('代理/店家');
+                $filter->like()->text('tradeno')->placeholder(admin_trans('store_agent_profit_record.placeholder.settlement_tradeno'));
+                $filter->like()->text('agent_promoter.name')->placeholder(admin_trans('store_agent_profit_record.placeholder.agent_store'));
                 $filter->like()->text('agent_promoter.phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->form()->hidden('created_at_start');

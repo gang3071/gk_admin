@@ -217,7 +217,7 @@ class ChannelNationalPromoterReportController
                 ->update(['status' => 1, 'settled_date' => $date]);
             Db::commit();
         } catch (\Exception $e) {
-            Log::error('结算失败', [$e->getMessage()]);
+            Log::error(admin_trans('national_promoter.log.settlement_failed'), [$e->getMessage()]);
             Db::rollback();
         }
         return notification_success(admin_trans('admin.success'),
@@ -283,7 +283,7 @@ class ChannelNationalPromoterReportController
                 ->update(['status' => 1, 'settled_date' => $date]);
             Db::commit();
         } catch (\Exception $e) {
-            Log::error('结算失败', [$e->getMessage()]);
+            Log::error(admin_trans('national_promoter.log.settlement_failed'), [$e->getMessage()]);
             Db::rollback();
         }
         return notification_success(admin_trans('admin.success'),

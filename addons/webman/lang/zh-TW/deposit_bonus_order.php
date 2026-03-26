@@ -31,6 +31,7 @@ return [
         'activity_id' => '選擇要參與的活動',
         'deposit_amount' => '輸入充值金額，必須匹配活動檔位',
         'player_id' => '搜索並選擇玩家賬號',
+        'player_username' => '請輸入玩家賬號',
     ],
 
     'status_pending' => '待核銷',
@@ -45,7 +46,10 @@ return [
     'tier_not_match' => '充值金額不匹配任何活動檔位',
     'player_not_found' => '玩家不存在',
     'player_limit_exceeded' => '玩家參與次數已達上限',
+    'parent_agent_not_found' => '未找到上級代理',
+    'no_available_activity' => '上級代理暫無可用的充值滿贈活動',
     'generate_success' => '訂單生成成功',
+    'generate_success_with_orderno' => '訂單生成成功！訂單號：{order_no}',
     'generate_fail' => '訂單生成失敗',
 
     'stats' => [

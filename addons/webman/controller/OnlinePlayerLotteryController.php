@@ -3,9 +3,9 @@
 namespace addons\webman\controller;
 
 use addons\webman\model\GameLottery;
+use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerLotteryRecord;
-use addons\webman\model\Notice;
 use ExAdmin\ui\component\layout\Space;
 use ExAdmin\ui\support\Request;
 use support\Db;
@@ -207,24 +207,24 @@ class OnlinePlayerLotteryController
 
         // 验证参数
         if (!$playerId || !$lotteryId || !$amount) {
-            return jsonFailResponse('参数错误');
+            return jsonFailResponse(admin_trans('online_player_lottery.validation.parameter_error'));
         }
 
         // 获取玩家信息
         $player = Player::find($playerId);
         if (!$player) {
-            return jsonFailResponse('玩家不存在');
+            return jsonFailResponse(admin_trans('online_player_lottery.validation.player_not_exist'));
         }
 
         // 获取彩金信息
         $lottery = GameLottery::find($lotteryId);
         if (!$lottery) {
-            return jsonFailResponse('彩金不存在');
+            return jsonFailResponse(admin_trans('online_player_lottery.validation.lottery_not_exist'));
         }
 
         // 检查彩金池余额
         if ($lottery->amount < $amount) {
-            return jsonFailResponse('彩金池余额不足，当前余额: ' . number_format($lottery->amount, 2));
+            return jsonFailResponse(admin_trans('online_player_lottery.validation.insufficient_lottery_balance', null, ['balance' => number_format($lottery->amount, 2)]));
         }
 
         DB::beginTransaction();
@@ -264,8 +264,8 @@ class OnlinePlayerLotteryController
             $notice->type = Notice::TYPE_LOTTERY;
             $notice->receiver = Notice::RECEIVER_PLAYER;
             $notice->is_private = 1;
-            $notice->title = '彩金派彩';
-            $notice->content = '恭喜您获得' . $lottery->name . '的彩金奖励，金额: ' . $amount;
+            $notice->title = admin_trans('online_player_lottery.notice.lottery_payout_title');
+            $notice->content = admin_trans('online_player_lottery.notice.lottery_payout_content', null, ['lottery_name' => $lottery->name, 'amount' => $amount]);
             $notice->save();
 
             DB::commit();
@@ -303,10 +303,10 @@ class OnlinePlayerLotteryController
                     'notice_num' => Notice::query()->where('player_id', $player->id)->where('status', 0)->count('*')
                 ]);
             } catch (\Exception $e) {
-                Log::error('发送彩金Socket消息失败: ' . $e->getMessage());
+                Log::error(admin_trans('online_player_lottery.log.send_socket_message_failed', null, ['message' => $e->getMessage()]));
             }
 
-            Log::info('手动发放彩金成功', [
+            Log::info(admin_trans('online_player_lottery.log.manual_payout_success'), [
                 'player_id' => $player->id,
                 'uuid' => $player->uuid,
                 'lottery_id' => $lottery->id,
@@ -315,12 +315,12 @@ class OnlinePlayerLotteryController
                 'remark' => $remark,
             ]);
 
-            return jsonSuccessResponse('彩金发放成功');
+            return jsonSuccessResponse(admin_trans('online_player_lottery.message.payout_success'));
 
         } catch (\Exception $e) {
             DB::rollback();
-            Log::error('手动发放彩金失败: ' . $e->getMessage());
-            return jsonFailResponse('彩金发放失败: ' . $e->getMessage());
+            Log::error(admin_trans('online_player_lottery.log.manual_payout_failed', null, ['message' => $e->getMessage()]));
+            return jsonFailResponse(admin_trans('online_player_lottery.message.payout_failed', null, ['message' => $e->getMessage()]));
         }
     }
 

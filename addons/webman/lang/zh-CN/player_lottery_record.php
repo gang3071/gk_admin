@@ -49,6 +49,18 @@ return [
         PlayerLotteryRecord::SOURCE_GAME => '电子游戏',
         PlayerLotteryRecord::SOURCE_MANUAL => '手动发放',
     ],
+
+    // 站内信消息
+    'notice' => [
+        'title' => '彩金派彩',
+        'content_machine' => '恭喜您在{machine_type}{machine_code}机台获得了{lottery_name}的彩金奖励彩金金额',
+    ],
+
+    // 机台类型
+    'machine_type' => [
+        'slot' => '斯洛',
+        'steel_ball' => '钢珠',
+    ],
     'status' => [
         PlayerLotteryRecord::STATUS_UNREVIEWED => '未审核',
         PlayerLotteryRecord::STATUS_REJECT => '已拒绝',
@@ -61,5 +73,13 @@ return [
         'total_pass_amount' => '已通过',
         'total_complete_amount' => '已领取',
         'total_count' => '记录总数',
-    ]
+    ],
+    'notice' => [
+        'lottery_payout_title' => '彩金派彩',
+        'lottery_payout_content' => '恭喜您在{machine_type}{machine_code}机台获得了{lottery_name}的彩金奖励彩金金额',
+    ],
+    'machine_type' => [
+        'slot' => '斯洛',
+        'steel_ball' => '钢珠',
+    ],
 ];

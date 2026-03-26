@@ -139,20 +139,20 @@ class PlayerController
         curl_close($ch);
 
         if ($curlError) {
-            throw new \Exception('游戏服务器连接失败: ' . $curlError);
+            throw new \Exception(admin_trans('player.game_server_connection_failed') . ': ' . $curlError);
         }
 
         if ($httpCode !== 200) {
-            throw new \Exception('游戏服务器返回错误: HTTP ' . $httpCode);
+            throw new \Exception(admin_trans('player.game_server_http_error') . ': HTTP ' . $httpCode);
         }
 
         $result = json_decode($response, true);
         if (empty($result)) {
-            throw new \Exception('游戏服务器响应格式错误');
+            throw new \Exception(admin_trans('player.game_server_response_error'));
         }
 
         if (isset($result['code']) && $result['code'] != 200) {
-            throw new GameException($result['msg'] ?? '游戏操作失败');
+            throw new GameException($result['msg'] ?? admin_trans('player.game_operation_failed'));
         }
 
         return $result['data'] ?? [];
@@ -1756,7 +1756,7 @@ class PlayerController
     public function playerTagForm(): Form
     {
         return Form::create(new $this->playerTag, function (Form $form) {
-            $form->text('name', '名称');
+            $form->text('name', admin_trans('player.fields.tag_name'));
             $form->saving(function (Form $form) {
                 if ($form->isEdit()) {
                     $id = $form->driver()->get('id');
@@ -2729,7 +2729,7 @@ class PlayerController
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.administrator');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),

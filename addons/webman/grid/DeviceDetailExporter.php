@@ -2,6 +2,10 @@
 
 namespace addons\webman\grid;
 
+use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\model\PlayerMoneyEditLog;
+use addons\webman\model\PlayerRechargeRecord;
+use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
@@ -40,6 +44,92 @@ class DeviceDetailExporter extends Excel
         return $this->shiftRecord;
     }
 
+    /**
+     * 获取设备的历史交易记录
+     * @param int $playerId 设备ID
+     * @param string $startTime 开始时间
+     * @param string $endTime 结束时间
+     * @return array
+     */
+    protected function getDeviceTransactionHistory(int $playerId, string $startTime, string $endTime): array
+    {
+        $records = [];
+
+        // 1. 开分记录
+        $recharges = PlayerRechargeRecord::where('player_id', $playerId)
+            ->whereBetween('created_at', [$startTime, $endTime])
+            ->where('status', 1) // 已完成
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($recharges as $record) {
+            $records[] = [
+                'time' => $record->created_at,
+                'type' => admin_trans('shift_handover.transaction.type_recharge'),
+                'type_key' => 'recharge',
+                'amount' => $record->money,
+                'remark' => $record->remark ?? ''
+            ];
+        }
+
+        // 2. 洗分记录
+        $withdrawals = PlayerWithdrawRecord::where('player_id', $playerId)
+            ->whereBetween('created_at', [$startTime, $endTime])
+            ->where('status', 1) // 已完成
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($withdrawals as $record) {
+            $records[] = [
+                'time' => $record->created_at,
+                'type' => admin_trans('shift_handover.transaction.type_withdrawal'),
+                'type_key' => 'withdrawal',
+                'amount' => $record->money,
+                'remark' => $record->remark ?? ''
+            ];
+        }
+
+        // 3. 彩金记录
+        $lotteries = PlayerLotteryRecord::where('player_id', $playerId)
+            ->whereBetween('created_at', [$startTime, $endTime])
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($lotteries as $record) {
+            $records[] = [
+                'time' => $record->created_at,
+                'type' => admin_trans('shift_handover.transaction.type_lottery'),
+                'type_key' => 'lottery',
+                'amount' => $record->amount,
+                'remark' => $record->lottery_name ?? ''
+            ];
+        }
+
+        // 4. 后台加点/扣点记录
+        $edits = PlayerMoneyEditLog::where('player_id', $playerId)
+            ->whereBetween('created_at', [$startTime, $endTime])
+            ->orderBy('created_at')
+            ->get();
+
+        foreach ($edits as $record) {
+            $isAddPoint = $record->money > 0;
+            $records[] = [
+                'time' => $record->created_at,
+                'type' => $isAddPoint ? admin_trans('shift_handover.transaction.type_add_point') : admin_trans('shift_handover.transaction.type_deduct_point'),
+                'type_key' => $isAddPoint ? 'add_point' : 'deduct_point',
+                'amount' => abs($record->money),
+                'remark' => $record->remark ?? ''
+            ];
+        }
+
+        // 按时间排序
+        usort($records, function ($a, $b) {
+            return strtotime($a['time']) - strtotime($b['time']);
+        });
+
+        return $records;
+    }
+
     public function write(array $data, \Closure $finish = null)
     {
         try {
@@ -50,12 +140,11 @@ class DeviceDetailExporter extends Excel
             }
 
             // 交班记录标题行
-            $this->sheet->setCellValue('A' . $this->currentRow, '设备明细 - 交班记录 ID: ' . $shiftRecord->id);
+            $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.export.title', null, ['id' => $shiftRecord->id]));
             $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-                'font' => ['bold' => true, 'size' => 16],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
                 'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true, 'size' => 16],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '2F5496']]]
             ]);
@@ -67,10 +156,10 @@ class DeviceDetailExporter extends Excel
 
             // 交班汇总信息
             $summaryData = [
-                ['交班时间:', $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time, '交班类型:', $shiftRecord->is_auto_shift == 1 ? '自动交班' : '手动交班'],
-                ['投钞点数:', number_format($shiftRecord->machine_point, 0), '彩金:', number_format($shiftRecord->lottery_amount, 2)],
-                ['总收入:', number_format($shiftRecord->total_in, 2), '总支出:', number_format($shiftRecord->total_out, 2)],
-                ['总利润:', number_format($shiftRecord->total_profit_amount, 2), '', '']
+                [admin_trans('shift_handover.export.start_time_label'), $shiftRecord->start_time, admin_trans('shift_handover.export.end_time_label'), $shiftRecord->end_time],
+                [admin_trans('shift_handover.export.shift_type_label'), $shiftRecord->is_auto_shift == 1 ? admin_trans('shift_handover.auto_shift') : admin_trans('shift_handover.manual_shift'), admin_trans('shift_handover.export.machine_point_label'), number_format($shiftRecord->machine_point, 0)],
+                [admin_trans('shift_handover.export.lottery_amount_label'), number_format($shiftRecord->lottery_amount, 2), admin_trans('shift_handover.export.total_in_label'), number_format($shiftRecord->total_in, 2)],
+                [admin_trans('shift_handover.export.total_out_label'), number_format($shiftRecord->total_out, 2), admin_trans('shift_handover.export.total_profit_label'), number_format($shiftRecord->total_profit_amount, 2)]
             ];
 
             $summaryStartRow = $this->currentRow;
@@ -91,11 +180,8 @@ class DeviceDetailExporter extends Excel
                 $this->currentRow++;
             }
 
-            // 合并汇总区域的右侧列
-            $this->sheet->mergeCells('D' . ($summaryStartRow + 3) . ':K' . ($summaryStartRow + 3));
-
             // 设置汇总区域样式
-            $summaryRange = 'A' . $summaryStartRow . ':K' . ($this->currentRow - 1);
+            $summaryRange = 'A' . $summaryStartRow . ':D' . ($this->currentRow - 1);
             $this->sheet->getStyle($summaryRange)->applyFromArray([
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
@@ -103,7 +189,7 @@ class DeviceDetailExporter extends Excel
             ]);
 
             // 利润单元格颜色
-            $profitCell = 'B' . ($summaryStartRow + 3);
+            $profitCell = 'D' . ($summaryStartRow + 3);
             $profitColor = $shiftRecord->total_profit_amount >= 0 ? '3f8600' : 'cf1322';
             $this->sheet->getStyle($profitCell)->getFont()->getColor()->setRGB($profitColor);
             $this->sheet->getStyle($profitCell)->getFont()->setBold(true);
@@ -116,7 +202,7 @@ class DeviceDetailExporter extends Excel
                 ->get();
 
             if ($deviceDetails->isEmpty()) {
-                $this->sheet->setCellValue('A' . $this->currentRow, '暂无设备明细数据');
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.export.no_device_data'));
                 $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
                 $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
@@ -127,17 +213,17 @@ class DeviceDetailExporter extends Excel
             } else {
                 // 设备明细表头
                 $headers = [
-                    '设备名称',
-                    '设备编号',
-                    '投钞点数',
-                    '开分',
-                    '洗分',
-                    '后台加点',
-                    '后台扣点',
-                    '彩金',
-                    '总收入',
-                    '总支出',
-                    '利润'
+                    admin_trans('shift_handover.device_name'),
+                    admin_trans('shift_handover.device_number'),
+                    admin_trans('shift_handover.machine_point'),
+                    admin_trans('shift_handover.recharge_amount'),
+                    admin_trans('shift_handover.withdrawal_amount'),
+                    admin_trans('shift_handover.modified_add_amount'),
+                    admin_trans('shift_handover.modified_deduct_amount'),
+                    admin_trans('shift_handover.lottery_amount'),
+                    admin_trans('shift_handover.total_in'),
+                    admin_trans('shift_handover.total_out'),
+                    admin_trans('shift_handover.profit')
                 ];
 
                 foreach ($headers as $index => $header) {
@@ -208,10 +294,13 @@ class DeviceDetailExporter extends Excel
                     $subtotal['profit'] += $detail->profit;
 
                     $this->currentRow++;
+
+                    // 添加该设备的历史交易记录
+                    $this->writeDeviceTransactionHistory($detail->player_id, $detail->player_name, $shiftRecord->start_time, $shiftRecord->end_time);
                 }
 
                 // 小计行
-                $this->sheet->setCellValue('A' . $this->currentRow, '小计 (' . $deviceDetails->count() . '台设备)');
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.export.subtotal_devices', null, ['count' => $deviceDetails->count()]));
                 $this->sheet->setCellValue('B' . $this->currentRow, '');
                 $this->sheet->setCellValue('C' . $this->currentRow, number_format($subtotal['machine_point'], 0));
                 $this->sheet->setCellValue('D' . $this->currentRow, number_format($subtotal['recharge_amount'], 2));
@@ -240,7 +329,7 @@ class DeviceDetailExporter extends Excel
 
             // 添加说明
             $this->currentRow += 2;
-            $this->sheet->setCellValue('A' . $this->currentRow, '说明：本报表为设备明细导出，导出时间：' . date('Y-m-d H:i:s'));
+            $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.export.device_detail_note', null, ['time' => date('Y-m-d H:i:s')]));
             $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                 'font' => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '666666']],
@@ -281,16 +370,106 @@ class DeviceDetailExporter extends Excel
     }
 
     /**
+     * 输出设备的历史交易记录
+     * @param int $playerId 设备ID
+     * @param string $playerName 设备名称
+     * @param string $startTime 开始时间
+     * @param string $endTime 结束时间
+     */
+    protected function writeDeviceTransactionHistory(int $playerId, string $playerName, string $startTime, string $endTime)
+    {
+        // 获取历史交易记录
+        $transactions = $this->getDeviceTransactionHistory($playerId, $startTime, $endTime);
+
+        if (empty($transactions)) {
+            return;
+        }
+
+        // 添加设备历史记录标题
+        $this->sheet->setCellValue('A' . $this->currentRow, '  ↳ ' . admin_trans('shift_handover.transaction.detail_title', null, ['name' => $playerName, 'count' => count($transactions)]));
+        $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
+        $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '1890ff']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E6F7FF']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+        ]);
+        $this->currentRow++;
+
+        // 历史记录表头
+        $this->sheet->setCellValue('B' . $this->currentRow, admin_trans('shift_handover.transaction.time'));
+        $this->sheet->setCellValue('C' . $this->currentRow, admin_trans('shift_handover.transaction.type'));
+        $this->sheet->setCellValue('D' . $this->currentRow, admin_trans('shift_handover.transaction.amount'));
+        $this->sheet->setCellValue('E' . $this->currentRow, admin_trans('shift_handover.transaction.remark'));
+        $this->sheet->mergeCells('E' . $this->currentRow . ':K' . $this->currentRow);
+
+        $this->sheet->getStyle('B' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 9],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F0F0F0']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'DDDDDD']]]
+        ]);
+        $this->currentRow++;
+
+        // 历史记录数据
+        foreach ($transactions as $transaction) {
+            $this->sheet->setCellValue('B' . $this->currentRow, $transaction['time']);
+            $this->sheet->setCellValue('C' . $this->currentRow, $transaction['type']);
+            $this->sheet->setCellValue('D' . $this->currentRow, number_format($transaction['amount'], 2));
+            $this->sheet->setCellValue('E' . $this->currentRow, $transaction['remark']);
+            $this->sheet->mergeCells('E' . $this->currentRow . ':K' . $this->currentRow);
+
+            // 样式
+            $this->sheet->getStyle('B' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
+                'font' => ['size' => 9],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FAFAFA']],
+                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'EEEEEE']]]
+            ]);
+
+            // 金额右对齐
+            $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            // 类型颜色标记
+            $typeColor = '000000';
+            switch ($transaction['type_key']) {
+                case 'recharge':
+                    $typeColor = '52c41a'; // 绿色
+                    break;
+                case 'withdrawal':
+                    $typeColor = 'ff4d4f'; // 红色
+                    break;
+                case 'lottery':
+                    $typeColor = 'fa8c16'; // 橙色
+                    break;
+                case 'add_point':
+                    $typeColor = '1890ff'; // 蓝色
+                    break;
+                case 'deduct_point':
+                    $typeColor = 'f5222d'; // 暗红色
+                    break;
+            }
+            $this->sheet->getStyle('C' . $this->currentRow)->getFont()->getColor()->setRGB($typeColor);
+            $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
+
+            $this->currentRow++;
+        }
+
+        // 添加空行分隔
+        $this->currentRow++;
+    }
+
+    /**
      * 设置列宽
      */
     protected function setColumnWidths()
     {
         $widths = [
-            'A' => 20,  // 设备名称
-            'B' => 15,  // 设备编号
-            'C' => 12,  // 投钞点数
-            'D' => 14,  // 开分
-            'E' => 14,  // 洗分
+            'A' => 22,  // 设备名称
+            'B' => 18,  // 设备编号/时间
+            'C' => 12,  // 投钞点数/类型
+            'D' => 14,  // 开分/金额
+            'E' => 25,  // 洗分/备注
             'F' => 14,  // 后台加点
             'G' => 14,  // 后台扣点
             'H' => 14,  // 彩金

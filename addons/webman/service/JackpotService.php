@@ -5,7 +5,6 @@ namespace addons\webman\service;
 use addons\webman\model\Machine;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Response;
-use support\Log;
 use think\Exception;
 
 class JackpotService
@@ -88,7 +87,7 @@ class JackpotService
     {
         /** TODO 新版工控调整完毕这边将删除 */
         if ($this->machine->domain == '59.120.86.58' || $this->machine->domain == '210.59.240.147') {
-            throw new Exception('该机台作为,新版工控测试机台使用中');
+            throw new Exception(admin_trans('common.machine_in_test_mode'));
         }
         switch ($action) {
             case 'plc_turn_point': // 這支判斷機台運轉的次數，如果沒在跳動就是沒在玩

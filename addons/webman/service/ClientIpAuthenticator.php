@@ -34,7 +34,7 @@ class ClientIpAuthenticator
         $result = [
             'success' => true,
             'code' => 'SUCCESS',
-            'message' => '认证通过',
+            'message' => admin_trans('common.authentication_passed'),
             'ip' => $ip,
             'checks' => []
         ];

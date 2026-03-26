@@ -36,14 +36,14 @@ class StoreMachineController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Grid::create([], function (Grid $grid) {
-                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">' . admin_trans('store_machine.offline_only') . '</font>'));
             });
         }
 
         $currentDepartmentId = Admin::user()->department_id;
 
         return Grid::create(new AdminUser(), function (Grid $grid) use ($currentDepartmentId) {
-            $grid->title('店家管理');
+            $grid->title(admin_trans('store_machine.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
@@ -63,7 +63,7 @@ class StoreMachineController
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
-            $grid->column('nickname', '店家名称')->display(function ($val, $data) {
+            $grid->column('nickname', admin_trans('store_machine.fields.name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
                     ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
                     : Avatar::create()->text(mb_substr($val, 0, 1));
@@ -73,48 +73,48 @@ class StoreMachineController
                 ]);
             })->width(150);
 
-            $grid->column('username', '登录账号')->width(120)->align('center');
-            $grid->column('department_phone', '联系电话')->width(120)->align('center');
+            $grid->column('username', admin_trans('store_machine.fields.username'))->width(120)->align('center');
+            $grid->column('department_phone', admin_trans('store_machine.fields.phone'))->width(120)->align('center');
             $grid->column('parent_agent_name', admin_trans('admin.agent'))->width(120)->align('center');
-            $grid->column('department_name', '部门名称')->width(150)->ellipsis(true);
+            $grid->column('department_name', admin_trans('store_machine.fields.department_name'))->width(150)->ellipsis(true);
 
             // 分润比例
-            $grid->column('agent_commission', '代理抽成')->display(function ($value) {
+            $grid->column('agent_commission', admin_trans('store_machine.fields.agent_commission'))->display(function ($value) {
                 if (is_null($value) || $value === '') {
-                    return Tag::create('未设置')->color('default');
+                    return Tag::create(admin_trans('store_machine.status.not_set'))->color('default');
                 }
                 return Tag::create($value . '%')->color('orange');
             })->width(100)->align('center');
 
-            $grid->column('channel_commission', '渠道抽成')->display(function ($value) {
+            $grid->column('channel_commission', admin_trans('store_machine.fields.channel_commission'))->display(function ($value) {
                 if (is_null($value) || $value === '') {
-                    return Tag::create('未设置')->color('default');
+                    return Tag::create(admin_trans('store_machine.status.not_set'))->color('default');
                 }
                 return Tag::create($value . '%')->color('blue');
             })->width(100)->align('center');
 
-            $grid->column('status', '状态')->display(function ($value) {
+            $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
                 return match ($value) {
-                    0 => Tag::create('已禁用')->color('red'),
-                    1 => Tag::create('正常')->color('green'),
+                    0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),
+                    1 => Tag::create(admin_trans('store_machine.status.normal'))->color('green'),
                     default => '',
                 };
             })->width(80)->align('center');
 
-            $grid->column('created_at', '创建时间')->width(160)->align('center');
+            $grid->column('created_at', admin_trans('store_machine.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) {
                 $filter->eq()->select('admin_users.status')
-                    ->placeholder('状态')
+                    ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
-                        1 => '正常',
-                        0 => '已禁用'
+                        1 => admin_trans('store_machine.status.normal'),
+                        0 => admin_trans('store_machine.status.disabled')
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('admin_users.username')->placeholder('登录账号');
-                $filter->like()->text('admin_users.nickname')->placeholder('店家名称');
-                $filter->like()->text('dept.phone')->placeholder('联系电话');
+                $filter->like()->text('admin_users.username')->placeholder(admin_trans('store_machine.placeholder.username'));
+                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('store_machine.placeholder.name'));
+                $filter->like()->text('dept.phone')->placeholder(admin_trans('store_machine.placeholder.phone'));
 
                 // 代理筛选
                 $filter->eq()->select('admin_users.parent_admin_id')
@@ -128,7 +128,7 @@ class StoreMachineController
                     ]));
 
                 $filter->between()->dateTimeRange('admin_users.created_at')
-                    ->placeholder(['开始时间', '结束时间']);
+                    ->placeholder([admin_trans('store_machine.placeholder.start_time'), admin_trans('store_machine.placeholder.end_time')]);
             });
 
             $grid->actions(function (Actions $actions) {
@@ -152,7 +152,7 @@ class StoreMachineController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $form->push(Html::markdown('><font size=3 color="#ff4d4f">' . admin_trans('store_machine.offline_only') . '</font>'));
             });
         }
 
@@ -176,54 +176,54 @@ class StoreMachineController
         $agentTreeOptions = Arr::tree($agentOptions);
 
         return Form::create([], function (Form $form) use ($agentTreeOptions) {
-            $form->title('创建店家');
+            $form->title(admin_trans('store_machine.form.create_title'));
             $form->labelCol(['span' => 20]);
 
-            $form->push(Html::markdown('><font size=2 color="#1890ff">创建店家后，该店家可登录店家后台</font>'));
+            $form->push(Html::markdown('><font size=2 color="#1890ff">' . admin_trans('store_machine.form.create_hint') . '</font>'));
 
-            $form->divider()->content('账号信息');
+            $form->divider()->content(admin_trans('store_machine.form.section_account'));
 
             $form->row(function (Form $form) {
                 $form->column(function (Form $form) {
-                    $form->text('phone', '联系电话')
+                    $form->text('phone', admin_trans('store_machine.fields.phone'))
                         ->maxlength(20)
-                        ->help('选填，用于联系');
+                        ->help(admin_trans('store_machine.help.phone'));
                 })->span(12);
 
                 $form->column(function (Form $form) {
-                    $form->text('admin_username', '后台登录账号')
+                    $form->text('admin_username', admin_trans('store_machine.fields.username'))
                         ->maxlength(20)
-                        ->help('必填，用于登录店家后台')
+                        ->help(admin_trans('store_machine.help.username'))
                         ->required();
                 })->span(12);
             })->gutter(16);
 
-            $form->text('name', '店家名称')
+            $form->text('name', admin_trans('store_machine.fields.name'))
                 ->maxlength(50)
-                ->help('店家的显示名称')
+                ->help(admin_trans('store_machine.help.name'))
                 ->required();
 
-            $form->divider()->content('上级代理');
+            $form->divider()->content(admin_trans('store_machine.form.section_parent_agent'));
 
-            $form->treeSelect('recommend_id', '选择上级代理')
+            $form->treeSelect('recommend_id', admin_trans('store_machine.form.select_parent_agent'))
                 ->options($agentTreeOptions)
-                ->help('选择该店家的上级代理')
+                ->help(admin_trans('store_machine.help.parent_agent'))
                 ->required();
 
-            $form->divider()->content('头像配置');
+            $form->divider()->content(admin_trans('store_machine.form.section_avatar'));
 
-            $form->image('avatar', '上传头像')
-                ->help('支持jpg、png格式，建议尺寸200x200')
+            $form->image('avatar', admin_trans('store_machine.fields.avatar'))
+                ->help(admin_trans('store_machine.help.avatar'))
                 ->required();
 
-            $form->divider()->content('密码配置');
+            $form->divider()->content(admin_trans('store_machine.form.section_password'));
 
-            $form->password('password', '登录密码')
-                ->rule(['min:6' => '密码至少6位'])
-                ->help('店家后台登录密码')
+            $form->password('password', admin_trans('store_machine.fields.password'))
+                ->rule(['min:6' => admin_trans('store_machine.validation.password_min')])
+                ->help(admin_trans('store_machine.help.password'))
                 ->required();
 
-            $form->password('password_confirmation', '确认密码')
+            $form->password('password_confirmation', admin_trans('store_machine.fields.password_confirmation'))
                 ->required();
 
             $form->layout('vertical');
@@ -243,7 +243,7 @@ class StoreMachineController
         /** @var Channel $channel */
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
-            return message_error('此功能仅限线下渠道使用');
+            return message_error(admin_trans('store_machine.error.offline_only'));
         }
 
         $adminUsername = $form->input('admin_username');
@@ -253,12 +253,12 @@ class StoreMachineController
         $avatar = $form->input('avatar');
 
         if (empty($avatar)) {
-            return message_error('请上传头像');
+            return message_error(admin_trans('store_machine.error.avatar_required'));
         }
 
         // 验证确认密码
         if ($password !== $form->input('password_confirmation')) {
-            return message_error('两次密码输入不一致');
+            return message_error(admin_trans('store_machine.error.password_mismatch'));
         }
 
         // 检查上级代理
@@ -267,13 +267,13 @@ class StoreMachineController
             ->where('type', AdminDepartment::TYPE_AGENT)
             ->first();
         if (!$parentAgent) {
-            return message_error('上级代理不存在');
+            return message_error(admin_trans('store_machine.error.parent_agent_not_found'));
         }
 
         // 检查后台账号是否已存在
         $existingAdmin = AdminUser::query()->where('username', $adminUsername)->first();
         if (!empty($existingAdmin)) {
-            return message_error("登录账号 {$adminUsername} 已存在");
+            return message_error(admin_trans('store_machine.error.username_exists', null, ['username' => $adminUsername]));
         }
 
         DB::beginTransaction();
@@ -305,7 +305,7 @@ class StoreMachineController
             $storeSetting->department_id = $departmentId;
             $storeSetting->admin_user_id = $adminUser->id;
             $storeSetting->feature = 'home_notice';
-            $storeSetting->content = '欢迎使用店家后台系统！';
+            $storeSetting->content = admin_trans('store_machine.welcome_message');
             $storeSetting->status = 1;
             $storeSetting->save();
 
@@ -328,19 +328,19 @@ class StoreMachineController
             // 4. 创建默认自动交班配置（早中晚三班）
             $autoShiftConfigs = [
                 [
-                    'title' => '早班',
+                    'title' => admin_trans('store_machine.auto_shift.morning_title'),
                     'shift_time' => '08:00:00',
-                    'description' => '早班自动交班（08:00-16:00）'
+                    'description' => admin_trans('store_machine.auto_shift.morning_desc')
                 ],
                 [
-                    'title' => '中班',
+                    'title' => admin_trans('store_machine.auto_shift.afternoon_title'),
                     'shift_time' => '16:00:00',
-                    'description' => '中班自动交班（16:00-24:00）'
+                    'description' => admin_trans('store_machine.auto_shift.afternoon_desc')
                 ],
                 [
-                    'title' => '晚班',
+                    'title' => admin_trans('store_machine.auto_shift.night_title'),
                     'shift_time' => '00:00:00',
-                    'description' => '晚班自动交班（00:00-08:00）'
+                    'description' => admin_trans('store_machine.auto_shift.night_desc')
                 ],
             ];
 
@@ -355,11 +355,16 @@ class StoreMachineController
 
             DB::commit();
 
-            return message_success("店家 {$name} 创建成功！登录账号：{$adminUsername}，" . admin_trans('admin.agent') . "：{$parentAgent->nickname}");
+            return message_success(admin_trans('store_machine.create_success', null, [
+                'name' => $name,
+                'username' => $adminUsername,
+                'agent_label' => admin_trans('admin.agent'),
+                'agent_name' => $parentAgent->nickname
+            ]));
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return message_error('创建店家失败：' . $e->getMessage());
+            return message_error(admin_trans('store_machine.create_failed', null, ['error' => $e->getMessage()]));
         }
     }
 

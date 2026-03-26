@@ -1687,7 +1687,7 @@ class ChannelPlayerPromoterController
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('player_promoter.admin');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),
@@ -2954,7 +2954,7 @@ class ChannelPlayerPromoterController
             try {
                 doSettlement($playerPromoter->player_id, Admin::id(), Admin::user()->username);
             } catch (Exception $e) {
-                Log::error('结算失败', [$e->getMessage()]);
+                Log::error(admin_trans('player_promoter.log.settlement_failed'), [$e->getMessage()]);
             }
         }
 

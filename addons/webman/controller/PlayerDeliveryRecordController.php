@@ -165,7 +165,7 @@ class PlayerDeliveryRecordController
                     Card::create([
                         Row::create()->column(Statistic::create()->value(bcsub(bcadd(($totalData['total_machine_amount'] ?? 0),
                             ($totalData['total_in_amount'] ?? 0), 2), ($totalData['total_out_amount'] ?? 0),
-                            2))->prefix('合计')->valueStyle([
+                            2))->prefix(admin_trans('common.total'))->valueStyle([
                             'font-size' => '14px',
                             'font-weight' => '500',
                             'text-align' => 'center'
@@ -420,15 +420,15 @@ class PlayerDeliveryRecordController
                 $val,
                 PlayerDeliveryRecord $data
             ) {
-                $name = '玩家';
+                $name = admin_trans('common.player');
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                 ])) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.administrator');
                 }
                 if ($data->type == PlayerDeliveryRecord::TYPE_MACHINE_DOWN && !empty($data->user_id)) {
-                    $name = $data->user_name ?? '管理员';
+                    $name = $data->user_name ?? admin_trans('common.administrator');
                 }
                 return Html::create()->content([
                     Html::div()->content($name),

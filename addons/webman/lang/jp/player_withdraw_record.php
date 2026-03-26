@@ -92,5 +92,16 @@ return [
         'examine_pass_confirm' => '審査に合格した後、注文は支払いプロセスに入ります。慎重に確認して確定してください',
         'examine_reject_confirm' => 'レビューを拒否し、レビューをクリックして合格すると、システムが自動的にゲームポイントを発行します',
     ],
-    'withdraw_setting_info' => '口座情報の引き出し'
+    'withdraw_setting_info' => '口座情報の引き出し',
+    'notice' => [
+        'withdraw_payment_success_title' => '出金の支払いが成功しました',
+        'withdraw_payment_success_content' => 'おめでとうございます。出金注文の支払いが成功しました。ゲームポイント {point} を引き出し、総出金額 {inmoney}',
+        'withdraw_reject_title' => '出金監査に失敗しました',
+        'withdraw_reject_content' => '申し訳ございませんが、出金注文の監査に失敗しました。理由は次のとおりです: {reason}',
+        'withdraw_down_success_title' => 'ポイント差し引き成功',
+        'withdraw_down_success_content' => 'このリクエストは正常に処理されました。{point} ポイントが差し引かれました。ご確認ください。',
+    ],
+    'payment_method' => [
+        'alipay' => 'アリペイ',
+    ],
 ];

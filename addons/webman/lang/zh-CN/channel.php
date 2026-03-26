@@ -10,6 +10,7 @@ return [
     'channel_exist' => '渠道域名存在重复',
     'save_error' => '保存失败',
     'save_success' => '保存成功',
+    'create_failed_log' => '渠道新增失败',
     'not_fount' => '渠道不存在',
     'fields' => [
         'id' => '渠道ID',

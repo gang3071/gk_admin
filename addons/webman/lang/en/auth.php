@@ -25,6 +25,7 @@ return [
         'data_type' => 'data range',
         'department' => 'department list',
         'type' => 'role type',
+        'is_protected' => 'system role',
     ],
     'options' => [
         'data_type' => [
@@ -42,5 +43,9 @@ return [
         AdminDepartment::TYPE_CHANNEL => 'Channel role',
         AdminDepartment::TYPE_AGENT => 'Agent role',
         AdminDepartment::TYPE_STORE => 'Store role',
+    ],
+    'tag' => [
+        'built_in_role' => 'Built-in Role',
+        'custom_role' => 'Custom',
     ],
 ];

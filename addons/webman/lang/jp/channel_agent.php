@@ -4,11 +4,35 @@ return [
     // タイトル
     'title' => '店舗/デバイス管理',
     'store_list' => '店舗リスト',
+    'store_management' => '店舗管理',
     'device_list' => 'デバイスリスト',
     'delivery_record' => '取引記録',
     'shift_handover_record' => '引継ぎ報告',
 
     // フィールド
+    'fields' => [
+        'store_name' => '店舗名',
+        'login_account' => 'ログインアカウント',
+        'contact_phone' => '連絡先電話',
+        'department_name' => '部門名',
+        'agent_commission' => '代理手数料',
+        'channel_commission' => 'チャネル手数料',
+        'status' => 'ステータス',
+        'created_at' => '作成日時',
+        'recharge_amount' => '累計チャージ',
+        'withdraw_amount' => '累計出金',
+        'machine_put_point' => '投入',
+        'lottery_amount' => '宝くじ',
+        'subtotal' => '小計',
+        'game_platform' => 'ゲームプラットフォーム',
+        'game_name' => 'ゲーム名',
+        'game_category' => 'ゲームカテゴリー',
+        'is_hot' => '人気',
+        'is_new' => '新しいゲーム',
+        'sort' => 'ソート',
+    ],
+
+    // 古いフィールドキー（互換性のため保持）
     'store_name' => '店舗名',
     'bind_player' => '紐付けプレイヤー',
     'account' => 'アカウント',
@@ -57,9 +81,88 @@ return [
     'error_ratio_invalid' => '為替レートは0より大きい必要があります',
     'error_device_not_found' => 'デバイスが存在しません',
     'error_insufficient_balance' => 'デバイス残高不足',
+    'error_player_not_found' => 'プレイヤーが見つかりません',
+    'error_offline_channel_only' => 'この機能はオフラインチャネルのみで利用可能です',
+    'error_no_game_platform' => 'このチャネルではゲームプラットフォームが有効になっていません',
+
+    // ステータスオプション
+    'status_options' => [
+        'normal' => '正常',
+        'disabled' => '無効',
+    ],
+
+    // タグ
+    'tag' => [
+        'not_set' => '未設定',
+        'disabled' => '無効',
+        'normal' => '正常',
+        'hot' => '人気',
+        'new' => '新',
+        'unknown_platform' => '不明なプラットフォーム',
+    ],
+
+    // プレースホルダー
+    'placeholder' => [
+        'status' => 'ステータス',
+        'login_account' => 'ログインアカウント',
+        'store_name' => '店舗名',
+        'contact_phone' => '連絡先電話',
+        'start_time' => '開始時間',
+        'end_time' => '終了時間',
+        'game_platform' => 'ゲームプラットフォーム',
+        'is_hot' => '人気かどうか',
+        'is_new' => '新しいゲームかどうか',
+    ],
+
+    // ゲームオプション
+    'game_options' => [
+        'hot_games' => '人気ゲーム',
+        'normal_games' => '通常ゲーム',
+        'new_games' => '新しいゲーム',
+        'old_games' => '古いゲーム',
+    ],
+
+    // ボタン
+    'button' => [
+        'save_selected_games' => '選択したゲームを保存',
+    ],
+
+    // 確認
+    'confirm' => [
+        'save_games' => '保存しますか？',
+    ],
 
     // 成功メッセージ
     'success_open_score' => 'チャージ成功',
+    'success_save' => '保存成功',
+
+    // エラーメッセージ - 追加
+    'error_save_failed' => '保存失敗',
+    'error_operation_failed' => '操作失敗',
+
+    // チャージ備考
+    'remark_store_open_score' => '店舗バックエンドチャージ',
+
+    // JavaScript テキスト
+    'js' => [
+        'conversion_preview' => '変換プレビュー：',
+        'please_enter_amount' => '金額を入力してください',
+        'points_unit' => 'ポイント',
+        'exchange_rate_label' => '為替レート：',
+    ],
+
+    // ゲーム関連
+    'game' => [
+        'game_id' => 'ゲーム ID',
+        'select_all_platform' => '【このプラットフォームのすべてのゲームを選択】',
+        'game_list_title' => '{platform} - ゲームリスト',
+        'tip_select_games' => 'ヒント: このプレイヤーが使用できる電子ゲームを選択してください。選択されていないゲームはクライアントに表示されません。',
+    ],
+
+    // ゲーム権限管理
+    'game_permission' => [
+        'title' => 'プレイヤーゲーム権限管理 - {name}',
+    ],
 
     // その他
     'remark' => '備考',

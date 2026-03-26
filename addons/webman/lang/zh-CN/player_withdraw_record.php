@@ -93,5 +93,16 @@ return [
         'examine_pass_confirm' => '审核通过后, 订单将进入财务打款流程, 请仔细核对确认',
         'examine_reject_confirm' => '审核拒绝, 点击审核通过后, 系统将会自动发放游戏点数',
     ],
-    'withdraw_setting_info' => '提现账户信息'
+    'withdraw_setting_info' => '提现账户信息',
+    'notice' => [
+        'withdraw_payment_success_title' => '提现打款成功',
+        'withdraw_payment_success_content' => '恭喜您的提现订单已打款成功，提现游戏点 {point}， 共提现金额 {inmoney}',
+        'withdraw_reject_title' => '提现审核不通过',
+        'withdraw_reject_content' => '抱歉您的提现订单审核不通过，原因是: {reason}',
+        'withdraw_down_success_title' => '下分成功',
+        'withdraw_down_success_content' => '本次申请已成功处理，下分 {point} ，请查收。',
+    ],
+    'payment_method' => [
+        'alipay' => '支付宝',
+    ],
 ];

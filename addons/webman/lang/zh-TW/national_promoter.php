@@ -48,4 +48,12 @@ return [
     ],
     'settlement' => '分潤結算',
     'settlement_confirm' => '您正在對全民代理 {uuid} 進行結算操作，當前可結算分潤 {amount}， 請確認是否結算?',
+    'level_prefix' => '等級',
+    'level_suffix' => '級',
+    'player' => '玩家',
+    'admin' => '管理員',
+
+    'log' => [
+        'settlement_failed' => '結算失敗',
+    ],
 ];

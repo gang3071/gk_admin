@@ -57,4 +57,29 @@ return [
     'current_present_in' => '当期転入(投入)',
     'current_present_out' => '当期転出(払出)',
     'current_machine_put' => '当期総投銭',
+
+    // 統計ラベル
+    'total_lottery' => '総抽選',
+    'profit_subtotal' => '利益小計',
+    'total_stores' => '総店舗数',
+    'total_devices' => '総デバイス数',
+
+    // 分析タイトル
+    'profit_loss_analysis' => '損益分析',
+    'operation_statistics' => '運営統計',
+    'lottery_statistics' => '抽選統計',
+
+    // 統計項目
+    'total_score_up' => '上分合計',
+    'total_score_down' => '下分合計',
+    'subtotal' => '小計',
+    'lottery_count' => '抽選回数',
+    'lottery_score' => '抽選スコア',
+    'bound_agent' => 'バインド代理',
+    'current_payment_amount' => '当期支払金額',
+    'payment_ratio' => '支払比率',
+
+    // ボタン
+    'shift_handover' => '引継ぎ',
+    'go_to_auto_shift_config' => '自動引継ぎ設定へ',
 ];

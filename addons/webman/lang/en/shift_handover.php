@@ -2,11 +2,14 @@
 
 return [
     'title' => 'Shift Handover',
+    'auto_shift_status_enabled' => 'Auto Shift: Enabled',
+    'auto_shift_status_disabled' => 'Auto Shift: Disabled',
     'auto_shift_enabled' => 'Auto Shift Enabled',
     'auto_shift_enabled_desc' => 'Automatic shift handover is enabled, manual shift handover is not allowed.',
     'auto_shift_close_hint' => 'If you need to manually hand over shifts, please turn off the auto shift function in "Auto Shift Config".',
     'goto_auto_shift_config' => 'Go to Auto Shift Config',
     'manual_shift_disabled' => 'Manual Shift Disabled',
+    'shift_failed' => 'Shift failed: ',
     'shift_time' => 'Shift Time',
     'shift_time_help' => 'Shift time cannot exceed current time, cannot select time within the past 5 days, cannot select the time range of the last shift',
     'start_time' => 'Start Time',
@@ -171,4 +174,84 @@ return [
     'all_devices_summary' => 'All Devices Summary',
     'devices_unit' => '',
     'export_note' => 'Note: Total data is aggregated from all device details; if a shift record has no device details, shift summary data is used.',
+
+    // Device Detail Export
+    'export' => [
+        'title' => 'Device Details Export - Shift Record ID: {id}',
+        'start_time_label' => 'Start Time:',
+        'end_time_label' => 'End Time:',
+        'shift_type_label' => 'Shift Type:',
+        'machine_point_label' => 'Machine Points:',
+        'lottery_amount_label' => 'Lottery:',
+        'total_in_label' => 'Total Income:',
+        'total_out_label' => 'Total Expense:',
+        'total_profit_label' => 'Total Profit:',
+        'no_device_data' => 'No Device Details',
+        'device_detail_note' => 'Note: This report is a device detail export, export time: {time}',
+        'subtotal_devices' => 'Subtotal ({count} Devices)',
+    ],
+
+    // Transaction Details
+    'transaction' => [
+        'detail_title' => '{name} - Transaction Details ({count} Records)',
+        'time' => 'Time',
+        'type' => 'Type',
+        'amount' => 'Amount',
+        'remark' => 'Remark',
+
+        // Transaction Types
+        'type_recharge' => 'Recharge',
+        'type_withdrawal' => 'Withdrawal',
+        'type_lottery' => 'Lottery',
+        'type_add_point' => 'Admin Add',
+        'type_deduct_point' => 'Admin Deduct',
+    ],
+
+    // Labels (with colon)
+    'label' => [
+        'start' => 'Start:',
+        'end' => 'End:',
+        'shift_type' => 'Shift Type:',
+        'log_id' => 'Log ID:',
+        'machine_amount' => 'Machine Amount:',
+        'machine_point' => 'Machine Points:',
+        'total_in' => 'Total Income:',
+        'total_out' => 'Total Expense:',
+        'total_profit' => 'Total Profit:',
+        'created_at' => 'Created At:',
+    ],
+
+    // Actions
+    'action' => [
+        'view_detail' => 'View Details',
+        'operation' => 'Operation',
+    ],
+
+    // Filters
+    'filter' => [
+        'time_range' => 'Time Range',
+        'start_time' => 'Start Time',
+        'end_time' => 'End Time',
+    ],
+
+    // Device Details
+    'device' => [
+        'detail_not_found' => 'Device Details - Record Not Found',
+        'detail_title' => 'Device Details',
+        'device_count' => 'Device Count',
+        'detail_data' => 'Device Detail Data',
+        'label' => [
+            'device_name' => 'Device Name:',
+            'device_number' => 'Device No.:',
+            'machine_point' => 'Machine Points:',
+            'recharge_amount' => 'Recharge Amount:',
+            'withdrawal_amount' => 'Withdrawal Amount:',
+            'backend_add_amount' => 'Admin Add:',
+            'backend_deduct_amount' => 'Admin Deduct:',
+            'lottery_amount' => 'Lottery Payout:',
+            'total_in' => 'Total Income:',
+            'total_out' => 'Total Expense:',
+            'device_profit' => 'Device Profit:',
+        ],
+    ],
 ];

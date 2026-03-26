@@ -33,4 +33,12 @@ return [
     'lottery_rate_help' => '派彩时将乘以派彩系数为实际活动金额',
     'lottery_add_status_help' => '该类型是否参与彩金池的累计',
     'lottery_assign_status_help' => '该类型是否参与彩金',
+    'form' => [
+        'category_name' => '类别名称',
+        'multilingual_config' => '多语言配置',
+    ],
+    'validation' => [
+        'please_fill_category_name' => '请填写类别名称',
+        'please_fill_simplified_chinese_name' => '请填写中文简体名称',
+    ],
 ];

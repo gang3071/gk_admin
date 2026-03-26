@@ -17,5 +17,14 @@ return [
         'created_at' => '作成時間',
         'updated_at' => '更新時間',
     ],
-    'delete_has_machine_error' => 'このラベルはまだ削除できない机があります'
+    'delete_has_machine_error' => 'このラベルはまだ削除できない机があります',
+    'form' => [
+        'label_name' => 'ラベル名',
+        'multilingual_config' => '多言語設定',
+    ],
+    'validation' => [
+        'please_fill_label_name' => 'ラベル名を入力してください',
+        'please_fill_simplified_chinese_name' => '簡体字中国語名を入力してください',
+        'please_upload_simplified_chinese_image' => '簡体字中国語画像をアップロードしてください',
+    ],
 ];

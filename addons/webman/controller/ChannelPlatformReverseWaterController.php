@@ -220,8 +220,12 @@ class ChannelPlatformReverseWaterController
             $notice->type = Notice::TYPE_REVERSE_WATER;
             $notice->receiver = Notice::RECEIVER_PLAYER;
             $notice->is_private = 1;
-            $notice->title = '電子遊戲反水獎勵';
-            $notice->content = '恭喜您在昨日的電子遊戲中獲得反水獎勵，奖励游戏点数' . $item['reverse_water'];
+            $notice->title = admin_trans('platform_reverse_water.notice.reverse_water_reward_title');
+            $notice->content = str_replace(
+                '{reverse_water}',
+                $item['reverse_water'],
+                admin_trans('platform_reverse_water.notice.reverse_water_reward_content_yesterday')
+            );
             $notice->save();
         }
         PlayGameRecord::query()->whereIn('id', $playGameIds)->update(['is_reverse' => 1]);
@@ -450,9 +454,13 @@ class ChannelPlatformReverseWaterController
                     'type' => Notice::TYPE_REVERSE_WATER,
                     'receiver' => Notice::RECEIVER_PLAYER,
                     'is_private' => 1,
-                    'title' => '電子遊戲反水獎勵',
+                    'title' => admin_trans('platform_reverse_water.notice.reverse_water_reward_title'),
                     'created_at' => $time,
-                    'content' => sprintf('恭喜您在'.$item->start_date.'至'.$item->end_date.'的電子遊戲中獲得反水獎勵，奖励游戏点数%.2f', $item->reverse_water)
+                    'content' => str_replace(
+                        ['{start_date}', '{end_date}', '{reverse_water}'],
+                        [$item->start_date, $item->end_date, sprintf('%.2f', $item->reverse_water)],
+                        admin_trans('platform_reverse_water.notice.reverse_water_reward_content_daterange')
+                    )
                 ];
                 $recordIds = explode(',', $item->record_ids ?? '');
                 $validIds = array_filter($recordIds, function($id) {
@@ -467,7 +475,7 @@ class ChannelPlatformReverseWaterController
                 ->update(['is_settled' => 1, 'settled_date' => $date]);
             Db::commit();
         } catch (\Exception $e) {
-            Log::error('结算失败', [$e->getMessage()]);
+            Log::error(admin_trans('platform_reverse_water.log.settlement_failed'), [$e->getMessage()]);
             Db::rollback();
         }
         return notification_success(admin_trans('admin.success'),

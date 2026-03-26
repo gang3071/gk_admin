@@ -92,5 +92,16 @@ return [
         'examine_pass_confirm' => '稽核通過後,訂單將進入財務打款流程,請仔細核對確認',
         'examine_reject_confirm' => '稽核拒絕,點擊稽核通過後,系統將會自動發放遊戲點數',
     ],
-    'withdraw_setting_info' => '提現帳戶資訊'
+    'withdraw_setting_info' => '提現帳戶資訊',
+    'notice' => [
+        'withdraw_payment_success_title' => '提現打款成功',
+        'withdraw_payment_success_content' => '恭喜您的提現訂單已打款成功，提現遊戲點 {point}， 共提現金額 {inmoney}',
+        'withdraw_reject_title' => '提現稽核不通過',
+        'withdraw_reject_content' => '抱歉您的提現訂單稽核不通過，原因是: {reason}',
+        'withdraw_down_success_title' => '下分成功',
+        'withdraw_down_success_content' => '本次申請已成功處理，下分 {point} ，請查收。',
+    ],
+    'payment_method' => [
+        'alipay' => '支付寶',
+    ],
 ];

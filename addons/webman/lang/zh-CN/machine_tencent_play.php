@@ -12,6 +12,10 @@ return [
         'push_key' => '推流key',
         'pull_domain' => '拉流域名',
         'pull_key' => '拉流域名',
+        'pull_domain_international' => '播放域名(国际区)',
+        'pull_key_international' => '播放域名Key(国际区)',
+        'pull_domain_cn' => '播放域名(大陆地区)',
+        'pull_key_cn' => '播放域名Key(大陆地区)',
         'license' => '播放器URL',
         'license_key' => '播放器KEY',
         'api_appid' => '腾讯云APPID',
@@ -19,5 +23,9 @@ return [
         'play_domain' => '腾讯云播放域名',
         'created_at' => '创建时间',
         'updated_at' => '更新时间',
+    ],
+    'form' => [
+        'please_select_video_reset' => '请选择重设的视讯直播',
+        'please_select_video_server' => '请选择重设的视讯主机',
     ],
 ];

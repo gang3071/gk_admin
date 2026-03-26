@@ -929,8 +929,12 @@ class ChannelRechargeRecordController
                     $notice->type = Notice::TYPE_RECHARGE_REJECT;
                     $notice->receiver = Notice::RECEIVER_PLAYER;
                     $notice->is_private = 1;
-                    $notice->title = '充值稽核不通過';
-                    $notice->content = '抱歉您的充值訂單稽核不通過，原因是: ' . $playerRechargeRecord->reject_reason;
+                    $notice->title = admin_trans('player_recharge_record.notice.recharge_reject_title');
+                    $notice->content = str_replace(
+                        '{reason}',
+                        $playerRechargeRecord->reject_reason,
+                        admin_trans('player_recharge_record.notice.recharge_reject_content')
+                    );
                     $notice->save();
                 } catch (\Exception) {
                     return message_error(admin_trans('player_recharge_record.action_error'));
@@ -1129,13 +1133,17 @@ class ChannelRechargeRecordController
             $notice->type = Notice::TYPE_RECHARGE_PASS;
             $notice->receiver = Notice::RECEIVER_PLAYER;
             $notice->is_private = 1;
-            $notice->title = '充值稽核通過';
-            $notice->content = '本次提交已通過審核，上分 ' . $playerRechargeRecord->point . ' ，請查收。';
+            $notice->title = admin_trans('player_recharge_record.notice.recharge_pass_title');
+            $notice->content = str_replace(
+                '{point}',
+                $playerRechargeRecord->point,
+                admin_trans('player_recharge_record.notice.recharge_pass_content')
+            );
             $notice->save();
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('审核通过失败', [$e->getTrace()]);
+            Log::error(admin_trans('player_recharge_record.log.examine_pass_failed'), [$e->getTrace()]);
             return message_error(admin_trans('player_recharge_record.action_error'));
         }
 

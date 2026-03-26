@@ -48,4 +48,12 @@ return [
     ],
     'settlement' => 'Profit sharing settlement',
     'settlement_confirm' => 'You are currently performing settlement operations on the national agent {uuid}, and can settle the profit sharing {amount}, Please confirm if settlement has been made?',
+    'level_prefix' => 'Level',
+    'level_suffix' => '',
+    'player' => 'Player',
+    'admin' => 'Admin',
+
+    'log' => [
+        'settlement_failed' => 'Settlement Failed',
+    ],
 ];

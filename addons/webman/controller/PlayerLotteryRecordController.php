@@ -26,7 +26,6 @@ use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\support\Request;
 use Illuminate\Support\Str;
 use support\Db;
-use support\Log;
 use Webman\Push\PushException;
 
 /**
@@ -734,8 +733,15 @@ class PlayerLotteryRecordController
             $notice->type = Notice::TYPE_LOTTERY;
             $notice->receiver = Notice::RECEIVER_PLAYER;
             $notice->is_private = 1;
-            $notice->title = '彩金派彩';
-            $notice->content = '恭喜您在' . ($playerLotteryRecord->machine->type == GameType::TYPE_SLOT ? '斯洛' : '鋼珠') . $playerLotteryRecord->machine->code . '機台獲得了' . $playerLotteryRecord->lottery_name . '的彩金獎勵彩金金額';
+            $machineType = $playerLotteryRecord->machine->type == GameType::TYPE_SLOT
+                ? admin_trans('player_lottery_record.machine_type.slot')
+                : admin_trans('player_lottery_record.machine_type.steel_ball');
+            $notice->title = admin_trans('player_lottery_record.notice.title');
+            $notice->content = admin_trans('player_lottery_record.notice.content_machine', null, [
+                '{machine_type}' => $machineType,
+                '{machine_code}' => $playerLotteryRecord->machine->code,
+                '{lottery_name}' => $playerLotteryRecord->lottery_name
+            ]);
             $notice->save();
             DB::commit();
         } catch (\Exception $e) {
@@ -799,8 +805,15 @@ class PlayerLotteryRecordController
                 $notice->type = Notice::TYPE_LOTTERY;
                 $notice->receiver = Notice::RECEIVER_PLAYER;
                 $notice->is_private = 1;
-                $notice->title = '彩金派彩';
-                $notice->content = '恭喜您在' . ($playerLotteryRecord->machine->type == GameType::TYPE_SLOT ? '斯洛' : '鋼珠') . $playerLotteryRecord->machine->code . '機台獲得了' . $playerLotteryRecord->lottery_name . '的彩金獎勵彩金金額';
+                $machineType = $playerLotteryRecord->machine->type == GameType::TYPE_SLOT
+                    ? admin_trans('player_lottery_record.machine_type.slot')
+                    : admin_trans('player_lottery_record.machine_type.steel_ball');
+                $notice->title = admin_trans('player_lottery_record.notice.title');
+                $notice->content = admin_trans('player_lottery_record.notice.content_machine', null, [
+                    '{machine_type}' => $machineType,
+                    '{machine_code}' => $playerLotteryRecord->machine->code,
+                    '{lottery_name}' => $playerLotteryRecord->lottery_name
+                ]);
                 $notices[] = $notice;
             }
             DB::beginTransaction();

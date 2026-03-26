@@ -237,7 +237,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('总拉彩')->style([
+                        Html::create(admin_trans('data_center.total_lottery'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -265,7 +265,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('盈余小计')->style([
+                        Html::create(admin_trans('data_center.profit_subtotal'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -1555,7 +1555,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 6),
-                    Row::create()->column(Statistic::create()->title('总店家数')->value(floatval($storeNum))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_stores'))->value(floatval($storeNum))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1581,7 +1581,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 6),
-                    Row::create()->column(Statistic::create()->title('总设备数')->value(floatval($playerNum))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_devices'))->value(floatval($playerNum))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -1734,7 +1734,7 @@ class ChannelIndexController
                         'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C',
                         'marginRight' => '20px'
                     ]), 6),
-                    Row::create()->column(Statistic::create()->title('盈余小计')->value(number_format(floatval($subtotal), 2))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.profit_subtotal'))->value(number_format(floatval($subtotal), 2))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2049,9 +2049,9 @@ class ChannelIndexController
         return BarChart::create()
             ->height('280px')
             ->hideDateFilter()
-            ->header(Html::create('盈亏分析')->tag('h2')->style(['text-align' => 'center']))
+            ->header(Html::create(admin_trans('data_center.profit_loss_analysis'))->tag('h2')->style(['text-align' => 'center']))
             ->xAxis($xAxis)
-            ->data('盈亏', $yAxis);
+            ->data(admin_trans('data_center.profit_loss_analysis'), $yAxis);
     }
 
     /**
@@ -2113,7 +2113,7 @@ class ChannelIndexController
             ->first();
 
         $autoShiftEnabled = $autoShiftConfig && $autoShiftConfig->is_enabled == 1;
-        $autoShiftStatusText = $autoShiftEnabled ? '自动交班：已开启' : '自动交班：已关闭';
+        $autoShiftStatusText = $autoShiftEnabled ? admin_trans('shift_handover.auto_shift_status_enabled') : admin_trans('shift_handover.auto_shift_status_disabled');
         $autoShiftStatusColor = $autoShiftEnabled ? '#67C23A' : '#909399';
 
         // 查询店家下的玩家（使用 store_admin_id）
@@ -2226,25 +2226,25 @@ class ChannelIndexController
         $storePlatformCash = null;
         // 创建时间筛选下拉菜单
         $dateTypeLabels = [
-            null => '全部',
-            1 => '今日',
-            2 => '昨天',
-            3 => '本周',
-            4 => '上周',
-            5 => '本月',
-            6 => '上月'
+            null => admin_trans('common.date_filter.all'),
+            1 => admin_trans('common.date_filter.today'),
+            2 => admin_trans('common.date_filter.yesterday'),
+            3 => admin_trans('common.date_filter.this_week'),
+            4 => admin_trans('common.date_filter.last_week'),
+            5 => admin_trans('common.date_filter.this_month'),
+            6 => admin_trans('common.date_filter.last_month')
         ];
-        $currentLabel = $dateTypeLabels[$dateType] ?? '全部';
+        $currentLabel = $dateTypeLabels[$dateType] ?? admin_trans('common.date_filter.all');
         $timeDropdown = Dropdown::create(
             Button::create($currentLabel)->size('mini')
         )->trigger(['click']);
-        $timeDropdown->item('全部')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => []]);
-        $timeDropdown->item('今日')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 1]]);
-        $timeDropdown->item('昨天')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 2]]);
-        $timeDropdown->item('本周')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 3]]);
-        $timeDropdown->item('上周')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 4]]);
-        $timeDropdown->item('本月')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 5]]);
-        $timeDropdown->item('上月')->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 6]]);
+        $timeDropdown->item(admin_trans('common.date_filter.all'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => []]);
+        $timeDropdown->item(admin_trans('common.date_filter.today'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 1]]);
+        $timeDropdown->item(admin_trans('common.date_filter.yesterday'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 2]]);
+        $timeDropdown->item(admin_trans('common.date_filter.this_week'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 3]]);
+        $timeDropdown->item(admin_trans('common.date_filter.last_week'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 4]]);
+        $timeDropdown->item(admin_trans('common.date_filter.this_month'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 5]]);
+        $timeDropdown->item(admin_trans('common.date_filter.last_month'))->redirect([$this, 'storeIndex'], ['ex_admin_filter' => ['date_type' => 6]]);
 
         $layout = Layout::create();
         $layout->row(function (Row $row) use (
@@ -2280,7 +2280,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Button::create('交班')->modal([$this, 'shiftHandover']),
+                        Button::create(admin_trans('data_center.shift_handover'))->modal([$this, 'shiftHandover']),
                         Html::create(admin_trans('shift_handover.start_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))
                             ->style([
                                 'color' => 'rgb(26 148 169)',
@@ -2315,7 +2315,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('运营统计')->style([
+                        Html::create(admin_trans('data_center.operation_statistics'))->style([
                             'fontSize' => '14px',
                             'fontWeight' => 'bold',
                             'color' => '#303133',
@@ -2338,7 +2338,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('上分总和')->style([
+                        Html::create(admin_trans('data_center.total_score_up'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2366,7 +2366,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('下分总和')->style([
+                        Html::create(admin_trans('data_center.total_score_down'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2422,7 +2422,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('小计')->style([
+                        Html::create(admin_trans('data_center.subtotal'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2450,7 +2450,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('拉彩统计')->style([
+                        Html::create(admin_trans('data_center.lottery_statistics'))->style([
                             'fontSize' => '14px',
                             'fontWeight' => 'bold',
                             'color' => '#303133',
@@ -2472,7 +2472,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('拉彩次数')->style([
+                        Html::create(admin_trans('data_center.lottery_count'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2500,7 +2500,7 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Html::create('拉彩分数')->style([
+                        Html::create(admin_trans('data_center.lottery_score'))->style([
                             'fontSize' => '14px',
                             'color' => '#909399',
                             'marginRight' => 'auto'
@@ -2531,7 +2531,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title('总设备数')->value(floatval($playerNum))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_devices'))->value(floatval($playerNum))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2540,7 +2540,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title('绑定代理')->value($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? '') : '')
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.bound_agent'))->value($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? '') : '')
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2566,7 +2566,7 @@ class ChannelIndexController
                         'color' => '#409eff',
                         'marginRight' => '20px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title('当期上缴金额')->value(floatval($info['profit_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_payment_amount'))->value(floatval($info['profit_amount'] ?? 0))
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2575,7 +2575,7 @@ class ChannelIndexController
                             'fontSize' => '45px',
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title('上缴比例')->value(floatval($info['ratio'] ?? 0) . '%')
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.payment_ratio'))->value(floatval($info['ratio'] ?? 0) . '%')
                         ->valueStyle([
                             'fontSize' => '20px',
                             'fontWeight' => '500',
@@ -2623,22 +2623,22 @@ class ChannelIndexController
                             'fontSize' => '48px',
                             'color' => '#1890ff'
                         ]),
-                        Html::div()->content('已开启自动交班')->style([
+                        Html::div()->content(admin_trans('common.auto_shift.enabled'))->style([
                             'marginTop' => '20px',
                             'color' => '#1890ff',
                             'fontSize' => '20px',
                             'fontWeight' => 'bold'
                         ]),
-                        Html::div()->content('系统已启用自动交班功能，无法进行手动交班操作。')->style([
+                        Html::div()->content(admin_trans('shift_handover.auto_shift_enabled_desc'))->style([
                             'color' => '#666',
                             'marginTop' => '10px'
                         ]),
-                        Html::div()->content('如需手动交班，请先到【自动交班配置】中关闭自动交班功能。')->style([
+                        Html::div()->content(admin_trans('shift_handover.auto_shift_close_hint'))->style([
                             'color' => '#999',
                             'marginTop' => '5px'
                         ]),
                         Html::div()->content(
-                            Button::create('前往自动交班配置')->redirect([\addons\webman\controller\ChannelAutoShiftController::class, 'config'])
+                            Button::create(admin_trans('data_center.go_to_auto_shift_config'))->redirect([\addons\webman\controller\ChannelAutoShiftController::class, 'config'])
                         )->style(['marginTop' => '30px'])
                     ])
                 )->style([
@@ -2806,7 +2806,7 @@ class ChannelIndexController
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
                     if (!$admin->department) {
-                        Log::error('交班失败：管理员未关联部门', [
+                        Log::error(admin_trans('common.shift_handover_failed_no_department'), [
                             'user_id' => $admin->id,
                             'department_id' => $admin->department_id
                         ]);
@@ -2833,7 +2833,7 @@ class ChannelIndexController
                     if (!$currency) {
                         $currency = Currency::query()->first();
                         if (!$currency) {
-                            Log::error('交班失败：系统没有任何货币配置', [
+                            Log::error(admin_trans('common.shift_handover_failed_no_currency'), [
                                 'user_id' => $admin->id,
                                 'department_id' => $admin->department_id
                             ]);
@@ -2952,7 +2952,7 @@ class ChannelIndexController
                     }
 
                     // 12. 记录日志
-                    Log::info('店家手动交班成功', [
+                    Log::info(admin_trans('common.auto_shift.manual_shift_success'), [
                         'record_id' => $storeAgentShiftHandoverRecord->id,
                         'log_id' => $manualLog->id,
                         'bind_admin_user_id' => $admin->id,
@@ -2984,7 +2984,7 @@ class ChannelIndexController
                     if ($transactionStarted) {
                         DB::rollBack();
                     }
-                    Log::error('手动交班失败', [
+                    Log::error(admin_trans('common.auto_shift.manual_shift_failed'), [
                         'error' => $e->getMessage(),
                         'trace' => $e->getTraceAsString(),
                         'user_id' => Admin::id(),
@@ -2993,7 +2993,7 @@ class ChannelIndexController
                         'start_time' => $startTime ?? null,
                         'end_time' => $endTime ?? null
                     ]);
-                    return message_error('交班失败：' . $e->getMessage());
+                    return message_error(admin_trans('shift_handover.shift_failed') . $e->getMessage());
                 }
             });
         });

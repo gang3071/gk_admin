@@ -49,6 +49,18 @@ return [
         PlayerLotteryRecord::SOURCE_GAME => 'ビデオゲーム',
         PlayerLotteryRecord::SOURCE_MANUAL => '手動配布',
     ],
+
+    // お知らせメッセージ
+    'notice' => [
+        'title' => 'ジャックポット配当',
+        'content_machine' => 'おめでとうございます！{machine_type}マシン{machine_code}で{lottery_name}ジャックポット報酬を獲得しました',
+    ],
+
+    // マシンタイプ
+    'machine_type' => [
+        'slot' => 'スロット',
+        'steel_ball' => 'スチールボール',
+    ],
     'status' => [
         PlayerLotteryRecord::STATUS_UNREVIEWED => '未レビュー',
         PlayerLotteryRecord::STATUS_REJECT => '拒否されました',
@@ -61,5 +73,13 @@ return [
         'total_pass_amount' => '合格',
         'total_complete_amount' => '受領済み',
         'total_count' => 'レコード総数',
-    ]
+    ],
+    'notice' => [
+        'lottery_payout_title' => 'ジャックポット配当',
+        'lottery_payout_content' => 'おめでとうございます。{machine_type}マシン{machine_code}で{lottery_name}ジャックポット報酬を獲得しました',
+    ],
+    'machine_type' => [
+        'slot' => 'スロット',
+        'steel_ball' => 'パチンコ',
+    ],
 ];

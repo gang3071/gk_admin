@@ -33,4 +33,12 @@ return [
     'lottery_rate_help' => '実際のアクティビティ額に支払い係数が乗算されます',
     'lottery_add_status_help' => 'このタイプが宝くじプールの蓄積に参加するかどうか',
     'lottery_assign_status_help' => 'このタイプが宝くじに参加するかどうか',
+    'form' => [
+        'category_name' => 'カテゴリ名',
+        'multilingual_config' => '多言語設定',
+    ],
+    'validation' => [
+        'please_fill_category_name' => 'カテゴリ名を入力してください',
+        'please_fill_simplified_chinese_name' => '簡体字中国語名を入力してください',
+    ],
 ];

@@ -106,4 +106,13 @@ return [
         'total_pending' => '支払い待ち/チャージ中',
         'total_fail' => '失敗/拒否/キャンセル',
     ],
+    'notice' => [
+        'recharge_reject_title' => 'チャージ監査に失敗しました',
+        'recharge_reject_content' => '申し訳ございませんが、チャージ注文の監査に失敗しました。理由は次のとおりです: {reason}',
+        'recharge_pass_title' => 'チャージ監査に合格しました',
+        'recharge_pass_content' => 'この提出は承認されました。{point} ポイントが追加されました。ご確認ください。',
+    ],
+    'log' => [
+        'examine_pass_failed' => '監査承認に失敗しました',
+    ],
 ];

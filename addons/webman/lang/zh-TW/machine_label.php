@@ -17,5 +17,14 @@ return [
         'created_at' => '創建時間',
         'updated_at' => '更新時間',
     ],
-    'delete_has_machine_error' => '該標籤尚有機台使用無法删除'
+    'delete_has_machine_error' => '該標籤尚有機台使用無法删除',
+    'form' => [
+        'label_name' => '標籤名稱',
+        'multilingual_config' => '多語言配寘',
+    ],
+    'validation' => [
+        'please_fill_label_name' => '請填寫標籤名稱',
+        'please_fill_simplified_chinese_name' => '請填寫中文簡體名稱',
+        'please_upload_simplified_chinese_image' => '請上傳中文簡體圖',
+    ],
 ];

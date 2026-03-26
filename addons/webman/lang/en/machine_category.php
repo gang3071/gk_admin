@@ -33,4 +33,12 @@ return [
     'lottery_rate_help' => 'The actual activity amount will be multiplied by the payout coefficient',
     'lottery_add_status_help' => 'Whether this type participates in the accumulation of the lottery pool',
     'lottery_assign_status_help' => 'Whether this type participates in lottery',
+    'form' => [
+        'category_name' => 'Category Name',
+        'multilingual_config' => 'Multilingual Configuration',
+    ],
+    'validation' => [
+        'please_fill_category_name' => 'Please fill in category name',
+        'please_fill_simplified_chinese_name' => 'Please fill in Simplified Chinese name',
+    ],
 ];

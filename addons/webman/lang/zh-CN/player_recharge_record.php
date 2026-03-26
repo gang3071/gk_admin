@@ -106,4 +106,13 @@ return [
         'total_pending' => '待支付/充值中',
         'total_fail' => '失败/拒绝/取消',
     ],
+    'notice' => [
+        'recharge_reject_title' => '充值审核不通过',
+        'recharge_reject_content' => '抱歉您的充值订单审核不通过，原因是: {reason}',
+        'recharge_pass_title' => '充值审核通过',
+        'recharge_pass_content' => '本次提交已通过审核，上分 {point} ，请查收。',
+    ],
+    'log' => [
+        'examine_pass_failed' => '审核通过失败',
+    ],
 ];

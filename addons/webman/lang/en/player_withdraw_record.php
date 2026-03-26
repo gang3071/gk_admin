@@ -92,5 +92,16 @@ return [
         'examine_pass_confirm' => 'After passing the review, the order will enter the financial payment process, please check carefully and confirm',
         'examine_reject_confirm' => 'Reject the review, click on the review and pass, the system will automatically issue game points',
     ],
-    'withdraw_setting_info' => 'Withdrawal account information'
+    'withdraw_setting_info' => 'Withdrawal account information',
+    'notice' => [
+        'withdraw_payment_success_title' => 'Withdrawal Payment Successful',
+        'withdraw_payment_success_content' => 'Congratulations, your withdrawal order has been successfully paid, game points withdrawn {point}, total withdrawal amount {inmoney}',
+        'withdraw_reject_title' => 'Withdrawal Audit Failed',
+        'withdraw_reject_content' => 'Sorry, your withdrawal order audit failed, the reason is: {reason}',
+        'withdraw_down_success_title' => 'Points Deduction Successful',
+        'withdraw_down_success_content' => 'This request has been successfully processed, deducted {point} points, please check.',
+    ],
+    'payment_method' => [
+        'alipay' => 'Alipay',
+    ],
 ];

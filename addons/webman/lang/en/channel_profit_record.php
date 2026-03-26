@@ -39,4 +39,5 @@ return [
     'settlement_time_end' => 'Settlement end time',
     'date_tip' => "The data is updated from 0:00 to 24:00 on the previous day at 3 a.m.",
     'profit_amount_tip' => "Profit settlement formula (machine points + administrator deduction points) - (activity rewards + system gifts + administrator points + machine points + bonus bonus). ",
+    'channel_settlement' => 'Channel Settlement',
 ];

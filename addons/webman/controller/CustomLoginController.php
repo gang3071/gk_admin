@@ -55,7 +55,7 @@ class CustomLoginController
         if (empty($username) || empty($password)) {
             return json([
                 'code' => 400,
-                'message' => '请输入账号和密码',
+                'message' => admin_trans('common.please_enter_credentials'),
                 'data' => null,
             ], 400);
         }
@@ -70,7 +70,7 @@ class CustomLoginController
         if (!$admin) {
             return json([
                 'code' => 400,
-                'message' => '账号不存在',
+                'message' => admin_trans('common.account_not_exist'),
                 'data' => null,
             ], 400);
         }
@@ -78,7 +78,7 @@ class CustomLoginController
         if (!password_verify($password, $admin->password)) {
             return json([
                 'code' => 400,
-                'message' => '密码错误',
+                'message' => admin_trans('common.password_incorrect'),
                 'data' => null,
             ], 400);
         }
@@ -88,7 +88,7 @@ class CustomLoginController
 
         return json([
             'code' => 0,
-            'message' => '登录成功',
+            'message' => admin_trans('common.login_success'),
             'data' => [
                 'redirect' => '/ex-admin/',
             ],
@@ -98,7 +98,7 @@ class CustomLoginController
         // 临时返回（请替换为实际逻辑）
         return json([
             'code' => 400,
-            'message' => '请在 CustomLoginController 中实现实际的登录逻辑',
+            'message' => admin_trans('common.implement_login_logic'),
             'data' => null,
         ], 400);
     }

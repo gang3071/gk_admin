@@ -2,11 +2,14 @@
 
 return [
     'title' => 'シフト引継ぎ',
+    'auto_shift_status_enabled' => '自動交代：有効',
+    'auto_shift_status_disabled' => '自動交代：無効',
     'auto_shift_enabled' => '自動交代が有効になっています',
     'auto_shift_enabled_desc' => 'システムは自動交代機能が有効になっており、手動交代操作はできません。',
     'auto_shift_close_hint' => '手動で交代する必要がある場合は、「自動交代設定」で自動交代機能をオフにしてください。',
     'goto_auto_shift_config' => '自動交代設定へ',
     'manual_shift_disabled' => '手動交代が無効',
+    'shift_failed' => '交代失敗：',
     'shift_time' => '交代時間',
     'shift_time_help' => '交代時間は現在時刻を超えることはできません。過去5日以内の時間を選択できません。前回の交代時間の範囲を選択できません',
     'start_time' => '開始時間',
@@ -171,4 +174,84 @@ return [
     'all_devices_summary' => '全デバイスサマリー',
     'devices_unit' => '台',
     'export_note' => '注：合計データはすべてのデバイス詳細から集計されます。交代記録にデバイス詳細がない場合は、交代サマリーデータが使用されます。',
+
+    // デバイス詳細エクスポート
+    'export' => [
+        'title' => 'デバイス詳細エクスポート - 交代記録 ID: {id}',
+        'start_time_label' => '開始時間:',
+        'end_time_label' => '終了時間:',
+        'shift_type_label' => '交代タイプ:',
+        'machine_point_label' => '投入ポイント:',
+        'lottery_amount_label' => '宝くじ:',
+        'total_in_label' => '総収入:',
+        'total_out_label' => '総支出:',
+        'total_profit_label' => '総利益:',
+        'no_device_data' => 'デバイス詳細なし',
+        'device_detail_note' => '注：このレポートはデバイス詳細のエクスポートです。エクスポート時間：{time}',
+        'subtotal_devices' => '小計 ({count}台のデバイス)',
+    ],
+
+    // 取引明細
+    'transaction' => [
+        'detail_title' => '{name} - 取引明細（{count}件）',
+        'time' => '時間',
+        'type' => 'タイプ',
+        'amount' => '金額',
+        'remark' => '備考',
+
+        // 取引タイプ
+        'type_recharge' => 'チャージ',
+        'type_withdrawal' => '引き出し',
+        'type_lottery' => '宝くじ',
+        'type_add_point' => '管理者追加',
+        'type_deduct_point' => '管理者控除',
+    ],
+
+    // ラベル（コロン付き）
+    'label' => [
+        'start' => '開始：',
+        'end' => '終了：',
+        'shift_type' => '交代タイプ：',
+        'log_id' => 'ログID：',
+        'machine_amount' => 'マシン金額：',
+        'machine_point' => '投入ポイント：',
+        'total_in' => '総収入：',
+        'total_out' => '総支出：',
+        'total_profit' => '総利益：',
+        'created_at' => '作成日時：',
+    ],
+
+    // アクション
+    'action' => [
+        'view_detail' => '詳細を表示',
+        'operation' => '操作',
+    ],
+
+    // フィルター
+    'filter' => [
+        'time_range' => '時間範囲',
+        'start_time' => '開始時間',
+        'end_time' => '終了時間',
+    ],
+
+    // デバイス詳細
+    'device' => [
+        'detail_not_found' => 'デバイス詳細 - レコードが見つかりません',
+        'detail_title' => 'デバイス詳細',
+        'device_count' => 'デバイス数',
+        'detail_data' => 'デバイス詳細データ',
+        'label' => [
+            'device_name' => 'デバイス名：',
+            'device_number' => 'デバイス番号：',
+            'machine_point' => '投入ポイント：',
+            'recharge_amount' => 'チャージ金額：',
+            'withdrawal_amount' => '引き出し金額：',
+            'backend_add_amount' => '管理者追加：',
+            'backend_deduct_amount' => '管理者控除：',
+            'lottery_amount' => '宝くじ支払い：',
+            'total_in' => '総収入：',
+            'total_out' => '総支出：',
+            'device_profit' => 'デバイス利益：',
+        ],
+    ],
 ];

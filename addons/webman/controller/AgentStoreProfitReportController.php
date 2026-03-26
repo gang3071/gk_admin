@@ -147,51 +147,51 @@ class AgentStoreProfitReportController
         }
 
         return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData) {
-            $grid->title('店家分润报表');
+            $grid->title(admin_trans('agent_store_profit.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
-            $grid->column('store_name', '店家名称')->width(150)->align('center');
+            $grid->column('store_name', admin_trans('agent_store_profit.fields.store_name'))->width(150)->align('center');
 
-            $grid->column('store_username', '登录账号')->width(120)->align('center');
+            $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 
-            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+            $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+            $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', '投钞')->display(function ($value) {
+            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+            $grid->column('lottery_amount', admin_trans('agent_store_profit.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('subtotal', '小计')->display(function ($value) {
+            $grid->column('subtotal', admin_trans('agent_store_profit.fields.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
-            $grid->column('agent_commission', '代理抽成比例')->display(function ($value) {
+            $grid->column('agent_commission', admin_trans('agent_store_profit.fields.agent_commission'))->display(function ($value) {
                 return $value . '%';
             })->width(100)->align('center');
 
-            $grid->column('agent_profit', '代理分润')->display(function ($value) {
+            $grid->column('agent_profit', admin_trans('agent_store_profit.fields.agent_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#1890ff' : '#fa8c16';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
-            $grid->column('channel_commission', '渠道抽成比例')->display(function ($value) {
+            $grid->column('channel_commission', admin_trans('agent_store_profit.fields.channel_commission'))->display(function ($value) {
                 return $value . '%';
             })->width(100)->align('center');
 
-            $grid->column('channel_profit', '渠道分润')->display(function ($value) {
+            $grid->column('channel_profit', admin_trans('agent_store_profit.fields.channel_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#52c41a' : '#f5222d';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
@@ -200,9 +200,9 @@ class AgentStoreProfitReportController
             $grid->filter(function (Filter $filter) {
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '时间范围')->placeholder([
-                    '开始时间',
-                    '结束时间'
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', admin_trans('agent_store_profit.filter.time_range'))->placeholder([
+                    admin_trans('agent_store_profit.filter.start_time'),
+                    admin_trans('agent_store_profit.filter.end_time')
                 ]);
             });
 

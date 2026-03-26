@@ -57,4 +57,29 @@ return [
     'current_present_in' => '当期转入(开分)',
     'current_present_out' => '当期转出(洗分)',
     'current_machine_put' => '当期总投钞',
+
+    // 统计标签
+    'total_lottery' => '总拉彩',
+    'profit_subtotal' => '盈余小计',
+    'total_stores' => '总店家数',
+    'total_devices' => '总设备数',
+
+    // 分析标题
+    'profit_loss_analysis' => '盈亏分析',
+    'operation_statistics' => '运营统计',
+    'lottery_statistics' => '拉彩统计',
+
+    // 统计项目
+    'total_score_up' => '上分总和',
+    'total_score_down' => '下分总和',
+    'subtotal' => '小计',
+    'lottery_count' => '拉彩次数',
+    'lottery_score' => '拉彩分数',
+    'bound_agent' => '绑定代理',
+    'current_payment_amount' => '当期上缴金额',
+    'payment_ratio' => '上缴比例',
+
+    // 按钮
+    'shift_handover' => '交班',
+    'go_to_auto_shift_config' => '前往自动交班配置',
 ];

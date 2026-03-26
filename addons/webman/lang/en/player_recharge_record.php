@@ -106,4 +106,13 @@ return [
         'total_pending' => 'Pending/Recharging',
         'total_fail' => 'Failed/Rejected/Cancelled',
     ],
+    'notice' => [
+        'recharge_reject_title' => 'Recharge Audit Failed',
+        'recharge_reject_content' => 'Sorry, your recharge order audit failed, the reason is: {reason}',
+        'recharge_pass_title' => 'Recharge Audit Passed',
+        'recharge_pass_content' => 'This submission has been approved, {point} points added, please check.',
+    ],
+    'log' => [
+        'examine_pass_failed' => 'Audit approval failed',
+    ],
 ];

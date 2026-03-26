@@ -49,6 +49,18 @@ return [
         PlayerLotteryRecord::SOURCE_GAME => 'Electronic Game',
         PlayerLotteryRecord::SOURCE_MANUAL => 'Manual Distribution',
     ],
+
+    // Notice messages
+    'notice' => [
+        'title' => 'Lottery Payout',
+        'content_machine' => 'Congratulations! You won {lottery_name} lottery reward on {machine_type} machine {machine_code}',
+    ],
+
+    // Machine types
+    'machine_type' => [
+        'slot' => 'Slot',
+        'steel_ball' => 'Steel Ball',
+    ],
     'status' => [
         PlayerLotteryRecord::STATUS_UNREVIEWED => 'Unreviewed',
         PlayerLotteryRecord::STATUS_REJECT => 'Rejected',
@@ -61,5 +73,13 @@ return [
         'total_pass_amount' => 'Passed',
         'total_complete_amount' => 'Received',
         'total_count' => 'Total Records',
-    ]
+    ],
+    'notice' => [
+        'lottery_payout_title' => 'Jackpot Payout',
+        'lottery_payout_content' => 'Congratulations, you won the {lottery_name} jackpot reward on {machine_type} machine {machine_code}',
+    ],
+    'machine_type' => [
+        'slot' => 'Slot',
+        'steel_ball' => 'Pachinko',
+    ],
 ];

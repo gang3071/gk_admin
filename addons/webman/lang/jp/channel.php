@@ -10,6 +10,7 @@ return [
     'channel_exist' => 'チャネルドメイン名が重複している',
     'save_error' => '保存に失敗しました',
     'save_success' => '正常に保存',
+    'create_failed_log' => 'チャネルの作成に失敗しました',
     'not_fount' => 'チャンネルが存在しません',
     'fields' => [
         'id' => 'チャンネルID',

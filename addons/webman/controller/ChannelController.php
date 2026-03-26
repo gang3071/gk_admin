@@ -36,7 +36,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
 use support\Db;
 use support\Log;
-use function DI\get;
 
 /**
  * 渠道管理
@@ -688,7 +687,7 @@ class ChannelController
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();
-                        Log::error('渠道新增失败: ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
+                        Log::error(admin_trans('channel.create_failed_log') . ': ' . $e->getMessage(), ['trace' => $e->getTraceAsString()]);
                         return message_error(admin_trans('channel.save_error') . ': ' . $e->getMessage());
                     }
                     return message_success(admin_trans('channel.save_success'));
@@ -855,7 +854,7 @@ class ChannelController
             ->pluck('machine_id')
             ->toArray();
         return Grid::create(new $this->machineModel(), function (Grid $grid) use ($department_id) {
-            $grid->title('添加机台');
+            $grid->title(admin_trans('channel.add_machine'));
             $grid->model()->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])->orderBy('id',
                 'desc');
             $grid->driver()->setPk('id');

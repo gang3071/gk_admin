@@ -77,4 +77,8 @@ return [
     'formula_tip' => '計算公式：（{up} + {admin_sub}）-（{activity} + {present} + {admin_add} + {down} + {lottery}）* {ratio}% = {profit_amount}',
     'source_promoter_name' => '來源推廣員',
     'promoter_max_ratio' => '分潤比最大可設定{max_ratio}%',
+    'admin' => '管理員',
+    'log' => [
+        'settlement_failed' => '結算失敗',
+    ],
 ];

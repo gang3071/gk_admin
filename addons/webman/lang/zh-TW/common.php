@@ -3,6 +3,8 @@
 return [
     // 通用錯誤消息
     'player_not_exist' => '玩家不存在',
+    'player_already_exists' => '玩家已存在',
+    'recommended_player_not_exist' => '推薦玩家不存在',
     'game_not_exist' => '遊戲不存在',
     'please_select_games' => '請選擇要授權的遊戲',
     'games_not_found' => '未找到選擇的遊戲',
@@ -17,13 +19,32 @@ return [
     'save_failed' => '保存失敗',
     'invalid_game_points' => '轉換後的遊戲點數無效',
     'system_error' => '系統錯誤',
+    'machine_in_test_mode' => '該機台作為新版工控測試機台使用中',
+    'video_host_request_failed' => '請求視訊主機失敗',
+    'get_stream_info_failed' => '獲取流信息失敗',
 
     // 通用成功消息
     'settlement_success' => '結算成功',
     'operation_success' => '操作成功',
+    'authentication_passed' => '認證通過',
     'batch_generation_failed' => '批量生成失敗：{message}',
     'create_agent_failed' => '創建代理失敗：{message}',
     'create_store_failed' => '創建店家失敗：{message}',
+
+    // 通用標籤
+    'administrator' => '管理員',
+    'player' => '玩家',
+    'total' => '合計',
+
+    // 通用確認消息
+    'confirm_save' => '確認保存？',
+
+    // 登錄相關
+    'please_enter_credentials' => '請輸入賬號和密碼',
+    'account_not_exist' => '賬號不存在',
+    'password_incorrect' => '密碼錯誤',
+    'login_success' => '登錄成功',
+    'implement_login_logic' => '請在 CustomLoginController 中實現實際的登錄邏輯',
 
     // 代理/店家相關
     'agent_commission_range_error' => '代理抽成比例必須在 0-100 之間',
@@ -108,6 +129,24 @@ return [
         'welcome_store_system' => '歡迎使用店家後台系統！',
     ],
 
+    // 日期篩選
+    'date_filter' => [
+        'all' => '全部',
+        'today' => '今日',
+        'yesterday' => '昨天',
+        'this_week' => '本周',
+        'last_week' => '上周',
+        'this_month' => '本月',
+        'last_month' => '上月',
+    ],
+
+    // 自動交班
+    'auto_shift' => [
+        'enabled' => '已開啟自動交班',
+        'manual_shift_success' => '店家手動交班成功',
+        'manual_shift_failed' => '手動交班失敗',
+    ],
+
     // 班次
     'shift' => [
         'morning' => '早班',
@@ -117,4 +156,9 @@ return [
         'night' => '晚班',
         'night_desc' => '晚班自動交班（00:00-08:00）',
     ],
+
+    // 通用UI
+    'total' => '合計',
+    'detail' => '詳情',
+    'chart' => '圖表',
 ];

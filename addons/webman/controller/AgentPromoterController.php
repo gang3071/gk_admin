@@ -186,7 +186,7 @@ class AgentPromoterController
             $item['ratio'] = $ratio;
         }
         return Grid::create($list, function (Grid $grid) use ($total, $list) {
-            $grid->title('代理/店家列表');
+            $grid->title(admin_trans('agent_promoter.title'));
             $exAdminFilter = Request::input('ex_admin_filter', []);
             $page = Request::input('ex_admin_page', 1);
             $size = Request::input('ex_admin_size', 25);
@@ -198,7 +198,7 @@ class AgentPromoterController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('id', 'ID')->align('center')->fixed(true)->ellipsis(true);
-            $grid->column('uuid', '绑定玩家UUID')
+            $grid->column('uuid', admin_trans('agent_promoter.fields.bound_player_uuid'))
                 ->display(function ($val, $data) {
                     return Html::create()->content([
                         Html::div()->content($val),
@@ -206,16 +206,16 @@ class AgentPromoterController
                     ]);
                 })
                 ->align('center')->fixed(true)->ellipsis(true);
-            $grid->column('name', '代理/店家')
+            $grid->column('name', admin_trans('agent_promoter.fields.agent_name'))
                 ->display(function ($value, $data) {
                     $value = !empty($value) ? $value : $data['uuid'];
                     return Html::create(Str::of($value)->limit(20, ' (...)'))
                         ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                         ->modal([$this, 'playerInfo'], ['player_id' => $data['player_id']])
-                        ->width('60%')->title('代理账号' . ':' . $value);
+                        ->width('60%')->title(admin_trans('agent_promoter.label.agent_account_with_value', null, ['value' => $value]));
                 })
                 ->fixed(true)->align('center')->width(120)->ellipsis(true);
-            $grid->column('ratio', '上缴比例')->display(function (
+            $grid->column('ratio', admin_trans('agent_promoter.fields.payment_ratio'))->display(function (
                 $val,
                 $data
             ) use ($grid) {
@@ -252,15 +252,15 @@ class AgentPromoterController
                 ])->attr('class', 'ex-admin-editable-cell')
                     ->event('dblclick', [$visible => true]);
             })->align('center')->ellipsis(true);
-            $grid->column('total_point', '当期总营收')->display(function ($val) {
+            $grid->column('total_point', admin_trans('agent_promoter.fields.current_total_revenue'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(140)->ellipsis(true);
-            $grid->column('self_profit_amount', '代理分润金额')->display(function ($val) {
+            $grid->column('self_profit_amount', admin_trans('agent_promoter.fields.agent_profit_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(140)->ellipsis(true);
-            $grid->column('adjust_amount', '分润调整金额')
+            $grid->column('adjust_amount', admin_trans('agent_promoter.fields.profit_adjust_amount'))
                 ->display(function ($val) {
                     return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                         ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
@@ -277,14 +277,14 @@ class AgentPromoterController
                         ->max(10000000)
                 )
                 ->align('center')->width(120)->ellipsis(true);
-            $grid->column('profit_amount', '当期上缴金额')->display(function ($val) {
+            $grid->column('profit_amount', admin_trans('agent_promoter.fields.current_payment_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('present_in_amount', '当期转入(开分)')->align('center')->width(140)->ellipsis(true);
-            $grid->column('machine_put_point', '当期投钞(充值)')->align('center')->width(140)->ellipsis(true);
-            $grid->column('present_out_amount', '当期转出(洗分)')->align('center')->width(140)->ellipsis(true);
-            $grid->column('player_num', '店家/设备数量')->display(function ($val) {
+            $grid->column('present_in_amount', admin_trans('agent_promoter.fields.current_transfer_in'))->align('center')->width(140)->ellipsis(true);
+            $grid->column('machine_put_point', admin_trans('agent_promoter.fields.current_cash_in'))->align('center')->width(140)->ellipsis(true);
+            $grid->column('present_out_amount', admin_trans('agent_promoter.fields.current_transfer_out'))->align('center')->width(140)->ellipsis(true);
+            $grid->column('player_num', admin_trans('agent_promoter.fields.store_device_count'))->display(function ($val) {
                 return Statistic::create()
                     ->value($val)
                     ->valueStyle(['fontSize' => '14px'])
@@ -292,7 +292,7 @@ class AgentPromoterController
                     ->prefix(Icon::create('far fa-user')->style(['fontSize' => '14px']))
                     ->style(['cursor' => 'pointer']);
             })->align('center')->width(120)->ellipsis(true)->sortable();
-            $grid->column('team_num', '设备数量')->display(function ($val) {
+            $grid->column('team_num', admin_trans('agent_promoter.fields.device_count'))->display(function ($val) {
                 return Statistic::create()
                     ->value($val)
                     ->valueStyle(['fontSize' => '14px'])
@@ -300,17 +300,17 @@ class AgentPromoterController
                     ->prefix(Icon::create('TeamOutlined')->style(['fontSize' => '14px']))
                     ->style(['cursor' => 'pointer']);
             })->align('center')->width(120)->ellipsis(true)->sortable();
-            $grid->column('money', '当前机台分数')->align('center')->width(140)->ellipsis(true);
+            $grid->column('money', admin_trans('agent_promoter.fields.current_machine_score'))->align('center')->width(140)->ellipsis(true);
             $grid->column('status', admin_trans('player_promoter.fields.status'))->switch()->align('center');
-            $grid->column('recommend_promoter_name', '上级代理')->display(function ($value) {
+            $grid->column('recommend_promoter_name', admin_trans('agent_promoter.fields.parent_agent'))->display(function ($value) {
                 return Html::create(Str::of($value)->limit(20, ' (...)'))->style([
                     'cursor' => 'pointer',
                     'color' => 'rgb(24, 144, 255)'
                 ]);
             })->align('center')->width(120)->ellipsis(true);
             $grid->column('settlement_amount',
-                '已结算金额')->align('center')->width(120)->fixed('right')->ellipsis(true);
-            $grid->column('last_settlement_timestamp', '上次结算时间')->align('center')->fixed('right')->ellipsis(true);
+                admin_trans('agent_promoter.detail.settled_amount'))->align('center')->width(120)->fixed('right')->ellipsis(true);
+            $grid->column('last_settlement_timestamp', admin_trans('agent_promoter.fields.last_settlement_time'))->align('center')->fixed('right')->ellipsis(true);
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('player_promoter.fields.name'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
@@ -367,16 +367,16 @@ class AgentPromoterController
                 $actions->hideDel();
                 $value = !empty($data['name']) ? $data['name'] : $data['uuid'];
                 $actions->prepend(
-                    Button::create('结算')
+                    Button::create(admin_trans('agent_promoter.button.settlement'))
                         ->type('primary')
-                        ->title('代理分润结算: ' . $value)
+                        ->title(admin_trans('agent_promoter.label.agent_settlement_with_value', null, ['value' => $value]))
                         ->modal([$this, 'settlement'], ['id' => $data['player_id']])
                 );
             });
             $grid->tools(
-                Button::create('批量结算')
+                Button::create(admin_trans('agent_promoter.button.batch_settlement'))
                     ->icon(Icon::create('fas fa-chalkboard'))
-                    ->confirm('批量结算无法根据时间精确结算, 将会结算所有未结算的时间, 是否确定结算?',
+                    ->confirm(admin_trans('agent_promoter.confirm.batch_settlement'),
                         [
                             $this,
                             'batchSettlement?' . http_build_query($param)
@@ -472,23 +472,23 @@ class AgentPromoterController
         $info['total_point'] = $totalPoint;
         $info['ratio'] = $playerPromoter->ratio ?? 0;
         return Detail::create($playerPromoter, function (Detail $detail) use ($info) {
-            $detail->item('name', '代理名称');
+            $detail->item('name', admin_trans('agent_promoter.detail.agent_name'));
             $detail->item('player.uuid', 'UUID')->copy();
-            $detail->item('ratio', '上缴比例')->append('%');
-            $detail->item('machine_put_point', '总投钞(充值)')->display(function () use ($info) {
+            $detail->item('ratio', admin_trans('agent_promoter.fields.payment_ratio'))->append('%');
+            $detail->item('machine_put_point', admin_trans('agent_promoter.fields.total_cash_in'))->display(function () use ($info) {
                 return $info['machine_put_point'] ?? '--';
             });
-            $detail->item('present_out_amount', '转出(洗分)')->display(function () use ($info) {
+            $detail->item('present_out_amount', admin_trans('agent_promoter.fields.transfer_out'))->display(function () use ($info) {
                 return $info['present_out_amount'] ?? '--';
             });
-            $detail->item('present_in_amount', '总转入(开分)')->display(function () use ($info) {
+            $detail->item('present_in_amount', admin_trans('agent_promoter.fields.total_transfer_in'))->display(function () use ($info) {
                 return $info['present_in_amount'] ?? '--';
             });
-            $detail->item('total_point', '总营收')->display(function () use ($info) {
+            $detail->item('total_point', admin_trans('agent_promoter.fields.total_income'))->display(function () use ($info) {
                 return $info['total_point'] ?? '--';
             });
-            $detail->item('settlement_amount', '已结算金额');
-            $detail->item('created_at', '创建时间')->display(function ($val) {
+            $detail->item('settlement_amount', admin_trans('agent_promoter.detail.settled_amount'));
+            $detail->item('created_at', admin_trans('agent_promoter.fields.created_at'))->display(function ($val) {
                 return date('Y-m-d H:i:s', strtotime($val));
             });
             $detail->item('player.machine_wallet.money',
@@ -501,16 +501,16 @@ class AgentPromoterController
                     'playerRecord'
                 ], ['id' => $data->player_id])->width('70%')->title($data->name);
             });
-            $detail->item('end_time', '最近结算时间')->display(function ($val, PlayerPromoter $data) {
+            $detail->item('end_time', admin_trans('agent_promoter.detail.last_settlement_time'))->display(function ($val, PlayerPromoter $data) {
                 /** @var StoreAgentProfitRecord $storeAgentProfitRecord */
                 $storeAgentProfitRecord = StoreAgentProfitRecord::query()->where('player_id',
                     $data->player_id)->orderBy('id', 'desc')->first();
                 if ($storeAgentProfitRecord) {
-                    return '开始时间 : ' . date('Y-m-d H:i:s',
-                            strtotime($storeAgentProfitRecord->start_time)) . ' 结束时间 : ' . date('Y-m-d H:i:s',
+                    return admin_trans('agent_promoter.detail.start_time_label') . ' : ' . date('Y-m-d H:i:s',
+                            strtotime($storeAgentProfitRecord->start_time)) . ' ' . admin_trans('agent_promoter.detail.end_time_label') . ' : ' . date('Y-m-d H:i:s',
                             strtotime($storeAgentProfitRecord->end_time));
                 }
-                return '开始时间 : 无 结束时间 : 无';
+                return admin_trans('agent_promoter.detail.start_time_label') . ' : ' . admin_trans('agent_promoter.detail.no_time') . ' ' . admin_trans('agent_promoter.detail.end_time_label') . ' : ' . admin_trans('agent_promoter.detail.no_time');
             });
         })->bordered();
     }
@@ -522,36 +522,36 @@ class AgentPromoterController
     public function settlementList(): Grid
     {
         return Grid::create(new $this->settlement(), function (Grid $grid) {
-            $grid->title('下线分润结算记录');
+            $grid->title(admin_trans('agent_promoter.settlement_records_title'));
             $grid->model()->with(['agent_promoter'])
                 ->orderBy('id', 'desc');
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('id', 'ID')->fixed(true)->align('center');
-            $grid->column('agent_promoter.name', '代理/店家')
+            $grid->column('agent_promoter.name', admin_trans('agent_promoter.fields.agent_name'))
                 ->display(function ($value, StoreAgentProfitRecord $data) {
                     $value = !empty($value) ? $value : $data->player->uuid;
                     return Html::create(Str::of($value)->limit(20, ' (...)'))
                         ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                         ->modal([$this, 'playerInfo'], ['player_id' => $data['player_id']])
-                        ->width('60%')->title('代理账号' . ':' . $value);
+                        ->width('60%')->title(admin_trans('agent_promoter.label.agent_account_with_value', null, ['value' => $value]));
                 })
                 ->fixed(true)->align('center')->width(120)->ellipsis(true);
-            $grid->column('settlement_tradeno', '结算单号')->align('center')->ellipsis(true)->copy();
-            $grid->column('adjust_amount', '分润调整金额')->display(function ($val) {
+            $grid->column('settlement_tradeno', admin_trans('agent_promoter.fields.settlement_tradeno'))->align('center')->ellipsis(true)->copy();
+            $grid->column('adjust_amount', admin_trans('agent_promoter.fields.profit_adjust_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('actual_amount', '实际分润金额')->display(function ($val) {
+            $grid->column('actual_amount', admin_trans('agent_promoter.fields.actual_profit_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('profit_amount', '分润金额')->display(function ($val) {
+            $grid->column('profit_amount', admin_trans('agent_promoter.fields.profit_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('ratio', '分润比例')->append('%')->align('center')->width(120)->ellipsis(true);
-            $grid->column('sub_name', '上缴对象')
+            $grid->column('ratio', admin_trans('agent_promoter.fields.profit_ratio'))->append('%')->align('center')->width(120)->ellipsis(true);
+            $grid->column('sub_name', admin_trans('agent_promoter.fields.payment_target'))
                 ->display(function ($value, StoreAgentProfitRecord $data) {
                     switch ($data['type']) {
                         case StoreAgentProfitRecord::TYPE_STORE:
@@ -562,50 +562,50 @@ class AgentPromoterController
                             return Html::create(Str::of($value)->limit(20, ' (...)'))
                                 ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                                 ->modal([$this, 'playerInfo'], ['player_id' => $playerPromoter->player_id])
-                                ->width('60%')->title('代理账号' . ':' . $value);
+                                ->width('60%')->title(admin_trans('agent_promoter.label.agent_account_with_value', null, ['value' => $value]));
                         case StoreAgentProfitRecord::TYPE_AGENT:
-                            $tag = Tag::create('渠道')->color('#f50');
+                            $tag = Tag::create(admin_trans('agent_promoter.tag.channel'))->color('#f50');
                             return Html::create()->content([
                                 $tag,
                             ]);
                     }
                 });
-            $grid->column('sub_profit_amount', '上缴金额')->display(function ($val) {
+            $grid->column('sub_profit_amount', admin_trans('agent_promoter.fields.payment_amount'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('sub_ratio', '上缴比例')->append('%')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_bet', '总押注')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_diff', '总输赢')->align('center')->width(120)->ellipsis(true);
-            $grid->column('machine_point', '投钞点数')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_income', '总营收')->display(function ($val) {
+            $grid->column('sub_ratio', admin_trans('agent_promoter.fields.payment_ratio_percent'))->append('%')->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_bet', admin_trans('agent_promoter.fields.total_bet'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_diff', admin_trans('agent_promoter.fields.total_diff'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('machine_point', admin_trans('agent_promoter.fields.machine_point'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_income', admin_trans('agent_promoter.fields.total_income'))->display(function ($val) {
                 return Html::create()->content([$val > 0 ? '+' . $val : $val,])
                     ->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
             })->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_in', '转入(开分)')->align('center')->width(120)->ellipsis(true);
-            $grid->column('total_out', '转出(洗分)')->align('center')->width(120)->ellipsis(true);
-            $grid->column('user_name', '管理员')->align('center');
+            $grid->column('total_in', admin_trans('agent_promoter.fields.transfer_in'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('total_out', admin_trans('agent_promoter.fields.transfer_out'))->align('center')->width(120)->ellipsis(true);
+            $grid->column('user_name', admin_trans('agent_promoter.fields.admin'))->align('center');
             $grid->column('type', admin_trans('admin.fields.type'))
                 ->display(function ($value) {
                     $tag = '';
                     switch ($value) {
                         case StoreAgentProfitRecord::TYPE_STORE:
-                            $tag = Tag::create('店家')->color('#108ee9');
+                            $tag = Tag::create(admin_trans('agent_promoter.tag.store'))->color('#108ee9');
                             break;
                         case StoreAgentProfitRecord::TYPE_AGENT:
-                            $tag = Tag::create('代理')->color('#f50');
+                            $tag = Tag::create(admin_trans('agent_promoter.tag.agent'))->color('#f50');
                             break;
                     }
                     return Html::create()->content([
                         $tag,
                     ]);
                 })->sortable();
-            $grid->column('start_time', '结算开始时间')->align('center')->fixed('right')->ellipsis(true);
-            $grid->column('end_time', '结算结束时间')->align('center')->fixed('right')->ellipsis(true);
-            $grid->column('created_at', '创建时间')->align('center')->fixed('right')->ellipsis(true);
+            $grid->column('start_time', admin_trans('agent_promoter.fields.settlement_start_time'))->align('center')->fixed('right')->ellipsis(true);
+            $grid->column('end_time', admin_trans('agent_promoter.fields.settlement_end_time'))->align('center')->fixed('right')->ellipsis(true);
+            $grid->column('created_at', admin_trans('agent_promoter.fields.created_at'))->align('center')->fixed('right')->ellipsis(true);
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('tradeno')->placeholder('结算单号');
-                $filter->like()->text('agent_promoter.name')->placeholder('代理/店家');
+                $filter->like()->text('tradeno')->placeholder(admin_trans('agent_promoter.placeholder.tradeno'));
+                $filter->like()->text('agent_promoter.name')->placeholder(admin_trans('agent_promoter.placeholder.agent_promoter'));
                 $filter->like()->text('agent_promoter.phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->form()->hidden('created_at_start');
@@ -679,8 +679,8 @@ class AgentPromoterController
                 $startTime = $storeAgentProfitRecord->start_time;
                 $endTime = $storeAgentProfitRecord->end_time;
             } else {
-                $startTime = '无';
-                $endTime = '无';
+                $startTime = admin_trans('agent_promoter.detail.no_time');
+                $endTime = admin_trans('agent_promoter.detail.no_time');
             }
             if (!empty($playerPromoter->last_settlement_timestamp)) {
                 if (is_string($playerPromoter->last_settlement_timestamp)) {
@@ -688,7 +688,7 @@ class AgentPromoterController
                 } else {
                     $endTime = $playerPromoter->last_settlement_timestamp;
                 }
-                $form->date('end_time', '结算结束时间')->bindFunction('disabledDate', "
+                $form->date('end_time', admin_trans('agent_promoter.fields.settlement_end_time'))->bindFunction('disabledDate', "
                     var date = new Date(time);
                     var Month = date.getMonth() + 1;
                     var Day = date.getDate();
@@ -700,19 +700,19 @@ class AgentPromoterController
                     var condition2 = newDateStr > '" . Carbon::today()->format('Y-m-d') . "';
                     return condition2 || condition1;", ['time'])
                     ->valueFormat('YYYY-MM-DD HH:mm:ss')
-                    ->showTime(true)->help('结算时间不能超过当前时间, 不能选择上次结算时间的范围')
+                    ->showTime(true)->help(admin_trans('agent_promoter.help.settlement_time'))
                     ->style([
                         'width' => '100%',
                     ])->required();
-                $form->push(Detail::create()->title('可选择结算时间范围 : ' . $endTime->format('Y-m-d H:i:s') . ' ~ 此刻'));
+                $form->push(Detail::create()->title(admin_trans('agent_promoter.help.settlement_range', null, ['start' => $endTime->format('Y-m-d H:i:s')])));
             } else {
                 $createTime = Carbon::parse($playerPromoter->created_at);
                 $form->push(Detail::create($playerPromoter, function (Detail $detail) {
-                    $detail->item('created_at', '代理创建时间')->display(function ($val) {
+                    $detail->item('created_at', admin_trans('agent_promoter.detail.agent_created_at'))->display(function ($val) {
                         return Carbon::parse($val)->format('Y-m-d H:i:s');
                     });
                 }));
-                $form->date('end_time', '结算结束时间')->bindFunction('disabledDate', "
+                $form->date('end_time', admin_trans('agent_promoter.fields.settlement_end_time'))->bindFunction('disabledDate', "
                     var date = new Date(time);
                     var Month = date.getMonth() + 1;
                     var Day = date.getDate();
@@ -725,17 +725,17 @@ class AgentPromoterController
                     return condition1 || condition2;", ['time'])
                     ->valueFormat('YYYY-MM-DD HH:mm:ss')
                     ->showTime(true)
-                    ->help('结算时间不能超过当前时间, 不能选择上次结算时间的范围')
+                    ->help(admin_trans('agent_promoter.help.settlement_time'))
                     ->style([
                         'width' => '100%',
                     ])->required();
-                $form->push(Detail::create()->title('可选择结算时间范围 : ' . $createTime->format('Y-m-d H:i:s') . ' ~ 此刻'));
+                $form->push(Detail::create()->title(admin_trans('agent_promoter.help.settlement_range', null, ['start' => $createTime->format('Y-m-d H:i:s')])));
             }
             $form->layout('vertical');
             $form->push(Card::create([
-                Html::create('开始时间: ' . ($startTime))->tag('p'),
-                Html::create('结束时间: ' . ($endTime))->tag('p'),
-            ])->title('上次结算时间'));
+                Html::create(admin_trans('agent_promoter.detail.start_time_label') . ': ' . ($startTime))->tag('p'),
+                Html::create(admin_trans('agent_promoter.detail.end_time_label') . ': ' . ($endTime))->tag('p'),
+            ])->title(admin_trans('agent_promoter.form.last_settlement_time')));
             $form->saving(function (Form $form) use ($id) {
                 /** @var PlayerPromoter $playerPromoter */
                 $playerPromoter = PlayerPromoter::query()->where('player_id', $id)->first();

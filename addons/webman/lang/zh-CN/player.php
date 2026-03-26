@@ -48,6 +48,7 @@ return [
         'register_domain' => '注册域名',
         'country_code' => '国家/地区号',
         'player_tag' => '标签',
+        'tag_name' => '标签名称',
         'uuid' => '玩家UID',
         'device_uuid' => '设备UUID',
         'device_name' => '设备名称',
@@ -197,4 +198,69 @@ return [
     'coin_artificial_withdraw' => '币商提现',
     'login_ip' => '登入IP',
     'national_level_not_configure' => '全民代理等级未配置',
+
+    // 统计字段
+    'total_recharge_amount' => '累计开分',
+    'total_withdraw_amount' => '累计洗分',
+    'total_machine_put_point' => '投钞',
+    'total_lottery_amount' => '彩金',
+    'subtotal' => '小计',
+
+    // 游戏相关
+    'game_platform' => '游戏平台',
+    'unknown_platform' => '未知平台',
+    'game_name' => '游戏名称',
+    'game_category' => '游戏分类',
+    'is_hot' => '热门',
+    'hot_tag' => '热门',
+    'is_new' => '新游戏',
+    'new_tag' => '新',
+    'hot_game' => '热门游戏',
+    'normal_game' => '普通游戏',
+    'new_game' => '新游戏',
+    'old_game' => '旧游戏',
+
+    // 游戏操作
+    'cancel_disable_game' => '取消禁用',
+    'disable_game' => '禁用游戏',
+    'confirm_cancel_disable_game' => '确认取消禁用该游戏？',
+    'confirm_disable_game' => '确认禁用该游戏？',
+    'save_selected_games' => '保存选择的游戏',
+    'game_disabled_success' => '成功禁用了 {count} 个游戏',
+    'game_enabled_all_success' => '已取消所有游戏禁用',
+    'single_game_disabled_success' => '成功禁用该游戏',
+    'single_game_enabled_success' => '成功取消禁用该游戏',
+
+    // Placeholder
+    'platform_placeholder' => '游戏平台',
+    'is_hot_placeholder' => '是否热门',
+    'is_new_placeholder' => '是否新游戏',
+
+    // 错误消息
+    'game_server_connection_failed' => '游戏服务器连接失败',
+    'game_server_http_error' => '游戏服务器返回错误',
+    'game_server_response_error' => '游戏服务器响应格式错误',
+    'game_operation_failed' => '游戏操作失败',
+    'save_failed' => '保存失败',
+    'operation_failed' => '操作失败',
+
+    // 备注模板
+    'store_backend_recharge_remark' => '店家后台开分{remark}',
+
+    // 报表相关
+    'machine_chip_total' => '投钞总额',
+    'no_promoter' => '暂无推广员',
+
+    // 转换预览
+    'conversion_preview' => '转换预览：',
+    'please_enter_amount' => '请输入金额',
+    'points_unit' => '点',
+    'exchange_rate' => '汇率：',
+    'game_points' => '游戏点数',
+
+    // 店家后台专用
+    'unnamed' => '未命名',
+    'game_id_label' => '游戏 ID: ',
+    'device_list_query_log' => '设备列表查询',
+    'no_device_data' => '暂无设备数据',
 ];

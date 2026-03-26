@@ -17,13 +17,34 @@ return [
     'save_failed' => '保存に失敗しました',
     'invalid_game_points' => '変換後のゲームポイントが無効です',
     'system_error' => 'システムエラー',
+    'player_already_exists' => 'プレーヤーは既に存在します',
+    'recommended_player_not_exist' => '推薦プレーヤーが存在しません',
+    'machine_in_test_mode' => 'このマシンは新バージョンの産業用制御テストマシンとして使用されています',
+    'video_host_request_failed' => 'ビデオホストのリクエストに失敗しました',
+    'get_stream_info_failed' => 'ストリーム情報の取得に失敗しました',
 
     // 共通成功メッセージ
     'settlement_success' => '決済が成功しました',
     'operation_success' => '操作が成功しました',
+    'authentication_passed' => '認証が成功しました',
     'batch_generation_failed' => '一括生成に失敗しました：{message}',
     'create_agent_failed' => 'エージェントの作成に失敗しました：{message}',
     'create_store_failed' => 'ストアの作成に失敗しました：{message}',
+
+    // 共通ラベル
+    'administrator' => '管理者',
+    'player' => 'プレイヤー',
+    'total' => '合計',
+
+    // 共通確認メッセージ
+    'confirm_save' => '保存してもよろしいですか？',
+
+    // ログイン関連
+    'please_enter_credentials' => 'アカウントとパスワードを入力してください',
+    'account_not_exist' => 'アカウントが存在しません',
+    'password_incorrect' => 'パスワードが正しくありません',
+    'login_success' => 'ログインに成功しました',
+    'implement_login_logic' => 'CustomLoginControllerに実際のログインロジックを実装してください',
 
     // エージェント/ストア関連
     'agent_commission_range_error' => 'エージェント手数料率は0〜100の間でなければなりません',
@@ -106,6 +127,24 @@ return [
         'not_filled' => '未入力',
         'welcome_agent_system' => 'エージェントバックエンドシステムへようこそ！',
         'welcome_store_system' => 'ストアバックエンドシステムへようこそ！',
+    ],
+
+    // 日付フィルター
+    'date_filter' => [
+        'all' => '全部',
+        'today' => '今日',
+        'yesterday' => '昨日',
+        'this_week' => '今週',
+        'last_week' => '先週',
+        'this_month' => '今月',
+        'last_month' => '先月',
+    ],
+
+    // 自動シフト
+    'auto_shift' => [
+        'enabled' => '自動シフトが有効になっています',
+        'manual_shift_success' => '手動シフト引継ぎ成功',
+        'manual_shift_failed' => '手動シフト引継ぎ失敗',
     ],
 
     // シフト

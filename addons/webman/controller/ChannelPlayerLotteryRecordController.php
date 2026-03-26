@@ -537,8 +537,15 @@ class ChannelPlayerLotteryRecordController
             $notice->type = Notice::TYPE_LOTTERY;
             $notice->receiver = Notice::RECEIVER_PLAYER;
             $notice->is_private = 1;
-            $notice->title = '彩金派彩';
-            $notice->content = '恭喜您在' . ($playerLotteryRecord->machine->type == GameType::TYPE_SLOT ? '斯洛' : '鋼珠') . $playerLotteryRecord->machine->code . '機台獲得了' . $playerLotteryRecord->lottery_name . '的彩金獎勵彩金金額';
+            $notice->title = admin_trans('player_lottery_record.notice.lottery_payout_title');
+            $machineType = $playerLotteryRecord->machine->type == GameType::TYPE_SLOT
+                ? admin_trans('player_lottery_record.machine_type.slot')
+                : admin_trans('player_lottery_record.machine_type.steel_ball');
+            $notice->content = str_replace(
+                ['{machine_type}', '{machine_code}', '{lottery_name}'],
+                [$machineType, $playerLotteryRecord->machine->code, $playerLotteryRecord->lottery_name],
+                admin_trans('player_lottery_record.notice.lottery_payout_content')
+            );
             $notice->save();
             DB::commit();
         } catch (\Exception $e) {
@@ -603,8 +610,15 @@ class ChannelPlayerLotteryRecordController
                 $notice->type = Notice::TYPE_LOTTERY;
                 $notice->receiver = Notice::RECEIVER_PLAYER;
                 $notice->is_private = 1;
-                $notice->title = '彩金派彩';
-                $notice->content = '恭喜您在' . ($playerLotteryRecord->machine->type == GameType::TYPE_SLOT ? '斯洛' : '鋼珠') . $playerLotteryRecord->machine->code . '機台獲得了' . $playerLotteryRecord->lottery_name . '的彩金獎勵彩金金額';
+                $notice->title = admin_trans('player_lottery_record.notice.lottery_payout_title');
+                $machineType = $playerLotteryRecord->machine->type == GameType::TYPE_SLOT
+                    ? admin_trans('player_lottery_record.machine_type.slot')
+                    : admin_trans('player_lottery_record.machine_type.steel_ball');
+                $notice->content = str_replace(
+                    ['{machine_type}', '{machine_code}', '{lottery_name}'],
+                    [$machineType, $playerLotteryRecord->machine->code, $playerLotteryRecord->lottery_name],
+                    admin_trans('player_lottery_record.notice.lottery_payout_content')
+                );
                 $notices[] = $notice;
             }
             DB::beginTransaction();

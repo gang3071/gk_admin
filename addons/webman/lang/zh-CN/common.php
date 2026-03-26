@@ -3,6 +3,8 @@
 return [
     // 通用错误消息
     'player_not_exist' => '玩家不存在',
+    'player_already_exists' => '玩家已存在',
+    'recommended_player_not_exist' => '推荐玩家不存在',
     'game_not_exist' => '游戏不存在',
     'please_select_games' => '请选择要授权的游戏',
     'games_not_found' => '未找到选择的游戏',
@@ -17,13 +19,32 @@ return [
     'save_failed' => '保存失败',
     'invalid_game_points' => '转换后的游戏点数无效',
     'system_error' => '系统错误',
+    'machine_in_test_mode' => '该机台作为新版工控测试机台使用中',
+    'video_host_request_failed' => '请求视讯主机失败',
+    'get_stream_info_failed' => '获取流信息失败',
 
     // 通用成功消息
     'settlement_success' => '结算成功',
     'operation_success' => '操作成功',
+    'authentication_passed' => '认证通过',
     'batch_generation_failed' => '批量生成失败：{message}',
     'create_agent_failed' => '创建代理失败：{message}',
     'create_store_failed' => '创建店家失败：{message}',
+
+    // 通用标签
+    'administrator' => '管理员',
+    'player' => '玩家',
+    'total' => '合计',
+
+    // 通用确认消息
+    'confirm_save' => '确认保存？',
+
+    // 登录相关
+    'please_enter_credentials' => '请输入账号和密码',
+    'account_not_exist' => '账号不存在',
+    'password_incorrect' => '密码错误',
+    'login_success' => '登录成功',
+    'implement_login_logic' => '请在 CustomLoginController 中实现实际的登录逻辑',
 
     // 代理/店家相关
     'agent_commission_range_error' => '代理抽成比例必须在 0-100 之间',
@@ -106,6 +127,24 @@ return [
         'not_filled' => '未填写',
         'welcome_agent_system' => '欢迎使用代理后台系统！',
         'welcome_store_system' => '欢迎使用店家后台系统！',
+    ],
+
+    // 日期筛选
+    'date_filter' => [
+        'all' => '全部',
+        'today' => '今日',
+        'yesterday' => '昨天',
+        'this_week' => '本周',
+        'last_week' => '上周',
+        'this_month' => '本月',
+        'last_month' => '上月',
+    ],
+
+    // 自动交班
+    'auto_shift' => [
+        'enabled' => '已开启自动交班',
+        'manual_shift_success' => '店家手动交班成功',
+        'manual_shift_failed' => '手动交班失败',
     ],
 
     // 班次

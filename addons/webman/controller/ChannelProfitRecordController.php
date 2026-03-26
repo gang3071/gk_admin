@@ -389,7 +389,7 @@ class ChannelProfitRecordController
     public function settlement(): Form
     {
         return Form::create([], function (Form $form) {
-            $form->title('渠道结算');
+            $form->title(admin_trans('channel_profit_record.channel_settlement'));
             $form->layout('vertical');
         });
     }

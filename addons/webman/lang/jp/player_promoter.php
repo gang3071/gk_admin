@@ -76,4 +76,8 @@ return [
     'formula_tip' => '計算式: ({up} + {admin_sub}) - ({activity} + {present} + {admin_add} + {down} + {lottery}) * {ratio}% = {profit_amount}',
     'source_promoter_name' => 'ソース プロモーター',
     'promoter_max_ratio' => '利益分配率の最大値は {max_ratio}% に設定できます',
+    'admin' => '管理者',
+    'log' => [
+        'settlement_failed' => '決済に失敗しました',
+    ],
 ];

@@ -39,7 +39,7 @@ class StorePlayerController
                 ->where('is_promoter', 0)
                 ->count();
 
-            \support\Log::info('设备列表查询', [
+            \support\Log::info(admin_trans('player.device_list_query_log'), [
                 'admin_id' => $admin->id,
                 'department_id' => $departmentId,
                 'store_admin_id' => $storeAdminId,

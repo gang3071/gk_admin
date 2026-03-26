@@ -57,5 +57,10 @@ return [
         'status_game_platform_close' => 'Turn off electronic game functionality',
         'is_test_open' => 'Activate Test Player',
         'is_test_close' => 'Close Test Player',
-    ]
+    ],
+    'sex' => [
+        '1' => 'Male',
+        '2' => 'Female',
+        '0' => 'Unknown',
+    ],
 ];

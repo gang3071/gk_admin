@@ -136,7 +136,7 @@ class ChannelPlayerWalletTransferController
             $grid->hideDeleteSelection();
             $grid->hideSelection();
             $grid->column('id', admin_trans('player_wallet_transfer.fields.id'))->fixed(true)->align('center')->sortable();
-            $grid->column('player.name', '账号')->display(function (
+            $grid->column('player.name', admin_trans('player.fields.account'))->display(function (
                 $val,
                 PlayerWalletTransfer $data
             ) {

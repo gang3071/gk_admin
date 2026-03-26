@@ -216,7 +216,7 @@ class ChannelPlayerEditLogController
                             }
                             break;
                         case 'sex':
-                            $content[] = Html::div()->content(admin_trans('player_edit_log.action.sex') . ($item == 1 ? 'name' : ($item == 2 ? '女' : '未知')));
+                            $content[] = Html::div()->content(admin_trans('player_edit_log.action.sex') . admin_trans('player_edit_log.sex.' . $item));
                             break;
                         case 'email':
                             $content[] = Html::div()->content(admin_trans('player_edit_log.action.email') . $item);

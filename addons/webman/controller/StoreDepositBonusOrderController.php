@@ -3,22 +3,19 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\DepositBonusActivity;
-use addons\webman\model\DepositBonusTier;
 use addons\webman\model\DepositBonusOrder;
 use addons\webman\model\Player;
-use addons\webman\model\AdminUser;
 use app\service\DepositBonusQrcodeService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\form\Form;
-use ExAdmin\ui\component\grid\grid\Actions;
+use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\support\Request;
-use support\Db;
 
 /**
  * 充值满赠订单管理 - 店机后台
@@ -192,7 +189,7 @@ class StoreDepositBonusOrderController
                 ->first();
 
             if (!$parentAgent) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">未找到上级代理</font>'));
+                $form->push(Html::markdown('><font size=3 color="#ff4d4f">' . admin_trans('deposit_bonus_order.parent_agent_not_found') . '</font>'));
                 return;
             }
 
@@ -204,7 +201,7 @@ class StoreDepositBonusOrderController
                 ->get();
 
             if ($activities->isEmpty()) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">上级代理暂无可用的充值满赠活动</font>'));
+                $form->push(Html::markdown('><font size=3 color="#ff4d4f">' . admin_trans('deposit_bonus_order.no_available_activity') . '</font>'));
                 return;
             }
 
@@ -223,7 +220,7 @@ class StoreDepositBonusOrderController
 
             $form->text('player_username', admin_trans('deposit_bonus_order.player_username'))
                 ->required()
-                ->help('请输入玩家账号');
+                ->help(admin_trans('deposit_bonus_order.help.player_username'));
 
             $form->layout('vertical');
 
@@ -235,7 +232,7 @@ class StoreDepositBonusOrderController
                 // 查询玩家
                 $player = Player::where('username', $playerUsername)->first();
                 if (!$player) {
-                    return message_error('玩家不存在');
+                    return message_error(admin_trans('deposit_bonus_order.player_not_found'));
                 }
 
                 try {
@@ -249,7 +246,7 @@ class StoreDepositBonusOrderController
                         $parentAgent->id    // agent_id: 上级代理ID
                     );
 
-                    return message_success('订单生成成功！订单号：' . $order->order_no);
+                    return message_success(admin_trans('deposit_bonus_order.generate_success_with_orderno', null, ['order_no' => $order->order_no]));
                 } catch (\Exception $e) {
                     return message_error($e->getMessage());
                 }

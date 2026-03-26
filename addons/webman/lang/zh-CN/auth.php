@@ -25,6 +25,7 @@ return [
         'data_type'=>'数据范围',
         'department'=>'部门列表',
         'type'=>'角色类型',
+        'is_protected'=>'系统角色',
     ],
     'options'=>[
         'data_type'=>[
@@ -42,5 +43,9 @@ return [
         AdminDepartment::TYPE_CHANNEL => '渠道角色',
         AdminDepartment::TYPE_AGENT => '代理角色',
         AdminDepartment::TYPE_STORE => '店家角色',
+    ],
+    'tag' => [
+        'built_in_role' => '内置角色',
+        'custom_role' => '自定义',
     ],
 ];

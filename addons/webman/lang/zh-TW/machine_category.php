@@ -33,4 +33,12 @@ return [
     'lottery_rate_help' => '派彩時將乘以派彩係數為實際活動金額',
     'lottery_add_status_help' => '該類型是否參與彩金池的累計',
     'lottery_assign_status_help' => '該類型是否參與彩金',
+    'form' => [
+        'category_name' => '類別名稱',
+        'multilingual_config' => '多語言配寘',
+    ],
+    'validation' => [
+        'please_fill_category_name' => '請填寫類別名稱',
+        'please_fill_simplified_chinese_name' => '請填寫中文簡體名稱',
+    ],
 ];

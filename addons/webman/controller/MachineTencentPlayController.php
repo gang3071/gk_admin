@@ -36,11 +36,11 @@ class MachineTencentPlayController
             $grid->column('push_domain',
                 admin_trans('machine_tencent_play.fields.push_domain'))->copy()->align('center');
             $grid->column('push_key', admin_trans('machine_tencent_play.fields.push_key'))->copy()->align('center');
-            $grid->column('pull_domain', '播放域名(国际区)')->copy()->align('center');
-            $grid->column('pull_key', '播放域名Key(国际区)')->copy()->align('center');
-            
-            $grid->column('pull_domain_cn', '播放域名(大陆地区)')->copy()->align('center');
-            $grid->column('pull_key_cn', '播放域名Key(大陆地区)')->copy()->align('center');
+            $grid->column('pull_domain', admin_trans('machine_tencent_play.fields.pull_domain_international'))->copy()->align('center');
+            $grid->column('pull_key', admin_trans('machine_tencent_play.fields.pull_key_international'))->copy()->align('center');
+
+            $grid->column('pull_domain_cn', admin_trans('machine_tencent_play.fields.pull_domain_cn'))->copy()->align('center');
+            $grid->column('pull_key_cn', admin_trans('machine_tencent_play.fields.pull_key_cn'))->copy()->align('center');
             
             $grid->column('license', admin_trans('machine_tencent_play.fields.license'))->copy()->align('center');
             $grid->column('license_key',
@@ -71,7 +71,7 @@ class MachineTencentPlayController
     public function machineMedia($id): Form
     {
         return Form::create([], function (Form $form) use ($id) {
-            $form->checkbox('videos', '请选择重设的视讯直接')
+            $form->checkbox('videos', admin_trans('machine_tencent_play.form.please_select_video_reset'))
                 ->options([
                     '60.249.10.215:5080' => 'video1',
                     '118.163.197.107:5080' => 'video2',
@@ -81,7 +81,7 @@ class MachineTencentPlayController
                 ]);
             $form->saving(function (Form $form) use ($id) {
                 if (empty($form->input('videos'))) {
-                    return message_error('请选择重设的视讯主机');
+                    return message_error(admin_trans('machine_tencent_play.form.please_select_video_server'));
                 }
                 /** @var MachineTencentPlay $machineTencentPlay */
                 $machineTencentPlay = MachineTencentPlay::query()->where('id', $id)->first();
@@ -114,10 +114,10 @@ class MachineTencentPlayController
             $form->text('title', admin_trans('machine_tencent_play.fields.title'))->required();
             $form->text('push_domain', admin_trans('machine_tencent_play.fields.push_domain'))->required();
             $form->text('push_key', admin_trans('machine_tencent_play.fields.push_key'))->required();
-            $form->text('pull_domain', '播放域名(国际区)')->required();
-            $form->text('pull_key', '播放域名Key(国际区)')->required();
-            $form->text('pull_domain_cn', '播放域名(大陆地区)')->required();
-            $form->text('pull_key_cn', '播放域名Key(大陆地区)')->required();
+            $form->text('pull_domain', admin_trans('machine_tencent_play.fields.pull_domain_international'))->required();
+            $form->text('pull_key', admin_trans('machine_tencent_play.fields.pull_key_international'))->required();
+            $form->text('pull_domain_cn', admin_trans('machine_tencent_play.fields.pull_domain_cn'))->required();
+            $form->text('pull_key_cn', admin_trans('machine_tencent_play.fields.pull_key_cn'))->required();
             $form->text('license', admin_trans('machine_tencent_play.fields.license'))->required();
             $form->text('license_key', admin_trans('machine_tencent_play.fields.license_key'))->required();
             $form->text('api_appid', 'SecretId')->required();

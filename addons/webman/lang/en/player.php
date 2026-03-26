@@ -48,6 +48,7 @@ return [
         'register_domain' => 'Register domain name',
         'country_code' => 'Country/region code',
         'player_tag' => 'tag',
+        'tag_name' => 'Tag Name',
         'uuid' => 'Player UID',
         'device_uuid' => 'Device UUID',
         'device_name' => 'Device Name',
@@ -196,4 +197,69 @@ return [
     'coin_artificial_withdraw' => 'Coin withdrawal',
     'login_ip' => 'Login IP',
     'national_level_not_configure' => 'National level not configure',
+
+    // Statistics Fields
+    'total_recharge_amount' => 'Total Recharge',
+    'total_withdraw_amount' => 'Total Withdrawal',
+    'total_machine_put_point' => 'Cash Deposit',
+    'total_lottery_amount' => 'Jackpot',
+    'subtotal' => 'Subtotal',
+
+    // Game Related
+    'game_platform' => 'Game Platform',
+    'unknown_platform' => 'Unknown Platform',
+    'game_name' => 'Game Name',
+    'game_category' => 'Game Category',
+    'is_hot' => 'Hot',
+    'hot_tag' => 'Hot',
+    'is_new' => 'New Game',
+    'new_tag' => 'New',
+    'hot_game' => 'Hot Game',
+    'normal_game' => 'Normal Game',
+    'new_game' => 'New Game',
+    'old_game' => 'Old Game',
+
+    // Game Operations
+    'cancel_disable_game' => 'Enable',
+    'disable_game' => 'Disable Game',
+    'confirm_cancel_disable_game' => 'Confirm to enable this game?',
+    'confirm_disable_game' => 'Confirm to disable this game?',
+    'save_selected_games' => 'Save Selected Games',
+    'game_disabled_success' => 'Successfully disabled {count} games',
+    'game_enabled_all_success' => 'All game restrictions removed',
+    'single_game_disabled_success' => 'Successfully disabled this game',
+    'single_game_enabled_success' => 'Successfully enabled this game',
+
+    // Placeholder
+    'platform_placeholder' => 'Game Platform',
+    'is_hot_placeholder' => 'Is Hot',
+    'is_new_placeholder' => 'Is New Game',
+
+    // Error Messages
+    'game_server_connection_failed' => 'Game server connection failed',
+    'game_server_http_error' => 'Game server returned error',
+    'game_server_response_error' => 'Game server response format error',
+    'game_operation_failed' => 'Game operation failed',
+    'save_failed' => 'Save failed',
+    'operation_failed' => 'Operation failed',
+
+    // Remark Template
+    'store_backend_recharge_remark' => 'Store backend recharge{remark}',
+
+    // Report Related
+    'machine_chip_total' => 'Total Cash Deposit',
+    'no_promoter' => 'No Promoter',
+
+    // Conversion Preview
+    'conversion_preview' => 'Conversion Preview:',
+    'please_enter_amount' => 'Please enter amount',
+    'points_unit' => 'pts',
+    'exchange_rate' => 'Exchange Rate:',
+    'game_points' => 'game points',
+
+    // Store Backend Specific
+    'unnamed' => 'Unnamed',
+    'game_id_label' => 'Game ID: ',
+    'device_list_query_log' => 'Device list query',
+    'no_device_data' => 'No device data available',
 ];

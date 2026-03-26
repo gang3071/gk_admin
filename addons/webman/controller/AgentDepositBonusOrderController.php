@@ -10,10 +10,10 @@ use app\service\DepositBonusQrcodeService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -209,7 +209,7 @@ class AgentDepositBonusOrderController
 
             $form->text('player_username', admin_trans('deposit_bonus_order.player_username'))
                 ->required()
-                ->help('请输入玩家账号');
+                ->help(admin_trans('deposit_bonus_order.help.player_username'));
 
             $form->layout('vertical');
 
@@ -221,7 +221,7 @@ class AgentDepositBonusOrderController
                 // 查询玩家
                 $player = Player::where('username', $playerUsername)->first();
                 if (!$player) {
-                    return message_error('玩家不存在');
+                    return message_error(admin_trans('deposit_bonus_order.player_not_found'));
                 }
 
                 try {
@@ -235,7 +235,7 @@ class AgentDepositBonusOrderController
                         $currentAdmin->id   // agent_id: 代理自己的ID
                     );
 
-                    return message_success('订单生成成功！订单号：' . $order->order_no);
+                    return message_success(admin_trans('deposit_bonus_order.generate_success_with_orderno', null, ['order_no' => $order->order_no]));
                 } catch (\Exception $e) {
                     return message_error($e->getMessage());
                 }

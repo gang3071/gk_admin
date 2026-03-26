@@ -17,13 +17,34 @@ return [
     'save_failed' => 'Save failed',
     'invalid_game_points' => 'Converted game points are invalid',
     'system_error' => 'System error',
+    'player_already_exists' => 'Player already exists',
+    'recommended_player_not_exist' => 'Recommended player does not exist',
+    'machine_in_test_mode' => 'This machine is being used as a new version industrial control test machine',
+    'video_host_request_failed' => 'Failed to request video host',
+    'get_stream_info_failed' => 'Failed to get stream information',
 
     // Common success messages
     'settlement_success' => 'Settlement successful',
     'operation_success' => 'Operation successful',
+    'authentication_passed' => 'Authentication passed',
     'batch_generation_failed' => 'Batch generation failed: {message}',
     'create_agent_failed' => 'Failed to create agent: {message}',
     'create_store_failed' => 'Failed to create store: {message}',
+
+    // Common labels
+    'administrator' => 'Administrator',
+    'player' => 'Player',
+    'total' => 'Total',
+
+    // Common confirmation messages
+    'confirm_save' => 'Confirm to save?',
+
+    // Login related
+    'please_enter_credentials' => 'Please enter account and password',
+    'account_not_exist' => 'Account does not exist',
+    'password_incorrect' => 'Incorrect password',
+    'login_success' => 'Login successful',
+    'implement_login_logic' => 'Please implement actual login logic in CustomLoginController',
 
     // Agent/Store related
     'agent_commission_range_error' => 'Agent commission ratio must be between 0-100',
@@ -106,6 +127,24 @@ return [
         'not_filled' => 'Not filled',
         'welcome_agent_system' => 'Welcome to Agent Backend System!',
         'welcome_store_system' => 'Welcome to Store Backend System!',
+    ],
+
+    // Date Filter
+    'date_filter' => [
+        'all' => 'All',
+        'today' => 'Today',
+        'yesterday' => 'Yesterday',
+        'this_week' => 'This Week',
+        'last_week' => 'Last Week',
+        'this_month' => 'This Month',
+        'last_month' => 'Last Month',
+    ],
+
+    // Auto Shift
+    'auto_shift' => [
+        'enabled' => 'Auto shift enabled',
+        'manual_shift_success' => 'Manual shift handover success',
+        'manual_shift_failed' => 'Manual shift handover failed',
     ],
 
     // Shift

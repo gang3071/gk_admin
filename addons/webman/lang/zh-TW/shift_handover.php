@@ -2,11 +2,14 @@
 
 return [
     'title' => '交班管理',
+    'auto_shift_status_enabled' => '自動交班：已開啟',
+    'auto_shift_status_disabled' => '自動交班：已關閉',
     'auto_shift_enabled' => '已開啟自動交班',
     'auto_shift_enabled_desc' => '系統已啟用自動交班功能，無法進行手動交班操作。',
     'auto_shift_close_hint' => '如需手動交班，請先到「自動交班配置」中關閉自動交班功能。',
     'goto_auto_shift_config' => '前往自動交班配置',
     'manual_shift_disabled' => '手動交班已停用',
+    'shift_failed' => '交班失敗：',
     'shift_time' => '交班時間',
     'shift_time_help' => '交班時間不能超過當前時間, 無法選擇過去5天內的時間, 不能選擇上次交班時間的範圍',
     'start_time' => '開始時間',
@@ -171,4 +174,84 @@ return [
     'all_devices_summary' => '全部設備匯總',
     'devices_unit' => '台',
     'export_note' => '說明：總計數據來源於所有設備明細的累加；若交班記錄無設備明細，則使用交班匯總數據。',
+
+    // 設備明細導出
+    'export' => [
+        'title' => '設備明細導出 - 交班記錄 ID: {id}',
+        'start_time_label' => '開始時間:',
+        'end_time_label' => '結束時間:',
+        'shift_type_label' => '交班類型:',
+        'machine_point_label' => '投鈔點數:',
+        'lottery_amount_label' => '彩金:',
+        'total_in_label' => '總收入:',
+        'total_out_label' => '總支出:',
+        'total_profit_label' => '總利潤:',
+        'no_device_data' => '暫無設備明細數據',
+        'device_detail_note' => '說明：本報表為設備明細導出，導出時間：{time}',
+        'subtotal_devices' => '小計 ({count}台設備)',
+    ],
+
+    // 交易明細
+    'transaction' => [
+        'detail_title' => '{name} - 交易明細（共 {count} 條）',
+        'time' => '時間',
+        'type' => '類型',
+        'amount' => '金額',
+        'remark' => '備註',
+
+        // 交易類型
+        'type_recharge' => '開分',
+        'type_withdrawal' => '洗分',
+        'type_lottery' => '彩金',
+        'type_add_point' => '後台加點',
+        'type_deduct_point' => '後台扣點',
+    ],
+
+    // 標籤（帶冒號）
+    'label' => [
+        'start' => '開始：',
+        'end' => '結束：',
+        'shift_type' => '交班類型：',
+        'log_id' => '日誌ID：',
+        'machine_amount' => '投鈔金額：',
+        'machine_point' => '投鈔點數：',
+        'total_in' => '總收入：',
+        'total_out' => '總支出：',
+        'total_profit' => '總利潤：',
+        'created_at' => '建立時間：',
+    ],
+
+    // 操作
+    'action' => [
+        'view_detail' => '查看明細',
+        'operation' => '操作',
+    ],
+
+    // 篩選
+    'filter' => [
+        'time_range' => '時間範圍',
+        'start_time' => '開始時間',
+        'end_time' => '結束時間',
+    ],
+
+    // 設備明細
+    'device' => [
+        'detail_not_found' => '設備明細 - 記錄不存在',
+        'detail_title' => '設備明細',
+        'device_count' => '設備數量',
+        'detail_data' => '設備詳細數據',
+        'label' => [
+            'device_name' => '設備名稱：',
+            'device_number' => '設備編號：',
+            'machine_point' => '投鈔點數：',
+            'recharge_amount' => '開分金額：',
+            'withdrawal_amount' => '洗分金額：',
+            'backend_add_amount' => '後台加點：',
+            'backend_deduct_amount' => '後台扣點：',
+            'lottery_amount' => '彩金發放：',
+            'total_in' => '總收入：',
+            'total_out' => '總支出：',
+            'device_profit' => '設備利潤：',
+        ],
+    ],
 ];

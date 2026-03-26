@@ -39,4 +39,5 @@ return [
     'settlement_time_end' => '結算結束時間',
     'date_tip' => '數據淩晨3點更新前一日0點到24點數據',
     'profit_amount_tip' => '分潤結算公式（機台上分+管理員扣點）-（活動獎勵+系統贈送+管理員加點+機台下分+彩金獎勵）. ',
+    'channel_settlement' => '渠道結算',
 ];

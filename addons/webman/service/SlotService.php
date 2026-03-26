@@ -5,7 +5,6 @@ namespace addons\webman\service;
 use addons\webman\model\Machine;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Response;
-use support\Log;
 use think\Exception;
 
 class SlotService
@@ -92,7 +91,7 @@ class SlotService
     {
         /** TODO 新版工控调整完毕这边将删除 */
         if ($this->machine->domain == '59.120.86.58' || $this->machine->domain == '210.59.240.147') {
-            throw new Exception('该机台作为,新版工控测试机台使用中');
+            throw new Exception(admin_trans('common.machine_in_test_mode'));
         }
         switch ($action) {
             case 'check_wash_status': // 檢查可否洗分

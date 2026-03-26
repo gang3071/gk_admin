@@ -213,5 +213,9 @@ return [
     'machine_lottery_record_title' => 'Machine Grand Prize Record',
     'lock' => 'Lock',
     'open' => 'Open',
+    'enable_auto' => 'Enable Auto',
+    'disable_auto' => 'Disable Auto',
+    'enable_lock' => 'Enable Lock',
+    'disable_lock' => 'Disable Lock',
     'machine_tencent_total_viewers' => 'Total number of views on Tencent Cloud: ',
 ];

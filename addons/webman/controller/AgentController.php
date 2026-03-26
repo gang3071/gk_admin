@@ -34,14 +34,14 @@ class AgentController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Grid::create([], function (Grid $grid) {
-                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">' . admin_trans('agent.offline_only') . '</font>'));
             });
         }
 
         $currentDepartmentId = Admin::user()->department_id;
 
         return Grid::create(new AdminUser(), function (Grid $grid) use ($currentDepartmentId) {
-            $grid->title('代理管理');
+            $grid->title(admin_trans('agent.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
@@ -59,7 +59,7 @@ class AgentController
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
-            $grid->column('nickname', '代理名称')->display(function ($val, $data) {
+            $grid->column('nickname', admin_trans('agent.fields.name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
                     ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
                     : Avatar::create()->text(mb_substr($val, 0, 1));
@@ -69,41 +69,41 @@ class AgentController
                 ]);
             })->width(150);
 
-            $grid->column('username', '登录账号')->width(120)->align('center');
-            $grid->column('department_phone', '联系电话')->width(120)->align('center');
-            $grid->column('department_name', '部门名称')->width(150)->ellipsis(true);
+            $grid->column('username', admin_trans('agent.fields.username'))->width(120)->align('center');
+            $grid->column('department_phone', admin_trans('agent.fields.phone'))->width(120)->align('center');
+            $grid->column('department_name', admin_trans('agent.fields.department_name'))->width(150)->ellipsis(true);
 
-            $grid->column('status', '状态')->display(function ($value) {
+            $grid->column('status', admin_trans('agent.fields.status'))->display(function ($value) {
                 return match ($value) {
-                    0 => Tag::create('已禁用')->color('red'),
-                    1 => Tag::create('正常')->color('green'),
+                    0 => Tag::create(admin_trans('agent.status.disabled'))->color('red'),
+                    1 => Tag::create(admin_trans('agent.status.normal'))->color('green'),
                     default => '',
                 };
             })->width(80)->align('center');
 
-            $grid->column('is_super', '超级管理员')->display(function ($value) {
+            $grid->column('is_super', admin_trans('agent.fields.is_super'))->display(function ($value) {
                 return $value == 1
-                    ? Tag::create('是')->color('blue')
-                    : Tag::create('否')->color('default');
+                    ? Tag::create(admin_trans('agent.is_super.yes'))->color('blue')
+                    : Tag::create(admin_trans('agent.is_super.no'))->color('default');
             })->width(100)->align('center');
 
-            $grid->column('created_at', '创建时间')->width(160)->align('center');
+            $grid->column('created_at', admin_trans('agent.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) {
                 $filter->eq()->select('admin_users.status')
-                    ->placeholder('状态')
+                    ->placeholder(admin_trans('agent.placeholder.status'))
                     ->options([
-                        1 => '正常',
-                        0 => '已禁用'
+                        1 => admin_trans('agent.status.normal'),
+                        0 => admin_trans('agent.status.disabled')
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('admin_users.username')->placeholder('登录账号');
-                $filter->like()->text('admin_users.nickname')->placeholder('代理名称');
-                $filter->like()->text('admin_department.phone')->placeholder('联系电话');
+                $filter->like()->text('admin_users.username')->placeholder(admin_trans('agent.placeholder.username'));
+                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('agent.placeholder.name'));
+                $filter->like()->text('admin_department.phone')->placeholder(admin_trans('agent.placeholder.phone'));
 
-                $filter->between()->dateTimeRange('admin_users.created_at', '创建时间')
-                    ->placeholder(['开始时间', '结束时间']);
+                $filter->between()->dateTimeRange('admin_users.created_at', admin_trans('agent.placeholder.created_at'))
+                    ->placeholder([admin_trans('agent.placeholder.start_time'), admin_trans('agent.placeholder.end_time')]);
             });
 
             $grid->actions(function (Actions $actions) {
@@ -127,52 +127,52 @@ class AgentController
         $channel = Channel::where('department_id', Admin::user()->department_id)->first();
         if (!$channel || $channel->is_offline != 1) {
             return Form::create([], function (Form $form) {
-                $form->push(Html::markdown('><font size=3 color="#ff4d4f">此功能仅限线下渠道使用</font>'));
+                $form->push(Html::markdown('><font size=3 color="#ff4d4f">' . admin_trans('agent.offline_only') . '</font>'));
             });
         }
 
         return Form::create([], function (Form $form) {
-            $form->title('创建代理');
+            $form->title(admin_trans('agent.form.create_title'));
             $form->labelCol(['span' => 20]);
 
-            $form->push(Html::markdown('><font size=2 color="#1890ff">创建代理后，该代理可登录代理后台，管理下级店家</font>'));
+            $form->push(Html::markdown('><font size=2 color="#1890ff">' . admin_trans('agent.form.create_hint') . '</font>'));
 
-            $form->divider()->content('账号信息');
+            $form->divider()->content(admin_trans('agent.form.section_account'));
 
             $form->row(function (Form $form) {
                 $form->column(function (Form $form) {
-                    $form->text('phone', '联系电话')
+                    $form->text('phone', admin_trans('agent.fields.phone'))
                         ->maxlength(20)
-                        ->help('选填，用于联系');
+                        ->help(admin_trans('agent.help.phone'));
                 })->span(12);
 
                 $form->column(function (Form $form) {
-                    $form->text('admin_username', '后台登录账号')
+                    $form->text('admin_username', admin_trans('agent.fields.username'))
                         ->maxlength(20)
-                        ->help('必填，用于登录代理后台')
+                        ->help(admin_trans('agent.help.username'))
                         ->required();
                 })->span(12);
             })->gutter(16);
 
-            $form->text('name', '代理名称')
+            $form->text('name', admin_trans('agent.fields.name'))
                 ->maxlength(50)
-                ->help('代理的显示名称')
+                ->help(admin_trans('agent.help.name'))
                 ->required();
 
-            $form->divider()->content('头像配置');
+            $form->divider()->content(admin_trans('agent.form.section_avatar'));
 
-            $form->image('avatar', '上传头像')
-                ->help('支持jpg、png格式，建议尺寸200x200')
+            $form->image('avatar', admin_trans('agent.fields.avatar'))
+                ->help(admin_trans('agent.help.avatar'))
                 ->required();
 
-            $form->divider()->content('密码配置');
+            $form->divider()->content(admin_trans('agent.form.section_password'));
 
-            $form->password('password', '登录密码')
-                ->rule(['min:6' => '密码至少6位'])
-                ->help('代理后台登录密码')
+            $form->password('password', admin_trans('agent.fields.password'))
+                ->rule(['min:6' => admin_trans('agent.validation.password_min')])
+                ->help(admin_trans('agent.help.password'))
                 ->required();
 
-            $form->password('password_confirmation', '确认密码')
+            $form->password('password_confirmation', admin_trans('agent.fields.password_confirmation'))
                 ->required();
 
             $form->layout('vertical');
@@ -272,7 +272,7 @@ class AgentController
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error('创建代理失败：' . $e->getMessage());
+            return message_error(admin_trans('agent.error.create_failed', null, ['error' => $e->getMessage()]));
         }
     }
 

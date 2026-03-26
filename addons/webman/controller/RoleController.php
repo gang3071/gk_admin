@@ -56,10 +56,10 @@ class RoleController
             $grid->column('name', admin_trans('auth.fields.name'));
             $grid->hideSelection();
             $grid->column('desc', admin_trans('auth.fields.desc'));
-            $grid->column('is_protected', '系统角色')->display(function ($value) {
+            $grid->column('is_protected', admin_trans('auth.fields.is_protected'))->display(function ($value) {
                 return $value == 1
-                    ? Tag::create('内置角色')->color('blue')
-                    : Tag::create('自定义')->color('default');
+                    ? Tag::create(admin_trans('auth.tag.built_in_role'))->color('blue')
+                    : Tag::create(admin_trans('auth.tag.custom_role'))->color('default');
             })->width(100)->align('center');
             $grid->column('data_type', admin_trans('auth.fields.data_type'))
                 ->display(function ($value, AdminRole $data) use ($type) {

@@ -39,4 +39,5 @@ return [
     'settlement_time_end' => '结算结束时间',
     'date_tip' => '数据凌晨3点更新前一日0点到24点数据',
     'profit_amount_tip' => '分润结算公式 (机台上分 + 管理员扣点) - (活动奖励 + 系统赠送 + 管理员加点 + 机台下分 + 彩金奖励). ',
+    'channel_settlement' => '渠道结算',
 ];

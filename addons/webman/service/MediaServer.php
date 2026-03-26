@@ -688,10 +688,10 @@ class MediaServer
         try {
             $response = Http::timeout(5)->get($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName);
         } catch (\Exception) {
-            throw new Exception('请求视讯主机失败');
+            throw new Exception(admin_trans('common.video_host_request_failed'));
         }
         if (empty($response) || $response->status() != 200) {
-            throw new Exception('获取流信息是吧');
+            throw new Exception(admin_trans('common.get_stream_info_failed'));
         }
         
         return json_decode($response->body(), true);

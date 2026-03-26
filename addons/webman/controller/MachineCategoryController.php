@@ -375,11 +375,11 @@ class MachineCategoryController
                 $key = 0;
                 foreach ($langList as $k => $v) {
                     $tabs->pane($v, function (Form $form) use ($k, $contents, $key) {
-                        $form->text("machineCategoryExtend." . $key . ".name", '分类名称')
+                        $form->text("machineCategoryExtend." . $key . ".name", admin_trans('machine_category.form.category_name'))
                             ->value($contents[$k]['name'] ?? '')
                             ->required()
                             ->maxlength(50)
-                            ->help('请填写分类名称');
+                            ->help(admin_trans('machine_category.validation.please_fill_category_name'));
                         if (!empty($contents[$k]['id'])) {
                             $form->hidden('machineCategoryExtend.' . $key . '.id')->default($contents[$k]['id']);
                         }
@@ -387,7 +387,7 @@ class MachineCategoryController
                     });
                     $key++;
                 }
-            }, '多语言配置');
+            }, admin_trans('machine_category.form.multilingual_config'));
             $form->layout('vertical');
             $form->row(function (Form $form) {
                 $form->column(function (Form $form) {
@@ -490,7 +490,7 @@ class MachineCategoryController
                 foreach ($machineCategoryExtend as $content) {
                     if ($content['lang'] == 'zh-CN') {
                         if (empty($content['name'])) {
-                            return message_error('请填写中文简体名称');
+                            return message_error(admin_trans('machine_category.validation.please_fill_simplified_chinese_name'));
                         }
                         $form->input('name', $content['name']);
                     }

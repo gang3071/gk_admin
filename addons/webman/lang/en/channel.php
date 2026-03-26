@@ -10,6 +10,7 @@ return [
     'channel_exist' => 'Duplicate channel domain name exists',
     'save_error' => 'Save failed',
     'save_success' => 'save successfully',
+    'create_failed_log' => 'Channel creation failed',
     'not_fount' => 'Channel does not exist',
     'fields' => [
         'id' => 'Channel ID',

@@ -48,6 +48,7 @@ return [
         'register_domain' => '註冊功能變數名稱',
         'country_code' => '國家/地區號',
         'player_tag' => '標籤',
+        'tag_name' => '標籤名稱',
         'uuid' => '玩家UID',
         'device_uuid' => '設備UUID',
         'device_name' => '設備名稱',
@@ -196,4 +197,69 @@ return [
     'coin_artificial_withdraw' => '币商提現',
     'login_ip' => '登入IP',
     'national_level_not_configure' => '全民代理等級未配寘',
+
+    // 統計欄位
+    'total_recharge_amount' => '累計開分',
+    'total_withdraw_amount' => '累計洗分',
+    'total_machine_put_point' => '投鈔',
+    'total_lottery_amount' => '彩金',
+    'subtotal' => '小計',
+
+    // 遊戲相關
+    'game_platform' => '遊戲平台',
+    'unknown_platform' => '未知平台',
+    'game_name' => '遊戲名稱',
+    'game_category' => '遊戲分類',
+    'is_hot' => '熱門',
+    'hot_tag' => '熱門',
+    'is_new' => '新遊戲',
+    'new_tag' => '新',
+    'hot_game' => '熱門遊戲',
+    'normal_game' => '普通遊戲',
+    'new_game' => '新遊戲',
+    'old_game' => '舊遊戲',
+
+    // 遊戲操作
+    'cancel_disable_game' => '取消禁用',
+    'disable_game' => '禁用遊戲',
+    'confirm_cancel_disable_game' => '確認取消禁用該遊戲？',
+    'confirm_disable_game' => '確認禁用該遊戲？',
+    'save_selected_games' => '保存選擇的遊戲',
+    'game_disabled_success' => '成功禁用了 {count} 個遊戲',
+    'game_enabled_all_success' => '已取消所有遊戲禁用',
+    'single_game_disabled_success' => '成功禁用該遊戲',
+    'single_game_enabled_success' => '成功取消禁用該遊戲',
+
+    // Placeholder
+    'platform_placeholder' => '遊戲平台',
+    'is_hot_placeholder' => '是否熱門',
+    'is_new_placeholder' => '是否新遊戲',
+
+    // 錯誤消息
+    'game_server_connection_failed' => '遊戲伺服器連接失敗',
+    'game_server_http_error' => '遊戲伺服器返回錯誤',
+    'game_server_response_error' => '遊戲伺服器響應格式錯誤',
+    'game_operation_failed' => '遊戲操作失敗',
+    'save_failed' => '保存失敗',
+    'operation_failed' => '操作失敗',
+
+    // 備註模板
+    'store_backend_recharge_remark' => '店家後台開分{remark}',
+
+    // 報表相關
+    'machine_chip_total' => '投鈔總額',
+    'no_promoter' => '暫無推廣員',
+
+    // 轉換預覽
+    'conversion_preview' => '轉換預覽：',
+    'please_enter_amount' => '請輸入金額',
+    'points_unit' => '點',
+    'exchange_rate' => '匯率：',
+    'game_points' => '遊戲點數',
+
+    // 店家後台專用
+    'unnamed' => '未命名',
+    'game_id_label' => '遊戲 ID: ',
+    'device_list_query_log' => '設備列表查詢',
+    'no_device_data' => '暫無設備數據',
 ];

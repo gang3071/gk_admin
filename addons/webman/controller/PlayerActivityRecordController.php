@@ -308,8 +308,10 @@ class PlayerActivityRecordController
                     $notice->type = Notice::TYPE_ACTIVITY_PASS;
                     $notice->receiver = Notice::RECEIVER_PLAYER;
                     $notice->is_private = 1;
-                    $notice->title = '活動獎勵稽核通過';
-                    $notice->content = '恭喜您活動獎勵稽核通過，奖励游戏点数 ' . $playerActivityPhaseRecord->bonus;
+                    $notice->title = admin_trans('player_activity_record.notice.activity_pass_title');
+                    $notice->content = admin_trans('player_activity_record.notice.activity_pass_content', null, [
+                        '{bonus}' => $playerActivityPhaseRecord->bonus
+                    ]);
                     $notice->save();
                 }
 
@@ -373,8 +375,10 @@ class PlayerActivityRecordController
                     $notice->type = Notice::TYPE_ACTIVITY_REJECT;
                     $notice->receiver = Notice::RECEIVER_PLAYER;
                     $notice->is_private = 1;
-                    $notice->title = '活動獎勵稽核不通過';
-                    $notice->content = '抱歉您的活動獎勵稽核不通過，原因是: ' . $form->input('reject_reason') ?? '';
+                    $notice->title = admin_trans('player_activity_record.notice.activity_reject_title');
+                    $notice->content = admin_trans('player_activity_record.notice.activity_reject_content', null, [
+                        '{reason}' => $form->input('reject_reason') ?? ''
+                    ]);
                     $notice->save();
                 }
 
@@ -600,8 +604,10 @@ class PlayerActivityRecordController
                     $notice->type = Notice::TYPE_ACTIVITY_REJECT;
                     $notice->receiver = Notice::RECEIVER_PLAYER;
                     $notice->is_private = 1;
-                    $notice->title = '活動獎勵稽核不通過';
-                    $notice->content = '抱歉您的活動獎勵稽核不通過，原因是: ' . $playerActivityPhaseRecord->reject_reason;
+                    $notice->title = admin_trans('player_activity_record.notice.activity_reject_title');
+                    $notice->content = admin_trans('player_activity_record.notice.activity_reject_content', null, [
+                        '{reason}' => $playerActivityPhaseRecord->reject_reason
+                    ]);
                     $notice->save();
                 } catch (\Exception $e) {
                     return message_error(admin_trans('player_activity_phase_record.action_error'));
@@ -662,8 +668,10 @@ class PlayerActivityRecordController
             $notice->type = Notice::TYPE_ACTIVITY_PASS;
             $notice->receiver = Notice::RECEIVER_PLAYER;
             $notice->is_private = 1;
-            $notice->title = '活動獎勵稽核通過';
-            $notice->content = '恭喜您活動獎勵稽核通過，奖励游戏点数 ' . $playerActivityPhaseRecord->bonus;
+            $notice->title = admin_trans('player_activity_record.notice.activity_pass_title');
+            $notice->content = admin_trans('player_activity_record.notice.activity_pass_content', null, [
+                '{bonus}' => $playerActivityPhaseRecord->bonus
+            ]);
             $notice->save();
             DB::commit();
         } catch (\Exception $e) {
