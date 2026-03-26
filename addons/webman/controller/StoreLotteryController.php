@@ -205,24 +205,12 @@ class StoreLotteryController
             });
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('machine_name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('machine_code')->placeholder(admin_trans('player_lottery_record.fields.machine_code'));
                 $filter->like()->text('lottery_name')->placeholder(admin_trans('player_lottery_record.fields.lottery_name'));
-                $filter->like()->text('uuid')->placeholder(admin_trans('player_lottery_record.fields.uuid'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->eq()->number('amount')->precision(2)->style(['width' => '150px'])
                     ->placeholder(admin_trans('player_lottery_record.fields.amount'));
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('player_lottery_record.fields.status'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerLotteryRecord::STATUS_UNREVIEWED => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_UNREVIEWED),
-                        PlayerLotteryRecord::STATUS_REJECT => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_REJECT),
-                        PlayerLotteryRecord::STATUS_PASS => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_PASS),
-                        PlayerLotteryRecord::STATUS_COMPLETE => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_COMPLETE),
-                    ]);
 
                 $filter->eq()->select('lottery_type')
                     ->placeholder(admin_trans('lottery.fields.lottery_type'))
