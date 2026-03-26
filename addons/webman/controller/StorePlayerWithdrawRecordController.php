@@ -4,9 +4,8 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
-use addons\webman\model\ChannelRechargeMethod;
+use addons\webman\model\Player;
 use addons\webman\model\PlayerWithdrawRecord;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -46,7 +45,7 @@ class StorePlayerWithdrawRecordController
             $admin = Admin::user();
 
             // 店机数据权限：只查询自己的玩家记录
-            $playerIds = \addons\webman\model\Player::query()
+            $playerIds = Player::query()
                 ->where('store_admin_id', $admin->id)
                 ->pluck('id');
 
@@ -131,13 +130,6 @@ class StorePlayerWithdrawRecordController
             $grid->column('tradeno', admin_trans('player_withdraw_record.fields.tradeno'))->copy()->width(180);
             $grid->column('player.machine.uuid', admin_trans('machine.fields.uuid'))->copy()->width(150);
             $grid->column('player.machine.name', admin_trans('machine.fields.name'))->align('center')->width(150);
-            $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerWithdrawRecord $data) {
-                return Html::create()->content([
-                    $data->player->is_test == 1
-                        ? Tag::create(admin_trans('player.fields.is_test'))->color('red')
-                        : Tag::create(admin_trans('player.player'))->color('green')
-                ]);
-            })->align('center')->width(100);
             $grid->column('money', admin_trans('player_withdraw_record.fields.money'))->display(function (
                 $val,
                 PlayerWithdrawRecord $data
@@ -147,22 +139,6 @@ class StorePlayerWithdrawRecordController
             $grid->column('point', admin_trans('player_withdraw_record.fields.point'))->align('center')->width(120);
             $grid->column('fee', admin_trans('player_withdraw_record.fields.fee'))->align('center')->width(100);
             $grid->column('inmoney', admin_trans('player_withdraw_record.fields.inmoney'))->align('center')->width(120);
-            $grid->column('bank_type', admin_trans('player_withdraw_record.fields.bank_type'))->display(function ($val) {
-                switch ($val) {
-                    case ChannelRechargeMethod::TYPE_USDT:
-                        return Tag::create(admin_trans('channel_recharge_method.type.' . $val))->color('#55acee');
-                    case ChannelRechargeMethod::TYPE_ALI:
-                        return Tag::create(admin_trans('channel_recharge_method.type.' . $val))->color('#3b5999');
-                    case ChannelRechargeMethod::TYPE_WECHAT:
-                        return Tag::create(admin_trans('channel_recharge_method.type.' . $val))->color('#87d068');
-                    case ChannelRechargeMethod::TYPE_BANK:
-                        return Tag::create(admin_trans('channel_recharge_method.type.' . $val))->color('#cd201f');
-                    case ChannelRechargeMethod::TYPE_GB:
-                        return Tag::create(admin_trans('channel_recharge_method.type.' . $val))->color('orange');
-                    default:
-                        return '';
-                }
-            })->align('center')->width(120);
             $grid->column('status', admin_trans('player_withdraw_record.fields.status'))->display(function ($val) {
                 switch ($val) {
                     case PlayerWithdrawRecord::STATUS_WAIT:
