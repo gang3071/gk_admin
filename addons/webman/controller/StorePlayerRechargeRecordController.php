@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\PlayerRechargeRecord;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
@@ -40,7 +41,7 @@ class StorePlayerRechargeRecordController
             $grid->bordered(true);
             $grid->autoHeight();
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
 
             // 店机数据权限：只查询自己的玩家记录
@@ -51,12 +52,8 @@ class StorePlayerRechargeRecordController
             $grid->model()->with(['player', 'channel_recharge_setting'])
                 ->whereIn('player_id', $playerIds)
                 ->whereIn('type', [
-                    PlayerRechargeRecord::TYPE_SELF,
                     PlayerRechargeRecord::TYPE_ARTIFICIAL,
-                    PlayerRechargeRecord::TYPE_BUSINESS,
-                    PlayerRechargeRecord::TYPE_GB,
                     PlayerRechargeRecord::TYPE_MACHINE,
-                    PlayerRechargeRecord::TYPE_EH,
                 ])
                 ->orderBy('created_at', 'desc');
 
@@ -99,35 +96,12 @@ class StorePlayerRechargeRecordController
             // 统计数据
             $query = clone $grid->model();
             $totalData = $query->selectRaw(
-                'sum(IF(status IN (0, 1), point, 0)) as pending_point,
-                 sum(IF(status = 2, point, 0)) as success_point,
-                 sum(IF(status IN (3, 4, 5, 6), point, 0)) as fail_point'
+                'sum(IF(status = 2, point, 0)) as success_point'
             )->first();
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
                 $row->gutter([10, 0]);
-
-                // 待支付/充值中
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['pending_point']) ? floatval($totalData['pending_point']) : 0)
-                            ->prefix(admin_trans('player_recharge_record.total_data.total_pending'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-
                 // 充值成功
                 $row->column(
                     Card::create([
@@ -139,26 +113,6 @@ class StorePlayerRechargeRecordController
                                 'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-
-                // 失败/拒绝/取消
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['fail_point']) ? floatval($totalData['fail_point']) : 0)
-                            ->prefix(admin_trans('player_recharge_record.total_data.total_fail'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#ff4d4f'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
@@ -239,37 +193,8 @@ class StorePlayerRechargeRecordController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        PlayerRechargeRecord::TYPE_SELF => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_SELF),
                         PlayerRechargeRecord::TYPE_ARTIFICIAL => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_ARTIFICIAL),
-                        PlayerRechargeRecord::TYPE_BUSINESS => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_BUSINESS),
-                        PlayerRechargeRecord::TYPE_GB => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_GB),
                         PlayerRechargeRecord::TYPE_MACHINE => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_MACHINE),
-                        PlayerRechargeRecord::TYPE_EH => admin_trans('player_recharge_record.type.' . PlayerRechargeRecord::TYPE_EH),
-                    ]);
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('player_recharge_record.fields.status'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerRechargeRecord::STATUS_WAIT => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_WAIT),
-                        PlayerRechargeRecord::STATUS_RECHARGING => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGING),
-                        PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS),
-                        PlayerRechargeRecord::STATUS_RECHARGED_CANCEL => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_CANCEL),
-                        PlayerRechargeRecord::STATUS_RECHARGED_REJECT => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_REJECT),
-                        PlayerRechargeRecord::STATUS_RECHARGED_SYSTEM_CANCEL => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_SYSTEM_CANCEL),
-                        PlayerRechargeRecord::STATUS_RECHARGED_FAIL => admin_trans('player_recharge_record.status.' . PlayerRechargeRecord::STATUS_RECHARGED_FAIL),
-                    ]);
-
-                $filter->select('search_type')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player.fields.type'))
-                    ->options([
-                        0 => admin_trans('player.player'),
-                        1 => admin_trans('player.fields.is_test'),
                     ]);
 
                 $filter->select('date_type')
