@@ -156,14 +156,21 @@ class ChannelPlayGameRecordController
             $grid->column('action_at', admin_trans('play_game_record.fields.action_at'))->align('center');
             $grid->actions(function (Actions $action,$data) {
                 $action->hideDel();
-                // TODO: 回放功能需要在 gk_work 实现 replay API 后恢复
-                // $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code))->replay($data->toArray());
-                // if(!empty($url)){
-                //     $action->prepend(
-                //         Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'],
-                //             ['url' => $url])
-                //     );
-                // }
+                // 回放功能
+                if (!empty($data->gamePlatform)) {
+                    try {
+                        $service = new \addons\webman\service\GamePlatformService();
+                        $url = $service->replay($data->id);
+                        if (!empty($url)) {
+                            $action->prepend(
+                                Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'],
+                                    ['url' => $url])
+                            );
+                        }
+                    } catch (\Exception $e) {
+                        // 如果平台不支持回放，忽略错误
+                    }
+                }
             });
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player_uuid')->placeholder(admin_trans('player.fields.uuid'));
