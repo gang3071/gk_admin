@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\model\PlayGameRecord;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\avatar\Avatar;
