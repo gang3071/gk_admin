@@ -454,12 +454,7 @@ class Login extends LoginAbstract
                         $query->where('uuid', $exAdminFilter['player']['uuid']);
                     });
                 }
-                if (!empty($exAdminFilter['player']['phone'])) {
-                    $query->whereHas('player', function ($query) use ($exAdminFilter) {
-                        $query->where('phone', 'like', '%' . $exAdminFilter['player']['phone'] . '%');
-                    });
-                }
-                
+
                 if (isset($exAdminFilter['date_type'])) {
                     $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                 }
@@ -1330,6 +1325,167 @@ class Login extends LoginAbstract
                 if (!empty($exAdminFilter['player']['store_admin_id'])) {
                     $query->whereHas('player', function ($q) use ($exAdminFilter) {
                         $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
+                    });
+                }
+                // 游戏分类筛选
+                if (!empty($exAdminFilter['cate_id'])) {
+                    $cate_id = $exAdminFilter['cate_id'];
+                    $query->whereHas('machine', function ($q) use ($cate_id) {
+                        $q->whereIn('cate_id', $cate_id);
+                    });
+                }
+                // 日期类型筛选
+                if (isset($exAdminFilter['date_type'])) {
+                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+                }
+
+                // 统计数据（应用所有筛选条件）
+                $totalData = $query->selectRaw('
+                    SUM(IF(status = ' . PlayerLotteryRecord::STATUS_UNREVIEWED . ', amount, 0)) as total_unreviewed_amount,
+                    SUM(IF(status = ' . PlayerLotteryRecord::STATUS_REJECT . ', amount, 0)) as total_reject_amount,
+                    SUM(IF(status = ' . PlayerLotteryRecord::STATUS_PASS . ', amount, 0)) as total_pass_amount,
+                    SUM(IF(status = ' . PlayerLotteryRecord::STATUS_COMPLETE . ', amount, 0)) as total_complete_amount,
+                    COUNT(*) as total_count
+                ')->first();
+
+                // 按游戏类型分组统计（只保留权限过滤和时间范围，不受其他筛选影响）
+                $jpQuery = clone $baseQuery;
+                // 只应用时间范围筛选，不应用status、lottery_type等筛选
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $jpQuery->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $jpQuery->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+                if (isset($exAdminFilter['date_type'])) {
+                    $jpQuery->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+                }
+                if (!empty($exAdminFilter['search_type'])) {
+                    $jpQuery->where('is_test', $exAdminFilter['search_type']);
+                }
+
+                $jpTotalData = $jpQuery->selectRaw('IFNULL(SUM(amount), 0) as total_amount, game_type, lottery_id, lottery_name, lottery_type, lottery_sort')
+                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                    ->groupBy('game_type', 'lottery_id', 'lottery_name', 'lottery_type', 'lottery_sort')
+                    ->orderBy('lottery_type')
+                    ->orderBy('lottery_sort')
+                    ->get();
+
+                $data = [
+                    [
+                        'title' => admin_trans('player_lottery_record.total_data.total_complete_amount'),
+                        'number' => !empty($totalData['total_complete_amount']) ? floatval($totalData['total_complete_amount']) : 0,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player_lottery_record.total_data.total_pass_amount'),
+                        'number' => !empty($totalData['total_pass_amount']) ? floatval($totalData['total_pass_amount']) : 0,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player_lottery_record.total_data.total_unreviewed_amount'),
+                        'number' => !empty($totalData['total_unreviewed_amount']) ? floatval($totalData['total_unreviewed_amount']) : 0,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player_lottery_record.total_data.total_reject_amount'),
+                        'number' => !empty($totalData['total_reject_amount']) ? floatval($totalData['total_reject_amount']) : 0,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player_lottery_record.total_data.total_count'),
+                        'number' => !empty($totalData['total_count']) ? intval($totalData['total_count']) : 0,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                ];
+
+                // 添加游戏类型分组统计
+                foreach ($jpTotalData as $value) {
+                    // 老虎机类型
+                    if ($value->game_type == GameType::TYPE_SLOT) {
+                        $data[] = [
+                            'title' => $value->lottery_name,
+                            'number' => floatval($value->total_amount),
+                            'prefix' => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT) . ' - ',
+                            'suffix' => ''
+                        ];
+                    }
+                    // 钢珠机类型
+                    elseif ($value->game_type == GameType::TYPE_STEEL_BALL) {
+                        $data[] = [
+                            'title' => $value->lottery_name,
+                            'number' => floatval($value->total_amount),
+                            'prefix' => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL) . ' - ',
+                            'suffix' => ''
+                        ];
+                    }
+                }
+
+                break;
+
+            case 'StoreLottery':
+                // 店家后台彩金统计
+                /** @var \addons\webman\model\AdminUser $currentAdmin */
+                $currentAdmin = Admin::user();
+
+                // 创建基础查询（只包含权限过滤）- 使用 store_admin_id
+                $baseQuery = PlayerLotteryRecord::query()
+                    ->whereHas('player', function($query) use ($currentAdmin) {
+                        $query->where('store_admin_id', $currentAdmin->id);
+                    });
+
+                // 克隆基础查询用于基础统计（会应用所有筛选条件）
+                $query = clone $baseQuery;
+
+                // 应用筛选条件
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+                if (!empty($exAdminFilter['status'])) {
+                    $query->where('status', $exAdminFilter['status']);
+                }
+                if (!empty($exAdminFilter['lottery_type'])) {
+                    $query->where('lottery_type', $exAdminFilter['lottery_type']);
+                }
+                if (!empty($exAdminFilter['lottery_name'])) {
+                    $query->where('lottery_name', 'like', '%' . $exAdminFilter['lottery_name'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_code'])) {
+                    $query->where('machine_code', 'like', '%' . $exAdminFilter['machine_code'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_name'])) {
+                    $query->where('machine_name', 'like', '%' . $exAdminFilter['machine_name'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_uuid'])) {
+                    $query->where('machine_uuid', 'like', '%' . $exAdminFilter['machine_uuid'] . '%');
+                }
+                if (!empty($exAdminFilter['uuid'])) {
+                    $query->where('uuid', $exAdminFilter['uuid']);
+                }
+                if (!empty($exAdminFilter['search_type'])) {
+                    $query->where('is_test', $exAdminFilter['search_type']);
+                }
+                if (!empty($exAdminFilter['search_is_promoter'])) {
+                    $query->where('is_promoter', $exAdminFilter['search_is_promoter']);
+                }
+                // 玩家姓名筛选
+                if (!empty($exAdminFilter['player']['name'])) {
+                    $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                    });
+                }
+                // 玩家UUID筛选
+                if (!empty($exAdminFilter['player']['uuid'])) {
+                    $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('uuid', $exAdminFilter['player']['uuid']);
                     });
                 }
                 // 游戏分类筛选
