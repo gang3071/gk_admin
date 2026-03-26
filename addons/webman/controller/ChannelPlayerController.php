@@ -4447,7 +4447,7 @@ class ChannelPlayerController
                 ->toArray();
             $grid->expandFilter();
             $grid->selection([237]);
-        });
+        })->params(['ddd' => 'ccc']);
     }
 
     /**
