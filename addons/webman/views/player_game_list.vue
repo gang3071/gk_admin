@@ -271,22 +271,41 @@ export default {
           ...this.filters
         }
       }).then(res => {
+        console.log('API响应:', res);
+
         if (res.status === 1) {
           const data = res.data;
+          console.log('游戏数据:', data);
+
           this.gameList = data.list || [];
           this.pagination.total = data.total || 0;
           this.platforms = data.platforms || [];
 
+          console.log('游戏列表:', this.gameList.length, '条');
+
           // 更新选中的行（已禁用的游戏）
-          this.selectedRowKeys = this.gameList
-            .filter(game => game.is_selected)
-            .map(game => game.id);
+          try {
+            this.selectedRowKeys = this.gameList
+              .filter(game => game && game.is_selected)
+              .map(game => game.id);
+            console.log('选中的游戏ID:', this.selectedRowKeys);
+          } catch (e) {
+            console.error('处理选中状态失败:', e);
+            this.selectedRowKeys = [];
+          }
         } else {
-          this.$message.error(res.message || '加载失败');
+          // 使用安全的消息提示
+          if (this.$message && this.$message.error) {
+            this.$message.error(res.message || '加载失败');
+          } else {
+            console.error('加载失败:', res.message);
+          }
         }
       }).catch(error => {
         console.error('加载游戏列表失败:', error);
-        this.$message.error('加载游戏列表失败');
+        if (this.$message && this.$message.error) {
+          this.$message.error('加载游戏列表失败: ' + (error.message || '未知错误'));
+        }
       }).finally(() => {
         this.loading = false;
       });
@@ -318,14 +337,20 @@ export default {
             }
           }).then(res => {
             if (res.status === 1) {
-              this.$message.success(res.message || `${actionText}成功`);
+              if (this.$message && this.$message.success) {
+                this.$message.success(res.message || `${actionText}成功`);
+              }
               this.loadGameList();
             } else {
-              this.$message.error(res.message || `${actionText}失败`);
+              if (this.$message && this.$message.error) {
+                this.$message.error(res.message || `${actionText}失败`);
+              }
             }
           }).catch(error => {
             console.error(`${actionText}游戏失败:`, error);
-            this.$message.error(`${actionText}游戏失败`);
+            if (this.$message && this.$message.error) {
+              this.$message.error(`${actionText}游戏失败`);
+            }
           });
         }
       });
@@ -334,7 +359,11 @@ export default {
     // 批量保存选中的游戏
     saveSelectedGames() {
       if (this.selectedRowKeys.length === 0) {
-        this.$message.warning('请至少选择一个游戏');
+        if (this.$message && this.$message.warning) {
+          this.$message.warning('请至少选择一个游戏');
+        } else {
+          alert('请至少选择一个游戏');
+        }
         return;
       }
 
@@ -352,14 +381,20 @@ export default {
             }
           }).then(res => {
             if (res.status === 1) {
-              this.$message.success(res.message || '保存成功');
+              if (this.$message && this.$message.success) {
+                this.$message.success(res.message || '保存成功');
+              }
               this.loadGameList();
             } else {
-              this.$message.error(res.message || '保存失败');
+              if (this.$message && this.$message.error) {
+                this.$message.error(res.message || '保存失败');
+              }
             }
           }).catch(error => {
             console.error('保存失败:', error);
-            this.$message.error('保存失败');
+            if (this.$message && this.$message.error) {
+              this.$message.error('保存失败');
+            }
           }).finally(() => {
             this.saving = false;
           });
