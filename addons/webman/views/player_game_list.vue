@@ -260,8 +260,10 @@ export default {
 
     // 加载游戏列表
     loadGameList() {
+      console.log('🚀 开始加载游戏列表');
       this.loading = true;
-      this.$request({
+
+      const promise = this.$request({
         url: 'ex-admin/addons-webman-controller-ChannelPlayerController/getPlayerGameListData',
         params: {
           player_id: this.player_id,
@@ -269,39 +271,39 @@ export default {
           size: this.pagination.pageSize,
           ...this.filters
         }
-      }).then(res => {
-        try {
-          console.log('✅ API响应:', res);
+      });
 
-          if (res.status === 1) {
-            const data = res.data;
-            console.log('✅ 游戏数据:', data);
+      console.log('📡 Promise对象:', promise);
 
-            this.gameList = data.list || [];
-            console.log('✅ 步骤1: 设置gameList，长度=', this.gameList.length);
+      promise.then(res => {
+        console.log('⭐ 进入then块');
+        console.log('✅ API响应:', res);
 
-            this.pagination.total = data.total || 0;
-            console.log('✅ 步骤2: 设置total=', this.pagination.total);
+        if (res.status === 1) {
+          const data = res.data;
+          console.log('✅ 游戏数据:', data);
 
-            this.platforms = data.platforms || [];
-            console.log('✅ 步骤3: 设置platforms，长度=', this.platforms.length);
+          this.gameList = data.list || [];
+          console.log('✅ 步骤1: 设置gameList，长度=', this.gameList.length);
 
-            // 更新选中的行（已禁用的游戏）
-            this.selectedRowKeys = this.gameList
-              .filter(game => game && game.is_selected)
-              .map(game => game.id);
-            console.log('✅ 步骤4: 设置selectedRowKeys=', this.selectedRowKeys);
+          this.pagination.total = data.total || 0;
+          console.log('✅ 步骤2: 设置total=', this.pagination.total);
 
-            console.log('🎉 加载完成！');
-          } else {
-            console.error('❌ API返回失败:', res.message);
-          }
-        } catch (e) {
-          console.error('❌ 处理响应数据时出错:', e);
-          console.error('❌ 错误消息:', e.message);
-          console.error('❌ 错误堆栈:', e.stack);
-          // 不要重新抛出，直接在这里处理
+          this.platforms = data.platforms || [];
+          console.log('✅ 步骤3: 设置platforms，长度=', this.platforms.length);
+
+          // 更新选中的行（已禁用的游戏）
+          this.selectedRowKeys = this.gameList
+            .filter(game => game && game.is_selected)
+            .map(game => game.id);
+          console.log('✅ 步骤4: 设置selectedRowKeys=', this.selectedRowKeys);
+
+          console.log('🎉 加载完成！');
+        } else {
+          console.error('❌ API返回失败:', res.message);
         }
+      }, error => {
+        console.error('❌ Promise被reject:', error);
       }).catch(error => {
         console.error('❌ catch块被触发:', error);
       }).finally(() => {
