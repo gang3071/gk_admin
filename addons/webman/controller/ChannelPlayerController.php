@@ -4439,8 +4439,14 @@ class ChannelPlayerController
                         0 => admin_trans('player.old_game')
                     ]);
             });
-
+            // 获取玩家已选择的游戏ID
+            $disselectedGameIds = PlayerDisabledGame::query()
+                ->where('player_id', $player_id)
+                ->where('status', 1)
+                ->pluck('game_id')
+                ->toArray();
             $grid->expandFilter();
+            $grid->selection($disselectedGameIds);
         });
     }
 
