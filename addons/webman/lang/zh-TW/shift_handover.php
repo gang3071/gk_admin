@@ -174,6 +174,7 @@ return [
     'all_devices_summary' => '全部設備匯總',
     'devices_unit' => '台',
     'export_note' => '說明：總計數據來源於所有設備明細的累加；若交班記錄無設備明細，則使用交班匯總數據。',
+    'details_title' => '▼ 各次交班記錄明細 ▼',
 
     // 設備明細導出
     'export' => [

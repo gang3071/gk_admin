@@ -30,6 +30,9 @@ class ShiftReportExporter extends Excel
         'profit' => 0                // 利润
     ];
 
+    // 存储所有交班记录数据，用于先计算总计再输出明细
+    protected $allRecords = [];
+
     public function columns(array $columns)
     {
         // 保存列配置，但不生成默认表头
@@ -40,6 +43,11 @@ class ShiftReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
+        // 如果是第一次调用，预留顶部空间给总计（从行号20开始输出明细）
+        if ($this->processedRecords == 0) {
+            $this->currentRow = 20;
+        }
+
         foreach ($data as $record) {
             // 从数据库查询原始记录（因为 parseColumn 后的数据没有所有字段）
             $recordId = $record['id'] ?? null;
@@ -312,68 +320,137 @@ class ShiftReportExporter extends Excel
     }
 
     /**
-     * 添加总计行
+     * 添加总计行（在顶部显示 - 当前店家所有设备从开始到现在的累加报表）
      */
     protected function addGrandTotalRow()
     {
-        $this->currentRow += 1;
+        $topRow = 1; // 从第1行开始
 
-        // 总计标题（添加说明）
+        // ==================== 第1部分：累加总报表标题 ====================
         $totalTitle = sprintf(
-            '═══ %s ═══  【%s %d %s | %d %s】',
+            '【%s】 %s：%d %s | %s：%d %s',
             admin_trans('shift_handover.grand_total'),
             admin_trans('shift_handover.total_shifts'),
             $this->processedRecords,
             admin_trans('shift_handover.shifts'),
+            admin_trans('shift_handover.devices'),
             $this->totalDevices,
-            admin_trans('shift_handover.devices')
+            admin_trans('shift_handover.devices_unit')
         );
-        $this->sheet->setCellValue('A' . $this->currentRow, $totalTitle);
-        $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
-        $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-            'font' => ['bold' => true, 'size' => 14],
+        $this->sheet->setCellValue('A' . $topRow, $totalTitle);
+        $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
+        $this->sheet->getStyle('A' . $topRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '4472C4']],
-            'font' => ['color' => ['rgb' => 'FFFFFF'], 'bold' => true, 'size' => 14],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '2F5496']]]
         ]);
-        $this->sheet->getRowDimension($this->currentRow)->setRowHeight(30);
-        $this->currentRow++;
+        $this->sheet->getRowDimension($topRow)->setRowHeight(35);
+        $topRow++;
 
-        // 总计数据行
-        $this->sheet->setCellValue('A' . $this->currentRow, sprintf('%s (%d%s)', admin_trans('shift_handover.all_devices_summary'), $this->totalDevices, admin_trans('shift_handover.devices_unit')));
-        $this->sheet->setCellValue('B' . $this->currentRow, '');
-        $this->sheet->setCellValue('C' . $this->currentRow, number_format($this->grandTotal['machine_point'], 0));
-        $this->sheet->setCellValue('D' . $this->currentRow, number_format($this->grandTotal['recharge_amount'], 2));
-        $this->sheet->setCellValue('E' . $this->currentRow, number_format($this->grandTotal['withdrawal_amount'], 2));
-        $this->sheet->setCellValue('F' . $this->currentRow, number_format($this->grandTotal['modified_add_amount'], 2));
-        $this->sheet->setCellValue('G' . $this->currentRow, number_format($this->grandTotal['modified_deduct_amount'], 2));
-        $this->sheet->setCellValue('H' . $this->currentRow, number_format($this->grandTotal['lottery_amount'], 2));
-        $this->sheet->setCellValue('I' . $this->currentRow, number_format($this->grandTotal['total_in'], 2));
-        $this->sheet->setCellValue('J' . $this->currentRow, number_format($this->grandTotal['total_out'], 2));
-        $this->sheet->setCellValue('K' . $this->currentRow, number_format($this->grandTotal['profit'], 2));
+        // 空行
+        $topRow++;
 
-        $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
+        // ==================== 第2部分：总计表头 ====================
+        $headers = [
+            admin_trans('shift_handover.device_name'),
+            admin_trans('shift_handover.device_number'),
+            admin_trans('shift_handover.machine_point'),
+            admin_trans('shift_handover.recharge_amount'),
+            admin_trans('shift_handover.withdrawal_amount'),
+            admin_trans('shift_handover.modified_add_amount'),
+            admin_trans('shift_handover.modified_deduct_amount'),
+            admin_trans('shift_handover.lottery_amount'),
+            admin_trans('shift_handover.total_in'),
+            admin_trans('shift_handover.total_out'),
+            admin_trans('shift_handover.profit')
+        ];
+
+        foreach ($headers as $index => $header) {
+            $this->sheet->setCellValueByColumnAndRow($index + 1, $topRow, $header);
+        }
+
+        $this->sheet->getStyle('A' . $topRow . ':K' . $topRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+        ]);
+        $this->sheet->getRowDimension($topRow)->setRowHeight(22);
+        $topRow++;
+
+        // ==================== 第3部分：总计数据行 ====================
+        $this->sheet->setCellValue('A' . $topRow, admin_trans('shift_handover.all_devices_summary') . ' (' . $this->totalDevices . admin_trans('shift_handover.devices_unit') . ')');
+        $this->sheet->setCellValue('B' . $topRow, '-');
+        $this->sheet->setCellValue('C' . $topRow, number_format($this->grandTotal['machine_point'], 0));
+        $this->sheet->setCellValue('D' . $topRow, number_format($this->grandTotal['recharge_amount'], 2));
+        $this->sheet->setCellValue('E' . $topRow, number_format($this->grandTotal['withdrawal_amount'], 2));
+        $this->sheet->setCellValue('F' . $topRow, number_format($this->grandTotal['modified_add_amount'], 2));
+        $this->sheet->setCellValue('G' . $topRow, number_format($this->grandTotal['modified_deduct_amount'], 2));
+        $this->sheet->setCellValue('H' . $topRow, number_format($this->grandTotal['lottery_amount'], 2));
+        $this->sheet->setCellValue('I' . $topRow, number_format($this->grandTotal['total_in'], 2));
+        $this->sheet->setCellValue('J' . $topRow, number_format($this->grandTotal['total_out'], 2));
+        $this->sheet->setCellValue('K' . $topRow, number_format($this->grandTotal['profit'], 2));
+
+        $this->sheet->getStyle('A' . $topRow . ':K' . $topRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFC000']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => 'FF9900']]]
         ]);
-        $this->sheet->getStyle('A' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
+        $this->sheet->getStyle('A' . $topRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $this->sheet->getStyle('B' . $topRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $this->sheet->getRowDimension($topRow)->setRowHeight(28);
 
         // 总计利润颜色
         $grandProfitColor = $this->grandTotal['profit'] >= 0 ? '3f8600' : 'cf1322';
-        $this->sheet->getStyle('K' . $this->currentRow)->getFont()->getColor()->setRGB($grandProfitColor);
+        $this->sheet->getStyle('K' . $topRow)->getFont()->getColor()->setRGB($grandProfitColor);
+        $topRow++;
 
-        // 添加说明行
-        $this->currentRow += 2;
-        $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.export_note'));
-        $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
-        $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
+        // 空行
+        $topRow++;
+
+        // ==================== 第4部分：说明文字 ====================
+        $this->sheet->setCellValue('A' . $topRow, admin_trans('shift_handover.export_note'));
+        $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
+        $this->sheet->getStyle('A' . $topRow)->applyFromArray([
             'font' => ['size' => 9, 'italic' => true, 'color' => ['rgb' => '666666']],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER]
         ]);
+        $this->sheet->getRowDimension($topRow)->setRowHeight(20);
+        $topRow++;
+
+        // 空行
+        $topRow += 2;
+
+        // ==================== 第5部分：分隔线 ====================
+        $separator = str_repeat('═', 120);
+        $this->sheet->setCellValue('A' . $topRow, $separator);
+        $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
+        $this->sheet->getStyle('A' . $topRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '999999']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+        $this->sheet->getRowDimension($topRow)->setRowHeight(5);
+        $topRow++;
+
+        // 空行
+        $topRow++;
+
+        // ==================== 第6部分：明细标题 ====================
+        $this->sheet->setCellValue('A' . $topRow, admin_trans('shift_handover.details_title'));
+        $this->sheet->mergeCells('A' . $topRow . ':K' . $topRow);
+        $this->sheet->getStyle('A' . $topRow)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '4472C4']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+        ]);
+        $this->sheet->getRowDimension($topRow)->setRowHeight(30);
+        $topRow++;
+
+        // 空行（留给明细部分开始）
+        $topRow++;
     }
 
     /**
