@@ -66,14 +66,14 @@ class StorePlayerWithdrawRecordController
             if (!empty($exAdminFilter['created_at_end'])) {
                 $grid->model()->where('created_at', '<=', $exAdminFilter['created_at_end']);
             }
-            if (!empty($exAdminFilter['player']['machine']['uuid'])) {
-                $grid->model()->whereHas('player.machine', function ($query) use ($exAdminFilter) {
-                    $query->where('uuid', $exAdminFilter['player']['machine']['uuid']);
+            if (!empty($exAdminFilter['player']['uuid'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('uuid', $exAdminFilter['player']['uuid']);
                 });
             }
-            if (!empty($exAdminFilter['player']['machine']['name'])) {
-                $grid->model()->whereHas('player.machine', function ($query) use ($exAdminFilter) {
-                    $query->where('name', 'like', '%' . $exAdminFilter['player']['machine']['name'] . '%');
+            if (!empty($exAdminFilter['player']['name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
                 });
             }
             if (!empty($exAdminFilter['type'])) {
@@ -128,8 +128,8 @@ class StorePlayerWithdrawRecordController
 
             $grid->column('id', admin_trans('player_withdraw_record.fields.id'))->align('center')->width(80);
             $grid->column('tradeno', admin_trans('player_withdraw_record.fields.tradeno'))->copy()->width(180);
-            $grid->column('player.machine.uuid', admin_trans('player.fields.device_uuid'))->copy()->width(150);
-            $grid->column('player.machine.name', admin_trans('player.fields.device_name'))->align('center')->width(150);
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->copy()->width(150);
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(150);
             $grid->column('money', admin_trans('player_withdraw_record.fields.money'))->display(function (
                 $val,
                 PlayerWithdrawRecord $data
@@ -159,8 +159,8 @@ class StorePlayerWithdrawRecordController
             $grid->column('finish_time', admin_trans('player_withdraw_record.fields.finish_time'))->align('center')->width(160);
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
-                $filter->like()->text('player.machine.name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('tradeno')->placeholder(admin_trans('player_withdraw_record.fields.tradeno'));
                 $filter->select('search_type')
                     ->showSearch()

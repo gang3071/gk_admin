@@ -99,14 +99,14 @@ class StorePlayerGameLogController
                     }
                 });
             }
-            if (!empty($exAdminFilter['player']['machine']['uuid'])) {
-                $grid->model()->whereHas('player.machine', function ($query) use ($exAdminFilter) {
-                    $query->where('uuid', $exAdminFilter['player']['machine']['uuid']);
+            if (!empty($exAdminFilter['player']['uuid'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('uuid', $exAdminFilter['player']['uuid']);
                 });
             }
-            if (!empty($exAdminFilter['player']['machine']['name'])) {
-                $grid->model()->whereHas('player.machine', function ($query) use ($exAdminFilter) {
-                    $query->where('name', 'like', '%' . $exAdminFilter['player']['machine']['name'] . '%');
+            if (!empty($exAdminFilter['player']['name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
                 });
             }
 
@@ -127,20 +127,20 @@ class StorePlayerGameLogController
             $grid->title(admin_trans('player_game_log.point_title'));
             $grid->column('id', admin_trans('player_game_log.fields.id'))->align('center');
             $grid->column(function (Grid $grid) {
-                $grid->column('player.machine.uuid', admin_trans('player.fields.device_uuid'))->display(function (
+                $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
                     return Html::create()->content([
-                        Html::div()->content($data->player->machine->uuid ?? '')
+                        Html::div()->content($data->player->uuid ?? '')
                     ]);
                 })->align('center');
-                $grid->column('player.machine.name', admin_trans('player.fields.device_name'))->display(function (
+                $grid->column('player.name', admin_trans('player.fields.device_name'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
                     return Html::create()->content([
-                        Html::div()->content($data->player->machine->name ?? '')
+                        Html::div()->content($data->player->name ?? '')
                     ]);
                 })->align('center');
                 $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
@@ -261,8 +261,8 @@ class StorePlayerGameLogController
                 admin_trans('player_game_log.fields.chip_amount'))->sortable()->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
-                $filter->like()->text('player.machine.name')->placeholder(admin_trans('player.fields.device_name'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('machine.machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->select('search_type')

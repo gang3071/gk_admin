@@ -109,8 +109,8 @@ class StoreDepositBonusTaskController
 
             $grid->column('id', admin_trans('deposit_bonus_task.fields.id'))->width(80)->align('center');
 
-            $grid->column('player.machine.uuid', admin_trans('player.fields.device_uuid'))->copy()->width(150);
-            $grid->column('player.machine.name', admin_trans('player.fields.device_name'))->width(150);
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->copy()->width(150);
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->width(150);
 
             $grid->column('activity_name', admin_trans('deposit_bonus_task.fields.activity'))
                 ->display(function ($val, PlayerBonusTask $data) {
@@ -187,9 +187,9 @@ class StoreDepositBonusTaskController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('player.machine.uuid')
+                $filter->like()->text('player.uuid')
                     ->placeholder(admin_trans('player.fields.device_uuid'));
-                $filter->like()->text('player.machine.name')
+                $filter->like()->text('player.name')
                     ->placeholder(admin_trans('player.fields.device_name'));
 
                 $filter->form()->hidden('created_at_start');
