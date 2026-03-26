@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\ChannelRechargeMethod;
 use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\common\Html;
@@ -41,7 +42,7 @@ class StorePlayerWithdrawRecordController
             $grid->bordered(true);
             $grid->autoHeight();
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
 
             // 店机数据权限：只查询自己的玩家记录
@@ -97,56 +98,12 @@ class StorePlayerWithdrawRecordController
             // 统计数据
             $query = clone $grid->model();
             $totalData = $query->selectRaw(
-                'sum(IF(status = 1, point, 0)) as wait_point,
-                 sum(IF(status = 4, point, 0)) as pending_payment_point,
-                 sum(IF(status = 2, point, 0)) as success_point,
-                 sum(IF(status IN (3, 5, 6, 7), point, 0)) as fail_point'
+                'sum(IF(status = 2, point, 0)) as success_point'
             )->first();
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
                 $row->gutter([10, 0]);
-
-                // 待审核金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['wait_point']) ? floatval($totalData['wait_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.status.1'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-
-                // 待打款金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['pending_payment_point']) ? floatval($totalData['pending_payment_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.status.4'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-
                 // 提现成功金额
                 $row->column(
                     Card::create([
@@ -158,26 +115,6 @@ class StorePlayerWithdrawRecordController
                                 'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-
-                // 失败/拒绝金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['fail_point']) ? floatval($totalData['fail_point']) : 0)
-                            ->prefix(admin_trans('player_withdraw_record.total_data.total_fail'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#ff4d4f'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
@@ -210,18 +147,6 @@ class StorePlayerWithdrawRecordController
             $grid->column('point', admin_trans('player_withdraw_record.fields.point'))->align('center')->width(120);
             $grid->column('fee', admin_trans('player_withdraw_record.fields.fee'))->align('center')->width(100);
             $grid->column('inmoney', admin_trans('player_withdraw_record.fields.inmoney'))->align('center')->width(120);
-            $grid->column('type', admin_trans('player_withdraw_record.fields.type'))->display(function ($val) {
-                switch ($val) {
-                    case PlayerWithdrawRecord::TYPE_THIRD:
-                        return Tag::create(admin_trans('player_withdraw_record.type.' . $val))->color('#55acee');
-                    case PlayerWithdrawRecord::TYPE_SELF:
-                        return Tag::create(admin_trans('player_withdraw_record.type.' . $val))->color('#3b5999');
-                    case PlayerWithdrawRecord::TYPE_GB:
-                        return Tag::create(admin_trans('player_withdraw_record.type.' . $val))->color('#87d068');
-                    default:
-                        return '';
-                }
-            })->align('center')->width(120);
             $grid->column('bank_type', admin_trans('player_withdraw_record.fields.bank_type'))->display(function ($val) {
                 switch ($val) {
                     case ChannelRechargeMethod::TYPE_USDT:
@@ -261,31 +186,6 @@ class StorePlayerWithdrawRecordController
                 $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('machine.fields.uuid'));
                 $filter->like()->text('player.machine.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('tradeno')->placeholder(admin_trans('player_withdraw_record.fields.tradeno'));
-
-                $filter->select('type')
-                    ->placeholder(admin_trans('player_withdraw_record.fields.type'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerWithdrawRecord::TYPE_THIRD => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_THIRD),
-                        PlayerWithdrawRecord::TYPE_SELF => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_SELF),
-                        PlayerWithdrawRecord::TYPE_GB => admin_trans('player_withdraw_record.type.' . PlayerWithdrawRecord::TYPE_GB),
-                    ]);
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('player_withdraw_record.fields.status'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        PlayerWithdrawRecord::STATUS_WAIT => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_WAIT),
-                        PlayerWithdrawRecord::STATUS_SUCCESS => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_SUCCESS),
-                        PlayerWithdrawRecord::STATUS_PENDING_REJECT => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_PENDING_REJECT),
-                        PlayerWithdrawRecord::STATUS_PENDING_PAYMENT => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_PENDING_PAYMENT),
-                        PlayerWithdrawRecord::STATUS_FAIL => admin_trans('player_withdraw_record.status.' . PlayerWithdrawRecord::STATUS_FAIL),
-                    ]);
-
                 $filter->select('search_type')
                     ->showSearch()
                     ->style(['width' => '200px'])
