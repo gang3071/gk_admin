@@ -3,7 +3,7 @@
     <a-card :loading="loading" :title="title">
       <!-- 筛选器 -->
       <template slot="extra">
-        <a-space>
+        <div style="display: flex; gap: 8px; align-items: center;">
           <a-select
             v-model="filters.platform_id"
             allowClear
@@ -41,7 +41,7 @@
           <a-button :loading="saving" icon="save" type="primary" @click="saveSelectedGames">
             保存选中游戏
           </a-button>
-        </a-space>
+        </div>
       </template>
 
       <!-- 游戏表格 -->
@@ -102,9 +102,8 @@
           </a-button>
           <a-button
             v-else
-            danger
             size="small"
-            type="primary"
+            type="danger"
             @click="toggleGame(record, true)"
           >
             禁用游戏
@@ -271,41 +270,37 @@ export default {
           ...this.filters
         }
       }).then(res => {
-        console.log('API响应:', res);
+        try {
+          console.log('API响应:', res);
 
-        if (res.status === 1) {
-          const data = res.data;
-          console.log('游戏数据:', data);
+          if (res.status === 1) {
+            const data = res.data;
+            console.log('游戏数据:', data);
 
-          this.gameList = data.list || [];
-          this.pagination.total = data.total || 0;
-          this.platforms = data.platforms || [];
+            this.gameList = data.list || [];
+            this.pagination.total = data.total || 0;
+            this.platforms = data.platforms || [];
 
-          console.log('游戏列表:', this.gameList.length, '条');
+            console.log('游戏列表:', this.gameList.length, '条');
 
-          // 更新选中的行（已禁用的游戏）
-          try {
+            // 更新选中的行（已禁用的游戏）
             this.selectedRowKeys = this.gameList
               .filter(game => game && game.is_selected)
               .map(game => game.id);
             console.log('选中的游戏ID:', this.selectedRowKeys);
-          } catch (e) {
-            console.error('处理选中状态失败:', e);
-            this.selectedRowKeys = [];
-          }
-        } else {
-          // 使用安全的消息提示
-          if (this.$message && this.$message.error) {
-            this.$message.error(res.message || '加载失败');
+            console.log('加载完成！');
           } else {
-            console.error('加载失败:', res.message);
+            console.error('API返回失败:', res.message);
           }
+        } catch (e) {
+          console.error('处理响应数据时出错:', e);
+          console.error('错误堆栈:', e.stack);
+          throw e; // 重新抛出以便外层catch捕获
         }
       }).catch(error => {
-        console.error('加载游戏列表失败:', error);
-        if (this.$message && this.$message.error) {
-          this.$message.error('加载游戏列表失败: ' + (error.message || '未知错误'));
-        }
+        console.error('请求失败或处理出错:', error);
+        console.error('错误类型:', typeof error);
+        console.error('错误对象:', error);
       }).finally(() => {
         this.loading = false;
       });
