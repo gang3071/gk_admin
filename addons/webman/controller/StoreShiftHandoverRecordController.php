@@ -174,7 +174,7 @@ class StoreShiftHandoverRecordController
 
             $grid->hideDelete();
             $grid->expandFilter();
-
+            $grid->hideDeleteSelection();
             // 使用自定义导出驱动
             $grid->export(new \addons\webman\grid\ShiftReportExporter())
                 ->filename('shift_report_' . date('YmdHis'));
@@ -365,12 +365,8 @@ class StoreShiftHandoverRecordController
             });
 
             $grid->hideDelete();
-            $grid->hideCreate();
-            $grid->disableSelection();
-
-            // 使用自定义导出驱动导出设备明细
-            $grid->export(new \addons\webman\grid\DeviceDetailExporter())
-                ->filename('device_details_' . $shiftRecordId . '_' . date('YmdHis'));
+            $grid->hideSelection();
+            $grid->hideDelete();
         });
     }
 
