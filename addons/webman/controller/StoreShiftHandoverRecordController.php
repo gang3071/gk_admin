@@ -377,15 +377,9 @@ class StoreShiftHandoverRecordController
             $grid->hideCreate();
             $grid->disableSelection();
 
-            // 添加工具栏导出按钮
-            $grid->toolbars(function ($toolbars) use ($shiftRecordId) {
-                $toolbars->prepend(
-                    Button::create('导出设备明细')
-                        ->type('primary')
-                        ->icon('DownloadOutlined')
-                        ->ajax([$this, 'exportDeviceDetailsDownload'], ['shift_record_id' => $shiftRecordId])
-                );
-            });
+            // 使用自定义导出驱动导出设备明细
+            $grid->export(new \addons\webman\grid\DeviceDetailExporter($shiftRecord))
+                ->filename('device_details_' . $shiftRecordId . '_' . date('YmdHis'));
         });
     }
 
@@ -481,105 +475,6 @@ class StoreShiftHandoverRecordController
         } catch (\Throwable $e) {
             \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
                 'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return response('<script>alert("导出失败: ' . addslashes($e->getMessage()) . '");history.back();</script>');
-        }
-    }
-
-    /**
-     * 导出设备明细（AJAX返回下载链接）
-     * @group store
-     * @auth true
-     */
-    public function exportDeviceDetailsDownload(int $shift_record_id)
-    {
-        try {
-            /** @var AdminUser $admin */
-            $admin = Admin::user();
-
-            // 验证权限：只能导出自己的交班记录的设备明细
-            $record = StoreAgentShiftHandoverRecord::where('id', $shift_record_id)
-                ->where('bind_admin_user_id', $admin->id)
-                ->first();
-
-            if (!$record) {
-                return message_error('记录不存在或无权限导出');
-            }
-
-            // 生成下载URL
-            $downloadUrl = admin_url([
-                'addons-webman-controller-StoreShiftHandoverRecordController',
-                'exportDeviceDetails'
-            ], ['shift_record_id' => $shift_record_id]);
-
-            // 返回成功通知并打开新窗口下载
-            return notification_success('开始导出', '正在生成设备明细Excel文件...')->redirect($downloadUrl);
-
-        } catch (\Throwable $e) {
-            \support\Log::error('导出设备明细失败: ' . $e->getMessage(), [
-                'shift_record_id' => $shift_record_id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return message_error('导出失败: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * 导出设备明细（实际下载）
-     * @group store
-     * @auth true
-     */
-    public function exportDeviceDetails(int $shift_record_id)
-    {
-        try {
-            /** @var AdminUser $admin */
-            $admin = Admin::user();
-
-            // 验证权限：只能导出自己的交班记录的设备明细
-            $record = StoreAgentShiftHandoverRecord::where('id', $shift_record_id)
-                ->where('bind_admin_user_id', $admin->id)
-                ->first();
-
-            if (!$record) {
-                return response('<script>alert("记录不存在或无权限导出");history.back();</script>');
-            }
-
-            // 使用独立的单条记录导出器（已包含设备明细）
-            $exporter = new \addons\webman\grid\SingleShiftReportExporter($record);
-
-            // 导出到临时目录
-            $savePath = runtime_path() . '/excel_export';
-            $filePath = $exporter->export($savePath);
-
-            if (!file_exists($filePath)) {
-                return response('<script>alert("导出失败，文件生成失败");history.back();</script>');
-            }
-
-            // 读取文件内容
-            $fileContent = file_get_contents($filePath);
-            $filename = 'device_details_' . $shift_record_id . '_' . date('YmdHis') . '.xlsx';
-
-            // 删除临时文件
-            @unlink($filePath);
-
-            // 返回文件供下载
-            $response = response($fileContent);
-            $response->withHeaders([
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                'Content-Length' => strlen($fileContent),
-                'Cache-Control' => 'max-age=0',
-                'Pragma' => 'public'
-            ]);
-
-            return $response;
-
-        } catch (\Throwable $e) {
-            \support\Log::error('导出设备明细失败: ' . $e->getMessage(), [
-                'shift_record_id' => $shift_record_id,
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]);
