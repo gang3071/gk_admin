@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Button;
@@ -33,7 +34,7 @@ class StoreShiftHandoverRecordController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
 
             // 数据权限：只能看到自己的交班记录
@@ -389,7 +390,7 @@ class StoreShiftHandoverRecordController
     public function exportSingle(int $id)
     {
         try {
-            /** @var \addons\webman\model\AdminUser $admin */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
 
             // 验证权限：只能导出自己的交班记录
@@ -401,63 +402,30 @@ class StoreShiftHandoverRecordController
                 return response('<script>alert("记录不存在或无权限导出");history.back();</script>');
             }
 
-            // 创建导出器实例
-            $exporter = new \addons\webman\grid\ShiftReportExporter();
+            // 使用独立的单条记录导出器
+            $exporter = new \addons\webman\grid\SingleShiftReportExporter($record);
 
-            // 创建 PhpSpreadsheet 对象
-            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('交班记录');
+            // 导出到临时目录
+            $savePath = runtime_path() . '/excel_export';
+            $filePath = $exporter->export($savePath);
 
-            // 设置导出器的必要属性
-            $exporter->spreadsheet = $spreadsheet;
-            $exporter->sheet = $sheet;
-            $exporter->currentRow = 1;
-            $exporter->count = 1;
-
-            // 模拟缓存对象（同步导出不需要真实缓存）
-            $exporter->cache = new class {
-                public function set($data) { return $this; }
-                public function expiresAfter($ttl) { return $this; }
-            };
-            $exporter->filesystemAdapter = new class {
-                public function save($cache) {}
-            };
-
-            // 准备数据
-            $data = [$record->toArray()];
-
-            // 用于存储生成的文件路径
-            $filePath = null;
-
-            // 写入数据
-            $exporter->write($data, function ($exp) use (&$filePath) {
-                // 保存到临时目录
-                $savePath = runtime_path() . '/excel_export/';
-                if (!is_dir($savePath)) {
-                    mkdir($savePath, 0755, true);
-                }
-
-                $filePath = $exp->save($savePath);
-                return $filePath;
-            });
-
-            if (!$filePath || !file_exists($filePath)) {
+            if (!file_exists($filePath)) {
                 return response('<script>alert("导出失败，文件生成失败");history.back();</script>');
             }
 
-            // 重命名文件为有意义的文件名
-            $filename = 'shift_report_' . $id . '_' . date('YmdHis') . '.xlsx';
-            $newPath = dirname($filePath) . '/' . $filename;
-            if (file_exists($newPath)) {
-                unlink($newPath);
-            }
-            rename($filePath, $newPath);
+            // 读取文件内容
+            $fileContent = file_get_contents($filePath);
+            $filename = basename($filePath);
+
+            // 删除临时文件
+            @unlink($filePath);
 
             // 返回文件供下载
-            return response()->download($newPath, $filename, [
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            ])->deleteFileAfterSend(true);
+            return response($fileContent, 200, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Length' => strlen($fileContent)
+            ]);
 
         } catch (\Throwable $e) {
             \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
