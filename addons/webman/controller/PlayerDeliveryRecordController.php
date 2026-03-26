@@ -204,7 +204,12 @@ class PlayerDeliveryRecordController
                 PlayerDeliveryRecord $data
             ) {
                 // 优先使用翻译，如果翻译不存在则使用原始值
-                $translatedText = admin_trans('message.target.' . $val, [], $val);
+                $transKey = 'message.target.' . $val;
+                $translatedText = admin_trans($transKey);
+                // 如果翻译不存在（返回的是翻译键本身），则使用原始值
+                if ($translatedText === $transKey) {
+                    $translatedText = $val;
+                }
 
                 switch ($data->type) {
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
