@@ -5,8 +5,6 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\PlayerRechargeRecord;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -70,9 +68,14 @@ class StorePlayerRechargeRecordController
             if (!empty($exAdminFilter['created_at_end'])) {
                 $grid->model()->where('created_at', '<=', $exAdminFilter['created_at_end']);
             }
-            if (!empty($exAdminFilter['player']['uuid'])) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('uuid', $exAdminFilter['player']['uuid']);
+            if (!empty($exAdminFilter['player']['machine']['uuid'])) {
+                $grid->model()->whereHas('player.machine', function ($query) use ($exAdminFilter) {
+                    $query->where('uuid', $exAdminFilter['player']['machine']['uuid']);
+                });
+            }
+            if (!empty($exAdminFilter['player']['machine']['name'])) {
+                $grid->model()->whereHas('player.machine', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player']['machine']['name'] . '%');
                 });
             }
             if (!empty($exAdminFilter['type'])) {
@@ -170,7 +173,8 @@ class StorePlayerRechargeRecordController
 
             $grid->column('id', admin_trans('player_recharge_record.fields.id'))->align('center')->width(80);
             $grid->column('tradeno', admin_trans('player_recharge_record.fields.tradeno'))->copy()->width(180);
-            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->copy()->width(150);
+            $grid->column('player.machine.uuid', admin_trans('machine.fields.uuid'))->copy()->width(150);
+            $grid->column('player.machine.name', admin_trans('machine.fields.name'))->align('center')->width(150);
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerRechargeRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1
@@ -178,18 +182,6 @@ class StorePlayerRechargeRecordController
                         : Tag::create(admin_trans('player.player'))->color('green')
                 ]);
             })->align('center')->width(100);
-            $grid->column('player_phone', admin_trans('player_recharge_record.fields.player_phone'))->display(function (
-                $val,
-                PlayerRechargeRecord $data
-            ) {
-                $image = isset($data->player->avatar) && !empty($data->player->avatar)
-                    ? Avatar::create()->src($data->player->avatar)
-                    : Avatar::create()->icon(Icon::create('UserOutlined'));
-                return Html::create()->content([
-                    $image,
-                    Html::div()->content($val)
-                ]);
-            })->align('center')->width(150);
             $grid->column('money', admin_trans('player_recharge_record.fields.money'))->display(function (
                 $val,
                 PlayerRechargeRecord $data
@@ -237,7 +229,8 @@ class StorePlayerRechargeRecordController
             $grid->column('finish_time', admin_trans('player_recharge_record.fields.finish_time'))->align('center')->width(160);
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('machine.fields.uuid'));
+                $filter->like()->text('player.machine.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('tradeno')->placeholder(admin_trans('player_recharge_record.fields.tradeno'));
 
                 $filter->select('type')

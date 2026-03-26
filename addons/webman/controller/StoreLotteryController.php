@@ -7,8 +7,6 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\Lottery;
 use addons\webman\model\PlayerLotteryRecord;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -77,8 +75,8 @@ class StoreLotteryController
             if (!empty($requestFilter['machine_name'])) {
                 $grid->model()->where('machine_name', 'like', '%' . $requestFilter['machine_name'] . '%');
             }
-            if (!empty($requestFilter['player_phone'])) {
-                $grid->model()->where('player_phone', 'like', '%' . $requestFilter['player_phone'] . '%');
+            if (!empty($requestFilter['machine_uuid'])) {
+                $grid->model()->where('machine_uuid', 'like', '%' . $requestFilter['machine_uuid'] . '%');
             }
             if (!empty($requestFilter['status'])) {
                 $grid->model()->where('status', $requestFilter['status']);
@@ -128,16 +126,8 @@ class StoreLotteryController
                 })
                 ->align('center')->fixed(true)->copy();
 
-            $grid->column('player_phone', admin_trans('player_lottery_record.fields.player_phone'))
-                ->display(function ($val, PlayerLotteryRecord $data) {
-                    $image = isset($data->player->avatar) && !empty($data->player->avatar)
-                        ? Avatar::create()->src($data->player->avatar)
-                        : Avatar::create()->icon(Icon::create('UserOutlined'));
-                    return Html::create()->content([
-                        $image,
-                        Html::div()->content($val)
-                    ]);
-                })->align('center')->fixed(true)->ellipsis(true);
+            $grid->column('machine_uuid', admin_trans('machine.fields.uuid'))->copy()->align('center')->fixed(true);
+            $grid->column('machine_name', admin_trans('machine.fields.name'))->align('center')->fixed(true)->ellipsis(true);
 
             $grid->column('type', admin_trans('player.fields.type'))
                 ->display(function ($val, $data) {
@@ -239,7 +229,7 @@ class StoreLotteryController
                 $filter->like()->text('machine_name')->placeholder(admin_trans('player_lottery_record.fields.machine_name'));
                 $filter->like()->text('machine_code')->placeholder(admin_trans('player_lottery_record.fields.machine_code'));
                 $filter->like()->text('lottery_name')->placeholder(admin_trans('player_lottery_record.fields.lottery_name'));
-                $filter->like()->text('player_phone')->placeholder(admin_trans('player_lottery_record.fields.player_phone'));
+                $filter->like()->text('machine_uuid')->placeholder(admin_trans('machine.fields.uuid'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player_lottery_record.fields.uuid'));
                 $filter->eq()->number('amount')->precision(2)->style(['width' => '150px'])
                     ->placeholder(admin_trans('player_lottery_record.fields.amount'));

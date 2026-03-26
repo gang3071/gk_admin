@@ -4,16 +4,13 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayerBonusTask;
-use addons\webman\model\Player;
-use addons\webman\model\AdminUser;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
-use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\grid\statistic\Statistic;
-use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
@@ -112,20 +109,8 @@ class StoreDepositBonusTaskController
 
             $grid->column('id', admin_trans('deposit_bonus_task.fields.id'))->width(80)->align('center');
 
-            $grid->column('player_id', admin_trans('deposit_bonus_task.fields.player'))
-                ->display(function ($val, PlayerBonusTask $data) {
-                    $player = $data->player;
-                    if (!$player) return '-';
-
-                    $avatar = !empty($player->avatar)
-                        ? Avatar::create()->src($player->avatar)->size(30)
-                        : Avatar::create()->text(mb_substr($player->username ?? 'U', 0, 1))->size(30);
-
-                    return Html::create()->content([
-                        $avatar,
-                        Html::div()->content($player->username ?? '-')->style(['margin-left' => '8px'])
-                    ]);
-                })->width(150);
+            $grid->column('player.machine.uuid', admin_trans('machine.fields.uuid'))->copy()->width(150);
+            $grid->column('player.machine.name', admin_trans('machine.fields.name'))->width(150);
 
             $grid->column('activity_name', admin_trans('deposit_bonus_task.fields.activity'))
                 ->display(function ($val, PlayerBonusTask $data) {
@@ -202,8 +187,10 @@ class StoreDepositBonusTaskController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('player.username')
-                    ->placeholder(admin_trans('deposit_bonus_task.search_player'));
+                $filter->like()->text('player.machine.uuid')
+                    ->placeholder(admin_trans('machine.fields.uuid'));
+                $filter->like()->text('player.machine.name')
+                    ->placeholder(admin_trans('machine.fields.name'));
 
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
