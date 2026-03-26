@@ -4296,7 +4296,29 @@ class ChannelPlayerController
         // 获取当前语言环境
         $lang = Container::getInstance()->translator->getLocale();
 
-        return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
+        // 获取当前筛选条件
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+
+        // 手动构建查询，应用筛选条件获取当前查询结果的所有游戏ID
+        $currentQueryGameIds = Game::query()
+            ->whereIn('platform_id', $channelGamePlatformIds)
+            ->where('status', 1)
+            ->when(!empty($exAdminFilter['platform_id']), function ($query) use ($exAdminFilter) {
+                $query->where('platform_id', $exAdminFilter['platform_id']);
+            })
+            ->when(isset($exAdminFilter['is_hot']), function ($query) use ($exAdminFilter) {
+                $query->where('is_hot', $exAdminFilter['is_hot']);
+            })
+            ->when(isset($exAdminFilter['is_new']), function ($query) use ($exAdminFilter) {
+                $query->where('is_new', $exAdminFilter['is_new']);
+            })
+            ->pluck('id')
+            ->toArray();
+
+        // 只保留当前查询结果中存在的已选中游戏ID
+        $currentPageSelectedIds = array_intersect($selectedGameIds, $currentQueryGameIds);
+
+        return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $currentPageSelectedIds, $player_id, $channelGamePlatformIds, $lang, $player) {
             $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
             $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
@@ -4440,7 +4462,7 @@ class ChannelPlayerController
             });
 
             $grid->expandFilter();
-        })->selection($selectedGameIds);
+        })->selection($currentPageSelectedIds);
     }
 
     /**
@@ -4497,6 +4519,7 @@ class ChannelPlayerController
         if (!empty($ex_admin_filter['platform_id']) || !empty($ex_admin_filter['cate_id']) ||
             isset($ex_admin_filter['is_hot']) || isset($ex_admin_filter['is_new'])) {
 
+            // 查询所有符合筛选条件的游戏ID（不限制分页，获取全部）
             $gameList = Game::query()
                 ->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
@@ -4512,11 +4535,10 @@ class ChannelPlayerController
                 ->when(isset($ex_admin_filter['is_new']), function ($query) use ($ex_admin_filter) {
                     $query->where('is_new', $ex_admin_filter['is_new']);
                 })
-                ->orderBy('id', 'desc')
-                ->forPage($page, $size)
                 ->pluck('id')
                 ->toArray();
 
+            // 筛选结果中未被选中的游戏ID（需要删除禁用状态）
             $filteredIds = array_diff($gameList, $selected);
             $filterAdd = true;
         }
