@@ -4306,14 +4306,18 @@ class ChannelPlayerController
 
         return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
             $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
-            $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
-                ->where('status', 1)
+
+            // 为每条记录添加选中标识字段
+            $selectedIdsStr = empty($selectedGameIds) ? '0' : implode(',', $selectedGameIds);
+            $grid->model()->selectRaw("yjb_game.*, IF(yjb_game.id IN ({$selectedIdsStr}), yjb_game.id, NULL) as ex_selection_field")
+                ->whereIn('platform_id', $channelGamePlatformIds)
+                ->where('yjb_game.status', 1)
                 ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
                     $query->where('lang', $lang);
                 }])
                 ->orderBy('platform_id', 'asc')
                 ->orderBy('sort', 'desc')
-                ->orderBy('id', 'desc');
+                ->orderBy('yjb_game.id', 'desc');
 
             $grid->driver()->setPk('id');
             $exAdminFilter = Request::input('ex_admin_filter', []);
@@ -4403,7 +4407,7 @@ class ChannelPlayerController
 
             $grid->pagination()->pageSize(50);
             $grid->hideDelete();
-            // $grid->hideDeleteSelection();  // 临时注释，测试是否影响selection显示
+            $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
             $grid->tools(
@@ -4449,8 +4453,8 @@ class ChannelPlayerController
 
             $grid->expandFilter();
 
-            // 设置选中项（必须在闭包内部！）
-            $grid->selection($selectedGameIds);
+            // 设置选中字段（Grid 通过此字段判断哪些行被选中）
+            $grid->selectionField('ex_selection_field');
 
             // 调试：在Grid内部再次记录
             \support\Log::info('Grid内部 - Selection IDs:', [
