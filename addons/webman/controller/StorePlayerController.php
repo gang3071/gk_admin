@@ -4,15 +4,14 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Player;
-use addons\webman\model\PlayerPlatformCash;
-use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\model\PlayerPlatformCash;
+use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\grid\avatar\Avatar;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -118,76 +117,76 @@ class StorePlayerController
         }
 
         return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list) {
-            $grid->title('设备列表 (当前店家: ' . $admin->username . ' | 设备数: ' . $playerCount . ')');
+            $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
-            $grid->column('id', 'ID')->width(80)->align('center');
+            $grid->column('id', admin_trans('player.fields.id'))->width(80)->align('center');
 
-            $grid->column('name', '设备名称')->display(function ($val, $data) {
+            $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
                     ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
                     : Avatar::create()->text(mb_substr($val ?: 'U', 0, 1));
                 return Html::create()->content([
                     $avatar,
-                    Html::div()->content($val ?: '未命名')->style(['margin-left' => '8px'])
+                    Html::div()->content($val ?: admin_trans('player.unnamed'))->style(['margin-left' => '8px'])
                 ]);
             })->width(150);
 
-            $grid->column('phone', '设备编号')->width(120)->align('center');
+            $grid->column('phone', admin_trans('player.fields.phone'))->width(120)->align('center');
 
-            $grid->column('wallet_money', '余额')->display(function ($value) {
+            $grid->column('wallet_money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('recharge_amount', '累计开分')->display(function ($value) {
+            $grid->column('recharge_amount', admin_trans('player_extend.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('withdraw_amount', '累计洗分')->display(function ($value) {
+            $grid->column('withdraw_amount', admin_trans('player_extend.withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', '投钞')->display(function ($value) {
+            $grid->column('machine_put_point', admin_trans('player_extend.machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('lottery_amount', '彩金')->display(function ($value) {
+            $grid->column('lottery_amount', admin_trans('player_lottery_record.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('subtotal', '小计')->display(function ($value) {
+            $grid->column('subtotal', admin_trans('player_extend.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
-            $grid->column('status', '状态')->display(function ($value) {
+            $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
-                    0 => Tag::create('已禁用')->color('red'),
-                    1 => Tag::create('正常')->color('green'),
-                    default => Tag::create('未知')->color('default'),
+                    0 => Tag::create(admin_trans('admin.close'))->color('red'),
+                    1 => Tag::create(admin_trans('admin.open'))->color('green'),
+                    default => Tag::create(admin_trans('admin.unknown'))->color('default'),
                 };
             })->width(80)->align('center');
 
-            $grid->column('created_at', '创建时间')->width(160)->align('center');
+            $grid->column('created_at', admin_trans('player.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) {
                 $filter->eq()->select('status')
-                    ->placeholder('状态')
+                    ->placeholder(admin_trans('player.fields.status'))
                     ->options([
-                        1 => '正常',
-                        0 => '已禁用'
+                        1 => admin_trans('admin.open'),
+                        0 => admin_trans('admin.close')
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('phone')->placeholder('设备编号');
-                $filter->like()->text('name')->placeholder('设备名称');
+                $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
 
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
-                    '开始时间',
-                    '结束时间'
+                    admin_trans('public_msg.created_at_start'),
+                    admin_trans('public_msg.created_at_end')
                 ]);
             });
 
@@ -212,7 +211,7 @@ class StorePlayerController
                     ->where('is_promoter', 0)
                     ->count();
 
-                $grid->emptyText('暂无设备数据<br><small style="color: #999;">部门ID: ' . $departmentId . ' | 店家ID: ' . $storeAdminId . '<br>该部门下总玩家数: ' . $totalPlayers . ' | 分配给当前店家: 0</small>');
+                $grid->emptyText(admin_trans('player.no_device_data'));
             }
         });
     }
