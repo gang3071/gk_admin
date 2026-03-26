@@ -4334,6 +4334,11 @@ class ChannelPlayerController
             $grid->bordered(true);
             $grid->column('id', 'ID')->align('center')->width('80px');
 
+            // 临时调试列：显示 ex_selection_field 的值
+            $grid->column('ex_selection_field', '选中字段(调试)')->display(function ($val, $data) {
+                return $val ? "✓ {$val}" : '✗ null';
+            })->align('center')->width('150px');
+
             $grid->column('platform_id', admin_trans('player.game_platform'))->display(function ($val, Game $data) {
                 return Tag::create($data->gamePlatform->name ?? admin_trans('player.unknown_platform'))->color('blue');
             })->align('center')->width('120px');
