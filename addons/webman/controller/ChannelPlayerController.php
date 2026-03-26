@@ -4462,6 +4462,9 @@ class ChannelPlayerController
             // 设置选中字段（Grid 通过此字段判断哪些行被选中）
             $grid->selectionField('ex_selection_field');
 
+            // 同时设置初始选中项（两者配合使用）
+            $grid->selection($selectedGameIds);
+
             // 调试：在Grid内部再次记录
             \support\Log::info('Grid内部 - Selection IDs:', [
                 'selectedGameIds' => $selectedGameIds,
