@@ -4446,7 +4446,7 @@ class ChannelPlayerController
                 ->pluck('game_id')
                 ->toArray();
             $grid->expandFilter();
-            $grid->selection($disselectedGameIds);
+            $grid->selection([237]);
         });
     }
 
