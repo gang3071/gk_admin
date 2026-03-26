@@ -51,8 +51,9 @@
         :loading="loading"
         :pagination="pagination"
         :row-selection="rowSelection"
-        :scroll="{ x: 1200, y: 600 }"
+        :scroll="{ x: 'max-content', y: 550 }"
         bordered
+        size="middle"
         row-key="id"
         @change="handleTableChange"
       >
@@ -61,15 +62,18 @@
         </template>
 
         <template slot="game_name" slot-scope="text, record">
-          <div style="display: flex; align-items: center">
-            <a-avatar
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <img
               v-if="record.picture"
-              :size="50"
               :src="record.picture"
-              shape="square"
-              style="margin-right: 8px"
+              :alt="record.name"
+              style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover; flex-shrink: 0;"
+              @error="handleImageError"
             />
-            <span>{{ record.name }}</span>
+            <div v-else style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <span style="color: #999; font-size: 12px;">暂无图片</span>
+            </div>
+            <span style="flex: 1; word-break: break-word;">{{ record.name }}</span>
           </div>
         </template>
 
@@ -92,22 +96,20 @@
         </template>
 
         <template slot="action" slot-scope="text, record">
-          <a-button
+          <a
             v-if="record.is_selected"
-            size="small"
-            type="default"
             @click="toggleGame(record, false)"
+            style="color: #52c41a; cursor: pointer;"
           >
-            取消禁用
-          </a-button>
-          <a-button
+            取消
+          </a>
+          <a
             v-else
-            size="small"
-            type="danger"
             @click="toggleGame(record, true)"
+            style="color: #ff4d4f; cursor: pointer;"
           >
-            禁用游戏
-          </a-button>
+            禁用
+          </a>
         </template>
       </a-table>
     </a-card>
@@ -149,11 +151,11 @@ export default {
       },
       columns: [
         {
-          title: 'ID',
-          dataIndex: 'id',
-          key: 'id',
-          width: 80,
-          align: 'center',
+          title: '游戏名称',
+          dataIndex: 'name',
+          key: 'game_name',
+          scopedSlots: { customRender: 'game_name' },
+          width: 280,
           fixed: 'left'
         },
         {
@@ -161,22 +163,15 @@ export default {
           dataIndex: 'platform_name',
           key: 'platform',
           scopedSlots: { customRender: 'platform' },
-          width: 120,
+          width: 130,
           align: 'center'
-        },
-        {
-          title: '游戏名称',
-          dataIndex: 'name',
-          key: 'game_name',
-          scopedSlots: { customRender: 'game_name' },
-          width: 250
         },
         {
           title: '游戏分类',
           dataIndex: 'category_name',
           key: 'category',
           scopedSlots: { customRender: 'category' },
-          width: 120,
+          width: 110,
           align: 'center'
         },
         {
@@ -184,7 +179,7 @@ export default {
           dataIndex: 'is_hot',
           key: 'is_hot',
           scopedSlots: { customRender: 'is_hot' },
-          width: 80,
+          width: 70,
           align: 'center'
         },
         {
@@ -192,7 +187,7 @@ export default {
           dataIndex: 'is_new',
           key: 'is_new',
           scopedSlots: { customRender: 'is_new' },
-          width: 80,
+          width: 70,
           align: 'center'
         },
         {
@@ -200,14 +195,14 @@ export default {
           dataIndex: 'is_selected',
           key: 'status',
           scopedSlots: { customRender: 'status' },
-          width: 100,
+          width: 90,
           align: 'center'
         },
         {
           title: '操作',
           key: 'action',
           scopedSlots: { customRender: 'action' },
-          width: 120,
+          width: 100,
           align: 'center',
           fixed: 'right'
         }
@@ -341,6 +336,14 @@ export default {
           promise.then(handleResponse, handleResponse);
         }
       });
+    },
+
+    // 图片加载错误处理
+    handleImageError(e) {
+      e.target.style.display = 'none';
+      if (e.target.nextElementSibling) {
+        e.target.nextElementSibling.style.display = 'flex';
+      }
     },
 
     // 批量保存选中的游戏
