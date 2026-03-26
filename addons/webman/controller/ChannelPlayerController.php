@@ -4308,16 +4308,6 @@ class ChannelPlayerController
                 ->orderBy('id', 'desc');
 
             $grid->driver()->setPk('id');
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-            $page = Request::input('ex_admin_page', 1);
-            $size = Request::input('ex_admin_size', 50);
-            $param = [
-                'size' => $size,
-                'page' => $page,
-                'ex_admin_filter' => $exAdminFilter,
-                'player_id' => $player_id,
-                'selected_before' => implode(',', $selectedGameIds), // 传递已选中的游戏ID
-            ];
 
             $grid->autoHeight();
             $grid->bordered(true);
@@ -4399,18 +4389,6 @@ class ChannelPlayerController
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
-            $grid->tools(
-                Button::create(admin_trans('player.save_selected_games'))
-                    ->icon(Icon::create('fas fa-save'))
-                    ->confirm(admin_trans('common.confirm_save'),
-                        [
-                            $this,
-                            'savePlayerGames?' . http_build_query($param)
-                        ])
-                    ->gridBatch()->gridRefresh()
-                    ->type('primary')
-            );
-
             $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
                 $filter->eq()->select('platform_id')
                     ->placeholder(admin_trans('player.platform_placeholder'))
@@ -4441,7 +4419,6 @@ class ChannelPlayerController
             });
 
             $grid->expandFilter();
-            $grid->selection($selectedGameIds);
         });
     }
 
