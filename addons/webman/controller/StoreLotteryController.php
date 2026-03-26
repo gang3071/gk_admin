@@ -126,8 +126,8 @@ class StoreLotteryController
                 })
                 ->align('center')->fixed(true)->copy();
 
-            $grid->column('machine_uuid', admin_trans('machine.fields.uuid'))->copy()->align('center')->fixed(true);
-            $grid->column('machine_name', admin_trans('machine.fields.name'))->align('center')->fixed(true)->ellipsis(true);
+            $grid->column('machine_uuid', admin_trans('player.fields.device_uuid'))->copy()->align('center')->fixed(true);
+            $grid->column('machine_name', admin_trans('player.fields.device_name'))->align('center')->fixed(true)->ellipsis(true);
 
             $grid->column('type', admin_trans('player.fields.type'))
                 ->display(function ($val, $data) {
@@ -226,10 +226,10 @@ class StoreLotteryController
             });
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('machine_name')->placeholder(admin_trans('player_lottery_record.fields.machine_name'));
+                $filter->like()->text('machine_name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('machine_code')->placeholder(admin_trans('player_lottery_record.fields.machine_code'));
                 $filter->like()->text('lottery_name')->placeholder(admin_trans('player_lottery_record.fields.lottery_name'));
-                $filter->like()->text('machine_uuid')->placeholder(admin_trans('machine.fields.uuid'));
+                $filter->like()->text('machine_uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player_lottery_record.fields.uuid'));
                 $filter->eq()->number('amount')->precision(2)->style(['width' => '150px'])
                     ->placeholder(admin_trans('player_lottery_record.fields.amount'));

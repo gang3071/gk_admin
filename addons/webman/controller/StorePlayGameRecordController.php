@@ -110,8 +110,8 @@ class StorePlayGameRecordController
             $grid->header($layout);
 
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center')->width(80);
-            $grid->column('player.machine.uuid', admin_trans('machine.fields.uuid'))->fixed(true)->copy()->align('center')->width(150);
-            $grid->column('player.machine.name', admin_trans('machine.fields.name'))->fixed(true)->align('center')->width(150);
+            $grid->column('player.machine.uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->copy()->align('center')->width(150);
+            $grid->column('player.machine.name', admin_trans('player.fields.device_name'))->fixed(true)->align('center')->width(150);
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayGameRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1
@@ -151,8 +151,8 @@ class StorePlayGameRecordController
             $grid->column('action_at', admin_trans('play_game_record.fields.action_at'))->align('center')->width(160);
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('machine.fields.uuid'));
-                $filter->like()->text('player.machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+                $filter->like()->text('player.machine.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('order_no')->placeholder(admin_trans('play_game_record.fields.order_no'));
                 $filter->like()->text('game_code')->placeholder(admin_trans('play_game_record.fields.game_code'));
 

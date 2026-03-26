@@ -127,7 +127,7 @@ class StorePlayerGameLogController
             $grid->title(admin_trans('player_game_log.point_title'));
             $grid->column('id', admin_trans('player_game_log.fields.id'))->align('center');
             $grid->column(function (Grid $grid) {
-                $grid->column('player.machine.uuid', admin_trans('machine.fields.uuid'))->display(function (
+                $grid->column('player.machine.uuid', admin_trans('player.fields.device_uuid'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
@@ -135,7 +135,7 @@ class StorePlayerGameLogController
                         Html::div()->content($data->player->machine->uuid ?? '')
                     ]);
                 })->align('center');
-                $grid->column('player.machine.name', admin_trans('machine.fields.name'))->display(function (
+                $grid->column('player.machine.name', admin_trans('player.fields.device_name'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
@@ -261,8 +261,8 @@ class StorePlayerGameLogController
                 admin_trans('player_game_log.fields.chip_amount'))->sortable()->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('machine.fields.uuid'));
-                $filter->like()->text('player.machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+                $filter->like()->text('player.machine.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('machine.machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->select('search_type')

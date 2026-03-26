@@ -127,8 +127,8 @@ class StorePlayerRechargeRecordController
 
             $grid->column('id', admin_trans('player_recharge_record.fields.id'))->align('center')->width(80);
             $grid->column('tradeno', admin_trans('player_recharge_record.fields.tradeno'))->copy()->width(180);
-            $grid->column('player.machine.uuid', admin_trans('machine.fields.uuid'))->copy()->width(150);
-            $grid->column('player.machine.name', admin_trans('machine.fields.name'))->align('center')->width(150);
+            $grid->column('player.machine.uuid', admin_trans('player.fields.device_uuid'))->copy()->width(150);
+            $grid->column('player.machine.name', admin_trans('player.fields.device_name'))->align('center')->width(150);
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerRechargeRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1
@@ -183,8 +183,8 @@ class StorePlayerRechargeRecordController
             $grid->column('finish_time', admin_trans('player_recharge_record.fields.finish_time'))->align('center')->width(160);
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('machine.fields.uuid'));
-                $filter->like()->text('player.machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('player.machine.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+                $filter->like()->text('player.machine.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('tradeno')->placeholder(admin_trans('player_recharge_record.fields.tradeno'));
 
                 $filter->select('type')
