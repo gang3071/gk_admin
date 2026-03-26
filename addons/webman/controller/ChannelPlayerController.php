@@ -53,7 +53,6 @@ use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\image\Image;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -4249,230 +4248,34 @@ class ChannelPlayerController
     }
 
     /**
-     * 玩家游戏列表（Grid方式，仅线下渠道）
+     * 玩家游戏列表（Vue组件方式，仅线下渠道）
      * @auth true
      * @param int $player_id
-     * @return Grid
+     * @return \support\view\Raw
      */
-    public function playerGameList(int $player_id): Grid
+    public function playerGameList(int $player_id)
     {
         /** @var Player $player */
         $player = Player::query()->with('channel')->find($player_id);
 
         if (empty($player)) {
-            // 返回空Grid并显示错误
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('channel_player.error.player_not_found'));
-            });
+            return message_error(admin_trans('channel_player.error.player_not_found'));
         }
 
         // 只有线下渠道才支持游戏级别权限管理
         if ($player->channel->is_offline != 1) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('channel_player.error.offline_channel_only'));
-            });
+            return message_error(admin_trans('channel_player.error.offline_channel_only'));
         }
 
         // 获取玩家所在渠道开启的游戏平台
         if (empty($player->channel->game_platform)) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('channel_player.error.no_game_platform'));
-            });
+            return message_error(admin_trans('channel_player.error.no_game_platform'));
         }
 
-        $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
-        if (empty($channelGamePlatformIds)) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('channel_player.error.no_game_platform'));
-            });
-        }
-
-        // 获取玩家已选择的游戏ID
-        $selectedGameIds = PlayerDisabledGame::query()
-            ->where('player_id', $player_id)
-            ->where('status', 1)
-            ->pluck('game_id')
-            ->toArray();
-
-        // 调试：记录选中的游戏ID
-        \support\Log::info('PlayerGameList - Selected Game IDs:', [
+        return admin_view(plugin()->webman->getPath() . '/views/player_game_list.vue')->attrs([
             'player_id' => $player_id,
-            'selectedGameIds' => $selectedGameIds,
-            'count' => count($selectedGameIds)
+            'player_name' => $player->name ?? admin_trans('channel_player.unknown_player'),
         ]);
-
-        // 获取当前语言环境
-        $lang = Container::getInstance()->translator->getLocale();
-
-        return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
-            $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
-
-            // 为每条记录添加选中标识字段（动态表名）
-            $tableName = $grid->model()->getModel()->getTable();
-            $selectedIdsStr = empty($selectedGameIds) ? '0' : implode(',', $selectedGameIds);
-
-            // 调试：记录SQL相关信息
-            \support\Log::info('PlayerGameList - SQL Debug:', [
-                'tableName' => $tableName,
-                'selectedIdsStr' => $selectedIdsStr,
-                'sqlRaw' => "{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, 0) as ex_selection_field"
-            ]);
-
-            $grid->model()->selectRaw("{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, 0) as ex_selection_field")
-                ->whereIn('platform_id', $channelGamePlatformIds)
-                ->where('status', 1)
-                ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
-                    $query->where('lang', $lang);
-                }])
-                ->orderBy('platform_id', 'asc')
-                ->orderBy('sort', 'desc')
-                ->orderBy('id', 'desc');
-
-            $grid->driver()->setPk('id');
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-            $page = Request::input('ex_admin_page', 1);
-            $size = Request::input('ex_admin_size', 50);
-            $param = [
-                'size' => $size,
-                'page' => $page,
-                'ex_admin_filter' => $exAdminFilter,
-                'player_id' => $player_id,
-            ];
-
-            $grid->autoHeight();
-            $grid->bordered(true);
-            $grid->column('id', 'ID')->align('center')->width('80px');
-
-            // 临时调试列：显示 ex_selection_field 的值
-            $grid->column('ex_selection_field', '选中字段(调试)')->display(function ($val, $data) use ($selectedGameIds) {
-                $gameId = $data['id'] ?? 'N/A';
-                $inArray = in_array($gameId, $selectedGameIds) ? '是' : '否';
-                $valDisplay = $val ? "✓ {$val}" : '✗ null';
-                return "ID:{$gameId} | 在数组:{$inArray} | 字段值:{$valDisplay}";
-            })->align('center')->width('300px');
-
-            $grid->column('platform_id', admin_trans('player.game_platform'))->display(function ($val, Game $data) {
-                return Tag::create($data->gamePlatform->name ?? admin_trans('player.unknown_platform'))->color('blue');
-            })->align('center')->width('120px');
-
-            $grid->column('game_content', admin_trans('player.game_name'))->display(function ($val, Game $data) use ($lang) {
-                $content = $data->gameContent ? $data->gameContent->where('lang', $lang)->first() : null;
-                $gameName = $content->name ?? admin_trans('player.game_id_label') . $data->id;
-
-                if ($content && $content->picture) {
-                    $image = Image::create()
-                        ->width(50)
-                        ->height(50)
-                        ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
-                        ->src($content->picture);
-                    return Html::create()->content([
-                        $image,
-                        Html::div()->content($gameName)->style(['margin-left' => '8px'])
-                    ])->style(['display' => 'flex', 'align-items' => 'center']);
-                }
-                return $gameName;
-            })->align('left');
-
-            $grid->column('cate_id', admin_trans('player.game_category'))->display(function ($val, Game $data) {
-                return Tag::create(getGameTypeName($val))->color('green');
-            })->align('center')->width('100px');
-
-            $grid->column('is_hot', admin_trans('player.is_hot'))->display(function ($val) {
-                return $val == 1 ? Tag::create(admin_trans('player.hot_tag'))->color('red') : '';
-            })->align('center')->width('80px');
-
-            $grid->column('is_new', admin_trans('player.is_new'))->display(function ($val) {
-                return $val == 1 ? Tag::create(admin_trans('player.new_tag'))->color('orange') : '';
-            })->align('center')->width('80px');
-
-            $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
-                $actions->hideDel();
-                $actions->hideEdit();
-
-                // 判断当前游戏是否被禁用
-                $isDisabled = in_array($data->id, $selectedGameIds);
-
-                if ($isDisabled) {
-                    // 已禁用，显示"取消禁用"按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('player.cancel_disable_game'))
-                            ->type('default')
-                            ->size('small')
-                            ->confirm(admin_trans('player.confirm_cancel_disable_game'), [$this, 'toggleGameDisable'], [
-                                'player_id' => $player_id,
-                                'game_id' => $data->id,
-                                'action' => 'enable'
-                            ])
-                            ->gridRefresh()
-                    );
-                } else {
-                    // 未禁用，显示"禁用游戏"按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('player.disable_game'))
-                            ->type('primary')
-                            ->size('small')
-                            ->danger()
-                            ->confirm(admin_trans('player.confirm_disable_game'), [$this, 'toggleGameDisable'], [
-                                'player_id' => $player_id,
-                                'game_id' => $data->id,
-                                'action' => 'disable'
-                            ])
-                            ->gridRefresh()
-                    );
-                }
-            })->align('center');
-
-            $grid->pagination()->pageSize(50);
-            $grid->hideDelete();
-            $grid->hideDeleteSelection();
-            $grid->hideTrashed();
-
-            $grid->tools(
-                Button::create(admin_trans('player.save_selected_games'))
-                    ->icon(Icon::create('fas fa-save'))
-                    ->confirm(admin_trans('common.confirm_save'),
-                        [
-                            $this,
-                            'savePlayerGames?' . http_build_query($param)
-                        ])
-                    ->gridBatch()->gridRefresh()
-                    ->type('primary')
-            );
-
-            $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
-                $filter->eq()->select('platform_id')
-                    ->placeholder(admin_trans('player.platform_placeholder'))
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options(GamePlatform::query()
-                        ->whereIn('id', $channelGamePlatformIds)
-                        ->pluck('name', 'id')
-                        ->toArray());
-
-                $filter->eq()->select('is_hot')
-                    ->placeholder(admin_trans('player.is_hot_placeholder'))
-                    ->style(['width' => '120px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        1 => admin_trans('player.hot_game'),
-                        0 => admin_trans('player.normal_game')
-                    ]);
-
-                $filter->eq()->select('is_new')
-                    ->placeholder(admin_trans('player.is_new_placeholder'))
-                    ->style(['width' => '120px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options([
-                        1 => admin_trans('player.new_game'),
-                        0 => admin_trans('player.old_game')
-                    ]);
-            });
-
-            $grid->expandFilter();
-
-            // 只使用 selectionField，不使用 selection() 方法（避免冲突）
-            $grid->selectionField('ex_selection_field');
-        });
     }
 
     /**
@@ -4678,6 +4481,236 @@ class ChannelPlayerController
         } catch (Exception $e) {
             Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
             return message_error(admin_trans('common.operation_failed') . '：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取玩家游戏列表数据（Vue组件专用API）
+     * @auth true
+     * @return \support\Response
+     */
+    public function getPlayerGameListData(): \support\Response
+    {
+        $playerId = Request::input('player_id');
+        $page = Request::input('page', 1);
+        $size = Request::input('size', 50);
+        $platformId = Request::input('platform_id');
+        $isHot = Request::input('is_hot');
+        $isNew = Request::input('is_new');
+
+        if (empty($playerId)) {
+            return json(['status' => 0, 'message' => admin_trans('common.player_id_required')]);
+        }
+
+        try {
+            /** @var Player $player */
+            $player = Player::query()->with('channel')->find($playerId);
+
+            if (empty($player)) {
+                return json(['status' => 0, 'message' => admin_trans('channel_player.error.player_not_found')]);
+            }
+
+            // 只有线下渠道才支持游戏级别权限管理
+            if ($player->channel->is_offline != 1) {
+                return json(['status' => 0, 'message' => admin_trans('channel_player.error.offline_channel_only')]);
+            }
+
+            // 获取玩家所在渠道开启的游戏平台
+            if (empty($player->channel->game_platform)) {
+                return json(['status' => 0, 'message' => admin_trans('channel_player.error.no_game_platform')]);
+            }
+
+            $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+            if (empty($channelGamePlatformIds)) {
+                return json(['status' => 0, 'message' => admin_trans('channel_player.error.no_game_platform')]);
+            }
+
+            // 获取玩家已禁用的游戏ID
+            $selectedGameIds = PlayerDisabledGame::query()
+                ->where('player_id', $playerId)
+                ->where('status', 1)
+                ->pluck('game_id')
+                ->toArray();
+
+            // 获取当前语言环境
+            $lang = Container::getInstance()->translator->getLocale();
+
+            // 构建查询
+            $query = Game::query()
+                ->whereIn('platform_id', $channelGamePlatformIds)
+                ->where('status', 1)
+                ->with(['gamePlatform', 'gameContent' => function ($q) use ($lang) {
+                    $q->where('lang', $lang);
+                }]);
+
+            // 应用筛选条件
+            if (!empty($platformId)) {
+                $query->where('platform_id', $platformId);
+            }
+            if (isset($isHot) && $isHot !== '') {
+                $query->where('is_hot', $isHot);
+            }
+            if (isset($isNew) && $isNew !== '') {
+                $query->where('is_new', $isNew);
+            }
+
+            // 获取总数
+            $total = $query->count();
+
+            // 分页查询
+            $games = $query->orderBy('platform_id', 'asc')
+                ->orderBy('sort', 'desc')
+                ->orderBy('id', 'desc')
+                ->forPage($page, $size)
+                ->get();
+
+            // 格式化数据
+            $gameList = $games->map(function ($game) use ($selectedGameIds, $lang) {
+                $content = $game->gameContent ? $game->gameContent->where('lang', $lang)->first() : null;
+
+                return [
+                    'id' => $game->id,
+                    'name' => $content->name ?? (admin_trans('player.game_id_label') . $game->id),
+                    'picture' => $content->picture ?? '',
+                    'platform_id' => $game->platform_id,
+                    'platform_name' => $game->gamePlatform->name ?? admin_trans('player.unknown_platform'),
+                    'cate_id' => $game->cate_id,
+                    'category_name' => getGameTypeName($game->cate_id),
+                    'is_hot' => $game->is_hot,
+                    'is_new' => $game->is_new,
+                    'is_selected' => in_array($game->id, $selectedGameIds), // 是否被禁用
+                ];
+            })->toArray();
+
+            // 获取平台列表
+            $platforms = GamePlatform::query()
+                ->whereIn('id', $channelGamePlatformIds)
+                ->select(['id', 'name'])
+                ->get()
+                ->toArray();
+
+            return json([
+                'status' => 1,
+                'message' => 'success',
+                'data' => [
+                    'list' => $gameList,
+                    'total' => $total,
+                    'platforms' => $platforms,
+                ]
+            ]);
+        } catch (Exception $e) {
+            Log::error('get_player_game_list_data', [$e->getMessage(), $e->getTrace()]);
+            return json([
+                'status' => 0,
+                'message' => admin_trans('common.load_failed') . '：' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * 保存玩家游戏权限（Vue组件专用）
+     * @auth true
+     * @return \support\Response
+     */
+    public function savePlayerGamesVue(): \support\Response
+    {
+        $playerId = Request::input('player_id');
+        $selectedGameIds = Request::input('selected_game_ids', []);
+
+        if (empty($playerId)) {
+            return json(['status' => 0, 'message' => admin_trans('common.player_id_required')]);
+        }
+
+        if (!is_array($selectedGameIds)) {
+            return json(['status' => 0, 'message' => admin_trans('common.invalid_parameter')]);
+        }
+
+        try {
+            /** @var Player $player */
+            $player = Player::query()->with('channel')->find($playerId);
+
+            if (empty($player)) {
+                return json(['status' => 0, 'message' => admin_trans('common.player_not_exist')]);
+            }
+
+            // 只有线下渠道才支持游戏级别权限管理
+            if ($player->channel->is_offline != 1) {
+                return json(['status' => 0, 'message' => admin_trans('common.offline_channel_feature_only')]);
+            }
+
+            // 获取渠道允许的游戏平台
+            $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+            if (empty($channelGamePlatformIds)) {
+                return json(['status' => 0, 'message' => admin_trans('common.channel_no_game_platform')]);
+            }
+
+            // 如果有选中的游戏，验证它们是否存在且在渠道范围内
+            if (!empty($selectedGameIds)) {
+                $selectedGames = Game::query()->whereIn('id', $selectedGameIds)->get();
+                if ($selectedGames->isEmpty()) {
+                    return json(['status' => 0, 'message' => admin_trans('common.games_not_found')]);
+                }
+
+                // 验证游戏是否都在渠道允许的范围内
+                foreach ($selectedGames as $game) {
+                    if (!in_array($game->platform_id, $channelGamePlatformIds)) {
+                        return json(['status' => 0, 'message' => admin_trans('common.games_not_in_channel_scope')]);
+                    }
+                }
+            }
+
+            Db::beginTransaction();
+            try {
+                // 清空该玩家所有游戏权限
+                PlayerDisabledGame::query()
+                    ->where('player_id', $playerId)
+                    ->delete();
+
+                // 如果有选中的游戏，批量插入
+                if (!empty($selectedGameIds)) {
+                    $selectedGames = Game::query()->whereIn('id', $selectedGameIds)->get();
+                    $insertData = [];
+                    foreach ($selectedGames as $game) {
+                        $insertData[] = [
+                            'player_id' => $playerId,
+                            'game_id' => $game->id,
+                            'platform_id' => $game->platform_id,
+                            'status' => 1,
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ];
+                    }
+
+                    if (!empty($insertData)) {
+                        PlayerDisabledGame::query()->insert($insertData);
+                    }
+                }
+
+                Db::commit();
+
+                $count = count($selectedGameIds);
+                $message = $count > 0
+                    ? str_replace('{count}', $count, admin_trans('player.game_disabled_success'))
+                    : admin_trans('player.game_enabled_all_success');
+
+                return json([
+                    'status' => 1,
+                    'message' => $message
+                ]);
+            } catch (Exception $e) {
+                Db::rollBack();
+                Log::error('save_player_games_vue', [$e->getMessage(), $e->getTrace()]);
+                return json([
+                    'status' => 0,
+                    'message' => $e->getMessage() ?? admin_trans('player.save_failed')
+                ]);
+            }
+        } catch (Exception $e) {
+            Log::error('save_player_games_vue', [$e->getMessage(), $e->getTrace()]);
+            return json([
+                'status' => 0,
+                'message' => admin_trans('common.operation_failed') . '：' . $e->getMessage()
+            ]);
         }
     }
 
