@@ -52,9 +52,11 @@ class ShiftReportExporter extends Excel
         // 如果是第一次调用，初始化店家所有设备
         if ($this->processedRecords == 0) {
             $this->initializeStoreDevices($data);
-            // 预留顶部空间给总计和设备明细（从行号200开始输出交班明细）
-            // 顶部包含：标题、表头、设备明细行（可能有几十个设备）、总计、说明等
-            $this->currentRow = 200;
+            // 动态计算顶部需要的行数：
+            // 1行标题 + 1行空行 + 1行表头 + N行设备明细 + 1行总计 + 2行空行 + 1行说明 + 2行空行 + 1行分隔线 + 1行空行 + 1行明细标题 + 2行空行 = 13 + N
+            $deviceCount = count($this->deviceTotals);
+            $topRowsNeeded = 13 + $deviceCount;
+            $this->currentRow = $topRowsNeeded + 3; // 再留3行空白
         }
 
         foreach ($data as $record) {
@@ -322,6 +324,19 @@ class ShiftReportExporter extends Excel
             // 添加总计行
             $this->addGrandTotalRow();
 
+            // 如果没有交班记录，在明细部分添加提示
+            if ($this->processedRecords == 0) {
+                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.no_shift_records'));
+                $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
+                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '999999']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFF4E6']]
+                ]);
+                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(50);
+            }
+
             // 设置列宽
             $this->setColumnWidths();
 
@@ -362,22 +377,27 @@ class ShiftReportExporter extends Excel
      */
     protected function initializeStoreDevices(array $data)
     {
+        // 如果没有交班记录数据，使用当前登录的店家管理员ID
         if (empty($data)) {
-            return;
-        }
+            $currentAdmin = \addons\webman\Admin::user();
+            if (!$currentAdmin) {
+                return;
+            }
+            $this->storeAdminId = $currentAdmin->id;
+        } else {
+            // 从第一条记录获取店家管理员ID
+            $firstRecordId = $data[0]['id'] ?? null;
+            if (!$firstRecordId) {
+                return;
+            }
 
-        // 从第一条记录获取店家管理员ID
-        $firstRecordId = $data[0]['id'] ?? null;
-        if (!$firstRecordId) {
-            return;
-        }
+            $firstRecord = StoreAgentShiftHandoverRecord::find($firstRecordId);
+            if (!$firstRecord || !$firstRecord->bind_admin_user_id) {
+                return;
+            }
 
-        $firstRecord = StoreAgentShiftHandoverRecord::find($firstRecordId);
-        if (!$firstRecord || !$firstRecord->bind_admin_user_id) {
-            return;
+            $this->storeAdminId = $firstRecord->bind_admin_user_id;
         }
-
-        $this->storeAdminId = $firstRecord->bind_admin_user_id;
 
         // 查询店家所有设备（Player表）
         $playerModel = plugin()->webman->config('database.player_model');
