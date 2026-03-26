@@ -117,35 +117,13 @@ class StoreLotteryController
 
             // 列定义
             $grid->column('id', admin_trans('player_lottery_record.fields.id'))->align('center')->fixed(true);
-            $grid->column('uuid', admin_trans('player_lottery_record.fields.uuid'))
-                ->display(function ($val, PlayerLotteryRecord $data) {
-                    return Html::create()->content([
-                        Html::div()->content($val),
-                        Html::div()->content($data->machine_name ?? '')->style(['color' => '#999', 'font-size' => '12px']),
-                        $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
-                    ]);
-                })
-                ->align('center')->fixed(true)->copy();
-
-            $grid->column('machine_uuid', admin_trans('player.fields.device_uuid'))->copy()->align('center')->fixed(true);
-            $grid->column('machine_name', admin_trans('player.fields.device_name'))->align('center')->fixed(true)->ellipsis(true);
-
-            $grid->column('type', admin_trans('player.fields.type'))
-                ->display(function ($val, $data) {
-                    $tags = [];
-                    if ($data['is_test'] == 1) {
-                        $tags[] = Tag::create(admin_trans('player.fields.is_test'))->color('red');
-                    } else {
-                        $tags[] = Tag::create(admin_trans('player.player'))->color('green');
-                    }
-                    if ($data['is_coin'] == 1) {
-                        $tags[] = Tag::create(admin_trans('player.coin_merchant'))->color('#3b5999');
-                    }
-                    if ($data['is_promoter'] == 1) {
-                        $tags[] = Tag::create(admin_trans('player.promoter'))->color('purple');
-                    }
-                    return Html::create()->content($tags)->style(['display' => 'inline-flex', 'text-align' => 'center']);
-                })->ellipsis(true)->width(200)->align('center');
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->copy()->align('center')->fixed(true);
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->display(function ($val, PlayerLotteryRecord $data) {
+                return Html::create()->content([
+                    Html::div()->content($val),
+                    $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
+                ]);
+            })->align('center')->fixed(true)->ellipsis(true);
 
             $grid->column('status', admin_trans('player_lottery_record.fields.status'))
                 ->display(function ($val) {
@@ -230,7 +208,6 @@ class StoreLotteryController
                 $filter->like()->text('machine_name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('machine_code')->placeholder(admin_trans('player_lottery_record.fields.machine_code'));
                 $filter->like()->text('lottery_name')->placeholder(admin_trans('player_lottery_record.fields.lottery_name'));
-                $filter->like()->text('machine_uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player_lottery_record.fields.uuid'));
                 $filter->eq()->number('amount')->precision(2)->style(['width' => '150px'])
                     ->placeholder(admin_trans('player_lottery_record.fields.amount'));
