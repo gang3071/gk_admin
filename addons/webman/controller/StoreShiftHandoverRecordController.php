@@ -401,40 +401,57 @@ class StoreShiftHandoverRecordController
                 return response('<script>alert("记录不存在或无权限导出");history.back();</script>');
             }
 
-            // 使用自定义导出驱动
+            // 创建导出器实例
             $exporter = new \addons\webman\grid\ShiftReportExporter();
 
-            // 初始化 Excel
-            $exporter->init();
+            // 创建 PhpSpreadsheet 对象
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('交班记录');
 
-            // 设置总数
+            // 设置导出器的必要属性
+            $exporter->spreadsheet = $spreadsheet;
+            $exporter->sheet = $sheet;
+            $exporter->currentRow = 1;
             $exporter->count = 1;
 
-            // 准备数据（只有一条记录）
+            // 模拟缓存对象（同步导出不需要真实缓存）
+            $exporter->cache = new class {
+                public function set($data) { return $this; }
+                public function expiresAfter($ttl) { return $this; }
+            };
+            $exporter->filesystemAdapter = new class {
+                public function save($cache) {}
+            };
+
+            // 准备数据
             $data = [$record->toArray()];
 
+            // 用于存储生成的文件路径
+            $filePath = null;
+
             // 写入数据
-            $exporter->write($data, function ($exporter) {
+            $exporter->write($data, function ($exp) use (&$filePath) {
                 // 保存到临时目录
                 $savePath = runtime_path() . '/excel_export/';
                 if (!is_dir($savePath)) {
                     mkdir($savePath, 0755, true);
                 }
 
-                return $exporter->save($savePath);
+                $filePath = $exp->save($savePath);
+                return $filePath;
             });
-
-            // 获取生成的文件路径
-            $filename = 'shift_report_' . $id . '_' . date('YmdHis') . '.xlsx';
-            $savePath = runtime_path() . '/excel_export/';
-            $filePath = $exporter->save($savePath);
 
             if (!$filePath || !file_exists($filePath)) {
                 return response('<script>alert("导出失败，文件生成失败");history.back();</script>');
             }
 
-            // 重命名文件
-            $newPath = $savePath . $filename;
+            // 重命名文件为有意义的文件名
+            $filename = 'shift_report_' . $id . '_' . date('YmdHis') . '.xlsx';
+            $newPath = dirname($filePath) . '/' . $filename;
+            if (file_exists($newPath)) {
+                unlink($newPath);
+            }
             rename($filePath, $newPath);
 
             // 返回文件供下载
@@ -443,6 +460,11 @@ class StoreShiftHandoverRecordController
             ])->deleteFileAfterSend(true);
 
         } catch (\Throwable $e) {
+            \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
             return response('<script>alert("导出失败: ' . addslashes($e->getMessage()) . '");history.back();</script>');
         }
     }
