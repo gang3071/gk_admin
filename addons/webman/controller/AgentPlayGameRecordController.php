@@ -4,11 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayGameRecord;
-use app\service\game\GameServiceFactory;
-use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -241,14 +237,15 @@ class AgentPlayGameRecordController
             $grid->actions(function (Actions $action, $data) {
                 $action->hideDel();
                 $action->hideEdit();
-                if (!empty($data->gamePlatform) && !empty($data->gamePlatform->code)) {
-                    $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code))->replay($data->toArray());
-                    if (!empty($url)) {
-                        $action->prepend(
-                            Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'], ['url' => $url])
-                        );
-                    }
-                }
+                // TODO: 回放功能需要在 gk_work 实现 replay API 后恢复
+                // if (!empty($data->gamePlatform) && !empty($data->gamePlatform->code)) {
+                //     $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code))->replay($data->toArray());
+                //     if (!empty($url)) {
+                //         $action->prepend(
+                //             Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'], ['url' => $url])
+                //         );
+                //     }
+                // }
             })->align('center');
 
             $grid->hideDelete();

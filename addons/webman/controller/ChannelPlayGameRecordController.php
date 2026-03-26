@@ -4,8 +4,6 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayGameRecord;
-use app\service\game\GameServiceFactory;
-use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\avatar\Avatar;
@@ -158,13 +156,14 @@ class ChannelPlayGameRecordController
             $grid->column('action_at', admin_trans('play_game_record.fields.action_at'))->align('center');
             $grid->actions(function (Actions $action,$data) {
                 $action->hideDel();
-                $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code))->replay($data->toArray());
-                if(!empty($url)){
-                    $action->prepend(
-                        Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'],
-                            ['url' => $url])
-                    );
-                }
+                // TODO: 回放功能需要在 gk_work 实现 replay API 后恢复
+                // $url = GameServiceFactory::createService(strtoupper($data->gamePlatform->code))->replay($data->toArray());
+                // if(!empty($url)){
+                //     $action->prepend(
+                //         Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'],
+                //             ['url' => $url])
+                //     );
+                // }
             });
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player_uuid')->placeholder(admin_trans('player.fields.uuid'));

@@ -33,6 +33,23 @@ class GamePlatform extends Model
     const DISPLAY_MODE_LANDSCAPE = 1; // 横版
     const DISPLAY_MODE_PORTRAIT = 2;  // 竖版
     const DISPLAY_MODE_ALL = 3;       // 全部支持
+
+    // 游戏平台类型常量
+    const TYPE_BTG = 'BTG';
+    const TYPE_WM = 'WM';
+    const TYPE_RSG = 'RSG';
+    const TYPE_ATG = 'ATG';
+    const TYPE_DG = 'DG';
+    const TYPE_JDB = 'JDB';
+    const TYPE_KY = 'KY';
+    const TYPE_YZG = 'YZG';
+    const TYPE_SP = 'SP';
+    const TYPE_SA = 'SA';
+    const TYPE_O8 = 'O8';
+    const TYPE_O8_STM = 'STM';
+    const TYPE_O8_HS = 'HS';
+    const TYPE_TNINE_SLOT = 'TNINE_SLOT';
+    const TYPE_KT = 'KT';
     
     public function __construct(array $attributes = [])
     {
