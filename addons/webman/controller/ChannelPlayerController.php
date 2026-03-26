@@ -4307,17 +4307,18 @@ class ChannelPlayerController
         return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
             $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
 
-            // 为每条记录添加选中标识字段
+            // 为每条记录添加选中标识字段（动态表名）
+            $tableName = $grid->model()->getModel()->getTable();
             $selectedIdsStr = empty($selectedGameIds) ? '0' : implode(',', $selectedGameIds);
-            $grid->model()->selectRaw("yjb_game.*, IF(yjb_game.id IN ({$selectedIdsStr}), yjb_game.id, NULL) as ex_selection_field")
+            $grid->model()->selectRaw("{$tableName}.*, IF({$tableName}.id IN ({$selectedIdsStr}), {$tableName}.id, NULL) as ex_selection_field")
                 ->whereIn('platform_id', $channelGamePlatformIds)
-                ->where('yjb_game.status', 1)
+                ->where('status', 1)
                 ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
                     $query->where('lang', $lang);
                 }])
                 ->orderBy('platform_id', 'asc')
                 ->orderBy('sort', 'desc')
-                ->orderBy('yjb_game.id', 'desc');
+                ->orderBy('id', 'desc');
 
             $grid->driver()->setPk('id');
             $exAdminFilter = Request::input('ex_admin_filter', []);
