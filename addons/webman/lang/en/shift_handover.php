@@ -175,6 +175,7 @@ return [
     'devices_unit' => '',
     'export_note' => 'Note: Total data is aggregated from all device details; if a shift record has no device details, shift summary data is used.',
     'details_title' => '▼ Shift Record Details ▼',
+    'no_shift_records' => 'No shift records (Please select shift records before exporting, or check filter criteria)',
 
     // Device Detail Export
     'export' => [

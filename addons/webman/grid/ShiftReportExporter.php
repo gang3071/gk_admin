@@ -324,19 +324,6 @@ class ShiftReportExporter extends Excel
             // 添加总计行
             $this->addGrandTotalRow();
 
-            // 如果没有交班记录，在明细部分添加提示
-            if ($this->processedRecords == 0) {
-                $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.no_shift_records'));
-                $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
-                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-                    'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '999999']],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFF4E6']]
-                ]);
-                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(50);
-            }
-
             // 设置列宽
             $this->setColumnWidths();
 
