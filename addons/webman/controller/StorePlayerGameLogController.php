@@ -151,13 +151,7 @@ class StorePlayerGameLogController
                         $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
                     ]);
                 })->align('center');
-                $grid->column('player.channel.name', admin_trans('player.fields.department_id'))->display(function (
-                    $val,
-                    PlayerGameLog $data
-                ) {
-                    return $data->player->channel->name ?? '';
-                })->width('150px')->align('center');
-            }, admin_trans('player_game_log.player_info'));
+            }, admin_trans('player_game_log.device_info'));
             $grid->column(function (Grid $grid) {
                 $grid->column('machine.machineLabel.name', admin_trans('machine.fields.name'))->display(function (
                     $val,
