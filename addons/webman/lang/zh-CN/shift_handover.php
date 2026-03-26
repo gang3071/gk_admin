@@ -171,4 +171,52 @@ return [
     'all_devices_summary' => '全部设备汇总',
     'devices_unit' => '台',
     'export_note' => '说明：总计数据来源于所有设备明细的累加；若交班记录无设备明细，则使用交班汇总数据。',
+
+    // 标签（带冒号）
+    'label' => [
+        'start' => '开始：',
+        'end' => '结束：',
+        'shift_type' => '交班类型：',
+        'log_id' => '日志ID：',
+        'machine_amount' => '投钞金额：',
+        'machine_point' => '投钞点数：',
+        'total_in' => '总收入：',
+        'total_out' => '总支出：',
+        'total_profit' => '总利润：',
+        'created_at' => '创建时间：',
+    ],
+
+    // 操作
+    'action' => [
+        'view_detail' => '查看明细',
+        'operation' => '操作',
+    ],
+
+    // 筛选
+    'filter' => [
+        'time_range' => '时间范围',
+        'start_time' => '开始时间',
+        'end_time' => '结束时间',
+    ],
+
+    // 设备明细
+    'device' => [
+        'detail_not_found' => '设备明细 - 记录不存在',
+        'detail_title' => '设备明细',
+        'device_count' => '设备数量',
+        'detail_data' => '设备详细数据',
+        'label' => [
+            'device_name' => '设备名称：',
+            'device_number' => '设备编号：',
+            'machine_point' => '投钞点数：',
+            'recharge_amount' => '开分金额：',
+            'withdrawal_amount' => '洗分金额：',
+            'backend_add_amount' => '后台加点：',
+            'backend_deduct_amount' => '后台扣点：',
+            'lottery_amount' => '彩金发放：',
+            'total_in' => '总收入：',
+            'total_out' => '总支出：',
+            'device_profit' => '设备利润：',
+        ],
+    ],
 ];
