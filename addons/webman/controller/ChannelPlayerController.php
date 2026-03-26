@@ -4403,7 +4403,7 @@ class ChannelPlayerController
 
             $grid->pagination()->pageSize(50);
             $grid->hideDelete();
-            $grid->hideDeleteSelection();
+            // $grid->hideDeleteSelection();  // 临时注释，测试是否影响selection显示
             $grid->hideTrashed();
 
             $grid->tools(
