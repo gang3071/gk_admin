@@ -2,10 +2,10 @@
   <div class="player-game-list">
     <a-card :loading="loading" :title="title">
       <!-- 筛选器 -->
-      <template #extra>
+      <template slot="extra">
         <a-space>
           <a-select
-            v-model:value="filters.platform_id"
+            v-model="filters.platform_id"
             allowClear
             placeholder="选择平台"
             style="width: 200px"
@@ -17,7 +17,7 @@
           </a-select>
 
           <a-select
-            v-model:value="filters.is_hot"
+            v-model="filters.is_hot"
             allowClear
             placeholder="热门游戏"
             style="width: 120px"
@@ -28,7 +28,7 @@
           </a-select>
 
           <a-select
-            v-model:value="filters.is_new"
+            v-model="filters.is_new"
             allowClear
             placeholder="新游戏"
             style="width: 120px"
@@ -38,7 +38,7 @@
             <a-select-option :value="0">旧游戏</a-select-option>
           </a-select>
 
-          <a-button :icon="h(SaveOutlined)" :loading="saving" type="primary" @click="saveSelectedGames">
+          <a-button :loading="saving" icon="save" type="primary" @click="saveSelectedGames">
             保存选中游戏
           </a-button>
         </a-space>
@@ -56,68 +56,59 @@
         row-key="id"
         @change="handleTableChange"
       >
-        <template #bodyCell="{ column, record }">
-          <!-- 平台列 -->
-          <template v-if="column.key === 'platform'">
-            <a-tag color="blue">{{ record.platform_name }}</a-tag>
-          </template>
+        <template slot="platform" slot-scope="text, record">
+          <a-tag color="blue">{{ record.platform_name }}</a-tag>
+        </template>
 
-          <!-- 游戏名称列 -->
-          <template v-else-if="column.key === 'game_name'">
-            <div style="display: flex; align-items: center">
-              <a-avatar
-                v-if="record.picture"
-                :size="50"
-                :src="record.picture"
-                shape="square"
-                style="margin-right: 8px"
-              />
-              <span>{{ record.name }}</span>
-            </div>
-          </template>
+        <template slot="game_name" slot-scope="text, record">
+          <div style="display: flex; align-items: center">
+            <a-avatar
+              v-if="record.picture"
+              :size="50"
+              :src="record.picture"
+              shape="square"
+              style="margin-right: 8px"
+            />
+            <span>{{ record.name }}</span>
+          </div>
+        </template>
 
-          <!-- 游戏分类列 -->
-          <template v-else-if="column.key === 'category'">
-            <a-tag color="green">{{ record.category_name }}</a-tag>
-          </template>
+        <template slot="category" slot-scope="text, record">
+          <a-tag color="green">{{ record.category_name }}</a-tag>
+        </template>
 
-          <!-- 热门标签 -->
-          <template v-else-if="column.key === 'is_hot'">
-            <a-tag v-if="record.is_hot === 1" color="red">热门</a-tag>
-          </template>
+        <template slot="is_hot" slot-scope="text, record">
+          <a-tag v-if="record.is_hot === 1" color="red">热门</a-tag>
+        </template>
 
-          <!-- 新游戏标签 -->
-          <template v-else-if="column.key === 'is_new'">
-            <a-tag v-if="record.is_new === 1" color="orange">新游戏</a-tag>
-          </template>
+        <template slot="is_new" slot-scope="text, record">
+          <a-tag v-if="record.is_new === 1" color="orange">新游戏</a-tag>
+        </template>
 
-          <!-- 状态列 -->
-          <template v-else-if="column.key === 'status'">
-            <a-tag :color="record.is_selected ? 'red' : 'green'">
-              {{ record.is_selected ? '已禁用' : '正常' }}
-            </a-tag>
-          </template>
+        <template slot="status" slot-scope="text, record">
+          <a-tag :color="record.is_selected ? 'red' : 'green'">
+            {{ record.is_selected ? '已禁用' : '正常' }}
+          </a-tag>
+        </template>
 
-          <!-- 操作列 -->
-          <template v-else-if="column.key === 'action'">
-            <a-button
-              v-if="record.is_selected"
-              size="small"
-              type="default"
-              @click="toggleGame(record, false)"
-            >
-              取消禁用
-            </a-button>
-            <a-button
-              v-else
-              danger
-              size="small"
-              type="primary"
-              @click="toggleGame(record, true)"
-            >
-              禁用游戏
-            </a-button>
-          </template>
+        <template slot="action" slot-scope="text, record">
+          <a-button
+            v-if="record.is_selected"
+            size="small"
+            type="default"
+            @click="toggleGame(record, false)"
+          >
+            取消禁用
+          </a-button>
+          <a-button
+            v-else
+            danger
+            size="small"
+            type="primary"
+            @click="toggleGame(record, true)"
+          >
+            禁用游戏
+          </a-button>
         </template>
       </a-table>
     </a-card>
@@ -125,11 +116,6 @@
 </template>
 
 <script>
-import {computed, createVNode, h, onMounted, reactive, ref} from 'vue';
-import {message, Modal} from 'ant-design-vue';
-import {ExclamationCircleOutlined, SaveOutlined} from '@ant-design/icons-vue';
-import axios from 'axios';
-
 export default {
   name: 'PlayerGameList',
   props: {
@@ -142,30 +128,119 @@ export default {
       default: ''
     }
   },
-  setup(props) {
-    const loading = ref(false);
-    const saving = ref(false);
-    const gameList = ref([]);
-    const platforms = ref([]);
-    const selectedRowKeys = ref([]);
-    const title = computed(() => `${props.player_name} - 游戏权限管理`);
-
+  data() {
+    return {
+      loading: false,
+      saving: false,
+      gameList: [],
+      platforms: [],
+      selectedRowKeys: [],
+      filters: {
+        platform_id: undefined,
+        is_hot: undefined,
+        is_new: undefined
+      },
+      pagination: {
+        current: 1,
+        pageSize: 50,
+        total: 0,
+        showSizeChanger: true,
+        showQuickJumper: true,
+        showTotal: (total) => `共 ${total} 条`
+      },
+      columns: [
+        {
+          title: 'ID',
+          dataIndex: 'id',
+          key: 'id',
+          width: 80,
+          align: 'center'
+        },
+        {
+          title: '游戏平台',
+          key: 'platform',
+          scopedSlots: { customRender: 'platform' },
+          width: 120,
+          align: 'center'
+        },
+        {
+          title: '游戏名称',
+          key: 'game_name',
+          scopedSlots: { customRender: 'game_name' },
+          width: 200
+        },
+        {
+          title: '游戏分类',
+          key: 'category',
+          scopedSlots: { customRender: 'category' },
+          width: 100,
+          align: 'center'
+        },
+        {
+          title: '热门',
+          key: 'is_hot',
+          scopedSlots: { customRender: 'is_hot' },
+          width: 80,
+          align: 'center'
+        },
+        {
+          title: '新游戏',
+          key: 'is_new',
+          scopedSlots: { customRender: 'is_new' },
+          width: 80,
+          align: 'center'
+        },
+        {
+          title: '状态',
+          key: 'status',
+          scopedSlots: { customRender: 'status' },
+          width: 100,
+          align: 'center'
+        },
+        {
+          title: '操作',
+          key: 'action',
+          scopedSlots: { customRender: 'action' },
+          width: 120,
+          align: 'center'
+        }
+      ]
+    };
+  },
+  computed: {
+    title() {
+      return `${this.player_name} - 游戏权限管理`;
+    },
+    rowSelection() {
+      return {
+        selectedRowKeys: this.selectedRowKeys,
+        onChange: (keys) => {
+          this.selectedRowKeys = keys;
+        }
+      };
+    }
+  },
+  mounted() {
+    this.loadGameList();
+  },
+  methods: {
     // 确认对话框辅助函数（兼容ExAdmin环境）
-    const showConfirm = (options) => {
-      return new Promise((resolve, reject) => {
+    showConfirm(options) {
+      const self = this;
+      return new Promise((resolve) => {
         try {
-          Modal.confirm({
-            icon: createVNode(ExclamationCircleOutlined),
+          this.$confirm({
+            title: options.title,
+            content: options.content,
             okText: '确认',
             cancelText: '取消',
-            ...options,
-            onOk: () => {
+            onOk() {
               resolve(true);
               if (options.onOk) {
                 return options.onOk();
               }
             },
-            onCancel: () => {
+            onCancel() {
               resolve(false);
               if (options.onCancel) {
                 options.onCancel();
@@ -182,94 +257,18 @@ export default {
           resolve(result);
         }
       });
-    };
-
-    const filters = reactive({
-      platform_id: undefined,
-      is_hot: undefined,
-      is_new: undefined
-    });
-
-    const pagination = reactive({
-      current: 1,
-      pageSize: 50,
-      total: 0,
-      showSizeChanger: true,
-      showQuickJumper: true,
-      showTotal: (total) => `共 ${total} 条`
-    });
-
-    const columns = [
-      {
-        title: 'ID',
-        dataIndex: 'id',
-        key: 'id',
-        width: 80,
-        align: 'center'
-      },
-      {
-        title: '游戏平台',
-        key: 'platform',
-        width: 120,
-        align: 'center'
-      },
-      {
-        title: '游戏名称',
-        key: 'game_name',
-        width: 200
-      },
-      {
-        title: '游戏分类',
-        key: 'category',
-        width: 100,
-        align: 'center'
-      },
-      {
-        title: '热门',
-        key: 'is_hot',
-        width: 80,
-        align: 'center'
-      },
-      {
-        title: '新游戏',
-        key: 'is_new',
-        width: 80,
-        align: 'center'
-      },
-      {
-        title: '状态',
-        key: 'status',
-        width: 100,
-        align: 'center'
-      },
-      {
-        title: '操作',
-        key: 'action',
-        width: 120,
-        align: 'center'
-      }
-    ];
-
-    const rowSelection = computed(() => ({
-      selectedRowKeys: selectedRowKeys.value,
-      onChange: (keys) => {
-        selectedRowKeys.value = keys;
-      },
-      getCheckboxProps: (record) => ({
-        // 可以添加一些禁用逻辑
-      })
-    }));
+    },
 
     // 加载游戏列表
-    const loadGameList = async () => {
-      loading.value = true;
+    async loadGameList() {
+      this.loading = true;
       try {
-        const response = await axios.get('/ex-admin/channel-player/getPlayerGameListData', {
+        const response = await this.$http.get('/ex-admin/channel-player/getPlayerGameListData', {
           params: {
-            player_id: props.player_id,
-            page: pagination.current,
-            size: pagination.pageSize,
-            ...filters
+            player_id: this.player_id,
+            page: this.pagination.current,
+            size: this.pagination.pageSize,
+            ...this.filters
           },
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -279,44 +278,44 @@ export default {
 
         if (response.data.status === 1) {
           const data = response.data.data;
-          gameList.value = data.list || [];
-          pagination.total = data.total || 0;
-          platforms.value = data.platforms || [];
+          this.gameList = data.list || [];
+          this.pagination.total = data.total || 0;
+          this.platforms = data.platforms || [];
 
           // 更新选中的行（已禁用的游戏）
-          selectedRowKeys.value = gameList.value
+          this.selectedRowKeys = this.gameList
             .filter(game => game.is_selected)
             .map(game => game.id);
         } else {
-          message.error(response.data.message || '加载失败');
+          this.$message.error(response.data.message || '加载失败');
         }
       } catch (error) {
         console.error('加载游戏列表失败:', error);
-        message.error('加载游戏列表失败');
+        this.$message.error('加载游戏列表失败');
       } finally {
-        loading.value = false;
+        this.loading = false;
       }
-    };
+    },
 
     // 表格变化处理
-    const handleTableChange = (pag) => {
-      pagination.current = pag.current;
-      pagination.pageSize = pag.pageSize;
-      loadGameList();
-    };
+    handleTableChange(pag) {
+      this.pagination.current = pag.current;
+      this.pagination.pageSize = pag.pageSize;
+      this.loadGameList();
+    },
 
     // 单个游戏切换
-    const toggleGame = (record, disable) => {
+    toggleGame(record, disable) {
       const action = disable ? 'disable' : 'enable';
       const actionText = disable ? '禁用' : '取消禁用';
 
-      showConfirm({
+      this.showConfirm({
         title: `确认${actionText}游戏`,
         content: `确定要${actionText}游戏"${record.name}"吗？`,
         onOk: async () => {
           try {
-            const response = await axios.post('/ex-admin/channel-player/toggleGameDisable', {
-              player_id: props.player_id,
+            const response = await this.$http.post('/ex-admin/channel-player/toggleGameDisable', {
+              player_id: this.player_id,
               game_id: record.id,
               action: action
             }, {
@@ -328,35 +327,35 @@ export default {
             });
 
             if (response.data.status === 1) {
-              message.success(response.data.message || `${actionText}成功`);
-              await loadGameList();
+              this.$message.success(response.data.message || `${actionText}成功`);
+              await this.loadGameList();
             } else {
-              message.error(response.data.message || `${actionText}失败`);
+              this.$message.error(response.data.message || `${actionText}失败`);
             }
           } catch (error) {
             console.error(`${actionText}游戏失败:`, error);
-            message.error(`${actionText}游戏失败`);
+            this.$message.error(`${actionText}游戏失败`);
           }
         }
       });
-    };
+    },
 
     // 批量保存选中的游戏
-    const saveSelectedGames = () => {
-      if (selectedRowKeys.value.length === 0) {
-        message.warning('请至少选择一个游戏');
+    saveSelectedGames() {
+      if (this.selectedRowKeys.length === 0) {
+        this.$message.warning('请至少选择一个游戏');
         return;
       }
 
-      showConfirm({
+      this.showConfirm({
         title: '确认保存',
-        content: `确定要将选中的 ${selectedRowKeys.value.length} 个游戏设为禁用状态吗？`,
+        content: `确定要将选中的 ${this.selectedRowKeys.length} 个游戏设为禁用状态吗？`,
         onOk: async () => {
-          saving.value = true;
+          this.saving = true;
           try {
-            const response = await axios.post('/ex-admin/channel-player/savePlayerGamesVue', {
-              player_id: props.player_id,
-              selected_game_ids: selectedRowKeys.value
+            const response = await this.$http.post('/ex-admin/channel-player/savePlayerGamesVue', {
+              player_id: this.player_id,
+              selected_game_ids: this.selectedRowKeys
             }, {
               headers: {
                 'X-Requested-With': 'XMLHttpRequest',
@@ -366,43 +365,20 @@ export default {
             });
 
             if (response.data.status === 1) {
-              message.success(response.data.message || '保存成功');
-              await loadGameList();
+              this.$message.success(response.data.message || '保存成功');
+              await this.loadGameList();
             } else {
-              message.error(response.data.message || '保存失败');
+              this.$message.error(response.data.message || '保存失败');
             }
           } catch (error) {
             console.error('保存失败:', error);
-            message.error('保存失败');
+            this.$message.error('保存失败');
           } finally {
-            saving.value = false;
+            this.saving = false;
           }
         }
       });
-    };
-
-    onMounted(() => {
-      loadGameList();
-    });
-
-    return {
-      h,
-      SaveOutlined,
-      loading,
-      saving,
-      gameList,
-      platforms,
-      selectedRowKeys,
-      filters,
-      pagination,
-      columns,
-      rowSelection,
-      title,
-      loadGameList,
-      handleTableChange,
-      toggleGame,
-      saveSelectedGames
-    };
+    }
   }
 };
 </script>
