@@ -3,7 +3,6 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Button;
@@ -166,10 +165,21 @@ class StoreShiftHandoverRecordController
                     ->placeholder(['开始时间', '结束时间']);
             });
 
-            // 隐藏默认操作列
-            $grid->actions(function (Actions $actions) {
+            // 操作列
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                // 添加单独导出按钮
+                $actions->prepend(
+                    Button::create('导出')
+                        ->type('link')
+                        ->size('small')
+                        ->link(admin_url([
+                            'addons-webman-controller-StoreShiftHandoverRecordController',
+                            'exportSingle'
+                        ], ['id' => $data['id']]))
+                );
             });
 
             $grid->hideDelete();
@@ -369,6 +379,72 @@ class StoreShiftHandoverRecordController
             $grid->hideCreate();
             $grid->disableSelection();
         });
+    }
+
+    /**
+     * 导出单条交班记录
+     * @group store
+     * @auth true
+     */
+    public function exportSingle(int $id)
+    {
+        try {
+            /** @var \addons\webman\model\AdminUser $admin */
+            $admin = Admin::user();
+
+            // 验证权限：只能导出自己的交班记录
+            $record = StoreAgentShiftHandoverRecord::where('id', $id)
+                ->where('bind_admin_user_id', $admin->id)
+                ->first();
+
+            if (!$record) {
+                return response('<script>alert("记录不存在或无权限导出");history.back();</script>');
+            }
+
+            // 使用自定义导出驱动
+            $exporter = new \addons\webman\grid\ShiftReportExporter();
+
+            // 初始化 Excel
+            $exporter->init();
+
+            // 设置总数
+            $exporter->count = 1;
+
+            // 准备数据（只有一条记录）
+            $data = [$record->toArray()];
+
+            // 写入数据
+            $exporter->write($data, function ($exporter) {
+                // 保存到临时目录
+                $savePath = runtime_path() . '/excel_export/';
+                if (!is_dir($savePath)) {
+                    mkdir($savePath, 0755, true);
+                }
+
+                return $exporter->save($savePath);
+            });
+
+            // 获取生成的文件路径
+            $filename = 'shift_report_' . $id . '_' . date('YmdHis') . '.xlsx';
+            $savePath = runtime_path() . '/excel_export/';
+            $filePath = $exporter->save($savePath);
+
+            if (!$filePath || !file_exists($filePath)) {
+                return response('<script>alert("导出失败，文件生成失败");history.back();</script>');
+            }
+
+            // 重命名文件
+            $newPath = $savePath . $filename;
+            rename($filePath, $newPath);
+
+            // 返回文件供下载
+            return response()->download($newPath, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ])->deleteFileAfterSend(true);
+
+        } catch (\Throwable $e) {
+            return response('<script>alert("导出失败: ' . addslashes($e->getMessage()) . '");history.back();</script>');
+        }
     }
 
 }
