@@ -188,29 +188,36 @@ class GamePlatformService
     /**
      * 进入指定游戏
      *
-     * @param int|GamePlatform $gamePlatform 游戏平台ID或对象
-     * @param string $gameCode 游戏代码
+     * @param int|object $game 游戏ID或Game对象
      * @return string 游戏URL
      * @throws Exception
      */
-    public function enterGame($gamePlatform, string $gameCode): string
+    public function enterGame($game): string
     {
-        // 如果传入的是ID，查询平台对象
-        if (is_int($gamePlatform)) {
-            $platform = GamePlatform::query()
-                ->where('id', $gamePlatform)
-                ->select(['id', 'code', 'name'])
-                ->first();
-
-            if (!$platform) {
-                throw new Exception(admin_trans('game_platform.not_fount'));
-            }
-            $gamePlatform = $platform;
-        }
+        // 如果传入的是Game对象，获取其ID
+        $gameId = is_object($game) ? $game->id : $game;
 
         $data = $this->callApi('/api/admin/enter-game', [
-            'game_platform_id' => $gamePlatform->id,
-            'game_code' => $gameCode,
+            'game_id' => $gameId,
+        ]);
+
+        return $data['url'] ?? '';
+    }
+
+    /**
+     * 游戏回放
+     *
+     * @param int|object $gameRecord 游戏记录ID或对象
+     * @return string 回放URL
+     * @throws Exception
+     */
+    public function replay($gameRecord): string
+    {
+        // 如果传入的是对象，获取其ID
+        $gameRecordId = is_object($gameRecord) ? $gameRecord->id : $gameRecord;
+
+        $data = $this->callApi('/api/admin/replay', [
+            'game_record_id' => $gameRecordId,
         ]);
 
         return $data['url'] ?? '';
