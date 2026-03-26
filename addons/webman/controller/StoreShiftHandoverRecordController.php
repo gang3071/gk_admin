@@ -167,21 +167,12 @@ class StoreShiftHandoverRecordController
             });
 
             // 操作列
-            $grid->actions(function (Actions $actions, $data) {
+            $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
                 $actions->hideDel();
-
-                // 添加单独导出按钮
-                $actions->prepend(
-                    Button::create('导出')
-                        ->type('primary')
-                        ->size('small')
-                        ->ajax([$this, 'exportSingleDownload'], ['id' => $data['id']])
-                );
             });
 
             $grid->hideDelete();
-            $grid->hideCreate();
             $grid->expandFilter();
 
             // 使用自定义导出驱动
@@ -381,105 +372,6 @@ class StoreShiftHandoverRecordController
             $grid->export(new \addons\webman\grid\DeviceDetailExporter($shiftRecord))
                 ->filename('device_details_' . $shiftRecordId . '_' . date('YmdHis'));
         });
-    }
-
-    /**
-     * 导出单条交班记录（AJAX返回下载链接）
-     * @group store
-     * @auth true
-     */
-    public function exportSingleDownload(int $id)
-    {
-        try {
-            /** @var AdminUser $admin */
-            $admin = Admin::user();
-
-            // 验证权限：只能导出自己的交班记录
-            $record = StoreAgentShiftHandoverRecord::where('id', $id)
-                ->where('bind_admin_user_id', $admin->id)
-                ->first();
-
-            if (!$record) {
-                return message_error('记录不存在或无权限导出');
-            }
-
-            // 生成下载URL
-            $downloadUrl = admin_url([
-                'addons-webman-controller-StoreShiftHandoverRecordController',
-                'exportSingle'
-            ], ['id' => $id]);
-
-            // 返回成功通知并打开新窗口下载
-            return notification_success('开始导出', '正在生成Excel文件...')->redirect($downloadUrl);
-
-        } catch (\Throwable $e) {
-            \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return message_error('导出失败: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * 导出单条交班记录（实际下载）
-     * @group store
-     * @auth true
-     */
-    public function exportSingle(int $id)
-    {
-        try {
-            /** @var AdminUser $admin */
-            $admin = Admin::user();
-
-            // 验证权限：只能导出自己的交班记录
-            $record = StoreAgentShiftHandoverRecord::where('id', $id)
-                ->where('bind_admin_user_id', $admin->id)
-                ->first();
-
-            if (!$record) {
-                return response('<script>alert("记录不存在或无权限导出");history.back();</script>');
-            }
-
-            // 使用独立的单条记录导出器
-            $exporter = new \addons\webman\grid\SingleShiftReportExporter($record);
-
-            // 导出到临时目录
-            $savePath = runtime_path() . '/excel_export';
-            $filePath = $exporter->export($savePath);
-
-            if (!file_exists($filePath)) {
-                return response('<script>alert("导出失败，文件生成失败");history.back();</script>');
-            }
-
-            // 读取文件内容
-            $fileContent = file_get_contents($filePath);
-            $filename = basename($filePath);
-
-            // 删除临时文件
-            @unlink($filePath);
-
-            // 返回文件供下载
-            $response = response($fileContent);
-            $response->withHeaders([
-                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                'Content-Length' => strlen($fileContent),
-                'Cache-Control' => 'max-age=0',
-                'Pragma' => 'public'
-            ]);
-
-            return $response;
-
-        } catch (\Throwable $e) {
-            \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
-                'id' => $id,
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            return response('<script>alert("导出失败: ' . addslashes($e->getMessage()) . '");history.back();</script>');
-        }
     }
 
 }
