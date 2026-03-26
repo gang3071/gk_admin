@@ -172,15 +172,11 @@ class StoreShiftHandoverRecordController
                 $actions->hideDel();
 
                 // 添加单独导出按钮
-                $exportUrl = admin_url([
-                    'addons-webman-controller-StoreShiftHandoverRecordController',
-                    'exportSingle'
-                ], ['id' => $data['id']]);
-
                 $actions->prepend(
-                    Html::create()->content(
-                        '<a href="' . $exportUrl . '" target="_blank" style="color: #1890ff; text-decoration: none;">导出</a>'
-                    )
+                    Button::create('导出')
+                        ->type('primary')
+                        ->size('small')
+                        ->ajax([$this, 'exportSingleDownload'], ['id' => $data['id']])
                 );
             });
 
@@ -384,7 +380,46 @@ class StoreShiftHandoverRecordController
     }
 
     /**
-     * 导出单条交班记录
+     * 导出单条交班记录（AJAX返回下载链接）
+     * @group store
+     * @auth true
+     */
+    public function exportSingleDownload(int $id)
+    {
+        try {
+            /** @var AdminUser $admin */
+            $admin = Admin::user();
+
+            // 验证权限：只能导出自己的交班记录
+            $record = StoreAgentShiftHandoverRecord::where('id', $id)
+                ->where('bind_admin_user_id', $admin->id)
+                ->first();
+
+            if (!$record) {
+                return message_error('记录不存在或无权限导出');
+            }
+
+            // 生成下载URL
+            $downloadUrl = admin_url([
+                'addons-webman-controller-StoreShiftHandoverRecordController',
+                'exportSingle'
+            ], ['id' => $id]);
+
+            // 返回成功通知并打开新窗口下载
+            return notification_success('开始导出', '正在生成Excel文件...')->redirect($downloadUrl);
+
+        } catch (\Throwable $e) {
+            \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
+                'id' => $id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return message_error('导出失败: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 导出单条交班记录（实际下载）
      * @group store
      * @auth true
      */
