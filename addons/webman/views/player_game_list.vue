@@ -51,7 +51,7 @@
         :loading="loading"
         :pagination="pagination"
         :row-selection="rowSelection"
-        :scroll="{ x: 1200 }"
+        :scroll="{ x: 1200, y: 600 }"
         bordered
         row-key="id"
         @change="handleTableChange"
@@ -153,10 +153,12 @@ export default {
           dataIndex: 'id',
           key: 'id',
           width: 80,
-          align: 'center'
+          align: 'center',
+          fixed: 'left'
         },
         {
           title: '游戏平台',
+          dataIndex: 'platform_name',
           key: 'platform',
           scopedSlots: { customRender: 'platform' },
           width: 120,
@@ -164,19 +166,22 @@ export default {
         },
         {
           title: '游戏名称',
+          dataIndex: 'name',
           key: 'game_name',
           scopedSlots: { customRender: 'game_name' },
-          width: 200
+          width: 250
         },
         {
           title: '游戏分类',
+          dataIndex: 'category_name',
           key: 'category',
           scopedSlots: { customRender: 'category' },
-          width: 100,
+          width: 120,
           align: 'center'
         },
         {
           title: '热门',
+          dataIndex: 'is_hot',
           key: 'is_hot',
           scopedSlots: { customRender: 'is_hot' },
           width: 80,
@@ -184,6 +189,7 @@ export default {
         },
         {
           title: '新游戏',
+          dataIndex: 'is_new',
           key: 'is_new',
           scopedSlots: { customRender: 'is_new' },
           width: 80,
@@ -191,6 +197,7 @@ export default {
         },
         {
           title: '状态',
+          dataIndex: 'is_selected',
           key: 'status',
           scopedSlots: { customRender: 'status' },
           width: 100,
@@ -201,7 +208,8 @@ export default {
           key: 'action',
           scopedSlots: { customRender: 'action' },
           width: 120,
-          align: 'center'
+          align: 'center',
+          fixed: 'right'
         }
       ]
     };
@@ -260,7 +268,6 @@ export default {
 
     // 加载游戏列表
     loadGameList() {
-      console.log('🚀 开始加载游戏列表');
       this.loading = true;
 
       const promise = this.$request({
@@ -273,44 +280,25 @@ export default {
         }
       });
 
-      console.log('📡 Promise对象:', promise);
-
       // ExAdmin的$request可能会reject成功的响应，所以我们在两个回调中都处理
       const handleResponse = (res) => {
-        console.log('📦 收到响应:', res);
-
-        // 检查是否是我们期望的格式
         if (res && res.status === 1 && res.data) {
           const data = res.data;
-          console.log('✅ 游戏数据:', data);
-
           this.gameList = data.list || [];
-          console.log('✅ 步骤1: 设置gameList，长度=', this.gameList.length);
-
           this.pagination.total = data.total || 0;
-          console.log('✅ 步骤2: 设置total=', this.pagination.total);
-
           this.platforms = data.platforms || [];
-          console.log('✅ 步骤3: 设置platforms，长度=', this.platforms.length);
 
           // 更新选中的行（已禁用的游戏）
           this.selectedRowKeys = this.gameList
             .filter(game => game && game.is_selected)
             .map(game => game.id);
-          console.log('✅ 步骤4: 设置selectedRowKeys=', this.selectedRowKeys);
-
-          console.log('🎉 加载完成！');
         } else {
-          console.error('❌ 响应格式不正确:', res);
+          console.error('响应格式不正确:', res);
         }
       };
 
       promise.then(handleResponse, handleResponse)
-        .catch(error => {
-          console.error('❌ catch块被触发:', error);
-        })
         .finally(() => {
-          console.log('⏹ finally: 设置loading=false');
           this.loading = false;
         });
     },
@@ -331,7 +319,7 @@ export default {
         title: `确认${actionText}游戏`,
         content: `确定要${actionText}游戏"${record.name}"吗？`,
         onOk: () => {
-          this.$request({
+          const promise = this.$request({
             url: 'ex-admin/addons-webman-controller-ChannelPlayerController/toggleGameDisable',
             method: 'post',
             data: {
@@ -339,23 +327,18 @@ export default {
               game_id: record.id,
               action: action
             }
-          }).then(res => {
-            if (res.status === 1) {
+          });
+
+          const handleResponse = (res) => {
+            if (res && res.status === 1) {
               if (this.$message && this.$message.success) {
                 this.$message.success(res.message || `${actionText}成功`);
               }
               this.loadGameList();
-            } else {
-              if (this.$message && this.$message.error) {
-                this.$message.error(res.message || `${actionText}失败`);
-              }
             }
-          }).catch(error => {
-            console.error(`${actionText}游戏失败:`, error);
-            if (this.$message && this.$message.error) {
-              this.$message.error(`${actionText}游戏失败`);
-            }
-          });
+          };
+
+          promise.then(handleResponse, handleResponse);
         }
       });
     },
@@ -376,32 +359,28 @@ export default {
         content: `确定要将选中的 ${this.selectedRowKeys.length} 个游戏设为禁用状态吗？`,
         onOk: () => {
           this.saving = true;
-          this.$request({
+          const promise = this.$request({
             url: 'ex-admin/addons-webman-controller-ChannelPlayerController/savePlayerGamesVue',
             method: 'post',
             data: {
               player_id: this.player_id,
               selected_game_ids: this.selectedRowKeys
             }
-          }).then(res => {
-            if (res.status === 1) {
+          });
+
+          const handleResponse = (res) => {
+            if (res && res.status === 1) {
               if (this.$message && this.$message.success) {
                 this.$message.success(res.message || '保存成功');
               }
               this.loadGameList();
-            } else {
-              if (this.$message && this.$message.error) {
-                this.$message.error(res.message || '保存失败');
-              }
             }
-          }).catch(error => {
-            console.error('保存失败:', error);
-            if (this.$message && this.$message.error) {
-              this.$message.error('保存失败');
-            }
-          }).finally(() => {
-            this.saving = false;
-          });
+          };
+
+          promise.then(handleResponse, handleResponse)
+            .finally(() => {
+              this.saving = false;
+            });
         }
       });
     }
