@@ -369,7 +369,7 @@ class StoreShiftHandoverRecordController
             $grid->disableSelection();
 
             // 使用自定义导出驱动导出设备明细
-            $grid->export(new \addons\webman\grid\DeviceDetailExporter($shiftRecord))
+            $grid->export(new \addons\webman\grid\DeviceDetailExporter())
                 ->filename('device_details_' . $shiftRecordId . '_' . date('YmdHis'));
         });
     }

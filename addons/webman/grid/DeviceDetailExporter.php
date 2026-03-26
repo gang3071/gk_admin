@@ -5,6 +5,7 @@ namespace addons\webman\grid;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
+use ExAdmin\ui\support\Request;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -15,12 +16,7 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
  */
 class DeviceDetailExporter extends Excel
 {
-    protected StoreAgentShiftHandoverRecord $shiftRecord;
-
-    public function __construct(StoreAgentShiftHandoverRecord $shiftRecord)
-    {
-        $this->shiftRecord = $shiftRecord;
-    }
+    protected ?StoreAgentShiftHandoverRecord $shiftRecord = null;
 
     public function columns(array $columns)
     {
@@ -29,11 +25,32 @@ class DeviceDetailExporter extends Excel
         return $this;
     }
 
+    /**
+     * 获取交班记录
+     */
+    protected function getShiftRecord(): ?StoreAgentShiftHandoverRecord
+    {
+        if ($this->shiftRecord === null) {
+            // 从请求参数获取 shift_record_id
+            $shiftRecordId = Request::input('shift_record_id');
+            if ($shiftRecordId) {
+                $this->shiftRecord = StoreAgentShiftHandoverRecord::find($shiftRecordId);
+            }
+        }
+        return $this->shiftRecord;
+    }
+
     public function write(array $data, \Closure $finish = null)
     {
         try {
+            // 获取交班记录
+            $shiftRecord = $this->getShiftRecord();
+            if (!$shiftRecord) {
+                throw new \Exception('交班记录不存在');
+            }
+
             // 交班记录标题行
-            $this->sheet->setCellValue('A' . $this->currentRow, '设备明细 - 交班记录 ID: ' . $this->shiftRecord->id);
+            $this->sheet->setCellValue('A' . $this->currentRow, '设备明细 - 交班记录 ID: ' . $shiftRecord->id);
             $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                 'font' => ['bold' => true, 'size' => 16],
@@ -50,10 +67,10 @@ class DeviceDetailExporter extends Excel
 
             // 交班汇总信息
             $summaryData = [
-                ['交班时间:', $this->shiftRecord->start_time . ' ~ ' . $this->shiftRecord->end_time, '交班类型:', $this->shiftRecord->is_auto_shift == 1 ? '自动交班' : '手动交班'],
-                ['投钞点数:', number_format($this->shiftRecord->machine_point, 0), '彩金:', number_format($this->shiftRecord->lottery_amount, 2)],
-                ['总收入:', number_format($this->shiftRecord->total_in, 2), '总支出:', number_format($this->shiftRecord->total_out, 2)],
-                ['总利润:', number_format($this->shiftRecord->total_profit_amount, 2), '', '']
+                ['交班时间:', $shiftRecord->start_time . ' ~ ' . $shiftRecord->end_time, '交班类型:', $shiftRecord->is_auto_shift == 1 ? '自动交班' : '手动交班'],
+                ['投钞点数:', number_format($shiftRecord->machine_point, 0), '彩金:', number_format($shiftRecord->lottery_amount, 2)],
+                ['总收入:', number_format($shiftRecord->total_in, 2), '总支出:', number_format($shiftRecord->total_out, 2)],
+                ['总利润:', number_format($shiftRecord->total_profit_amount, 2), '', '']
             ];
 
             $summaryStartRow = $this->currentRow;
@@ -87,14 +104,14 @@ class DeviceDetailExporter extends Excel
 
             // 利润单元格颜色
             $profitCell = 'B' . ($summaryStartRow + 3);
-            $profitColor = $this->shiftRecord->total_profit_amount >= 0 ? '3f8600' : 'cf1322';
+            $profitColor = $shiftRecord->total_profit_amount >= 0 ? '3f8600' : 'cf1322';
             $this->sheet->getStyle($profitCell)->getFont()->getColor()->setRGB($profitColor);
             $this->sheet->getStyle($profitCell)->getFont()->setBold(true);
 
             $this->currentRow++; // 空行
 
             // 获取设备明细
-            $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $this->shiftRecord->id)
+            $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $shiftRecord->id)
                 ->orderBy('profit', 'desc')
                 ->get();
 
