@@ -143,14 +143,6 @@ class StorePlayerGameLogController
                         Html::div()->content($data->player->name ?? '')
                     ]);
                 })->align('center');
-                $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
-                    $val,
-                    PlayerGameLog $data
-                ) {
-                    return Html::create()->content([
-                        $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
-                    ]);
-                })->align('center');
             }, admin_trans('player_game_log.device_info'));
             $grid->column(function (Grid $grid) {
                 $grid->column('machine.machineLabel.name', admin_trans('machine.fields.name'))->display(function (

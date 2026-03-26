@@ -121,6 +121,7 @@ class StoreLotteryController
                 ->display(function ($val, PlayerLotteryRecord $data) {
                     return Html::create()->content([
                         Html::div()->content($val),
+                        Html::div()->content($data->machine_name ?? '')->style(['color' => '#999', 'font-size' => '12px']),
                         $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
                     ]);
                 })
