@@ -4464,7 +4464,8 @@ class ChannelPlayerController
             });
 
             $grid->expandFilter();
-        })->selection(['237']);
+            $grid->selection(['237']);
+        });
     }
 
     /**
