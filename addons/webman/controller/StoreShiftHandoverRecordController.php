@@ -172,14 +172,15 @@ class StoreShiftHandoverRecordController
                 $actions->hideDel();
 
                 // 添加单独导出按钮
+                $exportUrl = admin_url([
+                    'addons-webman-controller-StoreShiftHandoverRecordController',
+                    'exportSingle'
+                ], ['id' => $data['id']]);
+
                 $actions->prepend(
-                    Button::create('导出')
-                        ->type('link')
-                        ->size('small')
-                        ->link(admin_url([
-                            'addons-webman-controller-StoreShiftHandoverRecordController',
-                            'exportSingle'
-                        ], ['id' => $data['id']]))
+                    Html::create()->content(
+                        '<a href="' . $exportUrl . '" target="_blank" style="color: #1890ff; text-decoration: none;">导出</a>'
+                    )
                 );
             });
 
@@ -421,11 +422,16 @@ class StoreShiftHandoverRecordController
             @unlink($filePath);
 
             // 返回文件供下载
-            return response($fileContent, 200, [
+            $response = response($fileContent);
+            $response->withHeaders([
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-                'Content-Length' => strlen($fileContent)
+                'Content-Length' => strlen($fileContent),
+                'Cache-Control' => 'max-age=0',
+                'Pragma' => 'public'
             ]);
+
+            return $response;
 
         } catch (\Throwable $e) {
             \support\Log::error('导出交班记录失败: ' . $e->getMessage(), [
