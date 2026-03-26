@@ -4510,10 +4510,27 @@ class ChannelPlayerController
 
     /**
      * 获取玩家游戏列表数据（Vue组件专用API）
-     * @auth true
+     * @auth false
      * @return \support\Response
      */
-    public function getPlayerGameListData(): \support\Response
+    public function getPlayerGameListData()
+    {
+        // 简单测试
+        return json([
+            'status' => 1,
+            'message' => 'API is working',
+            'data' => [
+                'test' => 'success',
+                'player_id' => Request::input('player_id'),
+                'page' => Request::input('page', 1)
+            ]
+        ]);
+    }
+
+    /**
+     * 获取玩家游戏列表数据（完整版本 - 暂时禁用）
+     */
+    private function getPlayerGameListDataFull()
     {
         $playerId = Request::input('player_id');
         $page = Request::input('page', 1);
@@ -4522,7 +4539,15 @@ class ChannelPlayerController
         $isHot = Request::input('is_hot');
         $isNew = Request::input('is_new');
 
+        // 调试日志
+        \support\Log::info('getPlayerGameListData called', [
+            'player_id' => $playerId,
+            'page' => $page,
+            'size' => $size
+        ]);
+
         if (empty($playerId)) {
+            \support\Log::warning('player_id is empty');
             return json(['status' => 0, 'message' => admin_trans('common.player_id_required')]);
         }
 
