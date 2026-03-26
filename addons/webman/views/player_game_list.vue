@@ -275,11 +275,12 @@ export default {
 
       console.log('📡 Promise对象:', promise);
 
-      promise.then(res => {
-        console.log('⭐ 进入then块');
-        console.log('✅ API响应:', res);
+      // ExAdmin的$request可能会reject成功的响应，所以我们在两个回调中都处理
+      const handleResponse = (res) => {
+        console.log('📦 收到响应:', res);
 
-        if (res.status === 1) {
+        // 检查是否是我们期望的格式
+        if (res && res.status === 1 && res.data) {
           const data = res.data;
           console.log('✅ 游戏数据:', data);
 
@@ -300,16 +301,18 @@ export default {
 
           console.log('🎉 加载完成！');
         } else {
-          console.error('❌ API返回失败:', res.message);
+          console.error('❌ 响应格式不正确:', res);
         }
-      }, error => {
-        console.error('❌ Promise被reject:', error);
-      }).catch(error => {
-        console.error('❌ catch块被触发:', error);
-      }).finally(() => {
-        console.log('⏹ finally: 设置loading=false');
-        this.loading = false;
-      });
+      };
+
+      promise.then(handleResponse, handleResponse)
+        .catch(error => {
+          console.error('❌ catch块被触发:', error);
+        })
+        .finally(() => {
+          console.log('⏹ finally: 设置loading=false');
+          this.loading = false;
+        });
     },
 
     // 表格变化处理
