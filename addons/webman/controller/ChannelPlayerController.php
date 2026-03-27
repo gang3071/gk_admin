@@ -4622,7 +4622,7 @@ class ChannelPlayerController
                 }
 
                 Db::commit();
-                return message_success($message);
+                return message_success($message)->refresh();
             } catch (Exception $e) {
                 Db::rollBack();
                 Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
