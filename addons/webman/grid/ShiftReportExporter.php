@@ -152,11 +152,9 @@ class ShiftReportExporter extends Excel
                 ];
 
                 // 设备明细数据 - 遍历所有设备（即使某些设备在本次交班中没有数据）
-                // 使用与顶部总计相同的排序逻辑（按利润倒序）
+                // 使用与顶部总计相同的排序逻辑（按 player_id 升序）
                 $sortedDevices = $this->deviceTotals;
-                uasort($sortedDevices, function($a, $b) {
-                    return $b['profit'] <=> $a['profit'];
-                });
+                ksort($sortedDevices); // 按 key (player_id) 升序排序
 
                 $detailStartRow = $this->currentRow;
                 $index = 0;
@@ -465,11 +463,9 @@ class ShiftReportExporter extends Excel
         $topRow++;
 
         // ==================== 第3部分：每个设备的明细行 ====================
-        // 创建副本并按利润倒序排列设备（不改变原数组，保持 player_id 作为 key）
+        // 创建副本并按 player_id 升序排列设备（不改变原数组，保持 player_id 作为 key）
         $sortedDevices = $this->deviceTotals;
-        uasort($sortedDevices, function($a, $b) {
-            return $b['profit'] <=> $a['profit'];
-        });
+        ksort($sortedDevices); // 按 key (player_id) 升序排序
 
         $deviceRowStart = $topRow;
         $index = 0;
