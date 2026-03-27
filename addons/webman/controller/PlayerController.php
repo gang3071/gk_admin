@@ -1231,6 +1231,7 @@ class PlayerController
                     // 玩家钱包扣减
                     $player->machine_wallet->money = bcsub($player->machine_wallet->money, $playerWithdrawRecord->point,
                         2);
+                    $player->machine_wallet->save();
                     // 更新玩家统计
                     $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
                         $playerWithdrawRecord->point, 2);
@@ -3124,6 +3125,7 @@ class PlayerController
                     $playerRechargeRecord->save();
                     $player->machine_wallet->money = bcadd($player->machine_wallet->money, $playerRechargeRecord->point,
                         2);
+                    $player->machine_wallet->save();
                     $player->player_extend->recharge_amount = bcadd($player->player_extend->recharge_amount,
                         $playerRechargeRecord->point, 2);
                     $player->player_extend->coin_recharge_amount = bcadd($player->player_extend->coin_recharge_amount,
@@ -3237,6 +3239,7 @@ class PlayerController
                     // 玩家钱包扣减
                     $player->machine_wallet->money = bcsub($player->machine_wallet->money, $playerWithdrawRecord->point,
                         2);
+                    $player->machine_wallet->save();
                     // 更新玩家统计
                     $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
                         $playerWithdrawRecord->point, 2);

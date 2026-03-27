@@ -2211,6 +2211,7 @@ class ChannelPlayerPromoterController
                 $playerDeliveryRecord->save();
 
                 $playerPromoter->player->machine_wallet->money = $amountAfter;
+                $playerPromoter->player->machine_wallet->save();
             }
             $playerPromoter->push();
             DB::commit();

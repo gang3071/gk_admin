@@ -193,6 +193,7 @@ class ChannelNationalPromoterReportController
                 $player = Player::query()->find($item->recommend_id);
                 $amountBefore = $player->machine_wallet->money;
                 $player->machine_wallet->money = bcadd($player->machine_wallet->money, $item->money, 2);
+                $player->machine_wallet->save();
 
                 // 寫入金流明細
                 $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -259,6 +260,7 @@ class ChannelNationalPromoterReportController
             $player = Player::query()->find($id);
             $amountBefore = $player->machine_wallet->money;
             $player->machine_wallet->money = bcadd($player->machine_wallet->money, $data->money, 2);
+            $player->machine_wallet->save();
 
             // 寫入金流明細
             $playerDeliveryRecord = new PlayerDeliveryRecord;

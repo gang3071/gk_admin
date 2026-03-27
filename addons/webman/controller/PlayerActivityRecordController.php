@@ -283,6 +283,7 @@ class PlayerActivityRecordController
                     $playerActivityPhaseRecord->user_id = $adminId;
                     $playerActivityPhaseRecord->user_name = $adminUsername;
                     $playerActivityPhaseRecord->player->machine_wallet->money = bcadd($playerActivityPhaseRecord->player->machine_wallet->money, $playerActivityPhaseRecord->bonus, 2);
+                    $playerActivityPhaseRecord->player->machine_wallet->save();
                     $playerActivityPhaseRecord->push();
                     //寫入金流明細
                     $playerDeliveryRecords[] = [
@@ -645,6 +646,7 @@ class PlayerActivityRecordController
             $playerActivityPhaseRecord->user_id = Admin::id() ?? 0;
             $playerActivityPhaseRecord->user_name = !empty(Admin::user()) ? Admin::user()->username : '';
             $playerActivityPhaseRecord->player->machine_wallet->money = bcadd($playerActivityPhaseRecord->player->machine_wallet->money, $playerActivityPhaseRecord->bonus, 2);
+            $playerActivityPhaseRecord->player->machine_wallet->save();
             $playerActivityPhaseRecord->push();
             //寫入金流明細
             $playerDeliveryRecord = new PlayerDeliveryRecord;
