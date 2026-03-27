@@ -49,9 +49,9 @@ class ShiftReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-        // 如果是第一次调用，初始化起始行（不初始化设备，设备在处理明细时动态添加）
+        // 如果是第一次调用，初始化店家所有设备并加载所有历史数据
         if ($this->processedRecords == 0) {
-            // 获取店家管理员ID（用于后续查询）
+            // 获取店家管理员ID
             if (!empty($data)) {
                 $firstRecordId = $data[0]['id'] ?? null;
                 if ($firstRecordId) {
@@ -61,6 +61,13 @@ class ShiftReportExporter extends Excel
                     }
                 }
             }
+
+            // 初始化店家所有设备
+            $this->initializeStoreDevices();
+
+            // 加载所有历史交班记录的设备明细数据（从设备创建开始到现在）
+            $this->loadAllHistoricalData();
+
             // 从第1行开始写明细，完成后会在前面插入总计区域
             $this->currentRow = 1;
         }
@@ -182,37 +189,8 @@ class ShiftReportExporter extends Excel
                     $subtotal['total_out'] += $detail->total_out;
                     $subtotal['profit'] += $detail->profit;
 
-                    // 累加到每个设备的总计（按设备名称分组）- 仅统计有交班记录的设备
-                    $deviceKey = $detail->player_name . '|' . $detail->player_phone; // 使用名称和编号组合作为唯一标识
-
-                    // 动态添加或累加设备数据
-                    if (isset($this->deviceTotals[$deviceKey])) {
-                        // 设备已存在，累加数据
-                        $this->deviceTotals[$deviceKey]['machine_point'] += $detail->machine_point;
-                        $this->deviceTotals[$deviceKey]['recharge_amount'] += $detail->recharge_amount;
-                        $this->deviceTotals[$deviceKey]['withdrawal_amount'] += $detail->withdrawal_amount;
-                        $this->deviceTotals[$deviceKey]['modified_add_amount'] += $detail->modified_add_amount;
-                        $this->deviceTotals[$deviceKey]['modified_deduct_amount'] += $detail->modified_deduct_amount;
-                        $this->deviceTotals[$deviceKey]['lottery_amount'] += $detail->lottery_amount;
-                        $this->deviceTotals[$deviceKey]['total_in'] += $detail->total_in;
-                        $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
-                        $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
-                    } else {
-                        // 设备不存在，新增设备（只添加有数据的设备）
-                        $this->deviceTotals[$deviceKey] = [
-                            'player_name' => $detail->player_name,
-                            'player_phone' => $detail->player_phone,
-                            'machine_point' => $detail->machine_point,
-                            'recharge_amount' => $detail->recharge_amount,
-                            'withdrawal_amount' => $detail->withdrawal_amount,
-                            'modified_add_amount' => $detail->modified_add_amount,
-                            'modified_deduct_amount' => $detail->modified_deduct_amount,
-                            'lottery_amount' => $detail->lottery_amount,
-                            'total_in' => $detail->total_in,
-                            'total_out' => $detail->total_out,
-                            'profit' => $detail->profit
-                        ];
-                    }
+                    // 注意：当前交班记录的设备数据已经在 loadAllHistoricalData() 中累加过了
+                    // 这里不需要重复累加，因为 loadAllHistoricalData() 已经包含了所有交班记录
 
                     $this->currentRow++;
                 }
@@ -244,12 +222,9 @@ class ShiftReportExporter extends Excel
 
                 $this->currentRow++;
 
-                // 累加小计到总计
-                foreach ($subtotal as $key => $value) {
-                    $this->grandTotal[$key] += floatval($value ?? 0);
-                }
+                // 注意：不累加小计到总计，因为总计已经在 loadAllHistoricalData() 中计算了所有历史数据
             } else {
-                // 没有设备明细数据，使用交班记录的汇总数据
+                // 没有设备明细数据
                 $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.no_device_data'));
                 $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
                 $this->sheet->getStyle('A' . $this->currentRow . ':K' . $this->currentRow)->applyFromArray([
@@ -259,12 +234,7 @@ class ShiftReportExporter extends Excel
                 ]);
                 $this->currentRow++;
 
-                // 使用交班记录的汇总数据累加（这些字段在交班记录中有）
-                $this->grandTotal['machine_point'] += floatval($originalRecord->machine_point ?? 0);
-                $this->grandTotal['lottery_amount'] += floatval($originalRecord->lottery_amount ?? 0);
-                $this->grandTotal['total_in'] += floatval($originalRecord->total_in ?? 0);
-                $this->grandTotal['total_out'] += floatval($originalRecord->total_out ?? 0);
-                $this->grandTotal['profit'] += floatval($originalRecord->total_profit_amount ?? 0);
+                // 注意：不累加到总计，因为总计已经在 loadAllHistoricalData() 中计算了所有历史数据
             }
 
             // 空行分隔
@@ -331,30 +301,11 @@ class ShiftReportExporter extends Excel
 
     /**
      * 初始化店家所有设备
-     * @param array $data 交班记录数据
      */
-    protected function initializeStoreDevices(array $data)
+    protected function initializeStoreDevices()
     {
-        // 如果没有交班记录数据，使用当前登录的店家管理员ID
-        if (empty($data)) {
-            $currentAdmin = \addons\webman\Admin::user();
-            if (!$currentAdmin) {
-                return;
-            }
-            $this->storeAdminId = $currentAdmin->id;
-        } else {
-            // 从第一条记录获取店家管理员ID
-            $firstRecordId = $data[0]['id'] ?? null;
-            if (!$firstRecordId) {
-                return;
-            }
-
-            $firstRecord = StoreAgentShiftHandoverRecord::find($firstRecordId);
-            if (!$firstRecord || !$firstRecord->bind_admin_user_id) {
-                return;
-            }
-
-            $this->storeAdminId = $firstRecord->bind_admin_user_id;
+        if (!$this->storeAdminId) {
+            return;
         }
 
         // 查询店家所有设备（Player表）
@@ -364,10 +315,11 @@ class ShiftReportExporter extends Excel
             ->select(['id', 'name', 'phone', 'uuid'])
             ->get();
 
-        // 初始化每个设备的累计数据结构
+        // 初始化每个设备的累计数据结构（使用 player_id 作为唯一标识）
         foreach ($allDevices as $device) {
-            $deviceKey = $device->name . '|' . ($device->phone ?? $device->uuid);
+            $deviceKey = $device->id; // 使用 player_id 作为唯一标识
             $this->deviceTotals[$deviceKey] = [
+                'player_id' => $device->id,
                 'player_name' => $device->name,
                 'player_phone' => $device->phone ?? $device->uuid,
                 'machine_point' => 0,
@@ -380,6 +332,58 @@ class ShiftReportExporter extends Excel
                 'total_out' => 0,
                 'profit' => 0
             ];
+        }
+    }
+
+    /**
+     * 加载所有历史交班记录的设备明细数据（从设备创建开始到现在）
+     */
+    protected function loadAllHistoricalData()
+    {
+        if (!$this->storeAdminId) {
+            return;
+        }
+
+        // 查询该店家所有的交班记录
+        $allShiftRecords = StoreAgentShiftHandoverRecord::query()
+            ->where('bind_admin_user_id', $this->storeAdminId)
+            ->pluck('id');
+
+        if ($allShiftRecords->isEmpty()) {
+            return;
+        }
+
+        // 查询所有交班记录的设备明细
+        $allDeviceDetails = StoreShiftDeviceDetail::query()
+            ->whereIn('shift_record_id', $allShiftRecords)
+            ->get();
+
+        // 累加到每个设备的总计和全局总计
+        foreach ($allDeviceDetails as $detail) {
+            $deviceKey = $detail->player_id; // 使用 player_id 作为唯一标识
+
+            if (isset($this->deviceTotals[$deviceKey])) {
+                $this->deviceTotals[$deviceKey]['machine_point'] += $detail->machine_point;
+                $this->deviceTotals[$deviceKey]['recharge_amount'] += $detail->recharge_amount;
+                $this->deviceTotals[$deviceKey]['withdrawal_amount'] += $detail->withdrawal_amount;
+                $this->deviceTotals[$deviceKey]['modified_add_amount'] += $detail->modified_add_amount;
+                $this->deviceTotals[$deviceKey]['modified_deduct_amount'] += $detail->modified_deduct_amount;
+                $this->deviceTotals[$deviceKey]['lottery_amount'] += $detail->lottery_amount;
+                $this->deviceTotals[$deviceKey]['total_in'] += $detail->total_in;
+                $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
+                $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
+            }
+
+            // 同时累加到全局总计
+            $this->grandTotal['machine_point'] += $detail->machine_point;
+            $this->grandTotal['recharge_amount'] += $detail->recharge_amount;
+            $this->grandTotal['withdrawal_amount'] += $detail->withdrawal_amount;
+            $this->grandTotal['modified_add_amount'] += $detail->modified_add_amount;
+            $this->grandTotal['modified_deduct_amount'] += $detail->modified_deduct_amount;
+            $this->grandTotal['lottery_amount'] += $detail->lottery_amount;
+            $this->grandTotal['total_in'] += $detail->total_in;
+            $this->grandTotal['total_out'] += $detail->total_out;
+            $this->grandTotal['profit'] += $detail->profit;
         }
     }
 
