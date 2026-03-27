@@ -152,9 +152,15 @@ class ShiftReportExporter extends Excel
                 ];
 
                 // 设备明细数据 - 遍历所有设备（即使某些设备在本次交班中没有数据）
+                // 使用与顶部总计相同的排序逻辑（按利润倒序）
+                $sortedDevices = $this->deviceTotals;
+                uasort($sortedDevices, function($a, $b) {
+                    return $b['profit'] <=> $a['profit'];
+                });
+
                 $detailStartRow = $this->currentRow;
                 $index = 0;
-                foreach ($this->deviceTotals as $playerId => $deviceInfo) {
+                foreach ($sortedDevices as $playerId => $deviceInfo) {
                     // 检查该设备在本次交班记录中是否有数据
                     $detail = $deviceDetailsMap[$playerId] ?? null;
 
@@ -459,13 +465,15 @@ class ShiftReportExporter extends Excel
         $topRow++;
 
         // ==================== 第3部分：每个设备的明细行 ====================
-        // 按利润倒序排列设备
-        usort($this->deviceTotals, function($a, $b) {
+        // 创建副本并按利润倒序排列设备（不改变原数组，保持 player_id 作为 key）
+        $sortedDevices = $this->deviceTotals;
+        uasort($sortedDevices, function($a, $b) {
             return $b['profit'] <=> $a['profit'];
         });
 
         $deviceRowStart = $topRow;
-        foreach ($this->deviceTotals as $index => $device) {
+        $index = 0;
+        foreach ($sortedDevices as $playerId => $device) {
             $this->sheet->setCellValue('A' . $topRow, $device['player_name']);
             $this->sheet->setCellValue('B' . $topRow, $device['player_phone']);
             $this->sheet->setCellValue('C' . $topRow, number_format($device['machine_point'], 0));
@@ -496,6 +504,7 @@ class ShiftReportExporter extends Excel
 
             $this->sheet->getRowDimension($topRow)->setRowHeight(20);
             $topRow++;
+            $index++;
         }
 
         // ==================== 第4部分：总计数据行 ====================
