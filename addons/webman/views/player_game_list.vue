@@ -31,7 +31,11 @@
             placeholder="热门筛选"
             @change="loadGameList"
           >
-            <a-select-option :value="1">🔥 热门</a-select-option>
+            <a-select-option :value="1">
+              <span style="color: #ff4d4f; font-weight: 600;">
+                <a-icon theme="filled" type="fire" /> 热门
+              </span>
+            </a-select-option>
             <a-select-option :value="0">普通</a-select-option>
           </a-select>
 
@@ -42,7 +46,11 @@
             class="filter-select-small"
             @change="loadGameList"
           >
-            <a-select-option :value="1">✨ 新游戏</a-select-option>
+            <a-select-option :value="1">
+              <span style="color: #ff7a45; font-weight: 600;">
+                <a-icon theme="filled" type="thunderbolt" /> 新游戏
+              </span>
+            </a-select-option>
             <a-select-option :value="0">旧游戏</a-select-option>
           </a-select>
 
@@ -83,7 +91,7 @@
         :loading="loading"
         :pagination="pagination"
         :row-selection="rowSelection"
-        :scroll="{ x: 1200, y: 600 }"
+        :scroll="{ x: 1250, y: 600 }"
         bordered
         size="middle"
         row-key="id"
@@ -124,19 +132,26 @@
         </template>
 
         <template slot="is_hot" slot-scope="text, record">
-          <a-tag v-if="record.is_hot === 1" color="red">🔥 热门</a-tag>
-          <span v-else class="empty-tag">-</span>
+          <div v-if="record.is_hot === 1" class="tag-hot">
+            <a-icon theme="filled" type="fire" />
+            <span>热门</span>
+          </div>
+          <span v-else class="tag-empty">—</span>
         </template>
 
         <template slot="is_new" slot-scope="text, record">
-          <a-tag v-if="record.is_new === 1" color="orange">✨ 新</a-tag>
-          <span v-else class="empty-tag">-</span>
+          <div v-if="record.is_new === 1" class="tag-new">
+            <a-icon theme="filled" type="thunderbolt" />
+            <span>新</span>
+          </div>
+          <span v-else class="tag-empty">—</span>
         </template>
 
         <template slot="status" slot-scope="text, record">
-          <a-tag :color="record.is_selected ? 'red' : 'green'">
-            {{ record.is_selected ? '已禁用' : '正常' }}
-          </a-tag>
+          <a-badge
+            :status="record.is_selected ? 'error' : 'success'"
+            :text="record.is_selected ? '已禁用' : '正常'"
+          />
         </template>
 
         <template slot="action" slot-scope="text, record">
@@ -227,7 +242,7 @@ export default {
           dataIndex: 'is_hot',
           key: 'is_hot',
           scopedSlots: { customRender: 'is_hot' },
-          width: 90,
+          width: 100,
           align: 'center'
         },
         {
@@ -235,7 +250,7 @@ export default {
           dataIndex: 'is_new',
           key: 'is_new',
           scopedSlots: { customRender: 'is_new' },
-          width: 90,
+          width: 100,
           align: 'center'
         },
         {
@@ -243,7 +258,7 @@ export default {
           dataIndex: 'is_selected',
           key: 'status',
           scopedSlots: { customRender: 'status' },
-          width: 100,
+          width: 110,
           align: 'center'
         },
         {
@@ -568,10 +583,89 @@ export default {
   font-weight: 500;
 }
 
-/* 空标签样式 */
-.empty-tag {
-  color: #d9d9d9;
+/* 热门标签样式 */
+.tag-hot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ff4d4f 100%);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(255, 77, 79, 0.3);
+  animation: pulse-hot 2s ease-in-out infinite;
+}
+
+.tag-hot .anticon {
   font-size: 14px;
+  animation: flame 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-hot {
+  0%, 100% {
+    box-shadow: 0 2px 6px rgba(255, 77, 79, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 12px rgba(255, 77, 79, 0.5);
+  }
+}
+
+@keyframes flame {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* 新游戏标签样式 */
+.tag-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #ffa940 0%, #ff7a45 100%);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(255, 169, 64, 0.3);
+  animation: pulse-new 2.5s ease-in-out infinite;
+}
+
+.tag-new .anticon {
+  font-size: 14px;
+  animation: sparkle 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-new {
+  0%, 100% {
+    box-shadow: 0 2px 6px rgba(255, 169, 64, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 12px rgba(255, 169, 64, 0.5);
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 1;
+    transform: rotate(0deg);
+  }
+  50% {
+    opacity: 0.7;
+    transform: rotate(-15deg);
+  }
+}
+
+/* 空标签样式 */
+.tag-empty {
+  color: #d9d9d9;
+  font-size: 16px;
+  font-weight: 300;
 }
 
 /* 操作链接样式 */
@@ -623,6 +717,28 @@ export default {
 
 :deep(.ant-table-tbody > tr > td) {
   border-bottom: 1px solid #f5f5f5;
+}
+
+/* Badge 状态样式优化 */
+:deep(.ant-badge-status-text) {
+  font-size: 13px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+:deep(.ant-badge-status-dot) {
+  width: 8px;
+  height: 8px;
+}
+
+:deep(.ant-badge-status-success) {
+  background-color: #52c41a;
+  box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.2);
+}
+
+:deep(.ant-badge-status-error) {
+  background-color: #ff4d4f;
+  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.2);
 }
 
 /* Tag 样式优化 */
