@@ -12,7 +12,7 @@ return [
         Notice::TYPE_MACHINE_BET => '机台设备bet(压分)数据异常',
         Notice::TYPE_MACHINE_WIN => '机台设备win(得分)数据异常',
         Notice::TYPE_MACHINE_WIN_NUMBER => '機台中洞兑奖次数（压转）异常通知',
-        Notice::TYPE_MACHINE_LOCK => '机台异常锁定通知',
+        Notice::TYPE_MACHINE_LOCK => '机台异常锁定通知',Notice::TYPE_MACHINE_CRASH => '设备爆机通知',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新的充值订单待审核, 玩家: {player_name}, 充值游戏点: {point} 充值金额: {money}!',
@@ -24,5 +24,6 @@ return [
         Notice::TYPE_MACHINE_WIN => '机台设备{machine_code}, 发现win(得分)数据异常, 请维护人员及时排查问题!',
         Notice::TYPE_MACHINE_WIN_NUMBER => '钢珠机台设备{machine_code}, 发现中洞兑奖次数（压转）, 请维护人员及时排查问题!',
         Notice::TYPE_MACHINE_LOCK => '机台设备{machine_code}，发生上下分异常（机台已锁），请维护人员及时排查问题！',
+        Notice::TYPE_MACHINE_CRASH => '设备已爆机：玩家 {player_name} (UID:{player_uuid}) 余额达到 {current_amount}，超过爆机金额 {crash_amount}，请联系管理员处理！',
     ],
 ];

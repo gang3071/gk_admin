@@ -41,6 +41,9 @@
                          :color="item.machine_status == 1 ? 'red' : 'green'" style="height: 23px;border-radius: 4px">
                     {{ item.machine_status == 1 ? lock : open }}
                   </a-tag>
+                  <a-tag v-else-if="item.type == 21" color="red" style="height: 23px;border-radius: 4px">
+                    {{ untreated }}
+                  </a-tag>
                   <a-tag v-else :color="item.type == 7 ? 'red' : 'green'" style="height: 23px;border-radius: 4px">
                     {{ item.type == 7 ? offline : processed }}
                   </a-tag>
@@ -75,6 +78,7 @@ const messages = {
       player_examine_lottery: '当前存在待审核的彩金奖励请尽快审核！',
       machine_online: '机台设备离线, 请尽快检查！',
       machine_lock: '机台设备上下分异常(锁定), 请尽快检查！',
+      machine_crash: '设备已爆机, 请尽快处理！',
       online: '在线',
       offline: '离线',
       processed: '已处理',
@@ -93,6 +97,7 @@ const messages = {
       player_examine_lottery: 'There are currently lottery awards to be reviewed, please review as soon as possible！',
       machine_online: 'Machine equipment offline, please check as soon as possible!',
       machine_lock: 'The upper and lower parts of the machine equipment are abnormal (locked), please check as soon as possible!',
+      machine_crash: 'Device crashed, please handle as soon as possible!',
       online: 'on line',
       offline: 'off line',
       processed: 'processed',
@@ -110,6 +115,7 @@ const messages = {
       player_examine_lottery: '現在レビュー対象のカラー報酬が存在します。できるだけ早くレビューしてください',
       machine_online: '机台設備がオフラインになっているので、できるだけ早くチェックしてください！',
       machine_lock: '机台設備の上下に異常（ロック）があるので、できるだけ早くチェックしてください！',
+      machine_crash: 'デバイスがクラッシュしました。できるだけ早く対応してください！',
       online: 'オンライン',
       offline: 'オフライン',
       processed: '処理済み',
@@ -128,6 +134,7 @@ const messages = {
       player_examine_lottery: '當前存在待審核的彩金獎勵請盡快審核！',
       machine_online: '機台設備離線, 請盡快檢查!',
       machine_lock: '機台設備上下分异常（鎖定），請儘快檢查！',
+      machine_crash: '設備已爆機, 請儘快處理！',
       online: '在線',
       offline: '離線',
       processed: '已處理',
@@ -348,6 +355,14 @@ export default {
               that.openNotification(title, router, description, params);
             }
             break;
+          case 'machine_crash':
+            if (machine === true) {
+              title = messages[lang].message.machine_crash;
+              description = content.message || '';
+              router = '/ex-admin/addons-webman-controller-ChannelPlayerController/index';
+              that.openNotificationErro(title, router, description, params);
+            }
+            break;
         }
       } catch (e) {
         console.warn('[Socket] Parse group message failed:', e);
@@ -433,6 +448,8 @@ export default {
           return 'orange'
         case 7:
           return 'red'
+        case 21:
+          return 'red' // 爆机通知 - 红色警告
       }
     },
     pageJump(url, source_id) {

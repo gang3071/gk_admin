@@ -69,6 +69,7 @@ return [
         'status_machine' => 'Physical machine',
         'status_offline_open' => 'Offline separation',
         'status_baccarat' => 'Hundreds of Real People',
+        'machine_crash_amount' => 'Crash Amount',
     ],
     'player_no_change' => 'The player has not changed',
     'not_fount' => 'The player was not found',
@@ -229,6 +230,9 @@ return [
     'game_enabled_all_success' => 'All game restrictions removed',
     'single_game_disabled_success' => 'Successfully disabled this game',
     'single_game_enabled_success' => 'Successfully enabled this game',
+    'game_status' => 'Game Status',
+    'game_status_normal' => 'Normal',
+    'game_status_disabled' => 'Disabled',
 
     // Placeholder
     'platform_placeholder' => 'Game Platform',
@@ -262,4 +266,22 @@ return [
     'game_id_label' => 'Game ID: ',
     'device_list_query_log' => 'Device list query',
     'no_device_data' => 'No device data available',
+
+    // Machine Crash Related
+    'is_crashed' => 'Crash Status',
+    'crashed' => 'Crashed',
+    'normal' => 'Normal',
+    'wash_score' => 'Wash Score',
+    'wash_score_amount' => 'Wash Amount',
+    'wash_score_success' => 'Wash score successfully',
+    'wash_score_failed' => 'Wash score failed',
+    'current_balance' => 'Current Balance',
+    'device_status' => 'Device Status',
+    'device_crashed_status' => '⚠️ Crashed',
+    'device_normal_status' => '✓ Normal',
+    'crash_amount' => 'Crash Amount',
+    'confiscated_amount' => '⚠️ Amount to be Confiscated',
+    'balance_after_wash' => 'Balance After Wash',
+    'wash_crashed_tip' => '⚠️ Device crashed! Only crash amount can be withdrawn, excess will be confiscated by system, wallet will be cleared',
+    'wash_normal_tip' => '✓ Device normal, all balance will be washed',
 ];

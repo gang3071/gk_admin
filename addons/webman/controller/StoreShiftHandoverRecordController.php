@@ -174,11 +174,24 @@ class StoreShiftHandoverRecordController
 
             $grid->hideDelete();
             $grid->expandFilter();
+            $grid->hideDeleteSelection();
 
-            // 使用自定义导出驱动
+            // 导出功能（权限通过 store_node.php 和 @auth true 控制）
             $grid->export(new \addons\webman\grid\ShiftReportExporter())
                 ->filename('shift_report_' . date('YmdHis'));
         });
+    }
+
+    /**
+     * 导出交班记录
+     * @group store
+     * @auth true
+     * @return void
+     */
+    public function export()
+    {
+        // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
+        // ExAdmin 会自动调用 ShiftReportExporter
     }
 
     /**
@@ -365,12 +378,8 @@ class StoreShiftHandoverRecordController
             });
 
             $grid->hideDelete();
-            $grid->hideCreate();
-            $grid->disableSelection();
-
-            // 使用自定义导出驱动导出设备明细
-            $grid->export(new \addons\webman\grid\DeviceDetailExporter())
-                ->filename('device_details_' . $shiftRecordId . '_' . date('YmdHis'));
+            $grid->hideSelection();
+            $grid->hideDelete();
         });
     }
 

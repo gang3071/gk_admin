@@ -69,6 +69,7 @@ return [
         'status_machine' => '实体机台',
         'status_offline_open' => '线下开分',
         'status_baccarat' => '真人百家',
+        'machine_crash_amount' => '爆机金额',
     ],
     'player_no_change' => '玩家沒有變動',
     'not_fount' => '未找到该玩家',
@@ -230,6 +231,9 @@ return [
     'game_enabled_all_success' => '已取消所有游戏禁用',
     'single_game_disabled_success' => '成功禁用该游戏',
     'single_game_enabled_success' => '成功取消禁用该游戏',
+    'game_status' => '游戏状态',
+    'game_status_normal' => '正常',
+    'game_status_disabled' => '禁用',
 
     // Placeholder
     'platform_placeholder' => '游戏平台',
@@ -263,4 +267,22 @@ return [
     'game_id_label' => '游戏 ID: ',
     'device_list_query_log' => '设备列表查询',
     'no_device_data' => '暂无设备数据',
+
+    // 爆机相关
+    'is_crashed' => '爆机状态',
+    'crashed' => '已爆机',
+    'normal' => '正常',
+    'wash_score' => '洗分',
+    'wash_score_amount' => '洗分金额',
+    'wash_score_success' => '洗分成功',
+    'wash_score_failed' => '洗分失败',
+    'current_balance' => '当前余额',
+    'device_status' => '设备状态',
+    'device_crashed_status' => '⚠️ 已爆机',
+    'device_normal_status' => '✓ 正常',
+    'crash_amount' => '爆机金额',
+    'confiscated_amount' => '⚠️ 将被没收金额',
+    'balance_after_wash' => '洗分后余额',
+    'wash_crashed_tip' => '⚠️ 设备已爆机！只能提现爆机金额，超出部分将被系统没收，钱包将清零',
+    'wash_normal_tip' => '✓ 设备正常，将全部余额洗分',
 ];

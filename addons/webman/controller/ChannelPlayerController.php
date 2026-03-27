@@ -66,6 +66,7 @@ use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Arr;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use support\Cache;
@@ -194,6 +195,7 @@ class ChannelPlayerController
             'player_register_record.country_name',
             'player_register_record.city_name',
             'player_platform_cash.money',
+            'player_platform_cash.is_crashed',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -383,6 +385,15 @@ class ChannelPlayerController
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
             })->ellipsis(true)->sortable()->align('center');
 
+            // 爆机状态列
+            $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
+                if ($val == 1) {
+                    return Tag::create(admin_trans('player.crashed'))->color('red');
+                } else {
+                    return Tag::create(admin_trans('player.normal'))->color('green');
+                }
+            })->width(100)->align('center')->sortable();
+
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
@@ -489,6 +500,14 @@ class ChannelPlayerController
                         ->placeholder(admin_trans('admin.store'))
                         ->remoteOptions(admin_url([ChannelPlayerController::class, 'getStoreOptions']));
                 }
+
+                // 爆机状态筛选
+                $filter->eq()->select('is_crashed')->options([
+                    '' => admin_trans('public_msg.all'),
+                    0 => admin_trans('player.normal'),
+                    1 => admin_trans('player.crashed')
+                ])->placeholder(admin_trans('player.is_crashed'));
+
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
@@ -576,6 +595,14 @@ class ChannelPlayerController
                             'cursor' => 'pointer'
                         ]))->title(admin_trans('player.wallet.artificial_withdrawal_tip'))
                     ));
+
+                // 洗分功能
+                $dropdown->append(admin_trans('player.wash_score'), 'SwapOutlined')
+                    ->modal([$this, 'washScoreForm'], [
+                        'id' => $data['id'],
+                        'money' => $data['money'] ?? 0,
+                        'is_crashed' => $data['is_crashed'] ?? 0,
+                    ])->width('600px');
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -730,6 +757,10 @@ class ChannelPlayerController
             }
             if (!empty($requestFilter['ip'])) {
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
+            }
+            // 爆机状态筛选
+            if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
+                $query->where('player_platform_cash.is_crashed', $requestFilter['is_crashed']);
             }
         }
     }
@@ -3302,7 +3333,7 @@ class ChannelPlayerController
                 $value,
                 Player $data
             ) {
-                if (isset($data->recommend_player) && !empty($data->recommend_player)) {
+                if (!empty($data->recommend_player)) {
                     return Html::create(Str::of($value)->limit(20, ' (...)'))
                         ->style(['cursor' => 'pointer', 'color' => 'rgb(24, 144, 255)'])
                         ->modal([$this, 'playerInfo'], ['player_id' => $data->recommend_player->id])
@@ -3856,6 +3887,15 @@ class ChannelPlayerController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
+            // machine_crash_amount（爆机金额）
+            $storeSettingCrashAmount = new StoreSetting();
+            $storeSettingCrashAmount->department_id = $currentDepartmentId;
+            $storeSettingCrashAmount->admin_user_id = $adminUser->id;
+            $storeSettingCrashAmount->feature = 'machine_crash_amount';
+            $storeSettingCrashAmount->num = 0; // 默认金额为 0
+            $storeSettingCrashAmount->status = 0; // 默认不开启
+            $storeSettingCrashAmount->save();
+
             Db::commit();
 
             return message_success(strtr(admin_trans('offline_channel.success_create_agent'), [
@@ -4114,6 +4154,15 @@ class ChannelPlayerController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
+            // machine_crash_amount（爆机金额）
+            $storeSettingCrashAmount = new StoreSetting();
+            $storeSettingCrashAmount->department_id = $departmentId;
+            $storeSettingCrashAmount->admin_user_id = $adminUser->id;
+            $storeSettingCrashAmount->feature = 'machine_crash_amount';
+            $storeSettingCrashAmount->num = 0; // 默认金额为 0
+            $storeSettingCrashAmount->status = 0; // 默认不开启
+            $storeSettingCrashAmount->save();
+
             // 5. 创建默认自动交班配置（早中晚三班）
             $autoShiftConfigs = [
                 [
@@ -4320,15 +4369,13 @@ class ChannelPlayerController
 
             $grid->autoHeight();
             $grid->bordered(true);
-            $grid->column('id', 'ID')->align('center')->width('80px');
-
-            $grid->column('platform_id', admin_trans('player.game_platform'))->display(function ($val, Game $data) {
-                return Tag::create($data->gamePlatform->name ?? admin_trans('player.unknown_platform'))->color('blue');
+            $grid->column('platform_id', '游戏平台')->display(function ($val, Game $data) {
+                return Tag::create($data->gamePlatform->name ?? '未知平台')->color('blue');
             })->align('center')->width('120px');
 
-            $grid->column('game_content', admin_trans('player.game_name'))->display(function ($val, Game $data) use ($lang) {
+            $grid->column('game_content', '游戏名称')->display(function ($val, Game $data) use ($lang) {
                 $content = $data->gameContent ? $data->gameContent->where('lang', $lang)->first() : null;
-                $gameName = $content->name ?? admin_trans('player.game_id_label') . $data->id;
+                $gameName = $content->name ?? '游戏 ID: ' . $data->id;
 
                 if ($content && $content->picture) {
                     $image = Image::create()
@@ -4344,75 +4391,44 @@ class ChannelPlayerController
                 return $gameName;
             })->align('left');
 
-            $grid->column('cate_id', admin_trans('player.game_category'))->display(function ($val, Game $data) {
+            $grid->column('cate_id', '游戏分类')->display(function ($val, Game $data) {
                 return Tag::create(getGameTypeName($val))->color('green');
             })->align('center')->width('100px');
 
-            $grid->column('is_hot', admin_trans('player.is_hot'))->display(function ($val) {
-                return $val == 1 ? Tag::create(admin_trans('player.hot_tag'))->color('red') : '';
+            $grid->column('is_hot', '热门')->display(function ($val) {
+                return $val == 1 ? Tag::create('热门')->color('red') : '';
             })->align('center')->width('80px');
 
-            $grid->column('is_new', admin_trans('player.is_new'))->display(function ($val) {
-                return $val == 1 ? Tag::create(admin_trans('player.new_tag'))->color('orange') : '';
+            $grid->column('is_new', '新游戏')->display(function ($val) {
+                return $val == 1 ? Tag::create('新')->color('orange') : '';
             })->align('center')->width('80px');
 
             $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
                 $actions->hideDel();
                 $actions->hideEdit();
+            })->hide();
 
-                // 判断当前游戏是否被禁用
+            // 添加状态开关列
+            $grid->column('status_switch', admin_trans('player.game_status'))->display(function ($val, $data) use ($selectedGameIds, $player_id) {
+                // 判断当前游戏是否被禁用：0=禁用，1=正常
                 $isDisabled = in_array($data->id, $selectedGameIds);
+                $status = $isDisabled ? 0 : 1;
 
-                if ($isDisabled) {
-                    // 已禁用，显示"取消禁用"按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('player.cancel_disable_game'))
-                            ->type('default')
-                            ->size('small')
-                            ->confirm(admin_trans('player.confirm_cancel_disable_game'), [$this, 'toggleGameDisable'], [
-                                'player_id' => $player_id,
-                                'game_id' => $data->id,
-                                'action' => 'enable'
-                            ])
-                            ->gridRefresh()
-                    );
-                } else {
-                    // 未禁用，显示"禁用游戏"按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('player.disable_game'))
-                            ->type('primary')
-                            ->size('small')
-                            ->danger()
-                            ->confirm(admin_trans('player.confirm_disable_game'), [$this, 'toggleGameDisable'], [
-                                'player_id' => $player_id,
-                                'game_id' => $data->id,
-                                'action' => 'disable'
-                            ])
-                            ->gridRefresh()
-                    );
-                }
-            })->align('center');
+                return Switches::create(null, $status)
+                    ->options([[1 => admin_trans('player.game_status_normal')], [0 => admin_trans('player.game_status_disabled')]])
+                    ->ajax([$this, 'toggleGameDisableSwitch'], [
+                        'player_id' => $player_id,
+                        'game_id' => $data->id
+                    ]);
+            })->align('center')->fixed('right')->width(120);
 
             $grid->pagination()->pageSize(50);
             $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
-
-            $grid->tools(
-                Button::create(admin_trans('player.save_selected_games'))
-                    ->icon(Icon::create('fas fa-save'))
-                    ->confirm(admin_trans('common.confirm_save'),
-                        [
-                            $this,
-                            'savePlayerGames?' . http_build_query($param)
-                        ])
-                    ->gridBatch()->gridRefresh()
-                    ->type('primary')
-            );
-
             $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
                 $filter->eq()->select('platform_id')
-                    ->placeholder(admin_trans('player.platform_placeholder'))
+                    ->placeholder('游戏平台')
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options(GamePlatform::query()
@@ -4421,26 +4437,27 @@ class ChannelPlayerController
                         ->toArray());
 
                 $filter->eq()->select('is_hot')
-                    ->placeholder(admin_trans('player.is_hot_placeholder'))
+                    ->placeholder('是否热门')
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => admin_trans('player.hot_game'),
-                        0 => admin_trans('player.normal_game')
+                        1 => '热门游戏',
+                        0 => '普通游戏'
                     ]);
 
                 $filter->eq()->select('is_new')
-                    ->placeholder(admin_trans('player.is_new_placeholder'))
+                    ->placeholder('是否新游戏')
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => admin_trans('player.new_game'),
-                        0 => admin_trans('player.old_game')
+                        1 => '新游戏',
+                        0 => '旧游戏'
                     ]);
             });
 
             $grid->expandFilter();
-        })->selection($selectedGameIds);
+            $grid->hideSelection();
+        });
     }
 
     /**
@@ -4574,6 +4591,82 @@ class ChannelPlayerController
     }
 
     /**
+     * 开关切换游戏禁用状态（用于Switches组件）
+     * @auth true
+     * @group channel
+     * @param int $player_id
+     * @param int $game_id
+     * @return Msg
+     */
+    public function toggleGameDisableSwitch(int $player_id, int $game_id): Msg
+    {
+        try {
+            // 获取开关的新状态：1=正常（未禁用），0=禁用
+            $newStatus = request()->post('status_switch', 1);
+
+            /** @var Player $player */
+            $player = Player::query()->with('channel')->find($player_id);
+
+            if (empty($player)) {
+                return message_error(admin_trans('common.player_not_exist'));
+            }
+
+            // 只有线下渠道才支持游戏级别权限管理
+            if ($player->channel->is_offline != 1) {
+                return message_error(admin_trans('common.offline_channel_feature_only'));
+            }
+
+            // 验证游戏是否存在
+            $game = Game::query()->find($game_id);
+            if (empty($game)) {
+                return message_error(admin_trans('common.game_not_exist'));
+            }
+
+            // 获取渠道允许的游戏平台
+            $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+            if (empty($channelGamePlatformIds) || !in_array($game->platform_id, $channelGamePlatformIds)) {
+                return message_error(admin_trans('common.game_not_in_channel_scope'));
+            }
+
+            Db::beginTransaction();
+            try {
+                if ($newStatus == 0) {
+                    // 状态为0=禁用 - 添加到 PlayerDisabledGame 表
+                    PlayerDisabledGame::query()->updateOrCreate(
+                        [
+                            'player_id' => $player_id,
+                            'game_id' => $game_id,
+                        ],
+                        [
+                            'platform_id' => $game->platform_id,
+                            'status' => 1,
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]
+                    );
+                    $message = admin_trans('player.single_game_disabled_success');
+                } else {
+                    // 状态为1=正常 - 从 PlayerDisabledGame 表删除
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->where('game_id', $game_id)
+                        ->delete();
+                    $message = admin_trans('player.single_game_enabled_success');
+                }
+
+                Db::commit();
+                return message_success($message);
+            } catch (Exception $e) {
+                Db::rollBack();
+                Log::error('toggle_game_disable_switch', [$e->getMessage(), $e->getTrace()]);
+                return message_error($e->getMessage() ?? '操作失败');
+            }
+        } catch (Exception $e) {
+            Log::error('toggle_game_disable_switch', [$e->getMessage(), $e->getTrace()]);
+            return message_error('操作失败：' . $e->getMessage());
+        }
+    }
+
+    /**
      * 切换单个游戏的禁用状态
      * @auth true
      * @group channel
@@ -4637,15 +4730,15 @@ class ChannelPlayerController
                 }
 
                 Db::commit();
-                return message_success($message)->refresh();
+                return message_success($message);
             } catch (Exception $e) {
                 Db::rollBack();
                 Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-                return message_error($e->getMessage() ?? admin_trans('player.operation_failed'));
+                return message_error($e->getMessage() ?? '操作失败');
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-            return message_error(admin_trans('common.operation_failed') . '：' . $e->getMessage());
+            return message_error('操作失败：' . $e->getMessage());
         }
     }
 
@@ -5021,5 +5114,243 @@ class ChannelPlayerController
             });
             $form->layout('vertical');
         });
+    }
+
+    /**
+     * 洗分表单
+     * @auth true
+     * @group wash_score
+     * @param $id
+     * @param $money
+     * @param $is_crashed
+     * @return Form
+     */
+    public function washScoreForm($id, $money, $is_crashed): Form
+    {
+        /** @var Player $player */
+        $player = Player::query()->with(['machine_wallet', 'channel'])->find($id);
+
+        if (!$player) {
+            return Form::create(function (Form $form) {
+                $form->text('error', admin_trans('player.player_not_found'))
+                    ->disabled();
+            });
+        }
+
+        // 检查爆机状态，计算可洗分金额
+        $crashCheck = checkMachineCrash($player);
+        $currentBalance = floatval($money);
+
+        // 如果爆机，洗分金额 = 爆机金额，钱包清零
+        if ($crashCheck['crashed'] && $crashCheck['crash_amount'] > 0) {
+            $washAmount = $crashCheck['crash_amount']; // 提现金额为爆机金额
+            $deductAmount = $currentBalance; // 钱包扣除全部余额
+        } else {
+            // 正常情况，全部洗掉
+            $washAmount = $currentBalance;
+            $deductAmount = $currentBalance;
+        }
+
+        $isCrashed = $crashCheck['crashed'];
+        $crashAmount = $crashCheck['crash_amount'] ?? 0;
+
+        return Form::create(function (Form $form) use ($id, $currentBalance, $washAmount, $deductAmount, $isCrashed, $crashAmount) {
+            // 设备状态提示（始终显示）
+            $form->text('device_status', admin_trans('player.device_status'))
+                ->value($isCrashed ? admin_trans('player.device_crashed_status') : admin_trans('player.device_normal_status'))
+                ->disabled();
+
+            $form->text('current_balance_display', admin_trans('player.current_balance'))
+                ->value(number_format($currentBalance, 2))
+                ->disabled();
+
+            if ($isCrashed) {
+                $form->text('crash_amount_display', admin_trans('player.crash_amount'))
+                    ->value(number_format($crashAmount, 2))
+                    ->disabled();
+
+                $confiscatedAmount = bcsub($deductAmount, $washAmount, 2);
+                $form->text('confiscated_amount', admin_trans('player.confiscated_amount'))
+                    ->value(number_format($confiscatedAmount, 2))
+                    ->disabled();
+
+                $form->text('remain_balance', admin_trans('player.balance_after_wash'))
+                    ->value('0.00')
+                    ->disabled();
+            }
+
+            $form->text('wash_amount_display', admin_trans('player.wash_score_amount'))
+                ->value(number_format($washAmount, 2))
+                ->disabled()
+                ->help($isCrashed
+                    ? admin_trans('player.wash_crashed_tip')
+                    : admin_trans('player.wash_normal_tip'));
+
+            $form->hidden('player_id')->value($id);
+            $form->hidden('wash_amount')->value($washAmount);
+            $form->hidden('deduct_amount')->value($deductAmount);
+
+            $form->saved(function ($form, $data) {
+                return $this->handleWashScore($data);
+            });
+
+            $form->layout('vertical');
+        });
+    }
+
+    /**
+     * 处理洗分
+     * @auth true
+     * @group wash_score
+     * @param array $data
+     * @return Msg
+     */
+    private function handleWashScore(array $data)
+    {
+        $playerId = $data['player_id'] ?? 0;
+        $washAmount = floatval($data['wash_amount'] ?? 0); // 提现金额
+        $deductAmount = floatval($data['deduct_amount'] ?? 0); // 钱包扣除金额
+
+        // 验证洗分金额
+        if ($washAmount <= 0) {
+            return message_error('洗分金额必须大于0');
+        }
+
+        if ($deductAmount <= 0) {
+            return message_error('钱包扣除金额必须大于0');
+        }
+
+        /** @var Player $player */
+        $player = Player::query()->with(['machine_wallet', 'channel', 'player_extend'])->find($playerId);
+
+        if (!$player) {
+            return message_error(admin_trans('player.player_not_found'));
+        }
+
+        // 获取货币配置
+        /** @var Currency $currency */
+        $currency = Currency::query()
+            ->where('identifying', $player->channel->currency)
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (!$currency) {
+            return message_error('币种配置不存在');
+        }
+
+        // 计算实际金额（游戏点数转为货币金额）
+        $money = bcdiv($washAmount, $currency->ratio, 2);
+
+        DB::beginTransaction();
+        try {
+            // 锁定钱包记录
+            /** @var PlayerPlatformCash $wallet */
+            $wallet = PlayerPlatformCash::query()
+                ->where('player_id', $playerId)
+                ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                DB::rollBack();
+                return message_error(admin_trans('player.wallet.player_error'));
+            }
+
+            // 检查余额是否足够
+            if ($wallet->money < $deductAmount) {
+                DB::rollBack();
+                return message_error(admin_trans('player.insufficient_balance'));
+            }
+
+            // 记录洗分前的余额
+            $previousAmount = floatval($wallet->money);
+
+            // 扣除钱包余额（可能是全部扣除）
+            $wallet->money = bcsub($wallet->money, $deductAmount, 2);
+            $wallet->save();
+
+            // 创建提现记录
+            $withdrawRecord = new PlayerWithdrawRecord();
+            $withdrawRecord->player_id = $playerId;
+            $withdrawRecord->talk_user_id = $player->talk_user_id ?? 0;
+            $withdrawRecord->department_id = $player->department_id;
+            $withdrawRecord->tradeno = createOrderNo();
+            $withdrawRecord->player_name = $player->name ?? '';
+            $withdrawRecord->player_phone = $player->phone ?? '';
+            $withdrawRecord->rate = $currency->ratio;
+            $withdrawRecord->actual_rate = $currency->ratio;
+            $withdrawRecord->money = $money;
+            $withdrawRecord->point = $washAmount;
+            $withdrawRecord->fee = 0;
+            $withdrawRecord->inmoney = $money; // 实际到账金额
+            $withdrawRecord->currency = $player->channel->currency;
+            $withdrawRecord->bank_name = '';
+            $withdrawRecord->account = '';
+            $withdrawRecord->account_name = '';
+            $withdrawRecord->wallet_address = '';
+            $withdrawRecord->qr_code = '';
+            $withdrawRecord->type = PlayerWithdrawRecord::TYPE_SELF; // 线下代理提现类型
+            $withdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
+            $withdrawRecord->bank_type = 4;
+            $withdrawRecord->remark = '渠道後台洗分';
+            $withdrawRecord->user_id = Admin::id() ?? 0;
+            $withdrawRecord->user_name = Admin::user()->username ?? 'system';
+            $withdrawRecord->finish_time = date('Y-m-d H:i:s');
+            $withdrawRecord->save();
+
+            // 更新玩家提现统计（统计实际提现的金额）
+            if ($player->player_extend) {
+                $player->player_extend->withdraw_amount = bcadd(
+                    $player->player_extend->withdraw_amount ?? 0,
+                    $washAmount, // 使用实际提现金额
+                    2
+                );
+                $player->push();
+            }
+
+            // 写入金流明细（记录实际扣除金额）
+            $deliveryRecord = new PlayerDeliveryRecord();
+            $deliveryRecord->player_id = $playerId;
+            $deliveryRecord->department_id = $player->department_id;
+            $deliveryRecord->target = $withdrawRecord->getTable();
+            $deliveryRecord->target_id = $withdrawRecord->id;
+            $deliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
+            $deliveryRecord->withdraw_status = $withdrawRecord->status;
+            $deliveryRecord->source = 'channel_withdrawal';
+            $deliveryRecord->amount = $deductAmount; // 记录实际扣除金额
+            $deliveryRecord->amount_before = $previousAmount;
+            $deliveryRecord->amount_after = floatval($wallet->money);
+            $deliveryRecord->tradeno = $withdrawRecord->tradeno;
+
+            // 计算备注信息
+            if ($deductAmount > $washAmount) {
+                $confiscatedAmount = bcsub($deductAmount, $washAmount, 2); // 没收金额
+                $deliveryRecord->remark = "渠道後台洗分（爆機清零，提現金額：{$washAmount}，沒收金額：{$confiscatedAmount}）";
+            } else {
+                $deliveryRecord->remark = '渠道後台洗分';
+            }
+
+            $deliveryRecord->save();
+
+            DB::commit();
+
+            // 刷新钱包以获取最新的爆机状态
+            $wallet->refresh();
+
+            // 爆机解锁通知会在 PlayerPlatformCash 模型的 booted 事件中自动处理
+
+            return message_success(admin_trans('player.wash_score_success'));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Channel wash score failed', [
+                'player_id' => $playerId,
+                'wash_amount' => $washAmount,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return message_error(admin_trans('player.wash_score_failed') . ': ' . $e->getMessage());
+        }
     }
 }

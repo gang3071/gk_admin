@@ -496,7 +496,7 @@ return [
                 'group' => 'store',
                 'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/index',
                 'title' => '记录列表',
-            ],
+            ]
         ]
     ],
 

@@ -174,6 +174,8 @@ return [
     'all_devices_summary' => '全部设备汇总',
     'devices_unit' => '台',
     'export_note' => '说明：总计数据来源于所有设备明细的累加；若交班记录无设备明细，则使用交班汇总数据。',
+    'details_title' => '▼ 各次交班记录明细 ▼',
+    'no_shift_records' => '暂无交班记录（请选择交班记录后再导出，或检查筛选条件）',
 
     // 标签（带冒号）
     'label' => [

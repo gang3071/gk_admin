@@ -16,6 +16,7 @@ return [
         'business_hours' => 'Business Hours',
         'enable_physical_machine' => 'Enable Physical Machine',
         'enable_live_baccarat' => 'Enable Live Baccarat',
+        'machine_crash_amount' => 'Machine Crash Amount',
     ],
     'home_notice_max_len' => 'Home notice message max 500 characters',
     'store_marquee_max_len' => 'Store marquee max 200 characters',
@@ -24,4 +25,12 @@ return [
     'edit_business_hours' => 'Edit Business Hours',
     'enable' => 'Enable',
     'disable' => 'Disable',
+
+    // Validation messages
+    'validation' => [
+        'integer' => 'Must be an integer',
+        'numeric' => 'Must be a number',
+        'max' => 'Cannot exceed {max}',
+        'min' => 'Cannot be less than {min}',
+    ],
 ];

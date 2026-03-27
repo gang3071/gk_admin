@@ -69,6 +69,7 @@ return [
         'status_machine' => 'ソリッドテーブル',
         'status_offline_open' => 'オフライン分割',
         'status_baccarat' => '真人百家',
+        'machine_crash_amount' => 'クラッシュ金額',
     ],
     'player_no_change' => 'プレイヤーは変更されていません',
     'not_fount' => 'プレーヤーが見つかりませんでした',
@@ -230,6 +231,9 @@ return [
     'game_enabled_all_success' => 'すべてのゲーム制限が削除されました',
     'single_game_disabled_success' => 'このゲームを正常に無効化しました',
     'single_game_enabled_success' => 'このゲームを正常に有効化しました',
+    'game_status' => 'ゲーム状態',
+    'game_status_normal' => '正常',
+    'game_status_disabled' => '無効',
 
     // プレースホルダー
     'platform_placeholder' => 'ゲームプラットフォーム',
@@ -263,4 +267,22 @@ return [
     'game_id_label' => 'ゲーム ID: ',
     'device_list_query_log' => 'デバイスリストクエリ',
     'no_device_data' => 'デバイスデータがありません',
+
+    // マシンクラッシュ関連
+    'is_crashed' => 'クラッシュ状態',
+    'crashed' => 'クラッシュ済み',
+    'normal' => '正常',
+    'wash_score' => 'ウォッシュスコア',
+    'wash_score_amount' => 'ウォッシュ金額',
+    'wash_score_success' => 'ウォッシュスコア成功',
+    'wash_score_failed' => 'ウォッシュスコア失敗',
+    'current_balance' => '現在の残高',
+    'device_status' => 'デバイス状態',
+    'device_crashed_status' => '⚠️ クラッシュ済み',
+    'device_normal_status' => '✓ 正常',
+    'crash_amount' => 'クラッシュ金額',
+    'confiscated_amount' => '⚠️ 没収される金額',
+    'balance_after_wash' => 'ウォッシュ後の残高',
+    'wash_crashed_tip' => '⚠️ デバイスがクラッシュしています！クラッシュ金額のみ引き出し可能、超過分はシステムに没収され、ウォレットはクリアされます',
+    'wash_normal_tip' => '✓ デバイス正常、全残高をウォッシュします',
 ];

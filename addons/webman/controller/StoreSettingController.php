@@ -60,9 +60,17 @@ class StoreSettingController
                 ->where('admin_user_id', $adminUserId);
 
             // 功能列
+            // 支持的 feature 类型及其翻译键：
+            // - home_notice: 首页提醒消息
+            // - store_marquee: 店家跑马灯
+            // - order_expiration: 订单过期时间
+            // - business_hours: 营业时间段
+            // - enable_physical_machine: 是否开启实体机台
+            // - enable_live_baccarat: 是否开启真人百家
+            // - machine_crash_amount: 爆机金额
             $grid->column('feature', admin_trans('store_setting.fields.feature'))
-                ->display(function ($value) {
-                    return admin_trans('store_setting.fields.' . $value);
+                ->display(function ($value, StoreSetting $data) {
+                    return admin_trans('store_setting.fields.' . $data->feature);
                 })->align('center');
 
             // 配置列
@@ -95,9 +103,9 @@ class StoreSettingController
                 })->editable(
                     (new Editable)->number('num')
                         ->rule([
-                            'integer' => admin_trans('validator.integer'),
-                            'max:180' => admin_trans('validator.max', null, ['{max}' => 180]),
-                            'min:5' => admin_trans('validator.min', null, ['{min}' => 5]),
+                            'integer' => admin_trans('store_setting.validation.integer'),
+                            'max:180' => admin_trans('store_setting.validation.max', null, ['{max}' => 180]),
+                            'min:5' => admin_trans('store_setting.validation.min', null, ['{min}' => 5]),
                         ])->addonAfter(admin_trans('store_setting.minutes'))
                 )->display(function ($val, StoreSetting $data) {
                     if (!empty($data->num)) {
@@ -145,6 +153,22 @@ class StoreSettingController
                     } else {
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
                     }
+                })->align('center')
+                // 爆机金额
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'machine_crash_amount';
+                })->editable(
+                    (new Editable)->number('num')
+                        ->rule([
+                            'numeric' => admin_trans('store_setting.validation.numeric'),
+                            'min:0' => admin_trans('store_setting.validation.min', null, ['{min}' => 0]),
+                        ])
+                        ->precision(2)
+                )->display(function ($val, StoreSetting $data) {
+                    if (!empty($data->num)) {
+                        return number_format(floatval($data->num), 2);
+                    }
+                    return '0.00';
                 })->align('center');
 
             // 状态列

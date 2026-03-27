@@ -325,6 +325,15 @@ class StoreMachineController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
+            // machine_crash_amount（爆机金额）
+            $storeSettingCrashAmount = new StoreSetting();
+            $storeSettingCrashAmount->department_id = $departmentId;
+            $storeSettingCrashAmount->admin_user_id = $adminUser->id;
+            $storeSettingCrashAmount->feature = 'machine_crash_amount';
+            $storeSettingCrashAmount->num = 0; // 默认金额为 0
+            $storeSettingCrashAmount->status = 0; // 默认不开启
+            $storeSettingCrashAmount->save();
+
             // 4. 创建默认自动交班配置（早中晚三班）
             $autoShiftConfigs = [
                 [

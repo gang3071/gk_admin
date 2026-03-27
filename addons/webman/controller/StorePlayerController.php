@@ -67,6 +67,9 @@ class StorePlayerController
             if (isset($requestFilter['status'])) {
                 $query->where('player.status', $requestFilter['status']);
             }
+            if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
+                $query->where('cash.is_crashed', $requestFilter['is_crashed']);
+            }
             if (!empty($requestFilter['phone'])) {
                 $query->where('player.phone', 'like', '%' . $requestFilter['phone'] . '%');
             }
@@ -88,6 +91,7 @@ class StorePlayerController
         $list = $query->select([
                 'player.*',
                 'cash.money as wallet_money',
+                'cash.is_crashed',
                 'player_extend.recharge_amount',
                 'player_extend.withdraw_amount',
                 'player_extend.machine_put_point'
@@ -139,6 +143,14 @@ class StorePlayerController
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
+                if ($val == 1) {
+                    return Tag::create(admin_trans('player.crashed'))->color('red');
+                } else {
+                    return Tag::create(admin_trans('player.normal'))->color('green');
+                }
+            })->width(100)->align('center');
+
             $grid->column('recharge_amount', admin_trans('player_extend.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
@@ -176,6 +188,15 @@ class StorePlayerController
                     ->options([
                         1 => admin_trans('admin.open'),
                         0 => admin_trans('admin.close')
+                    ])
+                    ->style(['width' => '150px']);
+
+                $filter->eq()->select('is_crashed')
+                    ->placeholder(admin_trans('player.is_crashed'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        0 => admin_trans('player.normal'),
+                        1 => admin_trans('player.crashed')
                     ])
                     ->style(['width' => '150px']);
 

@@ -220,6 +220,7 @@ class System extends SystemAbstract
             $typeArr[] = Notice::TYPE_MACHINE_WIN;
             $typeArr[] = Notice::TYPE_MACHINE_WIN_NUMBER;
             $typeArr[] = Notice::TYPE_MACHINE_LOCK;
+            $typeArr[] = Notice::TYPE_MACHINE_CRASH;
         }
         $list = [];
         if (Admin::user()->type == AdminDepartment::TYPE_DEPARTMENT && !empty($typeArr)) {
@@ -365,6 +366,20 @@ class System extends SystemAbstract
                         'created_at' => $createTime,
                         'machine_status' => $services->has_lock,
                         'url' => admin_url([MachineController::class, 'infoList'])
+                    ];
+                    break;
+                case Notice::TYPE_MACHINE_CRASH:
+                    // 爆机通知直接使用保存的 content，因为已经包含了所有必要信息
+                    $data[] = [
+                        'id' => $item->id,
+                        'source_id' => $item->source_id,
+                        'player_id' => $item->player_id,
+                        'title' => $title,
+                        'content' => $item->content, // 直接使用保存的完整内容
+                        'type' => $item->type,
+                        'created_at' => $createTime,
+                        'status' => true, // 爆机通知始终显示为活跃状态
+                        'url' => admin_url(['addons\webman\controller\ChannelPlayerController', 'index'])
                     ];
                     break;
             }

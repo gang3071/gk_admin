@@ -13,6 +13,7 @@ return [
         Notice::TYPE_MACHINE_WIN => 'Machine equipment win (score) data abnormality',
         Notice::TYPE_MACHINE_WIN_NUMBER => 'Abnormal notification of prize redemption times (pressure rotation) in the machine hole',
         Notice::TYPE_MACHINE_LOCK => 'Machine abnormal locking notification',
+        Notice::TYPE_MACHINE_CRASH => 'Device Crash Notification',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => 'New recharge order pending review, player: {player_name}, recharge game points: {point} recharge amount: {money}!',
@@ -24,5 +25,6 @@ return [
         Notice::TYPE_MACHINE_WIN => 'Machine device {machine_code}, abnormal win (score) data is found, please maintain the personnel to troubleshoot the problem in time!',
         Notice::TYPE_MACHINE_WIN_NUMBER => 'Steel ball machine equipment {machine_code}, Discovered the number of times the prize has been redeemed in the middle hole (pressure conversion), please have maintenance personnel investigate the problem in a timely manner!',
         Notice::TYPE_MACHINE_LOCK => 'The machine equipment {machine_code} has experienced a vertical separation abnormality (the machine is locked). Please have maintenance personnel investigate the problem in a timely manner!！',
+        Notice::TYPE_MACHINE_CRASH => 'Device crashed: Player {player_name} (UID:{player_uuid}) balance reached {current_amount}, exceeded crash amount {crash_amount}, please contact administrator!',
     ],
 ];
