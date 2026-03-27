@@ -4275,6 +4275,7 @@ class ChannelPlayerController
         return admin_view(plugin()->webman->getPath() . '/views/player_game_list.vue')->attrs([
             'player_id' => $player_id,
             'player_name' => $player->name ?? admin_trans('channel_player.unknown_player'),
+            'title' => admin_trans('channel_player.game_permission.title', null, ['name' => $player->name ?? admin_trans('channel_player.unknown_player')]),
         ]);
     }
 
@@ -4598,6 +4599,7 @@ class ChannelPlayerController
                     'picture' => $content->picture ?? '',
                     'platform_id' => $game->platform_id,
                     'platform_name' => $game->gamePlatform->name ?? admin_trans('player.unknown_platform'),
+                    'platform_logo' => $game->gamePlatform->logo ?? '',
                     'cate_id' => $game->cate_id,
                     'category_name' => getGameTypeName($game->cate_id),
                     'is_hot' => $game->is_hot,
@@ -4609,7 +4611,7 @@ class ChannelPlayerController
             // 获取平台列表
             $platforms = GamePlatform::query()
                 ->whereIn('id', $channelGamePlatformIds)
-                ->select(['id', 'name'])
+                ->select(['id', 'name', 'logo'])
                 ->get()
                 ->toArray();
 

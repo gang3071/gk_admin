@@ -1,6 +1,6 @@
 <template>
   <div class="player-game-list">
-    <a-card :loading="loading" :title="title">
+    <a-card :loading="loading" :title="cardTitle">
       <!-- 筛选器 -->
       <template slot="extra">
         <div style="display: flex; gap: 8px; align-items: center;">
@@ -12,7 +12,15 @@
             @change="loadGameList"
           >
             <a-select-option v-for="platform in platforms" :key="platform.id" :value="platform.id">
-              {{ platform.name }}
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <img
+                  v-if="platform.logo"
+                  :alt="platform.name"
+                  :src="platform.logo"
+                  style="width: 20px; height: 20px; object-fit: contain;"
+                />
+                <span>{{ platform.name }}</span>
+              </div>
             </a-select-option>
           </a-select>
 
@@ -58,20 +66,28 @@
         @change="handleTableChange"
       >
         <template slot="platform" slot-scope="text, record">
-          <a-tag color="blue">{{ record.platform_name }}</a-tag>
+          <div style="display: flex; align-items: center; gap: 6px; justify-content: center;">
+            <img
+              v-if="record.platform_logo"
+              :alt="record.platform_name"
+              :src="record.platform_logo"
+              style="width: 24px; height: 24px; object-fit: contain;"
+            />
+            <a-tag color="blue">{{ record.platform_name }}</a-tag>
+          </div>
         </template>
 
         <template slot="game_name" slot-scope="text, record">
-          <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
             <img
               v-if="record.picture"
               :src="record.picture"
               :alt="record.name"
-              style="width: 60px; height: 60px; border-radius: 4px; object-fit: cover; flex-shrink: 0;"
+              style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0;"
               @error="handleImageError"
             />
-            <div v-else style="width: 60px; height: 60px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <span style="color: #999; font-size: 12px;">暂无图片</span>
+            <div v-else style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <span style="color: #999; font-size: 11px;">无图</span>
             </div>
             <span style="flex: 1; word-break: break-word;">{{ record.name }}</span>
           </div>
@@ -127,6 +143,10 @@ export default {
     player_name: {
       type: String,
       default: ''
+    },
+    title: {
+      type: String,
+      default: ''
     }
   },
   data() {
@@ -151,6 +171,13 @@ export default {
       },
       columns: [
         {
+          title: 'ID',
+          dataIndex: 'id',
+          key: 'id',
+          width: 80,
+          align: 'center'
+        },
+        {
           title: '游戏名称',
           dataIndex: 'name',
           key: 'game_name',
@@ -163,7 +190,7 @@ export default {
           dataIndex: 'platform_name',
           key: 'platform',
           scopedSlots: { customRender: 'platform' },
-          width: 130,
+          width: 160,
           align: 'center'
         },
         {
@@ -171,7 +198,7 @@ export default {
           dataIndex: 'category_name',
           key: 'category',
           scopedSlots: { customRender: 'category' },
-          width: 110,
+          width: 100,
           align: 'center'
         },
         {
@@ -179,7 +206,7 @@ export default {
           dataIndex: 'is_hot',
           key: 'is_hot',
           scopedSlots: { customRender: 'is_hot' },
-          width: 70,
+          width: 80,
           align: 'center'
         },
         {
@@ -187,7 +214,7 @@ export default {
           dataIndex: 'is_new',
           key: 'is_new',
           scopedSlots: { customRender: 'is_new' },
-          width: 70,
+          width: 80,
           align: 'center'
         },
         {
@@ -202,7 +229,7 @@ export default {
           title: '操作',
           key: 'action',
           scopedSlots: { customRender: 'action' },
-          width: 100,
+          width: 120,
           align: 'center',
           fixed: 'right'
         }
@@ -210,8 +237,9 @@ export default {
     };
   },
   computed: {
-    title() {
-      return `${this.player_name} - 游戏权限管理`;
+    cardTitle() {
+      // 优先使用后端传入的翻译标题，否则使用默认格式
+      return this.title || `${this.player_name} - 游戏权限管理`;
     },
     rowSelection() {
       return {
