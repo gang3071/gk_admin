@@ -135,7 +135,7 @@
           title="游戏名称"
         >
           <template slot-scope="text, record">
-            <div class="game-name-cell">
+            <div v-if="record" class="game-name-cell">
               <div class="game-avatar-wrapper">
                 <img
                   v-if="record.picture"
@@ -149,6 +149,7 @@
               </div>
               <span class="game-name-text">{{ record.name }}</span>
             </div>
+            <span v-else class="tag-empty">—</span>
           </template>
         </a-table-column>
 
@@ -160,7 +161,7 @@
           title="游戏平台"
         >
           <template slot-scope="text, record">
-            <div class="platform-cell">
+            <div v-if="record" class="platform-cell">
               <img
                 v-if="record.platform_logo"
                 :alt="record.platform_name"
@@ -169,6 +170,7 @@
               />
               <a-tag color="blue">{{ text }}</a-tag>
             </div>
+            <span v-else class="tag-empty">—</span>
           </template>
         </a-table-column>
 
@@ -180,7 +182,8 @@
           title="游戏分类"
         >
           <template slot-scope="text">
-            <a-tag color="green">{{ text }}</a-tag>
+            <a-tag v-if="text" color="green">{{ text }}</a-tag>
+            <span v-else class="tag-empty">—</span>
           </template>
         </a-table-column>
 
@@ -192,7 +195,7 @@
           title="热门"
         >
           <template slot-scope="text, record">
-            <div v-if="Number(record.is_hot) === 1" class="tag-hot">
+            <div v-if="record && Number(record.is_hot) === 1" class="tag-hot">
               <a-icon type="fire" />
               <span>热门</span>
             </div>
@@ -208,7 +211,7 @@
           title="新游戏"
         >
           <template slot-scope="text, record">
-            <div v-if="Number(record.is_new) === 1" class="tag-new">
+            <div v-if="record && Number(record.is_new) === 1" class="tag-new">
               <a-icon type="thunderbolt" />
               <span>新</span>
             </div>
@@ -225,9 +228,11 @@
         >
           <template slot-scope="text, record">
             <a-badge
+              v-if="record"
               :status="record.is_selected ? 'error' : 'success'"
               :text="record.is_selected ? '已禁用' : '正常'"
             />
+            <span v-else class="tag-empty">—</span>
           </template>
         </a-table-column>
 
@@ -239,20 +244,23 @@
           title="操作"
         >
           <template slot-scope="text, record">
-            <a
-              v-if="record.is_selected"
-              class="action-link action-enable"
-              @click="toggleGame(record, false)"
-            >
-              取消禁用
-            </a>
-            <a
-              v-else
-              class="action-link action-disable"
-              @click="toggleGame(record, true)"
-            >
-              禁用游戏
-            </a>
+            <template v-if="record">
+              <a
+                v-if="record.is_selected"
+                class="action-link action-enable"
+                @click="toggleGame(record, false)"
+              >
+                取消禁用
+              </a>
+              <a
+                v-else
+                class="action-link action-disable"
+                @click="toggleGame(record, true)"
+              >
+                禁用游戏
+              </a>
+            </template>
+            <span v-else class="tag-empty">—</span>
           </template>
         </a-table-column>
       </a-table>
@@ -406,7 +414,8 @@ export default {
         console.log('API响应:', res);
         if (res && res.status === 1 && res.data) {
           const data = res.data;
-          this.gameList = data.list || [];
+          // 过滤掉 undefined 或 null 的游戏记录
+          this.gameList = (data.list || []).filter(game => game != null);
           this.pagination.total = data.total || 0;
           this.platforms = data.platforms || [];
           this.categories = data.categories || [];
