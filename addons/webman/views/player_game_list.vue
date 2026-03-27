@@ -83,16 +83,12 @@
         :loading="loading"
         :pagination="pagination"
         :row-selection="rowSelection"
-        :scroll="{ x: 1300, y: 600 }"
+        :scroll="{ x: 1200, y: 600 }"
         bordered
         size="middle"
         row-key="id"
         @change="handleTableChange"
       >
-        <template slot="id" slot-scope="text">
-          <span>{{ text }}</span>
-        </template>
-
         <template slot="platform" slot-scope="text, record">
           <div class="platform-cell">
             <img
@@ -204,14 +200,6 @@ export default {
       },
       columns: [
         {
-          title: 'ID',
-          dataIndex: 'id',
-          key: 'id',
-          scopedSlots: { customRender: 'id' },
-          width: 90,
-          align: 'center'
-        },
-        {
           title: '游戏名称',
           dataIndex: 'name',
           key: 'game_name',
@@ -263,7 +251,8 @@ export default {
           key: 'action',
           scopedSlots: { customRender: 'action' },
           width: 100,
-          align: 'center'
+          align: 'center',
+          fixed: 'right'
         }
       ]
     };
