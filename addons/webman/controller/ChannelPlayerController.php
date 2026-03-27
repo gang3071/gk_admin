@@ -4373,7 +4373,6 @@ class ChannelPlayerController
                                 'game_id' => $data->id,
                                 'action' => 'enable'
                             ])
-                            ->gridRefresh()
                     );
                 } else {
                     // 未禁用，显示"禁用游戏"按钮
@@ -4387,7 +4386,6 @@ class ChannelPlayerController
                                 'game_id' => $data->id,
                                 'action' => 'disable'
                             ])
-                            ->gridRefresh()
                     );
                 }
             })->align('center');
@@ -4587,7 +4585,7 @@ class ChannelPlayerController
             // 验证游戏是否存在
             $game = Game::query()->find($game_id);
             if (empty($game)) {
-                return message_error(admin_trans('common.game_not_exist'));
+                return message_error(admin_trans('common.game_not_exist'))->refresh();
             }
 
             // 获取渠道允许的游戏平台
@@ -4624,7 +4622,7 @@ class ChannelPlayerController
                 }
 
                 Db::commit();
-                return message_success($message)->refresh();
+                return message_success($message);
             } catch (Exception $e) {
                 Db::rollBack();
                 Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
