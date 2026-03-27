@@ -1,99 +1,96 @@
 <template>
   <div class="player-game-list">
     <a-card :bordered="false" :loading="loading" :title="cardTitle">
-      <!-- 筛选器 -->
-      <template slot="extra">
-        <div class="filter-bar">
-          <a-input-search
-            v-model="filters.game_name"
-            allowClear
-            class="filter-search"
-            enter-button
-            placeholder="搜索游戏名称"
-            @search="loadGameList"
-          />
+      <div slot="extra" class="filter-bar">
+        <a-input-search
+          v-model="filters.game_name"
+          allowClear
+          class="filter-search"
+          enter-button
+          placeholder="搜索游戏名称"
+          @search="loadGameList"
+        />
 
-          <a-select
-            v-model="filters.platform_id"
-            allowClear
-            placeholder="选择平台"
-            class="filter-select"
-            @change="loadGameList"
-          >
-            <a-select-option v-for="platform in platforms" :key="platform.id" :value="platform.id">
-              <div class="platform-option">
-                <img
-                  v-if="platform.logo"
-                  :alt="platform.name"
-                  :src="platform.logo"
-                  class="platform-logo-small"
-                />
-                <span>{{ platform.name }}</span>
-              </div>
-            </a-select-option>
-          </a-select>
+        <a-select
+          v-model="filters.platform_id"
+          allowClear
+          class="filter-select"
+          placeholder="选择平台"
+          @change="loadGameList"
+        >
+          <a-select-option v-for="platform in platforms" :key="platform.id" :value="platform.id">
+            <div class="platform-option">
+              <img
+                v-if="platform.logo"
+                :alt="platform.name"
+                :src="platform.logo"
+                class="platform-logo-small"
+              />
+              <span>{{ platform.name }}</span>
+            </div>
+          </a-select-option>
+        </a-select>
 
-          <a-select
-            v-model="filters.cate_id"
-            allowClear
-            class="filter-select-small"
-            placeholder="游戏分类"
-            @change="loadGameList"
-          >
-            <a-select-option v-for="category in categories" :key="category.value" :value="category.value">
-              {{ category.label }}
-            </a-select-option>
-          </a-select>
+        <a-select
+          v-model="filters.cate_id"
+          allowClear
+          class="filter-select-small"
+          placeholder="游戏分类"
+          @change="loadGameList"
+        >
+          <a-select-option v-for="category in categories" :key="category.value" :value="category.value">
+            {{ category.label }}
+          </a-select-option>
+        </a-select>
 
-          <a-select
-            v-model="filters.is_hot"
-            allowClear
-            class="filter-select-small"
-            placeholder="热门筛选"
-            @change="loadGameList"
-          >
-            <a-select-option :value="1">
-              <span style="color: #ff4d4f; font-weight: 600;">
-                <a-icon type="fire" /> 热门
-              </span>
-            </a-select-option>
-            <a-select-option :value="0">普通</a-select-option>
-          </a-select>
+        <a-select
+          v-model="filters.is_hot"
+          allowClear
+          class="filter-select-small"
+          placeholder="热门筛选"
+          @change="loadGameList"
+        >
+          <a-select-option :value="1">
+            <span style="color: #ff4d4f; font-weight: 600;">
+              <a-icon type="fire" /> 热门
+            </span>
+          </a-select-option>
+          <a-select-option :value="0">普通</a-select-option>
+        </a-select>
 
-          <a-select
-            v-model="filters.is_new"
-            allowClear
-            placeholder="新游戏"
-            class="filter-select-small"
-            @change="loadGameList"
-          >
-            <a-select-option :value="1">
-              <span style="color: #ff7a45; font-weight: 600;">
-                <a-icon type="thunderbolt" /> 新游戏
-              </span>
-            </a-select-option>
-            <a-select-option :value="0">旧游戏</a-select-option>
-          </a-select>
+        <a-select
+          v-model="filters.is_new"
+          allowClear
+          class="filter-select-small"
+          placeholder="新游戏"
+          @change="loadGameList"
+        >
+          <a-select-option :value="1">
+            <span style="color: #ff7a45; font-weight: 600;">
+              <a-icon type="thunderbolt" /> 新游戏
+            </span>
+          </a-select-option>
+          <a-select-option :value="0">旧游戏</a-select-option>
+        </a-select>
 
-          <a-button
-            icon="reload"
-            size="default"
-            @click="resetFilters"
-          >
-            重置
-          </a-button>
+        <a-button
+          icon="reload"
+          size="default"
+          @click="resetFilters"
+        >
+          重置
+        </a-button>
 
-          <a-button
-            :loading="saving"
-            icon="save"
-            size="default"
-            type="primary"
-            @click="saveSelectedGames"
-          >
-            保存
-          </a-button>
-        </div>
-      </template>
+        <a-button
+          :loading="saving"
+          icon="save"
+          size="default"
+          type="primary"
+          @click="saveSelectedGames"
+        >
+          保存
+        </a-button>
+      </div>
 
       <!-- 统计信息 -->
       <div v-if="gameList.length > 0" class="stats-bar">
@@ -125,89 +122,7 @@
         size="middle"
         row-key="id"
         @change="handleTableChange"
-      >
-        <template slot="platform" slot-scope="text, record">
-          <div class="platform-cell">
-            <img
-              v-if="record.platform_logo"
-              :alt="record.platform_name"
-              :src="record.platform_logo"
-              class="platform-logo"
-            />
-            <a-tag color="blue">{{ record.platform_name }}</a-tag>
-          </div>
-        </template>
-
-        <template slot="game_name" slot-scope="text, record">
-          <div class="game-name-cell">
-            <div class="game-avatar-wrapper">
-              <img
-                v-if="record.picture"
-                :alt="record.name"
-                :src="record.picture"
-                class="game-avatar"
-                @error="handleImageError"
-              />
-              <div v-else class="game-avatar-placeholder">
-                <span>无图</span>
-              </div>
-            </div>
-            <span class="game-name-text">{{ record.name }}</span>
-          </div>
-        </template>
-
-        <template slot="category" slot-scope="text, record">
-          <a-tag color="green">{{ record.category_name }}</a-tag>
-        </template>
-
-        <template slot="is_hot" slot-scope="text, record">
-          <!-- 调试信息 -->
-          <!-- <div style="font-size: 10px; color: #999;">
-            值:{{ record.is_hot }} 类型:{{ typeof record.is_hot }}
-          </div> -->
-          <div v-if="Number(record.is_hot) === 1" class="tag-hot">
-            <a-icon type="fire" />
-            <span>热门</span>
-          </div>
-          <span v-else class="tag-empty">—</span>
-        </template>
-
-        <template slot="is_new" slot-scope="text, record">
-          <!-- 调试信息 -->
-          <!-- <div style="font-size: 10px; color: #999;">
-            值:{{ record.is_new }} 类型:{{ typeof record.is_new }}
-          </div> -->
-          <div v-if="Number(record.is_new) === 1" class="tag-new">
-            <a-icon type="thunderbolt" />
-            <span>新</span>
-          </div>
-          <span v-else class="tag-empty">—</span>
-        </template>
-
-        <template slot="status" slot-scope="text, record">
-          <a-badge
-            :status="record.is_selected ? 'error' : 'success'"
-            :text="record.is_selected ? '已禁用' : '正常'"
-          />
-        </template>
-
-        <template slot="action" slot-scope="text, record">
-          <a
-            v-if="record.is_selected"
-            @click="toggleGame(record, false)"
-            class="action-link action-enable"
-          >
-            取消禁用
-          </a>
-          <a
-            v-else
-            @click="toggleGame(record, true)"
-            class="action-link action-disable"
-          >
-            禁用游戏
-          </a>
-        </template>
-      </a-table>
+      />
     </a-card>
   </div>
 </template>
@@ -252,64 +167,7 @@ export default {
         showQuickJumper: true,
         pageSizeOptions: ['20', '50', '100', '200'],
         showTotal: (total) => `共 ${total} 个游戏`
-      },
-      columns: [
-        {
-          title: '游戏名称',
-          dataIndex: 'name',
-          key: 'game_name',
-          scopedSlots: { customRender: 'game_name' },
-          width: 300
-        },
-        {
-          title: '游戏平台',
-          dataIndex: 'platform_name',
-          key: 'platform',
-          scopedSlots: { customRender: 'platform' },
-          width: 180,
-          align: 'center'
-        },
-        {
-          title: '游戏分类',
-          dataIndex: 'category_name',
-          key: 'category',
-          scopedSlots: { customRender: 'category' },
-          width: 110,
-          align: 'center'
-        },
-        {
-          title: '热门',
-          dataIndex: 'is_hot',
-          key: 'is_hot',
-          scopedSlots: { customRender: 'is_hot' },
-          width: 100,
-          align: 'center'
-        },
-        {
-          title: '新游戏',
-          dataIndex: 'is_new',
-          key: 'is_new',
-          scopedSlots: { customRender: 'is_new' },
-          width: 100,
-          align: 'center'
-        },
-        {
-          title: '状态',
-          dataIndex: 'is_selected',
-          key: 'status',
-          scopedSlots: { customRender: 'status' },
-          width: 110,
-          align: 'center'
-        },
-        {
-          title: '操作',
-          key: 'action',
-          scopedSlots: { customRender: 'action' },
-          width: 100,
-          align: 'center',
-          fixed: 'right'
-        }
-      ]
+      }
     };
   },
   computed: {
@@ -336,7 +194,141 @@ export default {
         this.filters.is_hot !== undefined ||
         this.filters.is_new !== undefined
       );
+    },
+    columns() {
+      return [
+        {
+          title: '游戏名称',
+          dataIndex: 'name',
+          key: 'game_name',
+          width: 300,
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            return h('div', { class: 'game-name-cell' }, [
+              h('div', { class: 'game-avatar-wrapper' }, [
+                record.picture
+                  ? h('img', {
+                      class: 'game-avatar',
+                      attrs: { src: record.picture, alt: record.name },
+                      on: {
+                        error: (e) => {
+                          e.target.style.display = 'none';
+                        }
+                      }
+                    })
+                  : h('div', { class: 'game-avatar-placeholder' }, [h('span', '无图')])
+              ]),
+              h('span', { class: 'game-name-text' }, record.name)
+            ]);
+          }
+        },
+        {
+          title: '游戏平台',
+          dataIndex: 'platform_name',
+          key: 'platform',
+          width: 180,
+          align: 'center',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            return h('div', { class: 'platform-cell' }, [
+              record.platform_logo
+                ? h('img', {
+                    class: 'platform-logo',
+                    attrs: { src: record.platform_logo, alt: record.platform_name }
+                  })
+                : null,
+              h('a-tag', { props: { color: 'blue' } }, record.platform_name)
+            ]);
+          }
+        },
+        {
+          title: '游戏分类',
+          dataIndex: 'category_name',
+          key: 'category',
+          width: 110,
+          align: 'center',
+          customRender: (text) => {
+            const h = this.$createElement;
+            return h('a-tag', { props: { color: 'green' } }, text);
+          }
+        },
+        {
+          title: '热门',
+          dataIndex: 'is_hot',
+          key: 'is_hot',
+          width: 100,
+          align: 'center',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            if (Number(record.is_hot) === 1) {
+              return h('div', { class: 'tag-hot' }, [
+                h('a-icon', { props: { type: 'fire' } }),
+                h('span', '热门')
+              ]);
+            }
+            return h('span', { class: 'tag-empty' }, '—');
+          }
+        },
+        {
+          title: '新游戏',
+          dataIndex: 'is_new',
+          key: 'is_new',
+          width: 100,
+          align: 'center',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            if (Number(record.is_new) === 1) {
+              return h('div', { class: 'tag-new' }, [
+                h('a-icon', { props: { type: 'thunderbolt' } }),
+                h('span', '新')
+              ]);
+            }
+            return h('span', { class: 'tag-empty' }, '—');
+          }
+        },
+        {
+          title: '状态',
+          dataIndex: 'is_selected',
+          key: 'status',
+          width: 110,
+          align: 'center',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            return h('a-badge', {
+              props: {
+                status: record.is_selected ? 'error' : 'success',
+                text: record.is_selected ? '已禁用' : '正常'
+              }
+            });
+          }
+        },
+        {
+          title: '操作',
+          key: 'action',
+          width: 100,
+          align: 'center',
+          fixed: 'right',
+          customRender: (text, record) => {
+            const h = this.$createElement;
+            if (record.is_selected) {
+              return h('a', {
+                class: 'action-link action-enable',
+                on: {
+                  click: () => this.toggleGame(record, false)
+                }
+              }, '取消禁用');
+            }
+            return h('a', {
+              class: 'action-link action-disable',
+              on: {
+                click: () => this.toggleGame(record, true)
+              }
+            }, '禁用游戏');
+          }
+        }
+      ];
     }
+  },
   },
   mounted() {
     this.loadGameList();
@@ -494,14 +486,6 @@ export default {
           promise.then(handleResponse, handleResponse);
         }
       });
-    },
-
-    // 图片加载错误处理
-    handleImageError(e) {
-      e.target.style.display = 'none';
-      if (e.target.nextElementSibling) {
-        e.target.nextElementSibling.style.display = 'flex';
-      }
     },
 
     // 批量保存选中的游戏
