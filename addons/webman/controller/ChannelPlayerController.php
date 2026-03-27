@@ -4361,7 +4361,7 @@ class ChannelPlayerController
             })->hide();
 
             // 添加状态开关列
-            $grid->column('status_switch', admin_trans('common.status'))->display(function ($val, $data) use ($selectedGameIds, $player_id) {
+            $grid->column('status_switch', admin_trans('player.game_status'))->display(function ($val, $data) use ($selectedGameIds, $player_id) {
                 // 判断当前游戏是否被禁用：0=禁用，1=正常
                 $isDisabled = in_array($data->id, $selectedGameIds);
                 $status = $isDisabled ? 0 : 1;

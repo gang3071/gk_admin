@@ -229,6 +229,7 @@ return [
     'game_enabled_all_success' => '已取消所有遊戲禁用',
     'single_game_disabled_success' => '成功禁用該遊戲',
     'single_game_enabled_success' => '成功取消禁用該遊戲',
+    'game_status' => '遊戲狀態',
     'game_status_normal' => '正常',
     'game_status_disabled' => '禁用',
 
