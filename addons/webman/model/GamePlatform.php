@@ -50,7 +50,8 @@ class GamePlatform extends Model
     const TYPE_O8_HS = 'HS';
     const TYPE_TNINE_SLOT = 'TNINE_SLOT';
     const TYPE_KT = 'KT';
-    
+    const TYPE_QT = 'QT';
+
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);

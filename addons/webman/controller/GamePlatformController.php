@@ -366,6 +366,7 @@ class GamePlatformController
                 case GamePlatform::TYPE_O8_STM:
                 case GamePlatform::TYPE_O8_HS:
                 case GamePlatform::TYPE_KT:
+                case GamePlatform::TYPE_QT:
                 case GamePlatform::TYPE_TNINE_SLOT:
                     $grid->column('name', admin_trans('game_extend.fields.name'))->align('center');
                     $grid->column('code', admin_trans('game_extend.fields.code'))->copy()->align('center');
