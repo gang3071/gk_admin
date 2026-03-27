@@ -229,6 +229,8 @@ return [
     'game_enabled_all_success' => 'All game restrictions removed',
     'single_game_disabled_success' => 'Successfully disabled this game',
     'single_game_enabled_success' => 'Successfully enabled this game',
+    'game_status_normal' => 'Normal',
+    'game_status_disabled' => 'Disabled',
 
     // Placeholder
     'platform_placeholder' => 'Game Platform',

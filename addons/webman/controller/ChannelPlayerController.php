@@ -4367,12 +4367,12 @@ class ChannelPlayerController
                 $status = $isDisabled ? 0 : 1;
 
                 return Switches::create(null, $status)
-                    ->options([[1 => admin_trans('common.status.1')], [0 => admin_trans('common.status.0')]])
+                    ->options([[1 => admin_trans('player.game_status_normal')], [0 => admin_trans('player.game_status_disabled')]])
                     ->ajax([$this, 'toggleGameDisableSwitch'], [
                         'player_id' => $player_id,
                         'game_id' => $data->id
                     ]);
-            })->align('center');
+            })->align('center')->fixed('right')->width(120);
 
             $grid->pagination()->pageSize(50);
             $grid->hideDelete();

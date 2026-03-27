@@ -230,6 +230,8 @@ return [
     'game_enabled_all_success' => 'すべてのゲーム制限が削除されました',
     'single_game_disabled_success' => 'このゲームを正常に無効化しました',
     'single_game_enabled_success' => 'このゲームを正常に有効化しました',
+    'game_status_normal' => '正常',
+    'game_status_disabled' => '無効',
 
     // プレースホルダー
     'platform_placeholder' => 'ゲームプラットフォーム',
