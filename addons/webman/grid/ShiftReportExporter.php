@@ -49,14 +49,20 @@ class ShiftReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-        // 如果是第一次调用，初始化店家所有设备
+        // 如果是第一次调用，初始化起始行（不初始化设备，设备在处理明细时动态添加）
         if ($this->processedRecords == 0) {
-            $this->initializeStoreDevices($data);
-            // 动态计算顶部需要的行数：
-            // 1行标题 + 1行空行 + 1行表头 + N行设备明细 + 1行总计 + 2行空行 + 1行说明 + 2行空行 + 1行分隔线 + 1行空行 + 1行明细标题 + 2行空行 = 13 + N
-            $deviceCount = count($this->deviceTotals);
-            $topRowsNeeded = 13 + $deviceCount;
-            $this->currentRow = $topRowsNeeded + 3; // 再留3行空白
+            // 获取店家管理员ID（用于后续查询）
+            if (!empty($data)) {
+                $firstRecordId = $data[0]['id'] ?? null;
+                if ($firstRecordId) {
+                    $firstRecord = StoreAgentShiftHandoverRecord::find($firstRecordId);
+                    if ($firstRecord && $firstRecord->bind_admin_user_id) {
+                        $this->storeAdminId = $firstRecord->bind_admin_user_id;
+                    }
+                }
+            }
+            // 从第1行开始写明细，完成后会在前面插入总计区域
+            $this->currentRow = 1;
         }
 
         foreach ($data as $record) {
@@ -71,8 +77,10 @@ class ShiftReportExporter extends Excel
                 continue;
             }
 
-            // 交班记录标题行
-            $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.shift_id') . ': ' . $originalRecord->id);
+            // 交班记录标题行（包含交班ID和时间）
+            $titleText = admin_trans('shift_handover.shift_id') . ': ' . $originalRecord->id . '    ' .
+                         admin_trans('shift_handover.shift_time') . ': ' . $originalRecord->start_time . ' ~ ' . $originalRecord->end_time;
+            $this->sheet->setCellValue('A' . $this->currentRow, $titleText);
             $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                 'font' => ['bold' => true, 'size' => 14],
@@ -82,51 +90,6 @@ class ShiftReportExporter extends Excel
             ]);
             $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
             $this->currentRow++;
-
-            // 交班汇总信息（改为更清晰的布局）
-            $summaryData = [
-                [admin_trans('shift_handover.shift_time') . ':', $originalRecord->start_time . ' ~ ' . $originalRecord->end_time, admin_trans('shift_handover.shift_type') . ':', $originalRecord->is_auto_shift == 1 ? admin_trans('shift_handover.auto_shift') : admin_trans('shift_handover.manual_shift')],
-                [admin_trans('shift_handover.machine_point') . ':', number_format($originalRecord->machine_point, 0), admin_trans('shift_handover.lottery_amount') . ':', number_format($originalRecord->lottery_amount, 2)],
-                [admin_trans('shift_handover.total_in') . ':', number_format($originalRecord->total_in, 2), admin_trans('shift_handover.total_out') . ':', number_format($originalRecord->total_out, 2)],
-                [admin_trans('shift_handover.profit') . ':', number_format($originalRecord->total_profit_amount, 2), '', '']
-            ];
-
-            $summaryStartRow = $this->currentRow;
-            foreach ($summaryData as $rowData) {
-                $this->sheet->setCellValue('A' . $this->currentRow, $rowData[0]);
-                $this->sheet->setCellValue('B' . $this->currentRow, $rowData[1]);
-                $this->sheet->setCellValue('C' . $this->currentRow, $rowData[2]);
-                $this->sheet->setCellValue('D' . $this->currentRow, $rowData[3]);
-
-                // 标签列加粗
-                $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
-
-                // 数值列右对齐
-                $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-
-                $this->currentRow++;
-            }
-
-            // 合并汇总区域的右侧列
-            $this->sheet->mergeCells('D' . ($summaryStartRow + 3) . ':K' . ($summaryStartRow + 3));
-
-            // 设置汇总区域样式
-            $summaryRange = 'A' . $summaryStartRow . ':K' . ($this->currentRow - 1);
-            $this->sheet->getStyle($summaryRange)->applyFromArray([
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F5F5F5']],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]],
-                'alignment' => ['vertical' => Alignment::VERTICAL_CENTER]
-            ]);
-
-            // 利润单元格颜色
-            $profitCell = 'B' . ($summaryStartRow + 3);
-            $profitColor = $originalRecord->total_profit_amount >= 0 ? '3f8600' : 'cf1322';
-            $this->sheet->getStyle($profitCell)->getFont()->getColor()->setRGB($profitColor);
-            $this->sheet->getStyle($profitCell)->getFont()->setBold(true);
-
-            $this->currentRow++; // 空行
 
             // 获取设备明细
             $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $originalRecord->id)
@@ -219,11 +182,12 @@ class ShiftReportExporter extends Excel
                     $subtotal['total_out'] += $detail->total_out;
                     $subtotal['profit'] += $detail->profit;
 
-                    // 累加到每个设备的总计（按设备名称分组）
+                    // 累加到每个设备的总计（按设备名称分组）- 仅统计有交班记录的设备
                     $deviceKey = $detail->player_name . '|' . $detail->player_phone; // 使用名称和编号组合作为唯一标识
 
-                    // 如果设备存在于初始化列表中，累加数据
+                    // 动态添加或累加设备数据
                     if (isset($this->deviceTotals[$deviceKey])) {
+                        // 设备已存在，累加数据
                         $this->deviceTotals[$deviceKey]['machine_point'] += $detail->machine_point;
                         $this->deviceTotals[$deviceKey]['recharge_amount'] += $detail->recharge_amount;
                         $this->deviceTotals[$deviceKey]['withdrawal_amount'] += $detail->withdrawal_amount;
@@ -234,7 +198,7 @@ class ShiftReportExporter extends Excel
                         $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
                         $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
                     } else {
-                        // 如果设备不在初始化列表中（可能是已删除的设备），也添加进去
+                        // 设备不存在，新增设备（只添加有数据的设备）
                         $this->deviceTotals[$deviceKey] = [
                             'player_name' => $detail->player_name,
                             'player_phone' => $detail->player_phone,
@@ -321,7 +285,14 @@ class ShiftReportExporter extends Excel
 
         // 在 foreach 循环外部检查是否所有记录都已处理完成
         if ($this->processedRecords >= $this->count) {
-            // 添加总计行
+            // 计算顶部需要的行数（动态计算，因为设备数量在处理完成后才知道）
+            $deviceCount = count($this->deviceTotals);
+            $topRowsNeeded = 13 + $deviceCount; // 1标题 + 1空 + 1表头 + N设备 + 1总计 + 2空 + 1说明 + 2空 + 1分隔 + 1空 + 1明细标题 + 2空
+
+            // 在第1行前插入足够的行数（这会将已写入的明细数据自动下移）
+            $this->sheet->insertNewRowBefore(1, $topRowsNeeded);
+
+            // 添加总计行（写入到第1行开始的插入区域）
             $this->addGrandTotalRow();
 
             // 设置列宽
