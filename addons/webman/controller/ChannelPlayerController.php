@@ -195,6 +195,7 @@ class ChannelPlayerController
             'player_register_record.country_name',
             'player_register_record.city_name',
             'player_platform_cash.money',
+            'player_platform_cash.is_crashed',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -384,6 +385,15 @@ class ChannelPlayerController
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
             })->ellipsis(true)->sortable()->align('center');
 
+            // 爆机状态列
+            $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
+                if ($val == 1) {
+                    return Tag::create(admin_trans('player.crashed'))->color('red');
+                } else {
+                    return Tag::create(admin_trans('player.normal'))->color('green');
+                }
+            })->width(100)->align('center')->sortable();
+
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
@@ -490,6 +500,14 @@ class ChannelPlayerController
                         ->placeholder(admin_trans('admin.store'))
                         ->remoteOptions(admin_url([ChannelPlayerController::class, 'getStoreOptions']));
                 }
+
+                // 爆机状态筛选
+                $filter->eq()->select('is_crashed')->options([
+                    '' => admin_trans('public_msg.all'),
+                    0 => admin_trans('player.normal'),
+                    1 => admin_trans('player.crashed')
+                ])->placeholder(admin_trans('player.is_crashed'));
+
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
@@ -731,6 +749,10 @@ class ChannelPlayerController
             }
             if (!empty($requestFilter['ip'])) {
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
+            }
+            // 爆机状态筛选
+            if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
+                $query->where('player_platform_cash.is_crashed', $requestFilter['is_crashed']);
             }
         }
     }

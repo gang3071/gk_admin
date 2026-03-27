@@ -265,4 +265,9 @@ return [
     'game_id_label' => '遊戲 ID: ',
     'device_list_query_log' => '設備列表查詢',
     'no_device_data' => '暫無設備數據',
+
+    // 爆機相關
+    'is_crashed' => '爆機狀態',
+    'crashed' => '已爆機',
+    'normal' => '正常',
 ];

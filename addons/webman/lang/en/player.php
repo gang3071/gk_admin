@@ -265,4 +265,9 @@ return [
     'game_id_label' => 'Game ID: ',
     'device_list_query_log' => 'Device list query',
     'no_device_data' => 'No device data available',
+
+    // Machine Crash Related
+    'is_crashed' => 'Crash Status',
+    'crashed' => 'Crashed',
+    'normal' => 'Normal',
 ];
