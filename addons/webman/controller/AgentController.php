@@ -263,6 +263,15 @@ class AgentController
             $storeSettingBaccarat->status = 1;
             $storeSettingBaccarat->save();
 
+            // machine_crash_amount（爆机金额）
+            $storeSettingCrashAmount = new StoreSetting();
+            $storeSettingCrashAmount->department_id = $departmentId;
+            $storeSettingCrashAmount->admin_user_id = $adminUser->id;
+            $storeSettingCrashAmount->feature = 'machine_crash_amount';
+            $storeSettingCrashAmount->num = 0; // 默认金额为 0
+            $storeSettingCrashAmount->status = 0; // 默认不开启
+            $storeSettingCrashAmount->save();
+
             Db::commit();
 
             return message_success(admin_trans('common.agent_create_success', null, [
