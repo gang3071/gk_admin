@@ -56,7 +56,7 @@
           >
             <a-select-option :value="1">
               <span style="color: #ff4d4f; font-weight: 600;">
-                <a-icon theme="filled" type="fire" /> 热门
+                🔥 热门
               </span>
             </a-select-option>
             <a-select-option :value="0">普通</a-select-option>
@@ -71,7 +71,7 @@
           >
             <a-select-option :value="1">
               <span style="color: #ff7a45; font-weight: 600;">
-                <a-icon theme="filled" type="thunderbolt" /> 新游戏
+                ⚡ 新游戏
               </span>
             </a-select-option>
             <a-select-option :value="0">旧游戏</a-select-option>
@@ -163,27 +163,31 @@
         </template>
 
         <template slot="is_hot" slot-scope="text, record">
-          <!-- 调试信息 -->
-          <!-- <div style="font-size: 10px; color: #999;">
-            值:{{ record.is_hot }} 类型:{{ typeof record.is_hot }}
-          </div> -->
-          <div v-if="Number(record.is_hot) === 1" class="tag-hot">
-            <a-icon theme="filled" type="fire" />
-            <span>热门</span>
+          <div>
+            <!-- 临时调试 -->
+            <div v-if="record.is_hot == 1 || record.is_hot === '1' || Number(record.is_hot) === 1" class="tag-hot">
+              <span class="tag-icon">🔥</span>
+              <span>热门</span>
+            </div>
+            <span v-else class="tag-empty">—</span>
+            <!-- <div style="font-size: 10px; color: #999; margin-top: 2px;">
+              值:{{ record.is_hot }} 条件:{{ (record.is_hot == 1 || record.is_hot === '1' || Number(record.is_hot) === 1) }}
+            </div> -->
           </div>
-          <span v-else class="tag-empty">—</span>
         </template>
 
         <template slot="is_new" slot-scope="text, record">
-          <!-- 调试信息 -->
-          <!-- <div style="font-size: 10px; color: #999;">
-            值:{{ record.is_new }} 类型:{{ typeof record.is_new }}
-          </div> -->
-          <div v-if="Number(record.is_new) === 1" class="tag-new">
-            <a-icon theme="filled" type="thunderbolt" />
-            <span>新</span>
+          <div>
+            <!-- 临时调试 -->
+            <div v-if="record.is_new == 1 || record.is_new === '1' || Number(record.is_new) === 1" class="tag-new">
+              <span class="tag-icon">⚡</span>
+              <span>新</span>
+            </div>
+            <span v-else class="tag-empty">—</span>
+            <!-- <div style="font-size: 10px; color: #999; margin-top: 2px;">
+              值:{{ record.is_new }} 条件:{{ (record.is_new == 1 || record.is_new === '1' || Number(record.is_new) === 1) }}
+            </div> -->
           </div>
-          <span v-else class="tag-empty">—</span>
         </template>
 
         <template slot="status" slot-scope="text, record">
@@ -696,8 +700,9 @@ export default {
   animation: pulse-hot 2s ease-in-out infinite;
 }
 
-.tag-hot .anticon {
+.tag-hot .tag-icon {
   font-size: 14px;
+  display: inline-block;
   animation: flame 1.5s ease-in-out infinite;
 }
 
@@ -734,8 +739,9 @@ export default {
   animation: pulse-new 2.5s ease-in-out infinite;
 }
 
-.tag-new .anticon {
+.tag-new .tag-icon {
   font-size: 14px;
+  display: inline-block;
   animation: sparkle 1.2s ease-in-out infinite;
 }
 
