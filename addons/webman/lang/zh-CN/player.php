@@ -69,6 +69,7 @@ return [
         'status_machine' => '实体机台',
         'status_offline_open' => '线下开分',
         'status_baccarat' => '真人百家',
+        'machine_crash_amount' => '爆机金额',
     ],
     'player_no_change' => '玩家沒有變動',
     'not_fount' => '未找到该玩家',

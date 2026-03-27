@@ -69,6 +69,7 @@ return [
         'status_machine' => 'ソリッドテーブル',
         'status_offline_open' => 'オフライン分割',
         'status_baccarat' => '真人百家',
+        'machine_crash_amount' => 'クラッシュ金額',
     ],
     'player_no_change' => 'プレイヤーは変更されていません',
     'not_fount' => 'プレーヤーが見つかりませんでした',

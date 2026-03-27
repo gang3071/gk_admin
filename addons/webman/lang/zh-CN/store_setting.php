@@ -24,4 +24,11 @@ return [
     'edit_business_hours' => '编辑营业时间',
     'enable' => '启用',
     'disable' => '禁用',
+
+    // 验证消息
+    'validation' => [
+        'integer' => '必须是整数',
+        'max' => '不能超过 {max}',
+        'min' => '不能少于 {min}',
+    ],
 ];

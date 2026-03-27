@@ -24,4 +24,11 @@ return [
     'edit_business_hours' => '営業時間を編集',
     'enable' => '有効',
     'disable' => '無効',
+
+    // 検証メッセージ
+    'validation' => [
+        'integer' => '整数でなければなりません',
+        'max' => '{max} を超えることはできません',
+        'min' => '{min} 未満にすることはできません',
+    ],
 ];

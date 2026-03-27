@@ -24,4 +24,11 @@ return [
     'edit_business_hours' => '編輯營業時間',
     'enable' => '啟用',
     'disable' => '禁用',
+
+    // 驗證消息
+    'validation' => [
+        'integer' => '必須是整數',
+        'max' => '不能超過 {max}',
+        'min' => '不能少於 {min}',
+    ],
 ];

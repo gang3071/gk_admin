@@ -69,6 +69,7 @@ return [
         'status_machine' => 'Physical machine',
         'status_offline_open' => 'Offline separation',
         'status_baccarat' => 'Hundreds of Real People',
+        'machine_crash_amount' => 'Crash Amount',
     ],
     'player_no_change' => 'The player has not changed',
     'not_fount' => 'The player was not found',

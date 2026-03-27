@@ -95,9 +95,9 @@ class StoreSettingController
                 })->editable(
                     (new Editable)->number('num')
                         ->rule([
-                            'integer' => admin_trans('validator.integer'),
-                            'max:180' => admin_trans('validator.max', null, ['{max}' => 180]),
-                            'min:5' => admin_trans('validator.min', null, ['{min}' => 5]),
+                            'integer' => admin_trans('store_setting.validation.integer'),
+                            'max:180' => admin_trans('store_setting.validation.max', null, ['{max}' => 180]),
+                            'min:5' => admin_trans('store_setting.validation.min', null, ['{min}' => 5]),
                         ])->addonAfter(admin_trans('store_setting.minutes'))
                 )->display(function ($val, StoreSetting $data) {
                     if (!empty($data->num)) {

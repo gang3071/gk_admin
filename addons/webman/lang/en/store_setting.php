@@ -24,4 +24,11 @@ return [
     'edit_business_hours' => 'Edit Business Hours',
     'enable' => 'Enable',
     'disable' => 'Disable',
+
+    // Validation messages
+    'validation' => [
+        'integer' => 'Must be an integer',
+        'max' => 'Cannot exceed {max}',
+        'min' => 'Cannot be less than {min}',
+    ],
 ];
