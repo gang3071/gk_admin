@@ -792,53 +792,56 @@ export default {
   color: #ff7875;
   background: #fff1f0;
 }
+</style>
 
+<!-- Ant Design 组件样式覆盖（不加scoped） -->
+<style>
 /* 表格样式优化 */
-.player-game-list >>> .ant-table {
+.player-game-list .ant-table {
   background: #fff;
   border-radius: 8px;
   overflow: hidden;
 }
 
-.player-game-list >>> .ant-table-thead > tr > th {
+.player-game-list .ant-table-thead > tr > th {
   background: #fafafa;
   font-weight: 600;
   color: #333;
   border-bottom: 2px solid #f0f0f0;
 }
 
-.player-game-list >>> .ant-table-tbody > tr:hover > td {
+.player-game-list .ant-table-tbody > tr:hover > td {
   background: #f5f9ff;
 }
 
-.player-game-list >>> .ant-table-tbody > tr > td {
+.player-game-list .ant-table-tbody > tr > td {
   border-bottom: 1px solid #f5f5f5;
 }
 
 /* Badge 状态样式优化 */
-.player-game-list >>> .ant-badge-status-text {
+.player-game-list .ant-badge-status-text {
   font-size: 13px;
   font-weight: 500;
   margin-left: 8px;
 }
 
-.player-game-list >>> .ant-badge-status-dot {
+.player-game-list .ant-badge-status-dot {
   width: 8px;
   height: 8px;
 }
 
-.player-game-list >>> .ant-badge-status-success {
+.player-game-list .ant-badge-status-success {
   background-color: #52c41a;
   box-shadow: 0 0 0 3px rgba(82, 196, 26, 0.2);
 }
 
-.player-game-list >>> .ant-badge-status-error {
+.player-game-list .ant-badge-status-error {
   background-color: #ff4d4f;
   box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.2);
 }
 
 /* Tag 样式优化 */
-.player-game-list >>> .ant-tag {
+.player-game-list .ant-tag {
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 12px;
@@ -847,38 +850,38 @@ export default {
 }
 
 /* 分页样式 */
-.player-game-list >>> .ant-pagination {
+.player-game-list .ant-pagination {
   margin-top: 16px;
 }
 
 /* 卡片样式 */
-.player-game-list >>> .ant-card {
+.player-game-list .ant-card {
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.player-game-list >>> .ant-card-head {
+.player-game-list .ant-card-head {
   border-bottom: 1px solid #f0f0f0;
   background: #fff;
 }
 
-.player-game-list >>> .ant-card-head-title {
+.player-game-list .ant-card-head-title {
   font-size: 16px;
   font-weight: 600;
   color: #333;
 }
 
-/* 搜索框样式 */
-.player-game-list >>> .ant-input-search-icon {
-  color: #1890ff;
-}
-
-.player-game-list >>> .ant-input {
+/* 输入框样式 */
+.player-game-list .ant-input {
   border-radius: 4px;
 }
 
-.player-game-list >>> .ant-input:focus {
+.player-game-list .ant-input:focus {
   border-color: #40a9ff;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.player-game-list .ant-input-search-icon {
+  color: #1890ff;
 }
 </style>
