@@ -4321,8 +4321,6 @@ class ChannelPlayerController
 
             $grid->autoHeight();
             $grid->bordered(true);
-            $grid->column('id', 'ID')->align('center')->width('80px');
-
             $grid->column('platform_id', '游戏平台')->display(function ($val, Game $data) {
                 return Tag::create($data->gamePlatform->name ?? '未知平台')->color('blue');
             })->align('center')->width('120px');
@@ -4441,6 +4439,8 @@ class ChannelPlayerController
             });
 
             $grid->expandFilter();
+            $grid->hideDeleteSelection();
+            $grid->hideSelection();
         })->selection($selectedGameIds);
     }
 
