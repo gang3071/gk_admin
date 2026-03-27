@@ -4358,36 +4358,20 @@ class ChannelPlayerController
             $grid->actions(function (Actions $actions, Game $data) use ($player_id, $selectedGameIds) {
                 $actions->hideDel();
                 $actions->hideEdit();
+            })->hide();
 
-                // 判断当前游戏是否被禁用
+            // 添加状态开关列
+            $grid->column('status_switch', admin_trans('common.status'))->display(function ($val, $data) use ($selectedGameIds, $player_id) {
+                // 判断当前游戏是否被禁用：0=禁用，1=正常
                 $isDisabled = in_array($data->id, $selectedGameIds);
+                $status = $isDisabled ? 0 : 1;
 
-                if ($isDisabled) {
-                    // 已禁用，显示"取消禁用"按钮
-                    $actions->prepend(
-                        Button::create('取消禁用')
-                            ->type('default')
-                            ->size('small')
-                            ->confirm('确认取消禁用该游戏？', [$this, 'toggleGameDisable'], [
-                                'player_id' => $player_id,
-                                'game_id' => $data->id,
-                                'action' => 'enable'
-                            ])
-                    );
-                } else {
-                    // 未禁用，显示"禁用游戏"按钮
-                    $actions->prepend(
-                        Button::create('禁用游戏')
-                            ->type('primary')
-                            ->size('small')
-                            ->danger()
-                            ->confirm('确认禁用该游戏？', [$this, 'toggleGameDisable'], [
-                                'player_id' => $player_id,
-                                'game_id' => $data->id,
-                                'action' => 'disable'
-                            ])
-                    );
-                }
+                return Switches::create(null, $status)
+                    ->options([[1 => admin_trans('common.status.1')], [0 => admin_trans('common.status.0')]])
+                    ->ajax([$this, 'toggleGameDisableSwitch'], [
+                        'player_id' => $player_id,
+                        'game_id' => $data->id
+                    ]);
             })->align('center');
 
             $grid->pagination()->pageSize(50);
@@ -4559,6 +4543,82 @@ class ChannelPlayerController
     }
 
     /**
+     * 开关切换游戏禁用状态（用于Switches组件）
+     * @auth true
+     * @group channel
+     * @param int $player_id
+     * @param int $game_id
+     * @return Msg
+     */
+    public function toggleGameDisableSwitch(int $player_id, int $game_id): Msg
+    {
+        try {
+            // 获取开关的新状态：1=正常（未禁用），0=禁用
+            $newStatus = request()->post('status_switch', 1);
+
+            /** @var Player $player */
+            $player = Player::query()->with('channel')->find($player_id);
+
+            if (empty($player)) {
+                return message_error(admin_trans('common.player_not_exist'));
+            }
+
+            // 只有线下渠道才支持游戏级别权限管理
+            if ($player->channel->is_offline != 1) {
+                return message_error(admin_trans('common.offline_channel_feature_only'));
+            }
+
+            // 验证游戏是否存在
+            $game = Game::query()->find($game_id);
+            if (empty($game)) {
+                return message_error(admin_trans('common.game_not_exist'));
+            }
+
+            // 获取渠道允许的游戏平台
+            $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+            if (empty($channelGamePlatformIds) || !in_array($game->platform_id, $channelGamePlatformIds)) {
+                return message_error(admin_trans('common.game_not_in_channel_scope'));
+            }
+
+            Db::beginTransaction();
+            try {
+                if ($newStatus == 0) {
+                    // 状态为0=禁用 - 添加到 PlayerDisabledGame 表
+                    PlayerDisabledGame::query()->updateOrCreate(
+                        [
+                            'player_id' => $player_id,
+                            'game_id' => $game_id,
+                        ],
+                        [
+                            'platform_id' => $game->platform_id,
+                            'status' => 1,
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]
+                    );
+                    $message = admin_trans('player.single_game_disabled_success');
+                } else {
+                    // 状态为1=正常 - 从 PlayerDisabledGame 表删除
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->where('game_id', $game_id)
+                        ->delete();
+                    $message = admin_trans('player.single_game_enabled_success');
+                }
+
+                Db::commit();
+                return message_success($message);
+            } catch (Exception $e) {
+                Db::rollBack();
+                Log::error('toggle_game_disable_switch', [$e->getMessage(), $e->getTrace()]);
+                return message_error($e->getMessage() ?? '操作失败');
+            }
+        } catch (Exception $e) {
+            Log::error('toggle_game_disable_switch', [$e->getMessage(), $e->getTrace()]);
+            return message_error('操作失败：' . $e->getMessage());
+        }
+    }
+
+    /**
      * 切换单个游戏的禁用状态
      * @auth true
      * @group channel
@@ -4585,7 +4645,7 @@ class ChannelPlayerController
             // 验证游戏是否存在
             $game = Game::query()->find($game_id);
             if (empty($game)) {
-                return message_error(admin_trans('common.game_not_exist'))->refresh();
+                return message_error(admin_trans('common.game_not_exist'));
             }
 
             // 获取渠道允许的游戏平台
@@ -4622,7 +4682,7 @@ class ChannelPlayerController
                 }
 
                 Db::commit();
-                return message_success($message)->refresh();
+                return message_success($message);
             } catch (Exception $e) {
                 Db::rollBack();
                 Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
