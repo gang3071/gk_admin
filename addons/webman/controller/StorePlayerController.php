@@ -130,7 +130,7 @@ class StorePlayerController
             $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
                     ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
-                    : Avatar::create()->text(mb_substr($val ?: 'U', 0, 1));
+                    : Avatar::create()->content(mb_substr($val ?: 'U', 0, 1));
                 return Html::create()->content([
                     $avatar,
                     Html::div()->content($val ?: admin_trans('player.unnamed'))->style(['margin-left' => '8px'])
