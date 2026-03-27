@@ -1,7 +1,8 @@
 <template>
   <div class="player-game-list">
     <a-card :bordered="false" :loading="loading" :title="cardTitle">
-      <div slot="extra" class="filter-bar">
+      <template slot="extra">
+        <div class="filter-bar">
         <a-input-search
           v-model="filters.game_name"
           allowClear
@@ -90,7 +91,8 @@
         >
           保存
         </a-button>
-      </div>
+        </div>
+      </template>
 
       <!-- 统计信息 -->
       <div v-if="gameList.length > 0" class="stats-bar">
@@ -123,50 +125,54 @@
         row-key="id"
         @change="handleTableChange"
       >
-        <div slot="game_name" slot-scope="text, record" class="game-name-cell">
-          <div class="game-avatar-wrapper">
-            <img
-              v-if="record.picture"
-              :alt="record.name"
-              :src="record.picture"
-              class="game-avatar"
-            />
-            <div v-else class="game-avatar-placeholder">
-              <span>无图</span>
+        <template slot="game_name" slot-scope="text, record">
+          <div class="game-name-cell">
+            <div class="game-avatar-wrapper">
+              <img
+                v-if="record.picture"
+                :alt="record.name"
+                :src="record.picture"
+                class="game-avatar"
+              />
+              <div v-else class="game-avatar-placeholder">
+                <span>无图</span>
+              </div>
             </div>
+            <span class="game-name-text">{{ record.name }}</span>
           </div>
-          <span class="game-name-text">{{ record.name }}</span>
-        </div>
+        </template>
 
-        <div slot="platform" slot-scope="text, record" class="platform-cell">
-          <img
-            v-if="record.platform_logo"
-            :alt="record.platform_name"
-            :src="record.platform_logo"
-            class="platform-logo"
-          />
-          <a-tag color="blue">{{ record.platform_name }}</a-tag>
-        </div>
+        <template slot="platform" slot-scope="text, record">
+          <div class="platform-cell">
+            <img
+              v-if="record.platform_logo"
+              :alt="record.platform_name"
+              :src="record.platform_logo"
+              class="platform-logo"
+            />
+            <a-tag color="blue">{{ record.platform_name }}</a-tag>
+          </div>
+        </template>
 
         <template slot="category" slot-scope="text">
           <a-tag color="green">{{ text }}</a-tag>
         </template>
 
-        <div slot="is_hot" slot-scope="text, record">
+        <template slot="is_hot" slot-scope="text, record">
           <div v-if="Number(record.is_hot) === 1" class="tag-hot">
             <a-icon type="fire" />
             <span>热门</span>
           </div>
           <span v-else class="tag-empty">—</span>
-        </div>
+        </template>
 
-        <div slot="is_new" slot-scope="text, record">
+        <template slot="is_new" slot-scope="text, record">
           <div v-if="Number(record.is_new) === 1" class="tag-new">
             <a-icon type="thunderbolt" />
             <span>新</span>
           </div>
           <span v-else class="tag-empty">—</span>
-        </div>
+        </template>
 
         <template slot="status" slot-scope="text, record">
           <a-badge
