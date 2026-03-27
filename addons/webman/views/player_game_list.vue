@@ -658,27 +658,4 @@ export default {
   font-weight: 600;
   color: #333;
 }
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-select,
-  .filter-select-small {
-    width: 100%;
-  }
-
-  .game-name-cell {
-    gap: 8px;
-  }
-
-  .game-avatar,
-  .game-avatar-placeholder {
-    width: 40px;
-    height: 40px;
-  }
-}
 </style>
