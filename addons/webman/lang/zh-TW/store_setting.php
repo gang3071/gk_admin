@@ -16,6 +16,7 @@ return [
         'business_hours' => '營業時間段',
         'enable_physical_machine' => '是否開啟實體機台',
         'enable_live_baccarat' => '是否開啟真人百家',
+        'machine_crash_amount' => '爆機金額',
     ],
     'home_notice_max_len' => '首頁提醒消息最多500個字符',
     'store_marquee_max_len' => '店機跑馬燈最多200個字符',
@@ -28,6 +29,7 @@ return [
     // 驗證消息
     'validation' => [
         'integer' => '必須是整數',
+        'numeric' => '必須是數字',
         'max' => '不能超過 {max}',
         'min' => '不能少於 {min}',
     ],

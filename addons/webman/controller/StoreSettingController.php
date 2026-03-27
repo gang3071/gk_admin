@@ -67,6 +67,7 @@ class StoreSettingController
             // - business_hours: 营业时间段
             // - enable_physical_machine: 是否开启实体机台
             // - enable_live_baccarat: 是否开启真人百家
+            // - machine_crash_amount: 爆机金额
             $grid->column('feature', admin_trans('store_setting.fields.feature'))
                 ->display(function ($value, StoreSetting $data) {
                     return admin_trans('store_setting.fields.' . $data->feature);
@@ -152,6 +153,22 @@ class StoreSettingController
                     } else {
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
                     }
+                })->align('center')
+                // 爆机金额
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'machine_crash_amount';
+                })->editable(
+                    (new Editable)->number('num')
+                        ->rule([
+                            'numeric' => admin_trans('store_setting.validation.numeric'),
+                            'min:0' => admin_trans('store_setting.validation.min', null, ['{min}' => 0]),
+                        ])
+                        ->precision(2)
+                )->display(function ($val, StoreSetting $data) {
+                    if (!empty($data->num)) {
+                        return number_format(floatval($data->num), 2);
+                    }
+                    return '0.00';
                 })->align('center');
 
             // 状态列

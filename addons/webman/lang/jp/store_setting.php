@@ -16,6 +16,7 @@ return [
         'business_hours' => '営業時間',
         'enable_physical_machine' => '実機を有効にする',
         'enable_live_baccarat' => 'ライブバカラを有効にする',
+        'machine_crash_amount' => 'クラッシュ金額',
     ],
     'home_notice_max_len' => 'ホーム通知メッセージは最大500文字',
     'store_marquee_max_len' => '店舗マーキーは最大200文字',
@@ -28,6 +29,7 @@ return [
     // 検証メッセージ
     'validation' => [
         'integer' => '整数でなければなりません',
+        'numeric' => '数字でなければなりません',
         'max' => '{max} を超えることはできません',
         'min' => '{min} 未満にすることはできません',
     ],
