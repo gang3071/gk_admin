@@ -4519,7 +4519,9 @@ class ChannelPlayerController
         $playerId = Request::input('player_id');
         $page = Request::input('page', 1);
         $size = Request::input('size', 50);
+        $gameName = Request::input('game_name');
         $platformId = Request::input('platform_id');
+        $cateId = Request::input('cate_id');
         $isHot = Request::input('is_hot');
         $isNew = Request::input('is_new');
 
@@ -4569,8 +4571,18 @@ class ChannelPlayerController
                 }]);
 
             // 应用筛选条件
+            if (!empty($gameName)) {
+                // 游戏名称搜索（通过关联的gameContent表）
+                $query->whereHas('gameContent', function ($q) use ($gameName, $lang) {
+                    $q->where('lang', $lang)
+                      ->where('name', 'like', '%' . $gameName . '%');
+                });
+            }
             if (!empty($platformId)) {
                 $query->where('platform_id', $platformId);
+            }
+            if (!empty($cateId)) {
+                $query->where('cate_id', $cateId);
             }
             if (isset($isHot) && $isHot !== '') {
                 $query->where('is_hot', $isHot);
@@ -4602,8 +4614,8 @@ class ChannelPlayerController
                     'platform_logo' => $game->gamePlatform->logo ?? '',
                     'cate_id' => $game->cate_id,
                     'category_name' => getGameTypeName($game->cate_id),
-                    'is_hot' => $game->is_hot,
-                    'is_new' => $game->is_new,
+                    'is_hot' => (int)$game->is_hot,  // 强制转换为整数
+                    'is_new' => (int)$game->is_new,  // 强制转换为整数
                     'is_selected' => in_array($game->id, $selectedGameIds), // 是否被禁用
                 ];
             })->toArray();
@@ -4615,6 +4627,16 @@ class ChannelPlayerController
                 ->get()
                 ->toArray();
 
+            // 获取游戏分类列表
+            $gameTypeOptions = getGameTypeOptions();
+            $categories = [];
+            foreach ($gameTypeOptions as $value => $label) {
+                $categories[] = [
+                    'value' => $value,
+                    'label' => $label
+                ];
+            }
+
             return json([
                 'status' => 1,
                 'message' => 'success',
@@ -4622,6 +4644,7 @@ class ChannelPlayerController
                     'list' => $gameList,
                     'total' => $total,
                     'platforms' => $platforms,
+                    'categories' => $categories,
                 ]
             ]);
         } catch (Exception $e) {

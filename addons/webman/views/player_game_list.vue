@@ -4,6 +4,17 @@
       <!-- 筛选器 -->
       <template slot="extra">
         <div class="filter-bar">
+          <a-input-search
+            v-model="filters.game_name"
+            allowClear
+            class="filter-search"
+            enter-button
+            placeholder="搜索游戏名称"
+            @search="loadGameList"
+          >
+            <a-icon slot="prefix" type="search" />
+          </a-input-search>
+
           <a-select
             v-model="filters.platform_id"
             allowClear
@@ -21,6 +32,18 @@
                 />
                 <span>{{ platform.name }}</span>
               </div>
+            </a-select-option>
+          </a-select>
+
+          <a-select
+            v-model="filters.cate_id"
+            allowClear
+            class="filter-select-small"
+            placeholder="游戏分类"
+            @change="loadGameList"
+          >
+            <a-select-option v-for="category in categories" :key="category.value" :value="category.value">
+              {{ category.label }}
             </a-select-option>
           </a-select>
 
@@ -132,7 +155,7 @@
         </template>
 
         <template slot="is_hot" slot-scope="text, record">
-          <div v-if="record.is_hot === 1" class="tag-hot">
+          <div v-if="record.is_hot == 1" class="tag-hot">
             <a-icon theme="filled" type="fire" />
             <span>热门</span>
           </div>
@@ -140,7 +163,7 @@
         </template>
 
         <template slot="is_new" slot-scope="text, record">
-          <div v-if="record.is_new === 1" class="tag-new">
+          <div v-if="record.is_new == 1" class="tag-new">
             <a-icon theme="filled" type="thunderbolt" />
             <span>新</span>
           </div>
@@ -198,9 +221,12 @@ export default {
       saving: false,
       gameList: [],
       platforms: [],
+      categories: [],
       selectedRowKeys: [],
       filters: {
+        game_name: undefined,
         platform_id: undefined,
+        cate_id: undefined,
         is_hot: undefined,
         is_new: undefined
       },
@@ -349,6 +375,7 @@ export default {
           this.gameList = data.list || [];
           this.pagination.total = data.total || 0;
           this.platforms = data.platforms || [];
+          this.categories = data.categories || [];
 
           // 更新选中的行（已禁用的游戏）
           this.selectedRowKeys = this.gameList
@@ -496,6 +523,11 @@ export default {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.filter-search {
+  width: 220px;
+  min-width: 180px;
 }
 
 .filter-select {
@@ -770,5 +802,43 @@ export default {
   font-size: 16px;
   font-weight: 600;
   color: #333;
+}
+
+/* 搜索框样式 */
+:deep(.filter-search .ant-input-search-icon) {
+  color: #1890ff;
+}
+
+:deep(.filter-search .ant-input) {
+  border-radius: 4px;
+}
+
+:deep(.filter-search .ant-input:focus) {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-search,
+  .filter-select,
+  .filter-select-small {
+    width: 100%;
+  }
+
+  .game-name-cell {
+    gap: 8px;
+  }
+
+  .game-avatar,
+  .game-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+  }
 }
 </style>
