@@ -4396,19 +4396,6 @@ class ChannelPlayerController
             $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
-
-            $grid->tools(
-                Button::create('保存选择的游戏')
-                    ->icon(Icon::create('fas fa-save'))
-                    ->confirm('确认保存？',
-                        [
-                            $this,
-                            'savePlayerGames?' . http_build_query($param)
-                        ])
-                    ->gridBatch()->gridRefresh()
-                    ->type('primary')
-            );
-
             $grid->filter(function (Filter $filter) use ($channelGamePlatformIds) {
                 $filter->eq()->select('platform_id')
                     ->placeholder('游戏平台')
@@ -4439,7 +4426,6 @@ class ChannelPlayerController
             });
 
             $grid->expandFilter();
-            $grid->hideDeleteSelection();
             $grid->hideSelection();
         })->selection($selectedGameIds);
     }
