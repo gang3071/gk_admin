@@ -56,7 +56,7 @@
           >
             <a-select-option :value="1">
               <span style="color: #ff4d4f; font-weight: 600;">
-                <a-icon theme="filled" type="fire" /> 热门
+                <a-icon type="fire" /> 热门
               </span>
             </a-select-option>
             <a-select-option :value="0">普通</a-select-option>
@@ -71,7 +71,7 @@
           >
             <a-select-option :value="1">
               <span style="color: #ff7a45; font-weight: 600;">
-                <a-icon theme="filled" type="thunderbolt" /> 新游戏
+                <a-icon type="thunderbolt" /> 新游戏
               </span>
             </a-select-option>
             <a-select-option :value="0">旧游戏</a-select-option>
@@ -168,7 +168,7 @@
             值:{{ record.is_hot }} 类型:{{ typeof record.is_hot }}
           </div> -->
           <div v-if="Number(record.is_hot) === 1" class="tag-hot">
-            <a-icon theme="filled" type="fire" />
+            <a-icon type="fire" />
             <span>热门</span>
           </div>
           <span v-else class="tag-empty">—</span>
@@ -180,7 +180,7 @@
             值:{{ record.is_new }} 类型:{{ typeof record.is_new }}
           </div> -->
           <div v-if="Number(record.is_new) === 1" class="tag-new">
-            <a-icon theme="filled" type="thunderbolt" />
+            <a-icon type="thunderbolt" />
             <span>新</span>
           </div>
           <span v-else class="tag-empty">—</span>
