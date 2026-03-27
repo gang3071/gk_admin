@@ -5137,52 +5137,61 @@ class ChannelPlayerController
             });
         }
 
-        // 检查爆机状态，计算最大可洗分金额
+        // 检查爆机状态，计算可洗分金额
         $crashCheck = checkMachineCrash($player);
         $currentBalance = floatval($money);
 
-        // 如果爆机，计算最大可洗金额
+        // 如果爆机，洗分金额 = 爆机金额，钱包清零
         if ($crashCheck['crashed'] && $crashCheck['crash_amount'] > 0) {
-            $maxWashAmount = $currentBalance - $crashCheck['crash_amount'];
-            if ($maxWashAmount < 0) {
-                $maxWashAmount = 0;
-            }
+            $washAmount = $crashCheck['crash_amount']; // 提现金额为爆机金额
+            $deductAmount = $currentBalance; // 钱包扣除全部余额
         } else {
-            $maxWashAmount = $currentBalance;
+            // 正常情况，全部洗掉
+            $washAmount = $currentBalance;
+            $deductAmount = $currentBalance;
         }
-
-        // 洗分金额向下取整到百位
-        $maxWashAmount = floor($maxWashAmount / 100) * 100;
 
         $isCrashed = $crashCheck['crashed'];
         $crashAmount = $crashCheck['crash_amount'] ?? 0;
 
-        return Form::create(function (Form $form) use ($id, $currentBalance, $maxWashAmount, $isCrashed, $crashAmount) {
+        return Form::create(function (Form $form) use ($id, $currentBalance, $washAmount, $deductAmount, $isCrashed, $crashAmount) {
+            // 设备状态提示（始终显示）
+            $form->text('device_status', admin_trans('player.device_status'))
+                ->value($isCrashed ? admin_trans('player.device_crashed_status') : admin_trans('player.device_normal_status'))
+                ->disabled();
+
             $form->text('current_balance_display', admin_trans('player.current_balance'))
                 ->value(number_format($currentBalance, 2))
                 ->disabled();
 
             if ($isCrashed) {
-                $form->text('crash_status_display', admin_trans('player.is_crashed'))
-                    ->value(admin_trans('player.crashed') . ' (' . admin_trans('player.fields.machine_crash_amount') . ': ' . number_format($crashAmount, 2) . ')')
+                $form->text('crash_amount_display', admin_trans('player.crash_amount'))
+                    ->value(number_format($crashAmount, 2))
+                    ->disabled();
+
+                $confiscatedAmount = bcsub($deductAmount, $washAmount, 2);
+                $form->text('confiscated_amount', admin_trans('player.confiscated_amount'))
+                    ->value(number_format($confiscatedAmount, 2))
+                    ->disabled();
+
+                $form->text('remain_balance', admin_trans('player.balance_after_wash'))
+                    ->value('0.00')
                     ->disabled();
             }
 
-            $form->text('max_wash_amount_display', admin_trans('player.max_wash_amount'))
-                ->value(number_format($maxWashAmount, 2))
-                ->disabled();
-
-            $form->number('wash_amount', admin_trans('player.wash_score_amount'))
-                ->required()
-                ->min(100)
-                ->step(100)
-                ->max($maxWashAmount)
-                ->help($isCrashed ? admin_trans('player.wash_score_tip') : admin_trans('player.wash_score_normal_tip'));
+            $form->text('wash_amount_display', admin_trans('player.wash_score_amount'))
+                ->value(number_format($washAmount, 2))
+                ->disabled()
+                ->help($isCrashed
+                    ? admin_trans('player.wash_crashed_tip')
+                    : admin_trans('player.wash_normal_tip'));
 
             $form->hidden('player_id')->value($id);
+            $form->hidden('wash_amount')->value($washAmount);
+            $form->hidden('deduct_amount')->value($deductAmount);
 
-            $form->saved(function ($form, $data) use ($maxWashAmount) {
-                return $this->handleWashScore($data, $maxWashAmount);
+            $form->saved(function ($form, $data) {
+                return $this->handleWashScore($data);
             });
 
             $form->layout('vertical');
@@ -5194,25 +5203,21 @@ class ChannelPlayerController
      * @auth true
      * @group wash_score
      * @param array $data
-     * @param float $maxWashAmount
      * @return Msg
      */
-    private function handleWashScore(array $data, float $maxWashAmount)
+    private function handleWashScore(array $data)
     {
         $playerId = $data['player_id'] ?? 0;
-        $washAmount = floatval($data['wash_amount'] ?? 0);
+        $washAmount = floatval($data['wash_amount'] ?? 0); // 提现金额
+        $deductAmount = floatval($data['deduct_amount'] ?? 0); // 钱包扣除金额
 
         // 验证洗分金额
-        if ($washAmount < 100) {
-            return message_error(admin_trans('player.wash_amount_invalid'));
+        if ($washAmount <= 0) {
+            return message_error('洗分金额必须大于0');
         }
 
-        if ($washAmount % 100 != 0) {
-            return message_error('洗分金额必须是100的整数倍');
-        }
-
-        if ($washAmount > $maxWashAmount) {
-            return message_error(admin_trans('player.wash_amount_exceed'));
+        if ($deductAmount <= 0) {
+            return message_error('钱包扣除金额必须大于0');
         }
 
         /** @var Player $player */
@@ -5253,7 +5258,7 @@ class ChannelPlayerController
             }
 
             // 检查余额是否足够
-            if ($wallet->money < $washAmount) {
+            if ($wallet->money < $deductAmount) {
                 DB::rollBack();
                 return message_error(admin_trans('player.insufficient_balance'));
             }
@@ -5261,8 +5266,8 @@ class ChannelPlayerController
             // 记录洗分前的余额
             $previousAmount = floatval($wallet->money);
 
-            // 扣除余额
-            $wallet->money = bcsub($wallet->money, $washAmount, 2);
+            // 扣除钱包余额（可能是全部扣除）
+            $wallet->money = bcsub($wallet->money, $deductAmount, 2);
             $wallet->save();
 
             // 创建提现记录
@@ -5294,17 +5299,17 @@ class ChannelPlayerController
             $withdrawRecord->finish_time = date('Y-m-d H:i:s');
             $withdrawRecord->save();
 
-            // 更新玩家提现统计
+            // 更新玩家提现统计（统计实际提现的金额）
             if ($player->player_extend) {
                 $player->player_extend->withdraw_amount = bcadd(
                     $player->player_extend->withdraw_amount ?? 0,
-                    $washAmount,
+                    $washAmount, // 使用实际提现金额
                     2
                 );
                 $player->push();
             }
 
-            // 写入金流明细
+            // 写入金流明细（记录实际扣除金额）
             $deliveryRecord = new PlayerDeliveryRecord();
             $deliveryRecord->player_id = $playerId;
             $deliveryRecord->department_id = $player->department_id;
@@ -5313,11 +5318,19 @@ class ChannelPlayerController
             $deliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
             $deliveryRecord->withdraw_status = $withdrawRecord->status;
             $deliveryRecord->source = 'channel_withdrawal';
-            $deliveryRecord->amount = $washAmount;
+            $deliveryRecord->amount = $deductAmount; // 记录实际扣除金额
             $deliveryRecord->amount_before = $previousAmount;
             $deliveryRecord->amount_after = floatval($wallet->money);
             $deliveryRecord->tradeno = $withdrawRecord->tradeno;
-            $deliveryRecord->remark = '渠道后台洗分';
+
+            // 计算备注信息
+            if ($deductAmount > $washAmount) {
+                $confiscatedAmount = bcsub($deductAmount, $washAmount, 2); // 没收金额
+                $deliveryRecord->remark = "渠道后台洗分（爆机清零，提现金额：{$washAmount}，没收金额：{$confiscatedAmount}）";
+            } else {
+                $deliveryRecord->remark = '渠道后台洗分';
+            }
+
             $deliveryRecord->save();
 
             DB::commit();
