@@ -78,6 +78,14 @@
           </a-select>
 
           <a-button
+            icon="reload"
+            size="default"
+            @click="resetFilters"
+          >
+            重置
+          </a-button>
+
+          <a-button
             :loading="saving"
             icon="save"
             size="default"
@@ -155,7 +163,11 @@
         </template>
 
         <template slot="is_hot" slot-scope="text, record">
-          <div v-if="record.is_hot == 1" class="tag-hot">
+          <!-- 调试信息 -->
+          <!-- <div style="font-size: 10px; color: #999;">
+            值:{{ record.is_hot }} 类型:{{ typeof record.is_hot }}
+          </div> -->
+          <div v-if="Number(record.is_hot) === 1" class="tag-hot">
             <a-icon theme="filled" type="fire" />
             <span>热门</span>
           </div>
@@ -163,7 +175,11 @@
         </template>
 
         <template slot="is_new" slot-scope="text, record">
-          <div v-if="record.is_new == 1" class="tag-new">
+          <!-- 调试信息 -->
+          <!-- <div style="font-size: 10px; color: #999;">
+            值:{{ record.is_new }} 类型:{{ typeof record.is_new }}
+          </div> -->
+          <div v-if="Number(record.is_new) === 1" class="tag-new">
             <a-icon theme="filled" type="thunderbolt" />
             <span>新</span>
           </div>
@@ -313,6 +329,15 @@ export default {
     },
     disabledCount() {
       return this.gameList.filter(game => game.is_selected).length;
+    },
+    hasActiveFilters() {
+      return !!(
+        this.filters.game_name ||
+        this.filters.platform_id ||
+        this.filters.cate_id ||
+        this.filters.is_hot !== undefined ||
+        this.filters.is_new !== undefined
+      );
     }
   },
   mounted() {
@@ -358,24 +383,52 @@ export default {
     loadGameList() {
       this.loading = true;
 
+      // 过滤掉 undefined 和 null 的参数
+      const params = {
+        player_id: this.player_id,
+        page: this.pagination.current,
+        size: this.pagination.pageSize
+      };
+
+      // 只添加有值的筛选条件
+      if (this.filters.game_name) params.game_name = this.filters.game_name;
+      if (this.filters.platform_id !== undefined && this.filters.platform_id !== null) {
+        params.platform_id = this.filters.platform_id;
+      }
+      if (this.filters.cate_id !== undefined && this.filters.cate_id !== null) {
+        params.cate_id = this.filters.cate_id;
+      }
+      if (this.filters.is_hot !== undefined && this.filters.is_hot !== null) {
+        params.is_hot = this.filters.is_hot;
+      }
+      if (this.filters.is_new !== undefined && this.filters.is_new !== null) {
+        params.is_new = this.filters.is_new;
+      }
+
+      console.log('请求参数:', params);
+
       const promise = this.$request({
         url: 'ex-admin/addons-webman-controller-ChannelPlayerController/getPlayerGameListData',
-        params: {
-          player_id: this.player_id,
-          page: this.pagination.current,
-          size: this.pagination.pageSize,
-          ...this.filters
-        }
+        params: params
       });
 
       // ExAdmin的$request可能会reject成功的响应，所以我们在两个回调中都处理
       const handleResponse = (res) => {
+        console.log('API响应:', res);
         if (res && res.status === 1 && res.data) {
           const data = res.data;
           this.gameList = data.list || [];
           this.pagination.total = data.total || 0;
           this.platforms = data.platforms || [];
           this.categories = data.categories || [];
+
+          // 调试输出
+          if (this.gameList.length > 0) {
+            console.log('第一条数据:', this.gameList[0]);
+            console.log('is_hot类型:', typeof this.gameList[0].is_hot, '值:', this.gameList[0].is_hot);
+            console.log('is_new类型:', typeof this.gameList[0].is_new, '值:', this.gameList[0].is_new);
+          }
+          console.log('分类列表:', this.categories);
 
           // 更新选中的行（已禁用的游戏）
           this.selectedRowKeys = this.gameList
@@ -390,6 +443,19 @@ export default {
         .finally(() => {
           this.loading = false;
         });
+    },
+
+    // 重置筛选条件
+    resetFilters() {
+      this.filters = {
+        game_name: undefined,
+        platform_id: undefined,
+        cate_id: undefined,
+        is_hot: undefined,
+        is_new: undefined
+      };
+      this.pagination.current = 1;
+      this.loadGameList();
     },
 
     // 表格变化处理

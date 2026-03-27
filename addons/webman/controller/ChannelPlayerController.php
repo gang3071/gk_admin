@@ -4581,14 +4581,14 @@ class ChannelPlayerController
             if (!empty($platformId)) {
                 $query->where('platform_id', $platformId);
             }
-            if (!empty($cateId)) {
+            if (isset($cateId) && $cateId !== '' && $cateId !== null) {
                 $query->where('cate_id', $cateId);
             }
-            if (isset($isHot) && $isHot !== '') {
-                $query->where('is_hot', $isHot);
+            if (isset($isHot) && $isHot !== '' && $isHot !== null) {
+                $query->where('is_hot', (int)$isHot);
             }
-            if (isset($isNew) && $isNew !== '') {
-                $query->where('is_new', $isNew);
+            if (isset($isNew) && $isNew !== '' && $isNew !== null) {
+                $query->where('is_new', (int)$isNew);
             }
 
             // 获取总数
