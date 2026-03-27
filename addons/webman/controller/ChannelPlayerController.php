@@ -4427,7 +4427,7 @@ class ChannelPlayerController
 
             $grid->expandFilter();
             $grid->hideSelection();
-        })->selection($selectedGameIds);
+        });
     }
 
     /**
