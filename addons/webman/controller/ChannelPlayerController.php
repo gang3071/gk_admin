@@ -5293,7 +5293,7 @@ class ChannelPlayerController
             $withdrawRecord->type = PlayerWithdrawRecord::TYPE_SELF; // 线下代理提现类型
             $withdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
             $withdrawRecord->bank_type = 4;
-            $withdrawRecord->remark = '渠道后台洗分';
+            $withdrawRecord->remark = '渠道後台洗分';
             $withdrawRecord->user_id = Admin::id() ?? 0;
             $withdrawRecord->user_name = Admin::user()->username ?? 'system';
             $withdrawRecord->finish_time = date('Y-m-d H:i:s');
@@ -5326,9 +5326,9 @@ class ChannelPlayerController
             // 计算备注信息
             if ($deductAmount > $washAmount) {
                 $confiscatedAmount = bcsub($deductAmount, $washAmount, 2); // 没收金额
-                $deliveryRecord->remark = "渠道后台洗分（爆机清零，提现金额：{$washAmount}，没收金额：{$confiscatedAmount}）";
+                $deliveryRecord->remark = "渠道後台洗分（爆機清零，提現金額：{$washAmount}，沒收金額：{$confiscatedAmount}）";
             } else {
-                $deliveryRecord->remark = '渠道后台洗分';
+                $deliveryRecord->remark = '渠道後台洗分';
             }
 
             $deliveryRecord->save();
