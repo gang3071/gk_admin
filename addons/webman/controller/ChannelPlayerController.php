@@ -598,6 +598,14 @@ class ChannelPlayerController
                             'cursor' => 'pointer'
                         ]))->title(admin_trans('player.wallet.artificial_withdrawal_tip'))
                     ));
+
+                // 洗分功能
+                $dropdown->append(admin_trans('player.wash_score'), 'SwapOutlined')
+                    ->modal([$this, 'washScoreForm'], [
+                        'id' => $data['id'],
+                        'money' => $data['money'] ?? 0,
+                        'is_crashed' => $data['is_crashed'] ?? 0,
+                    ])->width('600px');
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -5109,5 +5117,230 @@ class ChannelPlayerController
             });
             $form->layout('vertical');
         });
+    }
+
+    /**
+     * 洗分表单
+     * @auth true
+     * @group wash_score
+     * @param $id
+     * @param $money
+     * @param $is_crashed
+     * @return Form
+     */
+    public function washScoreForm($id, $money, $is_crashed): Form
+    {
+        /** @var Player $player */
+        $player = Player::query()->with(['machine_wallet', 'channel'])->find($id);
+
+        if (!$player) {
+            return Form::create(function (Form $form) {
+                $form->text('error', admin_trans('player.player_not_found'))
+                    ->disabled();
+            });
+        }
+
+        // 检查爆机状态，计算最大可洗分金额
+        $crashCheck = checkMachineCrash($player);
+        $currentBalance = floatval($money);
+
+        // 如果爆机，计算最大可洗金额
+        if ($crashCheck['crashed'] && $crashCheck['crash_amount'] > 0) {
+            $maxWashAmount = $currentBalance - $crashCheck['crash_amount'];
+            if ($maxWashAmount < 0) {
+                $maxWashAmount = 0;
+            }
+        } else {
+            $maxWashAmount = $currentBalance;
+        }
+
+        // 洗分金额向下取整到百位
+        $maxWashAmount = floor($maxWashAmount / 100) * 100;
+
+        $isCrashed = $crashCheck['crashed'];
+        $crashAmount = $crashCheck['crash_amount'] ?? 0;
+
+        return Form::create(function (Form $form) use ($id, $currentBalance, $maxWashAmount, $isCrashed, $crashAmount) {
+            $form->text('current_balance_display', admin_trans('player.current_balance'))
+                ->value(number_format($currentBalance, 2))
+                ->disabled();
+
+            if ($isCrashed) {
+                $form->text('crash_status_display', admin_trans('player.is_crashed'))
+                    ->value(admin_trans('player.crashed') . ' (' . admin_trans('player.fields.machine_crash_amount') . ': ' . number_format($crashAmount, 2) . ')')
+                    ->disabled();
+            }
+
+            $form->text('max_wash_amount_display', admin_trans('player.max_wash_amount'))
+                ->value(number_format($maxWashAmount, 2))
+                ->disabled();
+
+            $form->number('wash_amount', admin_trans('player.wash_score_amount'))
+                ->required()
+                ->min(100)
+                ->step(100)
+                ->max($maxWashAmount)
+                ->help($isCrashed ? admin_trans('player.wash_score_tip') : admin_trans('player.wash_score_normal_tip'));
+
+            $form->hidden('player_id')->value($id);
+
+            $form->saved(function ($form, $data) use ($maxWashAmount) {
+                return $this->handleWashScore($data, $maxWashAmount);
+            });
+
+            $form->layout('vertical');
+        });
+    }
+
+    /**
+     * 处理洗分
+     * @auth true
+     * @group wash_score
+     * @param array $data
+     * @param float $maxWashAmount
+     * @return Msg
+     */
+    private function handleWashScore(array $data, float $maxWashAmount)
+    {
+        $playerId = $data['player_id'] ?? 0;
+        $washAmount = floatval($data['wash_amount'] ?? 0);
+
+        // 验证洗分金额
+        if ($washAmount < 100) {
+            return message_error(admin_trans('player.wash_amount_invalid'));
+        }
+
+        if ($washAmount % 100 != 0) {
+            return message_error('洗分金额必须是100的整数倍');
+        }
+
+        if ($washAmount > $maxWashAmount) {
+            return message_error(admin_trans('player.wash_amount_exceed'));
+        }
+
+        /** @var Player $player */
+        $player = Player::query()->with(['machine_wallet', 'channel', 'player_extend'])->find($playerId);
+
+        if (!$player) {
+            return message_error(admin_trans('player.player_not_found'));
+        }
+
+        // 获取货币配置
+        /** @var Currency $currency */
+        $currency = Currency::query()
+            ->where('identifying', $player->channel->currency)
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (!$currency) {
+            return message_error('币种配置不存在');
+        }
+
+        // 计算实际金额（游戏点数转为货币金额）
+        $money = bcdiv($washAmount, $currency->ratio, 2);
+
+        DB::beginTransaction();
+        try {
+            // 锁定钱包记录
+            /** @var PlayerPlatformCash $wallet */
+            $wallet = PlayerPlatformCash::query()
+                ->where('player_id', $playerId)
+                ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$wallet) {
+                DB::rollBack();
+                return message_error(admin_trans('player.wallet.player_error'));
+            }
+
+            // 检查余额是否足够
+            if ($wallet->money < $washAmount) {
+                DB::rollBack();
+                return message_error(admin_trans('player.insufficient_balance'));
+            }
+
+            // 记录洗分前的余额
+            $previousAmount = floatval($wallet->money);
+
+            // 扣除余额
+            $wallet->money = bcsub($wallet->money, $washAmount, 2);
+            $wallet->save();
+
+            // 创建提现记录
+            $withdrawRecord = new PlayerWithdrawRecord();
+            $withdrawRecord->player_id = $playerId;
+            $withdrawRecord->talk_user_id = $player->talk_user_id ?? 0;
+            $withdrawRecord->department_id = $player->department_id;
+            $withdrawRecord->tradeno = createOrderNo();
+            $withdrawRecord->player_name = $player->name ?? '';
+            $withdrawRecord->player_phone = $player->phone ?? '';
+            $withdrawRecord->rate = $currency->ratio;
+            $withdrawRecord->actual_rate = $currency->ratio;
+            $withdrawRecord->money = $money;
+            $withdrawRecord->point = $washAmount;
+            $withdrawRecord->fee = 0;
+            $withdrawRecord->inmoney = $money; // 实际到账金额
+            $withdrawRecord->currency = $player->channel->currency;
+            $withdrawRecord->bank_name = '';
+            $withdrawRecord->account = '';
+            $withdrawRecord->account_name = '';
+            $withdrawRecord->wallet_address = '';
+            $withdrawRecord->qr_code = '';
+            $withdrawRecord->type = PlayerWithdrawRecord::TYPE_SELF; // 线下代理提现类型
+            $withdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
+            $withdrawRecord->bank_type = 4;
+            $withdrawRecord->remark = '渠道后台洗分';
+            $withdrawRecord->user_id = Admin::id() ?? 0;
+            $withdrawRecord->user_name = Admin::user()->username ?? 'system';
+            $withdrawRecord->finish_time = date('Y-m-d H:i:s');
+            $withdrawRecord->save();
+
+            // 更新玩家提现统计
+            if ($player->player_extend) {
+                $player->player_extend->withdraw_amount = bcadd(
+                    $player->player_extend->withdraw_amount ?? 0,
+                    $washAmount,
+                    2
+                );
+                $player->push();
+            }
+
+            // 写入金流明细
+            $deliveryRecord = new PlayerDeliveryRecord();
+            $deliveryRecord->player_id = $playerId;
+            $deliveryRecord->department_id = $player->department_id;
+            $deliveryRecord->target = $withdrawRecord->getTable();
+            $deliveryRecord->target_id = $withdrawRecord->id;
+            $deliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
+            $deliveryRecord->withdraw_status = $withdrawRecord->status;
+            $deliveryRecord->source = 'channel_withdrawal';
+            $deliveryRecord->amount = $washAmount;
+            $deliveryRecord->amount_before = $previousAmount;
+            $deliveryRecord->amount_after = floatval($wallet->money);
+            $deliveryRecord->tradeno = $withdrawRecord->tradeno;
+            $deliveryRecord->remark = '渠道后台洗分';
+            $deliveryRecord->save();
+
+            DB::commit();
+
+            // 刷新钱包以获取最新的爆机状态
+            $wallet->refresh();
+
+            // 爆机解锁通知会在 PlayerPlatformCash 模型的 booted 事件中自动处理
+
+            return message_success(admin_trans('player.wash_score_success'));
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Channel wash score failed', [
+                'player_id' => $playerId,
+                'wash_amount' => $washAmount,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return message_error(admin_trans('player.wash_score_failed') . ': ' . $e->getMessage());
+        }
     }
 }
