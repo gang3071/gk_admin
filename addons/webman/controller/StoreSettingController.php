@@ -60,9 +60,16 @@ class StoreSettingController
                 ->where('admin_user_id', $adminUserId);
 
             // 功能列
+            // 支持的 feature 类型及其翻译键：
+            // - home_notice: 首页提醒消息
+            // - store_marquee: 店家跑马灯
+            // - order_expiration: 订单过期时间
+            // - business_hours: 营业时间段
+            // - enable_physical_machine: 是否开启实体机台
+            // - enable_live_baccarat: 是否开启真人百家
             $grid->column('feature', admin_trans('store_setting.fields.feature'))
-                ->display(function ($value) {
-                    return admin_trans('store_setting.fields.' . $value);
+                ->display(function ($value, StoreSetting $data) {
+                    return admin_trans('store_setting.fields.' . $data->feature);
                 })->align('center');
 
             // 配置列

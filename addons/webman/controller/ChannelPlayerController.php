@@ -196,6 +196,7 @@ class ChannelPlayerController
             'player_register_record.city_name',
             'player_platform_cash.money',
             'player_platform_cash.is_crashed',
+            'player_platform_cash.machine_crash_amount',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -388,11 +389,13 @@ class ChannelPlayerController
             // 爆机状态列
             $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
                 if ($val == 1) {
-                    return Tag::create(admin_trans('player.crashed'))->color('red');
+                    $crashAmount = isset($data['machine_crash_amount']) ? number_format(floatval($data['machine_crash_amount']), 2) : '0.00';
+                    $text = admin_trans('player.crashed') . ' (' . admin_trans('player.fields.machine_crash_amount') . ': ' . $crashAmount . ')';
+                    return Tag::create($text)->color('red');
                 } else {
                     return Tag::create(admin_trans('player.normal'))->color('green');
                 }
-            })->width(100)->align('center')->sortable();
+            })->width(180)->align('center')->sortable();
 
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
