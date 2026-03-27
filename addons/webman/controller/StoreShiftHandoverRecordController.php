@@ -176,11 +176,9 @@ class StoreShiftHandoverRecordController
             $grid->expandFilter();
             $grid->hideDeleteSelection();
 
-            // 导出功能：检查权限后启用
-            if (Admin::check('addons-webman-controller-StoreShiftHandoverRecordController', 'export', 'get')) {
-                $grid->export(new \addons\webman\grid\ShiftReportExporter())
-                    ->filename('shift_report_' . date('YmdHis'));
-            }
+            // 导出功能（权限通过 store_node.php 和 @auth true 控制）
+            $grid->export(new \addons\webman\grid\ShiftReportExporter())
+                ->filename('shift_report_' . date('YmdHis'));
         });
     }
 
