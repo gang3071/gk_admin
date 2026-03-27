@@ -196,14 +196,16 @@ export default {
       );
     },
     columns() {
+      const self = this;
+      const h = this.$createElement;
+
       return [
         {
           title: '游戏名称',
           dataIndex: 'name',
           key: 'game_name',
           width: 300,
-          customRender: (text, record) => {
-            const h = this.$createElement;
+          customRender(text, record) {
             return h('div', { class: 'game-name-cell' }, [
               h('div', { class: 'game-avatar-wrapper' }, [
                 record.picture
@@ -211,7 +213,7 @@ export default {
                       class: 'game-avatar',
                       attrs: { src: record.picture, alt: record.name },
                       on: {
-                        error: (e) => {
+                        error(e) {
                           e.target.style.display = 'none';
                         }
                       }
@@ -228,8 +230,7 @@ export default {
           key: 'platform',
           width: 180,
           align: 'center',
-          customRender: (text, record) => {
-            const h = this.$createElement;
+          customRender(text, record) {
             return h('div', { class: 'platform-cell' }, [
               record.platform_logo
                 ? h('img', {
@@ -247,8 +248,7 @@ export default {
           key: 'category',
           width: 110,
           align: 'center',
-          customRender: (text) => {
-            const h = this.$createElement;
+          customRender(text) {
             return h('a-tag', { props: { color: 'green' } }, text);
           }
         },
@@ -258,8 +258,7 @@ export default {
           key: 'is_hot',
           width: 100,
           align: 'center',
-          customRender: (text, record) => {
-            const h = this.$createElement;
+          customRender(text, record) {
             if (Number(record.is_hot) === 1) {
               return h('div', { class: 'tag-hot' }, [
                 h('a-icon', { props: { type: 'fire' } }),
@@ -275,8 +274,7 @@ export default {
           key: 'is_new',
           width: 100,
           align: 'center',
-          customRender: (text, record) => {
-            const h = this.$createElement;
+          customRender(text, record) {
             if (Number(record.is_new) === 1) {
               return h('div', { class: 'tag-new' }, [
                 h('a-icon', { props: { type: 'thunderbolt' } }),
@@ -292,8 +290,7 @@ export default {
           key: 'status',
           width: 110,
           align: 'center',
-          customRender: (text, record) => {
-            const h = this.$createElement;
+          customRender(text, record) {
             return h('a-badge', {
               props: {
                 status: record.is_selected ? 'error' : 'success',
@@ -308,20 +305,23 @@ export default {
           width: 100,
           align: 'center',
           fixed: 'right',
-          customRender: (text, record) => {
-            const h = this.$createElement;
+          customRender(text, record) {
             if (record.is_selected) {
               return h('a', {
                 class: 'action-link action-enable',
                 on: {
-                  click: () => this.toggleGame(record, false)
+                  click() {
+                    self.toggleGame(record, false);
+                  }
                 }
               }, '取消禁用');
             }
             return h('a', {
               class: 'action-link action-disable',
               on: {
-                click: () => this.toggleGame(record, true)
+                click() {
+                  self.toggleGame(record, true);
+                }
               }
             }, '禁用游戏');
           }
