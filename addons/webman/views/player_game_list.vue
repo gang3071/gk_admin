@@ -1,23 +1,23 @@
 <template>
   <div class="player-game-list">
-    <a-card :loading="loading" :title="cardTitle">
+    <a-card :bordered="false" :loading="loading" :title="cardTitle">
       <!-- 筛选器 -->
       <template slot="extra">
-        <div style="display: flex; gap: 8px; align-items: center;">
+        <div class="filter-bar">
           <a-select
             v-model="filters.platform_id"
             allowClear
             placeholder="选择平台"
-            style="width: 200px"
+            class="filter-select"
             @change="loadGameList"
           >
             <a-select-option v-for="platform in platforms" :key="platform.id" :value="platform.id">
-              <div style="display: flex; align-items: center; gap: 6px;">
+              <div class="platform-option">
                 <img
                   v-if="platform.logo"
                   :alt="platform.name"
                   :src="platform.logo"
-                  style="width: 20px; height: 20px; object-fit: contain;"
+                  class="platform-logo-small"
                 />
                 <span>{{ platform.name }}</span>
               </div>
@@ -27,30 +27,54 @@
           <a-select
             v-model="filters.is_hot"
             allowClear
-            placeholder="热门游戏"
-            style="width: 120px"
+            class="filter-select-small"
+            placeholder="热门筛选"
             @change="loadGameList"
           >
-            <a-select-option :value="1">热门游戏</a-select-option>
-            <a-select-option :value="0">普通游戏</a-select-option>
+            <a-select-option :value="1">🔥 热门</a-select-option>
+            <a-select-option :value="0">普通</a-select-option>
           </a-select>
 
           <a-select
             v-model="filters.is_new"
             allowClear
             placeholder="新游戏"
-            style="width: 120px"
+            class="filter-select-small"
             @change="loadGameList"
           >
-            <a-select-option :value="1">新游戏</a-select-option>
+            <a-select-option :value="1">✨ 新游戏</a-select-option>
             <a-select-option :value="0">旧游戏</a-select-option>
           </a-select>
 
-          <a-button :loading="saving" icon="save" type="primary" @click="saveSelectedGames">
-            保存选中游戏
+          <a-button
+            :loading="saving"
+            icon="save"
+            size="default"
+            type="primary"
+            @click="saveSelectedGames"
+          >
+            保存
           </a-button>
         </div>
       </template>
+
+      <!-- 统计信息 -->
+      <div v-if="gameList.length > 0" class="stats-bar">
+        <a-space size="large">
+          <span class="stats-item">
+            <a-icon style="margin-right: 4px;" type="database" />
+            总计: <strong>{{ pagination.total }}</strong> 个游戏
+          </span>
+          <span class="stats-item">
+            <a-icon style="margin-right: 4px; color: #52c41a;" type="check-circle" />
+            已选中: <strong style="color: #1890ff;">{{ selectedRowKeys.length }}</strong> 个
+          </span>
+          <span class="stats-item">
+            <a-icon style="margin-right: 4px; color: #ff4d4f;" type="stop" />
+            已禁用: <strong style="color: #ff4d4f;">{{ disabledCount }}</strong> 个
+          </span>
+        </a-space>
+      </div>
 
       <!-- 游戏表格 -->
       <a-table
@@ -59,37 +83,39 @@
         :loading="loading"
         :pagination="pagination"
         :row-selection="rowSelection"
-        :scroll="{ x: 'max-content', y: 550 }"
+        :scroll="{ x: 1200, y: 600 }"
         bordered
         size="middle"
         row-key="id"
         @change="handleTableChange"
       >
         <template slot="platform" slot-scope="text, record">
-          <div style="display: flex; align-items: center; gap: 6px; justify-content: center;">
+          <div class="platform-cell">
             <img
               v-if="record.platform_logo"
               :alt="record.platform_name"
               :src="record.platform_logo"
-              style="width: 24px; height: 24px; object-fit: contain;"
+              class="platform-logo"
             />
             <a-tag color="blue">{{ record.platform_name }}</a-tag>
           </div>
         </template>
 
         <template slot="game_name" slot-scope="text, record">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <img
-              v-if="record.picture"
-              :src="record.picture"
-              :alt="record.name"
-              style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; flex-shrink: 0;"
-              @error="handleImageError"
-            />
-            <div v-else style="width: 50px; height: 50px; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-              <span style="color: #999; font-size: 11px;">无图</span>
+          <div class="game-name-cell">
+            <div class="game-avatar-wrapper">
+              <img
+                v-if="record.picture"
+                :alt="record.name"
+                :src="record.picture"
+                class="game-avatar"
+                @error="handleImageError"
+              />
+              <div v-else class="game-avatar-placeholder">
+                <span>无图</span>
+              </div>
             </div>
-            <span style="flex: 1; word-break: break-word;">{{ record.name }}</span>
+            <span class="game-name-text">{{ record.name }}</span>
           </div>
         </template>
 
@@ -98,11 +124,13 @@
         </template>
 
         <template slot="is_hot" slot-scope="text, record">
-          <a-tag v-if="record.is_hot === 1" color="red">热门</a-tag>
+          <a-tag v-if="record.is_hot === 1" color="red">🔥 热门</a-tag>
+          <span v-else class="empty-tag">-</span>
         </template>
 
         <template slot="is_new" slot-scope="text, record">
-          <a-tag v-if="record.is_new === 1" color="orange">新游戏</a-tag>
+          <a-tag v-if="record.is_new === 1" color="orange">✨ 新</a-tag>
+          <span v-else class="empty-tag">-</span>
         </template>
 
         <template slot="status" slot-scope="text, record">
@@ -115,16 +143,16 @@
           <a
             v-if="record.is_selected"
             @click="toggleGame(record, false)"
-            style="color: #52c41a; cursor: pointer;"
+            class="action-link action-enable"
           >
-            取消
+            取消禁用
           </a>
           <a
             v-else
             @click="toggleGame(record, true)"
-            style="color: #ff4d4f; cursor: pointer;"
+            class="action-link action-disable"
           >
-            禁用
+            禁用游戏
           </a>
         </template>
       </a-table>
@@ -167,30 +195,33 @@ export default {
         total: 0,
         showSizeChanger: true,
         showQuickJumper: true,
-        showTotal: (total) => `共 ${total} 条`
+        pageSizeOptions: ['20', '50', '100', '200'],
+        showTotal: (total) => `共 ${total} 个游戏`
       },
       columns: [
         {
           title: 'ID',
           dataIndex: 'id',
           key: 'id',
-          width: 80,
-          align: 'center'
+          width: 90,
+          align: 'center',
+          ellipsis: true
         },
         {
           title: '游戏名称',
           dataIndex: 'name',
           key: 'game_name',
           scopedSlots: { customRender: 'game_name' },
-          width: 280,
-          fixed: 'left'
+          width: 300,
+          fixed: 'left',
+          ellipsis: false
         },
         {
           title: '游戏平台',
           dataIndex: 'platform_name',
           key: 'platform',
           scopedSlots: { customRender: 'platform' },
-          width: 160,
+          width: 180,
           align: 'center'
         },
         {
@@ -198,7 +229,7 @@ export default {
           dataIndex: 'category_name',
           key: 'category',
           scopedSlots: { customRender: 'category' },
-          width: 100,
+          width: 110,
           align: 'center'
         },
         {
@@ -206,7 +237,7 @@ export default {
           dataIndex: 'is_hot',
           key: 'is_hot',
           scopedSlots: { customRender: 'is_hot' },
-          width: 80,
+          width: 90,
           align: 'center'
         },
         {
@@ -214,7 +245,7 @@ export default {
           dataIndex: 'is_new',
           key: 'is_new',
           scopedSlots: { customRender: 'is_new' },
-          width: 80,
+          width: 90,
           align: 'center'
         },
         {
@@ -222,14 +253,14 @@ export default {
           dataIndex: 'is_selected',
           key: 'status',
           scopedSlots: { customRender: 'status' },
-          width: 90,
+          width: 100,
           align: 'center'
         },
         {
           title: '操作',
           key: 'action',
           scopedSlots: { customRender: 'action' },
-          width: 120,
+          width: 130,
           align: 'center',
           fixed: 'right'
         }
@@ -248,6 +279,9 @@ export default {
           this.selectedRowKeys = keys;
         }
       };
+    },
+    disabledCount() {
+      return this.gameList.filter(game => game.is_selected).length;
     }
   },
   mounted() {
@@ -422,5 +456,229 @@ export default {
 <style scoped>
 .player-game-list {
   padding: 16px;
+  background: #f0f2f5;
+}
+
+/* 统计栏样式 */
+.stats-bar {
+  background: #f5f7fa;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  border: 1px solid #e8ebf0;
+}
+
+.stats-item {
+  color: #666;
+  font-size: 14px;
+}
+
+.stats-item strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* 筛选栏样式 */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  width: 200px;
+  min-width: 180px;
+}
+
+.filter-select-small {
+  width: 120px;
+  min-width: 100px;
+}
+
+.platform-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.platform-logo-small {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* 平台列样式 */
+.platform-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+}
+
+.platform-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+/* 游戏名称列样式 */
+.game-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.game-avatar-wrapper {
+  flex-shrink: 0;
+}
+
+.game-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #f0f0f0;
+  transition: all 0.3s;
+}
+
+.game-avatar:hover {
+  transform: scale(1.1);
+  border-color: #1890ff;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+}
+
+.game-avatar-placeholder {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: #999;
+  border: 2px solid #f0f0f0;
+}
+
+.game-name-text {
+  flex: 1;
+  word-break: break-word;
+  line-height: 1.5;
+  color: #333;
+  font-weight: 500;
+}
+
+/* 空标签样式 */
+.empty-tag {
+  color: #d9d9d9;
+  font-size: 14px;
+}
+
+/* 操作链接样式 */
+.action-link {
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s;
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.action-enable {
+  color: #52c41a;
+}
+
+.action-enable:hover {
+  color: #73d13d;
+  background: #f6ffed;
+}
+
+.action-disable {
+  color: #ff4d4f;
+}
+
+.action-disable:hover {
+  color: #ff7875;
+  background: #fff1f0;
+}
+
+/* 表格样式优化 */
+:deep(.ant-table) {
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:deep(.ant-table-thead > tr > th) {
+  background: #fafafa;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+:deep(.ant-table-tbody > tr:hover > td) {
+  background: #f5f9ff;
+}
+
+:deep(.ant-table-tbody > tr > td) {
+  border-bottom: 1px solid #f5f5f5;
+}
+
+/* Tag 样式优化 */
+:deep(.ant-tag) {
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+}
+
+/* 分页样式 */
+:deep(.ant-pagination) {
+  margin-top: 16px;
+}
+
+/* 卡片样式 */
+:deep(.ant-card) {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+:deep(.ant-card-head) {
+  border-bottom: 1px solid #f0f0f0;
+  background: #fff;
+}
+
+:deep(.ant-card-head-title) {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-select,
+  .filter-select-small {
+    width: 100%;
+  }
+
+  .game-name-cell {
+    gap: 8px;
+  }
+
+  .game-avatar,
+  .game-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+  }
 }
 </style>
