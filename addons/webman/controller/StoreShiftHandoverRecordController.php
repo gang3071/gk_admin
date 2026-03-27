@@ -175,10 +175,25 @@ class StoreShiftHandoverRecordController
             $grid->hideDelete();
             $grid->expandFilter();
             $grid->hideDeleteSelection();
-            // 使用自定义导出驱动
-            $grid->export(new \addons\webman\grid\ShiftReportExporter())
-                ->filename('shift_report_' . date('YmdHis'));
+
+            // 导出功能：检查权限后启用
+            if (Admin::check('addons-webman-controller-StoreShiftHandoverRecordController', 'export', 'get')) {
+                $grid->export(new \addons\webman\grid\ShiftReportExporter())
+                    ->filename('shift_report_' . date('YmdHis'));
+            }
         });
+    }
+
+    /**
+     * 导出交班记录
+     * @group store
+     * @auth true
+     * @return void
+     */
+    public function export()
+    {
+        // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
+        // ExAdmin 会自动调用 ShiftReportExporter
     }
 
     /**
