@@ -60,7 +60,7 @@
 
       <!-- 统计信息 -->
       <div v-if="gameList.length > 0" class="stats-bar">
-        <a-space size="large">
+        <div class="stats-content">
           <span class="stats-item">
             <a-icon style="margin-right: 4px;" type="database" />
             总计: <strong>{{ pagination.total }}</strong> 个游戏
@@ -73,7 +73,7 @@
             <a-icon style="margin-right: 4px; color: #ff4d4f;" type="stop" />
             已禁用: <strong style="color: #ff4d4f;">{{ disabledCount }}</strong> 个
           </span>
-        </a-space>
+        </div>
       </div>
 
       <!-- 游戏表格 -->
@@ -83,12 +83,16 @@
         :loading="loading"
         :pagination="pagination"
         :row-selection="rowSelection"
-        :scroll="{ x: 1200, y: 600 }"
+        :scroll="{ x: 1300, y: 600 }"
         bordered
         size="middle"
         row-key="id"
         @change="handleTableChange"
       >
+        <template slot="id" slot-scope="text">
+          <span>{{ text }}</span>
+        </template>
+
         <template slot="platform" slot-scope="text, record">
           <div class="platform-cell">
             <img
@@ -203,18 +207,16 @@ export default {
           title: 'ID',
           dataIndex: 'id',
           key: 'id',
+          scopedSlots: { customRender: 'id' },
           width: 90,
-          align: 'center',
-          ellipsis: true
+          align: 'center'
         },
         {
           title: '游戏名称',
           dataIndex: 'name',
           key: 'game_name',
           scopedSlots: { customRender: 'game_name' },
-          width: 300,
-          fixed: 'left',
-          ellipsis: false
+          width: 300
         },
         {
           title: '游戏平台',
@@ -260,9 +262,8 @@ export default {
           title: '操作',
           key: 'action',
           scopedSlots: { customRender: 'action' },
-          width: 130,
-          align: 'center',
-          fixed: 'right'
+          width: 100,
+          align: 'center'
         }
       ]
     };
@@ -466,6 +467,13 @@ export default {
   margin-bottom: 16px;
   border-radius: 6px;
   border: 1px solid #e8ebf0;
+}
+
+.stats-content {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .stats-item {
