@@ -817,28 +817,4 @@ export default {
   border-color: #40a9ff;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
 }
-
-/* 响应式调整 */
-@media (max-width: 768px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-search,
-  .filter-select,
-  .filter-select-small {
-    width: 100%;
-  }
-
-  .game-name-cell {
-    gap: 8px;
-  }
-
-  .game-avatar,
-  .game-avatar-placeholder {
-    width: 40px;
-    height: 40px;
-  }
-}
 </style>
