@@ -22,6 +22,8 @@ return [
     'agent_name' => '代理姓名',
     'store_machine_name' => '店家名称',
     'submit_ratio' => '上缴比例(%)',
+    'agent_commission' => '代理抽成(%)',
+    'channel_commission' => '渠道抽成(%)',
     'parent_agent' => '上级代理',
     'unified_password' => '统一密码',
     'confirm_password' => '确认密码',

@@ -22,6 +22,8 @@ return [
     'agent_name' => 'エージェント名',
     'store_machine_name' => '店舗マシン名',
     'submit_ratio' => '上納比率(%)',
+    'agent_commission' => 'エージェント手数料(%)',
+    'channel_commission' => 'チャンネル手数料(%)',
     'parent_agent' => '上位エージェント',
     'unified_password' => '統一パスワード',
     'confirm_password' => 'パスワード確認',
