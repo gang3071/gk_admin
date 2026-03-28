@@ -267,6 +267,11 @@ return [
     'device_list_query_log' => '設備列表查詢',
     'no_device_data' => '暫無設備數據',
 
+    // 篩選器
+    'filter' => [
+        'select_device' => '選擇設備',
+    ],
+
     // 爆機相關
     'is_crashed' => '爆機狀態',
     'crashed' => '已爆機',

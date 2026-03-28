@@ -267,6 +267,11 @@ return [
     'device_list_query_log' => 'Device list query',
     'no_device_data' => 'No device data available',
 
+    // Filters
+    'filter' => [
+        'select_device' => 'Select Device',
+    ],
+
     // Machine Crash Related
     'is_crashed' => 'Crash Status',
     'crashed' => 'Crashed',

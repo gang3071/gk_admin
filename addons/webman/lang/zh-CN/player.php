@@ -268,6 +268,11 @@ return [
     'device_list_query_log' => '设备列表查询',
     'no_device_data' => '暂无设备数据',
 
+    // 筛选器
+    'filter' => [
+        'select_device' => '选择设备',
+    ],
+
     // 爆机相关
     'is_crashed' => '爆机状态',
     'crashed' => '已爆机',

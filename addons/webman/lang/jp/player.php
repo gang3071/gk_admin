@@ -268,6 +268,11 @@ return [
     'device_list_query_log' => 'デバイスリストクエリ',
     'no_device_data' => 'デバイスデータがありません',
 
+    // フィルター
+    'filter' => [
+        'select_device' => 'デバイスを選択',
+    ],
+
     // マシンクラッシュ関連
     'is_crashed' => 'クラッシュ状態',
     'crashed' => 'クラッシュ済み',

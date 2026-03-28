@@ -64,6 +64,9 @@ class StorePlayerController
 
         // 应用筛选条件
         if (!empty($requestFilter)) {
+            if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
+                $query->where('player.id', $requestFilter['player_id']);
+            }
             if (isset($requestFilter['status'])) {
                 $query->where('player.status', $requestFilter['status']);
             }
@@ -120,7 +123,25 @@ class StorePlayerController
             $item['subtotal'] = bcsub($totalIn, $totalOut, 2);
         }
 
-        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list) {
+        // 获取设备选项列表用于筛选器下拉选择
+        $playerOptions = Player::query()
+            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $storeAdminId)
+            ->where('is_promoter', 0)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'name', 'uuid'])
+            ->mapWithKeys(function ($player) {
+                $label = $player->name
+                    ? "{$player->name} (ID: {$player->id})"
+                    : "ID: {$player->id}";
+                if ($player->uuid) {
+                    $label .= " - {$player->uuid}";
+                }
+                return [$player->id => $label];
+            })
+            ->toArray();
+
+        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -182,7 +203,13 @@ class StorePlayerController
 
             $grid->column('created_at', admin_trans('player.fields.created_at'))->width(160)->align('center');
 
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($playerOptions) {
+                // 设备下拉选择
+                $filter->eq()->select('player_id')
+                    ->placeholder(admin_trans('player.filter.select_device'))
+                    ->options(['' => admin_trans('public_msg.all')] + $playerOptions)
+                    ->style(['width' => '300px']);
+
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('player.fields.status'))
                     ->options([
