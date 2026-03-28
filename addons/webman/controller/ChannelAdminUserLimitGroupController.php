@@ -6,8 +6,11 @@ use addons\webman\Admin;
 use addons\webman\model\AdminUser;
 use addons\webman\model\AdminUserLimitGroup;
 use addons\webman\model\PlatformLimitGroup;
-use addons\webman\model\GamePlatform;
+use addons\webman\model\PlatformLimitGroupConfig;
+use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -49,7 +52,22 @@ class ChannelAdminUserLimitGroupController
 
             $grid->column('id', 'ID')->align('center')->width(80);
 
-            $grid->column('adminUser.username', '店家账号')->align('center');
+            $grid->column('adminUser.username', '店家')->display(function ($value, $data) {
+                // 获取店家头像
+                $avatar = null;
+                if (isset($data['admin_user']['avatar']) && !empty($data['admin_user']['avatar'])) {
+                    $avatar = Avatar::create()->src($data['admin_user']['avatar']);
+                } elseif (isset($data['adminUser']['avatar']) && !empty($data['adminUser']['avatar'])) {
+                    $avatar = Avatar::create()->src($data['adminUser']['avatar']);
+                } else {
+                    $avatar = Avatar::create()->icon(Icon::create('UserOutlined'));
+                }
+
+                return Html::create()->content([
+                    $avatar,
+                    Html::div()->content($value)
+                ]);
+            })->align('center');
 
             $grid->column('limitGroup.name', '限红组')->display(function ($value, $data) {
                 return Tag::create($value)->color('blue');
@@ -76,30 +94,23 @@ class ChannelAdminUserLimitGroupController
             })->align('center');
 
             $grid->filter(function (Filter $filter) {
-                $filter->equal()->select('admin_user_id', '店家')
+                $filter->eq()->select('admin_user_id', '店家')
                     ->showSearch()
                     ->dropdownMatchSelectWidth()
                     ->remoteOptions(admin_url([
                         'addons-webman-controller-ChannelAdminUserLimitGroupController',
                         'getStoreAdminOptions'
                     ]));
-                $filter->equal()->select('limit_group_id', '限红组')
+                $filter->eq()->select('limit_group_id', '限红组')
                     ->showSearch()
                     ->dropdownMatchSelectWidth()
                     ->remoteOptions(admin_url([
                         'addons-webman-controller-ChannelAdminUserLimitGroupController',
                         'getLimitGroupOptions'
                     ]));
-                $filter->equal()->select('platform_id', '游戏平台')
-                    ->showSearch()
-                    ->dropdownMatchSelectWidth()
-                    ->remoteOptions(admin_url([
-                        'addons-webman-controller-GamePlatformController',
-                        'getGamePlatformOptions'
-                    ]));
-                $filter->equal()->select('status')->placeholder('状态')->options([
-                    ['value' => 1, 'label' => '启用'],
-                    ['value' => 0, 'label' => '禁用'],
+                $filter->eq()->select('status')->placeholder('状态')->options([
+                    1 => '启用',
+                    0 => '禁用'
                 ]);
             });
             $grid->expandFilter();
@@ -127,11 +138,7 @@ class ChannelAdminUserLimitGroupController
             $form->select('limit_group_id', '限红组')
                 ->options($this->getLimitGroupOptionsArray())
                 ->required()
-                ->help('选择限红组');
-
-            $form->select('platform_id', '游戏平台')
-                ->options($this->getGamePlatformOptionsArray())
-                ->help('留空表示全平台生效');
+                ->help('选择限红组（游戏平台将自动从限红组配置中获取）');
 
             $form->textarea('remark', '备注')
                 ->rows(3)
@@ -145,21 +152,26 @@ class ChannelAdminUserLimitGroupController
                 ->default(1)
                 ->required();
 
-            // 自动设置分配人和分配时间
+            // 自动设置分配人和分配时间，以及从限红组配置中获取游戏平台
             $form->saving(function (Form $form) {
                 if (!$form->isEdit()) {
                     $form->input('assigned_by', Admin::id());
                     $form->input('assigned_at', date('Y-m-d H:i:s'));
                 }
 
-                // 自动设置platform_code
-                $platformId = $form->input('platform_id');
-                if ($platformId) {
-                    $platform = GamePlatform::find($platformId);
-                    if ($platform) {
-                        $form->input('platform_code', $platform->code);
-                    }
+                // 从限红组配置中自动获取游戏平台信息
+                $limitGroupId = $form->input('limit_group_id');
+                $limitGroupConfig = PlatformLimitGroupConfig::query()
+                    ->where('limit_group_id', $limitGroupId)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if ($limitGroupConfig) {
+                    $form->input('platform_id', $limitGroupConfig->platform_id);
+                    $form->input('platform_code', $limitGroupConfig->platform_code);
                 } else {
+                    // 如果限红组还没有配置平台，清空平台信息
+                    $form->input('platform_id', null);
                     $form->input('platform_code', null);
                 }
             });
@@ -223,41 +235,20 @@ class ChannelAdminUserLimitGroupController
         $data = [];
 
         foreach ($list as $item) {
+            // 获取限红组对应的游戏平台
+            $limitGroupConfig = PlatformLimitGroupConfig::query()
+                ->where('limit_group_id', $item->id)
+                ->whereNull('deleted_at')
+                ->with('gamePlatform')
+                ->first();
+
+            $platformName = $limitGroupConfig && $limitGroupConfig->gamePlatform
+                ? $limitGroupConfig->gamePlatform->name
+                : '未配置';
+
             $data[] = [
                 'value' => $item->id,
-                'label' => "{$item->name} ({$item->code})",
-            ];
-        }
-
-        return Response::success($data);
-    }
-
-    /**
-     * 获取游戏平台选项
-     * 只返回 ATG 和 RSG 平台
-     * @group channel
-     * @auth true
-     */
-    public function getGamePlatformOptions()
-    {
-        $request = Request::input();
-        $query = GamePlatform::query()
-            ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG']) // 只显示 ATG 和 RSG
-            ->orderBy('sort', 'desc')
-            ->orderBy('id', 'desc');
-
-        if (!empty($request['search'])) {
-            $query->where('name', 'like', '%' . $request['search'] . '%');
-        }
-
-        $list = $query->get();
-        $data = [];
-
-        foreach ($list as $item) {
-            $data[] = [
-                'value' => $item->id,
-                'label' => "{$item->name} ({$item->code})",
+                'label' => "{$item->name} ({$platformName})",
             ];
         }
 
@@ -296,28 +287,18 @@ class ChannelAdminUserLimitGroupController
             ->get();
 
         foreach ($list as $item) {
-            $data[$item->id] = "{$item->name} ({$item->code})";
-        }
+            // 获取限红组对应的游戏平台
+            $limitGroupConfig = PlatformLimitGroupConfig::query()
+                ->where('limit_group_id', $item->id)
+                ->whereNull('deleted_at')
+                ->with('gamePlatform')
+                ->first();
 
-        return $data;
-    }
+            $platformName = $limitGroupConfig && $limitGroupConfig->gamePlatform
+                ? $limitGroupConfig->gamePlatform->name
+                : '未配置';
 
-    /**
-     * 获取游戏平台选项（Form用，返回数组）
-     * 只返回 ATG 和 RSG 平台
-     */
-    private function getGamePlatformOptionsArray(): array
-    {
-        $data = [];
-        $list = GamePlatform::query()
-            ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG']) // 只显示 ATG 和 RSG
-            ->orderBy('sort', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
-
-        foreach ($list as $item) {
-            $data[$item->id] = "{$item->name} ({$item->code})";
+            $data[$item->id] = "{$item->name} ({$platformName})";
         }
 
         return $data;

@@ -5,12 +5,9 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\PlatformLimitGroup;
 use ExAdmin\ui\component\form\Form;
-use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Button;
 
 /**
  * 限红组管理（总后台）
@@ -54,25 +51,14 @@ class PlatformLimitGroupController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('code')->placeholder('限红组编码');
                 $filter->like()->text('name')->placeholder('限红组名称');
-                $filter->equal()->select('status')->placeholder('状态')->options([
-                    ['value' => 1, 'label' => '启用'],
-                    ['value' => 0, 'label' => '禁用'],
+                $filter->eq()->select('status')->placeholder('状态')->options([
+                    1 => '启用',
+                    0 => '禁用'
                 ]);
             });
             $grid->expandFilter();
 
             $grid->setForm()->drawer($this->form());
-
-            $grid->actions(function (Actions $actions, $data) {
-                // 添加配置平台按钮
-                $actions->prepend(
-                    Button::create('配置平台')
-                        ->navigate('ex-admin/addons-webman-controller-PlatformLimitGroupConfigController/index',
-                            ['limit_group_id' => $data['id']])
-                        ->type('primary')
-                        ->size('small')
-                );
-            })->align('center');
         });
     }
 

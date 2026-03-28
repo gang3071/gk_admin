@@ -94,23 +94,23 @@ class PlatformLimitGroupConfigController
             $grid->column('created_at', '创建时间')->align('center');
 
             $grid->filter(function (Filter $filter) {
-                $filter->equal()->select('limit_group_id', '限红组')
+                $filter->eq()->select('limit_group_id', '限红组')
                     ->showSearch()
                     ->dropdownMatchSelectWidth()
                     ->remoteOptions(admin_url([
                         'addons-webman-controller-PlatformLimitGroupConfigController',
                         'getLimitGroupOptions'
                     ]));
-                $filter->equal()->select('platform_id', '游戏平台')
+                $filter->eq()->select('platform_id', '游戏平台')
                     ->showSearch()
                     ->dropdownMatchSelectWidth()
                     ->remoteOptions(admin_url([
                         'addons-webman-controller-GamePlatformController',
                         'getGamePlatformOptions'
                     ]));
-                $filter->equal()->select('status')->placeholder('状态')->options([
-                    ['value' => 1, 'label' => '启用'],
-                    ['value' => 0, 'label' => '禁用'],
+                $filter->eq()->select('status')->placeholder('状态')->options([
+                    1 => '启用',
+                    0 => '禁用'
                 ]);
             });
             $grid->expandFilter();
@@ -224,11 +224,24 @@ class PlatformLimitGroupConfigController
 
             // 自动设置platform_code并验证字段
             $form->saving(function (Form $form) {
+                $limitGroupId = $form->input('limit_group_id');
                 $platformId = $form->input('platform_id');
                 $platform = GamePlatform::find($platformId);
 
                 if (!$platform) {
                     return message_error('游戏平台不存在');
+                }
+
+                // 新建时验证限红组唯一性（每个限红组只能绑定一个配置）
+                if (!$form->isEdit()) {
+                    $exists = PlatformLimitGroupConfig::query()
+                        ->where('limit_group_id', $limitGroupId)
+                        ->whereNull('deleted_at')
+                        ->exists();
+
+                    if ($exists) {
+                        return message_error('该限红组已绑定配置，每个限红组只能绑定一个平台配置');
+                    }
                 }
 
                 // 设置platform_code
@@ -276,7 +289,7 @@ class PlatformLimitGroupConfigController
     }
 
     /**
-     * 获取限红组选项
+     * 获取限红组选项（用于筛选器，显示所有限红组）
      * @auth true
      */
     public function getLimitGroupOptions()
@@ -363,9 +376,16 @@ class PlatformLimitGroupConfigController
      */
     private function getLimitGroupOptionsArray(): array
     {
+        // 获取已经绑定配置的限红组ID列表
+        $usedLimitGroupIds = PlatformLimitGroupConfig::query()
+            ->whereNull('deleted_at')
+            ->pluck('limit_group_id')
+            ->toArray();
+
         $data = [];
         $list = PlatformLimitGroup::query()
             ->where('status', 1)
+            ->whereNotIn('id', $usedLimitGroupIds) // 排除已绑定的限红组
             ->orderBy('sort', 'asc')
             ->get();
 
