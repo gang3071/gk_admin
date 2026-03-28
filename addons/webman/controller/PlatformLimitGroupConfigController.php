@@ -141,11 +141,10 @@ class PlatformLimitGroupConfigController
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
 
-            // 编辑时获取config_data
+            // 编辑时获取config_data（已经是数组类型，无需json_decode）
             $configData = [];
             if ($form->isEdit()) {
-                $configDataJson = $form->driver()->get('config_data');
-                $configData = $configDataJson ? json_decode($configDataJson, true) : [];
+                $configData = $form->driver()->get('config_data') ?: [];
             }
 
             // 游戏平台选择，使用 when 实现条件显示
