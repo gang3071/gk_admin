@@ -7,6 +7,7 @@ use addons\webman\traits\HasDateTimeFormatter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use support\Cache;
+use support\Log;
 
 /**
  * Class StoreSetting
@@ -190,7 +191,7 @@ class StoreSetting extends Model
                             $wallet->is_crashed = 0;
                             $wallet->save();
                         });
-
+                        Log::info('这里开始解锁', $player->id);
                         // 发送解锁通知
                         checkAndNotifyCrashUnlock($player, $previousAmount);
 
@@ -281,7 +282,7 @@ class StoreSetting extends Model
                 }
 
                 // 情况2：提高爆机金额，已爆机设备需要解锁
-                if ($wasCrashed && !$shouldCrash) {
+                if ($currentAmount > $previousAmount && $wasCrashed && !$shouldCrash) {
                     $wallet->withoutEvents(function () use ($wallet) {
                         $wallet->is_crashed = 0;
                         $wallet->save();
