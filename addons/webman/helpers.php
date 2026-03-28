@@ -2567,7 +2567,7 @@ if (!function_exists('checkAndNotifyCrashUnlock')) {
     {
         try {
             $crashCheckBefore = checkMachineCrash($player);
-
+            Log::info('checkAndNotifyCrashUnlock', [$crashCheckBefore]);
             // 如果当前没有爆机，检查之前是否爆机
             if (!$crashCheckBefore['crashed'] && $crashCheckBefore['crash_amount'] > 0) {
                 // 检查之前的余额是否达到爆机金额
