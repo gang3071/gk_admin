@@ -68,7 +68,7 @@ class SystemSettingController
                     Editable::textarea('content')
                         ->showCount()
                         ->rows(6)
-                        ->rule(['max:100' => admin_trans('system_setting.marquee_max_len')])
+                        ->rule(['max:500' => admin_trans('system_setting.marquee_max_len')])
                 )->display(function ($value, SystemSetting $data) {
                     return Str::of($data->content)->limit(35, ' (...)');
                 })->width('20%')->align('center')
