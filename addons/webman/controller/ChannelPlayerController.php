@@ -194,8 +194,8 @@ class ChannelPlayerController
             'player_register_record.ip',
             'player_register_record.country_name',
             'player_register_record.city_name',
-            'player_platform_cash.money',
-            'player_platform_cash.is_crashed',
+            'cash.money',
+            'cash.is_crashed',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -217,9 +217,9 @@ class ChannelPlayerController
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftJoin('player_platform_cash', function ($join) {
-                $join->on('player.id', '=', 'player_platform_cash.player_id')
-                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            ->leftJoin('player_platform_cash as cash', function ($join) {
+                $join->on('player.id', '=', 'cash.player_id')
+                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
             })
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
@@ -792,7 +792,7 @@ class ChannelPlayerController
             }
             // 爆机状态筛选
             if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
-                $query->where('player_platform_cash.is_crashed', $requestFilter['is_crashed']);
+                $query->where('cash.is_crashed', $requestFilter['is_crashed']);
             }
         }
     }

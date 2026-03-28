@@ -240,7 +240,7 @@ class ChannelAgentController
                 'player_extend.recharge_amount',
                 'player_extend.withdraw_amount',
                 'player_extend.machine_put_point',
-                'player_platform_cash.money',
+                'cash.money',
                 'player_promoter.name as promoter_name',
                 'store_admin.username as store_admin_username',
                 'store_admin.nickname as store_admin_nickname'
@@ -249,9 +249,9 @@ class ChannelAgentController
             ->leftjoin('player_promoter', 'player.recommend_id', '=', 'player_promoter.player_id')
             ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
-            ->leftJoin('player_platform_cash', function ($join) {
-                $join->on('player.id', '=', 'player_platform_cash.player_id')
-                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            ->leftJoin('player_platform_cash as cash', function ($join) {
+                $join->on('player.id', '=', 'cash.player_id')
+                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
             })
             ->where('player.type', Player::TYPE_PLAYER)
             ->where('player.is_promoter', 0);

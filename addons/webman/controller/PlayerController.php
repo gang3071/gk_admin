@@ -193,7 +193,7 @@ class PlayerController
                 'player_register_record.ip',
                 'player_register_record.country_name',
                 'player_register_record.city_name',
-                'player_platform_cash.money',
+                'cash.money',
                 'national_level.name as level_name',
                 'level_list.level as level',
                 'national_promoter.level as level_sort',
@@ -208,9 +208,9 @@ class PlayerController
             ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
             ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftJoin('player_platform_cash', function ($join) {
-                $join->on('player.id', '=', 'player_platform_cash.player_id')
-                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            ->leftJoin('player_platform_cash as cash', function ($join) {
+                $join->on('player.id', '=', 'cash.player_id')
+                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
             })
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
