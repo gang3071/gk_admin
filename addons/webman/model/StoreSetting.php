@@ -281,7 +281,7 @@ class StoreSetting extends Model
                 }
 
                 // 情况2：提高爆机金额，已爆机设备需要解锁
-                if ($currentAmount > $previousAmount && $wasCrashed && !$shouldCrash) {
+                if ($wasCrashed && !$shouldCrash) {
                     $wallet->withoutEvents(function () use ($wallet) {
                         $wallet->is_crashed = 0;
                         $wallet->save();
