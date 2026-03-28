@@ -218,7 +218,7 @@ class ChannelAgentController
     }
 
     /**
-     * 设备列表（普通玩家设备，is_promoter=0）
+     * 设备列表（普通玩家设备）
      * 注意：这里查询的是 Player 表中的普通玩家，不是推广员
      * @group channel
      * @auth true
@@ -275,6 +275,10 @@ class ChannelAgentController
         }
 
         if (!empty($requestFilter)) {
+            // 设备ID筛选
+            if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
+                $query->where('player.id', $requestFilter['player_id']);
+            }
             if (!empty($requestFilter['created_at_start'])) {
                 $query->where('player.created_at', '>=', $requestFilter['created_at_start']);
             }
@@ -331,7 +335,43 @@ class ChannelAgentController
             $item['subtotal'] = bcsub($totalIn, $totalOut, 2);
         }
 
-        return Grid::create($list, function (Grid $grid) use ($admin, $total, $list) {
+        // 获取设备选项列表用于筛选器下拉选择
+        $playerOptionsQuery = Player::query()
+            ->where('type', Player::TYPE_PLAYER)
+            ->where('is_promoter', 0)
+            ->select(['id', 'name', 'uuid']);
+
+        // 根据账号类型过滤设备
+        if ($admin->type === AdminUser::TYPE_STORE) {
+            $playerOptionsQuery->where('store_admin_id', $admin->id);
+        } elseif ($admin->type === AdminUser::TYPE_AGENT) {
+            $storeIds = $admin->childStores()
+                ->where('type', AdminUser::TYPE_STORE)
+                ->pluck('id')
+                ->toArray();
+            if (!empty($storeIds)) {
+                $playerOptionsQuery->whereIn('store_admin_id', $storeIds);
+            } else {
+                $playerOptionsQuery->whereRaw('1 = 0');
+            }
+        } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
+            $playerOptionsQuery->where('department_id', $admin->department_id);
+        }
+
+        $playerOptions = $playerOptionsQuery->orderBy('id', 'desc')
+            ->get()
+            ->mapWithKeys(function ($player) {
+                $label = $player->name
+                    ? "{$player->name} (ID: {$player->id})"
+                    : "ID: {$player->id}";
+                if ($player->uuid) {
+                    $label .= " - {$player->uuid}";
+                }
+                return [$player->id => $label];
+            })
+            ->toArray();
+
+        return Grid::create($list, function (Grid $grid) use ($admin, $total, $list, $playerOptions) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -409,7 +449,13 @@ class ChannelAgentController
                 };
             })->ellipsis(true)->align('center');
             $grid->column('created_at', admin_trans('player.fields.created_at'))->ellipsis(true)->align('center');
-            $grid->filter(function (Filter $filter) use ($admin) {
+            $grid->filter(function (Filter $filter) use ($admin, $playerOptions) {
+                // 设备下拉选择
+                $filter->eq()->select('player_id')
+                    ->placeholder(admin_trans('player.filter.select_device'))
+                    ->options(['' => admin_trans('public_msg.all')] + $playerOptions)
+                    ->style(['width' => '300px']);
+
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));

@@ -187,22 +187,7 @@ class ChannelAgentPromoterController
             $item['ratio'] = $ratio;
         }
 
-        // 获取代理选项列表用于筛选器下拉选择
-        $promoterOptions = PlayerPromoter::query()
-            ->leftJoin('player', 'player_promoter.player_id', '=', 'player.id')
-            ->orderBy('player_promoter.id', 'desc')
-            ->get(['player_promoter.player_id', 'player_promoter.name', 'player.uuid'])
-            ->mapWithKeys(function ($promoter) {
-                $label = $promoter->name ?: $promoter->uuid;
-                $label .= " (ID: {$promoter->player_id})";
-                if ($promoter->uuid && $promoter->name) {
-                    $label .= " - {$promoter->uuid}";
-                }
-                return [$promoter->player_id => $label];
-            })
-            ->toArray();
-
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $promoterOptions) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list) {
             $grid->title(admin_trans('agent_promoter.title'));
             $exAdminFilter = Request::input('ex_admin_filter', []);
             $page = Request::input('ex_admin_page', 1);
@@ -328,13 +313,7 @@ class ChannelAgentPromoterController
             $grid->column('settlement_amount',
                 admin_trans('player_promoter.fields.settled_amount'))->align('center')->width(120)->fixed('right')->ellipsis(true);
             $grid->column('last_settlement_timestamp', admin_trans('agent_promoter.fields.last_settlement_time'))->align('center')->fixed('right')->ellipsis(true);
-            $grid->filter(function (Filter $filter) use ($promoterOptions) {
-                // 代理下拉选择
-                $filter->eq()->select('pid')
-                    ->placeholder(admin_trans('channel_agent.filter.select_agent'))
-                    ->options(['' => admin_trans('public_msg.all')] + $promoterOptions)
-                    ->style(['width' => '300px']);
-
+            $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('player_promoter.fields.name'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));
