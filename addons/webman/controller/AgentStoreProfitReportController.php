@@ -198,7 +198,7 @@ class AgentStoreProfitReportController
             // 统计卡片
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 10]);
+                $row->gutter([10, 0]);
 
                 // 第一行：累计开分、累计洗分、投钞
                 $row->column(
@@ -208,16 +208,16 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_recharge'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#52c41a'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
 
@@ -228,16 +228,16 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_withdraw'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#fa8c16'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
 
@@ -248,22 +248,22 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_machine_put'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#1890ff'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
             })->style(['background' => '#fff']);
 
             $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 10]);
+                $row->gutter([10, 0]);
 
                 // 第二行：彩金、小计、代理分润、渠道分润
                 $row->column(
@@ -273,16 +273,16 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_lottery'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#eb2f96'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
 
@@ -293,16 +293,16 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_subtotal'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => floatval($totalStats['total_subtotal']) >= 0 ? '#3f8600' : '#cf1322'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
 
@@ -313,16 +313,16 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_agent_profit'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#722ed1'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
 
@@ -333,16 +333,16 @@ class AgentStoreProfitReportController
                             ->precision(2)
                             ->prefix(admin_trans('agent_store_profit.stats.total_channel_profit'))
                             ->valueStyle([
-                                'font-size' => '16px',
-                                'font-weight' => '600',
+                                'font-size' => '14px',
+                                'font-weight' => '500',
                                 'text-align' => 'center',
                                 'color' => '#13c2c2'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
                         'align-items' => 'center',
-                        'height' => '40px',
-                        'padding' => '8px'
+                        'height' => '30px',
+                        'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
             })->style(['background' => '#fff', 'margin-top' => '10px']);
