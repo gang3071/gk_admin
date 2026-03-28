@@ -66,6 +66,18 @@ class StoreSetting extends Model
         static::updated(function (StoreSetting $setting) {
             $cacheKey = self::getCacheKey($setting->department_id, $setting->admin_user_id, $setting->feature);
             Cache::delete($cacheKey);
+
+            // 处理爆机金额配置的启用/关闭
+            if ($setting->feature === 'machine_crash_amount') {
+                // status 变化：启用/关闭
+                if ($setting->wasChanged('status')) {
+                    self::handleMachineCrashConfigChange($setting);
+                }
+                // num 变化且当前启用：爆机金额调整
+                if ($setting->wasChanged('num') && $setting->status == 1) {
+                    self::handleMachineCrashAmountChange($setting);
+                }
+            }
         });
     }
 
@@ -76,6 +88,223 @@ class StoreSetting extends Model
     {
         $identifier = $adminUserId ?? 'all';
         return 'store-setting-' . $departmentId . '-' . $identifier . '-' . $feature;
+    }
+
+    /**
+     * 处理爆机金额配置的启用/关闭
+     *
+     * @param StoreSetting $setting 配置对象
+     * @return void
+     */
+    protected static function handleMachineCrashConfigChange(StoreSetting $setting): void
+    {
+        try {
+            $previousStatus = $setting->getOriginal('status');
+            $currentStatus = $setting->status;
+            $crashAmount = floatval($setting->num ?? 0);
+
+            // 配置无效（金额 <= 0）则跳过
+            if ($crashAmount <= 0) {
+                return;
+            }
+
+            // 获取该店家的所有设备
+            if (!$setting->admin_user_id) {
+                \support\Log::warning('StoreSetting: machine_crash_amount config has no admin_user_id', [
+                    'setting_id' => $setting->id,
+                ]);
+                return;
+            }
+
+            $players = Player::query()
+                ->where('store_admin_id', $setting->admin_user_id)
+                ->where('is_promoter', 0)
+                ->where('type', Player::TYPE_PLAYER)
+                ->get();
+
+            if ($players->isEmpty()) {
+                return;
+            }
+
+            // 场景1：从关闭到启用（0 → 1）
+            if ($previousStatus == 0 && $currentStatus == 1) {
+                foreach ($players as $player) {
+                    // 获取实体机钱包
+                    $wallet = PlayerPlatformCash::query()
+                        ->where('player_id', $player->id)
+                        ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                        ->first();
+
+                    if (!$wallet) {
+                        continue;
+                    }
+
+                    $currentAmount = floatval($wallet->money);
+
+                    // 检查是否达到爆机金额
+                    if ($currentAmount >= $crashAmount) {
+                        // 更新爆机状态
+                        if ($wallet->is_crashed != 1) {
+                            $wallet->withoutEvents(function () use ($wallet) {
+                                $wallet->is_crashed = 1;
+                                $wallet->save();
+                            });
+
+                            // 发送爆机通知
+                            $crashInfo = [
+                                'crashed' => true,
+                                'crash_amount' => $crashAmount,
+                                'current_amount' => $currentAmount,
+                            ];
+                            notifyMachineCrash($player, $crashInfo);
+
+                            \support\Log::info('StoreSetting: Player crashed after enabling config', [
+                                'player_id' => $player->id,
+                                'current_amount' => $currentAmount,
+                                'crash_amount' => $crashAmount,
+                            ]);
+                        }
+                    }
+                }
+            }
+
+            // 场景2：从启用到关闭（1 → 0）
+            if ($previousStatus == 1 && $currentStatus == 0) {
+                foreach ($players as $player) {
+                    // 获取实体机钱包
+                    $wallet = PlayerPlatformCash::query()
+                        ->where('player_id', $player->id)
+                        ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                        ->first();
+
+                    if (!$wallet) {
+                        continue;
+                    }
+
+                    // 检查是否处于爆机状态
+                    if ($wallet->is_crashed == 1) {
+                        $previousAmount = floatval($wallet->money);
+
+                        // 解锁爆机状态
+                        $wallet->withoutEvents(function () use ($wallet) {
+                            $wallet->is_crashed = 0;
+                            $wallet->save();
+                        });
+
+                        // 发送解锁通知
+                        checkAndNotifyCrashUnlock($player, $previousAmount);
+
+                        \support\Log::info('StoreSetting: Player unlocked after disabling config', [
+                            'player_id' => $player->id,
+                            'amount' => $previousAmount,
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('StoreSetting: Failed to handle machine crash config change', [
+                'setting_id' => $setting->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
+     * 处理爆机金额调整
+     *
+     * @param StoreSetting $setting 配置对象
+     * @return void
+     */
+    protected static function handleMachineCrashAmountChange(StoreSetting $setting): void
+    {
+        try {
+            $previousAmount = floatval($setting->getOriginal('num') ?? 0);
+            $currentAmount = floatval($setting->num ?? 0);
+
+            // 配置无效（金额 <= 0）则跳过
+            if ($currentAmount <= 0) {
+                return;
+            }
+
+            // 获取该店家的所有设备
+            if (!$setting->admin_user_id) {
+                return;
+            }
+
+            $players = Player::query()
+                ->where('store_admin_id', $setting->admin_user_id)
+                ->where('is_promoter', 0)
+                ->where('type', Player::TYPE_PLAYER)
+                ->get();
+
+            if ($players->isEmpty()) {
+                return;
+            }
+
+            foreach ($players as $player) {
+                // 获取实体机钱包
+                $wallet = PlayerPlatformCash::query()
+                    ->where('player_id', $player->id)
+                    ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                    ->first();
+
+                if (!$wallet) {
+                    continue;
+                }
+
+                $balance = floatval($wallet->money);
+                $wasCrashed = $wallet->is_crashed == 1;
+                $shouldCrash = $balance >= $currentAmount;
+
+                // 情况1：降低爆机金额，新设备需要爆机
+                if ($currentAmount < $previousAmount && !$wasCrashed && $shouldCrash) {
+                    $wallet->withoutEvents(function () use ($wallet) {
+                        $wallet->is_crashed = 1;
+                        $wallet->save();
+                    });
+
+                    // 发送爆机通知
+                    $crashInfo = [
+                        'crashed' => true,
+                        'crash_amount' => $currentAmount,
+                        'current_amount' => $balance,
+                    ];
+                    notifyMachineCrash($player, $crashInfo);
+
+                    \support\Log::info('StoreSetting: Player crashed after decreasing crash amount', [
+                        'player_id' => $player->id,
+                        'balance' => $balance,
+                        'new_crash_amount' => $currentAmount,
+                        'old_crash_amount' => $previousAmount,
+                    ]);
+                }
+
+                // 情况2：提高爆机金额，已爆机设备需要解锁
+                if ($currentAmount > $previousAmount && $wasCrashed && !$shouldCrash) {
+                    $wallet->withoutEvents(function () use ($wallet) {
+                        $wallet->is_crashed = 0;
+                        $wallet->save();
+                    });
+
+                    // 发送解锁通知
+                    checkAndNotifyCrashUnlock($player, $balance);
+
+                    \support\Log::info('StoreSetting: Player unlocked after increasing crash amount', [
+                        'player_id' => $player->id,
+                        'balance' => $balance,
+                        'new_crash_amount' => $currentAmount,
+                        'old_crash_amount' => $previousAmount,
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('StoreSetting: Failed to handle machine crash amount change', [
+                'setting_id' => $setting->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     /**
