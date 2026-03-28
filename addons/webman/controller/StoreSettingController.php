@@ -93,7 +93,7 @@ class StoreSettingController
                     Editable::textarea('content')
                         ->showCount()
                         ->rows(6)
-                        ->rule(['max:200' => admin_trans('store_setting.store_marquee_max_len')])
+                        ->rule(['max:500' => admin_trans('store_setting.store_marquee_max_len')])
                 )->display(function ($value, StoreSetting $data) {
                     return Str::of($data->content)->limit(50, ' (...)');
                 })->width('30%')->align('center')

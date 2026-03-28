@@ -19,7 +19,7 @@ return [
         'machine_crash_amount' => 'Machine Crash Amount',
     ],
     'home_notice_max_len' => 'Home notice message max 500 characters',
-    'store_marquee_max_len' => 'Store marquee max 200 characters',
+    'store_marquee_max_len' => 'Store marquee max 500 characters',
     'minutes' => 'Minutes',
     'time_range' => 'Time Range',
     'edit_business_hours' => 'Edit Business Hours',

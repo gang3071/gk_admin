@@ -19,7 +19,7 @@ return [
         'machine_crash_amount' => '爆機金額',
     ],
     'home_notice_max_len' => '首頁提醒消息最多500個字符',
-    'store_marquee_max_len' => '店機跑馬燈最多200個字符',
+    'store_marquee_max_len' => '店機跑馬燈最多500個字符',
     'minutes' => '分鐘',
     'time_range' => '時間範圍',
     'edit_business_hours' => '編輯營業時間',

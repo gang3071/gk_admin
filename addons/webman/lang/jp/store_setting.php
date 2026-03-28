@@ -19,7 +19,7 @@ return [
         'machine_crash_amount' => 'クラッシュ金額',
     ],
     'home_notice_max_len' => 'ホーム通知メッセージは最大500文字',
-    'store_marquee_max_len' => '店舗マーキーは最大200文字',
+    'store_marquee_max_len' => '店舗マーキーは最大500文字',
     'minutes' => '分',
     'time_range' => '時間範囲',
     'edit_business_hours' => '営業時間を編集',
