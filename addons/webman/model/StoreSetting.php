@@ -7,7 +7,6 @@ use addons\webman\traits\HasDateTimeFormatter;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use support\Cache;
-use support\Log;
 
 /**
  * Class StoreSetting
@@ -184,20 +183,38 @@ class StoreSetting extends Model
 
                     // 检查是否处于爆机状态
                     if ($wallet->is_crashed == 1) {
-                        $previousAmount = floatval($wallet->money);
+                        $currentAmount = floatval($wallet->money);
 
                         // 解锁爆机状态
                         $wallet->withoutEvents(function () use ($wallet) {
                             $wallet->is_crashed = 0;
                             $wallet->save();
                         });
-                        Log::info('StoreSetting: Player crashed after enabling config', [$player]);
-                        // 发送解锁通知
-                        checkAndNotifyCrashUnlock($player, $previousAmount);
+
+                        // 直接发送解锁通知（不能用 checkAndNotifyCrashUnlock，因为配置已关闭）
+                        try {
+                            // 玩家端消息
+                            $playerMessage = [
+                                'msg_type' => 'machine_crash_unlock',
+                                'player_id' => $player->id,
+                                'crash_amount' => $crashAmount,
+                                'current_amount' => $currentAmount,
+                                'message' => '✓ 您的设备爆机状态已解除，可继续正常使用。',
+                                'timestamp' => time(),
+                            ];
+                            // 发送给玩家
+                            $playerChannel = 'player-' . $player->id;
+                            sendSocketMessage($playerChannel, $playerMessage);
+                        } catch (\Exception $e) {
+                            \support\Log::error('StoreSetting: Failed to send unlock notification', [
+                                'player_id' => $player->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
 
                         \support\Log::info('StoreSetting: Player unlocked after disabling config', [
                             'player_id' => $player->id,
-                            'amount' => $previousAmount,
+                            'amount' => $currentAmount,
                         ]);
                     }
                 }
@@ -288,8 +305,26 @@ class StoreSetting extends Model
                         $wallet->save();
                     });
 
-                    // 发送解锁通知
-                    checkAndNotifyCrashUnlock($player, $balance);
+                    // 直接发送解锁通知
+                    try {
+                        // 玩家端消息
+                        $playerMessage = [
+                            'msg_type' => 'machine_crash_unlock',
+                            'player_id' => $player->id,
+                            'crash_amount' => $currentAmount,
+                            'current_amount' => $balance,
+                            'message' => '✓ 您的设备爆机状态已解除，可继续正常使用。',
+                            'timestamp' => time(),
+                        ];
+                        // 发送给玩家
+                        $playerChannel = 'player-' . $player->id;
+                        sendSocketMessage($playerChannel, $playerMessage);
+                    } catch (\Exception $e) {
+                        \support\Log::error('StoreSetting: Failed to send unlock notification', [
+                            'player_id' => $player->id,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
 
                     \support\Log::info('StoreSetting: Player unlocked after increasing crash amount', [
                         'player_id' => $player->id,
