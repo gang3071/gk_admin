@@ -208,7 +208,10 @@ class PlayerController
             ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
             ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftjoin('player_platform_cash', 'player.id', '=', 'player_platform_cash.player_id')
+            ->leftJoin('player_platform_cash', function ($join) {
+                $join->on('player.id', '=', 'player_platform_cash.player_id')
+                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            })
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
                     ->Join(DB::raw('( SELECT player_id, max( id ) AS id FROM player_login_record GROUP BY player_id) AS t'),

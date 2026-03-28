@@ -66,7 +66,10 @@ class ChannelAgentPromoterController
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
         $query = PlayerPromoter::query()
             ->leftjoin('player', 'player.id', '=', 'player_promoter.player_id')
-            ->leftjoin('player_platform_cash', 'player_promoter.player_id', '=', 'player_platform_cash.player_id')
+            ->leftJoin('player_platform_cash', function ($join) {
+                $join->on('player_promoter.player_id', '=', 'player_platform_cash.player_id')
+                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            })
             ->leftjoin('player_promoter as recommend_promoter', 'recommend_promoter.player_id', '=',
                 'player_promoter.recommend_id')
             ->when(!empty($requestFilter['pid']), function (Builder $q) use ($requestFilter) {

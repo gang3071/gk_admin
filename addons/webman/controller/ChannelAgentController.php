@@ -249,7 +249,10 @@ class ChannelAgentController
             ->leftjoin('player_promoter', 'player.recommend_id', '=', 'player_promoter.player_id')
             ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
-            ->leftjoin('player_platform_cash', 'player.id', '=', 'player_platform_cash.player_id')
+            ->leftJoin('player_platform_cash', function ($join) {
+                $join->on('player.id', '=', 'player_platform_cash.player_id')
+                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            })
             ->where('player.type', Player::TYPE_PLAYER)
             ->where('player.is_promoter', 0);
 

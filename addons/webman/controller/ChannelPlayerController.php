@@ -217,7 +217,10 @@ class ChannelPlayerController
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftjoin('player_platform_cash', 'player.id', '=', 'player_platform_cash.player_id')
+            ->leftJoin('player_platform_cash', function ($join) {
+                $join->on('player.id', '=', 'player_platform_cash.player_id')
+                    ->where('player_platform_cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
+            })
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
