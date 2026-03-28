@@ -172,23 +172,23 @@ class StorePlayerController
                 }
             })->width(100)->align('center');
 
-            $grid->column('recharge_amount', admin_trans('player_extend.recharge_amount'))->display(function ($value) {
+            $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('withdraw_amount', admin_trans('player_extend.withdraw_amount'))->display(function ($value) {
+            $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', admin_trans('player_extend.machine_put_point'))->display(function ($value) {
+            $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('lottery_amount', admin_trans('player_lottery_record.lottery_amount'))->display(function ($value) {
+            $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('subtotal', admin_trans('player_extend.subtotal'))->display(function ($value) {
+            $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
