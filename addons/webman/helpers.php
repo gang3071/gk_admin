@@ -2480,11 +2480,11 @@ if (!function_exists('notifyMachineCrash')) {
 
             // 1. 发送给玩家
             $playerChannel = 'player-' . $player->id;
-            sendSocketMessage([$playerChannel], $playerMessage, 'system');
+            sendSocketMessage($playerChannel, $playerMessage);
 
             // 2. 发送给渠道后台
             $channelAdminChannel = 'private-admin_group-channel-' . $player->department_id;
-            sendSocketMessage($channelAdminChannel, $adminMessage, 'system');
+            sendSocketMessage($channelAdminChannel, $adminMessage);
 
             // 3. 创建通知记录（渠道后台）
             $channelNotice = new Notice();
@@ -2586,7 +2586,7 @@ if (!function_exists('checkAndNotifyCrashUnlock')) {
                     ];
                     // 1. 发送给玩家
                     $playerChannel = 'player-' . $player->id;
-                    sendSocketMessage([$playerChannel], $playerMessage, 'system');
+                    sendSocketMessage($playerChannel, $playerMessage);
 
                     Log::info('Machine crash unlock notification sent', [
                         'player_id' => $player->id,
