@@ -2459,7 +2459,7 @@ if (!function_exists('notifyMachineCrash')) {
                 'player_id' => $player->id,
                 'crash_amount' => $crashInfo['crash_amount'],
                 'current_amount' => $crashInfo['current_amount'],
-                'message' => admin_trans('machine_crashed_contact_admin', 'message'),
+                'message' => '⚠️ 您的設備餘額已達到爆機金額，請聯繫管理員處理！',
                 'timestamp' => time(),
             ];
 
@@ -2581,7 +2581,7 @@ if (!function_exists('checkAndNotifyCrashUnlock')) {
                         'player_id' => $player->id,
                         'crash_amount' => $crashCheckBefore['crash_amount'],
                         'current_amount' => $crashCheckBefore['current_amount'],
-                        'message' => admin_trans('machine_crash_unlocked', 'message'),
+                        'message' => '✓ 您的设备爆机状态已解除，可继续正常使用。',
                         'timestamp' => time(),
                     ];
                     // 1. 发送给玩家
