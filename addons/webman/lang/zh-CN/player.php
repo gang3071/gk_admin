@@ -290,4 +290,8 @@ return [
     'balance_after_wash' => '洗分后余额',
     'wash_crashed_tip' => '⚠️ 设备已爆机！只能提现爆机金额，超出部分将被系统没收，钱包将清零',
     'wash_normal_tip' => '✓ 设备正常，将全部余额洗分',
+
+    // 爆机通知消息
+    'machine_crashed_contact_admin' => '⚠️ 您的设备余额已达到爆机金额，请联系管理员处理！',
+    'machine_crash_unlocked' => '✓ 您的设备爆机状态已解除，可继续正常使用。',
 ];

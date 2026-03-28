@@ -289,4 +289,8 @@ return [
     'balance_after_wash' => 'Balance After Wash',
     'wash_crashed_tip' => '⚠️ Device crashed! Only crash amount can be withdrawn, excess will be confiscated by system, wallet will be cleared',
     'wash_normal_tip' => '✓ Device normal, all balance will be washed',
+
+    // Machine Crash Notification Messages
+    'machine_crashed_contact_admin' => '⚠️ Your device balance has reached the crash amount, please contact the administrator!',
+    'machine_crash_unlocked' => '✓ Your device crash status has been released, you can continue to use normally.',
 ];
