@@ -21,8 +21,21 @@ return [
 
     // Filters
     'filter' => [
+        'select_store' => 'Select Store',
+        'all_stores' => 'All Stores',
         'time_range' => 'Time Range',
         'start_time' => 'Start Time',
         'end_time' => 'End Time',
+    ],
+
+    // Statistics
+    'stats' => [
+        'total_recharge' => 'Total Recharge',
+        'total_withdraw' => 'Total Withdrawal',
+        'total_machine_put' => 'Total Cash In',
+        'total_lottery' => 'Total Lottery',
+        'total_subtotal' => 'Total Subtotal',
+        'total_agent_profit' => 'Total Agent Profit',
+        'total_channel_profit' => 'Total Channel Profit',
     ],
 ];

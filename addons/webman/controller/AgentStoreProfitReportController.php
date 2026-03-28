@@ -9,8 +9,12 @@ use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\statistic\Statistic;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -33,13 +37,19 @@ class AgentStoreProfitReportController
         $exAdminFilter = Request::input('ex_admin_filter', []);
         $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
         $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
+        $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
         // 获取代理下的所有店家
-        $storeIds = $admin->childStores()
+        $allStoresQuery = $admin->childStores()
             ->where('type', AdminUser::TYPE_STORE)
-            ->where('status', 1)
-            ->pluck('id')
-            ->toArray();
+            ->where('status', 1);
+
+        // 如果选择了特定店家，只查询该店家
+        if (!empty($selectedStoreId)) {
+            $storeIds = [$selectedStoreId];
+        } else {
+            $storeIds = $allStoresQuery->pluck('id')->toArray();
+        }
 
         // 构建报表数据
         $reportData = [];
@@ -146,10 +156,198 @@ class AgentStoreProfitReportController
             ];
         }
 
-        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData) {
+        // 计算统计数据
+        $totalStats = [
+            'total_recharge' => 0,
+            'total_withdraw' => 0,
+            'total_machine_put' => 0,
+            'total_lottery' => 0,
+            'total_subtotal' => 0,
+            'total_agent_profit' => 0,
+            'total_channel_profit' => 0,
+        ];
+
+        foreach ($reportData as $item) {
+            $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], $item['recharge_amount'], 2);
+            $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], $item['withdraw_amount'], 2);
+            $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'], 2);
+            $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'], 2);
+            $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
+            $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
+            $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
+        }
+
+        // 获取店家选项列表用于筛选器下拉选择
+        $storeOptions = $admin->childStores()
+            ->where('type', AdminUser::TYPE_STORE)
+            ->where('status', 1)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
+
+        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData, $storeOptions, $totalStats) {
             $grid->title(admin_trans('agent_store_profit.title'));
             $grid->autoHeight();
             $grid->bordered(true);
+
+            // 统计卡片
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($totalStats) {
+                $row->gutter([10, 10]);
+
+                // 第一行：累计开分、累计洗分、投钞
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_recharge']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_recharge'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => '#52c41a'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 8);
+
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_withdraw']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_withdraw'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => '#fa8c16'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 8);
+
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_machine_put']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_machine_put'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => '#1890ff'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 8);
+            })->style(['background' => '#fff']);
+
+            $layout->row(function (Row $row) use ($totalStats) {
+                $row->gutter([10, 10]);
+
+                // 第二行：彩金、小计、代理分润、渠道分润
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_lottery']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_lottery'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => '#eb2f96'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 6);
+
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_subtotal']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_subtotal'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => floatval($totalStats['total_subtotal']) >= 0 ? '#3f8600' : '#cf1322'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 6);
+
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_agent_profit']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_agent_profit'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => '#722ed1'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 6);
+
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_channel_profit']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_channel_profit'))
+                            ->valueStyle([
+                                'font-size' => '16px',
+                                'font-weight' => '600',
+                                'text-align' => 'center',
+                                'color' => '#13c2c2'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '40px',
+                        'padding' => '8px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 6);
+            })->style(['background' => '#fff', 'margin-top' => '10px']);
+
+            $grid->tools($layout);
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
@@ -197,7 +395,13 @@ class AgentStoreProfitReportController
             })->width(120)->align('center');
 
             // 筛选器
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
+                // 店家下拉选择
+                $filter->eq()->select('store_id')
+                    ->placeholder(admin_trans('agent_store_profit.filter.select_store'))
+                    ->options(['' => admin_trans('agent_store_profit.filter.all_stores')] + $storeOptions)
+                    ->style(['width' => '300px']);
+
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', admin_trans('agent_store_profit.filter.time_range'))->placeholder([

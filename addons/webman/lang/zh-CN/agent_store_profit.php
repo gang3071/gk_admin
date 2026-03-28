@@ -21,8 +21,21 @@ return [
 
     // 筛选器
     'filter' => [
+        'select_store' => '选择店家',
+        'all_stores' => '全部店家',
         'time_range' => '时间范围',
         'start_time' => '开始时间',
         'end_time' => '结束时间',
+    ],
+
+    // 统计数据
+    'stats' => [
+        'total_recharge' => '总开分',
+        'total_withdraw' => '总洗分',
+        'total_machine_put' => '总投钞',
+        'total_lottery' => '总彩金',
+        'total_subtotal' => '总小计',
+        'total_agent_profit' => '总代理分润',
+        'total_channel_profit' => '总渠道分润',
     ],
 ];
