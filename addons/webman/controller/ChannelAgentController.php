@@ -100,6 +100,26 @@ class ChannelAgentController
 
             $grid->model()->orderBy('admin_users.id', 'desc');
 
+            // 获取店家选项列表用于筛选器下拉选择
+            $storeOptionsQuery = AdminUser::query()
+                ->where('type', AdminUser::TYPE_STORE)
+                ->select(['id', 'username', 'nickname']);
+
+            // 根据账号类型过滤店家
+            if ($admin->type === AdminUser::TYPE_AGENT) {
+                $storeOptionsQuery->where('parent_admin_id', $admin->id);
+            } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
+                $storeOptionsQuery->where('department_id', $admin->department_id);
+            }
+
+            $storeOptions = $storeOptionsQuery->get()
+                ->mapWithKeys(function ($store) {
+                    $label = $store->nickname ?: $store->username;
+                    $label .= " ({$store->username})";
+                    return [$store->id => $label];
+                })
+                ->toArray();
+
             $grid->column('id', 'ID')->width(80)->align('center');
 
             $grid->column('nickname', admin_trans('channel_agent.fields.store_name'))->display(function ($val, $data) {
@@ -150,7 +170,13 @@ class ChannelAgentController
 
             $grid->column('created_at', admin_trans('channel_agent.fields.created_at'))->width(160)->align('center');
 
-            $grid->filter(function (Filter $filter) use ($admin) {
+            $grid->filter(function (Filter $filter) use ($admin, $storeOptions) {
+                // 店家下拉选择
+                $filter->eq()->select('admin_users.id')
+                    ->placeholder(admin_trans('channel_agent.filter.select_store'))
+                    ->options(['' => admin_trans('public_msg.all')] + $storeOptions)
+                    ->style(['width' => '300px']);
+
                 $filter->eq()->select('admin_users.status')
                     ->placeholder(admin_trans('channel_agent.placeholder.status'))
                     ->options([

@@ -114,6 +114,12 @@ return [
         'is_new' => '是否新遊戲',
     ],
 
+    // 篩選器
+    'filter' => [
+        'select_store' => '選擇店家',
+        'select_agent' => '選擇代理',
+    ],
+
     // 遊戲選項
     'game_options' => [
         'hot_games' => '熱門遊戲',

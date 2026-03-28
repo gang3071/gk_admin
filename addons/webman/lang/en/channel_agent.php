@@ -114,6 +114,12 @@ return [
         'is_new' => 'Is New',
     ],
 
+    // Filters
+    'filter' => [
+        'select_store' => 'Select Store',
+        'select_agent' => 'Select Agent',
+    ],
+
     // Game Options
     'game_options' => [
         'hot_games' => 'Hot Games',

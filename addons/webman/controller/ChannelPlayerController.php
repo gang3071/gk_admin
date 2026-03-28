@@ -273,7 +273,25 @@ class ChannelPlayerController
             $item['subtotal'] = bcsub($totalIn, $totalOut, 2);
         }
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel) {
+        // 获取设备选项列表用于筛选器下拉选择
+        $playerOptions = Player::query()
+            ->where('department_id', Admin::user()->department_id)
+            ->where('type', Player::TYPE_PLAYER)
+            ->where('is_promoter', 0)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'name', 'uuid'])
+            ->mapWithKeys(function ($player) {
+                $label = $player->name
+                    ? "{$player->name} (ID: {$player->id})"
+                    : "ID: {$player->id}";
+                if ($player->uuid) {
+                    $label .= " - {$player->uuid}";
+                }
+                return [$player->id => $label];
+            })
+            ->toArray();
+
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel, $playerOptions) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -479,7 +497,13 @@ class ChannelPlayerController
                 admin_trans('player.fields.status_offline_open'))->switch()->ellipsis(true)->align('center');
             $grid->column('status_baccarat',
                 admin_trans('player.fields.status_baccarat'))->switch()->ellipsis(true)->align('center');
-            $grid->filter(function (Filter $filter) use ($channel) {
+            $grid->filter(function (Filter $filter) use ($channel, $playerOptions) {
+                // 设备下拉选择
+                $filter->eq()->select('player_id')
+                    ->placeholder(admin_trans('player.filter.select_device'))
+                    ->options(['' => admin_trans('public_msg.all')] + $playerOptions)
+                    ->style(['width' => '300px']);
+
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
@@ -671,6 +695,11 @@ class ChannelPlayerController
         // 应用筛选条件
         if (empty($requestFilter)) {
             return;
+        }
+
+        // 设备ID筛选
+        if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
+            $query->where('player.id', $requestFilter['player_id']);
         }
 
         // 线下渠道：按 player_type 筛选

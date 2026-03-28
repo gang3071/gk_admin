@@ -114,6 +114,12 @@ return [
         'is_new' => '新しいゲームかどうか',
     ],
 
+    // フィルター
+    'filter' => [
+        'select_store' => '店舗を選択',
+        'select_agent' => 'エージェントを選択',
+    ],
+
     // ゲームオプション
     'game_options' => [
         'hot_games' => '人気ゲーム',
