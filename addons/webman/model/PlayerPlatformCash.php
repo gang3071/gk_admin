@@ -65,11 +65,6 @@ class PlayerPlatformCash extends Model
     {
         // 监听余额更新事件
         static::updated(function (PlayerPlatformCash $wallet) {
-            // 只处理实体机平台的余额变化
-            if ($wallet->platform_id != self::PLATFORM_SELF) {
-                return;
-            }
-
             // 检查 money 字段是否变化
             if (!$wallet->wasChanged('money')) {
                 return;
