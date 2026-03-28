@@ -5222,7 +5222,12 @@ class ChannelPlayerController
             $form->hidden('wash_amount')->value($washAmount);
             $form->hidden('deduct_amount')->value($deductAmount);
 
-            $form->saved(function ($form, $data) {
+            $form->saved(function (Form $form) {
+                $data = [
+                    'player_id' => $form->input('player_id'),
+                    'wash_amount' => $form->input('wash_amount'),
+                    'deduct_amount' => $form->input('deduct_amount'),
+                ];
                 return $this->handleWashScore($data);
             });
 
@@ -5237,7 +5242,7 @@ class ChannelPlayerController
      * @param array $data
      * @return Msg
      */
-    private function handleWashScore(array $data)
+    private function handleWashScore(array $data): Msg
     {
         $playerId = $data['player_id'] ?? 0;
         $washAmount = floatval($data['wash_amount'] ?? 0); // 提现金额
