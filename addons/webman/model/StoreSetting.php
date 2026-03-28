@@ -191,7 +191,7 @@ class StoreSetting extends Model
                             $wallet->is_crashed = 0;
                             $wallet->save();
                         });
-                        Log::info('这里开始解锁', $player->id);
+                        Log::info('StoreSetting: Player crashed after enabling config', [$player]);
                         // 发送解锁通知
                         checkAndNotifyCrashUnlock($player, $previousAmount);
 
