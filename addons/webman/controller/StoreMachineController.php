@@ -48,7 +48,7 @@ class StoreMachineController
             ->where('admin_users.type', AdminUser::TYPE_STORE)
             ->where('parent_admin.department_id', $currentDepartmentId)
             ->orderBy('admin_users.id', 'desc')
-            ->get(['admin_users.id', 'admin_users.nickname', 'admin_users.username'])
+            ->get(['admin_users.id as id', 'admin_users.nickname as nickname', 'admin_users.username as username'])
             ->mapWithKeys(function ($store) {
                 $label = $store->nickname ?: $store->username;
                 $label .= " ({$store->username})";
