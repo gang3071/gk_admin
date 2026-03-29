@@ -1004,6 +1004,15 @@ return [
         'title' => '机台报表明细',
     ],
     [
+        'id' => 'addons\webman\controller\ChannelStoreProfitReportController\index',
+        'pid' => 'addons\webman\controller\ChannelMachineController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelStoreProfitReportController/index',
+        'title' => '店家分润报表',
+    ],
+    [
         'id' => 'addons\webman\controller\ChannelMachineController\infoList',
         'pid' => 'addons\webman\controller\ChannelMachineController-',
         'action' => 'infoList',
