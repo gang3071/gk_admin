@@ -225,7 +225,7 @@ class ChannelStoreProfitReportController
             $grid->bordered(true);
 
             // 统计卡片
-            $layout = Layout::create();
+            $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
             $layout->row(function (Row $row) use ($totalStats) {
                 $row->gutter([10, 0]);
 
@@ -289,10 +289,10 @@ class ChannelStoreProfitReportController
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
-            })->style(['background' => '#fff']);
+            });
 
             $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 0]);
+                $row->gutter([10, 10]);
 
                 // 第二行：彩金、小计、代理分润、渠道分润
                 $row->column(
@@ -374,7 +374,7 @@ class ChannelStoreProfitReportController
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
-            })->style(['background' => '#fff', 'margin-top' => '10px']);
+            });
             $grid->tools([$layout]);
 
             $grid->column('id', 'ID')->width(80)->align('center');
