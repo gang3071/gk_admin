@@ -214,5 +214,12 @@ return [
         'auto_shift_management' => '自动交班',
         'auto_shift_config' => '交班配置',
         'auto_shift_logs' => '执行日志',
+        //限红组管理（总后台）
+        'limit_group' => '限红管理',
+        'limit_group_list' => '限红组管理',
+        'limit_group_config' => '平台配置',
+        //渠道限红管理
+        'channel_limit_group' => '限红管理',
+        'channel_admin_limit_group' => '店家限红分配',
     ]
 ];

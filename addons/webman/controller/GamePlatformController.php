@@ -184,6 +184,17 @@ class GamePlatformController
                 ->ext('jpg,png,jpeg')
                 ->fileSize('1m')
                 ->required();
+
+            // 默认限红组（只在ATG/RSG平台显示）
+            if ($form->isEdit()) {
+                $platformCode = $form->driver()->get('code');
+                if (in_array($platformCode, ['ATG', 'RSG'])) {
+                    $form->select('default_limit_group_id', '默认限红组')
+                        ->options($this->getLimitGroupOptionsForPlatform())
+                        ->help('为该平台设置默认限红组，当店家未配置限红时使用');
+                }
+            }
+
             $form->switch('has_lobby', admin_trans('game_platform.fields.has_lobby'))->default(0)
                 ->when(1, function (Form $form) {
                     $langList = plugin()->webman->config('ui.lang.list');
@@ -233,6 +244,7 @@ class GamePlatformController
 
     /**
      * 筛选游戏平台
+     * @auth true
      * @return mixed
      */
     public function getGamePlatformOptions()
@@ -256,7 +268,8 @@ class GamePlatformController
     }
 
     /**
-     * 筛选游戏平台
+     * 筛选游戏分类
+     * @auth true
      * @return mixed
      */
     public function getGameCateOptions()
@@ -464,5 +477,27 @@ class GamePlatformController
                 return message_success(admin_trans('game_extend.save_success'));
             });
         });
+    }
+
+    /**
+     * 获取限红组选项（用于游戏平台表单）
+     * @return array
+     */
+    private function getLimitGroupOptionsForPlatform(): array
+    {
+        $data = [];
+        $limitGroupModel = 'addons\webman\model\PlatformLimitGroup';
+        if (class_exists($limitGroupModel)) {
+            $list = $limitGroupModel::query()
+                ->where('status', 1)
+                ->orderBy('sort', 'asc')
+                ->get();
+
+            foreach ($list as $item) {
+                $data[$item->id] = "{$item->name} ({$item->code})";
+            }
+        }
+
+        return $data;
     }
 }

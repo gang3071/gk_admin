@@ -22,6 +22,8 @@ return [
     'agent_name' => 'Agent Name',
     'store_machine_name' => 'Store Machine Name',
     'submit_ratio' => 'Submit Ratio (%)',
+    'agent_commission' => 'Agent Commission (%)',
+    'channel_commission' => 'Channel Commission (%)',
     'parent_agent' => 'Parent Agent',
     'unified_password' => 'Unified Password',
     'confirm_password' => 'Confirm Password',

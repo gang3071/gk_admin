@@ -663,7 +663,7 @@ class PlayerController
                 $form->row(function (Form $form) use ($options) {
                     $form->column(function (Form $form) use ($options) {
                         $form->text('phone',
-                            admin_trans('player.fields.phone'))->maxlength(50)->ruleNumber()->disabled(true);
+                            admin_trans('player.fields.phone'))->maxlength(50)->disabled(true);
                         $form->text('name', admin_trans('player.fields.name'))->maxlength(50);
                         $form->radio('avatar_type', admin_trans('player.avatar_type'))
                             ->button()

@@ -873,7 +873,7 @@ class ChannelPlayerController
                 $form->title(admin_trans('player.details'));
                 $form->row(function (Form $form) use ($options) {
                     $form->column(function (Form $form) use ($options) {
-                        $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->ruleNumber()
+                        $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)
                             ->rule([
                                 (string)Rule::unique(plugin()->webman->config('database.player_model'))->ignore($form->input('id')) => admin_trans('player.phone_exist'),
                             ])
