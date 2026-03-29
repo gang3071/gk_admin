@@ -75,6 +75,24 @@ class StoreMachineController
                 ])
                 ->orderBy('admin_users.id', 'desc');
 
+            // 手动处理筛选条件（避免字段歧义）
+            $filterData = \ExAdmin\ui\support\Request::input('ex_admin_filter', []);
+            foreach ($filterData as $filter) {
+                // 店家 ID 筛选
+                if ($filter['field'] === 'store_id_custom' && !empty($filter['value'])) {
+                    $grid->model()->where('admin_users.id', $filter['value']);
+                }
+                // 创建时间筛选
+                if ($filter['field'] === 'created_at_custom' && !empty($filter['value']) && is_array($filter['value'])) {
+                    if (!empty($filter['value'][0])) {
+                        $grid->model()->where('admin_users.created_at', '>=', $filter['value'][0]);
+                    }
+                    if (!empty($filter['value'][1])) {
+                        $grid->model()->where('admin_users.created_at', '<=', $filter['value'][1]);
+                    }
+                }
+            }
+
             $grid->column('id', 'ID')->width(80)->align('center');
 
             $grid->column('nickname', admin_trans('store_machine.fields.name'))->display(function ($val, $data) {
@@ -118,8 +136,8 @@ class StoreMachineController
             $grid->column('created_at', admin_trans('store_machine.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) use ($storeOptions) {
-                // 店家下拉筛选
-                $filter->eq()->select('id')
+                // 店家下拉筛选（使用自定义字段名，手动处理）
+                $filter->eq()->select('store_id_custom')
                     ->placeholder(admin_trans('store_machine.filter.select_store'))
                     ->options(['' => admin_trans('store_machine.all')] + $storeOptions)
                     ->style(['width' => '250px']);
@@ -147,7 +165,7 @@ class StoreMachineController
                         'getAgentOptions'
                     ]));
 
-                $filter->between()->dateTimeRange('created_at')
+                $filter->between()->dateTimeRange('created_at_custom')
                     ->placeholder([admin_trans('store_machine.placeholder.start_time'), admin_trans('store_machine.placeholder.end_time')]);
             });
 
