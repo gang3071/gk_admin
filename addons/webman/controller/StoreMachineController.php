@@ -68,18 +68,7 @@ class StoreMachineController
                 ->where('admin_users.type', AdminDepartment::TYPE_STORE)
                 ->where('parent_admin.department_id', $currentDepartmentId)  // 通过代理的 department_id 过滤
                 ->select([
-                    'admin_users.id',
-                    'admin_users.username',
-                    'admin_users.nickname',
-                    'admin_users.avatar',
-                    'admin_users.status',
-                    'admin_users.type',
-                    'admin_users.department_id',
-                    'admin_users.parent_admin_id',
-                    'admin_users.agent_commission',
-                    'admin_users.channel_commission',
-                    'admin_users.is_super',
-                    'admin_users.created_at',
+                    'admin_users.*',
                     'dept.name as department_name',
                     'dept.phone as department_phone',
                     'parent_admin.nickname as parent_agent_name'
