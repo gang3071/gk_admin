@@ -40,7 +40,20 @@ class AgentController
 
         $currentDepartmentId = Admin::user()->department_id;
 
-        return Grid::create(new AdminUser(), function (Grid $grid) use ($currentDepartmentId) {
+        // 获取代理选项列表用于筛选器下拉选择
+        $agentOptions = AdminUser::query()
+            ->where('department_id', $currentDepartmentId)
+            ->where('type', AdminUser::TYPE_AGENT)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($agent) {
+                $label = $agent->nickname ?: $agent->username;
+                $label .= " ({$agent->username})";
+                return [$agent->id => $label];
+            })
+            ->toArray();
+
+        return Grid::create(new AdminUser(), function (Grid $grid) use ($currentDepartmentId, $agentOptions) {
             $grid->title(admin_trans('agent.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -89,7 +102,13 @@ class AgentController
 
             $grid->column('created_at', admin_trans('agent.fields.created_at'))->width(160)->align('center');
 
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($agentOptions) {
+                // 代理下拉筛选
+                $filter->eq()->select('admin_users.id')
+                    ->placeholder(admin_trans('channel_agent.filter.select_agent'))
+                    ->options(['' => admin_trans('channel_agent.all')] + $agentOptions)
+                    ->style(['width' => '250px']);
+
                 $filter->eq()->select('admin_users.status')
                     ->placeholder(admin_trans('agent.placeholder.status'))
                     ->options([
