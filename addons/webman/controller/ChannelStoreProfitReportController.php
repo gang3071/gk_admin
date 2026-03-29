@@ -49,7 +49,7 @@ class ChannelStoreProfitReportController
 
         // 如果选择了特定代理，只查询该代理下的店家
         if (!empty($selectedAgentId)) {
-            $allStoresQuery->where('agent_admin_id', $selectedAgentId);
+            $allStoresQuery->where('parent_admin_id', $selectedAgentId);
         }
 
         // 如果选择了特定店家，只查询该店家
@@ -69,7 +69,7 @@ class ChannelStoreProfitReportController
             }
 
             // 获取代理信息
-            $agent = AdminUser::find($store->agent_admin_id);
+            $agent = AdminUser::find($store->parent_admin_id);
             $agentName = $agent ? ($agent->nickname ?: $agent->username) : '-';
 
             // 获取该店家下的所有玩家
