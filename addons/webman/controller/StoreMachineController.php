@@ -68,7 +68,18 @@ class StoreMachineController
                 ->where('admin_users.type', AdminDepartment::TYPE_STORE)
                 ->where('parent_admin.department_id', $currentDepartmentId)  // 通过代理的 department_id 过滤
                 ->select([
-                    'admin_users.*',
+                    'admin_users.id',
+                    'admin_users.username',
+                    'admin_users.nickname',
+                    'admin_users.avatar',
+                    'admin_users.status',
+                    'admin_users.type',
+                    'admin_users.department_id',
+                    'admin_users.parent_admin_id',
+                    'admin_users.agent_commission',
+                    'admin_users.channel_commission',
+                    'admin_users.is_super',
+                    'admin_users.created_at',
                     'dept.name as department_name',
                     'dept.phone as department_phone',
                     'parent_admin.nickname as parent_agent_name'
@@ -119,12 +130,12 @@ class StoreMachineController
 
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 // 店家下拉筛选
-                $filter->eq()->select('admin_users.id')
+                $filter->eq()->select('id')
                     ->placeholder(admin_trans('store_machine.filter.select_store'))
                     ->options(['' => admin_trans('store_machine.all')] + $storeOptions)
                     ->style(['width' => '250px']);
 
-                $filter->eq()->select('admin_users.status')
+                $filter->eq()->select('status')
                     ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
                         1 => admin_trans('store_machine.status.normal'),
@@ -132,12 +143,11 @@ class StoreMachineController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('admin_users.username')->placeholder(admin_trans('store_machine.placeholder.username'));
-                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('store_machine.placeholder.name'));
-                $filter->like()->text('dept.phone')->placeholder(admin_trans('store_machine.placeholder.phone'));
+                $filter->like()->text('username')->placeholder(admin_trans('store_machine.placeholder.username'));
+                $filter->like()->text('nickname')->placeholder(admin_trans('store_machine.placeholder.name'));
 
                 // 代理筛选
-                $filter->eq()->select('admin_users.parent_admin_id')
+                $filter->eq()->select('parent_admin_id')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
@@ -155,7 +165,8 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
             });
-
+            $grid->hideSelection();
+            $grid->hideDelete();
             $grid->setForm()->drawer($this->createStoreMachineForm());
             $grid->expandFilter();
         });
