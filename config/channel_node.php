@@ -623,6 +623,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-AgentController/createAgentForm',
         'title' => '创建代理保存',
     ],
+    [
+        'id' => 'addons\webman\controller\AgentController\getAgentOptions',
+        'pid' => 'addons\webman\controller\AgentController\index',
+        'action' => 'getAgentOptions',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-AgentController/getAgentOptions',
+        'title' => '获取代理选项',
+    ],
 
     // 店家管理（线下渠道）
     [
@@ -659,6 +668,15 @@ return [
         'group' => 'channel',
         'url' => 'ex-admin/addons-webman-controller-StoreMachineController/createStoreMachineForm',
         'title' => '创建店家保存',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreMachineController\getAgentOptions',
+        'pid' => 'addons\webman\controller\StoreMachineController\index',
+        'action' => 'getAgentOptions',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-StoreMachineController/getAgentOptions',
+        'title' => '获取代理选项',
     ],
 
     //玩家管理

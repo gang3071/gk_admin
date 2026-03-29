@@ -191,6 +191,11 @@ return [
         'agent_deposit_bonus_statistics' => 'Statistics Report',
         'agent_deposit_bonus_bet_detail' => 'Betting Details',
         'agent_deposit_bonus_task' => 'Wagering Tasks',
+        //Agent Profit Management
+        'agent_profit' => 'Profit Management',
+        'agent_profit_statistics' => 'Profit Statistics',
+        'agent_profit_records' => 'Profit Records',
+        'agent_settlement_records' => 'Settlement Records',
         //Store Device Management
         'store_player' => 'Device Management',
         'store_player_list' => 'Device List',
@@ -213,6 +218,8 @@ return [
         'auto_shift_management' => 'Auto Shift',
         'auto_shift_config' => 'Shift Configuration',
         'auto_shift_logs' => 'Execution Logs',
+        //Channel Store Profit Report
+        'channel_store_profit_report' => 'Store Profit Report',
         /** TODO end translation */
     ]
 ];

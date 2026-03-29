@@ -192,6 +192,11 @@ return [
         'agent_deposit_bonus_statistics' => '统计报表',
         'agent_deposit_bonus_bet_detail' => '押码明细',
         'agent_deposit_bonus_task' => '打码量任务',
+        //代理后台分润管理
+        'agent_profit' => '分润管理',
+        'agent_profit_statistics' => '分润统计',
+        'agent_profit_records' => '分润记录',
+        'agent_settlement_records' => '结算记录',
         //店机后台设备管理
         'store_player' => '设备管理',
         'store_player_list' => '设备列表',
@@ -221,5 +226,7 @@ return [
         //渠道限红管理
         'channel_limit_group' => '限红管理',
         'channel_admin_limit_group' => '店家限红分配',
+        //渠道后台店家分润报表
+        'channel_store_profit_report' => '店家分润报表',
     ]
 ];

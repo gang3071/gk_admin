@@ -192,6 +192,11 @@ return [
         'agent_deposit_bonus_statistics' => '統計レポート',
         'agent_deposit_bonus_bet_detail' => 'ベット詳細',
         'agent_deposit_bonus_task' => 'ベット量タスク',
+        //代理店利益管理
+        'agent_profit' => '利益管理',
+        'agent_profit_statistics' => '利益統計',
+        'agent_profit_records' => '利益記録',
+        'agent_settlement_records' => '決済記録',
         //店舗デバイス管理
         'store_player' => 'デバイス管理',
         'store_player_list' => 'デバイスリスト',
@@ -214,5 +219,7 @@ return [
         'auto_shift_management' => '自動シフト',
         'auto_shift_config' => 'シフト設定',
         'auto_shift_logs' => '実行ログ',
+        //チャンネルバックエンド店舗利益レポート
+        'channel_store_profit_report' => '店舗利益レポート',
     ]
 ];

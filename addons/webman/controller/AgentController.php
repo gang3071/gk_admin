@@ -346,6 +346,7 @@ class AgentController
      * 获取代理选项（用于筛选）
      * 注意：代理后台只能看到自己，返回当前代理账号
      * @auth true
+     * @group channel
      * @return \support\Response
      */
     public function getAgentOptions(): \support\Response

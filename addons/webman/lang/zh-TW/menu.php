@@ -191,6 +191,11 @@ return [
         'agent_deposit_bonus_statistics' => '統計報表',
         'agent_deposit_bonus_bet_detail' => '押碼明細',
         'agent_deposit_bonus_task' => '打碼量任務',
+        //代理後台分潤管理
+        'agent_profit' => '分潤管理',
+        'agent_profit_statistics' => '分潤統計',
+        'agent_profit_records' => '分潤記錄',
+        'agent_settlement_records' => '結算記錄',
         //店機後台設備管理
         'store_player' => '設備管理',
         'store_player_list' => '設備列表',
@@ -213,5 +218,7 @@ return [
         'auto_shift_management' => '自動交班',
         'auto_shift_config' => '交班配置',
         'auto_shift_logs' => '執行日誌',
+        //渠道後台店家分潤報表
+        'channel_store_profit_report' => '店家分潤報表',
     ]
 ];

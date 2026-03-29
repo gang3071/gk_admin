@@ -443,6 +443,8 @@ class StoreMachineController
 
     /**
      * 获取代理选项（用于店家筛选）
+     * @auth true
+     * @group channel
      */
     public function getAgentOptions(): Response
     {
