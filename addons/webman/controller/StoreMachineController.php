@@ -216,14 +216,14 @@ class StoreMachineController
 
             // 行展开 - 显示限红组配置信息
             $grid->expandRow(function ($row) {
-                // 查询该店家的限红组配置
-                $limitConfig = AdminUserLimitGroup::query()
+                // 查询该店家的所有限红组配置
+                $limitConfigs = AdminUserLimitGroup::query()
                     ->with(['limitGroup', 'gamePlatform'])
                     ->where('admin_user_id', $row['id'])
                     ->whereNull('deleted_at')
-                    ->first();
+                    ->get();
 
-                if (!$limitConfig) {
+                if ($limitConfigs->isEmpty()) {
                     return Card::create([
                         Html::div()->content([
                             Html::create('暂无限红组配置')->style(['padding' => '20px', 'color' => '#999', 'textAlign' => 'center'])
@@ -231,77 +231,80 @@ class StoreMachineController
                     ]);
                 }
 
-                // 获取平台名称
-                $platformName = $limitConfig->gamePlatform ?
-                    "{$limitConfig->gamePlatform->name} ({$limitConfig->platform_code})" :
-                    $limitConfig->platform_code;
+                $rows = [];
 
-                // 获取限红组名称
-                $limitGroupName = $limitConfig->limitGroup ?
-                    "{$limitConfig->limitGroup->name} ({$limitConfig->limitGroup->code})" :
-                    '-';
+                foreach ($limitConfigs as $limitConfig) {
+                    // 获取平台名称
+                    $platformName = $limitConfig->gamePlatform ?
+                        "{$limitConfig->gamePlatform->name} ({$limitConfig->platform_code})" :
+                        $limitConfig->platform_code;
 
-                // 获取配置详情（从限红组配置表中获取）
-                $configDetail = '-';
-                if ($limitConfig->limitGroup) {
-                    $groupConfig = PlatformLimitGroupConfig::query()
-                        ->where('limit_group_id', $limitConfig->limit_group_id)
-                        ->where('platform_id', $limitConfig->platform_id)
-                        ->where('status', 1)
-                        ->whereNull('deleted_at')
-                        ->first();
+                    // 获取限红组名称
+                    $limitGroupName = $limitConfig->limitGroup ?
+                        "{$limitConfig->limitGroup->name} ({$limitConfig->limitGroup->code})" :
+                        '-';
 
-                    if ($groupConfig && $groupConfig->config_data) {
-                        $configData = $groupConfig->config_data;
-                        if ($limitConfig->platform_code === 'ATG' && isset($configData['operator'])) {
-                            $configDetail = "营运账号: {$configData['operator']}";
-                        } elseif ($limitConfig->platform_code === 'RSG') {
-                            $min = $configData['min_bet_amount'] ?? 0;
-                            $max = $configData['max_bet_amount'] ?? 0;
-                            $configDetail = "限红范围: {$min} - {$max}";
+                    // 获取配置详情（从限红组配置表中获取）
+                    $configDetail = '-';
+                    if ($limitConfig->limitGroup) {
+                        $groupConfig = PlatformLimitGroupConfig::query()
+                            ->where('limit_group_id', $limitConfig->limit_group_id)
+                            ->where('platform_id', $limitConfig->platform_id)
+                            ->where('status', 1)
+                            ->whereNull('deleted_at')
+                            ->first();
+
+                        if ($groupConfig && $groupConfig->config_data) {
+                            $configData = $groupConfig->config_data;
+                            if ($limitConfig->platform_code === 'ATG' && isset($configData['operator'])) {
+                                $configDetail = "营运账号: {$configData['operator']}";
+                            } elseif ($limitConfig->platform_code === 'RSG') {
+                                $min = $configData['min_bet_amount'] ?? 0;
+                                $max = $configData['max_bet_amount'] ?? 0;
+                                $configDetail = "限红范围: {$min} - {$max}";
+                            }
                         }
                     }
-                }
 
-                // 格式化分配时间
-                $assignedAt = $limitConfig->assigned_at ?
-                    Carbon::parse($limitConfig->assigned_at)->format('Y-m-d H:i:s') :
-                    '-';
+                    // 格式化分配时间
+                    $assignedAt = $limitConfig->assigned_at ?
+                        Carbon::parse($limitConfig->assigned_at)->format('Y-m-d H:i:s') :
+                        '-';
 
-                return Card::create([
-                    Html::div()->content([
-                        Html::create('限红组配置详情')->tag('h4')->style(['marginBottom' => '15px']),
+                    // 添加平台配置行
+                    $rows[] = Html::div()->content([
+                        Html::create($platformName)->tag('h4')->style(['marginBottom' => '10px', 'marginTop' => count($rows) > 0 ? '20px' : '0', 'color' => '#1890ff']),
                         Html::create()->content([
                             // 第1行
                             Html::div()->content([
                                 Html::create()->content([
-                                    Html::create('游戏平台')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                                    Html::create($platformName)
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
-                                Html::create()->content([
                                     Html::create('限红组')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
                                     Html::create($limitGroupName)
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('配置详情')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($configDetail)
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
                             // 第2行
                             Html::div()->content([
                                 Html::create()->content([
-                                    Html::create('配置详情')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                                    Html::create($configDetail)
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
-                                Html::create()->content([
                                     Html::create('分配时间')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
                                     Html::create($assignedAt)
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
-                            ]),
-                            // 第3行 - 备注
-                            !empty($limitConfig->remark) ? Html::div()->content([
-                                Html::create()->content([
-                                    Html::create('备注')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px', 'verticalAlign' => 'top']),
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                !empty($limitConfig->remark) ? Html::create()->content([
+                                    Html::create('备注')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
                                     Html::create($limitConfig->remark)
-                                ])->style(['padding' => '8px'])
-                            ]) : null
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']) : null
+                            ])
                         ])
+                    ]);
+                }
+
+                return Card::create([
+                    Html::div()->content([
+                        Html::create('限红组配置详情')->tag('h4')->style(['marginBottom' => '15px']),
+                        Html::create()->content($rows)
                     ])->style(['padding' => '20px'])
                 ]);
             });
@@ -592,13 +595,14 @@ class StoreMachineController
             });
         }
 
-        // 查询该店家现有的限红组配置
-        $existingConfig = AdminUserLimitGroup::query()
+        // 查询该店家现有的所有限红组配置（按平台区分）
+        $existingConfigs = AdminUserLimitGroup::query()
             ->where('admin_user_id', $storeId)
             ->whereNull('deleted_at')
-            ->first();
+            ->get()
+            ->keyBy('platform_id');
 
-        return Form::create([], function (Form $form) use ($storeId, $existingConfig) {
+        return Form::create([], function (Form $form) use ($storeId, $existingConfigs) {
             $form->title('限红组配置');
 
             // 显式设置提交URL
@@ -613,49 +617,45 @@ class StoreMachineController
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
 
-            // 游戏平台选择
-            $platformOptions = [];
-            if ($atgPlatform) {
-                $platformOptions[$atgPlatform->id] = "{$atgPlatform->name} ({$atgPlatform->code})";
-            }
-            if ($rsgPlatform) {
-                $platformOptions[$rsgPlatform->id] = "{$rsgPlatform->name} ({$rsgPlatform->code})";
-            }
-
-            if (empty($platformOptions)) {
-                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/RSG）</div>');
+            if (!$atgPlatform && !$rsgPlatform) {
+                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG）</font>'));
             } else {
-                $platformSelect = $form->select('platform_id', '游戏平台')
-                    ->options($platformOptions)
-                    ->value($existingConfig ? $existingConfig->platform_id : null)
-                    ->required()
-                    ->help('选择要配置的游戏平台');
-
-                // ATG平台限红组选项
+                // ATG平台配置
                 if ($atgPlatform) {
-                    $platformSelect->when($atgPlatform->id, function (Form $form) use ($atgPlatform, $existingConfig) {
-                        $form->select('limit_group_id', '限红组')
-                            ->options($this->getLimitGroupOptionsForPlatform($atgPlatform->id))
-                            ->value($existingConfig && $existingConfig->platform_id == $atgPlatform->id ? $existingConfig->limit_group_id : null)
-                            ->help('选择ATG平台的限红组');
-                    });
+                    $form->divider()->content('ATG 平台限红组配置');
+
+                    $atgConfig = $existingConfigs->get($atgPlatform->id);
+                    $atgOptions = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($atgPlatform->id);
+
+                    $form->select('atg_limit_group_id', "限红组 ({$atgPlatform->name})")
+                        ->options($atgOptions)
+                        ->value($atgConfig ? $atgConfig->limit_group_id : null)
+                        ->help('选择ATG平台的限红组，选择"不配置限红组"将清除该平台的限红配置');
+
+                    $form->textarea('atg_remark', 'ATG备注')
+                        ->rows(2)
+                        ->value($atgConfig ? $atgConfig->remark : '')
+                        ->help('可选，ATG平台限红组配置备注');
                 }
 
-                // RSG平台限红组选项
+                // RSG平台配置
                 if ($rsgPlatform) {
-                    $platformSelect->when($rsgPlatform->id, function (Form $form) use ($rsgPlatform, $existingConfig) {
-                        $form->select('limit_group_id', '限红组')
-                            ->options($this->getLimitGroupOptionsForPlatform($rsgPlatform->id))
-                            ->value($existingConfig && $existingConfig->platform_id == $rsgPlatform->id ? $existingConfig->limit_group_id : null)
-                            ->help('选择RSG平台的限红组');
-                    });
+                    $form->divider()->content('RSG 平台限红组配置');
+
+                    $rsgConfig = $existingConfigs->get($rsgPlatform->id);
+                    $rsgOptions = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($rsgPlatform->id);
+
+                    $form->select('rsg_limit_group_id', "限红组 ({$rsgPlatform->name})")
+                        ->options($rsgOptions)
+                        ->value($rsgConfig ? $rsgConfig->limit_group_id : null)
+                        ->help('选择RSG平台的限红组，选择"不配置限红组"将清除该平台的限红配置');
+
+                    $form->textarea('rsg_remark', 'RSG备注')
+                        ->rows(2)
+                        ->value($rsgConfig ? $rsgConfig->remark : '')
+                        ->help('可选，RSG平台限红组配置备注');
                 }
             }
-
-            $form->textarea('remark', '备注')
-                ->rows(3)
-                ->value($existingConfig ? $existingConfig->remark : '')
-                ->help('可选，备注说明');
         });
     }
 
@@ -672,27 +672,98 @@ class StoreMachineController
         $data = $postData['data'] ?? $postData;
 
         $storeId = $data['store_id'] ?? null;
-        $platformId = $data['platform_id'] ?? null;
-        $limitGroupId = $data['limit_group_id'] ?? null;
-        $remark = $data['remark'] ?? '';
 
         if (!$storeId) {
             return message_error('店家ID不能为空');
         }
-        if (!$platformId) {
-            return message_error('请选择游戏平台');
-        }
 
-        // 验证平台
-        $platform = GamePlatform::find($platformId);
-        if (!$platform) {
-            return message_error('游戏平台不存在');
+        // 获取ATG和RSG平台
+        $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
+        $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+
+        DB::beginTransaction();
+        try {
+            $updatedCount = 0;
+            $errors = [];
+
+            // 处理ATG平台配置
+            if ($atgPlatform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $atgPlatform->id,
+                    $atgPlatform->code,
+                    $data['atg_limit_group_id'] ?? null,
+                    $data['atg_remark'] ?? ''
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "ATG: {$result['message']}";
+                }
+            }
+
+            // 处理RSG平台配置
+            if ($rsgPlatform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $rsgPlatform->id,
+                    $rsgPlatform->code,
+                    $data['rsg_limit_group_id'] ?? null,
+                    $data['rsg_remark'] ?? ''
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "RSG: {$result['message']}";
+                }
+            }
+
+            if (!empty($errors)) {
+                DB::rollBack();
+                return message_error('配置失败：' . implode('；', $errors));
+            }
+
+            DB::commit();
+
+            if ($updatedCount > 0) {
+                return message_success("限红组配置成功，已更新 {$updatedCount} 个平台的配置");
+            } else {
+                return message_success('操作成功');
+            }
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return message_error('配置失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 保存单个平台的限红组配置
+     */
+    private function savePlatformLimitGroup($storeId, $platformId, $platformCode, $limitGroupId, $remark)
+    {
+        // 查找该店机在该平台的现有配置
+        $config = AdminUserLimitGroup::query()
+            ->where('admin_user_id', $storeId)
+            ->where('platform_id', $platformId)
+            ->whereNull('deleted_at')
+            ->first();
+
+        // 如果不选择限红组（清空配置）
+        if (empty($limitGroupId)) {
+            if ($config) {
+                // 软删除现有配置
+                $config->delete();
+                return ['success' => true, 'message' => '已清除限红组配置'];
+            }
+            return ['success' => true, 'message' => '无需操作'];
         }
 
         // 验证限红组
         $limitGroup = PlatformLimitGroup::find($limitGroupId);
         if (!$limitGroup) {
-            return message_error('限红组不存在');
+            return ['success' => false, 'message' => '限红组不存在'];
         }
 
         // 验证限红组是否配置了该平台
@@ -704,47 +775,33 @@ class StoreMachineController
             ->first();
 
         if (!$limitGroupConfig) {
-            return message_error('该限红组未配置此平台');
+            return ['success' => false, 'message' => '该限红组未配置此平台'];
         }
 
-        DB::beginTransaction();
-        try {
-            // 查找或创建配置
-            $config = AdminUserLimitGroup::query()
-                ->where('admin_user_id', $storeId)
-                ->whereNull('deleted_at')
-                ->first();
-
-            if ($config) {
-                // 更新现有配置
-                $config->limit_group_id = $limitGroupId;
-                $config->platform_id = $platformId;
-                $config->platform_code = $platform->code;
-                $config->assigned_by = Admin::user()->id;
-                $config->assigned_at = Carbon::now();
-                $config->remark = $remark;
-                $config->status = 1;
-                $config->save();
-            } else {
-                // 创建新配置
-                $config = new AdminUserLimitGroup();
-                $config->admin_user_id = $storeId;
-                $config->limit_group_id = $limitGroupId;
-                $config->platform_id = $platformId;
-                $config->platform_code = $platform->code;
-                $config->assigned_by = Admin::user()->id;
-                $config->assigned_at = Carbon::now();
-                $config->remark = $remark;
-                $config->status = 1;
-                $config->save();
-            }
-
-            DB::commit();
-            return message_success('限红组配置成功');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return message_error('配置失败：' . $e->getMessage());
+        // 更新或创建配置
+        if ($config) {
+            // 更新现有配置
+            $config->limit_group_id = $limitGroupId;
+            $config->assigned_by = Admin::user()->id;
+            $config->assigned_at = Carbon::now();
+            $config->remark = $remark;
+            $config->status = 1;
+            $config->save();
+        } else {
+            // 创建新配置
+            $config = new AdminUserLimitGroup();
+            $config->admin_user_id = $storeId;
+            $config->limit_group_id = $limitGroupId;
+            $config->platform_id = $platformId;
+            $config->platform_code = $platformCode;
+            $config->assigned_by = Admin::user()->id;
+            $config->assigned_at = Carbon::now();
+            $config->remark = $remark;
+            $config->status = 1;
+            $config->save();
         }
+
+        return ['success' => true, 'message' => '配置成功'];
     }
 
     /**
