@@ -6,8 +6,14 @@ use addons\webman\Admin;
 use addons\webman\model\AdminDepartment;
 use addons\webman\model\AdminRoleUsers;
 use addons\webman\model\AdminUser;
+use addons\webman\model\AdminUserLimitGroup;
 use addons\webman\model\Channel;
+use addons\webman\model\GamePlatform;
+use addons\webman\model\PlatformLimitGroup;
+use addons\webman\model\PlatformLimitGroupConfig;
 use addons\webman\model\StoreSetting;
+use Carbon\Carbon;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
@@ -194,9 +200,17 @@ class StoreMachineController
                     ->placeholder([admin_trans('store_machine.placeholder.start_time'), admin_trans('store_machine.placeholder.end_time')]);
             });
 
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                // 添加限红组配置按钮
+                $actions->append(
+                    Button::create('限红组')
+                        ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
+                        ->type('primary')
+                        ->size('small')
+                );
             });
             $grid->hideSelection();
             $grid->hideDelete();
@@ -465,5 +479,209 @@ class StoreMachineController
             });
 
         return Response::success($agents);
+    }
+
+    /**
+     * 限红组配置表单
+     * @auth true
+     * @group channel
+     */
+    public function limitGroupForm()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Form::create([], function (Form $form) {
+                $form->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        // 查询该店家现有的限红组配置
+        $existingConfig = AdminUserLimitGroup::query()
+            ->where('admin_user_id', $storeId)
+            ->whereNull('deleted_at')
+            ->first();
+
+        return Form::create([], function (Form $form) use ($storeId, $existingConfig) {
+            $form->title('限红组配置');
+
+            // 显式设置提交URL
+            $form->url(admin_url([
+                'addons-webman-controller-StoreMachineController',
+                'saveLimitGroupConfig'
+            ]));
+
+            $form->hidden('store_id')->value($storeId);
+
+            // 获取ATG和RSG平台
+            $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
+            $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+
+            // 游戏平台选择
+            $platformOptions = [];
+            if ($atgPlatform) {
+                $platformOptions[$atgPlatform->id] = "{$atgPlatform->name} ({$atgPlatform->code})";
+            }
+            if ($rsgPlatform) {
+                $platformOptions[$rsgPlatform->id] = "{$rsgPlatform->name} ({$rsgPlatform->code})";
+            }
+
+            if (empty($platformOptions)) {
+                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/RSG）</div>');
+            } else {
+                $platformSelect = $form->select('platform_id', '游戏平台')
+                    ->options($platformOptions)
+                    ->value($existingConfig ? $existingConfig->platform_id : null)
+                    ->required()
+                    ->help('选择要配置的游戏平台');
+
+                // ATG平台限红组选项
+                if ($atgPlatform) {
+                    $platformSelect->when($atgPlatform->id, function (Form $form) use ($atgPlatform, $existingConfig) {
+                        $form->select('limit_group_id', '限红组')
+                            ->options($this->getLimitGroupOptionsForPlatform($atgPlatform->id))
+                            ->value($existingConfig && $existingConfig->platform_id == $atgPlatform->id ? $existingConfig->limit_group_id : null)
+                            ->required()
+                            ->help('选择ATG平台的限红组');
+                    });
+                }
+
+                // RSG平台限红组选项
+                if ($rsgPlatform) {
+                    $platformSelect->when($rsgPlatform->id, function (Form $form) use ($rsgPlatform, $existingConfig) {
+                        $form->select('limit_group_id', '限红组')
+                            ->options($this->getLimitGroupOptionsForPlatform($rsgPlatform->id))
+                            ->value($existingConfig && $existingConfig->platform_id == $rsgPlatform->id ? $existingConfig->limit_group_id : null)
+                            ->required()
+                            ->help('选择RSG平台的限红组');
+                    });
+                }
+            }
+
+            $form->textarea('remark', '备注')
+                ->rows(3)
+                ->value($existingConfig ? $existingConfig->remark : '')
+                ->help('可选，备注说明');
+        });
+    }
+
+    /**
+     * 保存限红组配置
+     * @auth true
+     * @group channel
+     */
+    public function saveLimitGroupConfig()
+    {
+        // 从请求中获取数据
+        $request = request();
+        $postData = $request->post();
+        $data = $postData['data'] ?? $postData;
+
+        $storeId = $data['store_id'] ?? null;
+        $platformId = $data['platform_id'] ?? null;
+        $limitGroupId = $data['limit_group_id'] ?? null;
+        $remark = $data['remark'] ?? '';
+
+        if (!$storeId) {
+            return message_error('店家ID不能为空');
+        }
+        if (!$platformId) {
+            return message_error('请选择游戏平台');
+        }
+        if (!$limitGroupId) {
+            return message_error('请选择限红组');
+        }
+
+        // 验证平台
+        $platform = GamePlatform::find($platformId);
+        if (!$platform) {
+            return message_error('游戏平台不存在');
+        }
+
+        // 验证限红组
+        $limitGroup = PlatformLimitGroup::find($limitGroupId);
+        if (!$limitGroup) {
+            return message_error('限红组不存在');
+        }
+
+        // 验证限红组是否配置了该平台
+        $limitGroupConfig = PlatformLimitGroupConfig::query()
+            ->where('limit_group_id', $limitGroupId)
+            ->where('platform_id', $platformId)
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->first();
+
+        if (!$limitGroupConfig) {
+            return message_error('该限红组未配置此平台');
+        }
+
+        DB::beginTransaction();
+        try {
+            // 查找或创建配置
+            $config = AdminUserLimitGroup::query()
+                ->where('admin_user_id', $storeId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if ($config) {
+                // 更新现有配置
+                $config->limit_group_id = $limitGroupId;
+                $config->platform_id = $platformId;
+                $config->platform_code = $platform->code;
+                $config->assigned_by = Admin::user()->id;
+                $config->assigned_at = Carbon::now();
+                $config->remark = $remark;
+                $config->status = 1;
+                $config->save();
+            } else {
+                // 创建新配置
+                $config = new AdminUserLimitGroup();
+                $config->admin_user_id = $storeId;
+                $config->limit_group_id = $limitGroupId;
+                $config->platform_id = $platformId;
+                $config->platform_code = $platform->code;
+                $config->assigned_by = Admin::user()->id;
+                $config->assigned_at = Carbon::now();
+                $config->remark = $remark;
+                $config->status = 1;
+                $config->save();
+            }
+
+            DB::commit();
+            return message_success('限红组配置成功');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return message_error('配置失败：' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 获取指定平台的限红组选项
+     * @param int $platformId 游戏平台ID
+     * @return array
+     */
+    private function getLimitGroupOptionsForPlatform($platformId): array
+    {
+        $data = [];
+
+        // 只返回该平台已配置的限红组
+        $list = PlatformLimitGroup::query()
+            ->where('status', 1)
+            ->whereHas('configs', function ($query) use ($platformId) {
+                $query->where('platform_id', $platformId)
+                    ->where('status', 1)
+                    ->whereNull('deleted_at');
+            })
+            ->orderBy('sort', 'asc')
+            ->get();
+
+        foreach ($list as $item) {
+            $data[$item->id] = "{$item->name} ({$item->code})";
+        }
+
+        return $data;
     }
 }
