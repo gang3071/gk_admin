@@ -196,9 +196,9 @@ class AgentStoreProfitReportController
             $grid->bordered(true);
 
             // 统计卡片
-            $layout = Layout::create();
+            $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
             $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 0]);
+                $row->gutter([10, 10]);
 
                 // 第一行：累计开分、累计洗分、投钞
                 $row->column(
@@ -260,7 +260,7 @@ class AgentStoreProfitReportController
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
-            })->style(['background' => '#fff']);
+            });
 
             $layout->row(function (Row $row) use ($totalStats) {
                 $row->gutter([10, 0]);
@@ -284,6 +284,7 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
@@ -304,6 +305,7 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
@@ -324,6 +326,7 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
@@ -344,10 +347,11 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
-            })->style(['background' => '#fff', 'margin-top' => '10px']);
+            });
 
-            $grid->tools($layout);
+            $grid->tools([$layout]);
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
