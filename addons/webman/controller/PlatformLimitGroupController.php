@@ -4,10 +4,13 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlatformLimitGroup;
+use addons\webman\model\PlatformLimitGroupConfig;
+use addons\webman\model\GamePlatform;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use support\Request;
 
 /**
  * 限红组管理（总后台）
@@ -29,14 +32,75 @@ class PlatformLimitGroupController
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
             $grid->title('限红组管理');
-            $grid->model()->orderBy('sort', 'asc')->orderBy('id', 'desc');
+
+            $exAdminFilter = request()->input('ex_admin_filter', []);
+
+            // 游戏平台筛选
+            if (!empty($exAdminFilter['platform_id'])) {
+                $grid->model()->whereHas('configs', function ($query) use ($exAdminFilter) {
+                    $query->where('platform_id', $exAdminFilter['platform_id'])
+                          ->where('status', 1)
+                          ->whereNull('deleted_at');
+                });
+            }
+
+            $grid->model()->with(['configs.gamePlatform'])->orderBy('sort', 'asc')->orderBy('id', 'desc');
             $grid->bordered(true);
             $grid->autoHeight();
 
             $grid->column('id', 'ID')->align('center')->width(80);
             $grid->column('code', '限红组编码')->align('center');
             $grid->column('name', '限红组名称')->align('center');
-            $grid->column('description', '描述')->align('center');
+
+            // 显示平台名称
+            $grid->column('platform_name', '游戏平台')->display(function ($value, $data) {
+                if (empty($data['configs'])) {
+                    return '-';
+                }
+
+                $platforms = [];
+                foreach ($data['configs'] as $config) {
+                    if ($config['status'] != 1) continue;
+
+                    // 优先使用关联的平台名称
+                    if (isset($config['game_platform']['name'])) {
+                        $platforms[] = $config['game_platform']['name'];
+                    } elseif (isset($config['platform_code'])) {
+                        $platforms[] = $config['platform_code'];
+                    }
+                }
+
+                return $platforms ? implode(', ', $platforms) : '-';
+            })->align('center');
+
+            // 显示平台配置信息
+            $grid->column('platform_config', '配置详情')->display(function ($value, $data) {
+                if (empty($data['configs'])) {
+                    return '未配置';
+                }
+
+                $configInfo = [];
+                foreach ($data['configs'] as $config) {
+                    if ($config['status'] != 1) continue;
+
+                    $configData = $config['config_data'] ?? [];
+
+                    // ATG平台显示营运账号
+                    if ($config['platform_code'] === 'ATG' && isset($configData['operator'])) {
+                        $configInfo[] = "营运账号: {$configData['operator']}";
+                    }
+                    // RSG平台显示限红范围
+                    elseif ($config['platform_code'] === 'RSG') {
+                        if (isset($configData['min_bet_amount']) && isset($configData['max_bet_amount'])) {
+                            $min = $configData['min_bet_amount'];
+                            $max = $configData['max_bet_amount'];
+                            $configInfo[] = "限红: {$min} - {$max}";
+                        }
+                    }
+                }
+
+                return $configInfo ? implode("\n", $configInfo) : '未配置';
+            })->align('center')->escape(false);
 
             $grid->column('status', '状态')->display(function ($value) {
                 return $value == 1
@@ -46,20 +110,58 @@ class PlatformLimitGroupController
 
             $grid->sortInput('sort');
 
-            $grid->column('created_at', '创建时间')->align('center');
+            $grid->column('created_at', '创建时间')->display(function ($value) {
+                if (empty($value)) {
+                    return '-';
+                }
+                // 格式化为 Y-m-d H:i:s 格式
+                return date('Y-m-d H:i:s', strtotime($value));
+            })->align('center');
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('code')->placeholder('限红组编码');
-                $filter->like()->text('name')->placeholder('限红组名称');
-                $filter->eq()->select('status')->placeholder('状态')->options([
-                    1 => '启用',
-                    0 => '禁用'
-                ]);
+                $filter->like()->text('code', '限红组编码')
+                    ->style(['width' => '200px']);
+                $filter->like()->text('name', '限红组名称')
+                    ->style(['width' => '200px']);
+
+                // 游戏平台筛选
+                $filter->eq()->select('platform_id', '游戏平台')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($this->getGamePlatformOptions());
+
+                $filter->eq()->select('status', '状态')
+                    ->style(['width' => '200px'])
+                    ->options([
+                        1 => '启用',
+                        0 => '禁用'
+                    ]);
             });
             $grid->expandFilter();
 
             $grid->setForm()->drawer($this->form());
         });
+    }
+
+    /**
+     * 获取游戏平台选项（用于筛选）
+     */
+    private function getGamePlatformOptions(): array
+    {
+        $platforms = GamePlatform::query()
+            ->where('status', 1)
+            ->whereIn('code', ['ATG', 'RSG'])
+            ->orderBy('sort', 'desc')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $options = [];
+        foreach ($platforms as $platform) {
+            $options[$platform->id] = "{$platform->name} ({$platform->code})";
+        }
+
+        return $options;
     }
 
     /**
@@ -82,10 +184,6 @@ class PlatformLimitGroupController
                 ->required()
                 ->help('如：高额组、中额组、低额组');
 
-            $form->textarea('description', '描述')
-                ->maxlength(500)
-                ->rows(3)
-                ->help('描述该限红组的适用场景');
 
             $form->radio('status', '状态')
                 ->options([
@@ -99,12 +197,237 @@ class PlatformLimitGroupController
                 ->default(0)
                 ->help('数值越小越靠前');
 
+            // 平台配置部分
+            $form->divider('平台配置');
+
+            // 获取ATG和RSG平台
+            $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
+            $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+
+            // 编辑时获取现有配置
+            $existingConfig = null;
+            $existingConfigData = [];
+            if ($form->isEdit()) {
+                $limitGroupId = $form->driver()->get('id');
+                $existingConfig = PlatformLimitGroupConfig::query()
+                    ->where('limit_group_id', $limitGroupId)
+                    ->whereNull('deleted_at')
+                    ->first();
+                if ($existingConfig) {
+                    $existingConfigData = $existingConfig->config_data ?? [];
+                }
+            }
+
+            // 游戏平台选择
+            $platformOptions = [];
+            if ($atgPlatform) {
+                $platformOptions[$atgPlatform->id] = "{$atgPlatform->name} ({$atgPlatform->code})";
+            }
+            if ($rsgPlatform) {
+                $platformOptions[$rsgPlatform->id] = "{$rsgPlatform->name} ({$rsgPlatform->code})";
+            }
+
+            if (empty($platformOptions)) {
+                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/RSG）</div>');
+            } else {
+                // 平台选择（新建必填，编辑显示）
+                if ($form->isEdit() && $existingConfig) {
+                    $form->display('_platform_display', '游戏平台')
+                        ->value($platformOptions[$existingConfig->platform_id] ?? '');
+                    $form->hidden('platform_id')->value($existingConfig->platform_id);
+
+                    // 编辑模式直接显示对应平台的配置字段
+                    if ($existingConfig->platform_code === 'ATG' && $atgPlatform) {
+                        $form->divider('ATG 平台配置');
+                        $form->text('atg_operator', 'X-Operator')
+                            ->value($existingConfigData['operator'] ?? '')
+                            ->required()
+                            ->help('ATG平台营运账号的Operator值')
+                            ->placeholder('请输入Operator');
+
+                        $form->password('atg_operator_key', 'X-Key')
+                            ->value($existingConfigData['operator_key'] ?? '')
+                            ->required()
+                            ->help('ATG平台营运账号的Key值')
+                            ->placeholder('请输入Key');
+
+                        $form->text('atg_provider_id', 'Provider ID')
+                            ->value($existingConfigData['provider_id'] ?? '4')
+                            ->default('4')
+                            ->help('ATG提供商ID，默认为4');
+
+                        $form->text('atg_api_domain', 'API域名')
+                            ->value($existingConfigData['api_domain'] ?? '')
+                            ->help('可选，留空使用默认配置');
+
+                        $form->textarea('atg_limit_description', '限红说明')
+                            ->rows(3)
+                            ->value($existingConfigData['limit_description'] ?? '')
+                            ->help('描述该营运账号的限红设置');
+                    } elseif ($existingConfig->platform_code === 'RSG' && $rsgPlatform) {
+                        $form->divider('RSG 平台配置');
+                        $form->number('rsg_min_bet_amount', '最小下注金额')
+                            ->precision(2)
+                            ->min(0)
+                            ->value($existingConfigData['min_bet_amount'] ?? '')
+                            ->required()
+                            ->help('RSG平台最小下注金额');
+
+                        $form->number('rsg_max_bet_amount', '最大下注金额')
+                            ->precision(2)
+                            ->min(0)
+                            ->value($existingConfigData['max_bet_amount'] ?? '')
+                            ->required()
+                            ->help('RSG平台最大下注金额');
+                    }
+                } else {
+                    // 新建模式使用 when 方法
+                    $platformSelect = $form->select('platform_id', '游戏平台')
+                        ->options($platformOptions)
+                        ->required()
+                        ->help('选择要配置的游戏平台');
+
+                    // ATG平台配置（使用when实现条件显示）
+                    if ($atgPlatform) {
+                        $platformSelect->when($atgPlatform->id, function (Form $form) {
+                            $form->divider('ATG 平台配置');
+
+                            $form->text('atg_operator', 'X-Operator')
+                                ->required()
+                                ->help('ATG平台营运账号的Operator值')
+                                ->placeholder('请输入Operator');
+
+                            $form->password('atg_operator_key', 'X-Key')
+                                ->required()
+                                ->help('ATG平台营运账号的Key值')
+                                ->placeholder('请输入Key');
+
+                            $form->text('atg_provider_id', 'Provider ID')
+                                ->default('4')
+                                ->help('ATG提供商ID，默认为4');
+
+                            $form->text('atg_api_domain', 'API域名')
+                                ->help('可选，留空使用默认配置')
+                                ->placeholder('https://api.atg.com');
+
+                            $form->textarea('atg_limit_description', '限红说明')
+                                ->rows(3)
+                                ->help('描述该营运账号的限红设置')
+                                ->placeholder('例如：单注：100-10000，单日限额：100000');
+                        });
+                    }
+
+                    // RSG平台配置（使用when实现条件显示）
+                    if ($rsgPlatform) {
+                        $platformSelect->when($rsgPlatform->id, function (Form $form) {
+                            $form->divider('RSG 平台配置');
+
+                            $form->number('rsg_min_bet_amount', '最小下注金额')
+                                ->required()
+                                ->precision(2)
+                                ->min(0)
+                                ->help('RSG平台最小下注金额')
+                                ->placeholder('例如：1.00');
+
+                            $form->number('rsg_max_bet_amount', '最大下注金额')
+                                ->required()
+                                ->precision(2)
+                                ->min(0)
+                                ->help('RSG平台最大下注金额')
+                                ->placeholder('例如：10000.00');
+                        });
+                    }
+                }
+            }
+
             // 自动设置部门ID
             if (!$form->isEdit()) {
                 $form->saving(function (Form $form) {
                     $form->input('department_id', Admin::user()->department_id);
                 });
             }
+
+            // 保存后处理平台配置
+            $form->saved(function (Form $form) {
+                // 直接从全局 request 获取数据
+                $request = request();
+                $postData = $request->post();
+
+                // 数据在 data 字段里
+                $data = $postData['data'] ?? [];
+
+                // 如果是编辑，从请求中获取ID；如果是新建，通过code查询刚保存的记录
+                $limitGroupId = $postData['id'] ?? null;
+
+                if (!$limitGroupId && isset($data['code'])) {
+                    // 新建时，通过code查询刚保存的记录
+                    $limitGroup = PlatformLimitGroup::query()
+                        ->where('code', $data['code'])
+                        ->where('department_id', Admin::user()->department_id)
+                        ->orderBy('id', 'desc')
+                        ->first();
+
+                    if ($limitGroup) {
+                        $limitGroupId = $limitGroup->id;
+                    }
+                }
+
+                if (!$limitGroupId) {
+                    return;
+                }
+
+                // 获取平台ID（可能在data中，也可能直接在postData中）
+                $platformId = $data['platform_id'] ?? $postData['platform_id'] ?? null;
+                if (!$platformId) {
+                    return;
+                }
+
+                $platform = GamePlatform::query()->where('id', $platformId)->first();
+                if (!$platform) {
+                    return;
+                }
+
+                // 根据平台类型组织config_data
+                $configData = [];
+                if ($platform->code === 'ATG') {
+                    $configData = [
+                        'operator' => $data['atg_operator'] ?? '',
+                        'operator_key' => $data['atg_operator_key'] ?? '',
+                        'provider_id' => $data['atg_provider_id'] ?? '4',
+                        'api_domain' => $data['atg_api_domain'] ?? '',
+                        'limit_description' => $data['atg_limit_description'] ?? '',
+                    ];
+                } elseif ($platform->code === 'RSG') {
+                    $configData = [
+                        'min_bet_amount' => isset($data['rsg_min_bet_amount']) ? floatval($data['rsg_min_bet_amount']) : 0,
+                        'max_bet_amount' => isset($data['rsg_max_bet_amount']) ? floatval($data['rsg_max_bet_amount']) : 0,
+                    ];
+                }
+
+                // 查找或创建配置
+                $config = PlatformLimitGroupConfig::query()
+                    ->where('limit_group_id', $limitGroupId)
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if ($config) {
+                    // 更新现有配置
+                    $config->platform_id = $platformId;
+                    $config->platform_code = $platform->code;
+                    $config->config_data = $configData;
+                    $config->status = 1;
+                    $config->save();
+                } else {
+                    // 创建新配置
+                    $config = new PlatformLimitGroupConfig();
+                    $config->limit_group_id = $limitGroupId;
+                    $config->platform_id = $platformId;
+                    $config->platform_code = $platform->code;
+                    $config->config_data = $configData;
+                    $config->status = 1;
+                    $config->save();
+                }
+            });
         });
     }
 }

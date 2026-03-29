@@ -72,7 +72,7 @@ class GamePlatformController
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
             $grid->title(admin_trans('game_platform.title'));
-            $grid->model()->orderBy('sort', 'desc')->orderBy('id', 'desc');
+            $grid->model()->with(['defaultLimitGroup'])->orderBy('sort', 'desc')->orderBy('id', 'desc');
             $grid->bordered(true);
             $grid->autoHeight();
             $grid->column('id', admin_trans('game_platform.fields.id'))->align('center');
@@ -103,6 +103,21 @@ class GamePlatformController
                 }
                 return $html;
             })->align('center');
+
+            // 默认限红组列
+            $grid->column('default_limit_group', '默认限红组')->display(function ($value, GamePlatform $data) {
+                // 只有ATG和RSG平台显示默认限红组
+                if (!in_array($data->code, ['ATG', 'RSG'])) {
+                    return '-';
+                }
+
+                if ($data->defaultLimitGroup) {
+                    return $data->defaultLimitGroup->name . ' (' . $data->defaultLimitGroup->code . ')';
+                }
+
+                return '未设置';
+            })->align('center');
+
             $grid->sortInput('sort');
             $grid->column('status', admin_trans('game_platform.fields.status'))->switch()->align('center');
             $grid->expandFilter();
@@ -187,10 +202,11 @@ class GamePlatformController
 
             // 默认限红组（只在ATG/RSG平台显示）
             if ($form->isEdit()) {
+                $platformId = $form->driver()->get('id');
                 $platformCode = $form->driver()->get('code');
                 if (in_array($platformCode, ['ATG', 'RSG'])) {
                     $form->select('default_limit_group_id', '默认限红组')
-                        ->options($this->getLimitGroupOptionsForPlatform())
+                        ->options($this->getLimitGroupOptionsForPlatform($platformId))
                         ->help('为该平台设置默认限红组，当店家未配置限红时使用');
                 }
             }
@@ -481,15 +497,29 @@ class GamePlatformController
 
     /**
      * 获取限红组选项（用于游戏平台表单）
+     * 只返回该平台已配置的限红组
+     * @param int|null $platformId 游戏平台ID
      * @return array
      */
-    private function getLimitGroupOptionsForPlatform(): array
+    private function getLimitGroupOptionsForPlatform($platformId = null): array
     {
         $data = [];
         $limitGroupModel = 'addons\webman\model\PlatformLimitGroup';
-        if (class_exists($limitGroupModel)) {
+        $configModel = 'addons\webman\model\PlatformLimitGroupConfig';
+
+        if (!class_exists($limitGroupModel) || !class_exists($configModel)) {
+            return $data;
+        }
+
+        // 只返回该平台已配置的限红组
+        if ($platformId) {
             $list = $limitGroupModel::query()
                 ->where('status', 1)
+                ->whereHas('configs', function ($query) use ($platformId) {
+                    $query->where('platform_id', $platformId)
+                          ->where('status', 1)
+                          ->whereNull('deleted_at');
+                })
                 ->orderBy('sort', 'asc')
                 ->get();
 

@@ -57,4 +57,12 @@ class GamePlatform extends Model
         parent::__construct($attributes);
         $this->setTable(plugin()->webman->config('database.game_platform_table'));
     }
+
+    /**
+     * 默认限红组关联
+     */
+    public function defaultLimitGroup()
+    {
+        return $this->belongsTo(PlatformLimitGroup::class, 'default_limit_group_id', 'id');
+    }
 }
