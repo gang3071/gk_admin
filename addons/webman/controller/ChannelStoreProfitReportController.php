@@ -375,8 +375,7 @@ class ChannelStoreProfitReportController
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
             })->style(['background' => '#fff', 'margin-top' => '10px']);
-
-            $grid->tools($layout);
+            $grid->header($layout);
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
