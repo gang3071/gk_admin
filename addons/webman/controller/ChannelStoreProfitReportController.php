@@ -227,7 +227,7 @@ class ChannelStoreProfitReportController
             // 统计卡片
             $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
             $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 0]);
+                $row->gutter([10, 10]);
 
                 // 第一行：累计开分、累计洗分、投钞
                 $row->column(
@@ -293,7 +293,6 @@ class ChannelStoreProfitReportController
 
             $layout->row(function (Row $row) use ($totalStats) {
                 $row->gutter([10, 10]);
-                $row->style(['margin-top' => '10px']);
 
                 // 第二行：彩金、小计、代理分润、渠道分润
                 $row->column(
