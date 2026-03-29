@@ -130,12 +130,12 @@ class StoreMachineController
 
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 // 店家下拉筛选
-                $filter->eq()->select('id')
+                $filter->eq()->select('admin_users.id')
                     ->placeholder(admin_trans('store_machine.filter.select_store'))
                     ->options(['' => admin_trans('store_machine.all')] + $storeOptions)
                     ->style(['width' => '250px']);
 
-                $filter->eq()->select('status')
+                $filter->eq()->select('admin_users.status')
                     ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
                         1 => admin_trans('store_machine.status.normal'),
@@ -143,11 +143,12 @@ class StoreMachineController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('username')->placeholder(admin_trans('store_machine.placeholder.username'));
-                $filter->like()->text('nickname')->placeholder(admin_trans('store_machine.placeholder.name'));
+                $filter->like()->text('admin_users.username')->placeholder(admin_trans('store_machine.placeholder.username'));
+                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('store_machine.placeholder.name'));
+                $filter->like()->text('dept.phone')->placeholder(admin_trans('store_machine.placeholder.phone'));
 
                 // 代理筛选
-                $filter->eq()->select('parent_admin_id')
+                $filter->eq()->select('admin_users.parent_admin_id')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
