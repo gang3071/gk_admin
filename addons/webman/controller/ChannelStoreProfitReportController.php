@@ -292,7 +292,7 @@ class ChannelStoreProfitReportController
             });
 
             $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 10]);
+                $row->gutter([10, 0]);
 
                 // 第二行：彩金、小计、代理分润、渠道分润
                 $row->column(
@@ -313,6 +313,7 @@ class ChannelStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
@@ -333,6 +334,7 @@ class ChannelStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
@@ -353,6 +355,7 @@ class ChannelStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
@@ -373,6 +376,7 @@ class ChannelStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    ->style(['margin-top' => '10px'])
                     , 6);
             });
             $grid->tools([$layout]);
