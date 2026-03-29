@@ -291,11 +291,7 @@ class StoreMachineController
                                 Html::create()->content([
                                     Html::create('分配时间')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
                                     Html::create($assignedAt)
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
-                                !empty($limitConfig->remark) ? Html::create()->content([
-                                    Html::create('备注')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                                    Html::create($limitConfig->remark)
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']) : null
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ])
                         ])
                     ]);
@@ -630,12 +626,7 @@ class StoreMachineController
                     $form->select('atg_limit_group_id', "限红组 ({$atgPlatform->name})")
                         ->options($atgOptions)
                         ->value($atgConfig ? $atgConfig->limit_group_id : null)
-                        ->help('选择ATG平台的限红组，选择"不配置限红组"将清除该平台的限红配置');
-
-                    $form->textarea('atg_remark', 'ATG备注')
-                        ->rows(2)
-                        ->value($atgConfig ? $atgConfig->remark : '')
-                        ->help('可选，ATG平台限红组配置备注');
+                        ->help('选择ATG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
                 }
 
                 // RSG平台配置
@@ -648,12 +639,7 @@ class StoreMachineController
                     $form->select('rsg_limit_group_id', "限红组 ({$rsgPlatform->name})")
                         ->options($rsgOptions)
                         ->value($rsgConfig ? $rsgConfig->limit_group_id : null)
-                        ->help('选择RSG平台的限红组，选择"不配置限红组"将清除该平台的限红配置');
-
-                    $form->textarea('rsg_remark', 'RSG备注')
-                        ->rows(2)
-                        ->value($rsgConfig ? $rsgConfig->remark : '')
-                        ->help('可选，RSG平台限红组配置备注');
+                        ->help('选择RSG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
                 }
             }
         });
@@ -692,8 +678,7 @@ class StoreMachineController
                     $storeId,
                     $atgPlatform->id,
                     $atgPlatform->code,
-                    $data['atg_limit_group_id'] ?? null,
-                    $data['atg_remark'] ?? ''
+                    $data['atg_limit_group_id'] ?? null
                 );
 
                 if ($result['success']) {
@@ -709,8 +694,7 @@ class StoreMachineController
                     $storeId,
                     $rsgPlatform->id,
                     $rsgPlatform->code,
-                    $data['rsg_limit_group_id'] ?? null,
-                    $data['rsg_remark'] ?? ''
+                    $data['rsg_limit_group_id'] ?? null
                 );
 
                 if ($result['success']) {
@@ -741,7 +725,7 @@ class StoreMachineController
     /**
      * 保存单个平台的限红组配置
      */
-    private function savePlatformLimitGroup($storeId, $platformId, $platformCode, $limitGroupId, $remark)
+    private function savePlatformLimitGroup($storeId, $platformId, $platformCode, $limitGroupId)
     {
         // 查找该店机在该平台的现有配置
         $config = AdminUserLimitGroup::query()
@@ -784,7 +768,6 @@ class StoreMachineController
             $config->limit_group_id = $limitGroupId;
             $config->assigned_by = Admin::user()->id;
             $config->assigned_at = Carbon::now();
-            $config->remark = $remark;
             $config->status = 1;
             $config->save();
         } else {
@@ -796,7 +779,6 @@ class StoreMachineController
             $config->platform_code = $platformCode;
             $config->assigned_by = Admin::user()->id;
             $config->assigned_at = Carbon::now();
-            $config->remark = $remark;
             $config->status = 1;
             $config->save();
         }
