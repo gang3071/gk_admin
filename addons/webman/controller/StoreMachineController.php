@@ -77,25 +77,19 @@ class StoreMachineController
 
             // 手动处理筛选条件（避免字段歧义）
             $filterData = \ExAdmin\ui\support\Request::input('ex_admin_filter', []);
-            if (is_array($filterData)) {
-                foreach ($filterData as $filter) {
-                    if (!is_array($filter) || !isset($filter['field'])) {
-                        continue;
-                    }
 
-                    // 店家 ID 筛选
-                    if ($filter['field'] === 'store_id_custom' && !empty($filter['value'])) {
-                        $grid->model()->where('admin_users.id', $filter['value']);
-                    }
-                    // 创建时间筛选
-                    if ($filter['field'] === 'created_at_custom' && !empty($filter['value']) && is_array($filter['value'])) {
-                        if (!empty($filter['value'][0])) {
-                            $grid->model()->where('admin_users.created_at', '>=', $filter['value'][0]);
-                        }
-                        if (!empty($filter['value'][1])) {
-                            $grid->model()->where('admin_users.created_at', '<=', $filter['value'][1]);
-                        }
-                    }
+            // 店家 ID 筛选
+            if (!empty($filterData['store_id_custom'])) {
+                $grid->model()->where('admin_users.id', $filterData['store_id_custom']);
+            }
+
+            // 创建时间筛选
+            if (!empty($filterData['created_at_custom']) && is_array($filterData['created_at_custom'])) {
+                if (!empty($filterData['created_at_custom'][0])) {
+                    $grid->model()->where('admin_users.created_at', '>=', $filterData['created_at_custom'][0]);
+                }
+                if (!empty($filterData['created_at_custom'][1])) {
+                    $grid->model()->where('admin_users.created_at', '<=', $filterData['created_at_custom'][1]);
                 }
             }
 
