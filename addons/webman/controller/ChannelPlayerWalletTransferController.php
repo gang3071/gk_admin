@@ -128,7 +128,7 @@ class ChannelPlayerWalletTransferController
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6);
             })->style(['background' => '#fff']);
-            $grid->tools($layout);
+            $grid->tools([$layout]);
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->hideAction();
