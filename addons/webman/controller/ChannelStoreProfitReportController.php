@@ -293,6 +293,7 @@ class ChannelStoreProfitReportController
 
             $layout->row(function (Row $row) use ($totalStats) {
                 $row->gutter([10, 10]);
+                $row->style(['margin-top' => '10px']);
 
                 // 第二行：彩金、小计、代理分润、渠道分润
                 $row->column(
