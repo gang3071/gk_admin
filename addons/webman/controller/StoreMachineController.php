@@ -83,6 +83,31 @@ class StoreMachineController
                 $grid->model()->where('admin_users.id', $filterData['store_id_custom']);
             }
 
+            // 状态筛选
+            if (isset($filterData['status_custom']) && $filterData['status_custom'] !== null && $filterData['status_custom'] !== '') {
+                $grid->model()->where('admin_users.status', $filterData['status_custom']);
+            }
+
+            // 用户名筛选
+            if (!empty($filterData['username_custom'])) {
+                $grid->model()->where('admin_users.username', 'like', '%' . $filterData['username_custom'] . '%');
+            }
+
+            // 昵称筛选
+            if (!empty($filterData['nickname_custom'])) {
+                $grid->model()->where('admin_users.nickname', 'like', '%' . $filterData['nickname_custom'] . '%');
+            }
+
+            // 电话筛选
+            if (!empty($filterData['department_phone_custom'])) {
+                $grid->model()->where('dept.phone', 'like', '%' . $filterData['department_phone_custom'] . '%');
+            }
+
+            // 代理筛选
+            if (!empty($filterData['parent_admin_id_custom'])) {
+                $grid->model()->where('admin_users.parent_admin_id', $filterData['parent_admin_id_custom']);
+            }
+
             // 创建时间筛选
             if (!empty($filterData['created_at_custom']) && is_array($filterData['created_at_custom'])) {
                 if (!empty($filterData['created_at_custom'][0])) {
@@ -142,7 +167,7 @@ class StoreMachineController
                     ->options(['' => admin_trans('store_machine.all')] + $storeOptions)
                     ->style(['width' => '250px']);
 
-                $filter->eq()->select('status')
+                $filter->eq()->select('status_custom')
                     ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
                         1 => admin_trans('store_machine.status.normal'),
@@ -150,12 +175,12 @@ class StoreMachineController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('username')->placeholder(admin_trans('store_machine.placeholder.username'));
-                $filter->like()->text('nickname')->placeholder(admin_trans('store_machine.placeholder.name'));
-                $filter->like()->text('department_phone')->placeholder(admin_trans('store_machine.placeholder.phone'));
+                $filter->like()->text('username_custom')->placeholder(admin_trans('store_machine.placeholder.username'));
+                $filter->like()->text('nickname_custom')->placeholder(admin_trans('store_machine.placeholder.name'));
+                $filter->like()->text('department_phone_custom')->placeholder(admin_trans('store_machine.placeholder.phone'));
 
                 // 代理筛选
-                $filter->eq()->select('parent_admin_id')
+                $filter->eq()->select('parent_admin_id_custom')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()

@@ -70,6 +70,44 @@ class AgentController
                 ])
                 ->orderBy('admin_users.id', 'desc');
 
+            // 手动处理筛选条件（避免字段歧义）
+            $filterData = \ExAdmin\ui\support\Request::input('ex_admin_filter', []);
+
+            // 代理 ID 筛选
+            if (!empty($filterData['agent_id_custom'])) {
+                $grid->model()->where('admin_users.id', $filterData['agent_id_custom']);
+            }
+
+            // 状态筛选
+            if (isset($filterData['status_custom']) && $filterData['status_custom'] !== null && $filterData['status_custom'] !== '') {
+                $grid->model()->where('admin_users.status', $filterData['status_custom']);
+            }
+
+            // 用户名筛选
+            if (!empty($filterData['username_custom'])) {
+                $grid->model()->where('admin_users.username', 'like', '%' . $filterData['username_custom'] . '%');
+            }
+
+            // 昵称筛选
+            if (!empty($filterData['nickname_custom'])) {
+                $grid->model()->where('admin_users.nickname', 'like', '%' . $filterData['nickname_custom'] . '%');
+            }
+
+            // 电话筛选
+            if (!empty($filterData['phone_custom'])) {
+                $grid->model()->where('admin_department.phone', 'like', '%' . $filterData['phone_custom'] . '%');
+            }
+
+            // 创建时间筛选
+            if (!empty($filterData['created_at_custom']) && is_array($filterData['created_at_custom'])) {
+                if (!empty($filterData['created_at_custom'][0])) {
+                    $grid->model()->where('admin_users.created_at', '>=', $filterData['created_at_custom'][0]);
+                }
+                if (!empty($filterData['created_at_custom'][1])) {
+                    $grid->model()->where('admin_users.created_at', '<=', $filterData['created_at_custom'][1]);
+                }
+            }
+
             $grid->column('id', 'ID')->width(80)->align('center');
 
             $grid->column('nickname', admin_trans('agent.fields.name'))->display(function ($val, $data) {
@@ -103,13 +141,13 @@ class AgentController
             $grid->column('created_at', admin_trans('agent.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) use ($agentOptions) {
-                // 代理下拉筛选
-                $filter->eq()->select('admin_users.id')
+                // 代理下拉筛选（使用自定义字段名，手动处理）
+                $filter->eq()->select('agent_id_custom')
                     ->placeholder(admin_trans('channel_agent.filter.select_agent'))
                     ->options(['' => admin_trans('channel_agent.all')] + $agentOptions)
                     ->style(['width' => '250px']);
 
-                $filter->eq()->select('admin_users.status')
+                $filter->eq()->select('status_custom')
                     ->placeholder(admin_trans('agent.placeholder.status'))
                     ->options([
                         1 => admin_trans('agent.status.normal'),
@@ -117,11 +155,11 @@ class AgentController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->like()->text('admin_users.username')->placeholder(admin_trans('agent.placeholder.username'));
-                $filter->like()->text('admin_users.nickname')->placeholder(admin_trans('agent.placeholder.name'));
-                $filter->like()->text('admin_department.phone')->placeholder(admin_trans('agent.placeholder.phone'));
+                $filter->like()->text('username_custom')->placeholder(admin_trans('agent.placeholder.username'));
+                $filter->like()->text('nickname_custom')->placeholder(admin_trans('agent.placeholder.name'));
+                $filter->like()->text('phone_custom')->placeholder(admin_trans('agent.placeholder.phone'));
 
-                $filter->between()->dateTimeRange('admin_users.created_at', admin_trans('agent.placeholder.created_at'))
+                $filter->between()->dateTimeRange('created_at_custom', admin_trans('agent.placeholder.created_at'))
                     ->placeholder([admin_trans('agent.placeholder.start_time'), admin_trans('agent.placeholder.end_time')]);
             });
 
