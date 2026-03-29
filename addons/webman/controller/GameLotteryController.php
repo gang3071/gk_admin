@@ -128,9 +128,9 @@ class GameLotteryController
                     $dailyChecks = (int)$redis->get('game_lottery_stats:daily:total:' . $data->id . ':' . $today) ?: 0;
                     $dailyWins = (int)$redis->get('game_lottery_stats:daily:win:' . $data->id . ':' . $today) ?: 0;
 
-                    // 计算中奖率
-                    $totalWinRate = $totalChecks > 0 ? round(($totalWins / $totalChecks) * 100, 4) : 0;
-                    $dailyWinRate = $dailyChecks > 0 ? round(($dailyWins / $dailyChecks) * 100, 4) : 0;
+                    // 计算中奖率（保留8位小数以显示极低概率）
+                    $totalWinRate = $totalChecks > 0 ? round(($totalWins / $totalChecks) * 100, 8) : 0;
+                    $dailyWinRate = $dailyChecks > 0 ? round(($dailyWins / $dailyChecks) * 100, 8) : 0;
 
                     return Html::create()->content([
                         // 总统计
