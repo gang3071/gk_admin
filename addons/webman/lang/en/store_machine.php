@@ -52,6 +52,14 @@ return [
         'end_time' => 'End Time',
     ],
 
+    // Filters
+    'filter' => [
+        'select_store' => 'Select Store',
+    ],
+
+    // Others
+    'all' => 'All',
+
     // Help text
     'help' => [
         'phone' => 'Optional, for contact',

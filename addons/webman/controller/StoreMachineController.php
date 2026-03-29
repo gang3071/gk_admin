@@ -42,7 +42,21 @@ class StoreMachineController
 
         $currentDepartmentId = Admin::user()->department_id;
 
-        return Grid::create(new AdminUser(), function (Grid $grid) use ($currentDepartmentId) {
+        // 获取店家选项列表用于筛选器下拉选择
+        $storeOptions = AdminUser::query()
+            ->join('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
+            ->where('admin_users.type', AdminUser::TYPE_STORE)
+            ->where('parent_admin.department_id', $currentDepartmentId)
+            ->orderBy('admin_users.id', 'desc')
+            ->get(['admin_users.id', 'admin_users.nickname', 'admin_users.username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
+
+        return Grid::create(new AdminUser(), function (Grid $grid) use ($currentDepartmentId, $storeOptions) {
             $grid->title(admin_trans('store_machine.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -103,7 +117,13 @@ class StoreMachineController
 
             $grid->column('created_at', admin_trans('store_machine.fields.created_at'))->width(160)->align('center');
 
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
+                // 店家下拉筛选
+                $filter->eq()->select('admin_users.id')
+                    ->placeholder(admin_trans('store_machine.filter.select_store'))
+                    ->options(['' => admin_trans('store_machine.all')] + $storeOptions)
+                    ->style(['width' => '250px']);
+
                 $filter->eq()->select('admin_users.status')
                     ->placeholder(admin_trans('store_machine.placeholder.status'))
                     ->options([
