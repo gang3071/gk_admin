@@ -682,9 +682,6 @@ class StoreMachineController
         if (!$platformId) {
             return message_error('请选择游戏平台');
         }
-        if (!$limitGroupId) {
-            return message_error('请选择限红组');
-        }
 
         // 验证平台
         $platform = GamePlatform::find($platformId);
