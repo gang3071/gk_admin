@@ -17,6 +17,7 @@ use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -212,6 +213,99 @@ class StoreMachineController
                         ->size('small')
                 );
             });
+
+            // 行展开 - 显示限红组配置信息
+            $grid->expandRow(function ($row) {
+                // 查询该店家的限红组配置
+                $limitConfig = AdminUserLimitGroup::query()
+                    ->with(['limitGroup', 'gamePlatform'])
+                    ->where('admin_user_id', $row['id'])
+                    ->whereNull('deleted_at')
+                    ->first();
+
+                if (!$limitConfig) {
+                    return Card::create([
+                        Html::div()->content([
+                            Html::create('暂无限红组配置')->style(['padding' => '20px', 'color' => '#999', 'textAlign' => 'center'])
+                        ])
+                    ]);
+                }
+
+                // 获取平台名称
+                $platformName = $limitConfig->gamePlatform ?
+                    "{$limitConfig->gamePlatform->name} ({$limitConfig->platform_code})" :
+                    $limitConfig->platform_code;
+
+                // 获取限红组名称
+                $limitGroupName = $limitConfig->limitGroup ?
+                    "{$limitConfig->limitGroup->name} ({$limitConfig->limitGroup->code})" :
+                    '-';
+
+                // 获取配置详情（从限红组配置表中获取）
+                $configDetail = '-';
+                if ($limitConfig->limitGroup) {
+                    $groupConfig = PlatformLimitGroupConfig::query()
+                        ->where('limit_group_id', $limitConfig->limit_group_id)
+                        ->where('platform_id', $limitConfig->platform_id)
+                        ->where('status', 1)
+                        ->whereNull('deleted_at')
+                        ->first();
+
+                    if ($groupConfig && $groupConfig->config_data) {
+                        $configData = $groupConfig->config_data;
+                        if ($limitConfig->platform_code === 'ATG' && isset($configData['operator'])) {
+                            $configDetail = "营运账号: {$configData['operator']}";
+                        } elseif ($limitConfig->platform_code === 'RSG') {
+                            $min = $configData['min_bet_amount'] ?? 0;
+                            $max = $configData['max_bet_amount'] ?? 0;
+                            $configDetail = "限红范围: {$min} - {$max}";
+                        }
+                    }
+                }
+
+                // 格式化分配时间
+                $assignedAt = $limitConfig->assigned_at ?
+                    Carbon::parse($limitConfig->assigned_at)->format('Y-m-d H:i:s') :
+                    '-';
+
+                return Card::create([
+                    Html::div()->content([
+                        Html::create('限红组配置详情')->tag('h4')->style(['marginBottom' => '15px']),
+                        Html::create()->content([
+                            // 第1行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('游戏平台')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($platformName)
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('限红组')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($limitGroupName)
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第2行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('配置详情')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($configDetail)
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create('分配时间')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create($assignedAt)
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第3行 - 备注
+                            !empty($limitConfig->remark) ? Html::div()->content([
+                                Html::create()->content([
+                                    Html::create('备注')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px', 'verticalAlign' => 'top']),
+                                    Html::create($limitConfig->remark)
+                                ])->style(['padding' => '8px'])
+                            ]) : null
+                        ])
+                    ])->style(['padding' => '20px'])
+                ]);
+            });
+
             $grid->hideSelection();
             $grid->hideDelete();
             $grid->setForm()->drawer($this->createStoreMachineForm());
@@ -543,7 +637,6 @@ class StoreMachineController
                         $form->select('limit_group_id', '限红组')
                             ->options($this->getLimitGroupOptionsForPlatform($atgPlatform->id))
                             ->value($existingConfig && $existingConfig->platform_id == $atgPlatform->id ? $existingConfig->limit_group_id : null)
-                            ->required()
                             ->help('选择ATG平台的限红组');
                     });
                 }
@@ -554,7 +647,6 @@ class StoreMachineController
                         $form->select('limit_group_id', '限红组')
                             ->options($this->getLimitGroupOptionsForPlatform($rsgPlatform->id))
                             ->value($existingConfig && $existingConfig->platform_id == $rsgPlatform->id ? $existingConfig->limit_group_id : null)
-                            ->required()
                             ->help('选择RSG平台的限红组');
                     });
                 }
