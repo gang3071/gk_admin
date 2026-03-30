@@ -10,7 +10,6 @@ return [
         'player_code' => '平台賬號',
         'player_name' => '平台用戶名',
         'status' => '狀態',
-        'has_out' => '是否轉出',
         'created_at' => '創建時間',
     ],
 
@@ -19,12 +18,6 @@ return [
         'normal' => '正常',
         'locked' => '鎖定',
         'unknown' => '未知',
-    ],
-
-    // 是否转出
-    'has_out' => [
-        'yes' => '已轉出',
-        'no' => '未轉出',
     ],
 
     // 其他

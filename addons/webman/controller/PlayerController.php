@@ -3626,11 +3626,6 @@ class PlayerController
                 $grid->model()->where('status', $exAdminFilter['status']);
             }
 
-            // 是否转出筛选
-            if (isset($exAdminFilter['has_out']) && $exAdminFilter['has_out'] !== '') {
-                $grid->model()->where('has_out', $exAdminFilter['has_out']);
-            }
-
             // 定义列
             $grid->column('id', 'ID')->width(80)->align('center')->sortable();
 
@@ -3657,47 +3652,27 @@ class PlayerController
                 })
                 ->width(100)->align('center');
 
-            $grid->column('has_out', admin_trans('player_platform_account.fields.has_out'))
-                ->display(function ($val) {
-                    return match ($val) {
-                        0 => Tag::create(admin_trans('player_platform_account.has_out.no'))->color('default'),
-                        1 => Tag::create(admin_trans('player_platform_account.has_out.yes'))->color('green'),
-                        default => Tag::create('-')->color('default'),
-                    };
-                })
-                ->width(100)->align('center');
-
             $grid->column('created_at', admin_trans('player_platform_account.fields.created_at'))
                 ->width(160)->align('center')->sortable();
 
             // 筛选器
             $grid->filter(function (Filter $filter) use ($playerId) {
-                // 只有在未指定玩家ID时才显示平台筛选
-                if ($playerId == 0) {
-                    $filter->eq()->select('platform_id')
-                        ->placeholder(admin_trans('player_platform_account.fields.platform_name'))
-                        ->showSearch()
-                        ->style(['width' => '200px'])
-                        ->dropdownMatchSelectWidth()
-                        ->remoteOptions(admin_url([
-                            'addons-webman-controller-GamePlatformController',
-                            'getGamePlatformOptions'
-                        ]));
-                }
+                // 游戏平台筛选（始终显示，可以筛选特定玩家在特定平台的账号）
+                $filter->eq()->select('platform_id')
+                    ->placeholder(admin_trans('player_platform_account.fields.platform_name'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->remoteOptions(admin_url([
+                        'addons-webman-controller-GamePlatformController',
+                        'getGamePlatformOptions'
+                    ]));
 
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('player_platform_account.fields.status'))
                     ->options([
                         1 => admin_trans('player_platform_account.status.normal'),
                         0 => admin_trans('player_platform_account.status.locked'),
-                    ])
-                    ->style(['width' => '150px']);
-
-                $filter->eq()->select('has_out')
-                    ->placeholder(admin_trans('player_platform_account.fields.has_out'))
-                    ->options([
-                        1 => admin_trans('player_platform_account.has_out.yes'),
-                        0 => admin_trans('player_platform_account.has_out.no'),
                     ])
                     ->style(['width' => '150px']);
             });

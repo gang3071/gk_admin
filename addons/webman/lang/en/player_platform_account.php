@@ -10,7 +10,6 @@ return [
         'player_code' => 'Platform Account',
         'player_name' => 'Platform Username',
         'status' => 'Status',
-        'has_out' => 'Has Transfer Out',
         'created_at' => 'Created At',
     ],
 
@@ -19,12 +18,6 @@ return [
         'normal' => 'Normal',
         'locked' => 'Locked',
         'unknown' => 'Unknown',
-    ],
-
-    // Transfer Out Status
-    'has_out' => [
-        'yes' => 'Transferred Out',
-        'no' => 'Not Transferred',
     ],
 
     // Other
