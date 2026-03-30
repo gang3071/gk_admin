@@ -11,7 +11,6 @@ use addons\webman\model\Channel;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\PlatformLimitGroup;
 use addons\webman\model\PlatformLimitGroupConfig;
-use addons\webman\model\PlayerGamePlatform;
 use addons\webman\model\StoreSetting;
 use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
@@ -25,7 +24,6 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Arr;
-use ExAdmin\ui\support\Request;
 use support\Db;
 
 /**
@@ -212,14 +210,6 @@ class StoreMachineController
                     Button::create('限红组')
                         ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
                         ->type('primary')
-                        ->size('small')
-                );
-
-                // 添加游戏账号按钮
-                $actions->append(
-                    Button::create('游戏账号')
-                        ->modal([$this, 'platformAccountList'], ['store_admin_id' => $data['id']])
-                        ->type('default')
                         ->size('small')
                 );
             });
@@ -821,108 +811,5 @@ class StoreMachineController
         }
 
         return $data;
-    }
-
-    /**
-     * 店家第三方游戏平台账号列表
-     * @auth true
-     * @param int $store_admin_id 店家管理员ID
-     * @return Grid
-     */
-    public function platformAccountList(int $store_admin_id = 0): Grid
-    {
-        return Grid::create(new PlayerGamePlatform(), function (Grid $grid) use ($store_admin_id) {
-            $grid->title(admin_trans('player_platform_account.title'));
-            $grid->autoHeight();
-            $grid->bordered(true);
-
-            // 关联查询玩家信息和游戏平台信息
-            $grid->model()->with(['player', 'gamePlatform'])
-                ->orderBy('platform_id', 'asc');
-
-            // 如果指定了店家ID，只显示该店家下所有玩家的账号
-            if ($store_admin_id > 0) {
-                $grid->model()->whereHas('player', function ($query) use ($store_admin_id) {
-                    $query->where('store_admin_id', $store_admin_id);
-                });
-            }
-
-            // 筛选处理
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-
-            // 平台ID筛选
-            if (!empty($exAdminFilter['platform_id'])) {
-                $grid->model()->where('platform_id', $exAdminFilter['platform_id']);
-            }
-
-            // 状态筛选
-            if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
-                $grid->model()->where('status', $exAdminFilter['status']);
-            }
-
-            // 定义列
-            $grid->column('id', 'ID')->width(80)->align('center')->sortable();
-
-            // 添加玩家信息列（设备UUID和设备名称）
-            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))
-                ->width(150)->align('center')->copy();
-
-            $grid->column('player.name', admin_trans('player.fields.device_name'))
-                ->width(150)->align('center');
-
-            $grid->column('gamePlatform.name', admin_trans('player_platform_account.fields.platform_name'))
-                ->display(function ($val, PlayerGamePlatform $data) {
-                    $color = '#1890ff';
-                    return Tag::create($val ?: admin_trans('player_platform_account.unknown_platform'))->color($color);
-                })
-                ->width(150)->align('center');
-
-            $grid->column('player_code', admin_trans('player_platform_account.fields.player_code'))
-                ->width(150)->align('center')->copy();
-
-            $grid->column('player_name', admin_trans('player_platform_account.fields.player_name'))
-                ->width(150)->align('center');
-
-            $grid->column('status', admin_trans('player_platform_account.fields.status'))
-                ->display(function ($val) {
-                    return match ($val) {
-                        0 => Tag::create(admin_trans('player_platform_account.status.locked'))->color('red'),
-                        1 => Tag::create(admin_trans('player_platform_account.status.normal'))->color('green'),
-                        default => Tag::create(admin_trans('player_platform_account.status.unknown'))->color('default'),
-                    };
-                })
-                ->width(100)->align('center');
-
-            $grid->column('created_at', admin_trans('player_platform_account.fields.created_at'))
-                ->width(160)->align('center')->sortable();
-
-            // 筛选器
-            $grid->filter(function (Filter $filter) use ($store_admin_id) {
-                // 游戏平台筛选（始终显示）
-                $filter->eq()->select('platform_id')
-                    ->placeholder(admin_trans('player_platform_account.fields.platform_name'))
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->remoteOptions(admin_url([
-                        'addons-webman-controller-GamePlatformController',
-                        'getGamePlatformOptions'
-                    ]));
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('player_platform_account.fields.status'))
-                    ->options([
-                        1 => admin_trans('player_platform_account.status.normal'),
-                        0 => admin_trans('player_platform_account.status.locked'),
-                    ])
-                    ->style(['width' => '150px']);
-            });
-
-            $grid->hideAction();
-            $grid->hideDelete();
-            $grid->hideSelection();
-            $grid->hideAdd();
-            $grid->expandFilter();
-        });
     }
 }

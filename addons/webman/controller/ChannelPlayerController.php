@@ -26,6 +26,7 @@ use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerDisabledGame;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerGameLog;
+use addons\webman\model\PlayerGamePlatform;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
@@ -575,6 +576,10 @@ class ChannelPlayerController
                     ->type('primary'));
                 $actions->prepend(Button::create(admin_trans('channel_agent.open_score'))
                     ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px'));
+                $actions->prepend(Button::create('游戏账号')
+                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
+                    ->type('default')
+                    ->size('small'));
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
                     $dropdown->prepend($data['is_coin'] == 0 ? admin_trans('player.set_coin') : admin_trans('player.cancel_coin'),
@@ -5376,5 +5381,106 @@ class ChannelPlayerController
             ]);
             return message_error(admin_trans('player.wash_score_failed') . ': ' . $e->getMessage());
         }
+    }
+
+    /**
+     * 玩家第三方游戏平台账号列表
+     * @auth true
+     * @param int $player_id 玩家ID
+     * @return Grid
+     */
+    public function platformAccountList(int $player_id = 0): Grid
+    {
+        return Grid::create(new PlayerGamePlatform(), function (Grid $grid) use ($player_id) {
+            $grid->title(admin_trans('player_platform_account.title'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 关联查询玩家信息和游戏平台信息
+            $grid->model()->with(['player', 'gamePlatform'])
+                ->orderBy('platform_id', 'asc');
+
+            // 如果指定了玩家ID，只显示该玩家的账号
+            if ($player_id > 0) {
+                $grid->model()->where('player_id', $player_id);
+            }
+
+            // 筛选处理
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            // 平台ID筛选
+            if (!empty($exAdminFilter['platform_id'])) {
+                $grid->model()->where('platform_id', $exAdminFilter['platform_id']);
+            }
+
+            // 状态筛选
+            if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
+                $grid->model()->where('status', $exAdminFilter['status']);
+            }
+
+            // 定义列
+            $grid->column('id', 'ID')->width(80)->align('center')->sortable();
+
+            // 添加玩家信息列（设备UUID和设备名称）
+            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))
+                ->width(150)->align('center')->copy();
+
+            $grid->column('player.name', admin_trans('player.fields.device_name'))
+                ->width(150)->align('center');
+
+            $grid->column('gamePlatform.name', admin_trans('player_platform_account.fields.platform_name'))
+                ->display(function ($val, PlayerGamePlatform $data) {
+                    $color = '#1890ff';
+                    return Tag::create($val ?: admin_trans('player_platform_account.unknown_platform'))->color($color);
+                })
+                ->width(150)->align('center');
+
+            $grid->column('player_code', admin_trans('player_platform_account.fields.player_code'))
+                ->width(150)->align('center')->copy();
+
+            $grid->column('player_name', admin_trans('player_platform_account.fields.player_name'))
+                ->width(150)->align('center');
+
+            $grid->column('status', admin_trans('player_platform_account.fields.status'))
+                ->display(function ($val) {
+                    return match ($val) {
+                        0 => Tag::create(admin_trans('player_platform_account.status.locked'))->color('red'),
+                        1 => Tag::create(admin_trans('player_platform_account.status.normal'))->color('green'),
+                        default => Tag::create(admin_trans('player_platform_account.status.unknown'))->color('default'),
+                    };
+                })
+                ->width(100)->align('center');
+
+            $grid->column('created_at', admin_trans('player_platform_account.fields.created_at'))
+                ->width(160)->align('center')->sortable();
+
+            // 筛选器
+            $grid->filter(function (Filter $filter) use ($player_id) {
+                // 游戏平台筛选（始终显示）
+                $filter->eq()->select('platform_id')
+                    ->placeholder(admin_trans('player_platform_account.fields.platform_name'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->remoteOptions(admin_url([
+                        'addons-webman-controller-GamePlatformController',
+                        'getGamePlatformOptions'
+                    ]));
+
+                $filter->eq()->select('status')
+                    ->placeholder(admin_trans('player_platform_account.fields.status'))
+                    ->options([
+                        1 => admin_trans('player_platform_account.status.normal'),
+                        0 => admin_trans('player_platform_account.status.locked'),
+                    ])
+                    ->style(['width' => '150px']);
+            });
+
+            $grid->hideAction();
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->hideAdd();
+            $grid->expandFilter();
+        });
     }
 }

@@ -678,15 +678,6 @@ return [
         'url' => 'ex-admin/addons-webman-controller-StoreMachineController/getAgentOptions',
         'title' => '获取代理选项',
     ],
-    [
-        'id' => 'addons\webman\controller\StoreMachineController\platformAccountList',
-        'pid' => 'addons\webman\controller\StoreMachineController\index',
-        'action' => 'platformAccountList',
-        'method' => 'get',
-        'group' => 'channel',
-        'url' => 'ex-admin/addons-webman-controller-StoreMachineController/platformAccountList',
-        'title' => '第三方游戏平台账号',
-    ],
 
     //玩家管理
     [
@@ -831,6 +822,15 @@ return [
         'group' => 'channel',
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/batchGenerateForm',
         'title' => '批量生成玩家保存',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelPlayerController\platformAccountList',
+        'pid' => 'addons\webman\controller\ChannelPlayerController\index',
+        'action' => 'platformAccountList',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/platformAccountList',
+        'title' => '游戏账号',
     ],
     [
         'id' => 'addons\webman\controller\ChannelPlayerController\playerRecord',
