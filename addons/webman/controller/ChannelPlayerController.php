@@ -4372,6 +4372,9 @@ class ChannelPlayerController
 
         return Grid::create(new Game(), function (Grid $grid) use ($selectedGameIds, $player_id, $channelGamePlatformIds, $lang, $player) {
             $grid->title(admin_trans('channel_player.game_permission.title', null, ['name' => $player->name]));
+
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
             $grid->model()->whereIn('platform_id', $channelGamePlatformIds)
                 ->where('status', 1)
                 ->with(['gamePlatform', 'gameContent' => function ($query) use ($lang) {
@@ -4381,8 +4384,20 @@ class ChannelPlayerController
                 ->orderBy('sort', 'desc')
                 ->orderBy('id', 'desc');
 
+            // 处理禁用状态筛选
+            if (isset($exAdminFilter['disabled_status']) && $exAdminFilter['disabled_status'] !== '') {
+                if ($exAdminFilter['disabled_status'] == 1) {
+                    // 只显示已禁用的游戏
+                    $grid->model()->whereIn('id', $selectedGameIds);
+                } elseif ($exAdminFilter['disabled_status'] == 0) {
+                    // 只显示未禁用的游戏
+                    if (!empty($selectedGameIds)) {
+                        $grid->model()->whereNotIn('id', $selectedGameIds);
+                    }
+                }
+            }
+
             $grid->driver()->setPk('id');
-            $exAdminFilter = Request::input('ex_admin_filter', []);
             $page = Request::input('ex_admin_page', 1);
             $size = Request::input('ex_admin_size', 50);
             $param = [
@@ -4477,6 +4492,15 @@ class ChannelPlayerController
                     ->options([
                         1 => '新游戏',
                         0 => '旧游戏'
+                    ]);
+
+                $filter->eq()->select('disabled_status')
+                    ->placeholder('禁用状态')
+                    ->style(['width' => '120px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        1 => '已禁用',
+                        0 => '未禁用'
                     ]);
             });
 
