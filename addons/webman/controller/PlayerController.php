@@ -25,6 +25,7 @@ use addons\webman\model\PlayerBank;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerGameLog;
+use addons\webman\model\PlayerGamePlatform;
 use addons\webman\model\PlayerGameRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
@@ -3599,13 +3600,13 @@ class PlayerController
      */
     public function platformAccountList(int $playerId = 0): Grid
     {
-        return Grid::create(new PlayerPlatformCash(), function (Grid $grid) use ($playerId) {
+        return Grid::create(new PlayerGamePlatform(), function (Grid $grid) use ($playerId) {
             $grid->title(admin_trans('player_platform_account.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 关联查询玩家信息
-            $grid->model()->with(['player'])->orderBy('platform_id', 'asc');
+            // 关联查询玩家信息和游戏平台信息
+            $grid->model()->with(['player', 'gamePlatform'])->orderBy('platform_id', 'asc');
 
             // 如果指定了玩家ID，只显示该玩家的账号
             if ($playerId > 0) {
@@ -3625,33 +3626,26 @@ class PlayerController
                 $grid->model()->where('status', $exAdminFilter['status']);
             }
 
-            // 爆机状态筛选
-            if (isset($exAdminFilter['is_crashed']) && $exAdminFilter['is_crashed'] !== '') {
-                $grid->model()->where('is_crashed', $exAdminFilter['is_crashed']);
+            // 是否转出筛选
+            if (isset($exAdminFilter['has_out']) && $exAdminFilter['has_out'] !== '') {
+                $grid->model()->where('has_out', $exAdminFilter['has_out']);
             }
 
             // 定义列
             $grid->column('id', 'ID')->width(80)->align('center')->sortable();
 
-            $grid->column('platform_name', admin_trans('player_platform_account.fields.platform_name'))
-                ->display(function ($val, PlayerPlatformCash $data) {
+            $grid->column('gamePlatform.name', admin_trans('player_platform_account.fields.platform_name'))
+                ->display(function ($val, PlayerGamePlatform $data) {
                     $color = '#1890ff';
-                    if ($data->platform_id == PlayerPlatformCash::PLATFORM_SELF) {
-                        $color = '#52c41a';
-                    }
-                    return Tag::create($val)->color($color);
+                    return Tag::create($val ?: admin_trans('player_platform_account.unknown_platform'))->color($color);
                 })
                 ->width(150)->align('center');
 
-            $grid->column('player_account', admin_trans('player_platform_account.fields.player_account'))
+            $grid->column('player_code', admin_trans('player_platform_account.fields.player_code'))
                 ->width(150)->align('center')->copy();
 
-            $grid->column('money', admin_trans('player_platform_account.fields.money'))
-                ->display(function ($val) {
-                    $color = $val >= 0 ? '#52c41a' : '#f5222d';
-                    return Html::create(number_format(floatval($val), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
-                })
-                ->width(120)->align('center')->sortable();
+            $grid->column('player_name', admin_trans('player_platform_account.fields.player_name'))
+                ->width(150)->align('center');
 
             $grid->column('status', admin_trans('player_platform_account.fields.status'))
                 ->display(function ($val) {
@@ -3663,11 +3657,11 @@ class PlayerController
                 })
                 ->width(100)->align('center');
 
-            $grid->column('is_crashed', admin_trans('player_platform_account.fields.is_crashed'))
+            $grid->column('has_out', admin_trans('player_platform_account.fields.has_out'))
                 ->display(function ($val) {
                     return match ($val) {
-                        0 => Tag::create(admin_trans('player_platform_account.is_crashed.normal'))->color('green'),
-                        1 => Tag::create(admin_trans('player_platform_account.is_crashed.crashed'))->color('red'),
+                        0 => Tag::create(admin_trans('player_platform_account.has_out.no'))->color('default'),
+                        1 => Tag::create(admin_trans('player_platform_account.has_out.yes'))->color('green'),
                         default => Tag::create('-')->color('default'),
                     };
                 })
@@ -3702,11 +3696,11 @@ class PlayerController
                     ])
                     ->style(['width' => '150px']);
 
-                $filter->eq()->select('is_crashed')
-                    ->placeholder(admin_trans('player_platform_account.fields.is_crashed'))
+                $filter->eq()->select('has_out')
+                    ->placeholder(admin_trans('player_platform_account.fields.has_out'))
                     ->options([
-                        0 => admin_trans('player_platform_account.is_crashed.normal'),
-                        1 => admin_trans('player_platform_account.is_crashed.crashed'),
+                        1 => admin_trans('player_platform_account.has_out.yes'),
+                        0 => admin_trans('player_platform_account.has_out.no'),
                     ])
                     ->style(['width' => '150px']);
             });
