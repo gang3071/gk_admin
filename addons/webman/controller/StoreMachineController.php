@@ -215,14 +215,12 @@ class StoreMachineController
                         ->size('small')
                 );
 
-                // 添加第三方游戏平台账号按钮
+                // 添加游戏账号按钮
                 $actions->append(
-                    Button::create(admin_trans('player.platform_accounts'))
+                    Button::create('游戏账号')
                         ->modal([$this, 'platformAccountList'], ['store_admin_id' => $data['id']])
                         ->type('default')
                         ->size('small')
-                        ->width('90%')
-                        ->title($data['nickname'] . ' (' . $data['username'] . ') - ' . admin_trans('player.platform_accounts'))
                 );
             });
 

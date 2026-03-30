@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => '第三方遊戲平台賬號',
+    'title' => '遊戲賬號',
 
     // 字段
     'fields' => [

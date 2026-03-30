@@ -162,7 +162,7 @@ return [
     'set_promoter_tip' => 'The player account must meet the requirements and must not belong to any promoter before it can be set as a first-level promoter. The second-level promoter is set by the first-level promoter on the client.',
     'wallet_action_status_has_closed' => 'The channel wallet operation function has been closed!',
     'player_bank' => 'Bank account',
-    'platform_accounts' => 'Third-Party Game Accounts',
+    'platform_accounts' => 'Game Accounts',
     'bind_promoter_confirm' => 'Tip: Once the promoter relationship is bound, it cannot be released. Please confirm if you want to bind it?',
     'player_not_found' => 'Player does not exist',
     'player_has_bind' => 'The player has already bound a promoter',

@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Third-Party Game Platform Accounts',
+    'title' => 'Game Accounts',
 
     // Fields
     'fields' => [
