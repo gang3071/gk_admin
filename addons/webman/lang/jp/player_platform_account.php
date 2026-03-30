@@ -8,7 +8,7 @@ return [
         'player_uuid' => 'プレイヤーUUID',
         'platform_name' => 'ゲームプラットフォーム',
         'player_code' => 'プラットフォームアカウント',
-        'player_name' => 'プラットフォームユーザー名',
+        'player_name' => 'デバイス名',
         'status' => 'ステータス',
         'created_at' => '作成日時',
     ],

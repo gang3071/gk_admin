@@ -8,7 +8,7 @@ return [
         'player_uuid' => '玩家UUID',
         'platform_name' => '遊戲平台',
         'player_code' => '平台賬號',
-        'player_name' => '平台用戶名',
+        'player_name' => '設備名稱',
         'status' => '狀態',
         'created_at' => '創建時間',
     ],

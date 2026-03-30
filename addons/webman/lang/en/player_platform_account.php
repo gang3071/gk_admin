@@ -8,7 +8,7 @@ return [
         'player_uuid' => 'Player UUID',
         'platform_name' => 'Game Platform',
         'player_code' => 'Platform Account',
-        'player_name' => 'Platform Username',
+        'player_name' => 'Device Name',
         'status' => 'Status',
         'created_at' => 'Created At',
     ],
