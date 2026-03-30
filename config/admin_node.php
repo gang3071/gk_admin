@@ -945,6 +945,15 @@ return [
         'title' => '修改银行账户状态',
     ],
     [
+        'id' => 'addons\webman\controller\PlayerController\platformAccountList',
+        'pid' => 'addons\webman\controller\PlayerController\index',
+        'action' => 'platformAccountList',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-PlayerController/platformAccountList',
+        'title' => '第三方游戏平台账号',
+    ],
+    [
         'id' => 'addons\webman\controller\PlayerController\playerRecord',
         'pid' => 'addons\webman\controller\PlayerController\index',
         'action' => 'playerRecord',

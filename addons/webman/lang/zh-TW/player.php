@@ -162,6 +162,7 @@ return [
     'set_promoter_tip' => '玩家帳戶必須滿足,未歸屬於莫個推廣員才能被設定為一級推廣員,二級推廣員由一級推廣員在用戶端設定.',
     'wallet_action_status_has_closed' => '已關閉通路錢包操作功能！',
     'player_bank' => '銀行帳戶',
+    'platform_accounts' => '第三方遊戲帳號',
     'bind_promoter_confirm' => '提示: 推广员关系一旦绑定将无法解除, 请确认是否绑定?',
     'player_not_found' => '玩家不存在',
     'player_has_bind' => '該玩家已綁定推廣員',

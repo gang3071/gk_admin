@@ -162,6 +162,7 @@ return [
     'set_promoter_tip' => '玩家账户必须满足, 未归属于莫个推广员才能被设置为一级推广员, 二级推广员由一级推广员在客户端设置.',
     'wallet_action_status_has_closed' => '已关闭渠道钱包操作功能!',
     'player_bank' => '银行账户',
+    'platform_accounts' => '第三方游戏账号',
     'bind_promoter_confirm' => '提示: 推广员关系一旦绑定将无法解除, 请确认是否绑定?',
     'player_not_found' => '玩家不存在',
     'player_has_bind' => '该玩家已绑定推广员',

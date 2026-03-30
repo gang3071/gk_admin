@@ -548,6 +548,10 @@ class PlayerController
                                 'cursor' => 'pointer'
                             ]))->title(admin_trans('player.player_bank'))
                         ));
+                $dropdown->append(admin_trans('player.platform_accounts'), 'AppstoreFilled')
+                    ->modal($this->platformAccountList($data['id']))
+                    ->width('90%')
+                    ->title($data['name'] . ' (' . $data['uuid'] . ') - ' . admin_trans('player.platform_accounts'));
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -3584,6 +3588,134 @@ class PlayerController
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
             });
+        });
+    }
+
+    /**
+     * 第三方游戏平台账号列表
+     * @auth true
+     * @param int $playerId 玩家ID
+     * @return Grid
+     */
+    public function platformAccountList(int $playerId = 0): Grid
+    {
+        return Grid::create(new PlayerPlatformCash(), function (Grid $grid) use ($playerId) {
+            $grid->title(admin_trans('player_platform_account.title'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 关联查询玩家信息
+            $grid->model()->with(['player'])->orderBy('platform_id', 'asc');
+
+            // 如果指定了玩家ID，只显示该玩家的账号
+            if ($playerId > 0) {
+                $grid->model()->where('player_id', $playerId);
+            }
+
+            // 筛选处理
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            // 平台ID筛选
+            if (!empty($exAdminFilter['platform_id'])) {
+                $grid->model()->where('platform_id', $exAdminFilter['platform_id']);
+            }
+
+            // 状态筛选
+            if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
+                $grid->model()->where('status', $exAdminFilter['status']);
+            }
+
+            // 爆机状态筛选
+            if (isset($exAdminFilter['is_crashed']) && $exAdminFilter['is_crashed'] !== '') {
+                $grid->model()->where('is_crashed', $exAdminFilter['is_crashed']);
+            }
+
+            // 定义列
+            $grid->column('id', 'ID')->width(80)->align('center')->sortable();
+
+            $grid->column('platform_name', admin_trans('player_platform_account.fields.platform_name'))
+                ->display(function ($val, PlayerPlatformCash $data) {
+                    $color = '#1890ff';
+                    if ($data->platform_id == PlayerPlatformCash::PLATFORM_SELF) {
+                        $color = '#52c41a';
+                    }
+                    return Tag::create($val)->color($color);
+                })
+                ->width(150)->align('center');
+
+            $grid->column('player_account', admin_trans('player_platform_account.fields.player_account'))
+                ->width(150)->align('center')->copy();
+
+            $grid->column('money', admin_trans('player_platform_account.fields.money'))
+                ->display(function ($val) {
+                    $color = $val >= 0 ? '#52c41a' : '#f5222d';
+                    return Html::create(number_format(floatval($val), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
+                })
+                ->width(120)->align('center')->sortable();
+
+            $grid->column('status', admin_trans('player_platform_account.fields.status'))
+                ->display(function ($val) {
+                    return match ($val) {
+                        0 => Tag::create(admin_trans('player_platform_account.status.locked'))->color('red'),
+                        1 => Tag::create(admin_trans('player_platform_account.status.normal'))->color('green'),
+                        default => Tag::create(admin_trans('player_platform_account.status.unknown'))->color('default'),
+                    };
+                })
+                ->width(100)->align('center');
+
+            $grid->column('is_crashed', admin_trans('player_platform_account.fields.is_crashed'))
+                ->display(function ($val) {
+                    return match ($val) {
+                        0 => Tag::create(admin_trans('player_platform_account.is_crashed.normal'))->color('green'),
+                        1 => Tag::create(admin_trans('player_platform_account.is_crashed.crashed'))->color('red'),
+                        default => Tag::create('-')->color('default'),
+                    };
+                })
+                ->width(100)->align('center');
+
+            $grid->column('created_at', admin_trans('player_platform_account.fields.created_at'))
+                ->width(160)->align('center')->sortable();
+
+            $grid->column('updated_at', admin_trans('player_platform_account.fields.updated_at'))
+                ->width(160)->align('center')->sortable();
+
+            // 筛选器
+            $grid->filter(function (Filter $filter) use ($playerId) {
+                // 只有在未指定玩家ID时才显示平台筛选
+                if ($playerId == 0) {
+                    $filter->eq()->select('platform_id')
+                        ->placeholder(admin_trans('player_platform_account.filter.platform'))
+                        ->showSearch()
+                        ->style(['width' => '200px'])
+                        ->dropdownMatchSelectWidth()
+                        ->remoteOptions(admin_url([
+                            'addons-webman-controller-GamePlatformController',
+                            'getGamePlatformOptions'
+                        ]));
+                }
+
+                $filter->eq()->select('status')
+                    ->placeholder(admin_trans('player_platform_account.fields.status'))
+                    ->options([
+                        1 => admin_trans('player_platform_account.status.normal'),
+                        0 => admin_trans('player_platform_account.status.locked'),
+                    ])
+                    ->style(['width' => '150px']);
+
+                $filter->eq()->select('is_crashed')
+                    ->placeholder(admin_trans('player_platform_account.fields.is_crashed'))
+                    ->options([
+                        0 => admin_trans('player_platform_account.is_crashed.normal'),
+                        1 => admin_trans('player_platform_account.is_crashed.crashed'),
+                    ])
+                    ->style(['width' => '150px']);
+            });
+
+            $grid->hideAction();
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->hideAdd();
+            $grid->expandFilter();
         });
     }
 }
