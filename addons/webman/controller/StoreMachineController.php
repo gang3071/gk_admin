@@ -20,7 +20,6 @@ use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
-use ExAdmin\ui\component\grid\grid\Dropdown;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -216,13 +215,15 @@ class StoreMachineController
                         ->size('small')
                 );
 
-                // 添加更多操作下拉菜单
-                $actions->dropdown(function (Dropdown $dropdown) use ($data) {
-                    $dropdown->append(admin_trans('player.platform_accounts'), 'AppstoreFilled')
+                // 添加第三方游戏平台账号按钮
+                $actions->append(
+                    Button::create(admin_trans('player.platform_accounts'))
                         ->modal([$this, 'platformAccountList'], ['store_admin_id' => $data['id']])
+                        ->type('default')
+                        ->size('small')
                         ->width('90%')
-                        ->title($data['nickname'] . ' (' . $data['username'] . ') - ' . admin_trans('player.platform_accounts'));
-                });
+                        ->title($data['nickname'] . ' (' . $data['username'] . ') - ' . admin_trans('player.platform_accounts'))
+                );
             });
 
             // 行展开 - 显示限红组配置信息
