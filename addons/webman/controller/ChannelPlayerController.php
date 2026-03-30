@@ -579,7 +579,8 @@ class ChannelPlayerController
                 $actions->prepend(Button::create('游戏账号')
                     ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
                     ->type('default')
-                    ->size('small'));
+                    ->size('small')
+                    ->width('90%'));
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
                     $dropdown->prepend($data['is_coin'] == 0 ? admin_trans('player.set_coin') : admin_trans('player.cancel_coin'),
