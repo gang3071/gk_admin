@@ -3670,15 +3670,12 @@ class PlayerController
             $grid->column('created_at', admin_trans('player_platform_account.fields.created_at'))
                 ->width(160)->align('center')->sortable();
 
-            $grid->column('updated_at', admin_trans('player_platform_account.fields.updated_at'))
-                ->width(160)->align('center')->sortable();
-
             // 筛选器
             $grid->filter(function (Filter $filter) use ($playerId) {
                 // 只有在未指定玩家ID时才显示平台筛选
                 if ($playerId == 0) {
                     $filter->eq()->select('platform_id')
-                        ->placeholder(admin_trans('player_platform_account.filter.platform'))
+                        ->placeholder(admin_trans('player_platform_account.fields.platform_name'))
                         ->showSearch()
                         ->style(['width' => '200px'])
                         ->dropdownMatchSelectWidth()
