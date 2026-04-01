@@ -195,6 +195,10 @@ class AgentStoreProfitReportController
             $grid->autoHeight();
             $grid->bordered(true);
 
+            // 添加导出功能
+            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
+                ->filename(admin_trans('agent_store_profit.export.filename') . date('YmdHis'));
+
             // 统计卡片
             $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
             $layout->row(function (Row $row) use ($totalStats) {

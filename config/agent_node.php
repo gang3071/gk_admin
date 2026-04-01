@@ -143,6 +143,15 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-AgentStoreProfitReportController/index',
                 'title' => '店家分润报表',
             ],
+            [
+                'id' => 'addons\webman\controller\AgentStoreProfitReportController\export',
+                'pid' => 'addons\webman\controller\AgentStoreProfitReportController\index',
+                'action' => 'export',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentStoreProfitReportController/export',
+                'title' => '导出店家分润报表',
+            ],
         ]
     ],
 

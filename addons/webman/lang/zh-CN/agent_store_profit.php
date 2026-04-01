@@ -38,4 +38,18 @@ return [
         'total_agent_profit' => '总代理分润',
         'total_channel_profit' => '总渠道分润',
     ],
+
+    // 导出
+    'export' => [
+        'filename' => '店家分润月报_',
+        'title' => '店家分润月报',
+        'agent_info' => '代理：',
+        'time_range' => '统计时间：',
+        'start_from' => '起始时间：',
+        'end_at' => '截止时间：',
+        'all_time' => '全部时间',
+        'export_time' => '导出时间：',
+        'summary_title' => '统计汇总',
+        'total' => '合计',
+    ],
 ];

@@ -38,4 +38,18 @@ return [
         'total_agent_profit' => 'Total Agent Profit',
         'total_channel_profit' => 'Total Channel Profit',
     ],
+
+    // Export
+    'export' => [
+        'filename' => 'store_profit_report_',
+        'title' => 'Store Profit Monthly Report',
+        'agent_info' => 'Agent: ',
+        'time_range' => 'Time Range: ',
+        'start_from' => 'Start From: ',
+        'end_at' => 'End At: ',
+        'all_time' => 'All Time',
+        'export_time' => 'Export Time: ',
+        'summary_title' => 'Summary',
+        'total' => 'Total',
+    ],
 ];

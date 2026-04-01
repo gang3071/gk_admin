@@ -38,4 +38,18 @@ return [
         'total_agent_profit' => '総代理分潤',
         'total_channel_profit' => '総チャネル分潤',
     ],
+
+    // エクスポート
+    'export' => [
+        'filename' => '店舗分潤月報_',
+        'title' => '店舗分潤月報',
+        'agent_info' => '代理：',
+        'time_range' => '統計期間：',
+        'start_from' => '開始時間：',
+        'end_at' => '終了時間：',
+        'all_time' => '全期間',
+        'export_time' => 'エクスポート時間：',
+        'summary_title' => '統計集計',
+        'total' => '合計',
+    ],
 ];
