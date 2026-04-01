@@ -424,6 +424,29 @@ class AgentStoreProfitReportExporter extends Excel
     }
 
     /**
+     * 保存文件到 public/storage 目录（与 ShiftReportExporter 保持一致）
+     * @param string $path 保存目录
+     * @return string|bool
+     */
+    public function save(string $path)
+    {
+        // 使用 public/storage 目录（与其他导出保持一致）
+        $exportPath = public_path('storage');
+
+        // 确保目录存在
+        if (!is_dir($exportPath)) {
+            mkdir($exportPath, 0755, true);
+        }
+
+        \support\Log::info('AgentStoreProfitReportExporter: 保存文件', [
+            'original_path' => $path,
+            'export_path' => $exportPath
+        ]);
+
+        return parent::save($exportPath);
+    }
+
+    /**
      * 查询报表数据（复用控制器逻辑）
      */
     private function queryReportData($admin, $selectedStoreId, $createdAtStart, $createdAtEnd, &$reportData, &$totalStats)
