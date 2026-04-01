@@ -50,13 +50,22 @@ class AgentStoreProfitReportExporter extends Excel
             ];
 
             foreach ($reportData as $item) {
-                $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], strval($item['recharge_amount'] ?? 0), 2);
-                $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], strval($item['withdraw_amount'] ?? 0), 2);
-                $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($item['machine_put_point'] ?? 0), 2);
-                $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($item['lottery_amount'] ?? 0), 2);
-                $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], strval($item['subtotal'] ?? 0), 2);
-                $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], strval($item['agent_profit'] ?? 0), 2);
-                $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], strval($item['channel_profit'] ?? 0), 2);
+                // 确保所有值都转换为有效的数字字符串
+                $recharge = isset($item['recharge_amount']) && is_numeric($item['recharge_amount']) ? strval($item['recharge_amount']) : '0';
+                $withdraw = isset($item['withdraw_amount']) && is_numeric($item['withdraw_amount']) ? strval($item['withdraw_amount']) : '0';
+                $machinePut = isset($item['machine_put_point']) && is_numeric($item['machine_put_point']) ? strval($item['machine_put_point']) : '0';
+                $lottery = isset($item['lottery_amount']) && is_numeric($item['lottery_amount']) ? strval($item['lottery_amount']) : '0';
+                $subtotal = isset($item['subtotal']) && is_numeric($item['subtotal']) ? strval($item['subtotal']) : '0';
+                $agentProfit = isset($item['agent_profit']) && is_numeric($item['agent_profit']) ? strval($item['agent_profit']) : '0';
+                $channelProfit = isset($item['channel_profit']) && is_numeric($item['channel_profit']) ? strval($item['channel_profit']) : '0';
+
+                $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], $recharge, 2);
+                $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], $withdraw, 2);
+                $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $machinePut, 2);
+                $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $lottery, 2);
+                $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $subtotal, 2);
+                $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $agentProfit, 2);
+                $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $channelProfit, 2);
             }
 
             // 写入 Excel
