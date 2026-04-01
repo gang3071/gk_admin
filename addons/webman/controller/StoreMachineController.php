@@ -505,33 +505,16 @@ class StoreMachineController
             $storeSettingCrashAmount->status = 0; // 默认不开启
             $storeSettingCrashAmount->save();
 
-            // 4. 创建默认自动交班配置（早中晚三班）
-            $autoShiftConfigs = [
-                [
-                    'title' => admin_trans('store_machine.auto_shift.morning_title'),
-                    'shift_time' => '08:00:00',
-                    'description' => admin_trans('store_machine.auto_shift.morning_desc')
-                ],
-                [
-                    'title' => admin_trans('store_machine.auto_shift.afternoon_title'),
-                    'shift_time' => '16:00:00',
-                    'description' => admin_trans('store_machine.auto_shift.afternoon_desc')
-                ],
-                [
-                    'title' => admin_trans('store_machine.auto_shift.night_title'),
-                    'shift_time' => '00:00:00',
-                    'description' => admin_trans('store_machine.auto_shift.night_desc')
-                ],
-            ];
-
-            foreach ($autoShiftConfigs as $configData) {
-                $autoShiftConfig = new \addons\webman\model\StoreAutoShiftConfig();
-                $autoShiftConfig->department_id = $departmentId;
-                $autoShiftConfig->bind_admin_user_id = $adminUser->id;
-                $autoShiftConfig->is_enabled = 0; // 默认不启用
-                $autoShiftConfig->auto_settlement = 1;
-                $autoShiftConfig->save();
-            }
+            // 4. 创建默认自动交班配置（一个店家一条记录）
+            // 修复：唯一索引 uk_dept_admin (department_id, bind_admin_user_id) 限制一个店家只能有一条配置
+            $autoShiftConfig = new \addons\webman\model\StoreAutoShiftConfig();
+            $autoShiftConfig->department_id = $departmentId;
+            $autoShiftConfig->bind_admin_user_id = $adminUser->id;
+            $autoShiftConfig->is_enabled = 0; // 默认禁用，由店家自行启用
+            $autoShiftConfig->shift_mode = 1; // 每日模式
+            $autoShiftConfig->shift_time = '02:00:00'; // 默认凌晨2点交班
+            $autoShiftConfig->auto_settlement = 1; // 自动结算
+            $autoShiftConfig->save();
 
             DB::commit();
 
