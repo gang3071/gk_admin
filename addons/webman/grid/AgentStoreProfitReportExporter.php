@@ -424,13 +424,11 @@ class AgentStoreProfitReportExporter extends Excel
     }
 
     /**
-     * 保存文件到 public/storage 目录并返回可访问的 URL
-     * @param string $path 保存目录（忽略，使用 public/storage）
-     * @return string 返回可直接访问的 HTTP URL
+     * 保存文件（使用 public/storage 目录）
      */
     public function save(string $path)
     {
-        // 使用 public/storage 目录
+        // 使用 public/storage 目录而不是传入的 $path
         $exportPath = public_path('storage');
 
         // 确保目录存在
@@ -438,26 +436,23 @@ class AgentStoreProfitReportExporter extends Excel
             mkdir($exportPath, 0755, true);
         }
 
-        // 调用父类保存文件，获取完整文件路径
+        // 调用父类保存文件，返回完整文件路径
         $fullFilePath = parent::save($exportPath);
 
-        // 提取文件名（去除目录路径）
+        // 将文件系统路径转换为可访问的 HTTPS URL
+        // 文件路径格式：/www/wwwroot/.../public/storage/file.xlsx
+        // 转换为：https://agent.supergames9.com/storage/file.xlsx
         $fileName = basename($fullFilePath);
-
-        // 构造可直接访问的 HTTPS URL
-        // 使用当前请求的域名（agent.supergames9.com），强制 HTTPS
         $host = $_SERVER['HTTP_HOST'] ?? 'agent.supergames9.com';
-        $fileUrl = 'https://' . $host . '/storage/' . $fileName;
+        $staticUrl = 'https://' . $host . '/storage/' . $fileName;
 
-        \support\Log::info('AgentStoreProfitReportExporter: 保存文件', [
-            'export_path' => $exportPath,
-            'full_file_path' => $fullFilePath,
-            'file_name' => $fileName,
-            'file_url' => $fileUrl
+        \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
+            'filesystem_path' => $fullFilePath,
+            'static_url' => $staticUrl
         ]);
 
-        // 返回可访问的 URL 而不是文件系统路径
-        return $fileUrl;
+        // 返回静态文件 URL（ExAdmin 会将其存入 cache 供前端下载）
+        return $staticUrl;
     }
 
     /**

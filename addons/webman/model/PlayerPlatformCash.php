@@ -57,7 +57,7 @@ class PlayerPlatformCash extends Model
 
     /**
      * 模型的 "booted" 方法
-     * 监听余额变化，自动检查爆机状态
+     * 监听余额变化，自动检查爆机状态并同步 Redis 缓存
      *
      * @return void
      */
@@ -68,6 +68,35 @@ class PlayerPlatformCash extends Model
             // 检查 money 字段是否变化
             if (!$wallet->wasChanged('money')) {
                 return;
+            }
+
+            // ✅ 自动同步 Redis 缓存（所有平台）
+            try {
+                $cacheUpdated = \addons\webman\service\WalletService::updateCache(
+                    $wallet->player_id,
+                    $wallet->platform_id,
+                    (float)$wallet->money
+                );
+
+                // 🚨 缓存同步失败告警
+                if (!$cacheUpdated) {
+                    \support\Log::critical('PlayerPlatformCash: Redis cache sync failed!', [
+                        'player_id' => $wallet->player_id,
+                        'platform_id' => $wallet->platform_id,
+                        'old_balance' => $wallet->getOriginal('money'),
+                        'new_balance' => $wallet->money,
+                        'timestamp' => date('Y-m-d H:i:s'),
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Redis 缓存同步异常
+                \support\Log::critical('PlayerPlatformCash: Redis cache sync exception!', [
+                    'player_id' => $wallet->player_id,
+                    'platform_id' => $wallet->platform_id,
+                    'new_balance' => $wallet->money,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
             }
 
             try {
