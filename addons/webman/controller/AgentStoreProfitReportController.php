@@ -195,9 +195,9 @@ class AgentStoreProfitReportController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 添加导出功能
+            // 添加导出功能（使用纯英文文件名避免编码问题）
             $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
-                ->filename(admin_trans('agent_store_profit.export.filename') . date('YmdHis'));
+                ->filename('store_profit_report_' . date('YmdHis'));
 
             // 统计卡片
             $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
