@@ -40,23 +40,23 @@ class AgentStoreProfitReportExporter extends Excel
 
             // 计算统计汇总
             $totalStats = [
-                'total_recharge' => 0,
-                'total_withdraw' => 0,
-                'total_machine_put' => 0,
-                'total_lottery' => 0,
-                'total_subtotal' => 0,
-                'total_agent_profit' => 0,
-                'total_channel_profit' => 0,
+                'total_recharge' => '0',
+                'total_withdraw' => '0',
+                'total_machine_put' => '0',
+                'total_lottery' => '0',
+                'total_subtotal' => '0',
+                'total_agent_profit' => '0',
+                'total_channel_profit' => '0',
             ];
 
             foreach ($reportData as $item) {
-                $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], $item['recharge_amount'] ?? 0, 2);
-                $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], $item['withdraw_amount'] ?? 0, 2);
-                $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'] ?? 0, 2);
-                $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'] ?? 0, 2);
-                $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'] ?? 0, 2);
-                $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'] ?? 0, 2);
-                $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'] ?? 0, 2);
+                $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], strval($item['recharge_amount'] ?? 0), 2);
+                $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], strval($item['withdraw_amount'] ?? 0), 2);
+                $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($item['machine_put_point'] ?? 0), 2);
+                $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($item['lottery_amount'] ?? 0), 2);
+                $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], strval($item['subtotal'] ?? 0), 2);
+                $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], strval($item['agent_profit'] ?? 0), 2);
+                $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], strval($item['channel_profit'] ?? 0), 2);
             }
 
             // 写入 Excel
