@@ -27,8 +27,20 @@ class AgentStoreProfitReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
+            // 调试：记录接收到的数据
+            \support\Log::info('AgentStoreProfitReportExporter received data:', [
+                'data_count' => count($data),
+                'data_sample' => array_slice($data, 0, 2), // 只记录前2条
+                'data_keys' => !empty($data) ? array_keys($data[0] ?? []) : []
+            ]);
+
             // 直接使用传入的数据（Grid 已经查询好的数据）
             $reportData = $data;
+
+            // 检查数据是否为空
+            if (empty($reportData)) {
+                throw new \Exception('导出数据为空，没有可导出的记录');
+            }
 
             // 从 Request 获取筛选参数（用于显示时间范围）
             $exAdminFilter = Request::input('ex_admin_filter', []);
