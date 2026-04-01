@@ -446,8 +446,7 @@ class AgentStoreProfitReportExporter extends Excel
 
         // 构造可直接访问的 HTTPS URL
         // 使用当前请求的域名（agent.supergames9.com），强制 HTTPS
-        $request = \support\Request::request();
-        $host = $request->getHost();
+        $host = $_SERVER['HTTP_HOST'] ?? 'agent.supergames9.com';
         $fileUrl = 'https://' . $host . '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 保存文件', [
