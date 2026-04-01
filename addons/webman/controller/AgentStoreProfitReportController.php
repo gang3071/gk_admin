@@ -158,20 +158,20 @@ class AgentStoreProfitReportController
 
         // 计算统计数据
         $totalStats = [
-            'total_recharge' => 0,
-            'total_withdraw' => 0,
-            'total_machine_put' => 0,
-            'total_lottery' => 0,
-            'total_subtotal' => 0,
-            'total_agent_profit' => 0,
-            'total_channel_profit' => 0,
+            'total_recharge' => '0',
+            'total_withdraw' => '0',
+            'total_machine_put' => '0',
+            'total_lottery' => '0',
+            'total_subtotal' => '0',
+            'total_agent_profit' => '0',
+            'total_channel_profit' => '0',
         ];
 
         foreach ($reportData as $item) {
-            $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], $item['recharge_amount'], 2);
-            $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], $item['withdraw_amount'], 2);
-            $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'], 2);
-            $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'], 2);
+            $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], strval($item['recharge_amount']), 2);
+            $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], strval($item['withdraw_amount']), 2);
+            $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($item['machine_put_point']), 2);
+            $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($item['lottery_amount']), 2);
             $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
             $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
@@ -194,7 +194,6 @@ class AgentStoreProfitReportController
             $grid->title(admin_trans('agent_store_profit.title'));
             $grid->autoHeight();
             $grid->bordered(true);
-
             // 统计卡片
             $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
             $layout->row(function (Row $row) use ($totalStats) {
@@ -413,7 +412,9 @@ class AgentStoreProfitReportController
                     admin_trans('agent_store_profit.filter.end_time')
                 ]);
             });
-
+            // 添加导出功能（使用纯英文文件名避免编码问题）
+            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
+                ->filename('store_profit_report_' . date('YmdHis'));
             $grid->hideAction();
             $grid->hideDelete();
             $grid->hideSelection();
@@ -423,5 +424,17 @@ class AgentStoreProfitReportController
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);
         });
+    }
+
+    /**
+     * 导出店家分润报表
+     * @group agent
+     * @auth true
+     * @return void
+     */
+    public function export()
+    {
+        // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
+        // ExAdmin 会自动调用 AgentStoreProfitReportExporter
     }
 }
