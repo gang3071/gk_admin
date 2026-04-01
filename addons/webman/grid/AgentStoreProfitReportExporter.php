@@ -4,10 +4,6 @@ namespace addons\webman\grid;
 
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
-use addons\webman\model\Player;
-use addons\webman\model\PlayerDeliveryRecord;
-use addons\webman\model\PlayerLotteryRecord;
-use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
 use ExAdmin\ui\support\Request;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -31,29 +27,18 @@ class AgentStoreProfitReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-            // 从 Request 获取筛选参数
+            // 直接使用传入的数据（Grid 已经查询好的数据）
+            $reportData = $data;
+
+            // 从 Request 获取筛选参数（用于显示时间范围）
             $exAdminFilter = Request::input('ex_admin_filter', []);
             $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
             $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
-            $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
             /** @var AdminUser $admin */
             $admin = Admin::user();
 
-            // 获取代理下的所有店家
-            $allStoresQuery = $admin->childStores()
-                ->where('type', AdminUser::TYPE_STORE)
-                ->where('status', 1);
-
-            // 如果选择了特定店家，只查询该店家
-            if (!empty($selectedStoreId)) {
-                $storeIds = [$selectedStoreId];
-            } else {
-                $storeIds = $allStoresQuery->pluck('id')->toArray();
-            }
-
-            // 构建报表数据（复用控制器逻辑）
-            $reportData = [];
+            // 计算统计汇总
             $totalStats = [
                 'total_recharge' => 0,
                 'total_withdraw' => 0,
@@ -64,117 +49,14 @@ class AgentStoreProfitReportExporter extends Excel
                 'total_channel_profit' => 0,
             ];
 
-            foreach ($storeIds as $storeId) {
-                $store = AdminUser::find($storeId);
-                if (!$store) {
-                    continue;
-                }
-
-                // 获取该店家下的所有玩家
-                $playerIds = Player::query()
-                    ->where('store_admin_id', $storeId)
-                    ->where('is_promoter', 0)
-                    ->pluck('id')
-                    ->toArray();
-
-                if (empty($playerIds)) {
-                    // 没有玩家也要显示店家信息
-                    $reportData[] = [
-                        'id' => $store->id,
-                        'store_name' => $store->nickname,
-                        'store_username' => $store->username,
-                        'agent_commission' => $store->agent_commission ?? 0,
-                        'channel_commission' => $store->channel_commission ?? 0,
-                        'recharge_amount' => 0,
-                        'withdraw_amount' => 0,
-                        'machine_put_point' => 0,
-                        'lottery_amount' => 0,
-                        'subtotal' => 0,
-                        'agent_profit' => 0,
-                        'channel_profit' => 0,
-                    ];
-                    continue;
-                }
-
-                // 查询开分、洗分、投钞数据
-                $deliveryQuery = PlayerDeliveryRecord::query()
-                    ->whereIn('player_id', $playerIds);
-
-                // 时间筛选
-                if (!empty($createdAtStart)) {
-                    $deliveryQuery->where('created_at', '>=', $createdAtStart);
-                }
-                if (!empty($createdAtEnd)) {
-                    $deliveryQuery->where('created_at', '<=', $createdAtEnd);
-                }
-
-                $deliveryData = $deliveryQuery->selectRaw("
-                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
-                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
-                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
-                ")->first();
-
-                // 查询拉彩数据
-                $lotteryQuery = PlayerLotteryRecord::query()
-                    ->whereIn('player_id', $playerIds)
-                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
-
-                // 时间筛选
-                if (!empty($createdAtStart)) {
-                    $lotteryQuery->where('created_at', '>=', $createdAtStart);
-                }
-                if (!empty($createdAtEnd)) {
-                    $lotteryQuery->where('created_at', '<=', $createdAtEnd);
-                }
-
-                $lotteryData = $lotteryQuery->selectRaw("
-                    SUM(`amount`) as lottery_amount
-                ")->first();
-
-                // 提取数据
-                $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
-                $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
-                $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
-                $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
-
-                // 计算小计：(开分+投钞) - (洗分+彩金)
-                $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-                $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
-                $subtotal = bcsub($totalIn, $totalOut, 2);
-
-                // 计算代理分润：小计 * 代理抽成比例
-                $agentCommission = floatval($store->agent_commission ?? 0);
-                $agentProfit = bcmul($subtotal, bcdiv($agentCommission, 100, 4), 2);
-
-                // 计算渠道分润：小计 * 渠道抽成比例
-                $channelCommission = floatval($store->channel_commission ?? 0);
-                $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
-
-                $item = [
-                    'id' => $store->id,
-                    'store_name' => $store->nickname,
-                    'store_username' => $store->username,
-                    'agent_commission' => $agentCommission,
-                    'channel_commission' => $channelCommission,
-                    'recharge_amount' => $rechargeAmount,
-                    'withdraw_amount' => $withdrawAmount,
-                    'machine_put_point' => $machinePutPoint,
-                    'lottery_amount' => $lotteryAmount,
-                    'subtotal' => $subtotal,
-                    'agent_profit' => $agentProfit,
-                    'channel_profit' => $channelProfit,
-                ];
-
-                $reportData[] = $item;
-
-                // 累加统计
-                $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], $item['recharge_amount'], 2);
-                $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], $item['withdraw_amount'], 2);
-                $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'], 2);
-                $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'], 2);
-                $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
-                $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
-                $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
+            foreach ($reportData as $item) {
+                $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], $item['recharge_amount'] ?? 0, 2);
+                $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], $item['withdraw_amount'] ?? 0, 2);
+                $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'] ?? 0, 2);
+                $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'] ?? 0, 2);
+                $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'] ?? 0, 2);
+                $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'] ?? 0, 2);
+                $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'] ?? 0, 2);
             }
 
             // 写入 Excel

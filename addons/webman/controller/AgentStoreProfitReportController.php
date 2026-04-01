@@ -194,11 +194,6 @@ class AgentStoreProfitReportController
             $grid->title(admin_trans('agent_store_profit.title'));
             $grid->autoHeight();
             $grid->bordered(true);
-
-            // 添加导出功能（使用纯英文文件名避免编码问题）
-            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
-                ->filename('store_profit_report_' . date('YmdHis'));
-
             // 统计卡片
             $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
             $layout->row(function (Row $row) use ($totalStats) {
@@ -417,7 +412,9 @@ class AgentStoreProfitReportController
                     admin_trans('agent_store_profit.filter.end_time')
                 ]);
             });
-
+            // 添加导出功能（使用纯英文文件名避免编码问题）
+            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
+                ->filename('store_profit_report_' . date('YmdHis'));
             $grid->hideAction();
             $grid->hideDelete();
             $grid->hideSelection();
@@ -427,5 +424,17 @@ class AgentStoreProfitReportController
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);
         });
+    }
+
+    /**
+     * 导出店家分润报表
+     * @group agent
+     * @auth true
+     * @return void
+     */
+    public function export()
+    {
+        // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
+        // ExAdmin 会自动调用 AgentStoreProfitReportExporter
     }
 }
