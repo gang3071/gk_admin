@@ -424,13 +424,13 @@ class AgentStoreProfitReportExporter extends Excel
     }
 
     /**
-     * 保存文件到 public/storage 目录（与 ShiftReportExporter 保持一致）
-     * @param string $path 保存目录
-     * @return string|bool
+     * 保存文件到 public/storage 目录并返回可访问的 URL
+     * @param string $path 保存目录（忽略，使用 public/storage）
+     * @return string 返回可直接访问的 HTTP URL
      */
     public function save(string $path)
     {
-        // 使用 public/storage 目录（与其他导出保持一致）
+        // 使用 public/storage 目录
         $exportPath = public_path('storage');
 
         // 确保目录存在
@@ -438,12 +438,26 @@ class AgentStoreProfitReportExporter extends Excel
             mkdir($exportPath, 0755, true);
         }
 
+        // 调用父类保存文件，获取完整文件路径
+        $fullFilePath = parent::save($exportPath);
+
+        // 提取文件名（去除目录路径）
+        $fileName = basename($fullFilePath);
+
+        // 构造可直接访问的 HTTP URL
+        // 使用当前请求的域名（agent.supergames9.com）
+        $baseUrl = \support\Request::getSchemeAndHttpHost();
+        $fileUrl = $baseUrl . '/storage/' . $fileName;
+
         \support\Log::info('AgentStoreProfitReportExporter: 保存文件', [
-            'original_path' => $path,
-            'export_path' => $exportPath
+            'export_path' => $exportPath,
+            'full_file_path' => $fullFilePath,
+            'file_name' => $fileName,
+            'file_url' => $fileUrl
         ]);
 
-        return parent::save($exportPath);
+        // 返回可访问的 URL 而不是文件系统路径
+        return $fileUrl;
     }
 
     /**
