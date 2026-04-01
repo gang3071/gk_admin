@@ -31,6 +31,8 @@ class AgentStoreProfitReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
+            \support\Log::info('=== AgentStoreProfitReportExporter 开始导出 ===');
+
             // ExAdmin Grid 导出时，$data 参数通常只包含简化数据
             // 需要从 Request 获取筛选参数，重新查询完整数据
             $exAdminFilter = Request::input('ex_admin_filter', []);
@@ -38,29 +40,65 @@ class AgentStoreProfitReportExporter extends Excel
             $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
             $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
+            \support\Log::info('步骤1: 获取筛选参数', [
+                'created_at_start' => $createdAtStart,
+                'created_at_end' => $createdAtEnd,
+                'store_id' => $selectedStoreId
+            ]);
+
             /** @var AdminUser $admin */
             $admin = Admin::user();
+            \support\Log::info('步骤2: 获取当前代理', [
+                'admin_id' => $admin->id,
+                'admin_username' => $admin->username
+            ]);
 
             // 重新查询数据（复用控制器逻辑）
+            \support\Log::info('步骤3: 开始查询数据');
             $this->queryReportData($admin, $selectedStoreId, $createdAtStart, $createdAtEnd, $reportData, $totalStats);
+
+            \support\Log::info('步骤4: 数据查询完成', [
+                'data_count' => count($reportData),
+                'total_recharge' => $totalStats['total_recharge'] ?? 0,
+                'total_subtotal' => $totalStats['total_subtotal'] ?? 0
+            ]);
 
             // 验证数据
             if (empty($reportData)) {
+                \support\Log::warning('步骤5: 数据为空，无法导出');
                 throw new \Exception('没有可导出的数据，请检查筛选条件或确认是否有店家数据');
             }
 
             // 写入 Excel
+            \support\Log::info('步骤6: 开始写入Excel');
             $this->writeExcel($reportData, $totalStats, $createdAtStart, $createdAtEnd, $admin);
+            \support\Log::info('步骤7: Excel写入完成');
 
             // 完成回调
             if ($finish) {
+                \support\Log::info('步骤8: 调用完成回调');
                 $result = call_user_func($finish, $this);
+                \support\Log::info('步骤9: 生成文件路径', ['file_url' => $result]);
+
                 $this->cache->set(['status' => 1, 'url' => $result]);
                 $this->cache->expiresAfter(60);
                 $this->filesystemAdapter->save($this->cache);
+
+                \support\Log::info('步骤10: 缓存保存成功');
+            } else {
+                \support\Log::warning('步骤8: finish回调为空');
             }
 
+            \support\Log::info('=== AgentStoreProfitReportExporter 导出成功 ===');
+
         } catch (\Throwable $e) {
+            \support\Log::error('=== AgentStoreProfitReportExporter 导出失败 ===', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             $this->cache->set([
                 'status' => 2,
                 'error' => $e->getMessage(),
@@ -390,6 +428,11 @@ class AgentStoreProfitReportExporter extends Excel
      */
     private function queryReportData($admin, $selectedStoreId, $createdAtStart, $createdAtEnd, &$reportData, &$totalStats)
     {
+        \support\Log::info('queryReportData: 开始查询', [
+            'admin_id' => $admin->id,
+            'selected_store_id' => $selectedStoreId
+        ]);
+
         // 获取代理下的所有店家
         $allStoresQuery = $admin->childStores()
             ->where('type', AdminUser::TYPE_STORE)
@@ -398,8 +441,10 @@ class AgentStoreProfitReportExporter extends Excel
         // 如果选择了特定店家，只查询该店家
         if (!empty($selectedStoreId)) {
             $storeIds = [$selectedStoreId];
+            \support\Log::info('queryReportData: 筛选特定店家', ['store_id' => $selectedStoreId]);
         } else {
             $storeIds = $allStoresQuery->pluck('id')->toArray();
+            \support\Log::info('queryReportData: 查询所有店家', ['store_count' => count($storeIds)]);
         }
 
         // 构建报表数据
