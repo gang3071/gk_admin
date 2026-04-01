@@ -530,8 +530,7 @@ class ChannelIndexController
 
             $row->column(Card::create($this->rechargeChart())->hoverable(), 12);
             $row->column(Card::create($this->withdrawChart())->hoverable(), 12);
-            $row->column(Card::create($this->playerChart())->hoverable(), 12);
-            $row->column(Card::create($this->machineChart())->hoverable(), 12);
+            $row->column(Card::create($this->playerChart())->hoverable(), 24);
         });
 
         return $layout;
