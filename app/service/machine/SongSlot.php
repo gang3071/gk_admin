@@ -653,9 +653,7 @@ class SongSlot extends MachineServices implements BaseMachine
             ]);
             throw new Exception($e->getMessage());
         }
-        saveMachineOperationLog($this->machine, $this->machine->gamingPlayer, json_encode($this->getAllData()), $cmd, 1,
-            $isSystem, $data);
-        
+
         return true;
     }
     

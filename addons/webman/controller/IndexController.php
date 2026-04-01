@@ -4,7 +4,6 @@ namespace addons\webman\controller;
 
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
-use addons\webman\model\mongo\MachineOperationLog;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerGameLog;
 use addons\webman\model\PlayerLoginRecord;
@@ -23,10 +22,8 @@ use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\response\Msg;
-use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-use MongoDB\BSON\UTCDateTime;
 use support\Db;
 use support\Response;
 
@@ -1166,65 +1163,7 @@ class IndexController
             ->xAxis($xAxis)
             ->data(admin_trans('data_center.player_amount'), $yAxis);
     }
-    
-    /**
-     * 机台操作
-     * @return LineChart
-     * @throws Exception
-     */
-    public function machineChart(): LineChart
-    {
-        $startDate = Carbon::now()->subHours(24);
-        $logs = MachineOperationLog::raw(function ($collection) use ($startDate) {
-            return $collection->aggregate([
-                [
-                    '$match' => [
-                        'created_at' => [
-                            '$gte' => new UTCDateTime($startDate->timestamp * 1000),
-                        ],
-                        'status' => 1
-                    ]
-                ],
-                [
-                    '$group' => [
-                        '_id' => [
-                            'date' => [
-                                '$dateToString' => [
-                                    'format' => '%Y-%m-%d %H',
-                                    'date' => '$created_at',
-                                    'timezone' => 'Asia/Shanghai'
-                                ]
-                            ],
-                        ],
-                        'count' => ['$sum' => 1]
-                    ]
-                ],
-                [
-                    '$sort' => [
-                        '_id.date' => 1
-                    ]
-                ]
-            ]);
-        })->toArray();
-        $data = [];
-        foreach ($logs as $log) {
-            $data[$log['_id']->date] = $log['count'];
-        }
-        $xAxis = [];
-        $yAxis = [];
-        for ($i = 23; $i >= 0; $i--) {
-            $time = Carbon::now()->subHours($i)->format('Y-m-d H');
-            $xAxis[] = $time;
-            $yAxis[] = $data[$time] ?? 0;
-        }
-        return LineChart::create()
-            ->height('280px')
-            ->hideDateFilter()
-            ->header(Html::create(admin_trans('data_center.machine_24_chart'))->tag('h2')->style(['text-align' => 'center']))
-            ->xAxis($xAxis)
-            ->data(admin_trans('data_center.machine_amount'), $yAxis);
-    }
-    
+
     /**
      * 上传
      * @return Response|void

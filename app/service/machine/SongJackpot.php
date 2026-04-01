@@ -844,8 +844,6 @@ class SongJackpot extends MachineServices implements BaseMachine
                 'description' => $this->getDescription($cmd),
             ]);
         }
-        saveMachineOperationLog($this->machine, $this->machine->gamingPlayer, json_encode($this->getAllData()), $cmd, 1,
-            $isSystem, $data);
 
         return true;
     }

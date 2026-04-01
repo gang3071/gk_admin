@@ -266,15 +266,6 @@ return [
         'children' => []
     ],
     [
-        'id' => 'addons\webman\controller\ChannelMachineOperationLogController\index',
-        'pid' => 'addons\webman\controller\ChannelPlayerEditLogController-',
-        'action' => 'index',
-        'method' => 'get',
-        'group' => 'channel',
-        'url' => 'ex-admin/addons-webman-controller-ChannelMachineOperationLogController/index',
-        'title' => '机台操作日志',
-    ],
-    [
         'id' => 'addons\webman\controller\ChannelPlayerEditLogController\index',
         'pid' => 'addons\webman\controller\ChannelPlayerEditLogController-',
         'action' => 'index',

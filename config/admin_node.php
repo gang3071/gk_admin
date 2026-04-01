@@ -1222,15 +1222,6 @@ return [
         'title' => '玩家资料修改日志',
     ],
     [
-        'id' => 'addons\webman\controller\MachineOperationLogController\index',
-        'pid' => 'addons\webman\controller\MachineKeepingLogController-',
-        'action' => 'index',
-        'method' => '',
-        'group' => 'department',
-        'url' => 'ex-admin/addons-webman-controller-MachineOperationLogController/index',
-        'title' => '机台操作日志',
-    ],
-    [
         'id' => 'addons\webman\controller\MachineEditLogController\index',
         'pid' => 'addons\webman\controller\MachineKeepingLogController-',
         'action' => 'index',
@@ -1247,15 +1238,6 @@ return [
         'group' => 'department',
         'url' => 'ex-admin/addons-webman-controller-MachineEditLogController/detail',
         'title' => '机台异动日志详情',
-    ],
-    [
-        'id' => 'addons\webman\controller\LotteryAddLogController\index',
-        'pid' => 'addons\webman\controller\MachineKeepingLogController-',
-        'action' => 'index',
-        'method' => 'get',
-        'group' => 'department',
-        'url' => 'ex-admin/addons-webman-controller-LotteryAddLogController/index',
-        'title' => '彩金累积日志',
     ],
     [
         'id' => 'addons\webman\controller\PlayerMoneyEditLogController\index',

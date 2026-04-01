@@ -11,8 +11,6 @@ use addons\webman\model\MachineLabel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineMediaPush;
 use addons\webman\model\MachineTencentPlay;
-use addons\webman\model\mongo\MachineOperationLog;
-use addons\webman\model\mongo\MachineReceiveLog;
 use addons\webman\model\NationalInvite;
 use addons\webman\model\NationalProfitRecord;
 use addons\webman\model\Notice;
@@ -143,96 +141,6 @@ if (!function_exists('getGameTypeCateName')) {
     function getGameTypeCateName($val): string
     {
         return admin_trans('game_type.game_type_cate.' . $val);
-    }
-}
-
-if (!function_exists('saveMachineOperationLog')) {
-    /**
-     * @param Machine $machine
-     * @param Player|null $player
-     * @param string $content 内容
-     * @param string $action 功能
-     * @param int $status 状态
-     * @param int $isSystem
-     * @param int $point
-     * @return bool
-     */
-    function saveMachineOperationLog(
-        Machine $machine,
-        Player  $player = null,
-        string  $content = '',
-        string  $action = '',
-        int     $status = 1,
-        int     $isSystem = 0,
-        int     $point = 0
-    ): bool
-    {
-        $machineOperationLog = new MachineOperationLog;
-        $machineOperationLog->id = 0;
-        $machineOperationLog->department_id = $player->department_id ?? 0;
-        $machineOperationLog->machine_id = $machine->id;
-        $machineOperationLog->producer_id = $machine->producer_id;
-        $machineOperationLog->machine_name = $machine->name;
-        $machineOperationLog->machine_type = $machine->type;
-        $machineOperationLog->machine_cate = $machine->cate_id;
-        $machineOperationLog->machine_code = $machine->code;
-        $machineOperationLog->uuid = $player->uuid ?? '';
-        $machineOperationLog->player_id = $player->id ?? 0;
-        $machineOperationLog->player_phone = $player->phone ?? '';
-        $machineOperationLog->player_name = $player->name ?? '';
-        $machineOperationLog->status = $status;
-        $machineOperationLog->is_system = $isSystem;
-        $machineOperationLog->content = $content;
-        $machineOperationLog->action = $action;
-        $machineOperationLog->remark = request()?->input('data')['remark'] ?? '';
-        $machineOperationLog->user_id = Admin::id() ?? 0;
-        $machineOperationLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
-        if ($action == 41) {
-            $point = 100;
-        } elseif ($action == 42) {
-            $point = 1000;
-        }
-        $machineOperationLog->point = $point;
-        return $machineOperationLog->save();
-    }
-}
-
-if (!function_exists('saveMachineReceiveLog')) {
-    /**
-     * @param Machine $machine
-     * @param string $msg 指令
-     * @param Player|null $player
-     * @param string $content 内容
-     * @param string $action 功能
-     * @param int $status 状态
-     * @return bool
-     */
-    function saveMachineReceiveLog(
-        Machine $machine,
-        string  $msg,
-        Player  $player = null,
-        string  $content = '',
-        string  $action = '',
-        int     $status = 1
-    ): bool
-    {
-        $machineOperationLog = new MachineReceiveLog();
-        $machineOperationLog->id = 0;
-        $machineOperationLog->department_id = $player->department_id ?? 0;
-        $machineOperationLog->machine_id = $machine->id;
-        $machineOperationLog->machine_name = $machine->name;
-        $machineOperationLog->machine_type = $machine->type;
-        $machineOperationLog->machine_code = $machine->code;
-        $machineOperationLog->uuid = $player->uuid ?? '';
-        $machineOperationLog->player_id = $player->id ?? 0;
-        $machineOperationLog->player_phone = $player->phone ?? '';
-        $machineOperationLog->player_name = $player->name ?? '';
-        $machineOperationLog->msg = $msg;
-        $machineOperationLog->content = $content;
-        $machineOperationLog->action = $action;
-        $machineOperationLog->status = $status;
-
-        return $machineOperationLog->save();
     }
 }
 

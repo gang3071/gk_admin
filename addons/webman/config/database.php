@@ -56,9 +56,6 @@ return [
         //平台
         'player_platform_cash_table' => 'player_platform_cash',
         'player_platform_cash_model' => \addons\webman\model\PlayerPlatformCash::class,
-        //管理员操作机台记录
-        'machine_operation_log_table' => 'machine_operation_log',
-        'machine_operation_log_model' => \addons\webman\model\mongo\MachineOperationLog::class,
         //玩家游戏记录
         'player_game_log_table' => 'player_game_log',
         'player_game_log_model' => \addons\webman\model\PlayerGameLog::class,
@@ -194,9 +191,6 @@ return [
         //彩金
         'lottery_table' => 'lottery',
         'lottery_model' => \addons\webman\model\Lottery::class,
-        //彩金池累积日志
-        'lottery_pool_add_log_table' => 'lottery_pool_add_log',
-        'lottery_pool_add_log_model' => \addons\webman\model\mongo\LotteryPoolAddLog::class,
         //玩家派彩记录
         'player_lottery_record_table' => 'player_lottery_record',
         'player_lottery_record_model' => \addons\webman\model\PlayerLotteryRecord::class,
@@ -257,9 +251,6 @@ return [
         //全民代理收益记录
         'national_profit_record_table' => 'national_profit_record',
         'national_profit_record_model' => \addons\webman\model\NationalProfitRecord::class,
-        //管理员操作机台记录
-        'machine_receive_log_table' => 'machine_receive_log',
-        'machine_receive_log_model' => \addons\webman\model\mongo\MachineReceiveLog::class,
         //银行列表
         'bank_table' => 'bank_list',
         'bank_model' => \addons\webman\model\Bank::class,
