@@ -44,6 +44,11 @@ class AgentStoreProfitReportExporter extends Excel
             // 重新查询数据（复用控制器逻辑）
             $this->queryReportData($admin, $selectedStoreId, $createdAtStart, $createdAtEnd, $reportData, $totalStats);
 
+            // 验证数据
+            if (empty($reportData)) {
+                throw new \Exception('没有可导出的数据，请检查筛选条件或确认是否有店家数据');
+            }
+
             // 写入 Excel
             $this->writeExcel($reportData, $totalStats, $createdAtStart, $createdAtEnd, $admin);
 
