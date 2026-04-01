@@ -446,7 +446,7 @@ class AgentStoreProfitReportExporter extends Excel
 
         // 构造可直接访问的 HTTP URL
         // 使用当前请求的域名（agent.supergames9.com）
-        $baseUrl = \support\Request::getSchemeAndHttpHost();
+        $baseUrl = Request::getSchemeAndHttpHost();
         $fileUrl = $baseUrl . '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 保存文件', [
