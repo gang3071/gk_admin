@@ -262,6 +262,10 @@ class StoreMachineController
                                 $min = $configData['min_bet_amount'] ?? 0;
                                 $max = $configData['max_bet_amount'] ?? 0;
                                 $configDetail = "限红范围: {$min} - {$max}";
+                            } elseif ($limitConfig->platform_code === 'DG') {
+                                $min = $configData['min'] ?? 0;
+                                $max = $configData['max'] ?? 0;
+                                $configDetail = "限红范围: {$min} - {$max}";
                             }
                         }
                     }
@@ -592,12 +596,13 @@ class StoreMachineController
 
             $form->hidden('store_id')->value($storeId);
 
-            // 获取ATG和RSG平台
+            // 获取ATG、RSG和DG平台
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+            $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
-            if (!$atgPlatform && !$rsgPlatform) {
-                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG）</font>'));
+            if (!$atgPlatform && !$rsgPlatform && !$dgPlatform) {
+                $form->push(Html::markdown('><font size=2 color="#999">暂无可用的游戏平台（ATG/RSG/DG）</font>'));
             } else {
                 // ATG平台配置
                 if ($atgPlatform) {
@@ -624,6 +629,19 @@ class StoreMachineController
                         ->value($rsgConfig ? $rsgConfig->limit_group_id : null)
                         ->help('选择RSG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
                 }
+
+                // DG平台配置
+                if ($dgPlatform) {
+                    $form->divider()->content('DG 平台限红组配置');
+
+                    $dgConfig = $existingConfigs->get($dgPlatform->id);
+                    $dgOptions = ['' => '不配置限红组'] + $this->getLimitGroupOptionsForPlatform($dgPlatform->id);
+
+                    $form->select('dg_limit_group_id', "限红组 ({$dgPlatform->name})")
+                        ->options($dgOptions)
+                        ->value($dgConfig ? $dgConfig->limit_group_id : null)
+                        ->help('选择DG平台的限红组，选择「不配置限红组」将清除该平台的限红配置');
+                }
             }
         });
     }
@@ -646,9 +664,10 @@ class StoreMachineController
             return message_error('店家ID不能为空');
         }
 
-        // 获取ATG和RSG平台
+        // 获取ATG、RSG和DG平台
         $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
         $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+        $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
         DB::beginTransaction();
         try {
@@ -684,6 +703,22 @@ class StoreMachineController
                     $updatedCount++;
                 } else {
                     $errors[] = "RSG: {$result['message']}";
+                }
+            }
+
+            // 处理DG平台配置
+            if ($dgPlatform) {
+                $result = $this->savePlatformLimitGroup(
+                    $storeId,
+                    $dgPlatform->id,
+                    $dgPlatform->code,
+                    $data['dg_limit_group_id'] ?? null
+                );
+
+                if ($result['success']) {
+                    $updatedCount++;
+                } else {
+                    $errors[] = "DG: {$result['message']}";
                 }
             }
 

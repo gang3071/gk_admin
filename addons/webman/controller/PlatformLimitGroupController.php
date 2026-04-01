@@ -97,6 +97,14 @@ class PlatformLimitGroupController
                             $configInfo[] = "限红: {$min} - {$max}";
                         }
                     }
+                    // DG平台显示限红范围
+                    elseif ($config['platform_code'] === 'DG') {
+                        if (isset($configData['min']) && isset($configData['max'])) {
+                            $min = $configData['min'];
+                            $max = $configData['max'];
+                            $configInfo[] = "限红: {$min} - {$max}";
+                        }
+                    }
                 }
 
                 return $configInfo ? implode("\n", $configInfo) : '未配置';
@@ -151,7 +159,7 @@ class PlatformLimitGroupController
     {
         $platforms = GamePlatform::query()
             ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG'])
+            ->whereIn('code', ['ATG', 'RSG', 'DG'])
             ->orderBy('sort', 'desc')
             ->orderBy('id', 'desc')
             ->get();
@@ -200,9 +208,10 @@ class PlatformLimitGroupController
             // 平台配置部分
             $form->divider('平台配置');
 
-            // 获取ATG和RSG平台
+            // 获取ATG、RSG和DG平台
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+            $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
             // 编辑时获取现有配置
             $existingConfig = null;
@@ -226,9 +235,12 @@ class PlatformLimitGroupController
             if ($rsgPlatform) {
                 $platformOptions[$rsgPlatform->id] = "{$rsgPlatform->name} ({$rsgPlatform->code})";
             }
+            if ($dgPlatform) {
+                $platformOptions[$dgPlatform->id] = "{$dgPlatform->name} ({$dgPlatform->code})";
+            }
 
             if (empty($platformOptions)) {
-                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/RSG）</div>');
+                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/RSG/DG）</div>');
             } else {
                 // 平台选择（新建必填，编辑显示）
                 if ($form->isEdit() && $existingConfig) {
@@ -279,6 +291,21 @@ class PlatformLimitGroupController
                             ->value($existingConfigData['max_bet_amount'] ?? '')
                             ->required()
                             ->help('RSG平台最大下注金额');
+                    } elseif ($existingConfig->platform_code === 'DG' && $dgPlatform) {
+                        $form->divider('DG 平台配置');
+                        $form->number('dg_min', '最小下注金额')
+                            ->precision(2)
+                            ->min(10)
+                            ->value($existingConfigData['min'] ?? '')
+                            ->required()
+                            ->help('DG平台最小下注金额，不能低于10');
+
+                        $form->number('dg_max', '最大下注金额')
+                            ->precision(2)
+                            ->min(10)
+                            ->value($existingConfigData['max'] ?? '')
+                            ->required()
+                            ->help('DG平台最大下注金额');
                     }
                 } else {
                     // 新建模式使用 when 方法
@@ -334,6 +361,27 @@ class PlatformLimitGroupController
                                 ->precision(2)
                                 ->min(0)
                                 ->help('RSG平台最大下注金额')
+                                ->placeholder('例如：10000.00');
+                        });
+                    }
+
+                    // DG平台配置（使用when实现条件显示）
+                    if ($dgPlatform) {
+                        $platformSelect->when($dgPlatform->id, function (Form $form) {
+                            $form->divider('DG 平台配置');
+
+                            $form->number('dg_min', '最小下注金额')
+                                ->required()
+                                ->precision(2)
+                                ->min(10)
+                                ->help('DG平台最小下注金额，不能低于10')
+                                ->placeholder('例如：10.00');
+
+                            $form->number('dg_max', '最大下注金额')
+                                ->required()
+                                ->precision(2)
+                                ->min(10)
+                                ->help('DG平台最大下注金额')
                                 ->placeholder('例如：10000.00');
                         });
                     }
@@ -401,6 +449,19 @@ class PlatformLimitGroupController
                     $configData = [
                         'min_bet_amount' => isset($data['rsg_min_bet_amount']) ? floatval($data['rsg_min_bet_amount']) : 0,
                         'max_bet_amount' => isset($data['rsg_max_bet_amount']) ? floatval($data['rsg_max_bet_amount']) : 0,
+                    ];
+                } elseif ($platform->code === 'DG') {
+                    $minAmount = isset($data['dg_min']) ? floatval($data['dg_min']) : 0;
+                    $maxAmount = isset($data['dg_max']) ? floatval($data['dg_max']) : 0;
+
+                    // 验证DG平台最小下注金额不能低于10
+                    if ($minAmount < 10) {
+                        return;
+                    }
+
+                    $configData = [
+                        'min' => $minAmount,
+                        'max' => $maxAmount,
                     ];
                 }
 

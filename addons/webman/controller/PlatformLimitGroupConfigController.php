@@ -82,6 +82,12 @@ class PlatformLimitGroupConfigController
                     $max = $value['max_bet_amount'] ?? 0;
                     $configText[] = "限红范围: {$min} - {$max}";
                 }
+                // DG平台显示限红范围
+                if (isset($value['min']) || isset($value['max'])) {
+                    $min = $value['min'] ?? 0;
+                    $max = $value['max'] ?? 0;
+                    $configText[] = "限红范围: {$min} - {$max}";
+                }
                 return implode('<br>', $configText);
             })->align('center');
 
@@ -137,9 +143,10 @@ class PlatformLimitGroupConfigController
                 ->required()
                 ->disabled($form->isEdit());
 
-            // 获取ATG和RSG平台ID
+            // 获取ATG、RSG和DG平台ID
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
+            $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
             // 编辑时获取config_data（已经是数组类型，无需json_decode）
             $configData = [];
@@ -213,6 +220,29 @@ class PlatformLimitGroupConfigController
                 });
             }
 
+            // DG平台配置（当选择DG时显示）
+            if ($dgPlatform) {
+                $platformSelect->when($dgPlatform->id, function (Form $form) use ($configData) {
+                    $form->divider('DG 平台配置');
+
+                    $form->number('config_data.min', '最小下注金额')
+                        ->required()
+                        ->precision(2)
+                        ->min(10)
+                        ->value($configData['min'] ?? '')
+                        ->help('DG平台最小下注金额，不能低于10')
+                        ->placeholder('例如：10.00');
+
+                    $form->number('config_data.max', '最大下注金额')
+                        ->required()
+                        ->precision(2)
+                        ->min(10)
+                        ->value($configData['max'] ?? '')
+                        ->help('DG平台最大下注金额')
+                        ->placeholder('例如：10000.00');
+                });
+            }
+
             $form->radio('status', '状态')
                 ->options([
                     1 => '启用',
@@ -274,12 +304,39 @@ class PlatformLimitGroupConfigController
                         return message_error('最大下注金额必须大于最小下注金额');
                     }
 
-                    // 清空ATG字段
+                    // 清空ATG和DG字段
                     unset($configData['operator']);
                     unset($configData['operator_key']);
                     unset($configData['provider_id']);
                     unset($configData['api_domain']);
                     unset($configData['limit_description']);
+                    unset($configData['min']);
+                    unset($configData['max']);
+
+                } elseif ($platform->code === 'DG') {
+                    // 验证DG平台必填字段
+                    if (!isset($configData['min']) || $configData['min'] === '') {
+                        return message_error('DG平台必须填写最小下注金额');
+                    }
+                    if (!isset($configData['max']) || $configData['max'] === '') {
+                        return message_error('DG平台必须填写最大下注金额');
+                    }
+                    // 验证DG平台最小下注金额不能低于10
+                    if ($configData['min'] < 10) {
+                        return message_error('DG平台最小下注金额不能低于10');
+                    }
+                    if ($configData['max'] <= $configData['min']) {
+                        return message_error('最大下注金额必须大于最小下注金额');
+                    }
+
+                    // 清空ATG和RSG字段
+                    unset($configData['operator']);
+                    unset($configData['operator_key']);
+                    unset($configData['provider_id']);
+                    unset($configData['api_domain']);
+                    unset($configData['limit_description']);
+                    unset($configData['min_bet_amount']);
+                    unset($configData['max_bet_amount']);
                 }
 
                 $form->input('config_data', $configData);
@@ -320,7 +377,7 @@ class PlatformLimitGroupConfigController
 
     /**
      * 获取游戏平台选项（ajax用）
-     * 只返回 ATG 和 RSG 平台
+     * 只返回 ATG、RSG 和 DG 平台
      * @auth true
      */
     public function getGamePlatformOptions()
@@ -328,7 +385,7 @@ class PlatformLimitGroupConfigController
         $request = Request::input();
         $query = GamePlatform::query()
             ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG']) // 只显示 ATG 和 RSG
+            ->whereIn('code', ['ATG', 'RSG', 'DG']) // 只显示 ATG、RSG 和 DG
             ->orderBy('sort', 'desc')
             ->orderBy('id', 'desc');
 
@@ -351,14 +408,14 @@ class PlatformLimitGroupConfigController
 
     /**
      * 获取游戏平台选项（Form用，返回数组）
-     * 只返回 ATG 和 RSG 平台
+     * 只返回 ATG、RSG 和 DG 平台
      */
     private function getGamePlatformOptionsArray(): array
     {
         $data = [];
         $list = GamePlatform::query()
             ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG']) // 只显示 ATG 和 RSG
+            ->whereIn('code', ['ATG', 'RSG', 'DG']) // 只显示 ATG、RSG 和 DG
             ->orderBy('sort', 'desc')
             ->orderBy('id', 'desc')
             ->get();
