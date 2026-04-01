@@ -444,10 +444,10 @@ class AgentStoreProfitReportExporter extends Excel
         // 提取文件名（去除目录路径）
         $fileName = basename($fullFilePath);
 
-        // 构造可直接访问的 HTTP URL
-        // 使用当前请求的域名（agent.supergames9.com）
-        $baseUrl = Request::getSchemeAndHttpHost();
-        $fileUrl = $baseUrl . '/storage/' . $fileName;
+        // 构造可直接访问的 HTTPS URL
+        // 使用当前请求的域名（agent.supergames9.com），强制 HTTPS
+        $host = Request::host();
+        $fileUrl = 'https://' . $host . '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 保存文件', [
             'export_path' => $exportPath,
