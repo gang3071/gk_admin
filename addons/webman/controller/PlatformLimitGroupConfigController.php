@@ -228,15 +228,15 @@ class PlatformLimitGroupConfigController
                     $form->number('config_data.min', '最小下注金额')
                         ->required()
                         ->precision(2)
-                        ->min(0)
+                        ->min(10)
                         ->value($configData['min'] ?? '')
-                        ->help('DG平台最小下注金额')
-                        ->placeholder('例如：1.00');
+                        ->help('DG平台最小下注金额，不能低于10')
+                        ->placeholder('例如：10.00');
 
                     $form->number('config_data.max', '最大下注金额')
                         ->required()
                         ->precision(2)
-                        ->min(0)
+                        ->min(10)
                         ->value($configData['max'] ?? '')
                         ->help('DG平台最大下注金额')
                         ->placeholder('例如：10000.00');
@@ -320,6 +320,10 @@ class PlatformLimitGroupConfigController
                     }
                     if (!isset($configData['max']) || $configData['max'] === '') {
                         return message_error('DG平台必须填写最大下注金额');
+                    }
+                    // 验证DG平台最小下注金额不能低于10
+                    if ($configData['min'] < 10) {
+                        return message_error('DG平台最小下注金额不能低于10');
                     }
                     if ($configData['max'] <= $configData['min']) {
                         return message_error('最大下注金额必须大于最小下注金额');

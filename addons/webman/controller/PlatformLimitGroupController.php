@@ -295,14 +295,14 @@ class PlatformLimitGroupController
                         $form->divider('DG 平台配置');
                         $form->number('dg_min', '最小下注金额')
                             ->precision(2)
-                            ->min(0)
+                            ->min(10)
                             ->value($existingConfigData['min'] ?? '')
                             ->required()
-                            ->help('DG平台最小下注金额');
+                            ->help('DG平台最小下注金额，不能低于10');
 
                         $form->number('dg_max', '最大下注金额')
                             ->precision(2)
-                            ->min(0)
+                            ->min(10)
                             ->value($existingConfigData['max'] ?? '')
                             ->required()
                             ->help('DG平台最大下注金额');
@@ -373,14 +373,14 @@ class PlatformLimitGroupController
                             $form->number('dg_min', '最小下注金额')
                                 ->required()
                                 ->precision(2)
-                                ->min(0)
-                                ->help('DG平台最小下注金额')
-                                ->placeholder('例如：1.00');
+                                ->min(10)
+                                ->help('DG平台最小下注金额，不能低于10')
+                                ->placeholder('例如：10.00');
 
                             $form->number('dg_max', '最大下注金额')
                                 ->required()
                                 ->precision(2)
-                                ->min(0)
+                                ->min(10)
                                 ->help('DG平台最大下注金额')
                                 ->placeholder('例如：10000.00');
                         });
@@ -451,9 +451,17 @@ class PlatformLimitGroupController
                         'max_bet_amount' => isset($data['rsg_max_bet_amount']) ? floatval($data['rsg_max_bet_amount']) : 0,
                     ];
                 } elseif ($platform->code === 'DG') {
+                    $minAmount = isset($data['dg_min']) ? floatval($data['dg_min']) : 0;
+                    $maxAmount = isset($data['dg_max']) ? floatval($data['dg_max']) : 0;
+
+                    // 验证DG平台最小下注金额不能低于10
+                    if ($minAmount < 10) {
+                        return;
+                    }
+
                     $configData = [
-                        'min' => isset($data['dg_min']) ? floatval($data['dg_min']) : 0,
-                        'max' => isset($data['dg_max']) ? floatval($data['dg_max']) : 0,
+                        'min' => $minAmount,
+                        'max' => $maxAmount,
                     ];
                 }
 
