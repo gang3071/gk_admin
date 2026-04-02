@@ -150,6 +150,9 @@ class StoreSetting extends Model
                                 $wallet->save();
                             });
 
+                            // 🚀 手动清除爆机缓存（因为使用了 withoutEvents）
+                            clearMachineCrashCache($player->id);
+
                             // 发送爆机通知
                             $crashInfo = [
                                 'crashed' => true,
@@ -190,6 +193,9 @@ class StoreSetting extends Model
                             $wallet->is_crashed = 0;
                             $wallet->save();
                         });
+
+                        // 🚀 手动清除爆机缓存（因为使用了 withoutEvents）
+                        clearMachineCrashCache($player->id);
 
                         // 直接发送解锁通知（不能用 checkAndNotifyCrashUnlock，因为配置已关闭）
                         try {
@@ -282,6 +288,9 @@ class StoreSetting extends Model
                         $wallet->save();
                     });
 
+                    // 🚀 手动清除爆机缓存（因为使用了 withoutEvents）
+                    clearMachineCrashCache($player->id);
+
                     // 发送爆机通知
                     $crashInfo = [
                         'crashed' => true,
@@ -304,6 +313,9 @@ class StoreSetting extends Model
                         $wallet->is_crashed = 0;
                         $wallet->save();
                     });
+
+                    // 🚀 手动清除爆机缓存（因为使用了 withoutEvents）
+                    clearMachineCrashCache($player->id);
 
                     // 直接发送解锁通知
                     try {
