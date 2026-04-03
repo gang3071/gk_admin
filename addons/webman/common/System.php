@@ -434,7 +434,7 @@ class System extends SystemAbstract
      */
     public function download($file): \support\Response|BinaryFileResponse|\Webman\Http\Response
     {
-        $path = base_path() . $file;
+        $path = public_path() . $file;
 
         if (!file_exists($path)) {
             return response('文件不存在', 404);
