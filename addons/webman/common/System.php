@@ -29,9 +29,9 @@ use ExAdmin\ui\support\Arr;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Token;
 use ExAdmin\ui\token\AuthException;
+use Exception;
 use GatewayWorker\Lib\Gateway;
-use think\Exception;
-
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class System extends SystemAbstract
 {
@@ -426,5 +426,20 @@ class System extends SystemAbstract
         }
         
         return Response::success($data);
+    }
+
+    /**
+     * @param $file
+     * @return \support\Response|BinaryFileResponse|\Webman\Http\Response
+     */
+    public function download($file): \support\Response|BinaryFileResponse|\Webman\Http\Response
+    {
+        $path = base_path() . $file;
+
+        if (!file_exists($path)) {
+            return response('文件不存在', 404);
+        }
+
+        return response()->download($path, basename($path));
     }
 }
