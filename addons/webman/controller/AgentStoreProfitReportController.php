@@ -413,9 +413,9 @@ class AgentStoreProfitReportController
                 ]);
             });
             // 添加导出功能（使用纯英文文件名避免编码问题）
+            // AgentStoreProfitReportExporter::save() 方法会强制使用 public/storage 目录
             $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
-                ->filename('store_profit_report_' . date('YmdHis'))
-                ->disk('local');  // ✅ 明确指定使用 local 存储驱动（public/storage）
+                ->filename('store_profit_report_' . date('YmdHis'));
             $grid->hideAction();
             $grid->hideDelete();
             $grid->hideSelection();

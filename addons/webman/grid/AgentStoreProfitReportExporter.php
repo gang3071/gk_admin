@@ -465,7 +465,7 @@ class AgentStoreProfitReportExporter extends Excel
 
     /**
      * 保存文件到 public/storage 目录
-     * 确保文件可以通过静态 URL 直接访问
+     * 返回可直接访问的静态文件 URL
      */
     public function save(string $path)
     {
@@ -484,21 +484,20 @@ class AgentStoreProfitReportExporter extends Excel
         // 获取文件名
         $fileName = basename($fullFilePath);
 
-        // 构建静态访问 URL
-        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
-        $host = $_SERVER['HTTP_HOST'] ?? 'agent.supergames9.com';
-        $staticUrl = $scheme . '://' . $host . '/storage/' . $fileName;
+        // ✅ 构建相对于网站根目录的路径
+        // 返回格式：/storage/file.xlsx（不包含域名，让浏览器自动补全）
+        $publicRelativePath = '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
             'filesystem_path' => $fullFilePath,
-            'public_url' => $staticUrl,
+            'relative_path' => $publicRelativePath,
             'web_accessible' => true
         ]);
 
-        // ✅ 返回完整文件系统路径
-        // ExAdmin 会检测到文件在 public 目录下，自动转换为静态 URL
-        // 转换规则：/www/wwwroot/.../public/storage/file.xlsx → https://domain.com/storage/file.xlsx
-        return $fullFilePath;
+        // ✅ 返回相对于网站根目录的路径（以 / 开头）
+        // ExAdmin 会将其识别为静态资源路径，直接使用而不包装下载路由
+        // 前端会将 /storage/file.xlsx 自动补全为 https://agent.supergames9.com/storage/file.xlsx
+        return $publicRelativePath;
     }
 
     /**
