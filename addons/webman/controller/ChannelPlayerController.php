@@ -1721,7 +1721,11 @@ class ChannelPlayerController
                 $player->recommend_id = $recommendPlayer->player->id;
                 $player->recommended_code = $recommendPlayer->player->recommend_code;
                 $player->save();
-                $recommendPlayer->increment('player_num');
+
+                // 更新推荐人的玩家数量（使用 save() 确保事务一致性和触发模型事件）
+                $recommendPlayer->player_num = ($recommendPlayer->player_num ?? 0) + 1;
+                $recommendPlayer->save();
+
                 return message_success(admin_trans('player.action_success'));
             });
         });
@@ -1920,7 +1924,12 @@ class ChannelPlayerController
             $player->is_promoter = 1;
             $player->save();
 
-            $parentPromoter && $orgPromoter == 0 && $parentPromoter->increment('team_num');
+            // 更新上级推广员的团队数量（使用 save() 确保事务一致性和触发模型事件）
+            if ($parentPromoter && $orgPromoter == 0) {
+                $parentPromoter->team_num = ($parentPromoter->team_num ?? 0) + 1;
+                $parentPromoter->save();
+            }
+
             Db::commit();
         } catch (\Exception $e) {
             Db::rollBack();

@@ -70,11 +70,14 @@ class ImportService
                 $player->recommended_code = $row['recommended_code'] ?? 0;
                 $player->avatar = config('def_avatar.1');
                 $player->save();
-                
+
+                // 更新推荐人的玩家数量（使用 save() 确保事务一致性和触发模型事件）
                 if (!empty($recommendPlayer->player_promoter)) {
-                    $recommendPlayer->player_promoter->increment('player_num');
+                    $playerPromoter = $recommendPlayer->player_promoter;
+                    $playerPromoter->player_num = ($playerPromoter->player_num ?? 0) + 1;
+                    $playerPromoter->save();
                 }
-                
+
                 addPlayerExtend($player);
                 addRegisterRecord($player->id, PlayerRegisterRecord::TYPE_CLIENT, $player->department_id);
                 DB::commit();

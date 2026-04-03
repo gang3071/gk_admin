@@ -2,6 +2,7 @@
 
 return [
     // 通用錯誤消息
+    'data_not_found' => '資料不存在',
     'player_not_exist' => '玩家不存在',
     'player_already_exists' => '玩家已存在',
     'recommended_player_not_exist' => '推薦玩家不存在',

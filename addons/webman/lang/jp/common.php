@@ -2,6 +2,7 @@
 
 return [
     // 共通エラーメッセージ
+    'data_not_found' => 'データが見つかりません',
     'player_not_exist' => 'プレーヤーが存在しません',
     'game_not_exist' => 'ゲームが存在しません',
     'please_select_games' => '承認するゲームを選択してください',

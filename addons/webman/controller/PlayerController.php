@@ -1479,7 +1479,11 @@ class PlayerController
                 $player->recommend_id = $recommendPlayer->player->id;
                 $player->recommended_code = $recommendPlayer->player->recommend_code;
                 $player->save();
-                $recommendPlayer->increment('player_num');
+
+                // 更新推荐人的玩家数量（使用 save() 确保事务一致性和触发模型事件）
+                $recommendPlayer->player_num = ($recommendPlayer->player_num ?? 0) + 1;
+                $recommendPlayer->save();
+
                 return message_success(admin_trans('player.action_success'));
             });
         });

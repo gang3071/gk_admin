@@ -2,6 +2,7 @@
 
 return [
     // Common error messages
+    'data_not_found' => 'Data not found',
     'player_not_exist' => 'Player does not exist',
     'game_not_exist' => 'Game does not exist',
     'please_select_games' => 'Please select games to authorize',

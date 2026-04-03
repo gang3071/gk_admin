@@ -75,7 +75,9 @@ class PlayGameRecordController
                     $query->where('is_test', $exAdminFilter['search_type']);
                 });
             }
-            $grid->model()->orderBy('id', 'desc');
+
+            // 预加载关联数据，避免 N+1 查询问题
+            $grid->model()->with(['player', 'channel', 'gamePlatform'])->orderBy('id', 'desc');
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($exAdminFilter) {
                 $row->gutter([10, 0]);
@@ -95,15 +97,36 @@ class PlayGameRecordController
                 $val,
                 PlayGameRecord $data
             ) {
-                $image = $data->player->avatar ? Avatar::create()->src(is_numeric($data->player->avatar) ? config('def_avatar.' . $data->player->avatar) : $data->player->avatar) : Avatar::create()->icon(Icon::create('UserOutlined'));
+                // 防御性编程：检查玩家数据是否存在
+                if (!$data->player) {
+                    return Html::create()->content([
+                        Avatar::create()->icon(Icon::create('UserOutlined')),
+                        Html::div()->content(admin_trans('common.data_not_found'))->style(['color' => '#999'])
+                    ]);
+                }
+
+                $image = $data->player->avatar
+                    ? Avatar::create()->src(is_numeric($data->player->avatar) ? config('def_avatar.' . $data->player->avatar) : $data->player->avatar)
+                    : Avatar::create()->icon(Icon::create('UserOutlined'));
+
                 return Html::create()->content([
                     $image,
                     Html::div()->content($data->player->uuid)
                 ]);
             })->fixed(true)->align('center');
+
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayGameRecord $data) {
+                // 防御性编程：检查玩家数据是否存在
+                if (!$data->player) {
+                    return Html::create()->content([
+                        Tag::create(admin_trans('common.data_not_found'))->color('default')
+                    ]);
+                }
+
                 return Html::create()->content([
-                    $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
+                    $data->player->is_test == 1
+                        ? Tag::create(admin_trans('player.fields.is_test'))->color('red')
+                        : Tag::create(admin_trans('player.player'))->color('green')
                 ]);
             })->fixed(true)->align('center');
             $grid->column('channel.name', admin_trans('channel.fields.name'))->align('center');
@@ -111,6 +134,13 @@ class PlayGameRecordController
                 $val,
                 PlayGameRecord $data
             ) {
+                // 防御性编程：检查关联数据是否存在
+                if (!$data->gamePlatform) {
+                    return Html::create()->content([
+                        Html::div()->content(admin_trans('common.data_not_found'))->style(['color' => '#999'])
+                    ]);
+                }
+
                 return Html::create()->content([
                     Html::div()->content($data->gamePlatform->name),
                 ]);

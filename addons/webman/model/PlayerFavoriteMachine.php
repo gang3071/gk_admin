@@ -52,10 +52,17 @@ class PlayerFavoriteMachine extends Model
     protected static function booted()
     {
         static::created(function (PlayerFavoriteMachine $playerFavoriteMachine) {
-            $playerFavoriteMachine->machine->increment('favorite_num');
+            // 增加机台收藏数（使用 save() 确保触发模型事件和数据一致性）
+            $machine = $playerFavoriteMachine->machine;
+            $machine->favorite_num = ($machine->favorite_num ?? 0) + 1;
+            $machine->save();
         });
+
         static::deleted(function (PlayerFavoriteMachine $playerFavoriteMachine) {
-            $playerFavoriteMachine->machine->decrement('favorite_num');
+            // 减少机台收藏数（使用 save() 确保触发模型事件和数据一致性）
+            $machine = $playerFavoriteMachine->machine;
+            $machine->favorite_num = max(($machine->favorite_num ?? 0) - 1, 0);
+            $machine->save();
         });
     }
 }
