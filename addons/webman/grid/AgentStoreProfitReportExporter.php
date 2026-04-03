@@ -21,6 +21,15 @@ class AgentStoreProfitReportExporter extends Excel
 {
     protected $currentRow = 1;
     protected $titleRow = 1;
+    protected $processedStores = 0;  // 已处理的店家数量
+    protected $isInitialized = false; // 是否已初始化
+
+    // 保存查询到的数据
+    protected $reportData = [];
+    protected $totalStats = [];
+    protected $admin = null;
+    protected $createdAtStart = null;
+    protected $createdAtEnd = null;
 
     /**
      * 导出数据
@@ -31,65 +40,121 @@ class AgentStoreProfitReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-            \support\Log::info('=== AgentStoreProfitReportExporter 开始导出 ===');
+            // ✅ 第一次调用时初始化（写入标题、统计汇总、表头）
+            if (!$this->isInitialized) {
+                \support\Log::info('=== AgentStoreProfitReportExporter 开始导出 ===');
 
-            // ExAdmin Grid 导出时，$data 参数通常只包含简化数据
-            // 需要从 Request 获取筛选参数，重新查询完整数据
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-            $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
-            $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
-            $selectedStoreId = $exAdminFilter['store_id'] ?? null;
+                // ExAdmin Grid 导出时，$data 参数通常只包含简化数据
+                // 需要从 Request 获取筛选参数，重新查询完整数据
+                $exAdminFilter = Request::input('ex_admin_filter', []);
+                $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
+                $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
+                $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
-            \support\Log::info('步骤1: 获取筛选参数', [
-                'created_at_start' => $createdAtStart,
-                'created_at_end' => $createdAtEnd,
-                'store_id' => $selectedStoreId
-            ]);
+                \support\Log::info('步骤1: 获取筛选参数', [
+                    'created_at_start' => $createdAtStart,
+                    'created_at_end' => $createdAtEnd,
+                    'store_id' => $selectedStoreId
+                ]);
 
-            /** @var AdminUser $admin */
-            $admin = Admin::user();
-            \support\Log::info('步骤2: 获取当前代理', [
-                'admin_id' => $admin->id,
-                'admin_username' => $admin->username
-            ]);
+                /** @var AdminUser $admin */
+                $admin = Admin::user();
+                \support\Log::info('步骤2: 获取当前代理', [
+                    'admin_id' => $admin->id,
+                    'admin_username' => $admin->username
+                ]);
 
-            // 重新查询数据（复用控制器逻辑）
-            \support\Log::info('步骤3: 开始查询数据');
-            $this->queryReportData($admin, $selectedStoreId, $createdAtStart, $createdAtEnd, $reportData, $totalStats);
+                // 重新查询数据（复用控制器逻辑）
+                \support\Log::info('步骤3: 开始查询数据');
+                $this->queryReportData($admin, $selectedStoreId, $createdAtStart, $createdAtEnd, $reportData, $totalStats);
 
-            \support\Log::info('步骤4: 数据查询完成', [
-                'data_count' => count($reportData),
-                'total_recharge' => $totalStats['total_recharge'] ?? 0,
-                'total_subtotal' => $totalStats['total_subtotal'] ?? 0
-            ]);
+                \support\Log::info('步骤4: 数据查询完成', [
+                    'data_count' => count($reportData),
+                    'total_recharge' => $totalStats['total_recharge'] ?? 0,
+                    'total_subtotal' => $totalStats['total_subtotal'] ?? 0
+                ]);
 
-            // 验证数据
-            if (empty($reportData)) {
-                \support\Log::warning('步骤5: 数据为空，无法导出');
-                throw new \Exception('没有可导出的数据，请检查筛选条件或确认是否有店家数据');
+                // 验证数据
+                if (empty($reportData)) {
+                    \support\Log::warning('步骤5: 数据为空，无法导出');
+                    throw new \Exception('没有可导出的数据，请检查筛选条件或确认是否有店家数据');
+                }
+
+                // 保存数据到实例属性
+                $this->reportData = $reportData;
+                $this->totalStats = $totalStats;
+                $this->admin = $admin;
+                $this->createdAtStart = $createdAtStart;
+                $this->createdAtEnd = $createdAtEnd;
+
+                // 写入标题、统计汇总、表头
+                \support\Log::info('步骤6: 写入标题和表头');
+                $this->writeTitle($admin, $createdAtStart, $createdAtEnd);
+                $this->writeSummary($totalStats);
+                $this->writeHeaders();
+
+                $this->isInitialized = true;
             }
 
-            // 写入 Excel
-            \support\Log::info('步骤6: 开始写入Excel');
-            $this->writeExcel($reportData, $totalStats, $createdAtStart, $createdAtEnd, $admin);
-            \support\Log::info('步骤7: Excel写入完成');
+            // ✅ 分批处理数据行（每次处理一批，更新进度）
+            $totalCount = count($this->reportData);
+            $lastProgress = -1; // 上次更新的进度值
 
-            // 完成回调
-            if ($finish) {
-                \support\Log::info('步骤8: 调用完成回调');
-                $result = call_user_func($finish, $this);
-                \support\Log::info('步骤9: 生成文件路径', ['file_url' => $result]);
+            foreach ($this->reportData as $index => $item) {
+                // 写入数据行
+                $this->writeDataRow($item, $index);
 
-                $this->cache->set(['status' => 1, 'url' => $result]);
-                $this->cache->expiresAfter(60);
-                $this->filesystemAdapter->save($this->cache);
+                // 更新已处理数量
+                $this->processedStores++;
 
-                \support\Log::info('步骤10: 缓存保存成功');
-            } else {
-                \support\Log::warning('步骤8: finish回调为空');
+                // ✅ 计算进度（每5%或每10条记录更新一次缓存，避免过于频繁）
+                $progress = floor($this->processedStores / $totalCount * 100);
+                $shouldUpdateCache = (
+                    $progress != $lastProgress && $progress % 5 == 0  // 每5%更新一次
+                    || $this->processedStores % 10 == 0                // 或每10条记录
+                    || $this->processedStores == $totalCount           // 或最后一条
+                );
+
+                if ($shouldUpdateCache) {
+                    $this->cache->set([
+                        'status' => 0,         // ✅ 0 = 进行中（显示进度条）
+                        'progress' => $progress // ✅ 进度百分比
+                    ]);
+                    $this->cache->expiresAfter(60);
+                    $this->filesystemAdapter->save($this->cache);
+
+                    \support\Log::info('步骤7: 进度更新', [
+                        'processed' => $this->processedStores,
+                        'total' => $totalCount,
+                        'progress' => $progress . '%'
+                    ]);
+
+                    $lastProgress = $progress;
+                }
             }
 
-            \support\Log::info('=== AgentStoreProfitReportExporter 导出成功 ===');
+            // ✅ 所有数据处理完成后，写入合计行并调用完成回调
+            if ($this->processedStores >= count($this->reportData)) {
+                \support\Log::info('步骤8: 写入合计行');
+                $this->writeTotalRow($this->totalStats);
+                $this->setColumnWidths();
+
+                // 完成回调
+                if ($finish) {
+                    \support\Log::info('步骤9: 调用完成回调');
+                    $result = call_user_func($finish, $this);
+                    \support\Log::info('步骤10: 生成文件路径', ['file_url' => $result]);
+
+                    // ✅ 设置为完成状态
+                    $this->cache->set(['status' => 1, 'url' => $result]);
+                    $this->cache->expiresAfter(60);
+                    $this->filesystemAdapter->save($this->cache);
+
+                    \support\Log::info('步骤11: 缓存保存成功');
+                }
+
+                \support\Log::info('=== AgentStoreProfitReportExporter 导出成功 ===');
+            }
 
         } catch (\Throwable $e) {
             \support\Log::error('=== AgentStoreProfitReportExporter 导出失败 ===', [
@@ -112,27 +177,58 @@ class AgentStoreProfitReportExporter extends Excel
     }
 
     /**
-     * 写入 Excel 数据
+     * 写入单行数据（用于分批处理）
      */
-    private function writeExcel(array $reportData, array $totalStats, $startTime, $endTime, $admin)
+    private function writeDataRow(array $item, int $index)
     {
-        // 1. 标题区域
-        $this->writeTitle($admin, $startTime, $endTime);
+        $this->sheet->setCellValue('A' . $this->currentRow, $item['id']);
+        $this->sheet->setCellValue('B' . $this->currentRow, $item['store_name']);
+        $this->sheet->setCellValue('C' . $this->currentRow, $item['store_username']);
+        $this->sheet->setCellValue('D' . $this->currentRow, number_format(floatval($item['recharge_amount']), 2));
+        $this->sheet->setCellValue('E' . $this->currentRow, number_format(floatval($item['withdraw_amount']), 2));
+        $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['machine_put_point']), 2));
+        $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['lottery_amount']), 2));
+        $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['subtotal']), 2));
+        $this->sheet->setCellValue('I' . $this->currentRow, $item['agent_commission'] . '%');
+        $this->sheet->setCellValue('J' . $this->currentRow, number_format(floatval($item['agent_profit']), 2));
+        $this->sheet->setCellValue('K' . $this->currentRow, $item['channel_commission'] . '%');
+        $this->sheet->setCellValue('L' . $this->currentRow, number_format(floatval($item['channel_profit']), 2));
 
-        // 2. 统计汇总区域
-        $this->writeSummary($totalStats);
+        // 交替行背景色
+        $bgColor = $index % 2 == 0 ? 'FFFFFF' : 'F5F5F5';
+        $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->applyFromArray([
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => $bgColor]
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D9D9D9']
+                ]
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ]
+        ]);
 
-        // 3. 表头
-        $this->writeHeaders();
+        // 小计列：根据正负值设置颜色
+        $subtotal = floatval($item['subtotal']);
+        $this->sheet->getStyle('H' . $this->currentRow)->getFont()->getColor()->setRGB($subtotal >= 0 ? '52C41A' : 'FF4D4F');
+        $this->sheet->getStyle('H' . $this->currentRow)->getFont()->setBold(true);
 
-        // 4. 数据行
-        $this->writeDataRows($reportData);
+        // 代理分润列：设置颜色
+        $agentProfit = floatval($item['agent_profit']);
+        $this->sheet->getStyle('J' . $this->currentRow)->getFont()->getColor()->setRGB($agentProfit >= 0 ? '1890FF' : 'FA8C16');
+        $this->sheet->getStyle('J' . $this->currentRow)->getFont()->setBold(true);
 
-        // 5. 合计行
-        $this->writeTotalRow($totalStats);
+        // 渠道分润列：设置颜色
+        $channelProfit = floatval($item['channel_profit']);
+        $this->sheet->getStyle('L' . $this->currentRow)->getFont()->getColor()->setRGB($channelProfit >= 0 ? '52C41A' : 'F5222D');
+        $this->sheet->getStyle('L' . $this->currentRow)->getFont()->setBold(true);
 
-        // 6. 设置列宽
-        $this->setColumnWidths();
+        $this->currentRow++;
     }
 
     /**
@@ -305,62 +401,6 @@ class AgentStoreProfitReportExporter extends Excel
         $this->currentRow++;
     }
 
-    /**
-     * 写入数据行
-     */
-    private function writeDataRows(array $reportData)
-    {
-        foreach ($reportData as $index => $item) {
-            $this->sheet->setCellValue('A' . $this->currentRow, $item['id']);
-            $this->sheet->setCellValue('B' . $this->currentRow, $item['store_name']);
-            $this->sheet->setCellValue('C' . $this->currentRow, $item['store_username']);
-            $this->sheet->setCellValue('D' . $this->currentRow, number_format(floatval($item['recharge_amount']), 2));
-            $this->sheet->setCellValue('E' . $this->currentRow, number_format(floatval($item['withdraw_amount']), 2));
-            $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['machine_put_point']), 2));
-            $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['lottery_amount']), 2));
-            $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['subtotal']), 2));
-            $this->sheet->setCellValue('I' . $this->currentRow, $item['agent_commission'] . '%');
-            $this->sheet->setCellValue('J' . $this->currentRow, number_format(floatval($item['agent_profit']), 2));
-            $this->sheet->setCellValue('K' . $this->currentRow, $item['channel_commission'] . '%');
-            $this->sheet->setCellValue('L' . $this->currentRow, number_format(floatval($item['channel_profit']), 2));
-
-            // 交替行背景色
-            $bgColor = $index % 2 == 0 ? 'FFFFFF' : 'F5F5F5';
-            $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->applyFromArray([
-                'fill' => [
-                    'fillType' => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => $bgColor]
-                ],
-                'borders' => [
-                    'allBorders' => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => 'D9D9D9']
-                    ]
-                ],
-                'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_CENTER,
-                    'vertical' => Alignment::VERTICAL_CENTER
-                ]
-            ]);
-
-            // 小计列：根据正负值设置颜色
-            $subtotal = floatval($item['subtotal']);
-            $this->sheet->getStyle('H' . $this->currentRow)->getFont()->getColor()->setRGB($subtotal >= 0 ? '52C41A' : 'FF4D4F');
-            $this->sheet->getStyle('H' . $this->currentRow)->getFont()->setBold(true);
-
-            // 代理分润列：设置颜色
-            $agentProfit = floatval($item['agent_profit']);
-            $this->sheet->getStyle('J' . $this->currentRow)->getFont()->getColor()->setRGB($agentProfit >= 0 ? '1890FF' : 'FA8C16');
-            $this->sheet->getStyle('J' . $this->currentRow)->getFont()->setBold(true);
-
-            // 渠道分润列：设置颜色
-            $channelProfit = floatval($item['channel_profit']);
-            $this->sheet->getStyle('L' . $this->currentRow)->getFont()->getColor()->setRGB($channelProfit >= 0 ? '52C41A' : 'F5222D');
-            $this->sheet->getStyle('L' . $this->currentRow)->getFont()->setBold(true);
-
-            $this->currentRow++;
-        }
-    }
 
     /**
      * 写入合计行
