@@ -13,7 +13,7 @@ return [
         'total_deposit_amount' => '総入金金額',
         'total_bonus_amount' => '総ボーナス金額',
         'total_bet_amount' => '総ベット量',
-        'total_withdraw_amount' => '総出金金額',
+        'total_withdraw_amount' => '総洗分金額',
         'completed_orders' => '完了注文',
         'expired_orders' => '期限切れ注文',
         'cancelled_orders' => 'キャンセル注文',

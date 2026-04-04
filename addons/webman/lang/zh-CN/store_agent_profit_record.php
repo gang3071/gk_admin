@@ -29,7 +29,7 @@ return [
         'agent_name' => '代理名称',
         'uuid' => 'UUID',
         'submit_ratio' => '上缴比例',
-        'machine_put_point' => '总投钞（充值）',
+        'machine_put_point' => '总投钞（开分）',
         'present_out_amount' => '转出（洗分）',
         'present_in_amount' => '总转入（开分）',
         'total_point' => '总营收',

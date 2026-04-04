@@ -27,7 +27,7 @@ return [
         'level' => 'Level',
         'must_chip_amount' => 'Must Chip Amount',
         'damage_rebate_ratio' => 'Damage Rebate Ratio',
-        'recharge_ratio' => 'Recharge Rebate points',
+        'recharge_ratio' => 'Open Score Rebate points',
         'reverse_water' => 'Reverse water ratio',
     ],
     'must_chip_amount_error' => 'The Chip Amount must be higher than the subordinate and lower than the superior',

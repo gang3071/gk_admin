@@ -107,7 +107,7 @@ return [
     'bound_player' => '绑定玩家',
     'transfer_in' => '转入(开分)',
     'transfer_out' => '转出(洗分)',
-    'coin_deposit' => '投钞(充值)',
+    'coin_deposit' => '投钞(开分)',
     'total_amount' => '总计(营业额)',
     'store_profit_ratio' => '店家分润',
     'store_profit_amount' => '店家拆账',

@@ -10,7 +10,7 @@ return [
         'feature' => '機能',
         'setting' => '構成',
         'status' => 'ステータス',
-        'recharge_order_expiration' => 'リチャージ注文の有効期限',
+        'recharge_order_expiration' => '開分注文の有効期限',
         'pending_minutes' => 'マシンは数分間アイドル状態になった後、自動的に予約に入ります',
         'king_off' => 'マシン保持停止期間',
         'gift_keeper_ minutes' => '上位ポイントのギフト保持時間',

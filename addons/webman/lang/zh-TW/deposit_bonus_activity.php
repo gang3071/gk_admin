@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => '充值滿贈活動管理',
+    'title' => '開分滿贈活動管理',
 
     'fields' => [
         'id' => 'ID',
@@ -22,7 +22,7 @@ return [
     ],
 
     'tier' => [
-        'deposit_amount' => '充值金額',
+        'deposit_amount' => '開分金額',
         'bonus_amount' => '贈送金額',
         'bonus_ratio' => '贈送比例',
         'sort_order' => '排序',
@@ -38,7 +38,7 @@ return [
         'limit_per_player' => '每個玩家在限制週期內可參與的次數，0表示不限制',
         'limit_period' => '參與次數限制的統計週期',
         'description' => '活動說明，將顯示給玩家',
-        'tiers' => '配置不同充值金額對應的贈送金額，至少需要配置一個檔位',
+        'tiers' => '配置不同開分金額對應的贈送金額，至少需要配置一個檔位',
     ],
 
     'status_enabled' => '啟用',

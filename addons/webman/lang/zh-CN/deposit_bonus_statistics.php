@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => '充值满赠统计报表',
+    'title' => '开分满赠统计报表',
 
     'fields' => [
         'id' => 'ID',
@@ -10,10 +10,10 @@ return [
         'total_participants' => '参与人数',
         'new_participants' => '新增参与人数',
         'total_orders' => '订单总数',
-        'total_deposit_amount' => '充值总金额',
+        'total_deposit_amount' => '开分总金额',
         'total_bonus_amount' => '赠送总金额',
         'total_bet_amount' => '总打码量',
-        'total_withdraw_amount' => '已提现金额',
+        'total_withdraw_amount' => '已洗分金额',
         'completed_orders' => '完成订单数',
         'expired_orders' => '过期订单数',
         'cancelled_orders' => '取消订单数',
@@ -24,7 +24,7 @@ return [
     'stats' => [
         'total_participants' => '参与人数',
         'total_orders' => '订单总数',
-        'total_deposit' => '充值总额',
+        'total_deposit' => '开分总额',
         'total_bonus' => '赠送总额',
         'total_bet' => '总打码量',
         'completed_orders' => '完成订单',

@@ -6,8 +6,8 @@ return [
     'title' => 'Settlement Records',
     'fields' => [
         'id' => 'ID',
-        'total_withdraw_amount' => 'Withdrawal Amount',
-        'total_recharge_amount' => 'Recharge Amount',
+        'total_withdraw_amount' => 'Wash Score Amount',
+        'total_recharge_amount' => 'Open Score Amount',
         'total_bonus_amount' => 'Activity Bonus Amount',
         'total_admin_deduct_amount' => 'Admin Deduction',
         'total_admin_add_amount' => 'Admin Addition',

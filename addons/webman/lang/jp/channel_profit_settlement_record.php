@@ -6,7 +6,7 @@ return [
     'title' => '決済記録',
     'fields' => [
         'id' => 'ID',
-        'total_withdraw_amount' => '出金金額',
+        'total_withdraw_amount' => '洗分金額',
         'total_recharge_amount' => '入金金額',
         'total_bonus_amount' => 'アクティビティボーナス',
         'total_admin_deduct_amount' => '管理者控除',

@@ -19,8 +19,8 @@ return [
     'player_info' => 'プレイヤー情報',
     'action_info' => 'アクション情報',
     'action' => [
-        PlayerMoneyEditLog::RECHARGE => 'リチャージ',
-        PlayerMoneyEditLog::VIP_RECHARGE => 'VIP リチャージ',
+        PlayerMoneyEditLog::RECHARGE => '開分',
+        PlayerMoneyEditLog::VIP_RECHARGE => 'VIP 開分',
         PlayerMoneyEditLog::TESTING_MACHINE => 'テストマシン',
         PlayerMoneyEditLog::OTHER => 'その他',
         PlayerMoneyEditLog::ACTIVITY_GIVE => 'アクティビティボーナス',
@@ -40,8 +40,8 @@ return [
         PlayerMoneyEditLog::DEPOSIT_BONUS_CANCEL => 'チャージボーナスキャンセル',
     ],
     'total_data' => [
-        'total_recharge' => 'リチャージ',
-        'total_vip_recharge' => 'VIP リチャージ',
+        'total_recharge' => '開分',
+        'total_vip_recharge' => 'VIP 開分',
         'total_testing_machine' => 'テストマシン',
         'total_other' => 'その他',
         'total_activity_give' => 'アクティビティのプレゼント',

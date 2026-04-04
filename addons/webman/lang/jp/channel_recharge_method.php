@@ -3,8 +3,8 @@
 use addons\webman\model\ChannelRechargeMethod;
 
 return [
-    'title' => 'リチャージ方法の設定',
-    'placeholder_name' => 'リチャージ方法名を入力してください',
+    'title' => '開分方法の設定',
+    'placeholder_name' => '開分方法名を入力してください',
     'placeholder_min' => '最低チャージ金額を入力してください',
     'placeholder_max' => '最大チャージ金額を入力してください',
     'limitation' => '制限',
@@ -29,7 +29,7 @@ return [
         'max_required' => '最低チャージ金額が必要です',
         'max_min_1' => '最低金額を0にすることはできません',
         'max_max_100000000' => '上限額は1億円に設定されています',
-        'max_gt_min' => '最大リチャージ額は最小リチャージ額より大きくなければなりません',
+        'max_gt_min' => '最大開分額は最小開分額より大きくなければなりません',
     ],
     'recharge_method_not_found' => 'チャージ方式は存在しません',
     'wechat_account' => 'マイクロ信号',

@@ -6,8 +6,8 @@ return [
     'title' => '結算記錄',
     'fields' => [
         'id' => 'ID',
-        'total_withdraw_amount' => '提現金額',
-        'total_recharge_amount' => '充值金額',
+        'total_withdraw_amount' => '洗分金額',
+        'total_recharge_amount' => '開分金額',
         'total_bonus_amount' => '活動贈送金額',
         'total_admin_deduct_amount' => '管理員扣點',
         'total_admin_add_amount' => '管理員加點',

@@ -13,7 +13,7 @@ return [
         'total_deposit_amount' => 'Total Deposit Amount',
         'total_bonus_amount' => 'Total Bonus Amount',
         'total_bet_amount' => 'Total Bet Amount',
-        'total_withdraw_amount' => 'Total Withdraw Amount',
+        'total_withdraw_amount' => 'Total Wash Score Amount',
         'completed_orders' => 'Completed Orders',
         'expired_orders' => 'Expired Orders',
         'cancelled_orders' => 'Cancelled Orders',

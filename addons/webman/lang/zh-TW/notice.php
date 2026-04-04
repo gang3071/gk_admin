@@ -4,8 +4,8 @@ use addons\webman\model\Notice;
 
 return [
     'title' => [
-        Notice::TYPE_EXAMINE_RECHARGE => '玩家充值待稽核通知',
-        Notice::TYPE_EXAMINE_WITHDRAW => '玩家提現待稽核通知',
+        Notice::TYPE_EXAMINE_RECHARGE => '玩家開分待稽核通知',
+        Notice::TYPE_EXAMINE_WITHDRAW => '玩家洗分待稽核通知',
         Notice::TYPE_EXAMINE_ACTIVITY => '活動獎勵待稽核通知',
         Notice::TYPE_EXAMINE_LOTTERY => '彩金獎勵待稽核通知',
         Notice::TYPE_MACHINE => '機台設備離線通知',
@@ -16,8 +16,8 @@ return [
         Notice::TYPE_MACHINE_CRASH => '設備爆機通知',
     ],
     'content' => [
-        Notice::TYPE_EXAMINE_RECHARGE => '新的充值訂單待稽核,玩家:{player_name},充值遊戲點:{point}充值金額:{money}！',
-        Notice::TYPE_EXAMINE_WITHDRAW => '新的提現訂單待稽核,玩家:{player_name},提現遊戲點:{point}提現金額:{money}！',
+        Notice::TYPE_EXAMINE_RECHARGE => '新的開分訂單待稽核,玩家:{player_name},開分遊戲點:{point}開分金額:{money}！',
+        Notice::TYPE_EXAMINE_WITHDRAW => '新的洗分訂單待稽核,玩家:{player_name},洗分遊戲點:{point}洗分金額:{money}！',
         Notice::TYPE_EXAMINE_ACTIVITY => '活動獎勵待稽核,玩家:{player_name},在機台:{machine_code},達成活動:{activity_content_name},的獎勵要求,獎勵遊戲點{point}！',
         Notice::TYPE_EXAMINE_LOTTERY => '彩金獎勵待稽核,玩家:{player_name},在機台:{machine_code},達成彩金:{lottery_name},的獎勵要求,獎勵遊戲點{point}！',
         Notice::TYPE_MACHINE => '機台設備{machine_code},現已下線,請維護人員及時排查問題！',

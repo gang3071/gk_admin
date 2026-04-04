@@ -7,8 +7,8 @@ return [
     'title' => '结算记录',
     'fields' => [
         'id' => 'ID',
-        'total_withdraw_amount' => '提现金额',
-        'total_recharge_amount' => '充值金额',
+        'total_withdraw_amount' => '洗分金额',
+        'total_recharge_amount' => '开分金额',
         'total_bonus_amount' => '活动赠送金额',
         'total_admin_deduct_amount' => '管理员扣点',
         'total_admin_add_amount' => '管理员加点',

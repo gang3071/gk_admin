@@ -3,12 +3,12 @@
 use addons\webman\model\PlayerDeliveryRecord;
 
 return [
-    'title' => 'Recharge ithdraw record',
+    'title' => 'Open Score ithdraw record',
     'fields' => [
         'id' => 'ID',
         'player_id' => 'player',
-        'recharge_total' => 'Recharge Amount',
-        'withdraw_total' => 'Withdrawal Amount',
+        'recharge_total' => 'Open Score Amount',
+        'withdraw_total' => 'Wash Score Amount',
         'total_amount' => 'Total Amount',
         'target' => 'Transaction data table',
         'target_id' => 'data id',
@@ -30,10 +30,10 @@ return [
         PlayerDeliveryRecord::TYPE_PRESENT_OUT => 'Points transferred out',
         PlayerDeliveryRecord::TYPE_MACHINE_UP => 'Machine Upload',
         PlayerDeliveryRecord::TYPE_MACHINE_DOWN => 'Machine points',
-        PlayerDeliveryRecord::TYPE_RECHARGE => 'Recharge',
-        PlayerDeliveryRecord::TYPE_WITHDRAWAL => 'Withdrawal',
+        PlayerDeliveryRecord::TYPE_RECHARGE => 'Open Score',
+        PlayerDeliveryRecord::TYPE_WITHDRAWAL => 'Wash Score',
         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT => '(Management background) deduction points',
-        PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK => 'Withdrawal fallback',
+        PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK => 'Wash Score fallback',
         PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS => 'Activity reward',
         PlayerDeliveryRecord::TYPE_REGISTER_PRESENT => 'System bonus points',
         PlayerDeliveryRecord::TYPE_PROFIT => 'Profit sharing',

@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => '充值满赠活动管理',
+    'title' => '开分满赠活动管理',
 
     'fields' => [
         'id' => 'ID',
@@ -22,7 +22,7 @@ return [
     ],
 
     'tier' => [
-        'deposit_amount' => '充值金额',
+        'deposit_amount' => '开分金额',
         'bonus_amount' => '赠送金额',
         'bonus_ratio' => '赠送比例',
         'sort_order' => '排序',
@@ -38,7 +38,7 @@ return [
         'limit_per_player' => '每个玩家在限制周期内可参与的次数，0表示不限制',
         'limit_period' => '参与次数限制的统计周期',
         'description' => '活动说明，将显示给玩家',
-        'tiers' => '配置不同充值金额对应的赠送金额，至少需要配置一个档位',
+        'tiers' => '配置不同开分金额对应的赠送金额，至少需要配置一个档位',
     ],
 
     'status_enabled' => '启用',
