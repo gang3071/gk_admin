@@ -106,7 +106,7 @@ return [
     'store_name' => '店舗名',
     'bound_player' => '紐付けプレイヤー',
     'transfer_in' => '転入(クレジット)',
-    'transfer_out' => '転出(出金)',
+    'transfer_out' => '転出(洗分)',
     'coin_deposit' => '投入(チャージ)',
     'total_amount' => '合計(売上高)',
     'store_profit_ratio' => '店舗利益率',

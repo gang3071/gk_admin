@@ -58,8 +58,8 @@ return [
         //财务数据
         'financial_data' => '财务数据',
         'transfer_point_record' => '转点记录',
-        'recharge_record' => '充值记录',
-        'withdrawal_records' => '提现记录',
+        'recharge_record' => '开分记录',
+        'withdrawal_records' => '洗分记录',
         //报表中心
         'report_center' => '报表中心',
         'machine_report' => '机台报表',
@@ -80,7 +80,7 @@ return [
         //币商管理
         'channel_coin_merchant_manage' => '币商管理',
         'channel_coin_merchant_list' => '币商列表',
-        'channel_coin_merchant_recharge_records' => '币商充值记录',
+        'channel_coin_merchant_recharge_records' => '币商开分记录',
         'channel_coin_merchant_transaction_records' => '币商交易记录',
         //玩家管理
         'channel_player_manage' => '玩家管理',
@@ -100,14 +100,14 @@ return [
         'channel_announcement_manager' => '公告管理',
         //财务管理
         'channel_financial_manager' => '财务管理',
-        'channel_recharge_review' => '充值审核',
-        'channel_withdrawal_review' => '提现审核',
-        'channel_withdrawal_and_payment' => '提现打款',
-        'channel_recharge_record' => '充值记录',
-        'channel_talk_recharge_records' => 'QTalk充值记录',
-        'channel_withdrawal_records' => '提现记录',
-        'channel_talk_withdrawal_records' => 'QTalk提现记录',
-        'channel_recharge_channel_configuration' => '充值渠道配置',
+        'channel_recharge_review' => '开分审核',
+        'channel_withdrawal_review' => '洗分审核',
+        'channel_withdrawal_and_payment' => '洗分打款',
+        'channel_recharge_record' => '开分记录',
+        'channel_talk_recharge_records' => 'QTalk开分记录',
+        'channel_withdrawal_records' => '洗分记录',
+        'channel_talk_withdrawal_records' => 'QTalk洗分记录',
+        'channel_recharge_channel_configuration' => '开分渠道配置',
         'channel_financial_operation_records' => '财务操作记录',
         //权限管理
         'channel_auth_manager' => '权限管理',
@@ -133,7 +133,7 @@ return [
         //币商管理
         'coin_management' => '币商管理',
         'coin_list' => '币商列表',
-        'coin_recharge_record' => '币商充值记录',
+        'coin_recharge_record' => '币商开分记录',
         //日志中心
         'log_center' => '日志中心',
         'machine_keeping_log' => '机台保留日志',
@@ -160,14 +160,14 @@ return [
         'agent_lottery_management' => '彩金管理',
         //店家彩金管理
         'store_lottery_management' => '彩金管理',
-        //充值满赠管理（管理后台）
-        'deposit_bonus_manage' => '充值满赠管理',
+        //开分满赠管理（管理后台）
+        'deposit_bonus_manage' => '开分满赠管理',
         'deposit_bonus_activity' => '活动管理',
         'deposit_bonus_qrcode' => '订单管理',
         'deposit_bonus_statistics' => '统计报表',
         'deposit_bonus_bet_detail' => '押码明细',
-        //渠道后台充值满赠管理
-        'channel_deposit_bonus_manage' => '充值满赠管理',
+        //渠道后台开分满赠管理
+        'channel_deposit_bonus_manage' => '开分满赠管理',
         'channel_deposit_bonus_activity' => '活动管理',
         'channel_deposit_bonus_order' => '订单管理',
         'channel_deposit_bonus_statistics' => '统计报表',
@@ -184,8 +184,8 @@ return [
         //代理后台电子游戏管理
         'agent_game_management' => '电子游戏管理',
         'agent_game_record' => '游戏记录',
-        //代理后台充值满赠管理
-        'agent_deposit_bonus_manage' => '充值满赠管理',
+        //代理后台开分满赠管理
+        'agent_deposit_bonus_manage' => '开分满赠管理',
         'agent_deposit_bonus_activity' => '活动管理',
         'agent_deposit_bonus_qrcode' => '订单管理',
         'agent_deposit_bonus_order' => '订单管理',
@@ -200,8 +200,8 @@ return [
         //店机后台设备管理
         'store_player' => '设备管理',
         'store_player_list' => '设备列表',
-        //店机后台充值满赠管理
-        'store_deposit_bonus_manage' => '充值满赠管理',
+        //店机后台开分满赠管理
+        'store_deposit_bonus_manage' => '开分满赠管理',
         'store_deposit_bonus_activity' => '活动管理',
         'store_deposit_bonus_order' => '订单管理',
         'store_deposit_bonus_statistics' => '统计报表',

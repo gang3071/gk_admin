@@ -58,8 +58,8 @@ return [
         //financial data
         'financial_data' => 'Financial data',
         'transfer_point_record' => 'Transfer point record',
-        'recharge_record' => 'Recharge record',
-        'withdrawal_records' => 'Withdrawal records',
+        'recharge_record' => 'Open Score record',
+        'withdrawal_records' => 'Wash Score records',
         //Report Center
         'report_center' => 'Report Center',
         'machine_report' => 'Machine report',
@@ -80,7 +80,7 @@ return [
         //Coin dealer management
         'channel_coin_merchant_manage' => 'Coin Merchant Management',
         'channel_coin_merchant_list' => 'Coin merchant list',
-        'channel_coin_merchant_recharge_records' => 'Coin merchant recharge records',
+        'channel_coin_merchant_recharge_records' => 'Coin merchant open score records',
         'channel_coin_merchant_transaction_records' => 'Coin merchant transaction records',
         //Player management
         'channel_player_manage' => 'Player management',
@@ -100,14 +100,14 @@ return [
         'channel_announcement_manager' => 'Announcement Management',
         //Financial management
         'channel_financial_manager' => 'Financial Management',
-        'channel_recharge_review' => 'Recharge review',
-        'channel_withdrawal_review' => 'Withdrawal review',
-        'channel_withdrawal_and_payment' => 'Withdrawal',
-        'channel_recharge_record' => 'Recharge Record',
-        'channel_talk_recharge_records' => 'QTalk recharge records',
-        'channel_withdrawal_records' => 'Withdrawal records',
-        'channel_talk_withdrawal_records' => 'QTalk withdrawal records',
-        'channel_recharge_channel_configuration' => 'Recharge channel configuration',
+        'channel_recharge_review' => 'Open Score review',
+        'channel_withdrawal_review' => 'Wash Score review',
+        'channel_withdrawal_and_payment' => 'Wash Score',
+        'channel_recharge_record' => 'Open Score Record',
+        'channel_talk_recharge_records' => 'QTalk open score records',
+        'channel_withdrawal_records' => 'Wash Score records',
+        'channel_talk_withdrawal_records' => 'QTalk wash score records',
+        'channel_recharge_channel_configuration' => 'Open Score channel configuration',
         'channel_financial_operation_records' => 'Financial operation records',
         //Permission management
         'channel_auth_manager' => 'Permission management',
@@ -133,7 +133,7 @@ return [
         //Coin dealer management
         'coin_management' => 'Coin Business Management',
         'coin_list' => 'Coin dealer list',
-        'coin_recharge_record' => 'Coin dealer recharge record',
+        'coin_recharge_record' => 'Coin dealer open score record',
         //Log center
         'log_center' => 'Log center',
         'machine_keeping_log' => 'Machine keeping log',
@@ -178,8 +178,8 @@ return [
         'store_game_log_list' => 'Report List',
         //Agent Financial Management
         'agent_financial_management' => 'Financial Management',
-        'agent_recharge_record' => 'Recharge Records',
-        'agent_withdraw_record' => 'Withdraw Records',
+        'agent_recharge_record' => 'Open Score Records',
+        'agent_withdraw_record' => 'Wash Score Records',
         //Agent Game Management
         'agent_game_management' => 'Game Management',
         'agent_game_record' => 'Game Records',
@@ -209,7 +209,7 @@ return [
         //Store Financial Management
         'store_financial_manage' => 'Credit Management Center',
         'store_recharge_record' => 'Credit Addition Records',
-        'store_withdraw_record' => 'Credit Withdrawal Records',
+        'store_withdraw_record' => 'Credit Wash Score Records',
         //Store Game Management
         'store_game_manage' => 'Game Management',
         'store_game_record' => 'Game Records',

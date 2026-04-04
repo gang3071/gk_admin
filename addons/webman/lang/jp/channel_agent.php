@@ -20,7 +20,7 @@ return [
         'status' => 'ステータス',
         'created_at' => '作成日時',
         'recharge_amount' => '累計チャージ',
-        'withdraw_amount' => '累計出金',
+        'withdraw_amount' => '累計洗分',
         'machine_put_point' => '投入',
         'lottery_amount' => '宝くじ',
         'subtotal' => '小計',
@@ -43,8 +43,8 @@ return [
     // 当期データ
     'current_data' => '当期データ',
     'present_in' => '入金(チャージ)',
-    'present_out' => '出金(キャッシュアウト)',
-    'machine_put' => '投入(リチャージ)',
+    'present_out' => '洗分(キャッシュアウト)',
+    'machine_put' => '投入(開分)',
     'total_revenue' => '合計(売上)',
     'store_profit_rate' => '店舗利益率',
     'store_profit_amount' => '店舗利益',
@@ -56,7 +56,7 @@ return [
 
     // チャージ関連
     'open_score' => 'チャージ',
-    'recharge_amount' => 'リチャージ金額',
+    'recharge_amount' => '開分金額',
     'quick_amount' => 'クイック金額',
     'custom_amount' => 'カスタム金額',
     'preset_amount' => 'プリセット金額',

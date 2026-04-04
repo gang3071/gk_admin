@@ -8,8 +8,8 @@ return [
     'title' => '決済記録',
     'fields' => [
         'id' => 'ID',
-        'total_withdraw_amount' => '出金金額',
-        'total_recharge_amount' => 'リチャージ金額',
+        'total_withdraw_amount' => '洗分金額',
+        'total_recharge_amount' => '開分金額',
         'total_bonus_amount' => 'アクティビティギフト額',
         'total_admin_deduct_amount' => '管理者控除ポイント',
         'total_admin_add_amount' => '管理者がポイントを追加',

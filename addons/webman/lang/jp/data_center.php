@@ -19,7 +19,7 @@ return [
     'recharge_chart' => '投入トレンドチャート',
     'recharge_amount' => '投入金額',
     'withdraw_chart' => '払出傾向グラフ',
-    'withdraw_amount' => '払出金額',
+    'withdraw_amount' => '払洗分額',
     'player_chart' => '新しいプレイヤー',
     'player_amount' => 'プレイヤーの数',
     'machine_24_chart' => '24時間機械利用可能',

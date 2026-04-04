@@ -4,8 +4,8 @@ use addons\webman\model\Notice;
 
 return [
     'title' => [
-        Notice::TYPE_EXAMINE_RECHARGE => '玩家充值待审核通知',
-        Notice::TYPE_EXAMINE_WITHDRAW => '玩家提现待审核通知',
+        Notice::TYPE_EXAMINE_RECHARGE => '玩家开分待审核通知',
+        Notice::TYPE_EXAMINE_WITHDRAW => '玩家洗分待审核通知',
         Notice::TYPE_EXAMINE_ACTIVITY => '活动奖励待审核通知',
         Notice::TYPE_EXAMINE_LOTTERY => '彩金奖励待审核通知',
         Notice::TYPE_MACHINE => '机台设备离线通知',
@@ -15,8 +15,8 @@ return [
         Notice::TYPE_MACHINE_LOCK => '机台异常锁定通知',Notice::TYPE_MACHINE_CRASH => '设备爆机通知',
     ],
     'content' => [
-        Notice::TYPE_EXAMINE_RECHARGE => '新的充值订单待审核, 玩家: {player_name}, 充值游戏点: {point} 充值金额: {money}!',
-        Notice::TYPE_EXAMINE_WITHDRAW => '新的提现订单待审核, 玩家: {player_name}, 提现游戏点: {point} 提现金额: {money}!',
+        Notice::TYPE_EXAMINE_RECHARGE => '新的开分订单待审核, 玩家: {player_name}, 开分游戏点: {point} 开分金额: {money}!',
+        Notice::TYPE_EXAMINE_WITHDRAW => '新的洗分订单待审核, 玩家: {player_name}, 洗分游戏点: {point} 洗分金额: {money}!',
         Notice::TYPE_EXAMINE_ACTIVITY => '活动奖励待审核, 玩家: {player_name},在机台: {machine_code}, 达成活动: {activity_content_name},的奖励要求,奖励游戏点{point}!',
         Notice::TYPE_EXAMINE_LOTTERY => '彩金奖励待审核, 玩家: {player_name},在机台: {machine_code}, 达成彩金: {lottery_name},的奖励要求,奖励游戏点{point}!',
         Notice::TYPE_MACHINE => '机台设备{machine_code}, 现已下线, 请维护人员及时排查问题!',

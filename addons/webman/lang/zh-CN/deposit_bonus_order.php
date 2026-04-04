@@ -1,8 +1,8 @@
 <?php
 
 return [
-    'title' => '充值满赠订单管理',
-    'generate_title' => '生成充值满赠订单',
+    'title' => '开分满赠订单管理',
+    'generate_title' => '生成开分满赠订单',
 
     'fields' => [
         'id' => 'ID',
@@ -12,7 +12,7 @@ return [
         'player_id' => '玩家',
         'player_account' => '玩家账号',
         'player_info' => '玩家信息',
-        'deposit_amount' => '充值金额',
+        'deposit_amount' => '开分金额',
         'bonus_amount' => '赠送金额',
         'required_bet_amount' => '需要打码量',
         'current_bet_amount' => '当前打码量',
@@ -29,7 +29,7 @@ return [
 
     'help' => [
         'activity_id' => '选择要参与的活动',
-        'deposit_amount' => '输入充值金额，必须匹配活动档位',
+        'deposit_amount' => '输入开分金额，必须匹配活动档位',
         'player_id' => '搜索并选择玩家账号',
         'player_username' => '请输入玩家账号',
     ],
@@ -43,18 +43,18 @@ return [
 
     'cannot_edit' => '订单不允许编辑，只能新增',
     'activity_invalid' => '活动不存在或已失效',
-    'tier_not_match' => '充值金额不匹配任何活动档位',
+    'tier_not_match' => '开分金额不匹配任何活动档位',
     'player_not_found' => '玩家不存在',
     'player_limit_exceeded' => '玩家参与次数已达上限',
     'parent_agent_not_found' => '未找到上级代理',
-    'no_available_activity' => '上级代理暂无可用的充值满赠活动',
+    'no_available_activity' => '上级代理暂无可用的开分满赠活动',
     'generate_success' => '订单生成成功',
     'generate_success_with_orderno' => '订单生成成功！订单号：{order_no}',
     'generate_fail' => '订单生成失败',
 
     'stats' => [
         'total_count' => '订单总数',
-        'total_deposit' => '充值总额',
+        'total_deposit' => '开分总额',
         'total_bonus' => '赠送总额',
         'completed_count' => '已完成',
     ],

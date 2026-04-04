@@ -29,7 +29,7 @@ return [
         'agent_name' => 'Agent Name',
         'uuid' => 'UUID',
         'submit_ratio' => 'Submit Ratio',
-        'machine_put_point' => 'Total Cash Deposit (Recharge)',
+        'machine_put_point' => 'Total Cash Deposit (Open Score)',
         'present_out_amount' => 'Transfer Out (Cash Out)',
         'present_in_amount' => 'Total Transfer In (Top-up)',
         'total_point' => 'Total Revenue',

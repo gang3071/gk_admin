@@ -4,8 +4,8 @@ use addons\webman\model\Notice;
 
 return [
     'title' => [
-        Notice::TYPE_EXAMINE_RECHARGE => 'Notification of player recharge pending review',
-        Notice::TYPE_EXAMINE_WITHDRAW => 'Notification of player withdrawal pending review',
+        Notice::TYPE_EXAMINE_RECHARGE => 'Notification of player open score pending review',
+        Notice::TYPE_EXAMINE_WITHDRAW => 'Notification of player wash score pending review',
         Notice::TYPE_EXAMINE_ACTIVITY => 'Notice of activity reward pending review',
         Notice::TYPE_EXAMINE_LOTTERY => 'Notice of bonus pending review',
         Notice::TYPE_MACHINE => 'Machine equipment offline notification',
@@ -16,8 +16,8 @@ return [
         Notice::TYPE_MACHINE_CRASH => 'Device Crash Notification',
     ],
     'content' => [
-        Notice::TYPE_EXAMINE_RECHARGE => 'New recharge order pending review, player: {player_name}, recharge game points: {point} recharge amount: {money}!',
-        Notice::TYPE_EXAMINE_WITHDRAW => 'New withdrawal order is pending review, player: {player_name}, withdrawal game points: {point}, withdrawal amount: {money}!',
+        Notice::TYPE_EXAMINE_RECHARGE => 'New open score order pending review, player: {player_name}, open score game points: {point} open score amount: {money}!',
+        Notice::TYPE_EXAMINE_WITHDRAW => 'New wash score order is pending review, player: {player_name}, wash score game points: {point}, wash score amount: {money}!',
         Notice::TYPE_EXAMINE_ACTIVITY => 'Activity rewards are pending review, player: {player_name}, on machine: {machine_code}, achieve activity: {activity_content_name}, reward requirements, reward game points {point}!',
         Notice::TYPE_EXAMINE_LOTTERY => 'The bonus reward is pending review, player: {player_name}, on the machine: {machine_code}, achieve bonus: {lottery_name}, reward requirements, reward game points {point}!',
         Notice::TYPE_MACHINE => 'Machine equipment {machine_code} is now offline. Maintenance personnel are requested to troubleshoot the problem in time!',

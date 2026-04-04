@@ -107,7 +107,7 @@ return [
     'bound_player' => 'Bound Player',
     'transfer_in' => 'Transfer In (Credit)',
     'transfer_out' => 'Transfer Out (Wash)',
-    'coin_deposit' => 'Coin Deposit (Recharge)',
+    'coin_deposit' => 'Coin Deposit (Open Score)',
     'total_amount' => 'Total (Turnover)',
     'store_profit_ratio' => 'Store Profit Ratio',
     'store_profit_amount' => 'Store Profit Amount',

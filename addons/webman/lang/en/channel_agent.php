@@ -44,7 +44,7 @@ return [
     'current_data' => 'Current Data',
     'present_in' => 'Transfer In (Credit)',
     'present_out' => 'Transfer Out (Cash Out)',
-    'machine_put' => 'Cash In (Recharge)',
+    'machine_put' => 'Cash In (Open Score)',
     'total_revenue' => 'Total (Revenue)',
     'store_profit_rate' => 'Store Profit Rate',
     'store_profit_amount' => 'Store Profit',
@@ -56,7 +56,7 @@ return [
 
     // Credit Related
     'open_score' => 'Credit',
-    'recharge_amount' => 'Recharge Amount',
+    'recharge_amount' => 'Open Score Amount',
     'quick_amount' => 'Quick Amount',
     'custom_amount' => 'Custom Amount',
     'preset_amount' => 'Preset Amount',

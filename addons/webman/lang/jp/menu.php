@@ -58,8 +58,8 @@ return [
         //財務データ
         'financial_data' => '財務データ',
         'transfer_point_record' => '転送ポイントレコード',
-        'recharge_record' => 'リチャージレコード',
-        'withdrawal_records' => '出金記録',
+        'recharge_record' => '開分レコード',
+        'withdrawal_records' => '洗分記録',
         //レポートセンター
         'report_center' => 'レポート センター',
         'machine_report' => 'マシンレポート',
@@ -80,7 +80,7 @@ return [
         //コインディーラー管理
         'channel_coin_merchant_manage' => 'コイン販売者管理',
         'channel_coin_merchant_list' => 'コイン販売者リスト',
-        'channel_coin_merchant_recharge_records' => 'コイン販売者のリチャージ記録',
+        'channel_coin_merchant_recharge_records' => 'コイン販売者の開分記録',
         'channel_coin_merchant_transaction_records' => 'コイン販売者の取引記録',
         //プレイヤー管理
         'channel_player_manage' => 'プレイヤー管理',
@@ -100,14 +100,14 @@ return [
         'channel_payment_manager' => 'アナウンス管理',
         //財務管理
         'channel_financial_manager' => '財務管理',
-        'channel_recharge_review' => 'リチャージレビュー',
-        'channel_withdrawal_review' => '出金レビュー',
-        'channel_withdrawal_and_payment' => '引き出しと支払い',
-        'channel_recharge_record' => 'リチャージレコード',
-        'channel_talk_recharge_records' => 'QTalk リチャージレコード',
-        'channel_withdrawal_records' => '出金記録',
-        'channel_talk_withdrawal_records' => 'QTalk 出金記録',
-        'channel_recharge_channel_configuration' => 'リチャージチャネル構成',
+        'channel_recharge_review' => '開分レビュー',
+        'channel_withdrawal_review' => '洗分レビュー',
+        'channel_withdrawal_and_payment' => '洗分と支払い',
+        'channel_recharge_record' => '開分レコード',
+        'channel_talk_recharge_records' => 'QTalk 開分レコード',
+        'channel_withdrawal_records' => '洗分記録',
+        'channel_talk_withdrawal_records' => 'QTalk 洗分記録',
+        'channel_recharge_channel_configuration' => '開分チャネル構成',
         'channel_financial_operation_records' => '金融業務記録',
         //権限管理
         'channel_auth_manager' => '権限管理',
@@ -133,7 +133,7 @@ return [
         //コインディーラー管理
         'coin_management' => 'コインビジネス管理',
         'coin_list' => 'コインディーラーリスト',
-        'coin_recharge_record' => 'コインディーラーのリチャージ記録',
+        'coin_recharge_record' => 'コインディーラーの開分記録',
         //ログセンター
         'log_center' => 'ログセンター',
         'machine_keeper_log' => 'マシン維持ログ',
@@ -179,8 +179,8 @@ return [
         'store_game_log_list' => 'レポートリスト',
         //代理店財務管理
         'agent_financial_management' => '財務管理',
-        'agent_recharge_record' => 'リチャージ記録',
-        'agent_withdraw_record' => '出金記録',
+        'agent_recharge_record' => '開分記録',
+        'agent_withdraw_record' => '洗分記録',
         //代理店ゲーム管理
         'agent_game_management' => 'ゲーム管理',
         'agent_game_record' => 'ゲーム記録',
@@ -208,9 +208,9 @@ return [
         'store_deposit_bonus_bet_detail' => 'ベット詳細',
         'store_deposit_bonus_task' => 'ベット量タスク',
         //店舗財務管理
-        'store_financial_manage' => '入出金センター',
+        'store_financial_manage' => '入洗分センター',
         'store_recharge_record' => '入金記録',
-        'store_withdraw_record' => '出金記録',
+        'store_withdraw_record' => '洗分記録',
         //店舗ゲーム管理
         'store_game_manage' => 'ゲーム管理',
         'store_game_record' => 'ゲーム記録',

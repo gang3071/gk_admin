@@ -8,7 +8,7 @@ return [
     'recharge_setting_info' => '売掛金',
     'fields' => [
         'id' => 'ID',
-        'method_name' => 'リチャージ方法名',
+        'method_name' => '開分方法名',
         'method_id' => 'チャージ方法',
         'min' => '最低チャージ金額',
         'max' => '最大チャージ金額',
@@ -33,7 +33,7 @@ return [
         'max_required' => '最低チャージ金額が必要です',
         'max_min_1' => '最低金額を0にすることはできません',
         'max_max_100000000' => '上限額は1億円に設定されています',
-        'max_gt_min' => '最大リチャージ額は最小リチャージ額より大きくなければなりません',
+        'max_gt_min' => '最大開分額は最小開分額より大きくなければなりません',
     ],
     'payment_code' => '入金コード',
     'wallet_code' => 'ウォレットQRコード',

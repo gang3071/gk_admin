@@ -8,8 +8,8 @@ return [
         'id' => 'ID',
         'store_name' => 'Store Name',
         'store_username' => 'Login Account',
-        'recharge_amount' => 'Total Recharge',
-        'withdraw_amount' => 'Total Withdrawal',
+        'recharge_amount' => 'Total Open Score',
+        'withdraw_amount' => 'Total Wash Score',
         'machine_put_point' => 'Cash In',
         'lottery_amount' => 'Lottery',
         'subtotal' => 'Subtotal',
@@ -30,8 +30,8 @@ return [
 
     // Statistics
     'stats' => [
-        'total_recharge' => 'Total Recharge',
-        'total_withdraw' => 'Total Withdrawal',
+        'total_recharge' => 'Total Open Score',
+        'total_withdraw' => 'Total Wash Score',
         'total_machine_put' => 'Total Cash In',
         'total_lottery' => 'Total Lottery',
         'total_subtotal' => 'Total Subtotal',
