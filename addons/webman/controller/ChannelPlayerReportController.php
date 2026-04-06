@@ -709,13 +709,8 @@ class ChannelPlayerReportController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
 
-            // 添加导出按钮
-            $grid->tools(
-                Button::create(admin_trans('public_msg.export'))
-                    ->icon(Icon::create('DownloadOutlined'))
-                    ->type('primary')
-                    ->href('ex-admin/addons-webman-controller-ChannelPlayerReportController/exportPlayerReport?' . http_build_query(['ex_admin_filter' => $exAdminFilter]))
-            );
+            // 添加导出功能（使用 ExAdmin 标准导出，会自动携带认证信息）
+            $this->export();
         });
     }
 
@@ -723,7 +718,7 @@ class ChannelPlayerReportController
      * 导出玩家报表
      * @auth true
      */
-    public function exportPlayerReport()
+    public function export()
     {
         $exAdminFilter = Request::input('ex_admin_filter', []);
 
