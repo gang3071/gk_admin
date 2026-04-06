@@ -9,29 +9,43 @@ use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
 use ExAdmin\ui\support\Request;
 use Illuminate\Database\Eloquent\Builder;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 
 /**
  * 渠道玩家报表导出器
  */
 class ChannelPlayerReportExporter extends Excel
 {
+    protected $currentRow = 1;
+    protected $processedRows = 0;
+    protected $isInitialized = false;
+    protected $reportData = [];
+
     /**
      * 导出数据
      */
     public function write(array $data, \Closure $finish = null)
     {
         try {
-            $exAdminFilter = Request::input('ex_admin_filter', []);
+            // 第一次调用时初始化
+            if (!$this->isInitialized) {
+                \support\Log::info('=== ChannelPlayerReportExporter 开始导出 ===');
 
-            // 构建查询（复用控制器逻辑）
-            $baseQuery = Player::query()->withTrashed();
-            $playGameRecordBaseQuery = PlayGameRecord::query()
-                ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
-                    $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
-                });
+                $exAdminFilter = Request::input('ex_admin_filter', []);
+                \support\Log::info('步骤1: 获取筛选参数', ['filter' => $exAdminFilter]);
 
-            // 应用筛选条件
-            $this->applyFilters($baseQuery, $playGameRecordBaseQuery, $exAdminFilter);
+                // 构建查询（复用控制器逻辑）
+                \support\Log::info('步骤2: 开始构建查询');
+                $baseQuery = Player::query()->withTrashed();
+                $playGameRecordBaseQuery = PlayGameRecord::query()
+                    ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
+                        $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
+                    });
+
+                // 应用筛选条件
+                $this->applyFilters($baseQuery, $playGameRecordBaseQuery, $exAdminFilter);
 
             // 构建查询
             $baseQuery->leftJoin('player_delivery_record', function ($join) use ($exAdminFilter) {
@@ -73,146 +87,107 @@ class ChannelPlayerReportExporter extends Excel
                 SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN player_delivery_record.amount ELSE 0 END) + SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS total_amount
             ");
 
-            $list = $baseQuery->with([
-                'recommend_promoter.player',
-                'national_promoter.level_list',
-                'national_promoter.level_list.national_level'
-            ])->groupBy('player.id')
-                ->orderBy('player.id', 'desc')
-                ->get()
-                ->toArray();
+                \support\Log::info('步骤3: 查询玩家数据');
+                $list = $baseQuery->with([
+                    'recommend_promoter.player',
+                    'national_promoter.level_list',
+                    'national_promoter.level_list.national_level'
+                ])->groupBy('player.id')
+                    ->orderBy('player.id', 'desc')
+                    ->get()
+                    ->toArray();
 
-            // 获取电子游戏数据
-            $formattedRecords = $playGameRecordBaseQuery
-                ->whereIn('player_id', array_column($list, 'id'))
-                ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
-                ->groupBy('play_game_record.player_id')
-                ->get()
-                ->toArray();
+                \support\Log::info('步骤4: 玩家数据查询完成', ['count' => count($list)]);
 
-            $playGameRecord = [];
-            foreach ($formattedRecords as $record) {
-                $playGameRecord[$record['player_id']] = $record;
+                // 验证数据
+                if (empty($list)) {
+                    \support\Log::warning('步骤5: 数据为空，无法导出');
+                    throw new \Exception('没有可导出的数据，请检查筛选条件');
+                }
+
+                // 获取电子游戏数据
+                \support\Log::info('步骤5: 查询电子游戏数据');
+                $formattedRecords = $playGameRecordBaseQuery
+                    ->whereIn('player_id', array_column($list, 'id'))
+                    ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
+                    ->groupBy('play_game_record.player_id')
+                    ->get()
+                    ->toArray();
+
+                $playGameRecord = [];
+                foreach ($formattedRecords as $record) {
+                    $playGameRecord[$record['player_id']] = $record;
+                }
+
+                // 准备导出数据
+                $this->prepareExportData($list, $playGameRecord);
+
+                \support\Log::info('步骤6: 数据准备完成，开始写入Excel');
+                $this->writeHeaders();
+                $this->isInitialized = true;
             }
 
-            // 写入表头
-            $headers = [
-                admin_trans('player.fields.uuid'),
-                admin_trans('player.fields.name'),
-                admin_trans('player.fields.phone'),
-                admin_trans('player.fields.type'),
-                admin_trans('player.fields.real_name'),
-                admin_trans('national_promoter.level_list.name'),
-                admin_trans('player.fields.recommend_promoter_name'),
-                admin_trans('player.recharge_total'),
-                admin_trans('player_wallet_transfer.fields.player_amount'),
-                admin_trans('player.self_recharge_total'),
-                admin_trans('player.artificial_recharge_total'),
-                admin_trans('player.withdrawal_total'),
-                admin_trans('player.channel_withdrawal_total'),
-                admin_trans('player.artificial_withdrawal_total'),
-                admin_trans('player.modified_total'),
-                admin_trans('player.coin_transfer'),
-                admin_trans('player.coin_withdraw'),
-                admin_trans('player.machine_up_total'),
-                admin_trans('player.machine_down_total'),
-                admin_trans('player.machine_chip_total'),
-                admin_trans('player.winn_los_total'),
-                admin_trans('player.lottery_total'),
-                admin_trans('player.activity_total'),
-                admin_trans('player.bet_total'),
-                admin_trans('player.diff_total'),
-                admin_trans('player.total_amount'),
-            ];
+            // 分批处理数据行（带进度更新）
+            $totalCount = count($this->reportData);
+            $lastProgress = -1;
 
-            $row = 1;
-            $col = 'A';
-            foreach ($headers as $header) {
-                $this->sheet->setCellValue($col . $row, $header);
-                $col++;
-            }
-            $row++;
+            foreach ($this->reportData as $index => $rowData) {
+                $this->writeDataRow($rowData, $index);
+                $this->processedRows++;
 
-            // 写入数据
-            foreach ($list as $item) {
-                // 获取推广员名称
-                $promoterName = admin_trans('player.no_promoter');
-                if (isset($item['recommend_promoter'])) {
-                    $promoterName = $item['recommend_promoter']['player']['uuid'] ?? '';
+                // 计算进度（每5%或每10条记录更新一次）
+                $progress = floor($this->processedRows / $totalCount * 100);
+                $shouldUpdateCache = (
+                    $progress != $lastProgress && $progress % 5 == 0
+                    || $this->processedRows % 10 == 0
+                    || $this->processedRows == $totalCount
+                );
+
+                if ($shouldUpdateCache) {
+                    $this->cache->set([
+                        'status' => 0,
+                        'progress' => $progress
+                    ]);
+                    $this->cache->expiresAfter(60);
+                    $this->filesystemAdapter->save($this->cache);
+
+                    \support\Log::info('步骤7: 进度更新', [
+                        'processed' => $this->processedRows,
+                        'total' => $totalCount,
+                        'progress' => $progress . '%'
+                    ]);
+
+                    $lastProgress = $progress;
                 }
-
-                // 获取等级
-                $levelName = '';
-                if (!empty($item['national_promoter']['level_list']['national_level'])) {
-                    $levelName = $item['national_promoter']['level_list']['national_level']['name'] . $item['national_promoter']['level_list']['level'];
-                }
-
-                // 获取类型
-                $typeName = $item['is_promoter'] == 1
-                    ? admin_trans('player.promoter')
-                    : admin_trans('player.not_promoter');
-                if ($item['is_test'] == 1) {
-                    $typeName = admin_trans('player.fields.is_test');
-                }
-
-                // 电子游戏数据
-                $betTotal = 0;
-                $diffTotal = 0;
-                if (!empty($playGameRecord[$item['id']])) {
-                    $betTotal = $playGameRecord[$item['id']]['bet_total'];
-                    $diffTotal = $playGameRecord[$item['id']]['diff_total'] * -1;
-                }
-
-                $rowData = [
-                    $item['uuid'],
-                    $item['name'] ?? '',
-                    $item['phone'] ?? '',
-                    $typeName,
-                    $item['real_name'] ?? '',
-                    $levelName,
-                    $promoterName,
-                    number_format($item['recharge_total'] ?? 0, 2, '.', ''),
-                    number_format($item['player_money'] ?? 0, 2, '.', ''),
-                    number_format($item['self_recharge_total'] ?? 0, 2, '.', ''),
-                    number_format($item['artificial_recharge_total'] ?? 0, 2, '.', ''),
-                    number_format($item['withdrawal_total'] ?? 0, 2, '.', ''),
-                    number_format($item['channel_withdrawal_total'] ?? 0, 2, '.', ''),
-                    number_format($item['artificial_withdrawal_total'] ?? 0, 2, '.', ''),
-                    number_format($item['modified_total'] ?? 0, 2, '.', ''),
-                    number_format($item['coin_transfer'] ?? 0, 2, '.', ''),
-                    number_format($item['coin_withdraw'] ?? 0, 2, '.', ''),
-                    number_format($item['machine_up_total'] ?? 0, 2, '.', ''),
-                    number_format($item['machine_down_total'] ?? 0, 2, '.', ''),
-                    number_format($item['machine_chip_total'] ?? 0, 2, '.', ''),
-                    number_format($item['winn_los_total'] ?? 0, 2, '.', ''),
-                    number_format($item['lottery_total'] ?? 0, 2, '.', ''),
-                    number_format($item['activity_total'] ?? 0, 2, '.', ''),
-                    number_format($betTotal, 2, '.', ''),
-                    number_format($diffTotal, 2, '.', ''),
-                    number_format($item['total_amount'] ?? 0, 2, '.', ''),
-                ];
-
-                $col = 'A';
-                foreach ($rowData as $value) {
-                    $this->sheet->setCellValue($col . $row, $value);
-                    $col++;
-                }
-                $row++;
             }
 
-            // 完成回调
-            if ($finish) {
-                $result = call_user_func($finish, $this);
-                $this->cache->set(['status' => 1, 'url' => $result]);
-                $this->cache->expiresAfter(60);
-                $this->filesystemAdapter->save($this->cache);
+            // 所有数据处理完成
+            if ($this->processedRows >= count($this->reportData)) {
+                \support\Log::info('步骤8: 设置列宽');
+                $this->setColumnWidths();
+
+                // 完成回调
+                if ($finish) {
+                    \support\Log::info('步骤9: 调用完成回调');
+                    $result = call_user_func($finish, $this);
+                    \support\Log::info('步骤10: 生成文件路径', ['file_url' => $result]);
+
+                    $this->cache->set(['status' => 1, 'url' => $result]);
+                    $this->cache->expiresAfter(60);
+                    $this->filesystemAdapter->save($this->cache);
+
+                    \support\Log::info('步骤11: 缓存保存成功');
+                }
+
+                \support\Log::info('=== ChannelPlayerReportExporter 导出成功 ===');
             }
 
         } catch (\Throwable $e) {
-            \support\Log::error('ChannelPlayerReportExporter 导出失败', [
+            \support\Log::error('=== ChannelPlayerReportExporter 导出失败 ===', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             $this->cache->set([
@@ -221,6 +196,200 @@ class ChannelPlayerReportExporter extends Excel
             ]);
             $this->cache->expiresAfter(60);
             $this->filesystemAdapter->save($this->cache);
+        }
+    }
+
+    /**
+     * 准备导出数据
+     */
+    private function prepareExportData($list, $playGameRecord)
+    {
+        $this->reportData = [];
+
+        foreach ($list as $item) {
+            // 获取推广员名称
+            $promoterName = admin_trans('player.no_promoter');
+            if (isset($item['recommend_promoter'])) {
+                $promoterName = $item['recommend_promoter']['player']['uuid'] ?? '';
+            }
+
+            // 获取等级
+            $levelName = '';
+            if (!empty($item['national_promoter']['level_list']['national_level'])) {
+                $levelName = $item['national_promoter']['level_list']['national_level']['name'] . $item['national_promoter']['level_list']['level'];
+            }
+
+            // 获取类型
+            $typeName = $item['is_promoter'] == 1
+                ? admin_trans('player.promoter')
+                : admin_trans('player.not_promoter');
+            if ($item['is_test'] == 1) {
+                $typeName = admin_trans('player.fields.is_test');
+            }
+
+            // 电子游戏数据
+            $betTotal = 0;
+            $diffTotal = 0;
+            if (!empty($playGameRecord[$item['id']])) {
+                $betTotal = $playGameRecord[$item['id']]['bet_total'];
+                $diffTotal = $playGameRecord[$item['id']]['diff_total'] * -1;
+            }
+
+            $this->reportData[] = [
+                $item['uuid'],
+                $item['name'] ?? '',
+                $item['phone'] ?? '',
+                $typeName,
+                $item['real_name'] ?? '',
+                $levelName,
+                $promoterName,
+                $item['recharge_total'] ?? 0,
+                $item['player_money'] ?? 0,
+                $item['self_recharge_total'] ?? 0,
+                $item['artificial_recharge_total'] ?? 0,
+                $item['withdrawal_total'] ?? 0,
+                $item['channel_withdrawal_total'] ?? 0,
+                $item['artificial_withdrawal_total'] ?? 0,
+                $item['modified_total'] ?? 0,
+                $item['coin_transfer'] ?? 0,
+                $item['coin_withdraw'] ?? 0,
+                $item['machine_up_total'] ?? 0,
+                $item['machine_down_total'] ?? 0,
+                $item['machine_chip_total'] ?? 0,
+                $item['winn_los_total'] ?? 0,
+                $item['lottery_total'] ?? 0,
+                $item['activity_total'] ?? 0,
+                $betTotal,
+                $diffTotal,
+                $item['total_amount'] ?? 0,
+            ];
+        }
+    }
+
+    /**
+     * 写入表头
+     */
+    private function writeHeaders()
+    {
+
+        $headers = [
+            admin_trans('player.fields.uuid'),
+            admin_trans('player.fields.name'),
+            admin_trans('player.fields.phone'),
+            admin_trans('player.fields.type'),
+            admin_trans('player.fields.real_name'),
+            admin_trans('national_promoter.level_list.name'),
+            admin_trans('player.fields.recommend_promoter_name'),
+            admin_trans('player.recharge_total'),
+            admin_trans('player_wallet_transfer.fields.player_amount'),
+            admin_trans('player.self_recharge_total'),
+            admin_trans('player.artificial_recharge_total'),
+            admin_trans('player.withdrawal_total'),
+            admin_trans('player.channel_withdrawal_total'),
+            admin_trans('player.artificial_withdrawal_total'),
+            admin_trans('player.modified_total'),
+            admin_trans('player.coin_transfer'),
+            admin_trans('player.coin_withdraw'),
+            admin_trans('player.machine_up_total'),
+            admin_trans('player.machine_down_total'),
+            admin_trans('player.machine_chip_total'),
+            admin_trans('player.winn_los_total'),
+            admin_trans('player.lottery_total'),
+            admin_trans('player.activity_total'),
+            admin_trans('player.bet_total'),
+            admin_trans('player.diff_total'),
+            admin_trans('player.total_amount'),
+        ];
+
+        $col = 'A';
+        foreach ($headers as $header) {
+            $this->sheet->setCellValue($col . $this->currentRow, $header);
+            $col++;
+        }
+
+        // 表头样式
+        $lastCol = chr(65 + count($headers) - 1); // A + 25 = Z
+        $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastCol . $this->currentRow)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF']
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1890FF']
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D9D9D9']
+                ]
+            ]
+        ]);
+
+        $this->currentRow++;
+    }
+
+    /**
+     * 写入单行数据
+     */
+    private function writeDataRow(array $rowData, int $index)
+    {
+        $col = 'A';
+        foreach ($rowData as $colIndex => $value) {
+            // 数字列格式化
+            if ($colIndex >= 7) { // 从第8列开始是数字列
+                $value = number_format(floatval($value), 2, '.', '');
+            }
+            $this->sheet->setCellValue($col . $this->currentRow, $value);
+            $col++;
+        }
+
+        // 交替行背景色
+        $bgColor = $index % 2 == 0 ? 'FFFFFF' : 'F5F5F5';
+        $lastCol = chr(65 + count($rowData) - 1);
+        $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastCol . $this->currentRow)->applyFromArray([
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => $bgColor]
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'D9D9D9']
+                ]
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ]
+        ]);
+
+        // 数字列右对齐
+        $this->sheet->getStyle('H' . $this->currentRow . ':' . $lastCol . $this->currentRow)->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+        $this->currentRow++;
+    }
+
+    /**
+     * 设置列宽
+     */
+    private function setColumnWidths()
+    {
+        $this->sheet->getColumnDimension('A')->setWidth(15); // UUID
+        $this->sheet->getColumnDimension('B')->setWidth(15); // 姓名
+        $this->sheet->getColumnDimension('C')->setWidth(15); // 手机号
+        $this->sheet->getColumnDimension('D')->setWidth(12); // 类型
+        $this->sheet->getColumnDimension('E')->setWidth(15); // 真实姓名
+        $this->sheet->getColumnDimension('F')->setWidth(12); // 等级
+        $this->sheet->getColumnDimension('G')->setWidth(15); // 推广员
+        // H-Z 列（数字列）统一宽度
+        foreach (range('H', 'Z') as $col) {
+            $this->sheet->getColumnDimension($col)->setWidth(15);
         }
     }
 
@@ -243,15 +412,18 @@ class ChannelPlayerReportExporter extends Excel
         // 获取文件名
         $fileName = basename($fullFilePath);
 
-        // 构建相对路径
-        $publicRelativePath = '/storage/' . $fileName;
+        // 构建完整的HTTP URL（前端可以直接访问）
+        $request = \support\Request::request();
+        $scheme = $request->header('x-forwarded-proto', $request->getScheme());
+        $host = $request->getHost();
+        $downloadUrl = $scheme . '://' . $host . '/storage/' . $fileName;
 
         \support\Log::info('ChannelPlayerReportExporter: 文件保存完成', [
             'filesystem_path' => $fullFilePath,
-            'relative_path' => $publicRelativePath,
+            'download_url' => $downloadUrl,
         ]);
 
-        return $publicRelativePath;
+        return $downloadUrl;
     }
 
     /**
