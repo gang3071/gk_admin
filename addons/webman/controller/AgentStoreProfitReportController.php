@@ -412,10 +412,7 @@ class AgentStoreProfitReportController
                     admin_trans('agent_store_profit.filter.end_time')
                 ]);
             });
-            // 添加导出功能（使用纯英文文件名避免编码问题）
-            // AgentStoreProfitReportExporter::save() 方法会强制使用 public/storage 目录
-            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
-                ->filename('store_profit_report_' . date('YmdHis'));
+
             $grid->hideAction();
             $grid->hideDelete();
             $grid->hideSelection();
@@ -426,6 +423,10 @@ class AgentStoreProfitReportController
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);
+
+            // 导出功能（权限通过 store_node.php 和 @auth true 控制）
+            $grid->export(new \addons\webman\grid\ShiftReportExporter())
+                ->filename('shift_report_test' . date('YmdHis'));
         });
     }
 
