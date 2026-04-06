@@ -709,8 +709,8 @@ class ChannelPlayerReportController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
 
-            // 添加导出功能（使用 ExAdmin 标准导出，会自动携带认证信息）
-            $this->export();
+            // 导出功能（权限通过 @auth true 控制）
+            $grid->export();
         });
     }
 
