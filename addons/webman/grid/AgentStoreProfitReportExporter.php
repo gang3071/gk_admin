@@ -464,12 +464,12 @@ class AgentStoreProfitReportExporter extends Excel
 
     /**
      * 保存文件
-     * @param string $path 保存目录（忽略，强制使用 public/storage）
-     * @return string 返回完整 URL
+     * @param string $path 保存目录（Arrays driver 传入 sys_get_temp_dir()，我们忽略并使用 public/storage）
+     * @return string 返回相对路径，让 Arrays driver 包装成 download URL
      */
     public function save(string $path)
     {
-        // 忽略传入的 $path 参数，强制使用 public/storage 目录
+        // 忽略传入的 $path 参数（sys_get_temp_dir()），强制使用 public/storage 目录
         $storageDir = public_path('storage');
 
         // 确保目录存在
@@ -483,24 +483,16 @@ class AgentStoreProfitReportExporter extends Excel
         // 获取文件名
         $fileName = basename($fullFilePath);
 
-        // 参考 Filesystem.php 的实现，构建完整 URL
-        $request = request();
-        if ($request) {
-            $host = $request->header('x-forwarded-host') ?: $request->header('host');
-            $baseUrl = 'https://' . $host;
-        } else {
-            $baseUrl = env('APP_URL', 'https://agent.supergames9.com');
-        }
-
-        $downloadUrl = $baseUrl . '/storage/' . $fileName;
+        // 返回相对路径（以 / 开头），Arrays driver 会把它作为 file 参数
+        $relativePath = '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
             'filesystem_path' => $fullFilePath,
-            'download_url' => $downloadUrl,
+            'relative_path' => $relativePath,
         ]);
 
-        // 返回完整 URL，让前端直接访问静态文件下载
-        return $downloadUrl;
+        // 返回相对路径，Arrays driver 会包装成：/ex-admin/system/download?file=/storage/xxx.xlsx
+        return $relativePath;
     }
 
     /**

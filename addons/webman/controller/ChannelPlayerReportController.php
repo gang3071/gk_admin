@@ -703,7 +703,9 @@ class ChannelPlayerReportController
                     admin_trans('public_msg.created_at_end')
                 ]);
             });
-            
+
+            // 使用 Arrays driver（必需，因为数据是手动查询的，不是通过 model()）
+            // 导出器的 save() 返回相对路径 /storage/xxx.xlsx，Arrays driver 会包装成 download URL
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
