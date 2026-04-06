@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => '代理/店家列表',
+    'title' => '代理/設備列表',
     'settlement_records_title' => '下線分潤結算記錄',
 
     // 欄位

@@ -3,7 +3,7 @@
 return [
     // 標題
     'title' => '店家/設備管理',
-    'store_list' => '店家列表',
+    'store_list' => '設備列表',
     'store_management' => '店家管理',
     'device_list' => '設備列表',
     'delivery_record' => '賬變記錄',

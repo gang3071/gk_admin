@@ -101,7 +101,7 @@ return [
     'account_exists' => '已存在',
 
     // 列表頁面
-    'store_list' => '店家列表',
+    'store_list' => '設備列表',
     'device_list' => '設備列表',
     'store_name' => '店家名稱',
     'bound_player' => '綁定玩家',
