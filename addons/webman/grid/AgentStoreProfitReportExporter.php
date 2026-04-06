@@ -483,22 +483,16 @@ class AgentStoreProfitReportExporter extends Excel
         // 获取文件名
         $fileName = basename($fullFilePath);
 
-        // 构建完整 URL
-        $request = request();
-        $host = $request->host();
-
-        // 从 nginx 代理头获取真实协议
-        // nginx 配置中应该有: proxy_set_header X-Forwarded-Proto $scheme;
-        $scheme = $request->header('x-forwarded-proto', 'https');
-
-        $downloadUrl = $scheme . '://' . $host . '/storage/' . $fileName;
+        // 返回相对路径（相对于 public 目录）
+        // ExAdmin 会通过 /ex-admin/system/download?file=/storage/xxx.xlsx 提供下载
+        $relativePath = '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
             'filesystem_path' => $fullFilePath,
-            'download_url' => $downloadUrl,
+            'relative_path' => $relativePath,
         ]);
 
-        return $downloadUrl;
+        return $relativePath;
     }
 
     /**
