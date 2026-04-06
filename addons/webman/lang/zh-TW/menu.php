@@ -47,7 +47,7 @@ return [
         'data_center' => '資料中心',
 //用戶管理
         'user_manage' => '玩家管理',
-        'user_manage_list' => '玩家清單',
+        'user_manage_list' => '設備清單',
         'accounting_change_records' => '賬變記錄',
 //遊戲管理
         'game_manager' => '遊戲管理',
@@ -84,7 +84,7 @@ return [
         'channel_coin_merchant_transaction_records' => '幣商交易記錄',
 //玩家管理
         'channel_player_manage' => '玩家管理',
-        'channel_player_list' => '玩家清單',
+        'channel_player_list' => '設備清單',
         'channel_player_accounting_change_records' => '賬變記錄',
 //機台管理
         'channel_machine_manage' => '機台管理',
