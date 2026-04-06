@@ -134,23 +134,20 @@ class AgentStoreProfitReportExporter extends Excel
             }
 
             // ✅ 所有数据处理完成后，写入合计行并调用完成回调
-            if ($this->processedStores >= count($this->reportData)) {
+            if ($this->processedStores >= $this->count) {
                 \support\Log::info('步骤8: 写入合计行');
                 $this->writeTotalRow($this->totalStats);
                 $this->setColumnWidths();
 
                 // 完成回调
                 if ($finish) {
-                    \support\Log::info('步骤9: 调用完成回调');
                     $result = call_user_func($finish, $this);
-                    \support\Log::info('步骤10: 生成文件路径', ['file_url' => $result]);
-
-                    // ✅ 设置为完成状态
-                    $this->cache->set(['status' => 1, 'url' => $result]);
+                    $this->cache->set([
+                        'status' => 1,
+                        'url' => $result
+                    ]);
                     $this->cache->expiresAfter(60);
                     $this->filesystemAdapter->save($this->cache);
-
-                    \support\Log::info('步骤11: 缓存保存成功');
                 }
 
                 \support\Log::info('=== AgentStoreProfitReportExporter 导出成功 ===');
@@ -465,43 +462,17 @@ class AgentStoreProfitReportExporter extends Excel
 
     /**
      * 保存文件
-     * @param string $path 保存目录（忽略，强制使用 public/storage）
-     * @return string 返回完整 URL
+     * @param string $path 保存目录
+     * @return string|bool
      */
     public function save(string $path)
     {
-        // 忽略传入的 $path 参数（可能是 /tmp/），强制使用 public/storage 目录
-        $storageDir = public_path('storage');
-
         // 确保目录存在
-        if (!is_dir($storageDir)) {
-            mkdir($storageDir, 0755, true);
+        if (!is_dir($path)) {
+            mkdir($path, 0755, true);
         }
 
-        // 调用父类保存文件到 public/storage 目录
-        $fullFilePath = parent::save($storageDir);
-
-        // 获取文件名
-        $fileName = basename($fullFilePath);
-
-        // 参考 Filesystem.php 的实现，构建完整 URL
-        $request = request();
-        if ($request) {
-            $host = $request->header('x-forwarded-host') ?: $request->header('host');
-            $baseUrl = 'https://' . $host;
-        } else {
-            $baseUrl = env('APP_URL', 'https://agent.supergames9.com');
-        }
-
-        $downloadUrl = $baseUrl . '/storage/' . $fileName;
-
-        \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
-            'filesystem_path' => $fullFilePath,
-            'download_url' => $downloadUrl,
-        ]);
-
-        // 返回完整 URL，让浏览器直接下载静态文件
-        return $downloadUrl;
+        return parent::save($path);
     }
 
     /**
