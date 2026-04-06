@@ -465,17 +465,43 @@ class AgentStoreProfitReportExporter extends Excel
 
     /**
      * 保存文件
-     * @param string $path 保存目录
-     * @return string|bool
+     * @param string $path 保存目录（忽略，强制使用 public/storage）
+     * @return string 返回完整 URL
      */
     public function save(string $path)
     {
+        // 忽略传入的 $path 参数（可能是 /tmp/），强制使用 public/storage 目录
+        $storageDir = public_path('storage');
+
         // 确保目录存在
-        if (!is_dir($path)) {
-            mkdir($path, 0755, true);
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0755, true);
         }
 
-        return parent::save($path);
+        // 调用父类保存文件到 public/storage 目录
+        $fullFilePath = parent::save($storageDir);
+
+        // 获取文件名
+        $fileName = basename($fullFilePath);
+
+        // 参考 Filesystem.php 的实现，构建完整 URL
+        $request = request();
+        if ($request) {
+            $host = $request->header('x-forwarded-host') ?: $request->header('host');
+            $baseUrl = 'https://' . $host;
+        } else {
+            $baseUrl = env('APP_URL', 'https://agent.supergames9.com');
+        }
+
+        $downloadUrl = $baseUrl . '/storage/' . $fileName;
+
+        \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
+            'filesystem_path' => $fullFilePath,
+            'download_url' => $downloadUrl,
+        ]);
+
+        // 返回完整 URL，让浏览器直接下载静态文件
+        return $downloadUrl;
     }
 
     /**
