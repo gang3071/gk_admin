@@ -133,25 +133,35 @@ class AgentStoreProfitReportExporter extends Excel
                 }
             }
 
-            // ✅ 所有数据处理完成后，写入合计行并构建下载 URL
+            // ✅ 所有数据处理完成后，写入合计行并保存文件
             if ($this->processedStores >= $this->count) {
+                \support\Log::info('步骤8: 写入合计行');
                 $this->writeTotalRow($this->totalStats);
                 $this->setColumnWidths();
 
-                $storageDir = public_path('storage');
-                if (!is_dir($storageDir)) {
-                    mkdir($storageDir, 0755, true);
-                }
+                // ✅ 参考 Eloquent driver 的做法，使用 Filesystem::path() 和 Filesystem::url()
+                \support\Log::info('步骤9: 保存文件到 public/storage');
+                parent::save(\addons\webman\filesystem\Filesystem::path(''));
 
-                // ✅ 设置缓存（前端通过 exportProgress 接口读取）
-                $result = call_user_func($finish, $this);
-                $this->cache->set(['status' => 3, 'url' => $result]);
+                // ✅ 使用 Filesystem::url() 构建 HTTPS URL（与 ShiftReportExporter 一致）
+                $downloadUrl = \addons\webman\filesystem\Filesystem::url($this->getFilename() . '.' . $this->getExtension());
+
+                \support\Log::info('步骤10: 生成下载 URL', [
+                    'download_url' => $downloadUrl
+                ]);
+
+                // ✅ 设置缓存（不调用 finish callback）
+                $this->cache->set(['status' => 1, 'url' => $downloadUrl]);
                 $this->cache->expiresAfter(60);
                 $this->filesystemAdapter->save($this->cache);
 
                 \support\Log::info('步骤11: 缓存保存成功');
                 \support\Log::info('=== AgentStoreProfitReportExporter 导出成功 ===');
             }
+
+            // ✅ 注意：不调用 finish callback
+            // Arrays driver 的 callback 使用 Request::getSchemeAndHttpHost() 返回 http URL
+            // 我们模仿 Eloquent driver，使用 Filesystem::url() 返回 https URL
 
         } catch (\Throwable $e) {
             \support\Log::error('=== AgentStoreProfitReportExporter 导出失败 ===', [
@@ -462,35 +472,14 @@ class AgentStoreProfitReportExporter extends Excel
 
     /**
      * 保存文件
-     * @param string $path 保存目录（Arrays driver 传入 sys_get_temp_dir()，我们忽略并使用 public/storage）
-     * @return string 返回相对路径，让 Arrays driver 包装成 download URL
+     * 注意：这个方法不会被调用，因为我们在 write() 方法中已经直接保存了文件
+     * 保留这个方法只是为了满足抽象类的要求
      */
     public function save(string $path)
     {
-        // 忽略传入的 $path 参数（sys_get_temp_dir()），强制使用 public/storage 目录
-        $storageDir = public_path('storage');
-
-        // 确保目录存在
-        if (!is_dir($storageDir)) {
-            mkdir($storageDir, 0755, true);
-        }
-
-        // 调用父类保存文件到 public/storage 目录
-        $fullFilePath = parent::save($storageDir);
-
-        // 获取文件名
-        $fileName = basename($fullFilePath);
-
-        // 返回相对路径（以 / 开头），Arrays driver 会把它作为 file 参数
-        $relativePath = '/storage/' . $fileName;
-
-        \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
-            'filesystem_path' => $fullFilePath,
-            'relative_path' => $relativePath,
-        ]);
-
-        // 返回相对路径，Arrays driver 会包装成：/ex-admin/system/download?file=/storage/xxx.xlsx
-        return $relativePath;
+        // 这个方法不会被 Arrays driver 的 callback 调用，因为我们不调用 finish callback
+        // 如果意外被调用，返回一个占位符
+        return '/storage/placeholder.xlsx';
     }
 
     /**

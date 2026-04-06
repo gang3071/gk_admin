@@ -425,7 +425,7 @@ class AgentStoreProfitReportController
             $grid->attr('mongo_model', $reportData);
 
             // 导出功能（权限通过 store_node.php 和 @auth true 控制）
-            $grid->export(new \addons\webman\grid\ShiftReportExporter())
+            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
                 ->filename('shift_report_test' . date('YmdHis'));
         });
     }
