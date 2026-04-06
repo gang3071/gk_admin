@@ -394,34 +394,18 @@ class ChannelPlayerReportExporter extends Excel
     }
 
     /**
-     * 保存文件到 public/storage 目录
+     * 保存文件
+     * @param string $path 保存目录
+     * @return string|bool
      */
     public function save(string $path)
     {
-        // 强制使用 public/storage 目录
-        $storageDir = public_path('storage');
-
         // 确保目录存在
-        if (!is_dir($storageDir)) {
-            mkdir($storageDir, 0755, true);
+        if (!is_dir($path)) {
+            mkdir($path, 0755, true);
         }
 
-        // 调用父类保存文件
-        $fullFilePath = parent::save($storageDir);
-
-        // 获取文件名
-        $fileName = basename($fullFilePath);
-
-        // 返回相对路径（相对于 public 目录）
-        // ExAdmin 会通过 /ex-admin/system/download?file=/storage/xxx.xlsx 提供下载
-        $relativePath = '/storage/' . $fileName;
-
-        \support\Log::info('ChannelPlayerReportExporter: 文件保存完成', [
-            'filesystem_path' => $fullFilePath,
-            'relative_path' => $relativePath,
-        ]);
-
-        return $relativePath;
+        return parent::save($path);
     }
 
     /**
