@@ -412,10 +412,14 @@ class ChannelPlayerReportExporter extends Excel
         // 获取文件名
         $fileName = basename($fullFilePath);
 
-        // 构建完整的HTTP URL（前端可以直接访问）
-        $request = \support\Request::request();
-        $scheme = $request->header('x-forwarded-proto', $request->getScheme());
-        $host = $request->getHost();
+        // 构建完整 URL
+        $request = request();
+        $host = $request->host();
+
+        // 从 nginx 代理头获取真实协议
+        // nginx 配置中应该有: proxy_set_header X-Forwarded-Proto $scheme;
+        $scheme = $request->header('x-forwarded-proto', 'https');
+
         $downloadUrl = $scheme . '://' . $host . '/storage/' . $fileName;
 
         \support\Log::info('ChannelPlayerReportExporter: 文件保存完成', [

@@ -469,8 +469,7 @@ class AgentStoreProfitReportExporter extends Excel
      */
     public function save(string $path)
     {
-        // ✅ 强制使用 public/storage 目录（忽略传入的 $path）
-        // ExAdmin 默认传入 /tmp/，但我们需要文件在 public/storage/ 下才能通过 Web 访问
+        // 强制使用 public/storage 目录
         $storageDir = public_path('storage');
 
         // 确保目录存在
@@ -484,20 +483,22 @@ class AgentStoreProfitReportExporter extends Excel
         // 获取文件名
         $fileName = basename($fullFilePath);
 
-        // ✅ 构建相对于网站根目录的路径
-        // 返回格式：/storage/file.xlsx（不包含域名，让浏览器自动补全）
-        $publicRelativePath = '/storage/' . $fileName;
+        // 构建完整 URL
+        $request = request();
+        $host = $request->host();
+
+        // 从 nginx 代理头获取真实协议
+        // nginx 配置中应该有: proxy_set_header X-Forwarded-Proto $scheme;
+        $scheme = $request->header('x-forwarded-proto', 'https');
+
+        $downloadUrl = $scheme . '://' . $host . '/storage/' . $fileName;
 
         \support\Log::info('AgentStoreProfitReportExporter: 文件保存完成', [
             'filesystem_path' => $fullFilePath,
-            'relative_path' => $publicRelativePath,
-            'web_accessible' => true
+            'download_url' => $downloadUrl,
         ]);
 
-        // ✅ 返回相对于网站根目录的路径（以 / 开头）
-        // ExAdmin 会将其识别为静态资源路径，直接使用而不包装下载路由
-        // 前端会将 /storage/file.xlsx 自动补全为 https://agent.supergames9.com/storage/file.xlsx
-        return $publicRelativePath;
+        return $downloadUrl;
     }
 
     /**
