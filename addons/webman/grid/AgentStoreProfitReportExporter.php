@@ -135,39 +135,17 @@ class AgentStoreProfitReportExporter extends Excel
 
             // ✅ 所有数据处理完成后，写入合计行并构建下载 URL
             if ($this->processedStores >= $this->count) {
-                \support\Log::info('步骤8: 写入合计行');
                 $this->writeTotalRow($this->totalStats);
                 $this->setColumnWidths();
 
-                // ✅ 不使用 Arrays driver 的 finish callback（因为它生成的是 http URL）
-                // 自己保存文件并构建正确的 https URL
-                \support\Log::info('步骤9: 保存文件到 public/storage');
                 $storageDir = public_path('storage');
                 if (!is_dir($storageDir)) {
                     mkdir($storageDir, 0755, true);
                 }
-                $fullFilePath = parent::save($storageDir);
-                $fileName = basename($fullFilePath);
-                $relativeFilePath = '/storage/' . $fileName;
-
-                // ✅ 构建正确的 https 下载 URL
-                $request = request();
-                if ($request) {
-                    $host = $request->header('x-forwarded-host') ?: $request->header('host');
-                    $protocol = $request->header('x-forwarded-proto') ?: 'https';
-                } else {
-                    $host = parse_url(env('APP_URL', 'https://agent.supergames9.com'), PHP_URL_HOST);
-                    $protocol = 'https';
-                }
-                $downloadUrl = $protocol . '://' . $host . '/ex-admin/system/download?App-Name=' . ($request ? $request->header('App-Name') : 'agent') . '&file=' . $relativeFilePath;
-
-                \support\Log::info('步骤10: 生成下载 URL', [
-                    'filesystem_path' => $fullFilePath,
-                    'download_url' => $downloadUrl
-                ]);
 
                 // ✅ 设置缓存（前端通过 exportProgress 接口读取）
-                $this->cache->set(['status' => 1, 'url' => $downloadUrl]);
+                $result = call_user_func($finish, $this);
+                $this->cache->set(['status' => 3, 'url' => $result]);
                 $this->cache->expiresAfter(60);
                 $this->filesystemAdapter->save($this->cache);
 
