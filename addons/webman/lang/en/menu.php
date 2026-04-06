@@ -218,6 +218,13 @@ return [
         'auto_shift_management' => 'Auto Shift',
         'auto_shift_config' => 'Shift Configuration',
         'auto_shift_logs' => 'Execution Logs',
+        //Limit Group Management (Admin)
+        'limit_group' => 'Limit Management',
+        'limit_group_list' => 'Limit Group Management',
+        'limit_group_config' => 'Platform Configuration',
+        //Channel Limit Group Management
+        'channel_limit_group' => 'Limit Management',
+        'channel_admin_limit_group' => 'Store Limit Allocation',
         //Channel Store Profit Report
         'channel_store_profit_report' => 'Store Profit Report',
         /** TODO end translation */

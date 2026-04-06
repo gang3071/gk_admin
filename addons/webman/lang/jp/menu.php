@@ -219,6 +219,13 @@ return [
         'auto_shift_management' => '自動シフト',
         'auto_shift_config' => 'シフト設定',
         'auto_shift_logs' => '実行ログ',
+        //制限グループ管理（総後台）
+        'limit_group' => '制限管理',
+        'limit_group_list' => '制限グループ管理',
+        'limit_group_config' => 'プラットフォーム設定',
+        //チャネル制限管理
+        'channel_limit_group' => '制限管理',
+        'channel_admin_limit_group' => '店舗制限配分',
         //チャンネルバックエンド店舗利益レポート
         'channel_store_profit_report' => '店舗利益レポート',
     ]

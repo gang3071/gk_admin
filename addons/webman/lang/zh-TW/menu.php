@@ -218,6 +218,13 @@ return [
         'auto_shift_management' => '自動交班',
         'auto_shift_config' => '交班配置',
         'auto_shift_logs' => '執行日誌',
+        //限紅組管理（總後台）
+        'limit_group' => '限紅管理',
+        'limit_group_list' => '限紅組管理',
+        'limit_group_config' => '平臺配置',
+        //渠道限紅管理
+        'channel_limit_group' => '限紅管理',
+        'channel_admin_limit_group' => '店家限紅分配',
         //渠道後台店家分潤報表
         'channel_store_profit_report' => '店家分潤報表',
     ]
