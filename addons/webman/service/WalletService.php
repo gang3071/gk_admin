@@ -35,13 +35,13 @@ class WalletService
      * @param int $playerId 玩家ID
      * @param int $platformId 平台ID，默认1（实体机平台）
      * @param bool $forceRefresh 是否强制刷新缓存
-     * @return float 余额
+     * @return float 余额（自动修正精度为2位小数）
      */
     public static function getBalance(int $playerId, int $platformId = 1, bool $forceRefresh = false): float
     {
         // 🚨 紧急开关：缓存被禁用时直接查询数据库
         if (!self::isCacheEnabled()) {
-            return self::getBalanceFromDB($playerId, $platformId);
+            return self::fixPrecision(self::getBalanceFromDB($playerId, $platformId));
         }
 
         $cacheKey = self::getCacheKey($playerId, $platformId);
@@ -51,7 +51,7 @@ class WalletService
             if (!$forceRefresh) {
                 $cached = Redis::get($cacheKey);
                 if ($cached !== null && $cached !== false) {
-                    return (float)$cached;
+                    return self::fixPrecision((float)$cached);
                 }
             }
 
@@ -61,7 +61,7 @@ class WalletService
             // 更新缓存
             Redis::setex($cacheKey, self::CACHE_TTL, $balance);
 
-            return $balance;
+            return self::fixPrecision($balance);
         } catch (\Throwable $e) {
             // Redis 异常时自动降级到数据库
             Log::warning('WalletService: Redis failed, fallback to DB', [
@@ -70,7 +70,7 @@ class WalletService
                 'error' => $e->getMessage(),
             ]);
 
-            return self::getBalanceFromDB($playerId, $platformId);
+            return self::fixPrecision(self::getBalanceFromDB($playerId, $platformId));
         }
     }
 
@@ -99,6 +99,20 @@ class WalletService
             ->first();
 
         return $wallet ? (float)$wallet->money : 0.0;
+    }
+
+    /**
+     * 修正浮点数精度问题
+     *
+     * 将余额格式化为保留2位小数，解决浮点数运算导致的精度误差
+     * 例如：51.32999999995809 -> 51.33
+     *
+     * @param float $balance 原始余额
+     * @return float 修正后的余额（2位小数）
+     */
+    private static function fixPrecision(float $balance): float
+    {
+        return round($balance, 2);
     }
 
     /**
@@ -214,7 +228,7 @@ class WalletService
      *
      * @param array $playerIds 玩家ID数组
      * @param int $platformId 平台ID
-     * @return array [player_id => balance]
+     * @return array [player_id => balance]（余额已修正精度为2位小数）
      */
     public static function getBatchBalance(array $playerIds, int $platformId = 1): array
     {
@@ -239,7 +253,7 @@ class WalletService
 
             foreach ($playerIds as $index => $playerId) {
                 if (isset($cached[$index]) && $cached[$index] !== false && $cached[$index] !== null) {
-                    $result[$playerId] = (float)$cached[$index];
+                    $result[$playerId] = self::fixPrecision((float)$cached[$index]);
                 } else {
                     $missedIds[] = $playerId;
                 }
@@ -260,7 +274,7 @@ class WalletService
                 ->get();
 
             foreach ($wallets as $wallet) {
-                $balance = (float)$wallet->money;
+                $balance = self::fixPrecision((float)$wallet->money);
                 $result[$wallet->player_id] = $balance;
 
                 // 回填缓存
@@ -435,7 +449,7 @@ local newBalance = currentBalance + amount
 -- 原子性写入
 redis.call('SETEX', key, ttl, newBalance)
 
-return cjson.encode({old = currentBalance, new = newBalance})
+return newBalance
 LUA;
 
     /**
@@ -508,6 +522,9 @@ LUA;
                 );
             }
 
+            // 🔧 修正精度
+            $newBalance = self::fixPrecision((float)$newBalance);
+
             // 解析返回的 JSON：{old: 旧余额, new: 新余额}
             $balanceData = json_decode($result, true);
             $oldBalance = (float)($balanceData['old'] ?? 0);
@@ -517,6 +534,7 @@ LUA;
             self::asyncUpdateDB($playerId, $newBalance);
 
             // ✅ 触发爆机检测（余额增加后可能触发爆机）
+            self::checkMachineCrash($playerId, $previousBalance, $newBalance);
             self::checkMachineCrash($playerId, $oldBalance, $newBalance);
 
             return $newBalance;
@@ -573,14 +591,26 @@ LUA;
                 );
             }
 
+            // 🔧 修正精度
+            if (isset($decoded['balance'])) {
+                $decoded['balance'] = self::fixPrecision((float)$decoded['balance']);
+            }
+            if (isset($decoded['old_balance'])) {
+                $decoded['old_balance'] = self::fixPrecision((float)$decoded['old_balance']);
+            }
+
             // ✅ 异步同步数据库（仅在扣款成功时）
             if (isset($decoded['ok']) && $decoded['ok'] === 1) {
+                self::asyncUpdateDB($playerId, $decoded['balance']);
                 $oldBalance = (float)($decoded['old'] ?? 0);
                 $newBalance = (float)($decoded['new'] ?? $decoded['balance']);
 
                 self::asyncUpdateDB($playerId, $newBalance);
 
                 // ✅ 触发爆机检测（余额减少后可能解除爆机）
+                $previousBalance = $decoded['old_balance'] ?? 0;
+                $currentBalance = $decoded['balance'];
+                self::checkMachineCrash($playerId, $previousBalance, $currentBalance);
                 self::checkMachineCrash($playerId, $oldBalance, $newBalance);
             }
 
