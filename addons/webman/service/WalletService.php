@@ -594,11 +594,6 @@ LUA;
     private static function asyncUpdateDB(int $playerId, float $newBalance): void
     {
         try {
-            // 单一钱包模式：同步 player.money 和 player_platform_cash.money
-            \support\Db::table('player')
-                ->where('id', $playerId)
-                ->update(['money' => $newBalance]);
-
             \support\Db::table('player_platform_cash')
                 ->where('player_id', $playerId)
                 ->update(['money' => $newBalance]);
