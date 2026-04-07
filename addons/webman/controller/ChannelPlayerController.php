@@ -40,6 +40,7 @@ use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreSetting;
 use addons\webman\service\ImportService;
+use addons\webman\service\WalletService;
 use app\exception\GameException;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -1279,128 +1280,145 @@ class ChannelPlayerController
                 }
                 Db::beginTransaction();
                 try {
-                    /** @var PlayerPlatformCash $playerWallet */
-                    $playerWallet = PlayerPlatformCash::query()->where('player_id',
-                        $player->id)->lockForUpdate()->first();
-                    $beforeGameAmount = $playerWallet->money;
-                    // 生成订单
-                    $playerRechargeRecord = new  PlayerRechargeRecord();
-                    $playerRechargeRecord->player_id = $player->id;
-                    $playerRechargeRecord->talk_user_id = $player->talk_user_id;
-                    $playerRechargeRecord->department_id = $player->department_id;
-                    $playerRechargeRecord->tradeno = createOrderNo();
-                    $playerRechargeRecord->player_name = $player->name ?? '';
-                    $playerRechargeRecord->player_phone = $player->phone ?? '';
-                    $playerRechargeRecord->money = $form->input('money') ?? 0;
-                    $playerRechargeRecord->inmoney = $form->input('money') ?? 0;
-                    $playerRechargeRecord->currency = $form->input('currency') ?? '';
-                    $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_ARTIFICIAL;
-                    $playerRechargeRecord->point = $form->input('point');
-                    $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
-                    $playerRechargeRecord->remark = $form->input('remark');
-                    $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
-                    $playerRechargeRecord->user_id = Admin::id() ?? 0;
-                    $playerRechargeRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : '';
-                    $playerRechargeRecord->save();
+                    // ✅ 步骤 1: 获取 Redis 分布式锁（防止并发）
+                    $lockKey = "player:balance:lock:{$player->id}";
+                    $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
+                    if (!$lock) {
+                        return message_error('操作繁忙，请稍后重试');
+                    }
 
-                    $playerWallet->money = bcadd($playerWallet->money, $playerRechargeRecord->point, 2);
-                    $playerWallet->save();
+                    try {
+                        // ✅ 步骤 2: 从 Redis 读取当前余额（唯一可信源）
+                        $beforeGameAmount = WalletService::getBalance($player->id);
 
-                    $player->player_extend->recharge_amount = bcadd($player->player_extend->recharge_amount,
-                        $playerRechargeRecord->point, 2);
-                    if (isset($player->national_promoter->status) && $player->national_promoter->status == 0) {
-                        $player->national_promoter->created_at = $playerRechargeRecord->finish_time;
-                        $player->national_promoter->status = 1;
-                        if (!empty($player->recommend_id) && $player->channel->national_promoter_status == 1) {
-                            //玩家上级推广员信息
-                            /** @var Player $recommendPlayer */
-                            $recommendPlayer = Player::query()->find($player->recommend_id);
-                            //推广员为全民代理
-                            if(!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1){
-                                //首充返佣金额
-                                /** @var PlayerPlatformCash $recommendPlayerWallet */
-                                $recommendPlayerWallet = PlayerPlatformCash::query()->where('player_id',
-                                    $player->recommend_id)->lockForUpdate()->first();
-                                $beforeRechargeAmount = $recommendPlayerWallet->money;
-                                $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
-                                $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $rechargeRebate,
-                                    2);
+                        // 生成订单
+                        $playerRechargeRecord = new  PlayerRechargeRecord();
+                        $playerRechargeRecord->player_id = $player->id;
+                        $playerRechargeRecord->talk_user_id = $player->talk_user_id;
+                        $playerRechargeRecord->department_id = $player->department_id;
+                        $playerRechargeRecord->tradeno = createOrderNo();
+                        $playerRechargeRecord->player_name = $player->name ?? '';
+                        $playerRechargeRecord->player_phone = $player->phone ?? '';
+                        $playerRechargeRecord->money = $form->input('money') ?? 0;
+                        $playerRechargeRecord->inmoney = $form->input('money') ?? 0;
+                        $playerRechargeRecord->currency = $form->input('currency') ?? '';
+                        $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_ARTIFICIAL;
+                        $playerRechargeRecord->point = $form->input('point');
+                        $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
+                        $playerRechargeRecord->remark = $form->input('remark');
+                        $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
+                        $playerRechargeRecord->user_id = Admin::id() ?? 0;
+                        $playerRechargeRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : '';
+                        $playerRechargeRecord->save();
 
-                                //寫入首充金流明細
-                                $playerDeliveryRecord = new PlayerDeliveryRecord;
-                                $playerDeliveryRecord->player_id = $recommendPlayer->id;
-                                $playerDeliveryRecord->department_id = $recommendPlayer->department_id;
-                                $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
-                                $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
-                                $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE_REWARD;
-                                $playerDeliveryRecord->source = 'national_promoter';
-                                $playerDeliveryRecord->amount = $rechargeRebate;
-                                $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
-                                $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
-                                $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
-                                $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
-                                $playerDeliveryRecord->save();
+                        $rechargeAmount = $playerRechargeRecord->point;
 
-                                //首冲成功之后全民代理邀请奖励
-                                $recommendPlayer->national_promoter->invite_num = bcadd($recommendPlayer->national_promoter->invite_num, 1, 0);
-                                $recommendPlayer->national_promoter->settlement_amount = bcadd($recommendPlayer->national_promoter->settlement_amount, $rechargeRebate, 2);
-                                /** @var NationalInvite $national_invite */
-                                $national_invite = NationalInvite::where('min', '<=',
-                                    $recommendPlayer->national_promoter->invite_num)
-                                    ->where('max', '>=', $recommendPlayer->national_promoter->invite_num)->first();
+                        // ✅ 步骤 3: 使用 WalletService 原子性增加余额（自动同步数据库）
+                        $newBalance = WalletService::atomicIncrement($player->id, $rechargeAmount);
 
-                                if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
-                                    $money = $national_invite->money;
-                                    $amount_before = $recommendPlayerWallet->money;
-                                    $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $money, 2);
-                                    // 寫入金流明細
+                        $player->player_extend->recharge_amount = bcadd($player->player_extend->recharge_amount,
+                            $playerRechargeRecord->point, 2);
+                        if (isset($player->national_promoter->status) && $player->national_promoter->status == 0) {
+                            $player->national_promoter->created_at = $playerRechargeRecord->finish_time;
+                            $player->national_promoter->status = 1;
+                            if (!empty($player->recommend_id) && $player->channel->national_promoter_status == 1) {
+                                //玩家上级推广员信息
+                                /** @var Player $recommendPlayer */
+                                $recommendPlayer = Player::query()->find($player->recommend_id);
+                                //推广员为全民代理
+                                if(!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1){
+                                    //首充返佣金额
+                                    $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
+
+                                    // ✅ 推荐人奖励：使用 WalletService 原子性增加余额
+                                    $beforeRechargeAmount = WalletService::getBalance($recommendPlayer->id);
+                                    $recommendNewBalance = WalletService::atomicIncrement($recommendPlayer->id, $rechargeRebate);
+
+                                    //寫入首充金流明細
                                     $playerDeliveryRecord = new PlayerDeliveryRecord;
                                     $playerDeliveryRecord->player_id = $recommendPlayer->id;
                                     $playerDeliveryRecord->department_id = $recommendPlayer->department_id;
-                                    $playerDeliveryRecord->target = $national_invite->getTable();
-                                    $playerDeliveryRecord->target_id = $national_invite->id;
-                                    $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_NATIONAL_INVITE;
+                                    $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
+                                    $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
+                                    $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE_REWARD;
                                     $playerDeliveryRecord->source = 'national_promoter';
-                                    $playerDeliveryRecord->amount = $money;
-                                    $playerDeliveryRecord->amount_before = $amount_before;
-                                    $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
-                                    $playerDeliveryRecord->tradeno = '';
-                                    $playerDeliveryRecord->remark = '';
+                                    $playerDeliveryRecord->amount = $rechargeRebate;
+                                    $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
+                                    $playerDeliveryRecord->amount_after = $recommendNewBalance;
+                                    $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
+                                    $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                                     $playerDeliveryRecord->save();
-                                }
-                                $recommendPlayer->push();
-                                $recommendPlayerWallet->save();
 
-                                $nationalProfitRecord = new NationalProfitRecord();
-                                $nationalProfitRecord->uid = $playerRechargeRecord->player_id;
-                                $nationalProfitRecord->recommend_id = $playerRechargeRecord->player->recommend_id;
-                                $nationalProfitRecord->money = $rechargeRebate;
-                                $nationalProfitRecord->type = 0;
-                                $nationalProfitRecord->status = 1;
-                                $nationalProfitRecord->save();
+                                    //首冲成功之后全民代理邀请奖励
+                                    $recommendPlayer->national_promoter->invite_num = bcadd($recommendPlayer->national_promoter->invite_num, 1, 0);
+                                    $recommendPlayer->national_promoter->settlement_amount = bcadd($recommendPlayer->national_promoter->settlement_amount, $rechargeRebate, 2);
+                                    /** @var NationalInvite $national_invite */
+                                    $national_invite = NationalInvite::where('min', '<=',
+                                        $recommendPlayer->national_promoter->invite_num)
+                                        ->where('max', '>=', $recommendPlayer->national_promoter->invite_num)->first();
+
+                                    if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
+                                        $money = $national_invite->money;
+                                        $amount_before = $recommendNewBalance;
+
+                                        // ✅ 再次增加邀请奖励：使用 WalletService 原子性增加余额
+                                        $inviteNewBalance = WalletService::atomicIncrement($recommendPlayer->id, $money);
+
+                                        // 寫入金流明細
+                                        $playerDeliveryRecord = new PlayerDeliveryRecord;
+                                        $playerDeliveryRecord->player_id = $recommendPlayer->id;
+                                        $playerDeliveryRecord->department_id = $recommendPlayer->department_id;
+                                        $playerDeliveryRecord->target = $national_invite->getTable();
+                                        $playerDeliveryRecord->target_id = $national_invite->id;
+                                        $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_NATIONAL_INVITE;
+                                        $playerDeliveryRecord->source = 'national_promoter';
+                                        $playerDeliveryRecord->amount = $money;
+                                        $playerDeliveryRecord->amount_before = $amount_before;
+                                        $playerDeliveryRecord->amount_after = $inviteNewBalance;
+                                        $playerDeliveryRecord->tradeno = '';
+                                        $playerDeliveryRecord->remark = '';
+                                        $playerDeliveryRecord->save();
+                                    }
+                                    $recommendPlayer->push();
+
+                                    $nationalProfitRecord = new NationalProfitRecord();
+                                    $nationalProfitRecord->uid = $playerRechargeRecord->player_id;
+                                    $nationalProfitRecord->recommend_id = $playerRechargeRecord->player->recommend_id;
+                                    $nationalProfitRecord->money = $rechargeRebate;
+                                    $nationalProfitRecord->type = 0;
+                                    $nationalProfitRecord->status = 1;
+                                    $nationalProfitRecord->save();
+                                }
                             }
                         }
+                        $player->push();
+
+                        //寫入金流明細
+                        $playerDeliveryRecord = new PlayerDeliveryRecord;
+                        $playerDeliveryRecord->player_id = $playerRechargeRecord->player_id;
+                        $playerDeliveryRecord->department_id = $playerRechargeRecord->department_id;
+                        $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
+                        $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
+                        $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
+                        $playerDeliveryRecord->source = 'artificial_recharge';
+                        $playerDeliveryRecord->amount = $playerRechargeRecord->point;
+                        $playerDeliveryRecord->amount_before = $beforeGameAmount;
+                        $playerDeliveryRecord->amount_after = $newBalance;  // ✅ 使用 Redis 计算的新值
+                        $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
+                        $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
+                        $playerDeliveryRecord->save();
+
+                        Db::commit();
+                    } finally {
+                        // ✅ 释放 Redis 锁（无论成功失败都要释放）
+                        \support\Redis::del($lockKey);
                     }
-                    $player->push();
-
-                    //寫入金流明細
-                    $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    $playerDeliveryRecord->player_id = $playerRechargeRecord->player_id;
-                    $playerDeliveryRecord->department_id = $playerRechargeRecord->department_id;
-                    $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
-                    $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
-                    $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
-                    $playerDeliveryRecord->source = 'artificial_recharge';
-                    $playerDeliveryRecord->amount = $playerRechargeRecord->point;
-                    $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
-                    $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
-                    $playerDeliveryRecord->save();
-
-                    Db::commit();
                 } catch (\Exception $e) {
                     Db::rollBack();
+                    \support\Log::error('Channel admin recharge failed', [
+                        'player_id' => $player->id ?? 0,
+                        'error' => $e->getMessage(),
+                    ]);
                     return message_error(admin_trans('player.artificial_recharge_error'));
                 }
                 return message_success(admin_trans('player.artificial_recharge_success'));
@@ -1447,60 +1465,89 @@ class ChannelPlayerController
                 if ($player->status == 0) {
                     return message_error(admin_trans('player.disable'));
                 }
-                if ($player->machine_wallet->money < $form->input('point')) {
+                if (WalletService::getBalance($player->id) < $form->input('point')) {
                     return message_error(admin_trans('player.insufficient_balance'));
                 }
                 Db::beginTransaction();
                 try {
-                    // 生成订单
-                    $playerWithdrawRecord = new PlayerWithdrawRecord();
-                    $playerWithdrawRecord->player_id = $player->id;
-                    $playerWithdrawRecord->talk_user_id = $player->talk_user_id;
-                    $playerWithdrawRecord->department_id = $player->department_id;
-                    $playerWithdrawRecord->tradeno = createOrderNo();
-                    $playerWithdrawRecord->player_name = $player->name ?? '';
-                    $playerWithdrawRecord->player_phone = $player->phone ?? '';
-                    $playerWithdrawRecord->money = $form->input('money') ?? 0;
-                    $playerWithdrawRecord->point = $form->input('point') ?? 0;
-                    $playerWithdrawRecord->fee = 0;
-                    $playerWithdrawRecord->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee,
-                        2); // 实际提现金额
-                    $playerWithdrawRecord->currency = $form->input('currency') ?? 0;
-                    $playerWithdrawRecord->bank_name = $form->input('bank_name') ?? 0;
-                    $playerWithdrawRecord->account = $form->input('account') ?? 0;
-                    $playerWithdrawRecord->account_name = $form->input('account_name') ?? 0;
-                    $playerWithdrawRecord->remark = $form->input('remark') ?? '';
-                    $playerWithdrawRecord->type = PlayerWithdrawRecord::TYPE_ARTIFICIAL;
-                    $playerWithdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
-                    $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
-                    $playerWithdrawRecord->save();
-                    $beforeGameAmount = $player->machine_wallet->money;
-                    // 玩家钱包扣减
-                    $player->machine_wallet->money = bcsub($player->machine_wallet->money, $playerWithdrawRecord->point,
-                        2);
-                    $player->machine_wallet->save();
-                    // 更新玩家统计
-                    $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
-                        $playerWithdrawRecord->point, 2);
-                    $player->push();
-                    //寫入金流明細
-                    $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    $playerDeliveryRecord->player_id = $playerWithdrawRecord->player_id;
-                    $playerDeliveryRecord->department_id = $playerWithdrawRecord->department_id;
-                    $playerDeliveryRecord->target = $playerWithdrawRecord->getTable();
-                    $playerDeliveryRecord->target_id = $playerWithdrawRecord->id;
-                    $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
-                    $playerDeliveryRecord->withdraw_status = $playerWithdrawRecord->status;
-                    $playerDeliveryRecord->source = 'artificial_withdrawal';
-                    $playerDeliveryRecord->amount = $playerWithdrawRecord->point;
-                    $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
-                    $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
-                    $playerDeliveryRecord->save();
-                    Db::commit();
+                    // ✅ 步骤 1: 获取 Redis 分布式锁
+                    $lockKey = "player:balance:lock:{$player->id}";
+                    $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
+                    if (!$lock) {
+                        return message_error('操作繁忙，请稍后重试');
+                    }
+
+                    try {
+                        // ✅ 步骤 2: 从 Redis 读取当前余额（唯一可信源）
+                        $beforeGameAmount = WalletService::getBalance($player->id);
+
+                        // 生成订单
+                        $playerWithdrawRecord = new PlayerWithdrawRecord();
+                        $playerWithdrawRecord->player_id = $player->id;
+                        $playerWithdrawRecord->talk_user_id = $player->talk_user_id;
+                        $playerWithdrawRecord->department_id = $player->department_id;
+                        $playerWithdrawRecord->tradeno = createOrderNo();
+                        $playerWithdrawRecord->player_name = $player->name ?? '';
+                        $playerWithdrawRecord->player_phone = $player->phone ?? '';
+                        $playerWithdrawRecord->money = $form->input('money') ?? 0;
+                        $playerWithdrawRecord->point = $form->input('point') ?? 0;
+                        $playerWithdrawRecord->fee = 0;
+                        $playerWithdrawRecord->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee,
+                            2); // 实际提现金额
+                        $playerWithdrawRecord->currency = $form->input('currency') ?? 0;
+                        $playerWithdrawRecord->bank_name = $form->input('bank_name') ?? 0;
+                        $playerWithdrawRecord->account = $form->input('account') ?? 0;
+                        $playerWithdrawRecord->account_name = $form->input('account_name') ?? 0;
+                        $playerWithdrawRecord->remark = $form->input('remark') ?? '';
+                        $playerWithdrawRecord->type = PlayerWithdrawRecord::TYPE_ARTIFICIAL;
+                        $playerWithdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
+                        $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
+                        $playerWithdrawRecord->save();
+
+                        $withdrawAmount = $playerWithdrawRecord->point;
+
+                        // ✅ 步骤 3: 使用 WalletService 原子性减少余额（带余额检查）
+                        $result = \addons\webman\service\WalletService::atomicDecrement($player->id, $withdrawAmount);
+
+                        if ($result['ok'] == 0) {
+                            throw new \Exception('余额不足');
+                        }
+
+                        $newBalance = $result['balance'];
+
+                        // ✅ WalletService 已自动同步数据库，无需手动同步
+                        // 更新玩家统计
+                        $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
+                            $playerWithdrawRecord->point, 2);
+                        $player->push();
+
+                        //寫入金流明細
+                        $playerDeliveryRecord = new PlayerDeliveryRecord;
+                        $playerDeliveryRecord->player_id = $playerWithdrawRecord->player_id;
+                        $playerDeliveryRecord->department_id = $playerWithdrawRecord->department_id;
+                        $playerDeliveryRecord->target = $playerWithdrawRecord->getTable();
+                        $playerDeliveryRecord->target_id = $playerWithdrawRecord->id;
+                        $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
+                        $playerDeliveryRecord->withdraw_status = $playerWithdrawRecord->status;
+                        $playerDeliveryRecord->source = 'artificial_withdrawal';
+                        $playerDeliveryRecord->amount = $playerWithdrawRecord->point;
+                        $playerDeliveryRecord->amount_before = $beforeGameAmount;
+                        $playerDeliveryRecord->amount_after = $newBalance;  // ✅ 使用 Redis 计算的新值
+                        $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
+                        $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
+                        $playerDeliveryRecord->save();
+
+                        Db::commit();
+                    } finally {
+                        // ✅ 释放 Redis 锁
+                        \support\Redis::del($lockKey);
+                    }
                 } catch (\Exception $e) {
                     Db::rollBack();
+                    \support\Log::error('[Channel Artificial Withdrawal] Failed', [
+                        'player_id' => $player->id ?? 0,
+                        'error' => $e->getMessage(),
+                    ]);
                     return message_error(admin_trans('player.artificial_withdrawal_error'));
                 }
                 return message_success(admin_trans('player.artificial_withdrawal_success'));
@@ -2375,68 +2422,87 @@ class ChannelPlayerController
                 }
                 Db::beginTransaction();
                 try {
-                    $beforeGameAmount = $player->machine_wallet->money;
-                    // 生成订单
-                    $playerRechargeRecord = new  PlayerRechargeRecord();
-                    $playerRechargeRecord->player_id = $id;
-                    $playerRechargeRecord->talk_user_id = $player->talk_user_id;
-                    $playerRechargeRecord->department_id = $player->department_id;
-                    $playerRechargeRecord->tradeno = createOrderNo();
-                    $playerRechargeRecord->player_name = $player->name ?? '';
-                    $playerRechargeRecord->player_phone = $player->phone ?? '';
-                    $playerRechargeRecord->money = $form->input('money');
-                    $playerRechargeRecord->inmoney = $form->input('money');
-                    $playerRechargeRecord->currency = $form->input('currency');
-                    $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_BUSINESS;
-                    $playerRechargeRecord->point = $form->input('point');
-                    $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
-                    $playerRechargeRecord->remark = $form->input('remark');
-                    $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
-                    $playerRechargeRecord->user_id = Admin::id() ?? 0;
-                    $playerRechargeRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : '';
-                    $playerRechargeRecord->save();
-                    $player->machine_wallet->money = bcadd($player->machine_wallet->money, $playerRechargeRecord->point,
-                        2);
-                    $player->machine_wallet->save();
-                    $player->player_extend->recharge_amount = bcadd($player->player_extend->recharge_amount,
-                        $playerRechargeRecord->point, 2);
-                    $player->player_extend->coin_recharge_amount = bcadd($player->player_extend->coin_recharge_amount,
-                        $playerRechargeRecord->point, 2);
-                    $player->push();
+                    // ✅ 步骤 1: 获取 Redis 分布式锁
+                    $lockKey = "player:balance:lock:{$player->id}";
+                    $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
+                    if (!$lock) {
+                        return message_error('操作繁忙，请稍后重试');
+                    }
 
-                    //寫入金流明細
-                    $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    $playerDeliveryRecord->player_id = $playerRechargeRecord->player_id;
-                    $playerDeliveryRecord->department_id = $playerRechargeRecord->department_id;
-                    $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
-                    $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
-                    $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
-                    $playerDeliveryRecord->source = 'coin_recharge';
-                    $playerDeliveryRecord->amount = $playerRechargeRecord->point;
-                    $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
-                    $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
-                    $playerDeliveryRecord->save();
+                    try {
+                        // ✅ 步骤 2: 从 Redis 读取当前余额（唯一可信源）
+                        $beforeGameAmount = WalletService::getBalance($player->id);
 
-                    $tradeno = date('YmdHis') . rand(10000, 99999);
-                    $playerMoneyEditLog = new PlayerMoneyEditLog;
-                    $playerMoneyEditLog->player_id = $player->id;
-                    $playerMoneyEditLog->department_id = $player->department_id;
-                    $playerMoneyEditLog->type = PlayerMoneyEditLog::TYPE_INCREASE;
-                    $playerMoneyEditLog->action = PlayerMoneyEditLog::COIN_RECHARGE;
-                    $playerMoneyEditLog->tradeno = $tradeno;
-                    $playerMoneyEditLog->currency = $player->currency;
-                    $playerMoneyEditLog->money = $playerRechargeRecord->point;
-                    $playerMoneyEditLog->inmoney = $playerRechargeRecord->inmoney;
-                    $playerMoneyEditLog->remark = $form->input('remark') ?? '';
-                    $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                    $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
-                    $playerMoneyEditLog->origin_money = $beforeGameAmount;
-                    $playerMoneyEditLog->after_money = $player->machine_wallet->money;
-                    $playerMoneyEditLog->save();
-                    Db::commit();
+                        // 生成订单
+                        $playerRechargeRecord = new  PlayerRechargeRecord();
+                        $playerRechargeRecord->player_id = $id;
+                        $playerRechargeRecord->talk_user_id = $player->talk_user_id;
+                        $playerRechargeRecord->department_id = $player->department_id;
+                        $playerRechargeRecord->tradeno = createOrderNo();
+                        $playerRechargeRecord->player_name = $player->name ?? '';
+                        $playerRechargeRecord->player_phone = $player->phone ?? '';
+                        $playerRechargeRecord->money = $form->input('money');
+                        $playerRechargeRecord->inmoney = $form->input('money');
+                        $playerRechargeRecord->currency = $form->input('currency');
+                        $playerRechargeRecord->type = PlayerRechargeRecord::TYPE_BUSINESS;
+                        $playerRechargeRecord->point = $form->input('point');
+                        $playerRechargeRecord->status = PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS;
+                        $playerRechargeRecord->remark = $form->input('remark');
+                        $playerRechargeRecord->finish_time = date('Y-m-d H:i:s');
+                        $playerRechargeRecord->user_id = Admin::id() ?? 0;
+                        $playerRechargeRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : '';
+                        $playerRechargeRecord->save();
+
+                        $rechargeAmount = $playerRechargeRecord->point;
+
+                        // ✅ 步骤 3: 使用 WalletService 原子性增加余额（自动同步数据库）
+                        $newBalance = \addons\webman\service\WalletService::atomicIncrement($player->id, $rechargeAmount);
+
+                        // ✅ WalletService 已自动同步数据库，无需手动同步
+                        $player->player_extend->recharge_amount = bcadd($player->player_extend->recharge_amount,
+                            $playerRechargeRecord->point, 2);
+                        $player->player_extend->coin_recharge_amount = bcadd($player->player_extend->coin_recharge_amount,
+                            $playerRechargeRecord->point, 2);
+                        $player->push();
+
+                        //寫入金流明細
+                        $playerDeliveryRecord = new PlayerDeliveryRecord;
+                        $playerDeliveryRecord->player_id = $playerRechargeRecord->player_id;
+                        $playerDeliveryRecord->department_id = $playerRechargeRecord->department_id;
+                        $playerDeliveryRecord->target = $playerRechargeRecord->getTable();
+                        $playerDeliveryRecord->target_id = $playerRechargeRecord->id;
+                        $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
+                        $playerDeliveryRecord->source = 'coin_recharge';
+                        $playerDeliveryRecord->amount = $playerRechargeRecord->point;
+                        $playerDeliveryRecord->amount_before = $beforeGameAmount;
+                        $playerDeliveryRecord->amount_after = $newBalance;  // ✅ 使用 Redis 计算的新值
+                        $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
+                        $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
+                        $playerDeliveryRecord->save();
+
+                        $tradeno = date('YmdHis') . rand(10000, 99999);
+                        $playerMoneyEditLog = new PlayerMoneyEditLog;
+                        $playerMoneyEditLog->player_id = $player->id;
+                        $playerMoneyEditLog->department_id = $player->department_id;
+                        $playerMoneyEditLog->type = PlayerMoneyEditLog::TYPE_INCREASE;
+                        $playerMoneyEditLog->action = PlayerMoneyEditLog::COIN_RECHARGE;
+                        $playerMoneyEditLog->tradeno = $tradeno;
+                        $playerMoneyEditLog->currency = $player->currency;
+                        $playerMoneyEditLog->money = $playerRechargeRecord->point;
+                        $playerMoneyEditLog->inmoney = $playerRechargeRecord->inmoney;
+                        $playerMoneyEditLog->remark = $form->input('remark') ?? '';
+                        $playerMoneyEditLog->user_id = Admin::id() ?? 0;
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
+                            [], 'message');
+                        $playerMoneyEditLog->origin_money = $beforeGameAmount;
+                        $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
+                        $playerMoneyEditLog->save();
+
+                        Db::commit();
+                    } finally {
+                        // ✅ 释放 Redis 锁
+                        \support\Redis::del($lockKey);
+                    }
                 } catch (\Exception $e) {
                     Db::rollBack();
                     Log::error($e->getMessage());
@@ -2481,78 +2547,107 @@ class ChannelPlayerController
                 if ($player->status == 0) {
                     return message_error(admin_trans('player.disable'));
                 }
-                if ($player->machine_wallet->money < $form->input('point')) {
+                if (WalletService::getBalance($player->id) < $form->input('point')) {
                     return message_error(admin_trans('player.insufficient_balance'));
                 }
                 Db::beginTransaction();
                 try {
-                    $beforeGameAmount = $player->machine_wallet->money;
-                    // 生成订单
-                    $playerWithdrawRecord = new PlayerWithdrawRecord();
-                    $playerWithdrawRecord->player_id = $player->id;
-                    $playerWithdrawRecord->talk_user_id = $player->talk_user_id;
-                    $playerWithdrawRecord->department_id = $player->department_id;
-                    $playerWithdrawRecord->tradeno = createOrderNo();
-                    $playerWithdrawRecord->player_name = $player->name ?? '';
-                    $playerWithdrawRecord->player_phone = $player->phone ?? '';
-                    $playerWithdrawRecord->money = $form->input('money') ?? 0;
-                    $playerWithdrawRecord->point = $form->input('point') ?? 0;
-                    $playerWithdrawRecord->fee = 0;
-                    $playerWithdrawRecord->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee,
-                        2); // 实际提现金额
-                    $playerWithdrawRecord->type = PlayerWithdrawRecord::TYPE_COIN;
-                    $playerWithdrawRecord->bank_type = ChannelRechargeMethod::TYPE_COIN;
-                    $playerWithdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
-                    $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
-                    $playerWithdrawRecord->remark = $form->input('remark') ?? '';
-                    $playerWithdrawRecord->user_id = Admin::id() ?? 0;
-                    $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
-                    $playerWithdrawRecord->save();
-                    // 玩家钱包扣减
-                    $player->machine_wallet->money = bcsub($player->machine_wallet->money, $playerWithdrawRecord->point,
-                        2);
-                    $player->machine_wallet->save();
-                    // 更新玩家统计
-                    $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
-                        $playerWithdrawRecord->point, 2);
-                    $player->push();
-                    //寫入金流明細
-                    $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    $playerDeliveryRecord->player_id = $playerWithdrawRecord->player_id;
-                    $playerDeliveryRecord->department_id = $playerWithdrawRecord->department_id;
-                    $playerDeliveryRecord->target = $playerWithdrawRecord->getTable();
-                    $playerDeliveryRecord->target_id = $playerWithdrawRecord->id;
-                    $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
-                    $playerDeliveryRecord->withdraw_status = $playerWithdrawRecord->status;
-                    $playerDeliveryRecord->source = 'artificial_withdrawal';
-                    $playerDeliveryRecord->amount = $playerWithdrawRecord->point;
-                    $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
-                    $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
-                    $playerDeliveryRecord->save();
-                    $tradeno = date('YmdHis') . rand(10000, 99999);
+                    // ✅ 步骤 1: 获取 Redis 分布式锁
+                    $lockKey = "player:balance:lock:{$player->id}";
+                    $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
+                    if (!$lock) {
+                        return message_error('操作繁忙，请稍后重试');
+                    }
 
-                    $playerMoneyEditLog = new PlayerMoneyEditLog;
-                    $playerMoneyEditLog->player_id = $player->id;
-                    $playerMoneyEditLog->department_id = $player->department_id;
-                    $playerMoneyEditLog->type = PlayerMoneyEditLog::TYPE_DEDUCT;
-                    $playerMoneyEditLog->action = PlayerMoneyEditLog::COIN_WITHDRAWAL;
-                    $playerMoneyEditLog->tradeno = $tradeno;
-                    $playerMoneyEditLog->currency = $player->currency;
-                    $playerMoneyEditLog->money = $playerWithdrawRecord->point;
-                    $playerMoneyEditLog->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee, 2);
-                    $playerMoneyEditLog->remark = $form->input('remark') ?? '';
-                    $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                    $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
-                    $playerMoneyEditLog->origin_money = $beforeGameAmount;
-                    $playerMoneyEditLog->after_money = $player->machine_wallet->money;
-                    $playerMoneyEditLog->save();
-                    Db::commit();
+                    try {
+                        // ✅ 步骤 2: 从 Redis 读取当前余额（唯一可信源）
+                        $beforeGameAmount = WalletService::getBalance($player->id);
+
+                        // 生成订单
+                        $playerWithdrawRecord = new PlayerWithdrawRecord();
+                        $playerWithdrawRecord->player_id = $player->id;
+                        $playerWithdrawRecord->talk_user_id = $player->talk_user_id;
+                        $playerWithdrawRecord->department_id = $player->department_id;
+                        $playerWithdrawRecord->tradeno = createOrderNo();
+                        $playerWithdrawRecord->player_name = $player->name ?? '';
+                        $playerWithdrawRecord->player_phone = $player->phone ?? '';
+                        $playerWithdrawRecord->money = $form->input('money') ?? 0;
+                        $playerWithdrawRecord->point = $form->input('point') ?? 0;
+                        $playerWithdrawRecord->fee = 0;
+                        $playerWithdrawRecord->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee,
+                            2); // 实际提现金额
+                        $playerWithdrawRecord->type = PlayerWithdrawRecord::TYPE_COIN;
+                        $playerWithdrawRecord->bank_type = ChannelRechargeMethod::TYPE_COIN;
+                        $playerWithdrawRecord->status = PlayerWithdrawRecord::STATUS_SUCCESS;
+                        $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
+                        $playerWithdrawRecord->remark = $form->input('remark') ?? '';
+                        $playerWithdrawRecord->user_id = Admin::id() ?? 0;
+                        $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
+                            [], 'message');
+                        $playerWithdrawRecord->save();
+
+                        $withdrawAmount = $playerWithdrawRecord->point;
+
+                        // ✅ 步骤 3: 使用 WalletService 原子性减少余额（带余额检查）
+                        $result = \addons\webman\service\WalletService::atomicDecrement($player->id, $withdrawAmount);
+
+                        if ($result['ok'] == 0) {
+                            throw new \Exception('余额不足');
+                        }
+
+                        $newBalance = $result['balance'];
+
+                        // ✅ WalletService 已自动同步数据库，无需手动同步
+                        // 更新玩家统计
+                        $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
+                            $playerWithdrawRecord->point, 2);
+                        $player->push();
+
+                        //寫入金流明細
+                        $playerDeliveryRecord = new PlayerDeliveryRecord;
+                        $playerDeliveryRecord->player_id = $playerWithdrawRecord->player_id;
+                        $playerDeliveryRecord->department_id = $playerWithdrawRecord->department_id;
+                        $playerDeliveryRecord->target = $playerWithdrawRecord->getTable();
+                        $playerDeliveryRecord->target_id = $playerWithdrawRecord->id;
+                        $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
+                        $playerDeliveryRecord->withdraw_status = $playerWithdrawRecord->status;
+                        $playerDeliveryRecord->source = 'artificial_withdrawal';
+                        $playerDeliveryRecord->amount = $playerWithdrawRecord->point;
+                        $playerDeliveryRecord->amount_before = $beforeGameAmount;
+                        $playerDeliveryRecord->amount_after = $newBalance;  // ✅ 使用 Redis 计算的新值
+                        $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
+                        $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
+                        $playerDeliveryRecord->save();
+                        $tradeno = date('YmdHis') . rand(10000, 99999);
+
+                        $playerMoneyEditLog = new PlayerMoneyEditLog;
+                        $playerMoneyEditLog->player_id = $player->id;
+                        $playerMoneyEditLog->department_id = $player->department_id;
+                        $playerMoneyEditLog->type = PlayerMoneyEditLog::TYPE_DEDUCT;
+                        $playerMoneyEditLog->action = PlayerMoneyEditLog::COIN_WITHDRAWAL;
+                        $playerMoneyEditLog->tradeno = $tradeno;
+                        $playerMoneyEditLog->currency = $player->currency;
+                        $playerMoneyEditLog->money = $playerWithdrawRecord->point;
+                        $playerMoneyEditLog->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee, 2);
+                        $playerMoneyEditLog->remark = $form->input('remark') ?? '';
+                        $playerMoneyEditLog->user_id = Admin::id() ?? 0;
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
+                            [], 'message');
+                        $playerMoneyEditLog->origin_money = $beforeGameAmount;
+                        $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
+                        $playerMoneyEditLog->save();
+
+                        Db::commit();
+                    } finally {
+                        // ✅ 释放 Redis 锁
+                        \support\Redis::del($lockKey);
+                    }
                 } catch (\Exception $e) {
                     Db::rollBack();
+                    \support\Log::error('[Coin Withdrawal] Failed', [
+                        'player_id' => $player->id ?? 0,
+                        'error' => $e->getMessage(),
+                    ]);
                     return message_error(admin_trans('player.artificial_withdrawal_error'));
                 }
                 return message_success(admin_trans('player.artificial_withdrawal_success'));

@@ -1192,7 +1192,7 @@ if (!function_exists('playerManualSystem')) {
         /** @var Player $player */
         $player = Player::find($data['id']);
         $tradeno = date('YmdHis') . rand(10000, 99999);
-        $originMoney = $player->machine_wallet->money;
+        $originMoney = \addons\webman\service\WalletService::getBalance($player->id);
 
         $playerMoneyEditLog = new PlayerMoneyEditLog;
         $playerMoneyEditLog->player_id = $player->id;
@@ -2466,7 +2466,7 @@ if (!function_exists('calculateAllowedWithdrawAmount')) {
     function calculateAllowedWithdrawAmount(Player $player, float $requestedAmount): array
     {
         $crashCheck = checkMachineCrash($player);
-        $currentAmount = $player->machine_wallet->money ?? 0;
+        $currentAmount = \addons\webman\service\WalletService::getBalance($player->id);
         $allowedAmount = $requestedAmount;
         $isLimited = false;
 
@@ -2587,5 +2587,19 @@ if (!function_exists('clearMachineCrashCache')) {
             ]);
             return false;
         }
+    }
+
+    /**
+     * 获取玩家余额（优先从 Redis 读取）
+     *
+     * 用于管理后台查询余额，优先读取 Redis 缓存，确保实时性
+     *
+     * @param int $playerId 玩家ID
+     * @param int $platformId 平台ID，默认1（实体机平台）
+     * @return float 余额
+     */
+    function getPlayerBalance(int $playerId, int $platformId = 1): float
+    {
+        return \addons\webman\service\WalletService::getBalance($playerId, $platformId);
     }
 }

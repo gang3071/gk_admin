@@ -106,9 +106,20 @@ class PlayerPlatformCash extends Model
                     return;
                 }
 
-                // 获取变化前后的余额
-                $previousAmount = floatval($wallet->getOriginal('money'));
-                $currentAmount = floatval($wallet->money);
+                // ✅ 从 Redis 读取余额（唯一可信源）
+                $previousAmount = floatval($wallet->getOriginal('money'));  // 数据库旧值（参考）
+
+                try {
+                    // ✅ 使用 Redis 余额判断爆机
+                    $currentAmount = \addons\webman\service\WalletService::getBalance($wallet->player_id, 1);
+                } catch (\Throwable $e) {
+                    // Redis 异常时降级到数据库值
+                    \support\Log::warning('爆机检测: Redis读取失败，降级到数据库', [
+                        'player_id' => $wallet->player_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                    $currentAmount = floatval($wallet->money);
+                }
 
                 // 获取爆机配置
                 $adminUserId = $player->store_admin_id ?? null;
@@ -184,6 +195,19 @@ class PlayerPlatformCash extends Model
                     'error' => $e->getMessage(),
                 ]);
             }
+        });
+    }
+
+    /**
+     * 保存模型但不触发事件（用于从 Redis 同步到数据库时避免循环）
+     *
+     * @param array $options
+     * @return bool
+     */
+    public function saveWithoutEvents(array $options = []): bool
+    {
+        return static::withoutEvents(function () use ($options) {
+            return $this->save($options);
         });
     }
 }

@@ -10,6 +10,7 @@ use addons\webman\model\MachineCategory;
 use addons\webman\model\MachineKeepingLog;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\Player;
+use addons\webman\service\WalletService;
 use app\service\machine\MachineServices;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -592,7 +593,7 @@ class ChannelMachineController
                 'player_avatar' => $item->gamingPlayer->avatar ?? '',
                 'cate_name' => $item->machineCategory->name,
                 'gaming_user_id' => $item->gaming_user_id,
-                'player_point' => $item->gamingPlayer->machine_wallet->money ?? 0,
+                'player_point' => $item->gaming_user_id ? WalletService::getBalance($item->gaming_user_id) : 0,
                 'type' => $item->type,
                 'keep_seconds' => $time,
                 'last_game_at' => $item->last_game_at ?? '',

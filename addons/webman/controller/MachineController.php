@@ -16,6 +16,7 @@ use addons\webman\model\MachineTencentPlay;
 use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\service\MediaServer;
+use addons\webman\service\WalletService;
 use app\service\machine\MachineServices;
 use Carbon\CarbonInterval;
 use ExAdmin\ui\component\common\Button;
@@ -44,12 +45,12 @@ use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use GatewayWorker\Lib\Gateway;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Db;
-use Exception;
 
 /**
  * 机台
@@ -1053,9 +1054,9 @@ class MachineController
                 ]);
             })->align('center');
             $grid->column('money', admin_trans('player_platform_cash.fields.money'))->display(function ($val, $data) {
-                return Html::create()->content([
-                    $data->gamingPlayer->machine_wallet->money ?? '',
-                ]);
+                // ✅ 从 Redis 读取实时余额
+                $balance = $data->gaming_user_id ? WalletService::getBalance($data->gaming_user_id) : '';
+                return Html::create()->content([$balance]);
             })->align('center');
             $grid->column('keep_seconds', admin_trans('machine.fields.keep_seconds'))->display(function (
                 $val,
@@ -1642,9 +1643,9 @@ class MachineController
                 })->align('center');
             })->align('center');
             $grid->column('money', admin_trans('player_platform_cash.fields.money'))->display(function ($val, $data) {
-                return Html::create()->content([
-                    $data->gamingPlayer->machine_wallet->money ?? '',
-                ]);
+                // ✅ 从 Redis 读取实时余额
+                $balance = $data->gaming_user_id ? WalletService::getBalance($data->gaming_user_id) : '';
+                return Html::create()->content([$balance]);
             })->align('center');
             $grid->column('keep_seconds', admin_trans('machine.fields.keep_seconds'))->display(function (
                 $val,

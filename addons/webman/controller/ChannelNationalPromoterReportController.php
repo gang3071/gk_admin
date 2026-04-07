@@ -7,6 +7,7 @@ use addons\webman\model\NationalProfitRecord;
 use addons\webman\model\NationalPromoter;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\service\WalletService;
 use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -191,8 +192,12 @@ class ChannelNationalPromoterReportController
                 $playProfitIds = array_merge($playProfitIds, $validIds);
                 /** @var Player $player */
                 $player = Player::query()->find($item->recommend_id);
-                $amountBefore = $player->machine_wallet->money;
-                $player->machine_wallet->money = bcadd($player->machine_wallet->money, $item->money, 2);
+                // ✅ 从 Redis 读取当前实时余额
+                $currentBalance = WalletService::getBalance($player->id);
+                $amountBefore = $currentBalance;
+                // 基于实时余额计算新余额
+                $newBalance = bcadd($currentBalance, $item->money, 2);
+                $player->machine_wallet->money = $newBalance;
                 $player->machine_wallet->save();
 
                 // 寫入金流明細
@@ -205,7 +210,7 @@ class ChannelNationalPromoterReportController
                 $playerDeliveryRecord->source = 'national_promoter';
                 $playerDeliveryRecord->amount = $item->money;
                 $playerDeliveryRecord->amount_before = $amountBefore;
-                $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
+                $playerDeliveryRecord->amount_after = $newBalance;
                 $playerDeliveryRecord->tradeno = '';
                 $playerDeliveryRecord->remark = '';
                 $playerDeliveryRecord->save();
@@ -258,8 +263,12 @@ class ChannelNationalPromoterReportController
             });
             $playProfitIds = array_merge($playProfitIds, $validIds);
             $player = Player::query()->find($id);
-            $amountBefore = $player->machine_wallet->money;
-            $player->machine_wallet->money = bcadd($player->machine_wallet->money, $data->money, 2);
+            // ✅ 从 Redis 读取当前实时余额
+            $currentBalance = WalletService::getBalance($player->id);
+            $amountBefore = $currentBalance;
+            // 基于实时余额计算新余额
+            $newBalance = bcadd($currentBalance, $data->money, 2);
+            $player->machine_wallet->money = $newBalance;
             $player->machine_wallet->save();
 
             // 寫入金流明細
@@ -272,7 +281,7 @@ class ChannelNationalPromoterReportController
             $playerDeliveryRecord->source = 'national_promoter';
             $playerDeliveryRecord->amount = $data->money;
             $playerDeliveryRecord->amount_before = $amountBefore;
-            $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
+            $playerDeliveryRecord->amount_after = $newBalance;
             $playerDeliveryRecord->tradeno = '';
             $playerDeliveryRecord->remark = '';
             $playerDeliveryRecord->save();

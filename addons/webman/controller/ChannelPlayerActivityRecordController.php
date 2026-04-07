@@ -9,6 +9,7 @@ use addons\webman\model\Notice;
 use addons\webman\model\PlayerActivityPhaseRecord;
 use addons\webman\model\PlayerActivityRecord;
 use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -474,33 +475,49 @@ class ChannelPlayerActivityRecordController
             $playerDeliveryRecords = [];
             $adminId = Admin::id() ?? 0;
             $adminUsername = !empty(Admin::user()) ? Admin::user()->username : '';
+
             DB::beginTransaction();
             try {
                 foreach ($playerActivityPhaseRecords as $playerActivityPhaseRecord) {
-                    $beforeGameAmount = $playerActivityPhaseRecord->player->machine_wallet->money;
-                    $playerActivityPhaseRecord->status = PlayerActivityPhaseRecord::STATUS_COMPLETE;
-                    $playerActivityPhaseRecord->user_id = $adminId;
-                    $playerActivityPhaseRecord->user_name = $adminUsername;
-                    $playerActivityPhaseRecord->player->machine_wallet->money = bcadd($playerActivityPhaseRecord->player->machine_wallet->money,
-                        $playerActivityPhaseRecord->bonus, 2);
-                    $playerActivityPhaseRecord->player->machine_wallet->save();
-                    $playerActivityPhaseRecord->push();
-                    //寫入金流明細
-                    $playerDeliveryRecords[] = [
-                        'player_id' => $playerActivityPhaseRecord->player_id,
-                        'department_id' => $playerActivityPhaseRecord->player->department_id,
-                        'target' => $playerActivityPhaseRecord->getTable(),
-                        'target_id' => $playerActivityPhaseRecord->id,
-                        'type' => PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
-                        'source' => 'activity',
-                        'amount' => $playerActivityPhaseRecord->bonus,
-                        'amount_before' => $beforeGameAmount,
-                        'amount_after' => $playerActivityPhaseRecord->player->machine_wallet->money,
-                        'tradeno' => '',
-                        'remark' => '',
-                        'created_at' => date('Y-m-d H:i:s'),
-                        'updated_at' => date('Y-m-d H:i:s'),
-                    ];
+                    // ✅ 步骤 1: 获取 Redis 分布式锁
+                    $lockKey = "player:balance:lock:{$playerActivityPhaseRecord->player_id}";
+                    $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
+                    if (!$lock) {
+                        throw new \Exception('玩家 ' . $playerActivityPhaseRecord->player_id . ' 操作繁忙，请稍后重试');
+                    }
+
+                    try {
+                        // ✅ 步骤 2: 从 Redis 读取当前余额（唯一可信源）
+                        $beforeGameAmount = WalletService::getBalance($playerActivityPhaseRecord->player_id);
+
+                        // ✅ 步骤 3: 使用 WalletService 原子性增加余额（自动同步数据库）
+                        $newBalance = WalletService::atomicIncrement($playerActivityPhaseRecord->player_id, $playerActivityPhaseRecord->bonus);
+
+                        $playerActivityPhaseRecord->status = PlayerActivityPhaseRecord::STATUS_COMPLETE;
+                        $playerActivityPhaseRecord->user_id = $adminId;
+                        $playerActivityPhaseRecord->user_name = $adminUsername;
+                        $playerActivityPhaseRecord->push();
+
+                        //寫入金流明細
+                        $playerDeliveryRecords[] = [
+                            'player_id' => $playerActivityPhaseRecord->player_id,
+                            'department_id' => $playerActivityPhaseRecord->player->department_id,
+                            'target' => $playerActivityPhaseRecord->getTable(),
+                            'target_id' => $playerActivityPhaseRecord->id,
+                            'type' => PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                            'source' => 'activity',
+                            'amount' => $playerActivityPhaseRecord->bonus,
+                            'amount_before' => $beforeGameAmount,
+                            'amount_after' => $newBalance,  // ✅ 使用 Redis 计算的新值
+                            'tradeno' => '',
+                            'remark' => '',
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ];
+                    } finally {
+                        // ✅ 释放 Redis 锁
+                        \support\Redis::del($lockKey);
+                    }
                     // 发送站内信
                     $notice = new Notice();
                     $notice->department_id = Admin::user()->department_id;
@@ -849,28 +866,43 @@ class ChannelPlayerActivityRecordController
         }
         DB::beginTransaction();
         try {
-            $beforeGameAmount = $playerActivityPhaseRecord->player->machine_wallet->money;
-            $playerActivityPhaseRecord->status = PlayerActivityPhaseRecord::STATUS_COMPLETE;
-            $playerActivityPhaseRecord->user_id = Admin::id() ?? 0;
-            $playerActivityPhaseRecord->user_name = !empty(Admin::user()) ? Admin::user()->username : '';
-            $playerActivityPhaseRecord->player->machine_wallet->money = bcadd($playerActivityPhaseRecord->player->machine_wallet->money,
-                $playerActivityPhaseRecord->bonus, 2);
-            $playerActivityPhaseRecord->player->machine_wallet->save();
-            $playerActivityPhaseRecord->push();
-            //寫入金流明細
-            $playerDeliveryRecord = new PlayerDeliveryRecord;
-            $playerDeliveryRecord->player_id = $playerActivityPhaseRecord->player_id;
-            $playerDeliveryRecord->department_id = $playerActivityPhaseRecord->player->department_id;
-            $playerDeliveryRecord->target = $playerActivityPhaseRecord->getTable();
-            $playerDeliveryRecord->target_id = $playerActivityPhaseRecord->id;
-            $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS;
-            $playerDeliveryRecord->source = 'activity';
-            $playerDeliveryRecord->amount = $playerActivityPhaseRecord->bonus;
-            $playerDeliveryRecord->amount_before = $beforeGameAmount;
-            $playerDeliveryRecord->amount_after = $playerActivityPhaseRecord->player->machine_wallet->money;
-            $playerDeliveryRecord->tradeno = $playerActivityPhaseRecord->tradeno ?? '';
-            $playerDeliveryRecord->remark = $playerActivityPhaseRecord->remark ?? '';
-            $playerDeliveryRecord->save();
+            // ✅ 步骤 1: 获取 Redis 分布式锁
+            $lockKey = "player:balance:lock:{$playerActivityPhaseRecord->player_id}";
+            $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
+            if (!$lock) {
+                return message_error('操作繁忙，请稍后重试');
+            }
+
+            try {
+                // ✅ 步骤 2: 从 Redis 读取当前余额（唯一可信源）
+                $beforeGameAmount = WalletService::getBalance($playerActivityPhaseRecord->player_id);
+
+                // ✅ 步骤 3: 使用 WalletService 原子性增加余额（自动同步数据库）
+                $newBalance = WalletService::atomicIncrement($playerActivityPhaseRecord->player_id, $playerActivityPhaseRecord->bonus);
+
+                $playerActivityPhaseRecord->status = PlayerActivityPhaseRecord::STATUS_COMPLETE;
+                $playerActivityPhaseRecord->user_id = Admin::id() ?? 0;
+                $playerActivityPhaseRecord->user_name = !empty(Admin::user()) ? Admin::user()->username : '';
+                $playerActivityPhaseRecord->push();
+
+                //寫入金流明細
+                $playerDeliveryRecord = new PlayerDeliveryRecord;
+                $playerDeliveryRecord->player_id = $playerActivityPhaseRecord->player_id;
+                $playerDeliveryRecord->department_id = $playerActivityPhaseRecord->player->department_id;
+                $playerDeliveryRecord->target = $playerActivityPhaseRecord->getTable();
+                $playerDeliveryRecord->target_id = $playerActivityPhaseRecord->id;
+                $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS;
+                $playerDeliveryRecord->source = 'activity';
+                $playerDeliveryRecord->amount = $playerActivityPhaseRecord->bonus;
+                $playerDeliveryRecord->amount_before = $beforeGameAmount;
+                $playerDeliveryRecord->amount_after = $newBalance;  // ✅ 使用 Redis 计算的新值
+                $playerDeliveryRecord->tradeno = $playerActivityPhaseRecord->tradeno ?? '';
+                $playerDeliveryRecord->remark = $playerActivityPhaseRecord->remark ?? '';
+                $playerDeliveryRecord->save();
+            } finally {
+                // ✅ 释放 Redis 锁
+                \support\Redis::del($lockKey);
+            }
             // 发送站内信
             $notice = new Notice();
             $notice->department_id = Admin::user()->department_id;
