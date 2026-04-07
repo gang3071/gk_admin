@@ -1,6 +1,8 @@
 <?php
 return [
     'default' => [
+        // 🎯 gk_admin 系统独立队列连接（redis-queue 插件专用）
+        // 注意：插件不支持 connection 字段，使用独立的 host 配置
         'host' => sprintf(
             'redis://%s:%s',
             env('REDIS_HOST', '127.0.0.1'),

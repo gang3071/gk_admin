@@ -435,7 +435,7 @@ local newBalance = currentBalance + amount
 -- 原子性写入
 redis.call('SETEX', key, ttl, newBalance)
 
-return newBalance
+return cjson.encode({old = currentBalance, new = newBalance})
 LUA;
 
     /**
@@ -461,7 +461,7 @@ local currentBalance = tonumber(redis.call('GET', key)) or 0
 
 -- 余额检查
 if currentBalance < amount then
-    return cjson.encode({ok = 0, error = 'insufficient_balance', balance = currentBalance})
+    return cjson.encode({ok = 0, error = 'insufficient_balance', balance = currentBalance, old = currentBalance})
 end
 
 -- 计算新余额
@@ -470,7 +470,7 @@ local newBalance = currentBalance - amount
 -- 原子性写入
 redis.call('SETEX', key, ttl, newBalance)
 
-return cjson.encode({ok = 1, balance = newBalance, old_balance = currentBalance})
+return cjson.encode({ok = 1, balance = newBalance, old = currentBalance, new = newBalance})
 LUA;
 
     /**
@@ -493,10 +493,7 @@ LUA;
         $cacheKey = self::getCacheKey($playerId, 1);
 
         try {
-            // 记录变更前余额（用于爆机检测）
-            $previousBalance = self::getBalance($playerId, 1);
-
-            $newBalance = Redis::eval(
+            $result = Redis::eval(
                 self::LUA_ATOMIC_INCREMENT,
                 1,  // 1 个 KEYS 参数
                 $cacheKey,  // KEYS[1]
@@ -504,20 +501,25 @@ LUA;
                 $ttl        // ARGV[2]
             );
 
-            if ($newBalance === false || $newBalance === null) {
+            if ($result === false || $result === null) {
                 throw new \RuntimeException(
                     sprintf('[WalletService::atomicIncrement] Redis Lua 脚本执行失败。玩家ID: %d, 金额: %s',
                         $playerId, $amount)
                 );
             }
 
+            // 解析返回的 JSON：{old: 旧余额, new: 新余额}
+            $balanceData = json_decode($result, true);
+            $oldBalance = (float)($balanceData['old'] ?? 0);
+            $newBalance = (float)($balanceData['new'] ?? 0);
+
             // ✅ 异步同步数据库（Redis 是实时标准，数据库用于持久化）
-            self::asyncUpdateDB($playerId, (float)$newBalance);
+            self::asyncUpdateDB($playerId, $newBalance);
 
             // ✅ 触发爆机检测（余额增加后可能触发爆机）
-            self::checkMachineCrash($playerId, $previousBalance, (float)$newBalance);
+            self::checkMachineCrash($playerId, $oldBalance, $newBalance);
 
-            return (float)$newBalance;
+            return $newBalance;
         } catch (\Throwable $e) {
             Log::error('WalletService: atomicIncrement failed', [
                 'player_id' => $playerId,
@@ -573,12 +575,13 @@ LUA;
 
             // ✅ 异步同步数据库（仅在扣款成功时）
             if (isset($decoded['ok']) && $decoded['ok'] === 1) {
-                self::asyncUpdateDB($playerId, (float)$decoded['balance']);
+                $oldBalance = (float)($decoded['old'] ?? 0);
+                $newBalance = (float)($decoded['new'] ?? $decoded['balance']);
+
+                self::asyncUpdateDB($playerId, $newBalance);
 
                 // ✅ 触发爆机检测（余额减少后可能解除爆机）
-                $previousBalance = (float)($decoded['old_balance'] ?? 0);
-                $currentBalance = (float)$decoded['balance'];
-                self::checkMachineCrash($playerId, $previousBalance, $currentBalance);
+                self::checkMachineCrash($playerId, $oldBalance, $newBalance);
             }
 
             return $decoded ?? [];
