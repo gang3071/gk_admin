@@ -2578,22 +2578,8 @@ if (!function_exists('clearMachineCrashCache')) {
      */
     function clearMachineCrashCache(int $playerId): bool
     {
-        try {
-            $cacheKey = "machine_crash_status:{$playerId}";
-            \support\Redis::del($cacheKey);
-            
-            \support\Log::info('clearMachineCrashCache: 缓存已清除', [
-                'player_id' => $playerId,
-            ]);
-            
-            return true;
-        } catch (\Exception $e) {
-            \support\Log::error('clearMachineCrashCache: 清除失败', [
-                'player_id' => $playerId,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
+        // 使用 WalletService 统一管理缓存
+        return \addons\webman\service\WalletService::clearCrashCache($playerId);
     }
 
     /**

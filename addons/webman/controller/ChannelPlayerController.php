@@ -182,7 +182,7 @@ class ChannelPlayerController
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
 
-        // 构建基础查询字段
+        // 构建基础查询字段（不包含余额和爆机状态，从 Redis 获取）
         $selectFields = [
             'player.*',
             'player_extend.recharge_amount',
@@ -196,8 +196,6 @@ class ChannelPlayerController
             'player_register_record.ip',
             'player_register_record.country_name',
             'player_register_record.city_name',
-            'cash.money',
-            'cash.is_crashed',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -212,17 +210,13 @@ class ChannelPlayerController
             ]);
         }
 
-        // 构建完整查询（带 JOIN 和字段选择）
+        // 构建完整查询（不再 JOIN player_platform_cash 表）
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select($selectFields)
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftJoin('player_platform_cash as cash', function ($join) {
-                $join->on('player.id', '=', 'cash.player_id')
-                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
-            })
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -257,6 +251,27 @@ class ChannelPlayerController
                 })
             ->get()
             ->toArray();
+
+        // ✅ 优化：使用 WalletService 批量从 Redis 缓存获取余额和爆机状态
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+
+            // 批量获取余额（从 Redis 缓存）
+            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 批量获取爆机状态（从 Redis 缓存）
+            $crashStatuses = WalletService::getBatchCrashStatus($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 将 Redis 缓存余额和爆机状态合并到列表数据中
+            foreach ($list as &$item) {
+                // 🔧 修复精度问题：格式化为保留2位小数
+                $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+
+                // 合并爆机状态（从缓存）
+                $item['is_crashed'] = $crashStatuses[$item['id']] ?? 0;
+            }
+            unset($item);
+        }
 
         // 计算每个设备的彩金和小计
         foreach ($list as &$item) {
@@ -390,7 +405,7 @@ class ChannelPlayerController
                     $this,
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
-            })->ellipsis(true)->sortable()->align('center');
+            })->ellipsis(true)->align('center');
 
             // 爆机状态列
             $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
@@ -399,7 +414,7 @@ class ChannelPlayerController
                 } else {
                     return Tag::create(admin_trans('player.normal'))->color('green');
                 }
-            })->width(100)->align('center')->sortable();
+            })->width(100)->align('center');
 
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
