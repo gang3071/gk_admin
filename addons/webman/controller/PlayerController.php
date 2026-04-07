@@ -195,7 +195,6 @@ class PlayerController
                 'player_register_record.ip',
                 'player_register_record.country_name',
                 'player_register_record.city_name',
-                'cash.money',
                 'national_level.name as level_name',
                 'level_list.level as level',
                 'national_promoter.level as level_sort',
@@ -210,10 +209,6 @@ class PlayerController
             ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
             ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftJoin('player_platform_cash as cash', function ($join) {
-                $join->on('player.id', '=', 'cash.player_id')
-                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
-            })
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
                     ->Join(DB::raw('( SELECT player_id, max( id ) AS id FROM player_login_record GROUP BY player_id) AS t'),
@@ -296,6 +291,20 @@ class PlayerController
                 })
             ->get()
             ->toArray();
+
+        // ✅ 优化：使用 WalletService 批量从 Redis 缓存获取余额（显示实时余额）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 将 Redis 缓存余额合并到列表数据中（覆盖数据库余额）
+            foreach ($list as &$item) {
+                $item['money'] = $balances[$item['id']] ?? 0.0;
+                // 移除数据库余额字段（仅用于排序）
+                unset($item['db_money']);
+            }
+            unset($item);
+        }
         return Grid::create($list, function (Grid $grid) use ($total, $list) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
@@ -379,7 +388,7 @@ class PlayerController
                     $this,
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
-            })->ellipsis(true)->sortable()->align('center');
+            })->ellipsis(true)->align('center');
             $grid->column('recharge_amount',
                 admin_trans('player_extend.fields.recharge_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('withdraw_amount',
