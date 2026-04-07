@@ -5474,10 +5474,19 @@ class ChannelPlayerController
 
             DB::commit();
 
-            // 刷新钱包以获取最新的爆机状态
-            $wallet->refresh();
+            // ✅ 更新 Redis 余额缓存（必须在 commit 后）
+            \addons\webman\service\WalletService::updateCache(
+                $playerId,
+                PlayerPlatformCash::PLATFORM_SELF,
+                floatval($wallet->money)
+            );
 
-            // 爆机解锁通知会在 PlayerPlatformCash 模型的 booted 事件中自动处理
+            // ✅ 检查爆机状态变化并发送通知
+            \addons\webman\service\WalletService::checkMachineCrash(
+                $playerId,
+                $previousAmount,
+                floatval($wallet->money)
+            );
 
             return message_success(admin_trans('player.wash_score_success'));
 

@@ -424,14 +424,14 @@ class AgentStoreProfitReportController
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);
 
-            // 导出功能（权限通过 store_node.php 和 @auth true 控制）
-            $grid->export(new \addons\webman\grid\AgentStoreProfitReportExporter())
-                ->filename('shift_report_test' . date('YmdHis'));
+            // 导出功能（权限通过 agent_node.php 和 @auth true 控制）
+            $grid->export(new \addons\webman\grid\AgentStoreProfitMonthlyExporter())
+                ->filename('monthly_business_report_' . date('YmdHis'));
         });
     }
 
     /**
-     * 导出店家分润报表
+     * 导出月度营业状况报表
      * @group agent
      * @auth true
      * @return void
@@ -439,6 +439,6 @@ class AgentStoreProfitReportController
     public function export()
     {
         // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
-        // ExAdmin 会自动调用 AgentStoreProfitReportExporter
+        // ExAdmin 会自动调用 AgentStoreProfitMonthlyExporter
     }
 }

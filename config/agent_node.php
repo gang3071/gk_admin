@@ -150,7 +150,7 @@ return [
                 'method' => 'get',
                 'group' => 'agent',
                 'url' => 'ex-admin/addons-webman-controller-AgentStoreProfitReportController/export',
-                'title' => '导出店家分润报表',
+                'title' => '导出月度营业状况',
             ],
         ]
     ],
