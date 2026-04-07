@@ -196,14 +196,10 @@ class AgentStoreProfitReportExporter extends Excel
         $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['machine_put_point']), 2));
         $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['lottery_amount']), 2));
         $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['subtotal']), 2));
-        $this->sheet->setCellValue('I' . $this->currentRow, $item['agent_commission'] . '%');
-        $this->sheet->setCellValue('J' . $this->currentRow, number_format(floatval($item['agent_profit']), 2));
-        $this->sheet->setCellValue('K' . $this->currentRow, $item['channel_commission'] . '%');
-        $this->sheet->setCellValue('L' . $this->currentRow, number_format(floatval($item['channel_profit']), 2));
 
         // 交替行背景色
         $bgColor = $index % 2 == 0 ? 'FFFFFF' : 'F5F5F5';
-        $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $this->currentRow . ':H' . $this->currentRow)->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => $bgColor]
@@ -225,16 +221,6 @@ class AgentStoreProfitReportExporter extends Excel
         $this->sheet->getStyle('H' . $this->currentRow)->getFont()->getColor()->setRGB($subtotal >= 0 ? '52C41A' : 'FF4D4F');
         $this->sheet->getStyle('H' . $this->currentRow)->getFont()->setBold(true);
 
-        // 代理分润列：设置颜色
-        $agentProfit = floatval($item['agent_profit']);
-        $this->sheet->getStyle('J' . $this->currentRow)->getFont()->getColor()->setRGB($agentProfit >= 0 ? '1890FF' : 'FA8C16');
-        $this->sheet->getStyle('J' . $this->currentRow)->getFont()->setBold(true);
-
-        // 渠道分润列：设置颜色
-        $channelProfit = floatval($item['channel_profit']);
-        $this->sheet->getStyle('L' . $this->currentRow)->getFont()->getColor()->setRGB($channelProfit >= 0 ? '52C41A' : 'F5222D');
-        $this->sheet->getStyle('L' . $this->currentRow)->getFont()->setBold(true);
-
         $this->currentRow++;
     }
 
@@ -245,7 +231,7 @@ class AgentStoreProfitReportExporter extends Excel
     {
         // 主标题
         $this->sheet->setCellValue('A1', admin_trans('agent_store_profit.export.title'));
-        $this->sheet->mergeCells('A1:M1');
+        $this->sheet->mergeCells('A1:I1');
         $this->sheet->getStyle('A1')->applyFromArray([
             'font' => [
                 'bold' => true,
@@ -266,7 +252,7 @@ class AgentStoreProfitReportExporter extends Excel
         // 报表信息
         $this->currentRow = 2;
         $this->sheet->setCellValue('A2', admin_trans('agent_store_profit.export.agent_info') . $admin->nickname . ' (' . $admin->username . ')');
-        $this->sheet->mergeCells('A2:M2');
+        $this->sheet->mergeCells('A2:I2');
 
         $this->currentRow = 3;
         $timeRange = admin_trans('agent_store_profit.export.time_range');
@@ -280,15 +266,15 @@ class AgentStoreProfitReportExporter extends Excel
             $timeRange .= admin_trans('agent_store_profit.export.all_time');
         }
         $this->sheet->setCellValue('A3', $timeRange);
-        $this->sheet->mergeCells('A3:M3');
+        $this->sheet->mergeCells('A3:I3');
 
         $this->currentRow = 4;
         $this->sheet->setCellValue('A4', admin_trans('agent_store_profit.export.export_time') . date('Y-m-d H:i:s'));
-        $this->sheet->mergeCells('A4:M4');
+        $this->sheet->mergeCells('A4:I4');
 
         // 设置信息行样式
         foreach ([2, 3, 4] as $row) {
-            $this->sheet->getStyle("A{$row}:M{$row}")->applyFromArray([
+            $this->sheet->getStyle("A{$row}:I{$row}")->applyFromArray([
                 'font' => ['size' => 10],
                 'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
                 'fill' => [
@@ -308,7 +294,7 @@ class AgentStoreProfitReportExporter extends Excel
     {
         $this->currentRow++;
         $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('agent_store_profit.export.summary_title'));
-        $this->sheet->mergeCells('A' . $this->currentRow . ':M' . $this->currentRow);
+        $this->sheet->mergeCells('A' . $this->currentRow . ':I' . $this->currentRow);
         $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
             'fill' => [
@@ -325,8 +311,6 @@ class AgentStoreProfitReportExporter extends Excel
             ['label' => admin_trans('agent_store_profit.stats.total_machine_put'), 'value' => $totalStats['total_machine_put']],
             ['label' => admin_trans('agent_store_profit.stats.total_lottery'), 'value' => $totalStats['total_lottery']],
             ['label' => admin_trans('agent_store_profit.stats.total_subtotal'), 'value' => $totalStats['total_subtotal']],
-            ['label' => admin_trans('agent_store_profit.stats.total_agent_profit'), 'value' => $totalStats['total_agent_profit']],
-            ['label' => admin_trans('agent_store_profit.stats.total_channel_profit'), 'value' => $totalStats['total_channel_profit']],
         ];
 
         $colIndex = 0;
@@ -371,10 +355,6 @@ class AgentStoreProfitReportExporter extends Excel
             admin_trans('agent_store_profit.fields.machine_put_point'),
             admin_trans('agent_store_profit.fields.lottery_amount'),
             admin_trans('agent_store_profit.fields.subtotal'),
-            admin_trans('agent_store_profit.fields.agent_commission'),
-            admin_trans('agent_store_profit.fields.agent_profit'),
-            admin_trans('agent_store_profit.fields.channel_commission'),
-            admin_trans('agent_store_profit.fields.channel_profit'),
         ];
 
         $col = 'A';
@@ -384,7 +364,7 @@ class AgentStoreProfitReportExporter extends Excel
         }
 
         // 表头样式
-        $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $this->currentRow . ':H' . $this->currentRow)->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF']
@@ -422,13 +402,9 @@ class AgentStoreProfitReportExporter extends Excel
         $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($totalStats['total_machine_put']), 2));
         $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($totalStats['total_lottery']), 2));
         $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($totalStats['total_subtotal']), 2));
-        $this->sheet->setCellValue('I' . $this->currentRow, '');
-        $this->sheet->setCellValue('J' . $this->currentRow, number_format(floatval($totalStats['total_agent_profit']), 2));
-        $this->sheet->setCellValue('K' . $this->currentRow, '');
-        $this->sheet->setCellValue('L' . $this->currentRow, number_format(floatval($totalStats['total_channel_profit']), 2));
 
         // 合计行样式
-        $this->sheet->getStyle('A' . $this->currentRow . ':L' . $this->currentRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $this->currentRow . ':H' . $this->currentRow)->applyFromArray([
             'font' => [
                 'bold' => true,
                 'size' => 11,
@@ -464,10 +440,6 @@ class AgentStoreProfitReportExporter extends Excel
         $this->sheet->getColumnDimension('F')->setWidth(15); // 投钞
         $this->sheet->getColumnDimension('G')->setWidth(15); // 彩金
         $this->sheet->getColumnDimension('H')->setWidth(15); // 小计
-        $this->sheet->getColumnDimension('I')->setWidth(12); // 代理抽成
-        $this->sheet->getColumnDimension('J')->setWidth(15); // 代理分润
-        $this->sheet->getColumnDimension('K')->setWidth(12); // 渠道抽成
-        $this->sheet->getColumnDimension('L')->setWidth(15); // 渠道分润
     }
 
     /**
@@ -514,8 +486,6 @@ class AgentStoreProfitReportExporter extends Excel
             'total_machine_put' => '0',
             'total_lottery' => '0',
             'total_subtotal' => '0',
-            'total_agent_profit' => '0',
-            'total_channel_profit' => '0',
         ];
 
         foreach ($storeIds as $storeId) {
@@ -537,15 +507,11 @@ class AgentStoreProfitReportExporter extends Excel
                     'id' => $store->id,
                     'store_name' => $store->nickname,
                     'store_username' => $store->username,
-                    'agent_commission' => $store->agent_commission ?? 0,
-                    'channel_commission' => $store->channel_commission ?? 0,
                     'recharge_amount' => 0,
                     'withdraw_amount' => 0,
                     'machine_put_point' => 0,
                     'lottery_amount' => 0,
                     'subtotal' => '0',
-                    'agent_profit' => '0',
-                    'channel_profit' => '0',
                 ];
                 continue;
             }
@@ -596,27 +562,15 @@ class AgentStoreProfitReportExporter extends Excel
             $totalOut = bcadd(strval($withdrawAmount), strval($lotteryAmount), 2);
             $subtotal = bcsub($totalIn, $totalOut, 2);
 
-            // 计算代理分润：小计 * 代理抽成比例
-            $agentCommission = floatval($store->agent_commission ?? 0);
-            $agentProfit = bcmul($subtotal, bcdiv(strval($agentCommission), '100', 4), 2);
-
-            // 计算渠道分润：小计 * 渠道抽成比例
-            $channelCommission = floatval($store->channel_commission ?? 0);
-            $channelProfit = bcmul($subtotal, bcdiv(strval($channelCommission), '100', 4), 2);
-
             $item = [
                 'id' => $store->id,
                 'store_name' => $store->nickname,
                 'store_username' => $store->username,
-                'agent_commission' => $agentCommission,
-                'channel_commission' => $channelCommission,
                 'recharge_amount' => $rechargeAmount,
                 'withdraw_amount' => $withdrawAmount,
                 'machine_put_point' => $machinePutPoint,
                 'lottery_amount' => $lotteryAmount,
                 'subtotal' => $subtotal,
-                'agent_profit' => $agentProfit,
-                'channel_profit' => $channelProfit,
             ];
 
             $reportData[] = $item;
@@ -627,8 +581,6 @@ class AgentStoreProfitReportExporter extends Excel
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($machinePutPoint), 2);
             $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($lotteryAmount), 2);
             $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $subtotal, 2);
-            $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $agentProfit, 2);
-            $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $channelProfit, 2);
         }
     }
 }
