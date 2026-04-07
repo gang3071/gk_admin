@@ -299,7 +299,8 @@ class PlayerController
 
             // 将 Redis 缓存余额合并到列表数据中（覆盖数据库余额）
             foreach ($list as &$item) {
-                $item['money'] = $balances[$item['id']] ?? 0.0;
+                // 🔧 修复精度问题：格式化为保留2位小数
+                $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
                 // 移除数据库余额字段（仅用于排序）
                 unset($item['db_money']);
             }
