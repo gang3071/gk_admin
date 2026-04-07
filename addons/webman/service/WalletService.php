@@ -462,8 +462,8 @@ LUA;
      * ARGV[2] = 缓存TTL（默认3600秒）
      *
      * 返回：
-     * - 成功：{ok: 1, balance: 新余额, old_balance: 旧余额}
-     * - 余额不足：{ok: 0, error: "insufficient_balance", balance: 当前余额}
+     * - 成功：{ok: 1, balance: 新余额, old: 旧余额, new: 新余额}
+     * - 余额不足：{ok: 0, error: "insufficient_balance", balance: 当前余额, old: 当前余额}
      */
     private const LUA_ATOMIC_DECREMENT = <<<'LUA'
 local key = KEYS[1]
@@ -507,6 +507,9 @@ LUA;
         $cacheKey = self::getCacheKey($playerId, 1);
 
         try {
+            // 记录变更前余额（用于爆机检测）
+            $oldBalance = self::getBalance($playerId, 1);
+
             $result = Redis::eval(
                 self::LUA_ATOMIC_INCREMENT,
                 1,  // 1 个 KEYS 参数
@@ -522,19 +525,13 @@ LUA;
                 );
             }
 
-            // 🔧 修正精度
-            $newBalance = self::fixPrecision((float)$newBalance);
-
-            // 解析返回的 JSON：{old: 旧余额, new: 新余额}
-            $balanceData = json_decode($result, true);
-            $oldBalance = (float)($balanceData['old'] ?? 0);
-            $newBalance = (float)($balanceData['new'] ?? 0);
+            // Lua 脚本返回数字（新余额），修正精度
+            $newBalance = self::fixPrecision((float)$result);
 
             // ✅ 异步同步数据库（Redis 是实时标准，数据库用于持久化）
             self::asyncUpdateDB($playerId, $newBalance);
 
             // ✅ 触发爆机检测（余额增加后可能触发爆机）
-            self::checkMachineCrash($playerId, $previousBalance, $newBalance);
             self::checkMachineCrash($playerId, $oldBalance, $newBalance);
 
             return $newBalance;
@@ -554,7 +551,7 @@ LUA;
      * @param int $playerId 玩家ID
      * @param float $amount 减少金额
      * @param int $ttl 缓存TTL（秒），默认3600
-     * @return array {ok: 1, balance: 新余额, old_balance: 旧余额} 或 {ok: 0, error: "insufficient_balance", balance: 当前余额}
+     * @return array 成功：{ok: 1, balance: 新余额, old: 旧余额} 或 失败：{ok: 0, error: "insufficient_balance", balance: 当前余额}
      * @throws \RuntimeException Redis 执行失败时抛出
      */
     public static function atomicDecrement(int $playerId, float $amount, int $ttl = 3600): array
@@ -591,26 +588,22 @@ LUA;
                 );
             }
 
-            // 🔧 修正精度
+            // 🔧 修正精度（Lua 返回的键：ok, balance, old, new, error）
             if (isset($decoded['balance'])) {
                 $decoded['balance'] = self::fixPrecision((float)$decoded['balance']);
             }
-            if (isset($decoded['old_balance'])) {
-                $decoded['old_balance'] = self::fixPrecision((float)$decoded['old_balance']);
+            if (isset($decoded['old'])) {
+                $decoded['old'] = self::fixPrecision((float)$decoded['old']);
             }
 
             // ✅ 异步同步数据库（仅在扣款成功时）
             if (isset($decoded['ok']) && $decoded['ok'] === 1) {
-                self::asyncUpdateDB($playerId, $decoded['balance']);
-                $oldBalance = (float)($decoded['old'] ?? 0);
-                $newBalance = (float)($decoded['new'] ?? $decoded['balance']);
+                $newBalance = $decoded['balance'];
+                $oldBalance = $decoded['old'];
 
                 self::asyncUpdateDB($playerId, $newBalance);
 
                 // ✅ 触发爆机检测（余额减少后可能解除爆机）
-                $previousBalance = $decoded['old_balance'] ?? 0;
-                $currentBalance = $decoded['balance'];
-                self::checkMachineCrash($playerId, $previousBalance, $currentBalance);
                 self::checkMachineCrash($playerId, $oldBalance, $newBalance);
             }
 
