@@ -110,6 +110,12 @@ class AgentStoreProfitMonthlyExporter extends Excel
             // 所有数据处理完成后保存文件
             if ($this->processedStores >= $this->count) {
                 \support\Log::info('步骤4: 设置列宽并保存文件');
+
+                // 清除 ExAdmin 自动添加的多余列（I、J、K、L）
+                // 这些列是 Grid 中定义的 agent_commission、agent_profit、channel_commission、channel_profit
+                // 我们只需要 A-H 共8列
+                $this->removeExtraColumns();
+
                 $this->setColumnWidths();
 
                 parent::save(\addons\webman\filesystem\Filesystem::path(''));
@@ -288,6 +294,40 @@ class AgentStoreProfitMonthlyExporter extends Excel
         $this->sheet->getColumnDimension('F')->setWidth(15); // 小计
         $this->sheet->getColumnDimension('G')->setWidth(15); // 昨日小计
         $this->sheet->getColumnDimension('H')->setWidth(15); // 今日变化
+    }
+
+    /**
+     * 删除 ExAdmin 自动添加的多余列
+     * ExAdmin 框架会自动将 Grid 中定义的所有列添加到导出中
+     * 我们需要删除 I、J、K、L 列（代理抽成、代理分润、渠道抽成、渠道分润）
+     */
+    private function removeExtraColumns()
+    {
+        try {
+            // 获取最大列数
+            $highestColumn = $this->sheet->getHighestColumn();
+            $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
+
+            // 如果列数超过8列（H列），说明有多余的列
+            if ($highestColumnIndex > 8) {
+                $columnsToRemove = $highestColumnIndex - 8;
+
+                // 从 I 列开始删除所有多余列
+                // removeColumn(列名或索引, 删除的列数)
+                $this->sheet->removeColumn('I', $columnsToRemove);
+
+                \support\Log::info('removeExtraColumns: 已删除多余列', [
+                    'original_columns' => $highestColumnIndex,
+                    'removed_columns' => $columnsToRemove,
+                    'final_columns' => 8,
+                ]);
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('removeExtraColumns: 删除多余列失败', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     /**
