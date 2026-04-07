@@ -19,6 +19,7 @@ use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWalletTransfer;
+use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -240,7 +241,6 @@ class ChannelAgentController
                 'player_extend.recharge_amount',
                 'player_extend.withdraw_amount',
                 'player_extend.machine_put_point',
-                'cash.money',
                 'player_promoter.name as promoter_name',
                 'store_admin.username as store_admin_username',
                 'store_admin.nickname as store_admin_nickname'
@@ -249,10 +249,6 @@ class ChannelAgentController
             ->leftjoin('player_promoter', 'player.recommend_id', '=', 'player_promoter.player_id')
             ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
-            ->leftJoin('player_platform_cash as cash', function ($join) {
-                $join->on('player.id', '=', 'cash.player_id')
-                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
-            })
             ->where('player.type', Player::TYPE_PLAYER)
             ->where('player.is_promoter', 0);
 
@@ -317,6 +313,18 @@ class ChannelAgentController
                 })
             ->get()
             ->toArray();
+
+        // 🚀 批量从 Redis 获取余额（优化性能）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 将 Redis 缓存余额合并到列表数据中，并修正精度
+            foreach ($list as &$item) {
+                $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+            }
+            unset($item);
+        }
 
         // 计算每个设备的彩金和小计
         foreach ($list as &$item) {
@@ -392,7 +400,7 @@ class ChannelAgentController
                 $val
             ) {
                 return Tag::create($val)->color('orange');
-            })->sortable()->align('center');
+            })->align('center');
             $grid->column('store_admin_name', admin_trans('admin.store'))->display(function ($val, $data) {
                 $storeName = $data['store_admin_nickname'] ?: $data['store_admin_username'];
                 if (!empty($storeName)) {
