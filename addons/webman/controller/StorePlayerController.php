@@ -6,6 +6,7 @@ use addons\webman\Admin;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -53,10 +54,6 @@ class StorePlayerController
         // 查询条件：店家管理的玩家（设备）
         // 关闭数据权限，因为我们手动控制了权限（department_id + store_admin_id）
         $query = Player::query()
-            ->leftJoin('player_platform_cash as cash', function ($join) {
-                $join->on('player.id', '=', 'cash.player_id')
-                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
-            })
             ->leftJoin('player_extend', 'player.id', '=', 'player_extend.player_id')
             ->where('player.department_id', $departmentId)
             ->where('player.store_admin_id', $storeAdminId)
@@ -69,9 +66,6 @@ class StorePlayerController
             }
             if (isset($requestFilter['status'])) {
                 $query->where('player.status', $requestFilter['status']);
-            }
-            if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
-                $query->where('cash.is_crashed', $requestFilter['is_crashed']);
             }
             if (!empty($requestFilter['phone'])) {
                 $query->where('player.phone', 'like', '%' . $requestFilter['phone'] . '%');
@@ -93,8 +87,6 @@ class StorePlayerController
 
         $list = $query->select([
                 'player.*',
-                'cash.money as wallet_money',
-                'cash.is_crashed',
                 'player_extend.recharge_amount',
                 'player_extend.withdraw_amount',
                 'player_extend.machine_put_point'
@@ -102,6 +94,20 @@ class StorePlayerController
             ->orderBy('player.id', 'desc')
             ->get()
             ->toArray();
+
+        // 🚀 批量从 Redis 获取余额和爆机状态（优化性能）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+            $crashStatuses = WalletService::getBatchCrashStatus($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 将 Redis 缓存数据合并到列表中，并修正精度
+            foreach ($list as &$item) {
+                $item['wallet_money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+                $item['is_crashed'] = $crashStatuses[$item['id']] ?? 0;
+            }
+            unset($item);
+        }
 
         // 计算每个设备的彩金和小计
         foreach ($list as &$item) {

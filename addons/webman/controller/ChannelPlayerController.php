@@ -182,7 +182,7 @@ class ChannelPlayerController
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
 
-        // 构建基础查询字段
+        // 构建基础查询字段（不包含余额和爆机状态，从 Redis 获取）
         $selectFields = [
             'player.*',
             'player_extend.recharge_amount',
@@ -196,8 +196,6 @@ class ChannelPlayerController
             'player_register_record.ip',
             'player_register_record.country_name',
             'player_register_record.city_name',
-            'cash.money',
-            'cash.is_crashed',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -212,17 +210,13 @@ class ChannelPlayerController
             ]);
         }
 
-        // 构建完整查询（带 JOIN 和字段选择）
+        // 构建完整查询（不再 JOIN player_platform_cash 表）
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select($selectFields)
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            ->leftJoin('player_platform_cash as cash', function ($join) {
-                $join->on('player.id', '=', 'cash.player_id')
-                    ->where('cash.platform_id', PlayerPlatformCash::PLATFORM_SELF);
-            })
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -257,6 +251,27 @@ class ChannelPlayerController
                 })
             ->get()
             ->toArray();
+
+        // ✅ 优化：使用 WalletService 批量从 Redis 缓存获取余额和爆机状态
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+
+            // 批量获取余额（从 Redis 缓存）
+            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 批量获取爆机状态（从 Redis 缓存）
+            $crashStatuses = WalletService::getBatchCrashStatus($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 将 Redis 缓存余额和爆机状态合并到列表数据中
+            foreach ($list as &$item) {
+                // 🔧 修复精度问题：格式化为保留2位小数
+                $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+
+                // 合并爆机状态（从缓存）
+                $item['is_crashed'] = $crashStatuses[$item['id']] ?? 0;
+            }
+            unset($item);
+        }
 
         // 计算每个设备的彩金和小计
         foreach ($list as &$item) {
@@ -390,7 +405,7 @@ class ChannelPlayerController
                     $this,
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
-            })->ellipsis(true)->sortable()->align('center');
+            })->ellipsis(true)->align('center');
 
             // 爆机状态列
             $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
@@ -399,7 +414,7 @@ class ChannelPlayerController
                 } else {
                     return Tag::create(admin_trans('player.normal'))->color('green');
                 }
-            })->width(100)->align('center')->sortable();
+            })->width(100)->align('center');
 
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
@@ -5381,33 +5396,40 @@ class ChannelPlayerController
         // 计算实际金额（游戏点数转为货币金额）
         $money = bcdiv($washAmount, $currency->ratio, 2);
 
+        // ✅ 优化：从缓存获取余额并预检（避免不必要的原子操作）
+        $previousAmount = \addons\webman\service\WalletService::getBalance($playerId, PlayerPlatformCash::PLATFORM_SELF);
+
+        // 检查余额是否足够
+        if ($previousAmount < $deductAmount) {
+            return message_error(admin_trans('player.insufficient_balance'));
+        }
+
+        // ✅ 余额足够，执行原子扣款（Redis Lua 脚本保证并发安全）
+        try {
+            $result = \addons\webman\service\WalletService::atomicDecrement($playerId, $deductAmount);
+
+            // 扣款失败（可能并发导致余额不足）
+            if (!isset($result['ok']) || $result['ok'] !== 1) {
+                return message_error($result['error'] === 'insufficient_balance'
+                    ? admin_trans('player.insufficient_balance')
+                    : '扣款失败，请重试');
+            }
+
+            // 扣款成功，获取新余额
+            $newBalance = $result['balance'];
+
+        } catch (\Exception $e) {
+            Log::error('洗分扣款失败', [
+                'player_id' => $playerId,
+                'deduct_amount' => $deductAmount,
+                'error' => $e->getMessage(),
+            ]);
+            return message_error('扣款失败：' . $e->getMessage());
+        }
+
+        // ✅ 创建业务记录（提现记录、金流明细等）
         DB::beginTransaction();
         try {
-            // 锁定钱包记录
-            /** @var PlayerPlatformCash $wallet */
-            $wallet = PlayerPlatformCash::query()
-                ->where('player_id', $playerId)
-                ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$wallet) {
-                DB::rollBack();
-                return message_error(admin_trans('player.wallet.player_error'));
-            }
-
-            // 检查余额是否足够
-            if ($wallet->money < $deductAmount) {
-                DB::rollBack();
-                return message_error(admin_trans('player.insufficient_balance'));
-            }
-
-            // 记录洗分前的余额
-            $previousAmount = floatval($wallet->money);
-
-            // 扣除钱包余额（可能是全部扣除）
-            $wallet->money = bcsub($wallet->money, $deductAmount, 2);
-            $wallet->save();
 
             // 创建提现记录
             $withdrawRecord = new PlayerWithdrawRecord();
@@ -5459,7 +5481,7 @@ class ChannelPlayerController
             $deliveryRecord->source = 'channel_withdrawal';
             $deliveryRecord->amount = $deductAmount; // 记录实际扣除金额
             $deliveryRecord->amount_before = $previousAmount;
-            $deliveryRecord->amount_after = floatval($wallet->money);
+            $deliveryRecord->amount_after = $newBalance;
             $deliveryRecord->tradeno = $withdrawRecord->tradeno;
 
             // 计算备注信息
@@ -5474,24 +5496,38 @@ class ChannelPlayerController
 
             DB::commit();
 
-            // ✅ 更新 Redis 余额缓存（必须在 commit 后）
-            \addons\webman\service\WalletService::updateCache(
-                $playerId,
-                PlayerPlatformCash::PLATFORM_SELF,
-                floatval($wallet->money)
-            );
-
             // ✅ 检查爆机状态变化并发送通知
+            //    - 自动更新 is_crashed 字段
+            //    - 清除爆机状态缓存（machine_crash_status:{player_id}）
+            //    - 发送爆机/解锁通知
+            //    注意：余额已通过 WalletService::atomicDecrement 更新，无需再次更新缓存
             \addons\webman\service\WalletService::checkMachineCrash(
                 $playerId,
                 $previousAmount,
-                floatval($wallet->money)
+                $newBalance
             );
 
             return message_success(admin_trans('player.wash_score_success'));
 
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // ❌ 业务记录创建失败，回滚 Redis 扣款
+            try {
+                \addons\webman\service\WalletService::atomicIncrement($playerId, $deductAmount);
+                Log::warning('洗分失败已回滚余额', [
+                    'player_id' => $playerId,
+                    'rollback_amount' => $deductAmount,
+                ]);
+            } catch (\Exception $rollbackError) {
+                // 回滚失败，记录严重错误（需人工介入）
+                Log::critical('洗分失败且回滚失败，余额不一致', [
+                    'player_id' => $playerId,
+                    'deduct_amount' => $deductAmount,
+                    'rollback_error' => $rollbackError->getMessage(),
+                ]);
+            }
+
             Log::error('Channel wash score failed', [
                 'player_id' => $playerId,
                 'wash_amount' => $washAmount,

@@ -665,6 +665,122 @@ LUA;
     }
 
     // ========================================
+    // 爆机状态管理（使用统一的缓存格式）
+    // ========================================
+
+    /**
+     * 爆机状态缓存键前缀
+     *
+     * 缓存格式（与 helpers.php 的 checkMachineCrash() 统一）：
+     * {
+     *   "crashed": bool,
+     *   "crash_amount": float|null,
+     *   "current_amount": float
+     * }
+     */
+    private const CRASH_CACHE_PREFIX = 'machine_crash_status:';
+
+    /**
+     * 批量获取爆机状态（带 Redis 缓存）
+     *
+     * 使用与 helpers.php checkMachineCrash() 统一的缓存格式
+     * 三个项目（gk_admin、gk_api、gk_work）都使用相同的缓存结构
+     *
+     * @param array $playerIds 玩家ID数组
+     * @param int $platformId 平台ID
+     * @return array [player_id => is_crashed]
+     */
+    public static function getBatchCrashStatus(array $playerIds, int $platformId = 1): array
+    {
+        if (empty($playerIds)) {
+            return [];
+        }
+
+        // 重建索引确保数组键是连续的 0, 1, 2...
+        $playerIds = array_values($playerIds);
+
+        $result = [];
+        $missedIds = [];
+
+        try {
+            // 批量从 Redis 获取
+            $cacheKeys = [];
+            foreach ($playerIds as $playerId) {
+                $cacheKeys[$playerId] = self::CRASH_CACHE_PREFIX . $playerId;
+            }
+
+            $cached = Redis::mget(array_values($cacheKeys));
+
+            foreach ($playerIds as $index => $playerId) {
+                if (isset($cached[$index]) && $cached[$index] !== false && $cached[$index] !== null) {
+                    // 解析 JSON 缓存，提取 crashed 字段
+                    $data = json_decode($cached[$index], true);
+                    if (is_array($data) && isset($data['crashed'])) {
+                        $result[$playerId] = (int)$data['crashed'];
+                    } else {
+                        // 缓存格式错误，标记为未命中
+                        $missedIds[] = $playerId;
+                    }
+                } else {
+                    $missedIds[] = $playerId;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Redis 失败，全部从数据库查询
+            Log::warning('WalletService: Batch crash status Redis failed, fallback to DB', [
+                'error' => $e->getMessage(),
+            ]);
+            $missedIds = $playerIds;
+        }
+
+        // 从数据库补充未命中的数据
+        if (!empty($missedIds)) {
+            $statuses = PlayerPlatformCash::query()
+                ->whereIn('player_id', $missedIds)
+                ->where('platform_id', $platformId)
+                ->get(['player_id', 'is_crashed']);
+
+            foreach ($statuses as $status) {
+                $result[$status->player_id] = (int)$status->is_crashed;
+            }
+
+            // 补充不存在的玩家（爆机状态为0）
+            foreach ($missedIds as $playerId) {
+                if (!isset($result[$playerId])) {
+                    $result[$playerId] = 0;
+                }
+            }
+
+            // 注意：不回填缓存
+            // 缓存由 helpers.php 的 checkMachineCrash() 函数负责维护
+            // 该函数会在查询时自动创建完整的缓存结构
+        }
+
+        return $result;
+    }
+
+    /**
+     * 清除爆机状态缓存
+     *
+     * @param int $playerId 玩家ID
+     * @return bool
+     */
+    public static function clearCrashCache(int $playerId): bool
+    {
+        try {
+            $cacheKey = self::CRASH_CACHE_PREFIX . $playerId;
+            Redis::del($cacheKey);
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('WalletService: Failed to clear crash cache', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    // ========================================
     // 爆机检测（余额更新后触发）
     // ========================================
 
@@ -729,8 +845,8 @@ LUA;
                 $wallet->is_crashed = $isCrashed;
                 $wallet->save();
 
-                // 清除爆机状态缓存
-                clearMachineCrashCache($playerId);
+                // 清除爆机状态缓存（让 helpers.php 的 checkMachineCrash() 重新生成）
+                self::clearCrashCache($playerId);
 
                 Log::info('WalletService: 爆机状态已更新', [
                     'player_id' => $playerId,
