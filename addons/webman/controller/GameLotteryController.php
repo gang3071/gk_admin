@@ -588,10 +588,28 @@ class GameLotteryController
                             $redis->del('game_lottery_stats:total:' . $id);
                             $redis->del('game_lottery_stats:win:' . $id);
 
-                            // 删除所有日期的统计（删除匹配模式的所有键）
-                            $dailyKeys = $redis->keys('game_lottery_stats:daily:*:' . $id . ':*');
-                            if (!empty($dailyKeys)) {
-                                $redis->del($dailyKeys);
+                            // 删除所有日期的统计（使用 SCAN 避免阻塞 Redis）
+                            $pattern = 'game_lottery_stats:daily:*:' . $id . ':*';
+                            $cursor = 0;
+                            $deletedCount = 0;
+
+                            do {
+                                // 使用 SCAN 分批查找，每次最多返回 100 个键
+                                $result = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
+                                $cursor = $result[0];
+                                $keys = $result[1];
+
+                                if (!empty($keys)) {
+                                    $redis->del($keys);
+                                    $deletedCount += count($keys);
+                                }
+                            } while ($cursor != 0);
+
+                            if ($deletedCount > 0) {
+                                \support\Log::info('清理日统计键', [
+                                    'lottery_id' => $id,
+                                    'deleted_count' => $deletedCount,
+                                ]);
                             }
 
                             \support\Log::info(admin_trans('lottery.log.reset_stats'), [
