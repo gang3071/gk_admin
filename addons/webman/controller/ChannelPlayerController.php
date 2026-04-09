@@ -5394,16 +5394,29 @@ class ChannelPlayerController
             return message_error('币种配置不存在');
         }
 
+        // ✅ 重新检查爆机状态和余额（表单提交前余额可能已变化）
+        $previousAmount = WalletService::getBalance($playerId, PlayerPlatformCash::PLATFORM_SELF);
+        $crashCheck = checkMachineCrash($player);
+
+        // 如果余额为0，不允许洗分
+        if ($previousAmount <= 0) {
+            return message_error('当前余额为0，无法洗分');
+        }
+
+        // ✅ 根据最新余额和爆机状态重新计算洗分金额
+        // 无论是否爆机，都扣除全部余额
+        $deductAmount = $previousAmount;
+
+        if ($crashCheck['crashed'] && $crashCheck['crash_amount'] > 0) {
+            // 爆机状态：提现金额=爆机金额（限额），没收超出部分
+            $washAmount = $crashCheck['crash_amount'];
+        } else {
+            // 正常状态：提现金额=当前全部余额
+            $washAmount = $previousAmount;
+        }
+
         // 计算实际金额（游戏点数转为货币金额）
         $money = bcdiv($washAmount, $currency->ratio, 2);
-
-        // ✅ 优化：从缓存获取余额并预检（避免不必要的原子操作）
-        $previousAmount = \addons\webman\service\WalletService::getBalance($playerId, PlayerPlatformCash::PLATFORM_SELF);
-
-        // 检查余额是否足够
-        if ($previousAmount < $deductAmount) {
-            return message_error(admin_trans('player.insufficient_balance'));
-        }
 
         // ✅ 余额足够，执行原子扣款（Redis Lua 脚本保证并发安全）
         try {
