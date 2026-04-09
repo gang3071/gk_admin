@@ -5288,7 +5288,8 @@ class ChannelPlayerController
 
         // 检查爆机状态，计算可洗分金额
         $crashCheck = checkMachineCrash($player);
-        $currentBalance = floatval($money);
+        // ✅ 使用checkMachineCrash返回的最新余额，而不是列表传入的旧余额
+        $currentBalance = $crashCheck['current_amount'] ?? floatval($money);
 
         // 如果爆机，洗分金额 = 爆机金额，钱包清零
         if ($crashCheck['crashed'] && $crashCheck['crash_amount'] > 0) {
