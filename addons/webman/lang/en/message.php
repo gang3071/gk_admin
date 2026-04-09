@@ -314,6 +314,13 @@ return [
         'machine_put_coins' => 'Deposit money',
         'agent_in' => 'Player (agent) transfer in',
         'agent_out' => 'Player (agent) transfers out',
+        'player_bet' => 'Player bet',
+        'player_cancel_bet' => 'Player cancel bet',
+        'player_gift' => 'Player tip',
+        'player_bet_settlement' => 'Player bet settlement',
+        'player_re_bet_settlement' => 'Bet re-settlement',
+        'wallet_modify' => 'Modify balance',
+        'lottery_game' => 'Lottery',
     ],
     'source' => [
         'system' => 'system',

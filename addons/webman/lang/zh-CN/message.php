@@ -319,6 +319,8 @@ return [
         'player_gift' => '用户打赏',
         'player_bet_settlement' => '用户下注结算',
         'player_re_bet_settlement' => '注单重新结算',
+        'wallet_modify' => '修改余额',
+        'lottery_game' => '彩金',
     ],
     'source' => [
         'system' => '系统',

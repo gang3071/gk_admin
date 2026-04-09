@@ -313,6 +313,13 @@ return [
         'machine_put_coins' => '金を投ずる',
         'agent_in' => 'プレイヤー（エージェント）転入',
         'agent_out' => 'プレイヤー（エージェント）転出',
+        'player_bet' => 'ユーザーベット',
+        'player_cancel_bet' => 'ユーザーベットキャンセル',
+        'player_gift' => 'ユーザーチップ',
+        'player_bet_settlement' => 'ユーザーベット清算',
+        'player_re_bet_settlement' => '賭注再清算',
+        'wallet_modify' => '残高修正',
+        'lottery_game' => '賞金',
     ],
     'source' => [
         'system' => 'システム',

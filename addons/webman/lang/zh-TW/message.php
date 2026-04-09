@@ -314,6 +314,13 @@ return [
         'machine_put_coins' => '投鈔',
         'agent_in' => '玩家轉入',
         'agent_out' => '玩家轉出',
+        'player_bet' => '用戶下注',
+        'player_cancel_bet' => '用戶取消下注',
+        'player_gift' => '用戶打賞',
+        'player_bet_settlement' => '用戶下注結算',
+        'player_re_bet_settlement' => '注單重新結算',
+        'wallet_modify' => '修改餘額',
+        'lottery_game' => '彩金',
     ],
     'source' => [
         'system' => '系統',
