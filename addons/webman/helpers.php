@@ -1343,6 +1343,14 @@ if (!function_exists('playerUpdateMoney')) {
             $machineWallet->money = bcsub($machineWallet->money, $money, 2);
         }
         $machineWallet->save();
+
+        // ✅ 关键修复：更新玩家的 Redis 钱包缓存
+        \addons\webman\service\WalletService::updateCache(
+            $player->id,
+            PlayerPlatformCash::PLATFORM_SELF,
+            $machineWallet->money
+        );
+
         switch ($deliveryType) {
             case PlayerDeliveryRecord::TYPE_PRESENT_IN:
                 if (!empty($player->player_extend)) {
