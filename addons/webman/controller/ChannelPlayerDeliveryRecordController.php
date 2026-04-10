@@ -212,7 +212,7 @@ class ChannelPlayerDeliveryRecordController
             })->align('center')->filter(
                 FilterColumn::like()->text('player.phone')
             );
-            $grid->column('name', admin_trans('player.fields.device_name'))->display(function (
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->display(function (
                 $val,
                 PlayerDeliveryRecord $data
             ) {
