@@ -68,12 +68,6 @@ class ChannelPlayerReportController
                 $playGameRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
                 $playerDeliveryRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
             }
-            if (!empty($exAdminFilter['account'])) {
-                $baseQuery->where('player.account', 'like', '%' . $exAdminFilter['account'] . '%');
-                $playGameRecordBaseQuery->where('player.account', 'like', '%' . $exAdminFilter['account'] . '%');
-                $playerDeliveryRecordBaseQuery->where('player.account', 'like',
-                    '%' . $exAdminFilter['account'] . '%');
-            }
             if (!empty($exAdminFilter['phone'])) {
                 $baseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
                 $playGameRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
@@ -464,20 +458,12 @@ class ChannelPlayerReportController
                 ]);
             })->align('center');
             $grid->column('uuid', admin_trans('player.fields.uuid'))->align('center');
-            $grid->column('account', admin_trans('player.fields.account'))->align('center');
             $grid->column('type', admin_trans('player.fields.type'))->display(function ($val, $data) {
                 return Html::create()->content([
                     $data['is_test'] == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
                 ]);
             })->align('center');
-            $grid->column('real_name', admin_trans('player.fields.real_name'))->align('center');
-            $grid->column('level_list.national_level.name',
-                admin_trans('national_promoter.level_list.name'))->display(function ($value, $data) {
-                if (!empty($data['national_promoter']['level_list']['national_level'])) {
-                    return $data['national_promoter']['level_list']['national_level']['name'] . $data['national_promoter']['level_list']['level'];
-                }
-                return '';
-            });
+            $grid->column('name', admin_trans('player.fields.device_name'))->align('center');
             $grid->column('recommend_promoter.name', admin_trans('player.fields.recommend_promoter_name'))
                 ->display(function ($value, $data) {
                     if (isset($data['recommend_promoter'])) {
@@ -653,8 +639,6 @@ class ChannelPlayerReportController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
-                $filter->like()->text('account')->placeholder(admin_trans('player.fields.account'));
-                $filter->like()->text('real_name')->placeholder(admin_trans('player.fields.real_name'));
                 $filter->like()->text('recommend_promoter.name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->select('search_type')
                     ->showSearch()

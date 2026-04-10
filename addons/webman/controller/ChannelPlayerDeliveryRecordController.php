@@ -212,6 +212,17 @@ class ChannelPlayerDeliveryRecordController
             })->align('center')->filter(
                 FilterColumn::like()->text('player.phone')
             );
+            $grid->column('name', admin_trans('player.fields.device_name'))->display(function (
+                $val,
+                PlayerDeliveryRecord $data
+            ) {
+                if ($data->machine) {
+                    return Html::create()->content([
+                        Html::div()->content($data->machine->name),
+                    ]);
+                }
+                return '-';
+            })->align('center');
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerDeliveryRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
@@ -221,6 +232,14 @@ class ChannelPlayerDeliveryRecordController
                 $val,
                 PlayerDeliveryRecord $data
             ) {
+                // 优先使用翻译，如果翻译不存在则使用原始值
+                $transKey = 'message.target.' . $val;
+                $translatedText = admin_trans($transKey);
+                // 如果翻译不存在（返回的是翻译键本身），则使用原始值
+                if ($translatedText === $transKey) {
+                    $translatedText = $val;
+                }
+
                 switch ($data->type) {
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
@@ -228,22 +247,25 @@ class ChannelPlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_WITHDRAWAL:
                     case PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK:
                     case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
+                    case PlayerDeliveryRecord::COIN_ADD:
+                    case PlayerDeliveryRecord::COIN_DEDUCT:
                     case PlayerDeliveryRecord::TYPE_SPECIAL:
                     case PlayerDeliveryRecord::TYPE_MACHINE:
-                        return Tag::create($val)->color('red');
+                        return Tag::create($translatedText)->color('red');
                     case PlayerDeliveryRecord::TYPE_PRESENT_IN:
                     case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
-                        return Tag::create($val)->color('green');
+                        return Tag::create($translatedText)->color('green');
                     case PlayerDeliveryRecord::TYPE_BET:
                     case PlayerDeliveryRecord::TYPE_CANCEL_BET:
                     case PlayerDeliveryRecord::TYPE_SETTLEMENT:
+                    case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                     case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
-                        return Tag::create($val)->color('blue');
+                        return Tag::create($translatedText)->color('blue');
                     case PlayerDeliveryRecord::TYPE_GIFT:
-                        return Tag::create($val)->color('pink');
+                        return Tag::create($translatedText)->color('pink');
                     case PlayerDeliveryRecord::TYPE_PREPAY:
                     case PlayerDeliveryRecord::TYPE_REFUND:
-                        return Tag::create($val)->color('cyan');
+                        return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_MACHINE_UP:
                     case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
                         if ($data->machine) {
@@ -254,11 +276,9 @@ class ChannelPlayerDeliveryRecordController
                                 ['data' => $data->machine->toArray()])->width('60%')->title($data->machine->code . ' ' . $data->machine->name);
                         }
                         break;
-                    case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
-                        return Tag::create($val)->color('blue');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
-                        return Tag::create($val)->color('purple');
+                        return Tag::create($translatedText)->color('purple');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
@@ -267,7 +287,7 @@ class ChannelPlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
                     case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
                     case PlayerDeliveryRecord::TYPE_LOTTERY:
-                        return Tag::create($val)->color('orange');
+                        return Tag::create($translatedText)->color('orange');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
@@ -276,7 +296,7 @@ class ChannelPlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_AGENT_IN:
                         return Tag::create($data->player->channel->name)->color('orange');
                     default:
-                        return '';
+                        return $translatedText ? Tag::create($translatedText)->color('gray') : '';
                 }
             })->align('center');
             $grid->column('type', admin_trans('player_delivery_record.fields.type'))
