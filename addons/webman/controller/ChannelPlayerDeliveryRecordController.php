@@ -212,17 +212,7 @@ class ChannelPlayerDeliveryRecordController
             })->align('center')->filter(
                 FilterColumn::like()->text('player.phone')
             );
-            $grid->column('player.name', admin_trans('player.fields.device_name'))->display(function (
-                $val,
-                PlayerDeliveryRecord $data
-            ) {
-                if ($data->machine) {
-                    return Html::create()->content([
-                        Html::div()->content($data->machine->name),
-                    ]);
-                }
-                return '-';
-            })->align('center');
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center');
             $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerDeliveryRecord $data) {
                 return Html::create()->content([
                     $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
