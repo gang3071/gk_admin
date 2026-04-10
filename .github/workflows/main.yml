@@ -1,11 +1,10 @@
 name: Admin
 
-# 1. 触发条件：只有当 push 到 master 分支时才触发
+# 1. 触发条件：只有 push 到 super9-master 分支时触发自动部署
 on:
   push:
     branches:
-      - master
-      # 如果你的后台项目是 master，就把上面那行改成 - master
+      - super9-master
 
 jobs:
   deploy:
