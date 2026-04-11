@@ -4750,9 +4750,6 @@ class ChannelPlayerController
     public function toggleGameDisableSwitch(int $player_id, int $game_id): Msg
     {
         try {
-            // 获取开关的新状态：1=正常（未禁用），0=禁用
-            $newStatus = request()->post('status_switch', 1);
-
             /** @var Player $player */
             $player = Player::query()->with('channel')->find($player_id);
 
@@ -4777,10 +4774,24 @@ class ChannelPlayerController
                 return message_error(admin_trans('common.game_not_in_channel_scope'));
             }
 
+            // 查询当前是否已禁用
+            $currentDisabled = PlayerDisabledGame::query()
+                ->where('player_id', $player_id)
+                ->where('game_id', $game_id)
+                ->where('status', 1)
+                ->exists();
+
             Db::beginTransaction();
             try {
-                if ($newStatus == 0) {
-                    // 状态为0=禁用 - 添加到 PlayerDisabledGame 表
+                if ($currentDisabled) {
+                    // 当前是禁用状态，切换为启用 - 从表中删除
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->where('game_id', $game_id)
+                        ->delete();
+                    $message = admin_trans('player.single_game_enabled_success');
+                } else {
+                    // 当前是启用状态，切换为禁用 - 添加到表中
                     PlayerDisabledGame::query()->updateOrCreate(
                         [
                             'player_id' => $player_id,
@@ -4793,16 +4804,10 @@ class ChannelPlayerController
                         ]
                     );
                     $message = admin_trans('player.single_game_disabled_success');
-                } else {
-                    // 状态为1=正常 - 从 PlayerDisabledGame 表删除
-                    PlayerDisabledGame::query()
-                        ->where('player_id', $player_id)
-                        ->where('game_id', $game_id)
-                        ->delete();
-                    $message = admin_trans('player.single_game_enabled_success');
                 }
 
                 Db::commit();
+                // 返回成功消息，Switches组件会自动更新显示状态
                 return message_success($message);
             } catch (Exception $e) {
                 Db::rollBack();
