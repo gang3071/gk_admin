@@ -358,15 +358,15 @@ class AgentStoreProfitReportController
 
             $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 
+            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
             $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
-
-            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
