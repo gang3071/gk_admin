@@ -9,6 +9,7 @@ return [
         'store_name' => 'Store Name',
         'store_username' => 'Username',
         'agent_name' => 'Agent',
+        'remark' => 'Remark',
         'recharge_amount' => 'Total Open Score',
         'withdraw_amount' => 'Total Wash Score',
         'machine_put_point' => 'Coin Deposit',
@@ -26,6 +27,7 @@ return [
         'all_agents' => 'All Agents',
         'select_store' => 'Select Store',
         'all_stores' => 'All Stores',
+        'remark_placeholder' => 'Enter remark keyword',
         'time_range' => 'Time Range',
         'start_time' => 'Start Time',
         'end_time' => 'End Time',
@@ -40,5 +42,11 @@ return [
         'total_subtotal' => 'Total Subtotal',
         'total_agent_profit' => 'Total Agent Profit',
         'total_channel_profit' => 'Total Channel Profit',
+    ],
+
+    // Messages
+    'message' => [
+        'store_not_found' => 'Store not found',
+        'update_success' => 'Remark updated successfully',
     ],
 ];

@@ -9,6 +9,7 @@ return [
         'store_name' => '店舗名',
         'store_username' => 'ログインID',
         'agent_name' => '所属代理店',
+        'remark' => '備考',
         'recharge_amount' => '累計開分',
         'withdraw_amount' => '累計洗分',
         'machine_put_point' => 'コイン投入',
@@ -26,6 +27,7 @@ return [
         'all_agents' => '全代理店',
         'select_store' => '店舗選択',
         'all_stores' => '全店舗',
+        'remark_placeholder' => '備考キーワードを入力',
         'time_range' => '期間',
         'start_time' => '開始時間',
         'end_time' => '終了時間',
@@ -40,5 +42,11 @@ return [
         'total_subtotal' => '総小計',
         'total_agent_profit' => '総代理店利益',
         'total_channel_profit' => '総チャンネル利益',
+    ],
+
+    // Messages
+    'message' => [
+        'store_not_found' => '店舗が見つかりません',
+        'update_success' => '備考が正常に更新されました',
     ],
 ];

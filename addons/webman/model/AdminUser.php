@@ -30,6 +30,7 @@ use support\Cache;
  * @property float $ratio 分润比例（百分比，仅代理/店家使用）
  * @property float $agent_commission 代理抽成比例（百分比，仅店家使用）
  * @property float $channel_commission 渠道抽成比例（百分比，仅店家使用）
+ * @property string $remark 备注
  * @property float $adjust_amount 分润调整金额
  * @property int $last_settlement_timestamp 上次结算时间戳
  * @property float $settlement_amount 已结算金额
@@ -89,6 +90,7 @@ class AdminUser extends Model
         'ratio',
         'agent_commission',
         'channel_commission',
+        'remark',
         'adjust_amount',
         'last_settlement_timestamp',
         'settlement_amount',
