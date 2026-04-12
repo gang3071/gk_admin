@@ -399,6 +399,10 @@ class ChannelStoreProfitReportController
 
             $grid->column('agent_name', admin_trans('channel_store_profit.fields.agent_name'))->width(120)->align('center');
 
+            $grid->column('machine_put_point', admin_trans('channel_store_profit.fields.machine_put_point'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
             $grid->column('recharge_amount', admin_trans('channel_store_profit.fields.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
@@ -407,9 +411,7 @@ class ChannelStoreProfitReportController
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', admin_trans('channel_store_profit.fields.machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+
 
             $grid->column('lottery_amount', admin_trans('channel_store_profit.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
