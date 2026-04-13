@@ -39,17 +39,30 @@ class AgentStoreProfitMonthlyExporter extends Excel
                 /** @var AdminUser $admin */
                 $admin = Admin::user();
 
-                // 计算时间范围
-                $monthStart = date('Y-m-01 00:00:00'); // 当月1号0点
-                $currentTime = date('Y-m-d H:i:s'); // 当前时间
-                $yesterdayEnd = date('Y-m-d 23:59:59', strtotime('-1 day')); // 昨天24点
-                $yesterdayStart = date('Y-m-d 00:00:00', strtotime('-1 day')); // 昨天0点
+                // 计算时间范围（以每天08:00:00作为分界点）
+                // 月度起始时间：当月1号 08:00:00
+                $monthStart = date('Y-m-01 08:00:00');
+
+                // 当前截止时间：当前实时时间
+                $currentTime = date('Y-m-d H:i:s');
+
+                // 昨日截止时间：昨天 08:00:00
+                $yesterdayEnd = date('Y-m-d 08:00:00', strtotime('-1 day'));
+
+                // 昨日小计的统计范围：1号08:00 到 昨日08:00
+                // 如果昨日08:00早于月度起始（即昨天是上个月），则昨日小计为0
+                $yesterdayStart = $monthStart;
+
+                if (strtotime($yesterdayEnd) < strtotime($monthStart)) {
+                    // 昨天08:00早于1号08:00，说明跨月了，昨日小计为0
+                    $yesterdayEnd = $monthStart; // 起止时间相同，查询结果为0
+                }
 
                 \support\Log::info('步骤1: 计算时间范围', [
                     'month_start' => $monthStart,
                     'current_time' => $currentTime,
-                    'yesterday_end' => $yesterdayEnd,
-                    'yesterday_start' => $yesterdayStart
+                    'yesterday_start' => $yesterdayStart,
+                    'yesterday_end' => $yesterdayEnd
                 ]);
 
                 // 查询月度数据
@@ -160,7 +173,7 @@ class AgentStoreProfitMonthlyExporter extends Excel
         // 合并单元格 A1:H1
         $this->sheet->mergeCells('A1:H1');
 
-        $timeRange = date('Y-m-d', strtotime($monthStart)) . ' 至 ' . date('Y-m-d H:i', strtotime($currentTime));
+        $timeRange = date('Y-m-d H:i', strtotime($monthStart)) . ' 至 ' . date('Y-m-d H:i', strtotime($currentTime));
         $title = $timeRange . ' | 营业状况 | 总设备数：' . $this->totalDeviceCount . ' | 店家数：' . $this->totalStoreCount;
 
         $this->sheet->setCellValue('A1', $title);
@@ -374,17 +387,15 @@ class AgentStoreProfitMonthlyExporter extends Excel
                 continue;
             }
 
-            // 查询月度数据（当月初至当前时间）
+            // 查询月度数据（1号08:00至当前时间）
             $monthlyData = $this->queryPeriodData($playerIds, $monthStart, $currentTime);
 
-            // 查询月度数据（当月初至昨天24点） - 用于计算今日变化
-            $monthlyUntilYesterday = $this->queryPeriodData($playerIds, $monthStart, $yesterdayEnd);
-
-            // 查询昨日数据（昨天一天）
+            // 查询昨日小计（1号08:00到昨日08:00）
             $yesterdayData = $this->queryPeriodData($playerIds, $yesterdayStart, $yesterdayEnd);
 
-            // 计算今日变化：今天的变化 = 当月至今的小计 - 当月至昨天的小计
-            $todayChange = bcsub($monthlyData['subtotal'], $monthlyUntilYesterday['subtotal'], 2);
+            // 计算今日变化：昨日08:00到当前时间的变化
+            // 今日变化 = 月度小计 - 昨日小计 = (1号08:00→现在) - (1号08:00→昨日08:00) = 昨日08:00→现在
+            $todayChange = bcsub($monthlyData['subtotal'], $yesterdayData['subtotal'], 2);
 
             $reportData[] = [
                 'store_name' => $store->nickname ?: $store->username,

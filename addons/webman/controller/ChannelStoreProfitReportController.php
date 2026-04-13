@@ -10,6 +10,7 @@ use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
@@ -39,6 +40,7 @@ class ChannelStoreProfitReportController
         $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
         $selectedAgentId = $exAdminFilter['agent_id'] ?? null;
+        $remarkKeyword = $exAdminFilter['remark'] ?? null;
 
         // 获取渠道下的所有店家
         // 渠道可以看到自己的直属店家 + 下属代理的店家
@@ -52,12 +54,18 @@ class ChannelStoreProfitReportController
             $allStoresQuery->where('parent_admin_id', $selectedAgentId);
         }
 
-        // 如果选择了特定店家，只查询该店家
+        // 如果选择了特定店家，添加店家ID筛选
         if (!empty($selectedStoreId)) {
-            $storeIds = [$selectedStoreId];
-        } else {
-            $storeIds = $allStoresQuery->pluck('id')->toArray();
+            $allStoresQuery->where('id', $selectedStoreId);
         }
+
+        // 如果输入了备注关键词，进行模糊搜索
+        if (!empty($remarkKeyword)) {
+            $allStoresQuery->where('remark', 'like', '%' . $remarkKeyword . '%');
+        }
+
+        // 获取符合所有筛选条件的店家ID列表
+        $storeIds = $allStoresQuery->pluck('id')->toArray();
 
         // 构建报表数据
         $reportData = [];
@@ -88,6 +96,7 @@ class ChannelStoreProfitReportController
                     'agent_name' => $agentName,
                     'agent_commission' => $store->agent_commission ?? 0,
                     'channel_commission' => $store->channel_commission ?? 0,
+                    'remark' => $store->remark ?? '',
                     'recharge_amount' => 0,
                     'withdraw_amount' => 0,
                     'machine_put_point' => 0,
@@ -160,6 +169,7 @@ class ChannelStoreProfitReportController
                 'agent_name' => $agentName,
                 'agent_commission' => $agentCommission,
                 'channel_commission' => $channelCommission,
+                'remark' => $store->remark ?? '',
                 'recharge_amount' => $rechargeAmount,
                 'withdraw_amount' => $withdrawAmount,
                 'machine_put_point' => $machinePutPoint,
@@ -389,6 +399,10 @@ class ChannelStoreProfitReportController
 
             $grid->column('agent_name', admin_trans('channel_store_profit.fields.agent_name'))->width(120)->align('center');
 
+            $grid->column('machine_put_point', admin_trans('channel_store_profit.fields.machine_put_point'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
             $grid->column('recharge_amount', admin_trans('channel_store_profit.fields.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
@@ -397,9 +411,7 @@ class ChannelStoreProfitReportController
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', admin_trans('channel_store_profit.fields.machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+
 
             $grid->column('lottery_amount', admin_trans('channel_store_profit.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
@@ -428,6 +440,15 @@ class ChannelStoreProfitReportController
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
+            $grid->column('remark', admin_trans('channel_store_profit.fields.remark'))
+                ->editable(
+                    (new Editable)
+                        ->textarea('remark')
+                        ->showCount()
+                        ->maxLength(500)
+                        ->rows(3)
+                )->width(200)->align('center')->ellipsis(true);
+
             // 筛选器
             $grid->filter(function (Filter $filter) use ($storeOptions, $agentOptions) {
                 // 代理下拉选择
@@ -442,12 +463,26 @@ class ChannelStoreProfitReportController
                     ->options(['' => admin_trans('channel_store_profit.filter.all_stores')] + $storeOptions)
                     ->style(['width' => '300px']);
 
+                // 备注模糊搜索
+                $filter->like()->text('remark')
+                    ->placeholder(admin_trans('channel_store_profit.filter.remark_placeholder'))
+                    ->style(['width' => '200px']);
+
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', admin_trans('channel_store_profit.filter.time_range'))->placeholder([
                     admin_trans('channel_store_profit.filter.start_time'),
                     admin_trans('channel_store_profit.filter.end_time')
                 ]);
+            });
+
+            // 处理列表编辑更新
+            $grid->updateing(function ($ids, $data) {
+                if (isset($ids[0]) && isset($data['remark'])) {
+                    if (AdminUser::query()->where('id', $ids[0])->update(['remark' => $data['remark']])) {
+                        return message_success(admin_trans('channel_store_profit.message.update_success'));
+                    }
+                }
             });
 
             $grid->hideAction();

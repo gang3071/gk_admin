@@ -9,6 +9,7 @@ return [
         'store_name' => '店家名称',
         'store_username' => '登录账号',
         'agent_name' => '所属代理',
+        'remark' => '备注',
         'recharge_amount' => '累计开分',
         'withdraw_amount' => '累计洗分',
         'machine_put_point' => '投钞',
@@ -26,6 +27,7 @@ return [
         'all_agents' => '全部代理',
         'select_store' => '选择店家',
         'all_stores' => '全部店家',
+        'remark_placeholder' => '请输入备注关键词',
         'time_range' => '时间范围',
         'start_time' => '开始时间',
         'end_time' => '结束时间',
@@ -40,5 +42,11 @@ return [
         'total_subtotal' => '总小计',
         'total_agent_profit' => '总代理分润',
         'total_channel_profit' => '总渠道分润',
+    ],
+
+    // 消息提示
+    'message' => [
+        'store_not_found' => '店家不存在',
+        'update_success' => '备注更新成功',
     ],
 ];
