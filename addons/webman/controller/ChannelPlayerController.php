@@ -283,14 +283,17 @@ class ChannelPlayerController
 
             $item['lottery_amount'] = $lotteryAmount;
 
-            // 计算小计 = (开分 + 投钞) - (洗分 + 彩金)
+            // 计算小计 = 开分 - (洗分 + 彩金)
+            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
-            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
 
-            $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
-            $item['subtotal'] = bcsub($totalIn, $totalOut, 2);
+            $item['subtotal'] = bcsub($rechargeAmount, $totalOut, 2);
+
+            // 存储纯开分金额（扣除投钞后），用于展示
+            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
+            $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
         }
 
         // 获取设备选项列表用于筛选器下拉选择
@@ -416,8 +419,10 @@ class ChannelPlayerController
                 }
             })->width(100)->align('center');
 
-            $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
+            $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value, $data) {
+                // 累计开分需要扣除投钞金额（因为开分字段已包含投钞）
+                $pureRecharge = $data['pure_recharge_amount'] ?? 0;
+                return number_format(floatval($pureRecharge), 2);
             })->width(120)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {

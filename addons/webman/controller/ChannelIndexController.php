@@ -550,7 +550,6 @@ class ChannelIndexController
                 PlayerRechargeRecord::TYPE_SELF,
                 PlayerRechargeRecord::TYPE_ARTIFICIAL,
                 PlayerRechargeRecord::TYPE_GB,
-                PlayerRechargeRecord::TYPE_MACHINE,
             ])->when($data_type, function (Builder $q, $value) {
                 switch ($value) {
                     case 'today': // 今天
