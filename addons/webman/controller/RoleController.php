@@ -123,15 +123,8 @@ class RoleController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('auth.title'));
 
-            // 检查是否为受保护的角色
-            $isProtected = false;
-            if ($form->isEdit()) {
-                $role = $form->model()->find($form->input('id'));
-                $isProtected = ($role->is_protected ?? 0) == 1 ||
-                               in_array($role->id, [AdminRole::ROLE_CHANNEL, AdminRole::ROLE_AGENT, AdminRole::ROLE_STORE]);
-            }
-
-            $form->text('name', admin_trans('auth.fields.name'))->required()->disabled($isProtected);
+            // 字段定义 - 编辑模式下名称和类型字段默认禁用（受保护角色的校验在 saving hook 中进行）
+            $form->text('name', admin_trans('auth.fields.name'))->required();
             $form->textarea('desc', admin_trans('auth.fields.desc'))->rows(5)->required();
             $form->radio('type', admin_trans('auth.fields.type'))
                 ->default(AdminDepartment::TYPE_DEPARTMENT)
@@ -142,10 +135,20 @@ class RoleController
                     AdminDepartment::TYPE_STORE => admin_trans('auth.type.' . AdminDepartment::TYPE_STORE),
                 ])->disabled($form->isEdit());
             $form->number('sort', admin_trans('auth.fields.sort'))->default($this->model::max('sort') + 1);
+
             $form->saving(function (Form $form) {
                 // 编辑时检查是否为受保护的角色
                 if ($form->isEdit()) {
-                    $role = $form->model()->find($form->input('id'));
+                    $roleId = $form->input('id');
+                    if (!$roleId) {
+                        return message_error(admin_trans('common.role_not_exist'));
+                    }
+
+                    $role = $form->model()->find($roleId);
+                    if (!$role) {
+                        return message_error(admin_trans('common.role_not_exist'));
+                    }
+
                     $isProtected = ($role->is_protected ?? 0) == 1 ||
                                    in_array($role->id, [AdminRole::ROLE_CHANNEL, AdminRole::ROLE_AGENT, AdminRole::ROLE_STORE]);
 
