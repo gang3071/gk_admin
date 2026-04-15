@@ -91,7 +91,7 @@ class StorePlayerController
                 'player_extend.withdraw_amount',
                 'player_extend.machine_put_point'
             ])
-            ->orderBy('player.id', 'desc')
+            ->orderBy('player.id', 'asc')
             ->get()
             ->toArray();
 
@@ -137,7 +137,7 @@ class StorePlayerController
             ->where('department_id', $departmentId)
             ->where('store_admin_id', $storeAdminId)
             ->where('is_promoter', 0)
-            ->orderBy('id', 'desc')
+            ->orderBy('id', 'asc')
             ->get(['id', 'name', 'uuid'])
             ->mapWithKeys(function ($player) {
                 $label = $player->name
@@ -155,7 +155,7 @@ class StorePlayerController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            $grid->column('id', admin_trans('player.fields.id'))->width(80)->align('center');
+            $grid->column('id', admin_trans('player.fields.id'))->width(80)->sortable()->align('center');
 
             $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])

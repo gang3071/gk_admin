@@ -247,7 +247,7 @@ class ChannelPlayerController
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
                     $query->orderBy($exAdminSortField, $exAdminSortBy);
                 }, function ($query) {
-                    $query->orderBy('id', 'desc');
+                    $query->orderBy('id', 'asc');
                 })
             ->get()
             ->toArray();
@@ -318,7 +318,7 @@ class ChannelPlayerController
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
-            $grid->column('id', admin_trans('player.fields.id'))->fixed(true)->align('center');
+            $grid->column('id', admin_trans('player.fields.id'))->fixed(true)->sortable()->align('center');
             $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $image = !empty($data['avatar']) ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar']) : Avatar::create()->icon(Icon::create('UserOutlined'));
                 return Html::create()->content([

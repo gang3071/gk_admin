@@ -121,7 +121,7 @@ class ChannelAgentController
                 })
                 ->toArray();
 
-            $grid->column('id', 'ID')->width(80)->align('center');
+            $grid->column('id', 'ID')->width(80)->sortable()->align('center');
 
             $grid->column('nickname', admin_trans('channel_agent.fields.store_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
@@ -309,7 +309,7 @@ class ChannelAgentController
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
                     $query->orderBy($exAdminSortField, $exAdminSortBy);
                 }, function ($query) {
-                    $query->orderBy('id', 'desc');
+                    $query->orderBy('id', 'asc');
                 })
             ->get()
             ->toArray();
