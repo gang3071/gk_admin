@@ -280,15 +280,33 @@ class PlayerController
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
             }
         }
-        // 排序处理
-        if (!empty($exAdminSortField) && !empty($exAdminSortBy)) {
-            $query->orderBy($exAdminSortField, $exAdminSortBy);
-        } else {
-            $query->orderBy('id', 'asc');
-        }
+        $totalNum = clone $query;
+        $total = $totalNum-->get()->count();
+        $list = $query->forPage($page, $size)
+            ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
+                function ($query) use ($exAdminSortField, $exAdminSortBy) {
+                    $query->orderBy($exAdminSortField, $exAdminSortBy);
+                }, function ($query) {
+                    $query->orderBy('id', 'asc');
+                })
+            ->get()
+            ->toArray();
 
-        // ✅ 使用 Model 模式，让 Grid 自动分页（避免双重分页问题）
-        return Grid::create($query, function (Grid $grid) {
+        // ✅ 优化：使用 WalletService 批量从 Redis 缓存获取余额（显示实时余额）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
+
+            // 将 Redis 缓存余额合并到列表数据中（覆盖数据库余额）
+            foreach ($list as &$item) {
+                // 🔧 修复精度问题：格式化为保留2位小数
+                $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
+                // 移除数据库余额字段（仅用于排序）
+                unset($item['db_money']);
+            }
+            unset($item);
+        }
+        return Grid::create($list, function (Grid $grid) use ($total, $list) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -367,13 +385,7 @@ class PlayerController
                 $val,
                 $data
             ) {
-                // ✅ 从 Redis 动态获取实时余额（带静态缓存优化）
-                static $balanceCache = [];
-                if (!isset($balanceCache[$data['id']])) {
-                    $balanceCache[$data['id']] = WalletService::getBalance($data['id']);
-                }
-                $realBalance = number_format($balanceCache[$data['id']] ?? 0.0, 2, '.', '');
-                return Tag::create($realBalance)->color('orange')->style(['cursor' => 'pointer'])->modal([
+                return Tag::create($val)->color('orange')->style(['cursor' => 'pointer'])->modal([
                     $this,
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
@@ -585,6 +597,9 @@ class PlayerController
                     }
                 }
             });
+            $grid->attr('is_mongo', true);
+            $grid->attr('is_mongo_total', $total);
+            $grid->attr('mongo_model', $list);
         });
     }
 
@@ -1534,276 +1549,276 @@ class PlayerController
     }
 
     // 单一钱包模式下不需要钱包转账功能
-        // /** @var Player $changePlayer */
-        // $playerGamePlatformList = PlayerGamePlatform::query()->whereIn('id', $selected)->get();
-        // if (!$playerGamePlatformList) {
-            // return message_error(admin_trans('player.not_fount'));
-        // }
-        // /** @var PlayerGamePlatform $playerGamePlatform */
-        // foreach ($playerGamePlatformList as $playerGamePlatform) {
-            // if ($playerGamePlatform->gamePlatform->status != 1) {
-                // return message_error(admin_trans('player_game_platform.game_platform_disable'));
-            // }
-            // $lang = locale();
-            // $lang = Str::replace('_', '-', $lang);
-            // try {
-                // $balanceData = $this->callGameProxyApi(
-                    // '/api/v1/get-balance',
-                    // $playerGamePlatform->player,
-                    // ['game_platform_id' => $playerGamePlatform->gamePlatform->id],
-                    // $lang
-                // );
-                // $amount = $balanceData['balance'] ?? 0;
-            // } catch (\Exception $e) {
-                // return message_error($e->getMessage());
-            // }
-            // if ($amount > 0) {
-                // DB::beginTransaction();
-                // try {
-                    // $player = $playerGamePlatform->player;
-                    // $gamePlatform = $playerGamePlatform->gamePlatform;
-                    // $playerWalletTransfer = new PlayerWalletTransfer();
-                    // $playerWalletTransfer->player_id = $player->id;
-                    // $playerWalletTransfer->parent_player_id = $player->recommend_id ?? 0;
-                    // $playerWalletTransfer->agent_player_id = $player->recommend_promoter->recommend_id ?? 0;
-                    // $playerWalletTransfer->platform_id = $gamePlatform->id;
-                    // $playerWalletTransfer->department_id = $player->department_id;
-                    // $playerWalletTransfer->type = PlayerWalletTransfer::TYPE_IN;
-                    // $playerWalletTransfer->game_amount = $amount;
-                    // $playerWalletTransfer->player_amount = $player->machine_wallet->money;
-                    // $playerWalletTransfer->tradeno = createOrderNo();
-                    // $result = $this->callGameProxyApi(
-                        // '/api/v1/wallet-transfer-in',
-                        // $player,
-                        // [
-                            // 'game_platform_id' => $gamePlatform->id,
-                            // 'amount' => $amount,
-                            // 'take_all' => 'true',
-                        // ],
-                        // $lang
-                    // );
-                    // $playerWalletTransfer->platform_no = $result['order_id'] ?? '';
-                    // $playerWalletTransfer->amount = $result['amount'] ?? $amount;
-                    // $beforeGameAmount = $player->machine_wallet->money;
-                    // 更新玩家统计
-                    // $player->machine_wallet->money = bcadd($player->machine_wallet->money,
-                        // $playerWalletTransfer->amount, 2);
-                    // $player->push();
-                    // $playerWalletTransfer->save();
+    // /** @var Player $changePlayer */
+    // $playerGamePlatformList = PlayerGamePlatform::query()->whereIn('id', $selected)->get();
+    // if (!$playerGamePlatformList) {
+    // return message_error(admin_trans('player.not_fount'));
+    // }
+    // /** @var PlayerGamePlatform $playerGamePlatform */
+    // foreach ($playerGamePlatformList as $playerGamePlatform) {
+    // if ($playerGamePlatform->gamePlatform->status != 1) {
+    // return message_error(admin_trans('player_game_platform.game_platform_disable'));
+    // }
+    // $lang = locale();
+    // $lang = Str::replace('_', '-', $lang);
+    // try {
+    // $balanceData = $this->callGameProxyApi(
+    // '/api/v1/get-balance',
+    // $playerGamePlatform->player,
+    // ['game_platform_id' => $playerGamePlatform->gamePlatform->id],
+    // $lang
+    // );
+    // $amount = $balanceData['balance'] ?? 0;
+    // } catch (\Exception $e) {
+    // return message_error($e->getMessage());
+    // }
+    // if ($amount > 0) {
+    // DB::beginTransaction();
+    // try {
+    // $player = $playerGamePlatform->player;
+    // $gamePlatform = $playerGamePlatform->gamePlatform;
+    // $playerWalletTransfer = new PlayerWalletTransfer();
+    // $playerWalletTransfer->player_id = $player->id;
+    // $playerWalletTransfer->parent_player_id = $player->recommend_id ?? 0;
+    // $playerWalletTransfer->agent_player_id = $player->recommend_promoter->recommend_id ?? 0;
+    // $playerWalletTransfer->platform_id = $gamePlatform->id;
+    // $playerWalletTransfer->department_id = $player->department_id;
+    // $playerWalletTransfer->type = PlayerWalletTransfer::TYPE_IN;
+    // $playerWalletTransfer->game_amount = $amount;
+    // $playerWalletTransfer->player_amount = $player->machine_wallet->money;
+    // $playerWalletTransfer->tradeno = createOrderNo();
+    // $result = $this->callGameProxyApi(
+    // '/api/v1/wallet-transfer-in',
+    // $player,
+    // [
+    // 'game_platform_id' => $gamePlatform->id,
+    // 'amount' => $amount,
+    // 'take_all' => 'true',
+    // ],
+    // $lang
+    // );
+    // $playerWalletTransfer->platform_no = $result['order_id'] ?? '';
+    // $playerWalletTransfer->amount = $result['amount'] ?? $amount;
+    // $beforeGameAmount = $player->machine_wallet->money;
+    // 更新玩家统计
+    // $player->machine_wallet->money = bcadd($player->machine_wallet->money,
+    // $playerWalletTransfer->amount, 2);
+    // $player->push();
+    // $playerWalletTransfer->save();
 
-                    // $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    // $playerDeliveryRecord->player_id = $player->id;
-                    // $playerDeliveryRecord->department_id = $player->department_id;
-                    // $playerDeliveryRecord->target = $playerWalletTransfer->getTable();
-                    // $playerDeliveryRecord->target_id = $playerWalletTransfer->id;
-                    // $playerDeliveryRecord->platform_id = $gamePlatform->id;
-                    // $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN;
-                    // $playerDeliveryRecord->source = 'wallet_transfer_in';
-                    // $playerDeliveryRecord->amount = $playerWalletTransfer->amount;
-                    // $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    // $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    // $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
-                    // $playerDeliveryRecord->remark = $target->remark ?? '';
-                    // $playerDeliveryRecord->user_id = Admin::id();
-                    // $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        // [], 'message');
-                    // $playerDeliveryRecord->save();
+    // $playerDeliveryRecord = new PlayerDeliveryRecord;
+    // $playerDeliveryRecord->player_id = $player->id;
+    // $playerDeliveryRecord->department_id = $player->department_id;
+    // $playerDeliveryRecord->target = $playerWalletTransfer->getTable();
+    // $playerDeliveryRecord->target_id = $playerWalletTransfer->id;
+    // $playerDeliveryRecord->platform_id = $gamePlatform->id;
+    // $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN;
+    // $playerDeliveryRecord->source = 'wallet_transfer_in';
+    // $playerDeliveryRecord->amount = $playerWalletTransfer->amount;
+    // $playerDeliveryRecord->amount_before = $beforeGameAmount;
+    // $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
+    // $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
+    // $playerDeliveryRecord->remark = $target->remark ?? '';
+    // $playerDeliveryRecord->user_id = Admin::id();
+    // $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
+    // [], 'message');
+    // $playerDeliveryRecord->save();
 
-                    // DB::commit();
-                // } catch (Exception|GameException $e) {
-                    // DB::rollBack();
-                    // return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
-                // }
-            // }
-        // }
-
-        // return message_success(admin_trans('admin.success'));
+    // DB::commit();
+    // } catch (Exception|GameException $e) {
+    // DB::rollBack();
+    // return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
+    // }
+    // }
     // }
 
-        // if ($playerGamePlatform->gamePlatform->status != 1) {
-            // return message_error(admin_trans('player_game_platform.game_platform_disable'));
-        // }
-        // $lang = locale();
-        // $lang = Str::replace('_', '-', $lang);
-        // try {
-            // $balanceData = $this->callGameProxyApi(
-                // '/api/v1/get-balance',
-                // $playerGamePlatform->player,
-                // ['game_platform_id' => $playerGamePlatform->gamePlatform->id],
-                // $lang
-            // );
-            // $balance = $balanceData['balance'] ?? 0;
-        // } catch (\Exception $e) {
-            // return message_error($e->getMessage());
-        // }
-        // return Form::create([], function (Form $form) use ($id, $playerGamePlatform, $balance, $lang) {
-            // $form->number('money',
-                // admin_trans('player_game_platform.current_balance') . ': ' . $balance)->min(0)->max($balance)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player_game_platform.transfer_out_amount'));
-            // $form->switch('take_all', admin_trans('player_game_platform.has_all_transfer_out'));
-            // $form->actions()->hideResetButton();
-            // $form->saving(function (Form $form) use ($playerGamePlatform, $balance, $lang) {
-                // $amount = $form->input('money');
-                // $takeAll = $form->input('take_all');
-                // if ($takeAll == 0 && $amount > $balance) {
-                    // return message_error(trans('insufficient_wallet_balance', [], 'message'));
-                // }
-                // if ($takeAll == 1) {
-                    // if ($balance <= 0) {
-                        // return message_error(trans('insufficient_wallet_balance', [], 'message'));
-                    // }
-                    // $amount = $balance;
-                // }
-                // DB::beginTransaction();
-                // try {
-                    // $player = $playerGamePlatform->player;
-                    // $gamePlatform = $playerGamePlatform->gamePlatform;
-                    // $playerWalletTransfer = new PlayerWalletTransfer();
-                    // $playerWalletTransfer->player_id = $player->id;
-                    // $playerWalletTransfer->parent_player_id = $player->recommend_id ?? 0;
-                    // $playerWalletTransfer->agent_player_id = $player->recommend_promoter->recommend_id ?? 0;
-                    // $playerWalletTransfer->platform_id = $gamePlatform->id;
-                    // $playerWalletTransfer->department_id = $player->department_id;
-                    // $playerWalletTransfer->type = PlayerWalletTransfer::TYPE_IN;
-                    // $playerWalletTransfer->game_amount = $balance;
-                    // $playerWalletTransfer->player_amount = $player->machine_wallet->money;
-                    // $playerWalletTransfer->tradeno = createOrderNo();
-                    // $result = $this->callGameProxyApi(
-                        // '/api/v1/wallet-transfer-in',
-                        // $player,
-                        // [
-                            // 'game_platform_id' => $gamePlatform->id,
-                            // 'amount' => $amount,
-                            // 'take_all' => $takeAll == 1 ? 'true' : 'false',
-                        // ],
-                        // $lang
-                    // );
-                    // $playerWalletTransfer->platform_no = $result['order_id'] ?? '';
-                    // $playerWalletTransfer->amount = $result['amount'] ?? $amount;
-                    // $beforeGameAmount = $player->machine_wallet->money;
-                    // 更新玩家统计
-                    // $player->machine_wallet->money = bcadd($player->machine_wallet->money,
-                        // $playerWalletTransfer->amount, 2);
-                    // $player->push();
-                    // $playerWalletTransfer->save();
-
-                    // $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    // $playerDeliveryRecord->player_id = $player->id;
-                    // $playerDeliveryRecord->department_id = $player->department_id;
-                    // $playerDeliveryRecord->target = $playerWalletTransfer->getTable();
-                    // $playerDeliveryRecord->target_id = $playerWalletTransfer->id;
-                    // $playerDeliveryRecord->platform_id = $gamePlatform->id;
-                    // $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN;
-                    // $playerDeliveryRecord->source = 'wallet_transfer_in';
-                    // $playerDeliveryRecord->amount = $playerWalletTransfer->amount;
-                    // $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    // $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    // $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
-                    // $playerDeliveryRecord->remark = $target->remark ?? '';
-                    // $playerDeliveryRecord->user_id = Admin::id();
-                    // $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        // [], 'message');
-                    // $playerDeliveryRecord->save();
-
-                    // DB::commit();
-                // } catch (Exception $e) {
-                    // DB::rollBack();
-                    // return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
-                // } catch (GameException $e) {
-                    // DB::rollBack();
-                    // return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
-                // }
-                // return message_success(admin_trans('player_game_platform.transfer_out_success'));
-            // });
-            // $form->layout('vertical');
-        // });
+    // return message_success(admin_trans('admin.success'));
     // }
 
-        // if ($playerGamePlatform->gamePlatform->status != 1) {
-            // return message_error(admin_trans('player_game_platform.game_platform_disable'));
-        // }
-        // return Form::create([], function (Form $form) use ($id, $playerGamePlatform) {
-            // $form->number('money',
-                // admin_trans('player_game_platform.current_balance') . ': ' . $playerGamePlatform->player->machine_wallet->money)->min(0)->max($playerGamePlatform->player->machine_wallet->money)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player_game_platform.transfer_in_amount'));
-            // $form->switch('take_all', admin_trans('player_game_platform.has_all_transfer_in'));
-            // $form->actions()->hideResetButton();
-            // $form->saving(function (Form $form) use ($playerGamePlatform) {
-                // $amount = $form->input('money');
-                // $takeAll = $form->input('take_all');
-                // if ($takeAll == 0 && $amount > $playerGamePlatform->player->machine_wallet->money) {
-                    // return message_error(admin_trans('player_game_platform.insufficient_account_balance'));
-                // }
-                // if ($takeAll == 1) {
-                    // $amount = $playerGamePlatform->player->machine_wallet->money;
-                // }
-                // $lang = locale();
-                // $lang = Str::replace('_', '-', $lang);
-                // $player = $playerGamePlatform->player;
-                // $gamePlatform = $playerGamePlatform->gamePlatform;
-                // $balanceData = $this->callGameProxyApi(
-                    // '/api/v1/get-balance',
-                    // $player,
-                    // ['game_platform_id' => $gamePlatform->id],
-                    // $lang
-                // );
-                // $balance = $balanceData['balance'] ?? 0;
-                // DB::beginTransaction();
-                // try {
-                    // $playerWalletTransfer = new PlayerWalletTransfer();
-                    // $playerWalletTransfer->player_id = $player->id;
-                    // $playerWalletTransfer->parent_player_id = $player->recommend_id ?? 0;
-                    // $playerWalletTransfer->agent_player_id = $player->recommend_promoter->recommend_id ?? 0;
-                    // $playerWalletTransfer->platform_id = $gamePlatform->id;
-                    // $playerWalletTransfer->department_id = $player->department_id;
-                    // $playerWalletTransfer->type = PlayerWalletTransfer::TYPE_OUT;
-                    // $playerWalletTransfer->amount = abs($amount);
-                    // $playerWalletTransfer->game_amount = $balance;
-                    // $playerWalletTransfer->player_amount = $player->machine_wallet->money;
-                    // $playerWalletTransfer->tradeno = createOrderNo();
-                    // $result = $this->callGameProxyApi(
-                        // '/api/v1/wallet-transfer-out',
-                        // $player,
-                        // [
-                            // 'game_platform_id' => $gamePlatform->id,
-                            // 'amount' => $amount,
-                        // ],
-                        // $lang
-                    // );
-                    // $playerWalletTransfer->platform_no = $result['order_id'] ?? '';
-                    // $playerWalletTransfer->save();
-                    // $beforeGameAmount = $player->machine_wallet->money;
-                    // $player->machine_wallet->money = bcsub($player->machine_wallet->money,
-                        // $playerWalletTransfer->amount, 2);
-                    // $player->push();
+    // if ($playerGamePlatform->gamePlatform->status != 1) {
+    // return message_error(admin_trans('player_game_platform.game_platform_disable'));
+    // }
+    // $lang = locale();
+    // $lang = Str::replace('_', '-', $lang);
+    // try {
+    // $balanceData = $this->callGameProxyApi(
+    // '/api/v1/get-balance',
+    // $playerGamePlatform->player,
+    // ['game_platform_id' => $playerGamePlatform->gamePlatform->id],
+    // $lang
+    // );
+    // $balance = $balanceData['balance'] ?? 0;
+    // } catch (\Exception $e) {
+    // return message_error($e->getMessage());
+    // }
+    // return Form::create([], function (Form $form) use ($id, $playerGamePlatform, $balance, $lang) {
+    // $form->number('money',
+    // admin_trans('player_game_platform.current_balance') . ': ' . $balance)->min(0)->max($balance)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player_game_platform.transfer_out_amount'));
+    // $form->switch('take_all', admin_trans('player_game_platform.has_all_transfer_out'));
+    // $form->actions()->hideResetButton();
+    // $form->saving(function (Form $form) use ($playerGamePlatform, $balance, $lang) {
+    // $amount = $form->input('money');
+    // $takeAll = $form->input('take_all');
+    // if ($takeAll == 0 && $amount > $balance) {
+    // return message_error(trans('insufficient_wallet_balance', [], 'message'));
+    // }
+    // if ($takeAll == 1) {
+    // if ($balance <= 0) {
+    // return message_error(trans('insufficient_wallet_balance', [], 'message'));
+    // }
+    // $amount = $balance;
+    // }
+    // DB::beginTransaction();
+    // try {
+    // $player = $playerGamePlatform->player;
+    // $gamePlatform = $playerGamePlatform->gamePlatform;
+    // $playerWalletTransfer = new PlayerWalletTransfer();
+    // $playerWalletTransfer->player_id = $player->id;
+    // $playerWalletTransfer->parent_player_id = $player->recommend_id ?? 0;
+    // $playerWalletTransfer->agent_player_id = $player->recommend_promoter->recommend_id ?? 0;
+    // $playerWalletTransfer->platform_id = $gamePlatform->id;
+    // $playerWalletTransfer->department_id = $player->department_id;
+    // $playerWalletTransfer->type = PlayerWalletTransfer::TYPE_IN;
+    // $playerWalletTransfer->game_amount = $balance;
+    // $playerWalletTransfer->player_amount = $player->machine_wallet->money;
+    // $playerWalletTransfer->tradeno = createOrderNo();
+    // $result = $this->callGameProxyApi(
+    // '/api/v1/wallet-transfer-in',
+    // $player,
+    // [
+    // 'game_platform_id' => $gamePlatform->id,
+    // 'amount' => $amount,
+    // 'take_all' => $takeAll == 1 ? 'true' : 'false',
+    // ],
+    // $lang
+    // );
+    // $playerWalletTransfer->platform_no = $result['order_id'] ?? '';
+    // $playerWalletTransfer->amount = $result['amount'] ?? $amount;
+    // $beforeGameAmount = $player->machine_wallet->money;
+    // 更新玩家统计
+    // $player->machine_wallet->money = bcadd($player->machine_wallet->money,
+    // $playerWalletTransfer->amount, 2);
+    // $player->push();
+    // $playerWalletTransfer->save();
 
-                    // $playerDeliveryRecord = new PlayerDeliveryRecord;
-                    // $playerDeliveryRecord->player_id = $player->id;
-                    // $playerDeliveryRecord->department_id = $player->department_id;
-                    // $playerDeliveryRecord->target = $playerWalletTransfer->getTable();
-                    // $playerDeliveryRecord->target_id = $playerWalletTransfer->id;
-                    // $playerDeliveryRecord->platform_id = $gamePlatform->id;
-                    // $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT;
-                    // $playerDeliveryRecord->source = 'wallet_transfer_out';
-                    // $playerDeliveryRecord->amount = $playerWalletTransfer->amount;
-                    // $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    // $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
-                    // $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
-                    // $playerDeliveryRecord->remark = $target->remark ?? '';
-                    // $playerDeliveryRecord->user_id = Admin::id();
-                    // $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        // [], 'message');
-                    // $playerDeliveryRecord->save();
-                    // DB::commit();
-                // } catch (Exception $e) {
-                    // DB::rollBack();
-                    // return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
-                // } catch (GameException $e) {
-                    // DB::rollBack();
-                    // return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
-                // }
-                // return message_success(admin_trans('player_game_platform.transfer_in_success'));
-            // });
-            // $form->layout('vertical');
-        // });
+    // $playerDeliveryRecord = new PlayerDeliveryRecord;
+    // $playerDeliveryRecord->player_id = $player->id;
+    // $playerDeliveryRecord->department_id = $player->department_id;
+    // $playerDeliveryRecord->target = $playerWalletTransfer->getTable();
+    // $playerDeliveryRecord->target_id = $playerWalletTransfer->id;
+    // $playerDeliveryRecord->platform_id = $gamePlatform->id;
+    // $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN;
+    // $playerDeliveryRecord->source = 'wallet_transfer_in';
+    // $playerDeliveryRecord->amount = $playerWalletTransfer->amount;
+    // $playerDeliveryRecord->amount_before = $beforeGameAmount;
+    // $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
+    // $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
+    // $playerDeliveryRecord->remark = $target->remark ?? '';
+    // $playerDeliveryRecord->user_id = Admin::id();
+    // $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
+    // [], 'message');
+    // $playerDeliveryRecord->save();
+
+    // DB::commit();
+    // } catch (Exception $e) {
+    // DB::rollBack();
+    // return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
+    // } catch (GameException $e) {
+    // DB::rollBack();
+    // return message_error(admin_trans('player_game_platform.transfer_out_failed') . $e->getMessage());
+    // }
+    // return message_success(admin_trans('player_game_platform.transfer_out_success'));
+    // });
+    // $form->layout('vertical');
+    // });
+    // }
+
+    // if ($playerGamePlatform->gamePlatform->status != 1) {
+    // return message_error(admin_trans('player_game_platform.game_platform_disable'));
+    // }
+    // return Form::create([], function (Form $form) use ($id, $playerGamePlatform) {
+    // $form->number('money',
+    // admin_trans('player_game_platform.current_balance') . ': ' . $playerGamePlatform->player->machine_wallet->money)->min(0)->max($playerGamePlatform->player->machine_wallet->money)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player_game_platform.transfer_in_amount'));
+    // $form->switch('take_all', admin_trans('player_game_platform.has_all_transfer_in'));
+    // $form->actions()->hideResetButton();
+    // $form->saving(function (Form $form) use ($playerGamePlatform) {
+    // $amount = $form->input('money');
+    // $takeAll = $form->input('take_all');
+    // if ($takeAll == 0 && $amount > $playerGamePlatform->player->machine_wallet->money) {
+    // return message_error(admin_trans('player_game_platform.insufficient_account_balance'));
+    // }
+    // if ($takeAll == 1) {
+    // $amount = $playerGamePlatform->player->machine_wallet->money;
+    // }
+    // $lang = locale();
+    // $lang = Str::replace('_', '-', $lang);
+    // $player = $playerGamePlatform->player;
+    // $gamePlatform = $playerGamePlatform->gamePlatform;
+    // $balanceData = $this->callGameProxyApi(
+    // '/api/v1/get-balance',
+    // $player,
+    // ['game_platform_id' => $gamePlatform->id],
+    // $lang
+    // );
+    // $balance = $balanceData['balance'] ?? 0;
+    // DB::beginTransaction();
+    // try {
+    // $playerWalletTransfer = new PlayerWalletTransfer();
+    // $playerWalletTransfer->player_id = $player->id;
+    // $playerWalletTransfer->parent_player_id = $player->recommend_id ?? 0;
+    // $playerWalletTransfer->agent_player_id = $player->recommend_promoter->recommend_id ?? 0;
+    // $playerWalletTransfer->platform_id = $gamePlatform->id;
+    // $playerWalletTransfer->department_id = $player->department_id;
+    // $playerWalletTransfer->type = PlayerWalletTransfer::TYPE_OUT;
+    // $playerWalletTransfer->amount = abs($amount);
+    // $playerWalletTransfer->game_amount = $balance;
+    // $playerWalletTransfer->player_amount = $player->machine_wallet->money;
+    // $playerWalletTransfer->tradeno = createOrderNo();
+    // $result = $this->callGameProxyApi(
+    // '/api/v1/wallet-transfer-out',
+    // $player,
+    // [
+    // 'game_platform_id' => $gamePlatform->id,
+    // 'amount' => $amount,
+    // ],
+    // $lang
+    // );
+    // $playerWalletTransfer->platform_no = $result['order_id'] ?? '';
+    // $playerWalletTransfer->save();
+    // $beforeGameAmount = $player->machine_wallet->money;
+    // $player->machine_wallet->money = bcsub($player->machine_wallet->money,
+    // $playerWalletTransfer->amount, 2);
+    // $player->push();
+
+    // $playerDeliveryRecord = new PlayerDeliveryRecord;
+    // $playerDeliveryRecord->player_id = $player->id;
+    // $playerDeliveryRecord->department_id = $player->department_id;
+    // $playerDeliveryRecord->target = $playerWalletTransfer->getTable();
+    // $playerDeliveryRecord->target_id = $playerWalletTransfer->id;
+    // $playerDeliveryRecord->platform_id = $gamePlatform->id;
+    // $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT;
+    // $playerDeliveryRecord->source = 'wallet_transfer_out';
+    // $playerDeliveryRecord->amount = $playerWalletTransfer->amount;
+    // $playerDeliveryRecord->amount_before = $beforeGameAmount;
+    // $playerDeliveryRecord->amount_after = $player->machine_wallet->money;
+    // $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
+    // $playerDeliveryRecord->remark = $target->remark ?? '';
+    // $playerDeliveryRecord->user_id = Admin::id();
+    // $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
+    // [], 'message');
+    // $playerDeliveryRecord->save();
+    // DB::commit();
+    // } catch (Exception $e) {
+    // DB::rollBack();
+    // return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
+    // } catch (GameException $e) {
+    // DB::rollBack();
+    // return message_error(admin_trans('player_game_platform.transfer_in_failed') . $e->getMessage());
+    // }
+    // return message_success(admin_trans('player_game_platform.transfer_in_success'));
+    // });
+    // $form->layout('vertical');
+    // });
     // }
 
     /**
