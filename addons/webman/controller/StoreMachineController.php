@@ -212,6 +212,30 @@ class StoreMachineController
                         ->type('primary')
                         ->size('small')
                 );
+
+                // 添加自动交班配置按钮
+                $actions->append(
+                    Button::create('自动交班配置')
+                        ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
+                        ->type('default')
+                        ->size('small')
+                );
+
+                // 添加店家系统配置按钮
+                $actions->append(
+                    Button::create('系统配置')
+                        ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                        ->type('default')
+                        ->size('small')
+                );
+
+                // 添加店家开分配置按钮
+                $actions->append(
+                    Button::create('开分配置')
+                        ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                        ->type('default')
+                        ->size('small')
+                );
             });
 
             // 行展开 - 显示限红组配置信息
@@ -829,5 +853,457 @@ class StoreMachineController
         }
 
         return $data;
+    }
+
+    /**
+     * 自动交班配置表单（渠道查看店家配置）
+     * @auth true
+     * @group channel
+     */
+    public function autoShiftConfigForm()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Form::create([], function (Form $form) {
+                $form->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        // 获取自动交班配置
+        $config = \addons\webman\model\StoreAutoShiftConfig::query()
+            ->where('department_id', $store->department_id)
+            ->where('bind_admin_user_id', $storeId)
+            ->first();
+
+        return Form::create($config ? $config->toArray() : [], function (Form $form) use ($store, $storeId, $config) {
+            $form->title('自动交班配置 - ' . ($store->nickname ?: $store->username));
+
+            // 显示执行统计
+            if ($config && $config->is_enabled) {
+                $service = new \app\service\store\AutoShiftService();
+                $stats = $service->getExecutionStats($store->department_id, $storeId, 7);
+
+                $form->divider()->content(admin_trans('shift_handover.auto.stats_title'));
+
+                $form->row(function (Form $form) use ($stats) {
+                    // 总执行次数
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_total'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['total'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
+                                    ->style(['font-size' => '24px', 'font-weight' => '500'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
+
+                    // 成功次数
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_success'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['success'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
+                                    ->style(['font-size' => '24px', 'font-weight' => '500', 'color' => '#3f8600'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
+
+                    // 失败次数
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_failed'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['failed'] ?? 0) . ' ' . admin_trans('shift_handover.auto.stats_times'))
+                                    ->style(['font-size' => '24px', 'font-weight' => '500', 'color' => '#cf1322'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
+
+                    // 成功率
+                    $form->column(function (Form $form) use ($stats) {
+                        $form->push(Html::div()->content(
+                            Html::create()->content([
+                                Html::div()->content(admin_trans('shift_handover.auto.stats_success_rate'))
+                                    ->style(['color' => 'rgba(0,0,0,0.45)', 'font-size' => '14px', 'margin-bottom' => '4px']),
+                                Html::div()->content(($stats['total'] > 0 ? round(($stats['success'] / $stats['total']) * 100, 2) : 0) . '%')
+                                    ->style(['font-size' => '24px', 'font-weight' => '500'])
+                            ])
+                        )->style(['text-align' => 'center', 'padding' => '16px', 'border' => '1px solid #f0f0f0', 'border-radius' => '4px']));
+                    })->span(6);
+                })->gutter(16);
+            }
+
+            // 基础配置
+            $form->push(Html::div()->style(['margin-top' => '24px']));
+            $form->divider()->content(admin_trans('shift_handover.auto.config_title'));
+
+            $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
+                ->checkedValue(1)
+                ->unCheckedValue(0)
+                ->help(admin_trans('shift_handover.auto.enable_help'));
+
+            // 三个时间字段（横向排列）
+            $form->row(function (Form $form) {
+                $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
+                    ->default('08:00:00')
+                    ->help(admin_trans('shift_handover.auto.shift_time_1_help'))
+                    ->span(8);
+
+                $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
+                    ->default('16:00:00')
+                    ->help(admin_trans('shift_handover.auto.shift_time_2_help'))
+                    ->span(8);
+
+                $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
+                    ->default('00:00:00')
+                    ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
+                    ->span(8);
+            });
+
+            // 显示下次交班时间
+            $form->push(Html::div()->style(['margin-top' => '24px']));
+            $form->divider()->content(admin_trans('shift_handover.auto.exec_info'));
+            if ($config && $config->next_shift_time) {
+                $form->push(Html::div()->content(
+                    Html::create()->content([
+                        Html::create()->tag('strong')->content(admin_trans('shift_handover.auto.next_shift_time') . '：'),
+                        $config->next_shift_time
+                    ])
+                )->style(['padding' => '16px', 'background' => '#f0f9ff', 'border' => '1px solid #bae7ff', 'border-radius' => '4px', 'margin-bottom' => '24px']));
+            } else {
+                $form->push(Html::div()->content(admin_trans('shift_handover.auto.config_save_hint'))
+                    ->style(['padding' => '16px', 'background' => '#f5f5f5', 'border' => '1px solid #d9d9d9', 'border-radius' => '4px', 'color' => '#999', 'margin-bottom' => '24px']));
+            }
+
+            $form->hidden('store_id')->value($storeId);
+
+            // 处理表单提交
+            $form->saving(function (Form $form) use ($store) {
+                $request = request();
+                $formData = $request->post('data', []);
+
+                $data = [
+                    'department_id' => $store->department_id,
+                    'bind_admin_user_id' => $formData['store_id'],
+                    'is_enabled' => isset($formData['is_enabled']) ? (int)$formData['is_enabled'] : 0,
+                    'shift_time_1' => $formData['shift_time_1'] ?? '08:00:00',
+                    'shift_time_2' => $formData['shift_time_2'] ?? '16:00:00',
+                    'shift_time_3' => $formData['shift_time_3'] ?? '00:00:00',
+                    'auto_settlement' => 1,
+                ];
+
+                $service = new \app\service\store\AutoShiftService();
+                $result = $service->saveConfig($data);
+
+                if ($result['code'] === 0) {
+                    return message_success($result['msg'] ?? admin_trans('shift_handover.auto.save_success'));
+                } else {
+                    return message_error($result['msg'] ?? admin_trans('shift_handover.auto.save_failed'));
+                }
+            });
+        });
+    }
+
+    /**
+     * 店家系统配置列表（渠道查看店家配置）
+     * @auth true
+     * @group channel
+     */
+    public function storeSettingList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        return Grid::create(new StoreSetting(), function (Grid $grid) use ($store, $storeId) {
+            $grid->title('系统配置 - ' . ($store->nickname ?: $store->username));
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 查询该店家的专属配置
+            $grid->model()
+                ->where('department_id', $store->department_id)
+                ->where('admin_user_id', $storeId);
+
+            // 功能列
+            $grid->column('feature', admin_trans('store_setting.fields.feature'))
+                ->display(function ($value, StoreSetting $data) {
+                    return admin_trans('store_setting.fields.' . $data->feature);
+                })->align('center');
+
+            // 配置列（复用 StoreSettingController 的逻辑）
+            $grid->column('setting', admin_trans('store_setting.fields.setting'))
+                // 首页提醒消息
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'home_notice';
+                })->editable(
+                    \ExAdmin\ui\component\grid\grid\Editable::textarea('content')
+                        ->showCount()
+                        ->rows(6)
+                        ->rule(['max:500' => admin_trans('store_setting.home_notice_max_len')])
+                )->display(function ($value, StoreSetting $data) {
+                    return \Illuminate\Support\Str::of($data->content)->limit(50, ' (...)');
+                })->width('30%')->align('center')
+                // 店家跑马灯
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'store_marquee';
+                })->editable(
+                    \ExAdmin\ui\component\grid\grid\Editable::textarea('content')
+                        ->showCount()
+                        ->rows(6)
+                        ->rule(['max:500' => admin_trans('store_setting.store_marquee_max_len')])
+                )->display(function ($value, StoreSetting $data) {
+                    return \Illuminate\Support\Str::of($data->content)->limit(50, ' (...)');
+                })->width('30%')->align('center')
+                // 订单过期时间
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'order_expiration';
+                })->editable(
+                    (new \ExAdmin\ui\component\grid\grid\Editable)->number('num')
+                        ->rule([
+                            'integer' => admin_trans('store_setting.validation.integer'),
+                            'max:180' => admin_trans('store_setting.validation.max', null, ['{max}' => 180]),
+                            'min:5' => admin_trans('store_setting.validation.min', null, ['{min}' => 5]),
+                        ])->addonAfter(admin_trans('store_setting.minutes'))
+                )->display(function ($val, StoreSetting $data) {
+                    if (!empty($data->num)) {
+                        return $data->num . ' ' . admin_trans('store_setting.minutes');
+                    }
+                    return '';
+                })->align('center')
+                // 营业时间
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'business_hours';
+                })->display(function ($value, StoreSetting $data) {
+                    $time = '';
+                    !empty($data->date_start) && $time .= $data->date_start;
+                    !empty($data->date_end) && $time .= ' ~ ' . $data->date_end;
+                    return Tag::create($time)->color('blue')->modal([$this, 'editBusinessHours'], ['data' => $data]);
+                })->align('center')
+                // 是否开启实体机台
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'enable_physical_machine';
+                })->editable(
+                    (new \ExAdmin\ui\component\grid\grid\Editable)->select('num')
+                        ->options([
+                            1 => admin_trans('store_setting.enable'),
+                            0 => admin_trans('store_setting.disable'),
+                        ])
+                )->display(function ($val, StoreSetting $data) {
+                    if ($data->num == 1) {
+                        return Tag::create(admin_trans('store_setting.enable'))->color('green');
+                    } else {
+                        return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                    }
+                })->align('center')
+                // 是否开启真人百家
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'enable_live_baccarat';
+                })->editable(
+                    (new \ExAdmin\ui\component\grid\grid\Editable)->select('num')
+                        ->options([
+                            1 => admin_trans('store_setting.enable'),
+                            0 => admin_trans('store_setting.disable'),
+                        ])
+                )->display(function ($val, StoreSetting $data) {
+                    if ($data->num == 1) {
+                        return Tag::create(admin_trans('store_setting.enable'))->color('green');
+                    } else {
+                        return Tag::create(admin_trans('store_setting.disable'))->color('red');
+                    }
+                })->align('center')
+                // 爆机金额
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'machine_crash_amount';
+                })->editable(
+                    (new \ExAdmin\ui\component\grid\grid\Editable)->number('num')
+                        ->rule([
+                            'numeric' => admin_trans('store_setting.validation.numeric'),
+                            'min:0' => admin_trans('store_setting.validation.min', null, ['{min}' => 0]),
+                        ])
+                        ->precision(2)
+                )->display(function ($val, StoreSetting $data) {
+                    if (!empty($data->num)) {
+                        return number_format(floatval($data->num), 2);
+                    }
+                    return '0.00';
+                })->align('center');
+
+            // 状态列
+            $grid->column('status', admin_trans('store_setting.fields.status'))
+                ->switch()->align('center');
+
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+        });
+    }
+
+    /**
+     * 编辑营业时间（用于店家系统配置）
+     * @auth true
+     * @group channel
+     */
+    public function editBusinessHours(StoreSetting $data): Form
+    {
+        return Form::create($data, function (Form $form) use ($data) {
+            $form->title(admin_trans('store_setting.edit_business_hours'));
+            $form->timeRange('date_start', 'date_end', admin_trans('store_setting.time_range'))
+                ->value([$data->date_start, $data->date_end])
+                ->required();
+        });
+    }
+
+    /**
+     * 店家开分配置列表（渠道查看店家配置）
+     * @auth true
+     * @group channel
+     */
+    public function openScoreSettingList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        $model = plugin()->webman->config('database.open_score_setting_model');
+
+        return Grid::create(new $model(), function (Grid $grid) use ($store, $storeId, $model) {
+            $grid->title('开分配置 - ' . ($store->nickname ?: $store->username));
+            $grid->model()->where('admin_user_id', $storeId)->orderBy('id', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->column('scores', admin_trans('open_score_setting.fields.scores'))
+                ->display(function ($val, $data) {
+                    $scores = [];
+                    for ($i = 1; $i <= 6; $i++) {
+                        $key = 'score_' . $i;
+                        if ($data->$key > 0) {
+                            $scores[] = Tag::create($data->$key)->color('cyan');
+                        }
+                    }
+                    return Html::create()->content($scores)->style([
+                        'display' => 'flex',
+                        'gap' => '5px',
+                        'flex-wrap' => 'wrap'
+                    ]);
+                })->align('center')->width('30%');
+
+            $grid->column('default_scores', admin_trans('open_score_setting.fields.default_scores'))
+                ->display(function ($val) {
+                    if ($val > 0) {
+                        return Tag::create($val)->color('orange');
+                    }
+                    return Tag::create(admin_trans('open_score_setting.not_set'))->color('default');
+                })->align('center');
+
+            $grid->column('created_at', admin_trans('open_score_setting.fields.created_at'))->align('center');
+            $grid->column('updated_at', admin_trans('open_score_setting.fields.updated_at'))->align('center');
+
+            $grid->setForm()->drawer($this->openScoreSettingForm($storeId));
+            $grid->expandFilter();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDetail();
+            })->align('center');
+        });
+    }
+
+    /**
+     * 店家开分配置表单（用于渠道管理）
+     * @auth true
+     * @group channel
+     * @param int $storeId
+     * @return Form
+     */
+    public function openScoreSettingForm(int $storeId): Form
+    {
+        $model = plugin()->webman->config('database.open_score_setting_model');
+
+        return Form::create(new $model(), function (Form $form) use ($storeId, $model) {
+            $form->title(admin_trans('open_score_setting.title'));
+
+            $form->number('default_scores', admin_trans('open_score_setting.fields.default_scores'))
+                ->default(0)
+                ->min(0)
+                ->max(1000000)
+                ->style(['width' => '100%'])
+                ->help(admin_trans('open_score_setting.help.default_scores'));
+
+            $form->divider()->content(admin_trans('open_score_setting.fields.default_scores'));
+
+            // 6个开分选项
+            for ($i = 1; $i <= 6; $i++) {
+                $form->number('score_' . $i, admin_trans('open_score_setting.fields.score_' . $i))
+                    ->default($this->getDefaultScore($i))
+                    ->min(0)
+                    ->max(1000000)
+                    ->style(['width' => '100%'])
+                    ->help(admin_trans('open_score_setting.help.score'));
+            }
+
+            $form->layout('vertical');
+
+            // 保存时验证
+            $form->saving(function (Form $form) use ($storeId, $model) {
+                $form->input('admin_user_id', $storeId);
+
+                // 检查是否已存在配置（编辑时排除当前记录）
+                $exists = $model::query()->where('admin_user_id', $storeId);
+
+                if ($form->isEdit()) {
+                    $exists->where('id', '!=', $form->driver()->get('id'));
+                }
+
+                if ($exists->exists()) {
+                    return message_error(admin_trans('open_score_setting.player_exists'));
+                }
+
+                // 验证至少配置一个开分选项
+                $hasScore = false;
+                for ($i = 1; $i <= 6; $i++) {
+                    $score = $form->input('score_' . $i);
+                    if (!empty($score) && $score > 0) {
+                        $hasScore = true;
+                        break;
+                    }
+                }
+
+                if (!$hasScore) {
+                    return message_error(admin_trans('open_score_setting.at_least_one_score'));
+                }
+            });
+        });
+    }
+
+    /**
+     * 获取默认开分值
+     * @param int $index
+     * @return int
+     */
+    private function getDefaultScore(int $index): int
+    {
+        $defaults = [100, 500, 1000, 5000, 10000, 20000];
+        return $defaults[$index - 1] ?? 0;
     }
 }
