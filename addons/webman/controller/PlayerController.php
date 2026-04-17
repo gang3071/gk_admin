@@ -540,7 +540,7 @@ class PlayerController
                     ));
                 $dropdown->append(admin_trans('player.player_bank'), 'BankFilled')
                     ->modal($this->playerBank($data['id']))
-                    ->width('70%')
+                    ->width('75%')
                     ->title(Html::create(admin_trans('player.player_bank'))
                         ->content(
                             ToolTip::create(Icon::create('BankFilled')->style([
