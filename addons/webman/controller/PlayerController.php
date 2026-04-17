@@ -281,7 +281,7 @@ class PlayerController
             }
         }
         $totalNum = clone $query;
-        $total = $totalNum-->get()->count();
+        $total = $totalNum->get()->count();
         $list = $query->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
