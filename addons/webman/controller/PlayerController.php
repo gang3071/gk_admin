@@ -280,33 +280,15 @@ class PlayerController
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
             }
         }
-        $totalNum = clone $query;
-        $total = $totalNum->count();
-        $list = $query->forPage($page, $size)
-            ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
-                function ($query) use ($exAdminSortField, $exAdminSortBy) {
-                    $query->orderBy($exAdminSortField, $exAdminSortBy);
-                }, function ($query) {
-                    $query->orderBy('id', 'asc');
-                })
-            ->get()
-            ->toArray();
-
-        // ✅ 优化：使用 WalletService 批量从 Redis 缓存获取余额（显示实时余额）
-        if (!empty($list)) {
-            $playerIds = array_column($list, 'id');
-            $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
-
-            // 将 Redis 缓存余额合并到列表数据中（覆盖数据库余额）
-            foreach ($list as &$item) {
-                // 🔧 修复精度问题：格式化为保留2位小数
-                $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
-                // 移除数据库余额字段（仅用于排序）
-                unset($item['db_money']);
-            }
-            unset($item);
+        // 排序处理
+        if (!empty($exAdminSortField) && !empty($exAdminSortBy)) {
+            $query->orderBy($exAdminSortField, $exAdminSortBy);
+        } else {
+            $query->orderBy('id', 'asc');
         }
-        return Grid::create($list, function (Grid $grid) use ($total, $list) {
+
+        // ✅ 使用 Model 模式，让 Grid 自动分页（避免双重分页问题）
+        return Grid::create($query, function (Grid $grid) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -385,7 +367,13 @@ class PlayerController
                 $val,
                 $data
             ) {
-                return Tag::create($val)->color('orange')->style(['cursor' => 'pointer'])->modal([
+                // ✅ 从 Redis 动态获取实时余额（带静态缓存优化）
+                static $balanceCache = [];
+                if (!isset($balanceCache[$data['id']])) {
+                    $balanceCache[$data['id']] = WalletService::getBalance($data['id']);
+                }
+                $realBalance = number_format($balanceCache[$data['id']] ?? 0.0, 2, '.', '');
+                return Tag::create($realBalance)->color('orange')->style(['cursor' => 'pointer'])->modal([
                     $this,
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
@@ -597,9 +585,6 @@ class PlayerController
                     }
                 }
             });
-            $grid->attr('is_mongo', true);
-            $grid->attr('is_mongo_total', $total);
-            $grid->attr('mongo_model', $list);
         });
     }
 
