@@ -896,24 +896,16 @@ class StoreMachineController
             ];
         }
 
-        // 调试日志：记录表单数据
-        \support\Log::info('打开自动交班配置表单', [
-            'store_id' => $storeId,
-            'department_id' => $store->department_id,
-            'config_exists' => $config !== null,
-            'form_data' => $formData,
-        ]);
-
         return Form::create($formData, function (Form $form) use ($store, $storeId, $config, $formData) {
             $form->title('自动交班配置 - ' . ($store->nickname ?: $store->username));
 
-            // 🔧 显式设置提交URL（修复：模态框表单需要明确的提交地址）
+            // 显式设置提交URL
             $form->url(admin_url([
                 'addons-webman-controller-StoreMachineController',
                 'saveAutoShiftConfig'
             ]));
 
-            // 显示执行统计（只有配置存在且启用时才显示）
+            // 显示执行统计
             if ($config && $config->id && $config->is_enabled) {
                 $service = new \app\service\store\AutoShiftService();
                 $stats = $service->getExecutionStats($store->department_id, $storeId, 7);
@@ -1041,14 +1033,6 @@ class StoreMachineController
             return message_error('店家不存在');
         }
 
-        // 【调试日志】记录提交的数据
-        \support\Log::info('[Controller] 收到自动交班配置提交', [
-            'store_id' => $storeId,
-            'department_id' => $store->department_id,
-            'post_data' => $postData,
-            'parsed_data' => $data,
-        ]);
-
         $configData = [
             'department_id' => $store->department_id,
             'bind_admin_user_id' => $storeId,
@@ -1062,25 +1046,10 @@ class StoreMachineController
         $service = new \app\service\store\AutoShiftService();
         $result = $service->saveConfig($configData);
 
-        // 【验证】重新从数据库读取，确认是否真的保存了
-        $verify = \addons\webman\model\StoreAutoShiftConfig::query()
-            ->where('department_id', $store->department_id)
-            ->where('bind_admin_user_id', $storeId)
-            ->first();
-
-        \support\Log::info('[Controller] 保存后验证', [
-            'service_result' => $result,
-            'verify_from_db' => $verify ? $verify->toArray() : null,
-        ]);
-
         if ($result['code'] === 0) {
-            if ($verify) {
-                return message_success("✅ 已保存！启用={$verify->is_enabled}, 时间={$verify->shift_time_1}/{$verify->shift_time_2}/{$verify->shift_time_3}");
-            } else {
-                return message_error('⚠️ 保存返回成功但数据库中未找到记录！');
-            }
+            return message_success($result['msg'] ?? admin_trans('shift_handover.auto.save_success'));
         } else {
-            return message_error($result['msg'] ?? '保存失败');
+            return message_error($result['msg'] ?? admin_trans('shift_handover.auto.save_failed'));
         }
     }
 
