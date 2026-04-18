@@ -1075,6 +1075,12 @@ class StoreMachineController
             $grid->autoHeight();
             $grid->bordered(true);
 
+            // 设置更新 API 路径（Drawer 中的 Grid 需要显式指定）
+            $grid->api(admin_url([
+                'addons-webman-controller-StoreMachineController',
+                'updateStoreSetting'
+            ]));
+
             // 查询该店家的专属配置（关闭数据权限，避免影响更新）
             $grid->model()
                 ->offDataAuth()
@@ -1196,6 +1202,72 @@ class StoreMachineController
                 $actions->hideEdit();
             });
         });
+    }
+
+    /**
+     * 更新店家系统配置
+     * @auth true
+     * @group channel
+     */
+    public function updateStoreSetting()
+    {
+        $request = request();
+        $id = $request->input('id');
+        $field = $request->input('field');
+        $value = $request->input('value');
+
+        \support\Log::info('[临时] 收到系统配置更新请求', [
+            'id' => $id,
+            'field' => $field,
+            'value' => $value,
+            'all_input' => $request->all(),
+        ]);
+
+        if (!$id) {
+            return message_error('配置ID不能为空');
+        }
+
+        // 查询配置（关闭数据权限）
+        $setting = StoreSetting::query()
+            ->offDataAuth()
+            ->find($id);
+
+        if (!$setting) {
+            return message_error('配置不存在');
+        }
+
+        \support\Log::info('[临时] 找到配置记录', [
+            'setting' => $setting->toArray(),
+        ]);
+
+        // 更新字段
+        if ($field && $value !== null) {
+            $setting->$field = $value;
+        } else {
+            // 批量更新
+            foreach ($request->except(['id', '_method', '_token']) as $key => $val) {
+                if (in_array($key, $setting->getFillable())) {
+                    $setting->$key = $val;
+                }
+            }
+        }
+
+        \support\Log::info('[临时] 准备保存', [
+            'dirty' => $setting->getDirty(),
+        ]);
+
+        $saved = $setting->save();
+
+        \support\Log::info('[临时] 保存结果', [
+            'saved' => $saved,
+            'after_save' => $setting->fresh()->toArray(),
+        ]);
+
+        if ($saved) {
+            return message_success('保存成功');
+        } else {
+            return message_error('保存失败');
+        }
     }
 
     /**
