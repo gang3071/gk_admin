@@ -1097,7 +1097,6 @@ class StoreMachineController
                         ->showCount()
                         ->rows(6)
                         ->rule(['max:500' => admin_trans('store_setting.home_notice_max_len')])
-                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($value, StoreSetting $data) {
                     return \Illuminate\Support\Str::of($data->content)->limit(50, ' (...)');
                 })->width('30%')->align('center')
@@ -1109,7 +1108,7 @@ class StoreMachineController
                         ->showCount()
                         ->rows(6)
                         ->rule(['max:500' => admin_trans('store_setting.store_marquee_max_len')])
-                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                        
                 )->display(function ($value, StoreSetting $data) {
                     return \Illuminate\Support\Str::of($data->content)->limit(50, ' (...)');
                 })->width('30%')->align('center')
@@ -1123,7 +1122,7 @@ class StoreMachineController
                             'max:180' => admin_trans('store_setting.validation.max', null, ['{max}' => 180]),
                             'min:5' => admin_trans('store_setting.validation.min', null, ['{min}' => 5]),
                         ])->addonAfter(admin_trans('store_setting.minutes'))
-                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                        
                 )->display(function ($val, StoreSetting $data) {
                     if (!empty($data->num)) {
                         return $data->num . ' ' . admin_trans('store_setting.minutes');
@@ -1148,7 +1147,7 @@ class StoreMachineController
                             1 => admin_trans('store_setting.enable'),
                             0 => admin_trans('store_setting.disable'),
                         ])
-                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                        
                 )->display(function ($val, StoreSetting $data) {
                     if ($data->num == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
@@ -1165,7 +1164,7 @@ class StoreMachineController
                             1 => admin_trans('store_setting.enable'),
                             0 => admin_trans('store_setting.disable'),
                         ])
-                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                        
                 )->display(function ($val, StoreSetting $data) {
                     if ($data->num == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
@@ -1183,7 +1182,7 @@ class StoreMachineController
                             'min:0' => admin_trans('store_setting.validation.min', null, ['{min}' => 0]),
                         ])
                         ->precision(2)
-                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                        
                 )->display(function ($val, StoreSetting $data) {
                     if (!empty($data->num)) {
                         return number_format(floatval($data->num), 2);
@@ -1194,7 +1193,7 @@ class StoreMachineController
             // 状态列
             $grid->column('status', admin_trans('store_setting.fields.status'))
                 ->switch()
-                ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                
                 ->align('center');
 
             $grid->hideDelete();
@@ -1203,6 +1202,38 @@ class StoreMachineController
                 $actions->hideDel();
                 $actions->hideEdit();
             });
+
+            // 设置表单处理 editable 更新
+            $grid->setForm(Form::create(new StoreSetting(), function (Form $form) {
+                $form->saving(function (Form $form) {
+                    \support\Log::info('[临时] Grid Form saving 被调用', [
+                        'all_input' => $form->all(),
+                    ]);
+
+                    $id = $form->input('id') ?? $form->input('pk');
+                    $field = $form->input('field') ?? $form->input('name');
+                    $value = $form->input('value');
+
+                    if (!$id) {
+                        return message_error('配置ID不能为空');
+                    }
+
+                    $setting = StoreSetting::query()->offDataAuth()->find($id);
+                    if (!$setting) {
+                        return message_error('配置不存在');
+                    }
+
+                    if ($field) {
+                        $setting->$field = $value;
+                    }
+
+                    if ($setting->save()) {
+                        return message_success('保存成功');
+                    } else {
+                        return message_error('保存失败');
+                    }
+                });
+            }));
         });
     }
 
