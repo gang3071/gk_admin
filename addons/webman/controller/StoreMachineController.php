@@ -904,7 +904,7 @@ class StoreMachineController
             'form_data' => $formData,
         ]);
 
-        return Form::create($formData, function (Form $form) use ($store, $storeId, $config) {
+        return Form::create($formData, function (Form $form) use ($store, $storeId, $config, $formData) {
             $form->title('自动交班配置 - ' . ($store->nickname ?: $store->username));
 
             // 🔧 显式设置提交URL（修复：模态框表单需要明确的提交地址）
