@@ -872,14 +872,40 @@ class StoreMachineController
             });
         }
 
-        // 获取自动交班配置
+        // 获取自动交班配置（注意：要绕过数据权限限制）
         $config = \addons\webman\model\StoreAutoShiftConfig::query()
             ->where('department_id', $store->department_id)
             ->where('bind_admin_user_id', $storeId)
             ->first();
 
-        return Form::create($config ? $config->toArray() : [], function (Form $form) use ($store, $storeId, $config) {
+        // 如果不存在配置，创建一个空的模型实例（用于表单绑定）
+        if (!$config) {
+            $config = new \addons\webman\model\StoreAutoShiftConfig();
+            $config->department_id = $store->department_id;
+            $config->bind_admin_user_id = $storeId;
+            $config->is_enabled = 0;
+            $config->shift_time_1 = '08:00:00';
+            $config->shift_time_2 = '16:00:00';
+            $config->shift_time_3 = '00:00:00';
+            $config->auto_settlement = 1;
+        }
+
+        // 调试日志：记录查询到的配置数据
+        \support\Log::info('打开自动交班配置表单', [
+            'store_id' => $storeId,
+            'department_id' => $store->department_id,
+            'config_id' => $config->id ?? 'new',
+            'config_data' => $config->toArray()
+        ]);
+
+        return Form::create($config, function (Form $form) use ($store, $storeId, $config) {
             $form->title('自动交班配置 - ' . ($store->nickname ?: $store->username));
+
+            // 🔧 显式设置提交URL（修复：模态框表单需要明确的提交地址）
+            $form->url(admin_url([
+                'addons-webman-controller-StoreMachineController',
+                'saveAutoShiftConfig'
+            ]));
 
             // 显示执行统计
             if ($config && $config->is_enabled) {
@@ -982,32 +1008,57 @@ class StoreMachineController
             }
 
             $form->hidden('store_id')->value($storeId);
-
-            // 处理表单提交
-            $form->saving(function (Form $form) use ($store) {
-                $request = request();
-                $formData = $request->post('data', []);
-
-                $data = [
-                    'department_id' => $store->department_id,
-                    'bind_admin_user_id' => $formData['store_id'],
-                    'is_enabled' => isset($formData['is_enabled']) ? (int)$formData['is_enabled'] : 0,
-                    'shift_time_1' => $formData['shift_time_1'] ?? '08:00:00',
-                    'shift_time_2' => $formData['shift_time_2'] ?? '16:00:00',
-                    'shift_time_3' => $formData['shift_time_3'] ?? '00:00:00',
-                    'auto_settlement' => 1,
-                ];
-
-                $service = new \app\service\store\AutoShiftService();
-                $result = $service->saveConfig($data);
-
-                if ($result['code'] === 0) {
-                    return message_success($result['msg'] ?? admin_trans('shift_handover.auto.save_success'));
-                } else {
-                    return message_error($result['msg'] ?? admin_trans('shift_handover.auto.save_failed'));
-                }
-            });
         });
+    }
+
+    /**
+     * 保存自动交班配置
+     * @auth true
+     * @group channel
+     */
+    public function saveAutoShiftConfig()
+    {
+        $request = request();
+        $postData = $request->post();
+        $data = $postData['data'] ?? $postData;
+
+        $storeId = $data['store_id'] ?? null;
+
+        if (!$storeId) {
+            return message_error('店家ID不能为空');
+        }
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return message_error('店家不存在');
+        }
+
+        // 【调试日志】记录提交的数据
+        \support\Log::info('保存自动交班配置', [
+            'store_id' => $storeId,
+            'post_data' => $postData,
+            'parsed_data' => $data,
+        ]);
+
+        $configData = [
+            'department_id' => $store->department_id,
+            'bind_admin_user_id' => $storeId,
+            'is_enabled' => isset($data['is_enabled']) ? (int)$data['is_enabled'] : 0,
+            'shift_time_1' => $data['shift_time_1'] ?? '08:00:00',
+            'shift_time_2' => $data['shift_time_2'] ?? '16:00:00',
+            'shift_time_3' => $data['shift_time_3'] ?? '00:00:00',
+            'auto_settlement' => 1,
+        ];
+
+        $service = new \app\service\store\AutoShiftService();
+        $result = $service->saveConfig($configData);
+
+        if ($result['code'] === 0) {
+            return message_success("✅ 保存成功！启用={$configData['is_enabled']}, 时间={$configData['shift_time_1']}/{$configData['shift_time_2']}/{$configData['shift_time_3']}");
+        } else {
+            return message_error($result['msg'] ?? '保存失败');
+        }
     }
 
     /**
@@ -1032,8 +1083,9 @@ class StoreMachineController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 查询该店家的专属配置
+            // 查询该店家的专属配置（关闭数据权限，避免影响更新）
             $grid->model()
+                ->offDataAuth()
                 ->where('department_id', $store->department_id)
                 ->where('admin_user_id', $storeId);
 
