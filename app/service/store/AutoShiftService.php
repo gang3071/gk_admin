@@ -54,6 +54,9 @@ class AutoShiftService
     public function saveConfig(array $data): array
     {
         try {
+            // 【调试】记录开始保存
+            Log::info('[AutoShift] 开始保存配置', ['input_data' => $data]);
+
             DB::beginTransaction();
 
             /** @var StoreAutoShiftConfig|null $config */
@@ -62,12 +65,25 @@ class AutoShiftService
                 ->where('bind_admin_user_id', $data['bind_admin_user_id'])
                 ->first();
 
+            $isNew = !$config;
+
             if (!$config) {
                 /** @var StoreAutoShiftConfig $config */
                 $config = new StoreAutoShiftConfig();
                 $config->department_id = $data['department_id'];
                 $config->bind_admin_user_id = $data['bind_admin_user_id'];
+                Log::info('[AutoShift] 创建新配置记录');
+            } else {
+                Log::info('[AutoShift] 更新现有配置', ['config_id' => $config->id]);
             }
+
+            // 记录修改前的值
+            $oldValues = $config->exists ? [
+                'is_enabled' => $config->is_enabled,
+                'shift_time_1' => $config->shift_time_1,
+                'shift_time_2' => $config->shift_time_2,
+                'shift_time_3' => $config->shift_time_3,
+            ] : null;
 
             // 更新配置
             $config->is_enabled = $data['is_enabled'] ?? 0;
@@ -76,23 +92,58 @@ class AutoShiftService
             $config->shift_time_3 = $data['shift_time_3'] ?? '00:00:00';
             $config->auto_settlement = $data['auto_settlement'] ?? 1;
 
+            // 【调试】记录赋值后的配置
+            Log::info('[AutoShift] 配置赋值完成', [
+                'old_values' => $oldValues,
+                'new_values' => [
+                    'is_enabled' => $config->is_enabled,
+                    'shift_time_1' => $config->shift_time_1,
+                    'shift_time_2' => $config->shift_time_2,
+                    'shift_time_3' => $config->shift_time_3,
+                ],
+                'dirty' => $config->getDirty(),
+            ]);
+
             // 验证配置
             $validation = $this->validateConfig($config);
             if (!$validation['valid']) {
                 DB::rollBack();
+                Log::warning('[AutoShift] 验证失败', ['message' => $validation['message']]);
                 return ['code' => 1, 'msg' => $validation['message']];
             }
 
             // 如果启用，计算下次交班时间
             if ($config->is_enabled) {
                 $config->next_shift_time = $this->calculateNextShiftTime($config);
+                Log::info('[AutoShift] 计算下次交班时间', ['next_shift_time' => $config->next_shift_time]);
             } else {
                 $config->next_shift_time = null;
             }
 
-            $config->save();
+            // 【调试】保存前检查
+            Log::info('[AutoShift] 准备保存', [
+                'is_new' => $isNew,
+                'attributes' => $config->getAttributes(),
+                'dirty' => $config->getDirty(),
+            ]);
+
+            $saved = $config->save();
+
+            Log::info('[AutoShift] save()返回结果', [
+                'result' => $saved,
+                'config_id' => $config->id,
+            ]);
 
             DB::commit();
+
+            Log::info('[AutoShift] 事务已提交', ['config_id' => $config->id]);
+
+            // 【验证】重新查询数据库确认保存
+            $verify = StoreAutoShiftConfig::query()->find($config->id);
+            Log::info('[AutoShift] 验证保存结果', [
+                'verify_data' => $verify ? $verify->toArray() : null,
+            ]);
+
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('保存自动交班配置失败', [

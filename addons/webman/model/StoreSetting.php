@@ -53,17 +53,34 @@ class StoreSetting extends Model
      */
     protected static function booted()
     {
+        // 【调试】监听更新前事件
+        static::updating(function (StoreSetting $setting) {
+            \support\Log::info('[StoreSetting] 准备更新', [
+                'id' => $setting->id,
+                'feature' => $setting->feature,
+                'dirty' => $setting->getDirty(),
+                'original' => $setting->getOriginal(),
+            ]);
+        });
+
         static::created(function (StoreSetting $setting) {
+            \support\Log::info('[StoreSetting] 记录已创建', ['id' => $setting->id]);
             $cacheKey = self::getCacheKey($setting->department_id, $setting->admin_user_id, $setting->feature);
             Cache::delete($cacheKey);
         });
 
         static::deleted(function (StoreSetting $setting) {
+            \support\Log::info('[StoreSetting] 记录已删除', ['id' => $setting->id]);
             $cacheKey = self::getCacheKey($setting->department_id, $setting->admin_user_id, $setting->feature);
             Cache::delete($cacheKey);
         });
 
         static::updated(function (StoreSetting $setting) {
+            \support\Log::info('[StoreSetting] 记录已更新', [
+                'id' => $setting->id,
+                'feature' => $setting->feature,
+                'changes' => $setting->getChanges(),
+            ]);
             $cacheKey = self::getCacheKey($setting->department_id, $setting->admin_user_id, $setting->feature);
             Cache::delete($cacheKey);
 
