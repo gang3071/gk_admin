@@ -1060,6 +1060,11 @@ class StoreMachineController
      */
     public function storeSettingList()
     {
+        // 处理 PUT 请求（editable 更新）
+        if (request()->method() === 'PUT') {
+            return $this->updateStoreSetting();
+        }
+
         $storeId = request()->input('store_id');
 
         // 获取店家信息
@@ -1087,7 +1092,7 @@ class StoreMachineController
                     return admin_trans('store_setting.fields.' . $data->feature);
                 })->align('center');
 
-            // 配置列（复用 StoreSettingController 的逻辑）
+            // 配置列
             $grid->column('setting', admin_trans('store_setting.fields.setting'))
                 // 首页提醒消息
                 ->if(function ($value, StoreSetting $data) {
@@ -1202,38 +1207,6 @@ class StoreMachineController
                 $actions->hideDel();
                 $actions->hideEdit();
             });
-
-            // 设置表单处理 editable 更新
-            $grid->setForm(Form::create(new StoreSetting(), function (Form $form) {
-                $form->saving(function (Form $form) {
-                    \support\Log::info('[临时] Grid Form saving 被调用', [
-                        'all_input' => $form->all(),
-                    ]);
-
-                    $id = $form->input('id') ?? $form->input('pk');
-                    $field = $form->input('field') ?? $form->input('name');
-                    $value = $form->input('value');
-
-                    if (!$id) {
-                        return message_error('配置ID不能为空');
-                    }
-
-                    $setting = StoreSetting::query()->offDataAuth()->find($id);
-                    if (!$setting) {
-                        return message_error('配置不存在');
-                    }
-
-                    if ($field) {
-                        $setting->$field = $value;
-                    }
-
-                    if ($setting->save()) {
-                        return message_success('保存成功');
-                    } else {
-                        return message_error('保存失败');
-                    }
-                });
-            }));
         });
     }
 
@@ -1246,63 +1219,68 @@ class StoreMachineController
     {
         $request = request();
 
-        // ExAdmin 的 editable 提交格式：id, field, value
-        $id = $request->input('id') ?? $request->input('pk');
-        $field = $request->input('field') ?? $request->input('name');
-        $value = $request->input('value');
+        // ExAdmin editable 提交的数据在 body 中
+        $body = $request->rawBody();
+        $data = json_decode($body, true);
+
+        // 获取 ID 和字段
+        $id = $data['id'] ?? $request->input('id');
+        $field = $data['field'] ?? $request->input('field');
+        $value = $data['value'] ?? $request->input('value');
 
         \support\Log::info('[临时] 收到系统配置更新请求', [
+            'method' => $request->method(),
+            'raw_body' => $body,
+            'parsed_data' => $data,
             'id' => $id,
             'field' => $field,
             'value' => $value,
-            'all_input' => $request->all(),
         ]);
 
         if (!$id) {
-            return response()->json(['status' => false, 'msg' => '配置ID不能为空']);
+            return json(['status' => false, 'msg' => '配置ID不能为空']);
         }
 
         // 查询配置（关闭数据权限）
-        $setting = StoreSetting::query()
-            ->offDataAuth()
-            ->find($id);
+        $setting = StoreSetting::query()->offDataAuth()->find($id);
 
         if (!$setting) {
-            return response()->json(['status' => false, 'msg' => '配置不存在']);
+            return json(['status' => false, 'msg' => '配置不存在']);
         }
 
         \support\Log::info('[临时] 找到配置记录', [
-            'setting' => $setting->toArray(),
+            'setting_id' => $setting->id,
+            'feature' => $setting->feature,
         ]);
 
         // 更新字段
-        if ($field) {
+        if ($field && isset($value)) {
             $setting->$field = $value;
         }
 
         \support\Log::info('[临时] 准备保存', [
+            'field' => $field,
+            'value' => $value,
             'dirty' => $setting->getDirty(),
         ]);
 
         try {
-            $saved = $setting->save();
-
-            \support\Log::info('[临时] 保存结果', [
-                'saved' => $saved,
-                'after_save' => $setting->fresh()->toArray(),
-            ]);
-
-            if ($saved || !$setting->isDirty()) {
-                return response()->json(['status' => true, 'msg' => '保存成功']);
+            if ($setting->isDirty()) {
+                $saved = $setting->save();
+                \support\Log::info('[临时] 保存完成', [
+                    'saved' => $saved,
+                    'changes' => $setting->getChanges(),
+                ]);
             } else {
-                return response()->json(['status' => false, 'msg' => '保存失败']);
+                \support\Log::info('[临时] 无需保存（数据未变化）');
             }
+
+            return json(['status' => true, 'msg' => '保存成功']);
         } catch (\Exception $e) {
             \support\Log::error('[临时] 保存异常', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
             ]);
-            return response()->json(['status' => false, 'msg' => '保存失败：' . $e->getMessage()]);
+            return json(['status' => false, 'msg' => '保存失败：' . $e->getMessage()]);
         }
     }
 
