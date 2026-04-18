@@ -1075,12 +1075,6 @@ class StoreMachineController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 设置更新 API 路径（Drawer 中的 Grid 需要显式指定）
-            $grid->api(admin_url([
-                'addons-webman-controller-StoreMachineController',
-                'updateStoreSetting'
-            ]));
-
             // 查询该店家的专属配置（关闭数据权限，避免影响更新）
             $grid->model()
                 ->offDataAuth()
@@ -1103,6 +1097,7 @@ class StoreMachineController
                         ->showCount()
                         ->rows(6)
                         ->rule(['max:500' => admin_trans('store_setting.home_notice_max_len')])
+                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($value, StoreSetting $data) {
                     return \Illuminate\Support\Str::of($data->content)->limit(50, ' (...)');
                 })->width('30%')->align('center')
@@ -1114,6 +1109,7 @@ class StoreMachineController
                         ->showCount()
                         ->rows(6)
                         ->rule(['max:500' => admin_trans('store_setting.store_marquee_max_len')])
+                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($value, StoreSetting $data) {
                     return \Illuminate\Support\Str::of($data->content)->limit(50, ' (...)');
                 })->width('30%')->align('center')
@@ -1127,6 +1123,7 @@ class StoreMachineController
                             'max:180' => admin_trans('store_setting.validation.max', null, ['{max}' => 180]),
                             'min:5' => admin_trans('store_setting.validation.min', null, ['{min}' => 5]),
                         ])->addonAfter(admin_trans('store_setting.minutes'))
+                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($val, StoreSetting $data) {
                     if (!empty($data->num)) {
                         return $data->num . ' ' . admin_trans('store_setting.minutes');
@@ -1151,6 +1148,7 @@ class StoreMachineController
                             1 => admin_trans('store_setting.enable'),
                             0 => admin_trans('store_setting.disable'),
                         ])
+                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($val, StoreSetting $data) {
                     if ($data->num == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
@@ -1167,6 +1165,7 @@ class StoreMachineController
                             1 => admin_trans('store_setting.enable'),
                             0 => admin_trans('store_setting.disable'),
                         ])
+                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($val, StoreSetting $data) {
                     if ($data->num == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
@@ -1184,6 +1183,7 @@ class StoreMachineController
                             'min:0' => admin_trans('store_setting.validation.min', null, ['{min}' => 0]),
                         ])
                         ->precision(2)
+                        ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
                 )->display(function ($val, StoreSetting $data) {
                     if (!empty($data->num)) {
                         return number_format(floatval($data->num), 2);
@@ -1193,7 +1193,9 @@ class StoreMachineController
 
             // 状态列
             $grid->column('status', admin_trans('store_setting.fields.status'))
-                ->switch()->align('center');
+                ->switch()
+                ->api(admin_url(['addons-webman-controller-StoreMachineController', 'updateStoreSetting']))
+                ->align('center');
 
             $grid->hideDelete();
             $grid->hideSelection();
@@ -1212,8 +1214,10 @@ class StoreMachineController
     public function updateStoreSetting()
     {
         $request = request();
-        $id = $request->input('id');
-        $field = $request->input('field');
+
+        // ExAdmin 的 editable 提交格式：id, field, value
+        $id = $request->input('id') ?? $request->input('pk');
+        $field = $request->input('field') ?? $request->input('name');
         $value = $request->input('value');
 
         \support\Log::info('[临时] 收到系统配置更新请求', [
@@ -1224,7 +1228,7 @@ class StoreMachineController
         ]);
 
         if (!$id) {
-            return message_error('配置ID不能为空');
+            return response()->json(['status' => false, 'msg' => '配置ID不能为空']);
         }
 
         // 查询配置（关闭数据权限）
@@ -1233,7 +1237,7 @@ class StoreMachineController
             ->find($id);
 
         if (!$setting) {
-            return message_error('配置不存在');
+            return response()->json(['status' => false, 'msg' => '配置不存在']);
         }
 
         \support\Log::info('[临时] 找到配置记录', [
@@ -1241,32 +1245,33 @@ class StoreMachineController
         ]);
 
         // 更新字段
-        if ($field && $value !== null) {
+        if ($field) {
             $setting->$field = $value;
-        } else {
-            // 批量更新
-            foreach ($request->except(['id', '_method', '_token']) as $key => $val) {
-                if (in_array($key, $setting->getFillable())) {
-                    $setting->$key = $val;
-                }
-            }
         }
 
         \support\Log::info('[临时] 准备保存', [
             'dirty' => $setting->getDirty(),
         ]);
 
-        $saved = $setting->save();
+        try {
+            $saved = $setting->save();
 
-        \support\Log::info('[临时] 保存结果', [
-            'saved' => $saved,
-            'after_save' => $setting->fresh()->toArray(),
-        ]);
+            \support\Log::info('[临时] 保存结果', [
+                'saved' => $saved,
+                'after_save' => $setting->fresh()->toArray(),
+            ]);
 
-        if ($saved) {
-            return message_success('保存成功');
-        } else {
-            return message_error('保存失败');
+            if ($saved || !$setting->isDirty()) {
+                return response()->json(['status' => true, 'msg' => '保存成功']);
+            } else {
+                return response()->json(['status' => false, 'msg' => '保存失败']);
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('[临时] 保存异常', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['status' => false, 'msg' => '保存失败：' . $e->getMessage()]);
         }
     }
 
