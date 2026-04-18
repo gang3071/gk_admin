@@ -872,33 +872,39 @@ class StoreMachineController
             });
         }
 
-        // 获取自动交班配置（注意：要绕过数据权限限制）
+        // 获取自动交班配置（转换为数组，避免 ExAdmin 使用默认 RESTful 逻辑）
         $config = \addons\webman\model\StoreAutoShiftConfig::query()
             ->where('department_id', $store->department_id)
             ->where('bind_admin_user_id', $storeId)
             ->first();
 
-        // 如果不存在配置，创建一个空的模型实例（用于表单绑定）
-        if (!$config) {
-            $config = new \addons\webman\model\StoreAutoShiftConfig();
-            $config->department_id = $store->department_id;
-            $config->bind_admin_user_id = $storeId;
-            $config->is_enabled = 0;
-            $config->shift_time_1 = '08:00:00';
-            $config->shift_time_2 = '16:00:00';
-            $config->shift_time_3 = '00:00:00';
-            $config->auto_settlement = 1;
+        // 准备表单初始值
+        $formData = [];
+        if ($config) {
+            $formData = [
+                'is_enabled' => $config->is_enabled,
+                'shift_time_1' => $config->shift_time_1,
+                'shift_time_2' => $config->shift_time_2,
+                'shift_time_3' => $config->shift_time_3,
+            ];
+        } else {
+            $formData = [
+                'is_enabled' => 0,
+                'shift_time_1' => '08:00:00',
+                'shift_time_2' => '16:00:00',
+                'shift_time_3' => '00:00:00',
+            ];
         }
 
-        // 调试日志：记录查询到的配置数据
+        // 调试日志：记录表单数据
         \support\Log::info('打开自动交班配置表单', [
             'store_id' => $storeId,
             'department_id' => $store->department_id,
-            'config_id' => $config->id ?? 'new',
-            'config_data' => $config->toArray()
+            'config_exists' => $config !== null,
+            'form_data' => $formData,
         ]);
 
-        return Form::create($config, function (Form $form) use ($store, $storeId, $config) {
+        return Form::create($formData, function (Form $form) use ($store, $storeId, $config) {
             $form->title('自动交班配置 - ' . ($store->nickname ?: $store->username));
 
             // 🔧 显式设置提交URL（修复：模态框表单需要明确的提交地址）
@@ -907,8 +913,8 @@ class StoreMachineController
                 'saveAutoShiftConfig'
             ]));
 
-            // 显示执行统计
-            if ($config && $config->is_enabled) {
+            // 显示执行统计（只有配置存在且启用时才显示）
+            if ($config && $config->id && $config->is_enabled) {
                 $service = new \app\service\store\AutoShiftService();
                 $stats = $service->getExecutionStats($store->department_id, $storeId, 7);
 
@@ -972,22 +978,23 @@ class StoreMachineController
             $form->switch('is_enabled', admin_trans('shift_handover.auto.enable'))
                 ->checkedValue(1)
                 ->unCheckedValue(0)
+                ->value($formData['is_enabled'] ?? 0)
                 ->help(admin_trans('shift_handover.auto.enable_help'));
 
             // 三个时间字段（横向排列）
-            $form->row(function (Form $form) {
+            $form->row(function (Form $form) use ($formData) {
                 $form->time('shift_time_1', admin_trans('shift_handover.auto.shift_time_1'))
-                    ->default('08:00:00')
+                    ->value($formData['shift_time_1'] ?? '08:00:00')
                     ->help(admin_trans('shift_handover.auto.shift_time_1_help'))
                     ->span(8);
 
                 $form->time('shift_time_2', admin_trans('shift_handover.auto.shift_time_2'))
-                    ->default('16:00:00')
+                    ->value($formData['shift_time_2'] ?? '16:00:00')
                     ->help(admin_trans('shift_handover.auto.shift_time_2_help'))
                     ->span(8);
 
                 $form->time('shift_time_3', admin_trans('shift_handover.auto.shift_time_3'))
-                    ->default('00:00:00')
+                    ->value($formData['shift_time_3'] ?? '00:00:00')
                     ->help(admin_trans('shift_handover.auto.shift_time_3_help'))
                     ->span(8);
             });
@@ -995,7 +1002,7 @@ class StoreMachineController
             // 显示下次交班时间
             $form->push(Html::div()->style(['margin-top' => '24px']));
             $form->divider()->content(admin_trans('shift_handover.auto.exec_info'));
-            if ($config && $config->next_shift_time) {
+            if ($config && $config->id && $config->next_shift_time) {
                 $form->push(Html::div()->content(
                     Html::create()->content([
                         Html::create()->tag('strong')->content(admin_trans('shift_handover.auto.next_shift_time') . '：'),
