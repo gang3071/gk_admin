@@ -1219,27 +1219,24 @@ class StoreMachineController
     {
         $request = request();
 
-        // ExAdmin editable 提交的数据在 body 中
+        // 解析请求数据
         $body = $request->rawBody();
-        $data = json_decode($body, true);
-
-        // 获取 ID 和字段
-        $id = $data['id'] ?? $request->input('id');
-        $field = $data['field'] ?? $request->input('field');
-        $value = $data['value'] ?? $request->input('value');
+        $requestData = json_decode($body, true);
 
         \support\Log::info('[临时] 收到系统配置更新请求', [
             'method' => $request->method(),
-            'raw_body' => $body,
-            'parsed_data' => $data,
-            'id' => $id,
-            'field' => $field,
-            'value' => $value,
+            'parsed_data' => $requestData,
         ]);
 
-        if (!$id) {
+        // ExAdmin 格式：{"ex_admin_action":"update","ids":[13],"data":{"status":0}}
+        $ids = $requestData['ids'] ?? [];
+        $updateData = $requestData['data'] ?? [];
+
+        if (empty($ids)) {
             return json(['status' => false, 'msg' => '配置ID不能为空']);
         }
+
+        $id = $ids[0]; // 取第一个ID
 
         // 查询配置（关闭数据权限）
         $setting = StoreSetting::query()->offDataAuth()->find($id);
@@ -1251,16 +1248,15 @@ class StoreMachineController
         \support\Log::info('[临时] 找到配置记录', [
             'setting_id' => $setting->id,
             'feature' => $setting->feature,
+            'update_data' => $updateData,
         ]);
 
-        // 更新字段
-        if ($field && isset($value)) {
+        // 批量更新字段
+        foreach ($updateData as $field => $value) {
             $setting->$field = $value;
         }
 
         \support\Log::info('[临时] 准备保存', [
-            'field' => $field,
-            'value' => $value,
             'dirty' => $setting->getDirty(),
         ]);
 
@@ -1271,11 +1267,12 @@ class StoreMachineController
                     'saved' => $saved,
                     'changes' => $setting->getChanges(),
                 ]);
+
+                return json(['status' => true, 'msg' => '保存成功']);
             } else {
                 \support\Log::info('[临时] 无需保存（数据未变化）');
+                return json(['status' => true, 'msg' => '数据未变化']);
             }
-
-            return json(['status' => true, 'msg' => '保存成功']);
         } catch (\Exception $e) {
             \support\Log::error('[临时] 保存异常', [
                 'error' => $e->getMessage(),
