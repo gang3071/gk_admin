@@ -53,6 +53,15 @@ class StoreSetting extends Model
      */
     protected static function booted()
     {
+        // 临时：监听更新事件
+        static::updating(function (StoreSetting $setting) {
+            \support\Log::info('[临时] StoreSetting 准备更新', [
+                'id' => $setting->id,
+                'feature' => $setting->feature,
+                'dirty' => $setting->getDirty(),
+            ]);
+        });
+
         static::created(function (StoreSetting $setting) {
             $cacheKey = self::getCacheKey($setting->department_id, $setting->admin_user_id, $setting->feature);
             Cache::delete($cacheKey);
@@ -64,6 +73,11 @@ class StoreSetting extends Model
         });
 
         static::updated(function (StoreSetting $setting) {
+            \support\Log::info('[临时] StoreSetting 已更新', [
+                'id' => $setting->id,
+                'feature' => $setting->feature,
+                'changes' => $setting->getChanges(),
+            ]);
             $cacheKey = self::getCacheKey($setting->department_id, $setting->admin_user_id, $setting->feature);
             Cache::delete($cacheKey);
 

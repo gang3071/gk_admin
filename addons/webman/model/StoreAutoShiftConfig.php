@@ -37,6 +37,22 @@ class StoreAutoShiftConfig extends Model
     protected $primaryKey = 'id';
 
     /**
+     * 可批量赋值的属性
+     * @var array
+     */
+    protected $fillable = [
+        'department_id',
+        'bind_admin_user_id',
+        'is_enabled',
+        'shift_time_1',
+        'shift_time_2',
+        'shift_time_3',
+        'auto_settlement',
+        'last_shift_time',
+        'next_shift_time',
+    ];
+
+    /**
      * 追加到模型数组的访问器
      * @var array
      */

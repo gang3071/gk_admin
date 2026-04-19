@@ -415,7 +415,7 @@ class AutoShiftService
             'total_out' => (float)$totalOut,
             'lottery_amount' => (float)$data['lottery_amount'],
             'total_profit' => (float)$totalProfit,
-            // 详细分类数据（用于日志和调试）
+            // 详细分类数据
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],
             'modified_add_amount' => (float)$data['modified_add_amount'],
