@@ -461,9 +461,9 @@ export default {
 
         if (content.msg_type === 'online_players_update' && content.type === 'machine') {
           console.log('[在线玩家] 更新实体机台玩家列表，数量:', content.players.length);
-          // 使用 $nextTick 确保 Vue 响应式更新
+          // 智能更新：只更新变化的玩家，避免列表跳动
           this.$nextTick(() => {
-            this.machinePlayers = [...content.players];
+            this.updateMachinePlayersList(content.players);
             this.lastMachineUpdateTime = new Date().toLocaleTimeString();
             console.log('[在线玩家] 实体机台玩家列表已更新:', this.machinePlayers.length);
           });
@@ -488,9 +488,9 @@ export default {
 
         if (content.msg_type === 'online_players_update' && content.type === 'game') {
           console.log('[在线玩家] 更新电子游戏玩家列表，数量:', content.players.length);
-          // 使用 $nextTick 确保 Vue 响应式更新
+          // 智能更新：只更新变化的玩家，避免列表跳动
           this.$nextTick(() => {
-            this.gamePlayers = [...content.players];
+            this.updateGamePlayersList(content.players);
             this.lastGameUpdateTime = new Date().toLocaleTimeString();
             console.log('[在线玩家] 电子游戏玩家列表已更新:', this.gamePlayers.length);
           });
@@ -600,17 +600,23 @@ export default {
       }
     },
 
-    // 清理超过10秒未押注的玩家
+    // 清理超过60秒未押注的玩家（改为60秒，与后端一致）
     cleanupOfflinePlayers() {
       const now = Math.floor(Date.now() / 1000);
+      const timeout = 60; // 60秒超时
 
-      // 清理实体机台玩家
+      // 清理实体机台玩家（原地删除，避免重建数组）
       const beforeMachineCount = this.machinePlayers.length;
-      this.machinePlayers = this.machinePlayers.filter(player => {
-        const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
-        const secondsAgo = now - lastBetTimestamp;
-        return secondsAgo <= 10;
-      });
+      for (let i = this.machinePlayers.length - 1; i >= 0; i--) {
+        const player = this.machinePlayers[i];
+        if (player.last_bet_time) {
+          const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
+          const secondsAgo = now - lastBetTimestamp;
+          if (secondsAgo > timeout) {
+            this.machinePlayers.splice(i, 1);
+          }
+        }
+      }
 
       if (beforeMachineCount !== this.machinePlayers.length) {
         console.log('[在线玩家] 自动清理实体机台离线玩家', {
@@ -620,13 +626,18 @@ export default {
         });
       }
 
-      // 清理电子游戏玩家
+      // 清理电子游戏玩家（原地删除，避免重建数组）
       const beforeGameCount = this.gamePlayers.length;
-      this.gamePlayers = this.gamePlayers.filter(player => {
-        const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
-        const secondsAgo = now - lastBetTimestamp;
-        return secondsAgo <= 10;
-      });
+      for (let i = this.gamePlayers.length - 1; i >= 0; i--) {
+        const player = this.gamePlayers[i];
+        if (player.last_bet_time) {
+          const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
+          const secondsAgo = now - lastBetTimestamp;
+          if (secondsAgo > timeout) {
+            this.gamePlayers.splice(i, 1);
+          }
+        }
+      }
 
       if (beforeGameCount !== this.gamePlayers.length) {
         console.log('[在线玩家] 自动清理电子游戏离线玩家', {
@@ -637,20 +648,138 @@ export default {
       }
     },
 
+    // 智能更新实体机台玩家列表（避免跳动）
+    updateMachinePlayersList(newPlayers) {
+      // 如果当前列表为空，直接赋值
+      if (this.machinePlayers.length === 0) {
+        this.machinePlayers = newPlayers;
+        return;
+      }
+
+      // 构建当前玩家Map（以ID为key）
+      const currentMap = new Map();
+      this.machinePlayers.forEach(player => {
+        currentMap.set(player.id, player);
+      });
+
+      // 构建新玩家Map
+      const newMap = new Map();
+      newPlayers.forEach(player => {
+        newMap.set(player.id, player);
+      });
+
+      // 1. 移除已离线的玩家
+      this.machinePlayers = this.machinePlayers.filter(player => newMap.has(player.id));
+
+      // 2. 更新现有玩家的信息（原地更新，避免对象引用变化）
+      this.machinePlayers.forEach((player, index) => {
+        const newPlayer = newMap.get(player.id);
+        if (newPlayer) {
+          // 只更新变化的字段
+          Object.keys(newPlayer).forEach(key => {
+            if (player[key] !== newPlayer[key]) {
+              player[key] = newPlayer[key];
+            }
+          });
+        }
+      });
+
+      // 3. 添加新玩家
+      newPlayers.forEach(newPlayer => {
+        if (!currentMap.has(newPlayer.id)) {
+          this.machinePlayers.push(newPlayer);
+        }
+      });
+
+      // 4. 按后端顺序重新排序（保持与后端一致）
+      const orderMap = new Map();
+      newPlayers.forEach((player, index) => {
+        orderMap.set(player.id, index);
+      });
+      this.machinePlayers.sort((a, b) => {
+        return (orderMap.get(a.id) || 999) - (orderMap.get(b.id) || 999);
+      });
+    },
+
+    // 智能更新电子游戏玩家列表（避免跳动）
+    updateGamePlayersList(newPlayers) {
+      // 如果当前列表为空，直接赋值
+      if (this.gamePlayers.length === 0) {
+        this.gamePlayers = newPlayers;
+        return;
+      }
+
+      // 构建当前玩家Map（以ID为key）
+      const currentMap = new Map();
+      this.gamePlayers.forEach(player => {
+        currentMap.set(player.id, player);
+      });
+
+      // 构建新玩家Map
+      const newMap = new Map();
+      newPlayers.forEach(player => {
+        newMap.set(player.id, player);
+      });
+
+      // 1. 移除已离线的玩家
+      this.gamePlayers = this.gamePlayers.filter(player => newMap.has(player.id));
+
+      // 2. 更新现有玩家的信息（原地更新，避免对象引用变化）
+      this.gamePlayers.forEach((player, index) => {
+        const newPlayer = newMap.get(player.id);
+        if (newPlayer) {
+          // 只更新变化的字段
+          Object.keys(newPlayer).forEach(key => {
+            if (player[key] !== newPlayer[key]) {
+              player[key] = newPlayer[key];
+            }
+          });
+        }
+      });
+
+      // 3. 添加新玩家
+      newPlayers.forEach(newPlayer => {
+        if (!currentMap.has(newPlayer.id)) {
+          this.gamePlayers.push(newPlayer);
+        }
+      });
+
+      // 4. 按后端顺序重新排序（保持与后端一致）
+      const orderMap = new Map();
+      newPlayers.forEach((player, index) => {
+        orderMap.set(player.id, index);
+      });
+      this.gamePlayers.sort((a, b) => {
+        return (orderMap.get(a.id) || 999) - (orderMap.get(b.id) || 999);
+      });
+    },
+
     // 更新玩家的 bet_seconds_ago 显示
     updateBetSecondsAgo() {
       const now = Math.floor(Date.now() / 1000);
 
-      // 更新实体机台玩家
+      // 更新实体机台玩家（使用 Vue.set 确保响应式）
       this.machinePlayers.forEach(player => {
-        const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
-        player.bet_seconds_ago = now - lastBetTimestamp;
+        if (player.last_bet_time) {
+          const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
+          const newSecondsAgo = now - lastBetTimestamp;
+          // 只在秒数变化时更新（减少不必要的响应式触发）
+          if (player.bet_seconds_ago !== newSecondsAgo) {
+            player.bet_seconds_ago = newSecondsAgo;
+          }
+        }
       });
 
       // 更新电子游戏玩家
       this.gamePlayers.forEach(player => {
-        const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
-        player.bet_seconds_ago = now - lastBetTimestamp;
+        if (player.last_bet_time) {
+          const lastBetTimestamp = new Date(player.last_bet_time).getTime() / 1000;
+          const newSecondsAgo = now - lastBetTimestamp;
+          // 只在秒数变化时更新
+          if (player.bet_seconds_ago !== newSecondsAgo) {
+            player.bet_seconds_ago = newSecondsAgo;
+          }
+        }
       });
     }
   }
