@@ -5,7 +5,9 @@ namespace addons\webman\controller;
 use addons\webman\model\GameLottery;
 use addons\webman\model\Notice;
 use addons\webman\model\Player;
+use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\service\WalletService;
 use ExAdmin\ui\component\layout\Space;
 use ExAdmin\ui\support\Request;
 use support\Db;
@@ -36,7 +38,7 @@ class OnlinePlayerLotteryController
      */
     public function getMachinePlayers()
     {
-        $tenSecondsAgo = date('Y-m-d H:i:s', time() - 10);
+        $oneMinuteAgo = date('Y-m-d H:i:s', time() - 60);
         $fiveMinutesAgo = date('Y-m-d H:i:s', time() - 300);
 
         $players = Player::query()
@@ -56,7 +58,7 @@ class OnlinePlayerLotteryController
             ->join('player_game_record', 'player.id', '=', 'player_game_record.player_id')
             ->join('player_game_log', 'player_game_record.id', '=', 'player_game_log.game_record_id')
             ->where('player_game_record.status', \addons\webman\model\PlayerGameRecord::STATUS_START)
-            ->where('player_game_log.created_at', '>=', $tenSecondsAgo)
+            ->where('player_game_log.created_at', '>=', $oneMinuteAgo)
             ->where('player_game_log.pressure', '>', 0)
             ->groupBy([
                 'player.id',
@@ -119,7 +121,7 @@ class OnlinePlayerLotteryController
      */
     public function getGamePlayers()
     {
-        $tenSecondsAgo = date('Y-m-d H:i:s', time() - 10);
+        $oneMinuteAgo = date('Y-m-d H:i:s', time() - 60);
         $fiveMinutesAgo = date('Y-m-d H:i:s', time() - 300);
 
         $players = Player::query()
@@ -137,8 +139,9 @@ class OnlinePlayerLotteryController
             ->selectRaw('MAX(play_game_record.created_at) as last_bet_time')
             ->selectRaw('MAX(play_game_record.bet) as last_bet')
             ->join('play_game_record', 'player.id', '=', 'play_game_record.player_id')
-            ->where('play_game_record.created_at', '>=', $tenSecondsAgo)
+            ->where('play_game_record.created_at', '>=', $oneMinuteAgo)
             ->where('play_game_record.bet', '>', 0)
+            ->where('play_game_record.settlement_status', 0)
             ->groupBy([
                 'player.id',
                 'player.uuid',
@@ -229,6 +232,10 @@ class OnlinePlayerLotteryController
 
         DB::beginTransaction();
         try {
+            // 增加玩家余额（直接到账）
+            $beforeBalance = WalletService::getBalance($player->id, 1);
+            $afterBalance = WalletService::add($player->id, $amount, 1);
+
             // 创建彩金记录
             $record = new PlayerLotteryRecord();
             $record->player_id = $player->id;
@@ -248,9 +255,24 @@ class OnlinePlayerLotteryController
             $record->lottery_type = $lottery->lottery_type;
             $record->lottery_sort = $lottery->sort;
             $record->cate_rate = $lottery->rate;
-            $record->status = PlayerLotteryRecord::STATUS_PASS;
+            $record->status = PlayerLotteryRecord::STATUS_COMPLETE; // 直接完成，无需玩家手动领取
             $record->remark = $remark;
             $record->save();
+
+            // 创建金流明细
+            $deliveryRecord = new PlayerDeliveryRecord();
+            $deliveryRecord->player_id = $player->id;
+            $deliveryRecord->department_id = $player->department_id;
+            $deliveryRecord->target = $record->getTable();
+            $deliveryRecord->target_id = $record->id;
+            $deliveryRecord->type = PlayerDeliveryRecord::TYPE_LOTTERY;
+            $deliveryRecord->source = 'lottery';
+            $deliveryRecord->amount = $amount;
+            $deliveryRecord->amount_before = $beforeBalance;
+            $deliveryRecord->amount_after = $afterBalance;
+            $deliveryRecord->tradeno = '';
+            $deliveryRecord->remark = $remark;
+            $deliveryRecord->save();
 
             // 扣减彩金池
             $lottery->amount = bcsub($lottery->amount, $amount, 4);

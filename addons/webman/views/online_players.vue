@@ -1,20 +1,82 @@
 <template>
   <div class="online-players-container">
     <a-tabs v-model:activeKey="activeTab" @change="onTabChange">
-      <!-- 实体机台在线玩家 -->
-      <a-tab-pane key="machine" tab="实体机台在线玩家">
-        <a-card :title="`实体机台在线玩家 (${machinePlayers.length}人在线)`" :bordered="false">
+      <!-- 电子游戏在线玩家 -->
+      <a-tab-pane key="game" tab="电子游戏在线玩家">
+        <a-card :bordered="false" :title="`电子游戏在线玩家 (${gamePlayers.length}人在线)`">
           <template #extra>
             <a-space>
               <a-tag color="green">实时更新</a-tag>
-              <a-tag color="blue">最后更新: {{ lastMachineUpdateTime }}</a-tag>
-              <a-button type="primary" size="small" @click="refreshMachinePlayers">
+              <a-tag color="blue">最后更新: {{ lastGameUpdateTime }}</a-tag>
+              <a-button size="small" type="primary" @click="refreshGamePlayers">
                 刷新
               </a-button>
             </a-space>
           </template>
 
-          <a-empty v-if="!machineLoading && machinePlayers.length === 0" description="暂无在线玩家（最近10秒内无押注记录）" />
+          <a-empty v-if="!gameLoading && gamePlayers.length === 0" description="暂无在线玩家（最近1分钟内无押注记录）" />
+
+          <a-table
+            v-else
+            :columns="gameColumns"
+            :data-source="gamePlayers"
+            :loading="gameLoading"
+            :pagination="{ pageSize: 20 }"
+            :scroll="{ x: 1200 }"
+            row-key="id"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'player_info'">
+                <a-space>
+                  <a-avatar :src="record.avatar" v-if="record.avatar" />
+                  <a-avatar v-else />
+                  <div>
+                    <div>{{ record.name }}</div>
+                    <div style="color: #999; font-size: 12px;">{{ record.phone }}</div>
+                  </div>
+                </a-space>
+              </template>
+
+              <template v-if="column.key === 'platform_info'">
+                <div v-if="record.platform_name">{{ record.platform_name }}</div>
+                <span v-else>-</span>
+              </template>
+
+              <template v-if="column.key === 'last_bet_time'">
+                <div>
+                  <div>{{ record.last_bet_time }}</div>
+                  <a-tag color="green" style="margin-top: 4px;">{{ record.bet_seconds_ago }}秒前</a-tag>
+                </div>
+              </template>
+
+              <template v-if="column.key === 'status'">
+                <a-tag color="green">游戏中</a-tag>
+              </template>
+
+              <template v-if="column.key === 'action'">
+                <a-button type="primary" size="small" @click="showGrantModal(record)">
+                  发放彩金
+                </a-button>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-tab-pane>
+
+      <!-- 实体机台在线玩家 -->
+      <a-tab-pane key="machine" tab="实体机台在线玩家">
+        <a-card :bordered="false" :title="`实体机台在线玩家 (${machinePlayers.length}人在线)`">
+          <template #extra>
+            <a-space>
+              <a-tag color="green">实时更新</a-tag>
+              <a-tag color="blue">最后更新: {{ lastMachineUpdateTime }}</a-tag>
+              <a-button size="small" type="primary" @click="refreshMachinePlayers">
+                刷新
+              </a-button>
+            </a-space>
+          </template>
+
+          <a-empty v-if="!machineLoading && machinePlayers.length === 0" description="暂无在线玩家（最近1分钟内无押注记录）" />
 
           <a-table
             v-else
@@ -42,68 +104,6 @@
                   <div>{{ record.machine_name }}</div>
                   <div style="color: #999; font-size: 12px;">编号: {{ record.machine_code }}</div>
                 </div>
-                <span v-else>-</span>
-              </template>
-
-              <template v-if="column.key === 'last_bet_time'">
-                <div>
-                  <div>{{ record.last_bet_time }}</div>
-                  <a-tag color="green" style="margin-top: 4px;">{{ record.bet_seconds_ago }}秒前</a-tag>
-                </div>
-              </template>
-
-              <template v-if="column.key === 'status'">
-                <a-tag color="green">游戏中</a-tag>
-              </template>
-
-              <template v-if="column.key === 'action'">
-                <a-button type="primary" size="small" @click="showGrantModal(record)">
-                  发放彩金
-                </a-button>
-              </template>
-            </template>
-          </a-table>
-        </a-card>
-      </a-tab-pane>
-
-      <!-- 电子游戏在线玩家 -->
-      <a-tab-pane key="game" tab="电子游戏在线玩家">
-        <a-card :title="`电子游戏在线玩家 (${gamePlayers.length}人在线)`" :bordered="false">
-          <template #extra>
-            <a-space>
-              <a-tag color="green">实时更新</a-tag>
-              <a-tag color="blue">最后更新: {{ lastGameUpdateTime }}</a-tag>
-              <a-button type="primary" size="small" @click="refreshGamePlayers">
-                刷新
-              </a-button>
-            </a-space>
-          </template>
-
-          <a-empty v-if="!gameLoading && gamePlayers.length === 0" description="暂无在线玩家（最近10秒内无押注记录）" />
-
-          <a-table
-            v-else
-            :columns="gameColumns"
-            :data-source="gamePlayers"
-            :loading="gameLoading"
-            :pagination="{ pageSize: 20 }"
-            :scroll="{ x: 1200 }"
-            row-key="id"
-          >
-            <template #bodyCell="{ column, record }">
-              <template v-if="column.key === 'player_info'">
-                <a-space>
-                  <a-avatar :src="record.avatar" v-if="record.avatar" />
-                  <a-avatar v-else />
-                  <div>
-                    <div>{{ record.name }}</div>
-                    <div style="color: #999; font-size: 12px;">{{ record.phone }}</div>
-                  </div>
-                </a-space>
-              </template>
-
-              <template v-if="column.key === 'platform_info'">
-                <div v-if="record.platform_name">{{ record.platform_name }}</div>
                 <span v-else>-</span>
               </template>
 
