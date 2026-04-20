@@ -394,16 +394,8 @@ class AutoShiftService
         // 计算总支出（洗分 + 后台扣点）
         $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
 
-        // 计算利润（投钞 + 总收入 - 总支出 - 彩金）
-        $totalProfit = bcsub(
-            bcsub(
-                bcadd($data['machine_put_point'], $totalIn, 2),
-                $totalOut,
-                2
-            ),
-            $data['lottery_amount'],
-            2
-        );
+        // 计算利润（投钞 + 总收入 - 总支出）
+        $totalProfit = bcsub(bcadd($data['machine_put_point'], $totalIn, 2), $totalOut, 2);
 
         // 计算每台设备的明细统计
         $deviceDetails = $this->calculateDeviceDetails($admin->department_id, $bindAdminUserId, $startTime, $endTime);

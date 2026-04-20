@@ -2814,17 +2814,8 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->bind_admin_user_id = $admin->id;
                     $storeAgentShiftHandoverRecord->is_auto_shift = 0;
 
-                    // 计算利润（投钞 + 总收入 - 总支出 - 彩金）
-                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
-                        bcsub(
-                            bcadd($storeAgentShiftHandoverRecord->machine_point,
-                                  $storeAgentShiftHandoverRecord->total_in, 2),
-                            $storeAgentShiftHandoverRecord->total_out,
-                            2
-                        ),
-                        $storeAgentShiftHandoverRecord->lottery_amount,
-                        2
-                    );
+                    // 计算利润（投钞 + 总收入 - 总支出）
+                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(bcadd($storeAgentShiftHandoverRecord->machine_point, $storeAgentShiftHandoverRecord->total_in, 2), $storeAgentShiftHandoverRecord->total_out, 2);
                     $storeAgentShiftHandoverRecord->save();
 
                     // 8.5 保存设备明细
