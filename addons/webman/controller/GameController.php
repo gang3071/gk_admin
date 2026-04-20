@@ -329,16 +329,20 @@ class GameController
             $tabs = $form->tabs()->destroyInactiveTabPane();
             $contents = [];
             if ($form->isEdit()) {
-                $contents = $form->driver()->get('gameContent')->mapWithKeys(function (gameContent $content) {
-                    return [
-                        $content->lang => [
-                            'name' => $content->name,
-                            'description' => $content->description,
-                            'picture' => $content->picture,
-                            'id' => $content->id,
-                        ]
-                    ];
-                });
+                // 兼容 PHP 8.0：确保 gameContent 存在且不为空
+                $gameContent = $form->driver()->get('gameContent');
+                if ($gameContent && $gameContent->isNotEmpty()) {
+                    $contents = $gameContent->mapWithKeys(function (GameContent $content) {
+                        return [
+                            $content->lang => [
+                                'name' => $content->name,
+                                'description' => $content->description,
+                                'picture' => $content->picture,
+                                'id' => $content->id,
+                            ]
+                        ];
+                    });
+                }
             }
             foreach ($langList as $k => $v) {
                 $tabs->pane($v, function (Form $form) use ($k, $contents) {
