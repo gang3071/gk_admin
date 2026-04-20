@@ -128,11 +128,7 @@ class ChannelIndexController
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal = bcadd(
-                $operationStatistics['withdrawal_total'] ?? 0,
-                $lotteryStatistics['lottery_amount'] ?? 0,
-                2
-            );
+            $outcomeTotal = $operationStatistics['withdrawal_total'] ?? 0;
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // 数据周期筛选
@@ -1443,11 +1439,7 @@ class ChannelIndexController
             $statisticsData['machine_put_point'] ?? 0,
             2
         );
-        $outcomeTotal = bcadd(
-            $statisticsData['withdraw_amount'] ?? 0,
-            $statisticsData['lottery_amount'] ?? 0,
-            2
-        );
+        $outcomeTotal = $statisticsData['withdraw_amount'] ?? 0;
         $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
         $layout = Layout::create();
@@ -2207,11 +2199,7 @@ class ChannelIndexController
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal = bcadd(
-                $operationStatistics['withdrawal_total'] ?? 0,
-                $lotteryStatistics['lottery_amount'] ?? 0,
-                2
-            );
+            $outcomeTotal =$operationStatistics['withdrawal_total'] ?? 0;
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             $row->column(

@@ -149,10 +149,11 @@ class ChannelStoreProfitReportController
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
-            // 计算小计：(开分+投钞) - (洗分+彩金)
+            // 计算小计 = 开分 - (洗分 + 彩金)
+            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
+            // 注意：洗分（recharge_amount）已经包含了彩金，所以不需要再加彩金
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-            $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
-            $subtotal = bcsub($totalIn, $totalOut, 2);
+            $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
             // 计算代理分润：小计 * 代理抽成比例
             $agentCommission = floatval($store->agent_commission ?? 0);
@@ -308,27 +309,6 @@ class ChannelStoreProfitReportController
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_lottery']))
-                            ->precision(2)
-                            ->prefix(admin_trans('channel_store_profit.stats.total_lottery'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#eb2f96'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
-
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
                             ->value(floatval($totalStats['total_subtotal']))
                             ->precision(2)
                             ->prefix(admin_trans('channel_store_profit.stats.total_subtotal'))
@@ -345,6 +325,27 @@ class ChannelStoreProfitReportController
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     ->style(['margin-top' => '10px'])
+                    , 6);
+
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_lottery']))
+                            ->precision(2)
+                            ->prefix(admin_trans('channel_store_profit.stats.total_lottery'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#eb2f96'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                        ->style(['margin-top' => '10px'])
                     , 6);
 
                 $row->column(
