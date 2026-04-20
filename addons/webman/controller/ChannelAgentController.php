@@ -338,11 +338,11 @@ class ChannelAgentController
 
             // 计算小计 = 开分 - (洗分 + 彩金)
             // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
+            // 注意：洗分（recharge_amount）已经包含了彩金，所以不需要再加彩金
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
 
-            $totalOut = bcadd($withdrawAmount, $lotteryAmount, 2);
-            $item['subtotal'] = bcsub($rechargeAmount, $totalOut, 2);
+            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
 
             // 存储纯开分金额（扣除投钞后），用于展示
             $machinePutPoint = floatval($item['machine_put_point'] ?? 0);

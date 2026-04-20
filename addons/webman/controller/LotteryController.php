@@ -824,9 +824,15 @@ class LotteryController
 
                             do {
                                 // 使用 SCAN 分批查找，每次最多返回 100 个键
-                                $result = $redis->scan($cursor, 'MATCH', $pattern, 'COUNT', 100);
+                                // Redis::scan($cursor, $pattern, $count) - 使用位置参数
+                                $result = $redis->scan($cursor, $pattern, 100);
+
+                                if ($result === false) {
+                                    break; // 扫描失败，退出循环
+                                }
+
                                 $cursor = $result[0];
-                                $keys = $result[1];
+                                $keys = $result[1] ?? [];
 
                                 if (!empty($keys)) {
                                     $redis->del($keys);
