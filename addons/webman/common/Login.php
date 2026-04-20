@@ -527,12 +527,13 @@ class Login extends LoginAbstract
             case 'PlayGameRecord':
                 $query = PlayGameRecord::query();
 
-                // 代理后台：只统计该代理下级店家的玩家数据
+                // 1. 代理后台：只统计该代理下级店家的玩家数据
                 if (!empty($adminUserId)) {
                     /** @var \addons\webman\model\AdminUser $adminUser */
                     $adminUser = \addons\webman\model\AdminUser::query()->find($adminUserId);
+
                     if ($adminUser && $adminUser->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
-                        // 获取该代理下所有店家的ID
+                        // 代理：获取该代理下所有店家的ID
                         $storeIds = $adminUser->childStores()
                             ->where('type', \addons\webman\model\AdminUser::TYPE_STORE)
                             ->pluck('id');
@@ -542,9 +543,19 @@ class Login extends LoginAbstract
                             ->pluck('id');
                         // 只查询这些玩家的游戏记录
                         $query->whereIn('player_id', $playerIds);
+                    } elseif ($adminUser && $adminUser->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+                        // 店家：只统计自己的玩家数据
+                        $playerIds = Player::query()
+                            ->where('store_admin_id', $adminUser->id)
+                            ->pluck('id');
+                        $query->whereIn('player_id', $playerIds);
                     }
                 }
-                // 旧逻辑：通过玩家ID过滤（推广员相关）
+                // 2. 子站后台：通过 department_id 过滤
+                elseif (!empty($departmentId)) {
+                    $query->where('department_id', $departmentId);
+                }
+                // 3. 旧逻辑：通过玩家ID过滤（推广员相关）
                 elseif (!empty($playerId)) {
                     /** @var Player $player */
                     $player = Player::query()->find($playerId);
