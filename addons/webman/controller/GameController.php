@@ -329,32 +329,39 @@ class GameController
             $tabs = $form->tabs()->destroyInactiveTabPane();
             $contents = [];
             if ($form->isEdit()) {
-                $contents = $form->driver()->get('gameContent')->mapWithKeys(function (gameContent $content) {
-                    return [
-                        $content->lang => [
-                            'name' => $content->name,
-                            'description' => $content->description,
-                            'picture' => $content->picture,
-                            'id' => $content->id,
-                        ]
-                    ];
-                });
+                // 兼容 PHP 8.0：确保 gameContent 存在且不为空
+                $gameContent = $form->driver()->get('gameContent');
+                if ($gameContent && $gameContent->isNotEmpty()) {
+                    $contents = $gameContent->mapWithKeys(function (GameContent $content) {
+                        return [
+                            $content->lang => [
+                                'name' => $content->name,
+                                'description' => $content->description,
+                                'picture' => $content->picture,
+                                'id' => $content->id,
+                            ]
+                        ];
+                    });
+                }
             }
             foreach ($langList as $k => $v) {
                 $tabs->pane($v, function (Form $form) use ($k, $contents) {
+                    // 获取当前语言的内容数据（兼容 PHP 8.0 严格类型检查）
+                    $langContent = $contents[$k] ?? [];
+
                     $form->text("content." . $k . ".name", admin_trans('game.fields.name'))
-                        ->value($contents[$k]['name'] ?? '')
+                        ->value($langContent['name'] ?? '')
                         ->required()->maxlength(200)
                         ->help(admin_trans('game.help.name'));
                     $form->image("content." . $k . ".picture", admin_trans('game.fields.picture'))
                         ->ext('jpg,png,jpeg')
-                        ->value($contents[$k]['picture'] ?? '')
+                        ->value($langContent['picture'] ?? '')
                         ->fileSize('3m')
                         ->help(admin_trans('game.help.picture_size'))
                         ->required();
                     $form->myEditor("content." . $k . ".description", admin_trans('game.fields.description'))
-                        ->value(isset($contents[$k]['description']) ? (string)$contents[$k]['description'] : '');
-                    $form->hidden('content_id')->default($contents[$k]['id'] ?? '');
+                        ->value($langContent['description'] ?? '');
+                    $form->hidden('content_id')->default($langContent['id'] ?? '');
                 });
             }
             $form->layout('vertical');
