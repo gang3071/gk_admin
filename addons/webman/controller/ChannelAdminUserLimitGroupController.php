@@ -11,12 +11,11 @@ use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
-use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\support\Request;
 use ExAdmin\ui\response\Response;
+use ExAdmin\ui\support\Request;
 
 /**
  * 店家限红分配管理（渠道后台）
@@ -175,7 +174,59 @@ class ChannelAdminUserLimitGroupController
                     $form->input('platform_code', null);
                 }
             });
+
+            // 保存/更新后清理缓存
+            $form->saved(function (Form $form) {
+                $this->clearAdminUserLimitGroupCache($form);
+            });
+
+            // 删除后清理缓存
+            $form->deleting(function (Form $form) {
+                $this->clearAdminUserLimitGroupCache($form);
+            });
         });
+    }
+
+    /**
+     * 清理店家限红组相关缓存
+     * @param Form $form
+     */
+    private function clearAdminUserLimitGroupCache(Form $form)
+    {
+        try {
+            $redis = \support\Redis::connection('default')->client();
+
+            // 获取店家ID和平台ID
+            $adminUserId = $form->model()->admin_user_id ?? $form->input('admin_user_id');
+            $platformId = $form->model()->platform_id ?? $form->input('platform_id');
+
+            if ($adminUserId && $platformId) {
+                // 清理该店家下所有玩家的限红组配置缓存（使用SCAN避免阻塞）
+                $pattern = "limit_group_config:{$platformId}:*:{$adminUserId}";
+                $iterator = null;
+                while (false !== ($keys = $redis->scan($iterator, $pattern, 100))) {
+                    if (!empty($keys)) {
+                        $redis->del(...$keys);
+                    }
+                }
+
+                // 同时清理平台限红组配置缓存（因为可能切换了营运账号）
+                $platformLimitConfigKey = "platform_limit_configs:{$platformId}";
+                $redis->del($platformLimitConfigKey);
+
+                \support\Log::info('店家限红组缓存已清理', [
+                    'admin_user_id' => $adminUserId,
+                    'platform_id' => $platformId,
+                    'limit_group_id' => $form->model()->limit_group_id ?? $form->input('limit_group_id'),
+                ]);
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('清理店家限红组缓存失败', [
+                'error' => $e->getMessage(),
+                'admin_user_id' => $adminUserId ?? null,
+                'platform_id' => $platformId ?? null,
+            ]);
+        }
     }
 
     /**

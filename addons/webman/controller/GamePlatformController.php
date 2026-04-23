@@ -231,7 +231,59 @@ class GamePlatformController
                     }
                 });
             $form->layout('vertical');
+
+            // 保存/更新后清理缓存（如果修改了default_limit_group_id）
+            $form->saved(function (Form $form) {
+                $this->clearGamePlatformCache($form);
+            });
         });
+    }
+
+    /**
+     * 清理游戏平台相关缓存
+     * @param Form $form
+     */
+    private function clearGamePlatformCache(Form $form)
+    {
+        try {
+            $redis = \support\Redis::connection('default')->client();
+
+            // 获取平台ID和代码
+            $platformId = $form->model()->id ?? $form->input('id');
+            $platformCode = $form->model()->code ?? $form->input('code');
+
+            if ($platformId) {
+                // 1. 清理游戏平台缓存
+                $platformCacheKey = "game_platform:{$platformCode}";
+                $redis->del($platformCacheKey);
+
+                // 2. 如果是ATG/RSG/DG平台，清理相关限红组缓存
+                if (in_array($platformCode, ['ATG', 'RSG', 'DG'])) {
+                    // 清理平台限红组配置缓存
+                    $platformLimitConfigKey = "platform_limit_configs:{$platformId}";
+                    $redis->del($platformLimitConfigKey);
+
+                    // 清理所有玩家的限红组配置缓存（使用SCAN避免阻塞）
+                    $pattern = "limit_group_config:{$platformId}:*";
+                    $iterator = null;
+                    while (false !== ($keys = $redis->scan($iterator, $pattern, 100))) {
+                        if (!empty($keys)) {
+                            $redis->del(...$keys);
+                        }
+                    }
+
+                    \support\Log::info('游戏平台缓存已清理', [
+                        'platform_id' => $platformId,
+                        'platform_code' => $platformCode,
+                    ]);
+                }
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('清理游戏平台缓存失败', [
+                'error' => $e->getMessage(),
+                'platform_id' => $platformId ?? null,
+            ]);
+        }
     }
 
     /**

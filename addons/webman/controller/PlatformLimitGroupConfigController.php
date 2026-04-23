@@ -2,16 +2,16 @@
 
 namespace addons\webman\controller;
 
+use addons\webman\model\GamePlatform;
 use addons\webman\model\PlatformLimitGroup;
 use addons\webman\model\PlatformLimitGroupConfig;
-use addons\webman\model\GamePlatform;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\support\Request;
 use ExAdmin\ui\response\Response;
+use ExAdmin\ui\support\Request;
 
 /**
  * 限红组平台配置管理（总后台）
@@ -341,7 +341,65 @@ class PlatformLimitGroupConfigController
 
                 $form->input('config_data', $configData);
             });
+
+            // 保存/更新后清理缓存
+            $form->saved(function (Form $form) {
+                $this->clearLimitGroupCache($form);
+            });
+
+            // 删除后清理缓存
+            $form->deleting(function (Form $form) {
+                $this->clearLimitGroupCache($form);
+            });
         });
+    }
+
+    /**
+     * 清理限红组相关缓存
+     * @param Form $form
+     */
+    private function clearLimitGroupCache(Form $form)
+    {
+        try {
+            $redis = \support\Redis::connection('default')->client();
+
+            // 获取平台ID
+            $platformId = $form->model()->platform_id ?? $form->input('platform_id');
+
+            if ($platformId) {
+                // 1. 清理平台限红组配置缓存
+                $platformLimitConfigKey = "platform_limit_configs:{$platformId}";
+                $redis->del($platformLimitConfigKey);
+
+                // 2. 清理所有玩家的限红组配置缓存（使用SCAN避免阻塞）
+                $pattern = "limit_group_config:{$platformId}:*";
+                $iterator = null;
+                while (false !== ($keys = $redis->scan($iterator, $pattern, 100))) {
+                    if (!empty($keys)) {
+                        $redis->del(...$keys);
+                    }
+                }
+
+                // 3. 清理游戏平台缓存
+                $platformCacheKey = "game_platform:*";
+                $iterator = null;
+                while (false !== ($keys = $redis->scan($iterator, $platformCacheKey, 100))) {
+                    if (!empty($keys)) {
+                        $redis->del(...$keys);
+                    }
+                }
+
+                \support\Log::info('限红组配置缓存已清理', [
+                    'platform_id' => $platformId,
+                    'limit_group_id' => $form->model()->limit_group_id ?? $form->input('limit_group_id'),
+                ]);
+            }
+        } catch (\Exception $e) {
+            \support\Log::error('清理限红组缓存失败', [
+                'error' => $e->getMessage(),
+                'platform_id' => $platformId ?? null,
+            ]);
+        }
     }
 
     /**
