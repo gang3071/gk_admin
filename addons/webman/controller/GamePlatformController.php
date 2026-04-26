@@ -122,7 +122,6 @@ class GamePlatformController
             // 维护时间列
             $grid->column('maintenance_time', admin_trans('game_platform.fields.maintenance_time'))
                 ->display(function ($value, GamePlatform $data) {
-                    var_dump($data->toArray());
                     $time = '';
                     !empty($data->maintenance_week) && $time .= admin_trans('system_setting.week.' . $data->maintenance_week) . ' ';
                     !empty($data->maintenance_start_time) && $time .= $data->maintenance_start_time;
@@ -560,6 +559,7 @@ class GamePlatformController
      */
     public function editPlatformMaintain(GamePlatform $data): Form
     {
+        var_dump($data->toArray());
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
