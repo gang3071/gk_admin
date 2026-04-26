@@ -562,9 +562,6 @@ class GamePlatformController
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
-            // 隐藏字段：存储平台ID
-            $form->hidden('id')->value($data->id);
-
             // 维护功能开关
             $form->switch('maintenance_status', admin_trans('game_platform.fields.maintenance_status'))
                 ->value($data->maintenance_status ?? 0)
@@ -587,9 +584,9 @@ class GamePlatformController
             $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'))
                 ->value([$data->maintenance_start_time ?? null, $data->maintenance_end_time ?? null]);
 
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use($data) {
 
-                $id = $form->driver()->get('id');
+                $id = $data->id;
                 /** @var GamePlatform $gamePlat */
                 $gamePlat = GamePlatform::query()->find($id);
 
