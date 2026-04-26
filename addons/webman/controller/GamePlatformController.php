@@ -559,6 +559,7 @@ class GamePlatformController
      */
     public function editPlatformMaintain(GamePlatform $data): Form
     {
+        var_dump($data);
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
@@ -586,6 +587,7 @@ class GamePlatformController
 
             $form->saving(function (Form $form) use($data) {
 
+                var_dump($data);
                 $id = $data->id;
                 /** @var GamePlatform $gamePlat */
                 $gamePlat = GamePlatform::query()->find($id);
