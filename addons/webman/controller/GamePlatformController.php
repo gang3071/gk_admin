@@ -607,7 +607,7 @@ class GamePlatformController
                     DB::rollBack();
                     return message_error(admin_trans('form.save_fail') . $e->getMessage());
                 }
-                return message_success(admin_trans('game_extend.save_success'));
+                return message_success(admin_trans('form.save_success'));
             });
         });
     }
