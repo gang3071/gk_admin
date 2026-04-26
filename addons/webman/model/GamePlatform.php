@@ -19,6 +19,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int display_mode 展示模式
  * @property int status 状态
  * @property int has_lobby 是否进入大厅
+ * @property int maintenance_week 维护星期
+ * @property string maintenance_start_time 维护开始时间
+ * @property string maintenance_end_time 维护结束时间
+ * @property int maintenance_status 维护功能状态
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  * @property string deleted_at 删除时间

@@ -8,6 +8,7 @@ use addons\webman\model\GameType;
 use addons\webman\service\GamePlatformService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -117,6 +118,25 @@ class GamePlatformController
 
                 return '未设置';
             })->align('center');
+
+            // 维护时间列
+            $grid->column('maintenance_time', admin_trans('game_platform.fields.maintenance_time'))
+                ->display(function ($value, GamePlatform $data) {
+                    $time = '';
+                    !empty($data->maintenance_week) && $time .= admin_trans('system_setting.week.' . $data->maintenance_week) . ' ';
+                    !empty($data->maintenance_start_time) && $time .= $data->maintenance_start_time;
+                    !empty($data->maintenance_end_time) && $time .= '~' . $data->maintenance_end_time;
+
+                    if (empty($time)) {
+                        $time = admin_trans('game_platform.no_maintenance');
+                    }
+
+                    $html = Html::create()->content([
+                        Icon::create('FieldTimeOutlined'),
+                        $time
+                    ])->style(['cursor' => 'pointer']);
+                    return Tag::create($html)->color('cyan')->modal([$this, 'editPlatformMaintain'], ['data' => $data]);
+                })->align('center');
 
             $grid->sortInput('sort');
             $grid->column('status', admin_trans('game_platform.fields.status'))->switch()->align('center');
@@ -529,5 +549,43 @@ class GamePlatformController
         }
 
         return $data;
+    }
+
+    /**
+     * 游戏平台维护时间编辑
+     * @auth true
+     * @param GamePlatform $data
+     * @return Form
+     */
+    public function editPlatformMaintain(GamePlatform $data): Form
+    {
+        /** @var GamePlatform $platform */
+        $platform = GamePlatform::query()->where('id', $data->id)->first();
+
+        return Form::create($platform, function (Form $form) use ($platform) {
+            $form->title(admin_trans('game_platform.maintenance_title'));
+
+            // 维护功能开关
+            $form->switch('maintenance_status', admin_trans('game_platform.fields.maintenance_status'))
+                ->value($platform->maintenance_status ?? 0)
+                ->help(admin_trans('game_platform.maintenance_status_help'));
+
+            // 星期选择
+            $form->select('maintenance_week', admin_trans('system_setting.week_str'))
+                ->value($platform->maintenance_week)
+                ->options([
+                    1 => admin_trans('system_setting.week.1'),
+                    2 => admin_trans('system_setting.week.2'),
+                    3 => admin_trans('system_setting.week.3'),
+                    4 => admin_trans('system_setting.week.4'),
+                    5 => admin_trans('system_setting.week.5'),
+                    6 => admin_trans('system_setting.week.6'),
+                    7 => admin_trans('system_setting.week.7'),
+                ]);
+
+            // 时间范围
+            $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'))
+                ->value([$platform->maintenance_start_time, $platform->maintenance_end_time]);
+        });
     }
 }

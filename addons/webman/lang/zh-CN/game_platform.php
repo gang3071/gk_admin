@@ -13,6 +13,8 @@ return [
         'ratio' => '电子游戏结算比值',
         'has_lobby' => '是否进入大厅',
         'picture' => '客户端大图',
+        'maintenance_time' => '维护时间',
+        'maintenance_status' => '维护功能',
     ],
     'display_mode' => [
         1 => '横版',
@@ -30,4 +32,7 @@ return [
     'view_game' => '查看游戏',
     'player_not_fount' => '未设置后管玩家账号',
     'disable' => '游戏平台已被禁用',
+    'maintenance_title' => '平台维护时间设置',
+    'no_maintenance' => '未设置',
+    'maintenance_status_help' => '开启后，在设置的维护时间内，该平台将进入维护状态',
 ];

@@ -13,6 +13,8 @@ return [
         'ratio' => 'Electronic game settlement ratio',
         'has_lobby' => 'Do you want to enter the lobby',
         'picture' => 'Client side image',
+        'maintenance_time' => 'Maintenance Time',
+        'maintenance_status' => 'Maintenance Function',
     ],
     'display_mode' => [
         1 => 'Landscape',
@@ -30,4 +32,7 @@ return [
     'view_game' => 'View game',
     'player_not_fount' => 'No post management player account has been set up',
     'disable' => 'The gaming platform has been disabled',
+    'maintenance_title' => 'Platform Maintenance Time Settings',
+    'no_maintenance' => 'Not Set',
+    'maintenance_status_help' => 'When enabled, the platform will enter maintenance mode during the configured time period',
 ];
