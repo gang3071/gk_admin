@@ -559,19 +559,25 @@ class GamePlatformController
      */
     public function editPlatformMaintain(GamePlatform $data): Form
     {
-        // 重新查询获取完整数据
-        $platformId = $data->id ?? $data['id'];
-        $platform = GamePlatform::query()->find($platformId);
+        /** @var GamePlatform $data */
+        $platformId = $data->id;
+        $data = GamePlatform::query()->where('id', $platformId)->first();
 
-        return Form::create($platform, function (Form $form) use ($platformId) {
+        if (!$data) {
+            return notification_error(admin_trans('admin.error'), '平台不存在');
+        }
+
+        return Form::create($data, function (Form $form) use ($data, $platformId) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
             // 维护功能开关
             $form->switch('maintenance_status', admin_trans('game_platform.fields.maintenance_status'))
+                ->value($data->maintenance_status ?? 0)
                 ->help(admin_trans('game_platform.maintenance_status_help'));
 
             // 星期选择
             $form->select('maintenance_week', admin_trans('system_setting.week_str'))
+                ->value($data->maintenance_week ?? null)
                 ->options([
                     1 => admin_trans('system_setting.week.1'),
                     2 => admin_trans('system_setting.week.2'),
@@ -583,20 +589,26 @@ class GamePlatformController
                 ]);
 
             // 时间范围
-            $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'));
+            $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'))
+                ->value([$data->maintenance_start_time ?? null, $data->maintenance_end_time ?? null]);
 
-            // 保存逻辑
+            // 手动保存逻辑（避免 Form 自动保存导致的字段问题）
             $form->saving(function (Form $form) use ($platformId) {
-                $platform = GamePlatform::query()->find($platformId);
-                if ($platform) {
-                    $platform->maintenance_status = $form->input('maintenance_status') ?? 0;
-                    $platform->maintenance_week = $form->input('maintenance_week');
-                    $platform->maintenance_start_time = $form->input('maintenance_start_time');
-                    $platform->maintenance_end_time = $form->input('maintenance_end_time');
-                    $platform->save();
+                try {
+                    Db::table('game_platform')
+                        ->where('id', $platformId)
+                        ->update([
+                            'maintenance_status' => $form->input('maintenance_status') ?? 0,
+                            'maintenance_week' => $form->input('maintenance_week'),
+                            'maintenance_start_time' => $form->input('maintenance_start_time'),
+                            'maintenance_end_time' => $form->input('maintenance_end_time'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    // 返回 false 阻止 Form 的默认保存行为
+                    return false;
+                } catch (\Exception $e) {
+                    return message_error('保存失败: ' . $e->getMessage());
                 }
-                // 阻止默认保存行为
-                return false;
             });
         });
     }
