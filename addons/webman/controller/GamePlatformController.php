@@ -559,20 +559,20 @@ class GamePlatformController
      */
     public function editPlatformMaintain(GamePlatform $data): Form
     {
-        /** @var GamePlatform $platform */
-        $platform = GamePlatform::query()->where('id', $data->id)->first();
+        /** @var GamePlatform $data */
+        $data = GamePlatform::query()->where('id', $data->id)->first();
 
-        return Form::create($platform, function (Form $form) use ($platform) {
+        return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
             // 维护功能开关
             $form->switch('maintenance_status', admin_trans('game_platform.fields.maintenance_status'))
-                ->value($platform->maintenance_status ?? 0)
+                ->value($data->maintenance_status ?? 0)
                 ->help(admin_trans('game_platform.maintenance_status_help'));
 
             // 星期选择
             $form->select('maintenance_week', admin_trans('system_setting.week_str'))
-                ->value($platform->maintenance_week)
+                ->value($data->maintenance_week)
                 ->options([
                     1 => admin_trans('system_setting.week.1'),
                     2 => admin_trans('system_setting.week.2'),
@@ -585,7 +585,7 @@ class GamePlatformController
 
             // 时间范围
             $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'))
-                ->value([$platform->maintenance_start_time, $platform->maintenance_end_time]);
+                ->value([$data->maintenance_start_time, $data->maintenance_end_time]);
         });
     }
 }
