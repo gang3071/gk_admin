@@ -27,7 +27,7 @@ class ClientMaintainTask
             $this->checkMaintenanceTime();
         });
 
-        Log::info("ClientMaintainTask: 客户端维护时间监听任务已启动，每60秒检查一次\n");
+        echo "ClientMaintainTask: 客户端维护时间监听任务已启动，每60秒检查一次\n";
 
         // 启动时立即执行一次检查
         $this->checkMaintenanceTime();
