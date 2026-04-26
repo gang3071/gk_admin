@@ -593,6 +593,19 @@ class GamePlatformController
             // 时间范围
             $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'))
                 ->value([$platform->maintenance_start_time, $platform->maintenance_end_time]);
+
+            // 保存逻辑
+            $form->saving(function (Form $form) use ($platform) {
+                // 更新维护时间字段
+                $platform->maintenance_status = $form->input('maintenance_status') ?? 0;
+                $platform->maintenance_week = $form->input('maintenance_week');
+                $platform->maintenance_start_time = $form->input('maintenance_start_time');
+                $platform->maintenance_end_time = $form->input('maintenance_end_time');
+                $platform->save();
+
+                // 阻止默认保存行为
+                return false;
+            });
         });
     }
 }
