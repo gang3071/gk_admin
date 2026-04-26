@@ -559,13 +559,8 @@ class GamePlatformController
      */
     public function editPlatformMaintain(GamePlatform $data): Form
     {
-        /** @var GamePlatform $data */
         $platformId = $data->id;
         $data = GamePlatform::query()->where('id', $platformId)->first();
-
-        if (!$data) {
-            return notification_error(admin_trans('admin.error'), '平台不存在');
-        }
 
         return Form::create($data, function (Form $form) use ($data, $platformId) {
             $form->title(admin_trans('game_platform.maintenance_title'));
