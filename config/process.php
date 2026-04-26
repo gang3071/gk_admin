@@ -9,4 +9,11 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 客户端维护时间监听任务
+    'client_maintain' => [
+        'handler' => process\ClientMaintainTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];
