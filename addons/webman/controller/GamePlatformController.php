@@ -584,23 +584,26 @@ class GamePlatformController
             $form->timeRange('maintenance_start_time', 'maintenance_end_time', admin_trans('system_setting.time_range'))
                 ->value([$data->maintenance_start_time ?? null, $data->maintenance_end_time ?? null]);
 
-            // 手动保存逻辑（避免 Form 自动保存导致的字段问题）
-            $form->saving(function (Form $form) use ($data) {
+            $form->saving(function (Form $form) {
+
+                $id = $form->driver()->get('id');
+                /** @var GamePlatform $gamePlat */
+                $gamePlat = GamePlatform::query()->find($id);
+
+                DB::beginTransaction();
                 try {
-                    Db::table('game_platform')
-                        ->where('id', $data->id)
-                        ->update([
-                            'maintenance_status' => $form->input('maintenance_status') ?? 0,
-                            'maintenance_week' => $form->input('maintenance_week'),
-                            'maintenance_start_time' => $form->input('maintenance_start_time'),
-                            'maintenance_end_time' => $form->input('maintenance_end_time'),
-                            'updated_at' => date('Y-m-d H:i:s'),
-                        ]);
-                    // 返回 false 阻止 Form 的默认保存行为
-                    return false;
+                    $gamePlat->maintenance_status = $form->input('maintenance_status') ?? 0;
+                    $gamePlat->maintenance_week = $form->input('maintenance_week');
+                    $gamePlat->maintenance_start_time = $form->input('maintenance_start_time');
+                    $gamePlat->maintenance_end_time = $form->input('maintenance_end_time');
+                    $gamePlat->updated_at = date('Y-m-d H:i:s');
+                    $gamePlat->save();
+                    DB::commit();
                 } catch (\Exception $e) {
-                    return message_error('保存失败: ' . $e->getMessage());
+                    DB::rollBack();
+                    return message_error(admin_trans('form.save_fail') . $e->getMessage());
                 }
+                return message_success(admin_trans('game_extend.save_success'));
             });
         });
     }
