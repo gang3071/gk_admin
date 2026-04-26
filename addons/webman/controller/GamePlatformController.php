@@ -559,10 +559,7 @@ class GamePlatformController
      */
     public function editPlatformMaintain(GamePlatform $data): Form
     {
-        $platformId = $data->id;
-        $data = GamePlatform::query()->where('id', $platformId)->first();
-
-        return Form::create($data, function (Form $form) use ($data, $platformId) {
+        return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
             // 维护功能开关
@@ -588,10 +585,10 @@ class GamePlatformController
                 ->value([$data->maintenance_start_time ?? null, $data->maintenance_end_time ?? null]);
 
             // 手动保存逻辑（避免 Form 自动保存导致的字段问题）
-            $form->saving(function (Form $form) use ($platformId) {
+            $form->saving(function (Form $form) use ($data) {
                 try {
                     Db::table('game_platform')
-                        ->where('id', $platformId)
+                        ->where('id', $data->id)
                         ->update([
                             'maintenance_status' => $form->input('maintenance_status') ?? 0,
                             'maintenance_week' => $form->input('maintenance_week'),
