@@ -135,7 +135,7 @@ class GamePlatformController
                         Icon::create('FieldTimeOutlined'),
                         $time
                     ])->style(['cursor' => 'pointer']);
-                    return Tag::create($html)->color('cyan')->modal([$this, 'editPlatformMaintain'], ['data' => $data]);
+                    return Tag::create($html)->color('cyan')->modal([$this, 'editPlatformMaintain'], ['id' => $data->id]);
                 })->align('center');
 
             $grid->sortInput('sort');
@@ -554,12 +554,16 @@ class GamePlatformController
     /**
      * 游戏平台维护时间编辑
      * @auth true
-     * @param GamePlatform $data
+     * @param int $id 平台ID
      * @return Form
      */
-    public function editPlatformMaintain(GamePlatform $data): Form
+    public function editPlatformMaintain($id): Form
     {
-        var_dump($data->toArray());
+
+        var_dump($id);
+        /** @var GamePlatform $data */
+        $data = GamePlatform::query()->where('id', $id)->first();
+
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
