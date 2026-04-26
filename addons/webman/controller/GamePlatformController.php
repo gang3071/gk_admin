@@ -562,6 +562,9 @@ class GamePlatformController
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('game_platform.maintenance_title'));
 
+            // 隐藏字段：存储平台ID
+            $form->hidden('id')->value($data->id);
+
             // 维护功能开关
             $form->switch('maintenance_status', admin_trans('game_platform.fields.maintenance_status'))
                 ->value($data->maintenance_status ?? 0)
