@@ -559,8 +559,6 @@ class GamePlatformController
      */
     public function editPlatformMaintain($id): Form
     {
-
-        var_dump($id);
         /** @var GamePlatform $data */
         $data = GamePlatform::query()->where('id', $id)->first();
 
