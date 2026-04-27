@@ -278,18 +278,6 @@ class SystemSettingController
                 $actions->hideDel();
                 $actions->hideEdit();
             });
-
-            // 状态修改后立即推送（针对客户端维护配置）
-            $grid->editing(function ($id, $data) {
-                // 检查是否修改了 status 字段
-                if (isset($data['status'])) {
-                    // 查询完整记录以获取 feature 字段
-                    $config = SystemSetting::query()->find($id);
-                    if ($config && $config->feature === 'client_maintain') {
-                        $this->triggerClientMaintainNotify($id, 'status_switch');
-                    }
-                }
-            });
         });
     }
     

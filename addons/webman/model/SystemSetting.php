@@ -65,6 +65,49 @@ class SystemSetting extends Model
         static::updated(function (SystemSetting $setting) {
             $cacheKey = 'setting-' . $setting->feature . '-' . $setting->department_id;
             Cache::set($cacheKey, $setting);
+
+            // 客户端维护配置更新后立即推送
+            if ($setting->feature === 'client_maintain') {
+                // 检查是否修改了 status、num、date_start 或 date_end 字段（使用 wasChanged 方法）
+                $triggerFields = ['status', 'num', 'date_start', 'date_end'];
+                $shouldTrigger = false;
+
+                foreach ($triggerFields as $field) {
+                    if ($setting->wasChanged($field)) {
+                        $shouldTrigger = true;
+                        break;
+                    }
+                }
+
+                if ($shouldTrigger) {
+                    try {
+                        $service = new \app\service\ClientMaintainService();
+                        $redis = \support\Redis::connection();
+
+                        // 清除推送缓存和状态缓存
+                        $departmentId = $setting->department_id ?? 0;
+                        $configKey = $departmentId . ':' . $setting->id;
+                        $redis->del('client_maintain:notified:' . $configKey . ':start');
+                        $redis->del('client_maintain:notified:' . $configKey . ':end');
+                        $redis->del('client_maintain:status:' . $departmentId);
+
+                        // 立即检查并推送
+                        $service->checkAndNotify();
+
+                        \support\Log::info('客户端维护配置更新，触发立即推送', [
+                            'trigger' => 'model_updated',
+                            'config_id' => $setting->id,
+                            'department_id' => $departmentId,
+                            'changed_fields' => array_keys($setting->getChanges()),
+                        ]);
+                    } catch (\Throwable $e) {
+                        \support\Log::error('客户端维护配置更新推送失败', [
+                            'error' => $e->getMessage(),
+                            'config_id' => $setting->id,
+                        ]);
+                    }
+                }
+            }
         });
     }
 
