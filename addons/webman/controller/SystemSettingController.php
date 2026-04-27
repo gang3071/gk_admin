@@ -387,21 +387,10 @@ class SystemSettingController
             }
 
             $service = new \app\service\ClientMaintainService();
-
-            // 清除推送缓存和状态缓存，强制立即推送和更新
             $departmentId = $config->department_id ?? 0;
-            $configKey = $departmentId . ':' . $config->id;
-            $redis = \support\Redis::connection();
 
-            // 清除推送缓存
-            $redis->del('client_maintain:notified:' . $configKey . ':start');
-            $redis->del('client_maintain:notified:' . $configKey . ':end');
-
-            // 清除状态缓存（确保跨项目同步）
-            $redis->del('client_maintain:status:' . $departmentId);
-
-            // 立即检查并推送（同时会更新状态缓存）
-            $service->checkAndNotify();
+            // 后台修改配置后，直接根据 status 推送，不重新计算时间
+            $service->notifyImmediately($configId);
 
             \support\Log::info('客户端维护配置修改，触发立即推送和缓存更新', [
                 'trigger' => $trigger,
