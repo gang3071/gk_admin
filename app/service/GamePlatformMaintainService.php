@@ -55,6 +55,60 @@ class GamePlatformMaintainService
     }
 
     /**
+     * 后台修改配置后立即推送通知（不计算时间，直接根据 maintenance_status 推送）
+     *
+     * @param int $platformId 游戏平台ID
+     * @return void
+     */
+    public function notifyImmediately(int $platformId): void
+    {
+        try {
+            /** @var GamePlatform $platform */
+            $platform = GamePlatform::query()
+                ->where('id', $platformId)
+                ->whereNull('deleted_at')
+                ->first();
+
+            if (!$platform) {
+                Log::warning('游戏平台不存在，无法推送维护通知', ['platform_id' => $platformId]);
+                return;
+            }
+
+            $redis = Redis::connection();
+            $statusKey = self::REDIS_KEY_STATUS . $platformId;
+
+            // 根据 maintenance_status 直接判断当前应该推送的状态
+            // 1=开始维护，0=结束维护
+            $isStarting = $platform->maintenance_status == 1;
+            $currentStatus = $isStarting ? 'in_maintenance' : 'not_in_maintenance';
+
+            // 发送通知
+            $this->sendMaintenanceNotification($platform, $isStarting);
+
+            // 更新状态缓存
+            $redis->setex($statusKey, 604800, $currentStatus);
+
+            Log::info('后台修改配置，立即推送维护通知', [
+                'platform_id' => $platformId,
+                'platform_code' => $platform->code,
+                'platform_name' => $platform->name,
+                'maintenance_status' => $platform->maintenance_status,
+                'status' => $isStarting ? 'start' : 'end',
+                'week' => $platform->maintenance_week,
+                'time_range' => $platform->maintenance_start_time . ' ~ ' . $platform->maintenance_end_time,
+            ]);
+
+        } catch (\Throwable $e) {
+            Log::error('立即推送维护通知失败', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'platform_id' => $platformId,
+            ]);
+        }
+    }
+
+    /**
      * 处理单个游戏平台维护配置
      */
     private function processPlatform(GamePlatform $platform): void

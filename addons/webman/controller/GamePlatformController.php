@@ -626,12 +626,8 @@ class GamePlatformController
 
             $service = new \app\service\GamePlatformMaintainService();
 
-            // 清除状态缓存，强制状态变化检测并立即推送
-            $redis = \support\Redis::connection();
-            $redis->del('game_platform_maintain:status:' . $platformId);
-
-            // 立即检查并推送（会重新计算状态并推送）
-            $service->checkAndNotify();
+            // 后台修改配置后，直接根据 maintenance_status 推送，不重新计算时间
+            $service->notifyImmediately($platformId);
 
             \support\Log::info('游戏平台维护配置修改，触发立即推送', [
                 'trigger' => $trigger,
