@@ -17,9 +17,14 @@ class GamePlatformMaintainService
     private const REDIS_KEY_PREFIX = 'game_platform_maintain:';
 
     /**
-     * 维护通知已发送标记键
+     * 维护通知已发送标记键（已废弃，改用状态缓存）
      */
     private const REDIS_KEY_NOTIFIED = self::REDIS_KEY_PREFIX . 'notified:';
+
+    /**
+     * 维护状态缓存键（记录当前维护状态：in_maintenance / not_in_maintenance）
+     */
+    private const REDIS_KEY_STATUS = self::REDIS_KEY_PREFIX . 'status:';
 
     /**
      * 检查并处理游戏平台维护时间
@@ -65,42 +70,45 @@ class GamePlatformMaintainService
 
         $redis = Redis::connection();
 
-        if ($isInMaintenance) {
-            // 在维护时间段内，推送开始维护通知（防重复推送）
-            $notifiedKey = self::REDIS_KEY_NOTIFIED . $platformId . ':start';
+        // 获取上一次的维护状态
+        $statusKey = self::REDIS_KEY_STATUS . $platformId;
+        $lastStatus = $redis->get($statusKey);
 
-            if (!$redis->get($notifiedKey)) {
+        // 当前状态
+        $currentStatus = $isInMaintenance ? 'in_maintenance' : 'not_in_maintenance';
+
+        // 只有状态发生变化时才推送
+        if ($lastStatus !== $currentStatus) {
+            if ($isInMaintenance) {
+                // 状态变为：进入维护
                 $this->sendMaintenanceNotification($platform, true);
 
-                // 缓存时间 = 维护时段长度，确保维护期间不重复推送
-                $duration = $this->getMaintenanceDuration($platform);
-                $redis->setex($notifiedKey, $duration, '1');
-
-                Log::info('游戏平台维护开始推送', [
+                Log::info('游戏平台进入维护，推送开始通知', [
                     'platform_id' => $platformId,
                     'platform_code' => $platformCode,
                     'platform_name' => $platform->name,
                     'week' => $platform->maintenance_week,
                     'time_range' => $platform->maintenance_start_time . ' ~ ' . $platform->maintenance_end_time,
-                    'cache_duration' => $duration,
+                    'last_status' => $lastStatus,
+                    'current_status' => $currentStatus,
                 ]);
+            } else {
+                // 状态变为：离开维护（只有从维护状态切换出来才推送）
+                if ($lastStatus === 'in_maintenance') {
+                    $this->sendMaintenanceNotification($platform, false);
+
+                    Log::info('游戏平台离开维护，推送结束通知', [
+                        'platform_id' => $platformId,
+                        'platform_code' => $platformCode,
+                        'platform_name' => $platform->name,
+                        'last_status' => $lastStatus,
+                        'current_status' => $currentStatus,
+                    ]);
+                }
             }
-        } else {
-            // 不在维护时间段内，推送结束维护通知（防重复推送）
-            $notifiedKey = self::REDIS_KEY_NOTIFIED . $platformId . ':end';
 
-            if (!$redis->get($notifiedKey)) {
-                $this->sendMaintenanceNotification($platform, false);
-
-                // 缓存较短时间，避免频繁推送 end
-                $redis->setex($notifiedKey, 300, '1');
-
-                Log::info('游戏平台维护结束推送', [
-                    'platform_id' => $platformId,
-                    'platform_code' => $platformCode,
-                    'platform_name' => $platform->name,
-                ]);
-            }
+            // 更新状态缓存（7天过期，足够覆盖一个维护周期）
+            $redis->setex($statusKey, 604800, $currentStatus);
         }
     }
 
