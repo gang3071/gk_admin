@@ -601,6 +601,9 @@ class GamePlatformController
                     $gamePlat->updated_at = date('Y-m-d H:i:s');
                     $gamePlat->save();
                     DB::commit();
+
+                    // 保存成功后立即触发推送（状态、时间、星期修改）
+                    $this->triggerGamePlatformMaintainNotify($id, 'maintenance_config_edit');
                 } catch (\Exception $e) {
                     DB::rollBack();
                     return message_error(admin_trans('form.save_fail') . $e->getMessage());
@@ -608,5 +611,43 @@ class GamePlatformController
                 return message_success(admin_trans('form.save_success'));
             });
         });
+    }
+
+    /**
+     * 触发游戏平台维护通知推送
+     */
+    private function triggerGamePlatformMaintainNotify(int $platformId, string $trigger = 'unknown'): void
+    {
+        try {
+            $platform = GamePlatform::query()->find($platformId);
+            if (!$platform) {
+                return;
+            }
+
+            $service = new \app\service\GamePlatformMaintainService();
+
+            // 清除推送缓存，强制立即推送
+            $redis = \support\Redis::connection();
+            $redis->del('game_platform_maintain:notified:' . $platformId . ':start');
+            $redis->del('game_platform_maintain:notified:' . $platformId . ':end');
+
+            // 立即检查并推送
+            $service->checkAndNotify();
+
+            \support\Log::info('游戏平台维护配置修改，触发立即推送', [
+                'trigger' => $trigger,
+                'platform_id' => $platformId,
+                'platform_code' => $platform->code,
+                'platform_name' => $platform->name,
+                'maintenance_status' => $platform->maintenance_status,
+                'week' => $platform->maintenance_week,
+                'time_range' => $platform->maintenance_start_time . ' ~ ' . $platform->maintenance_end_time,
+            ]);
+        } catch (\Throwable $e) {
+            \support\Log::error('触发游戏平台维护推送失败', [
+                'error' => $e->getMessage(),
+                'platform_id' => $platformId,
+            ]);
+        }
     }
 }

@@ -17,14 +17,14 @@ class ClientMaintainService
     private const REDIS_KEY_PREFIX = 'client_maintain:';
 
     /**
-     * 维护状态键
-     */
-    private const REDIS_KEY_STATUS = self::REDIS_KEY_PREFIX . 'status';
-
-    /**
      * 维护通知已发送标记键
      */
     private const REDIS_KEY_NOTIFIED = self::REDIS_KEY_PREFIX . 'notified:';
+
+    /**
+     * 维护状态缓存键（缓存格式：client_maintain:status:{departmentId}）
+     */
+    private const REDIS_KEY_STATUS = self::REDIS_KEY_PREFIX . 'status:';
 
     /**
      * 检查并处理客户端维护时间
@@ -68,44 +68,45 @@ class ClientMaintainService
         // 检查是否处于维护时间段（只有启用状态才检查时间）
         $isInMaintenance = $isEnabled && $this->isInMaintenanceTime($config);
 
-        // 获取上一次的维护状态
         $redis = Redis::connection();
-        $lastStatus = $redis->hGet(self::REDIS_KEY_STATUS, $configKey);
-        $notifiedKey = self::REDIS_KEY_NOTIFIED . $configKey;
 
-        // 状态转换：进入维护时间
-        if ($isInMaintenance && $lastStatus !== '1') {
-            // 检查是否已经发送过通知（避免重复推送）
-            $notified = $redis->get($notifiedKey);
-            if (!$notified) {
+        // 更新维护状态缓存
+        $this->updateStatusCache($departmentId, $isInMaintenance, $config);
+
+        if ($isInMaintenance) {
+            // 在维护时间段内，推送开始维护通知（防重复推送）
+            $notifiedKey = self::REDIS_KEY_NOTIFIED . $configKey . ':start';
+
+            if (!$redis->get($notifiedKey)) {
                 $this->sendMaintenanceNotification($config, true);
-                // 标记已发送，设置过期时间（维护时段内有效）
-                $redis->setex($notifiedKey, 3600, '1');
+
+                // 缓存时间 = 维护时段长度，确保维护期间不重复推送
+                $duration = $this->getMaintenanceDuration($config);
+                $redis->setex($notifiedKey, $duration, '1');
+
+                Log::info('客户端维护开始推送', [
+                    'department_id' => $departmentId,
+                    'config_id' => $config->id,
+                    'week' => $config->num,
+                    'time_range' => $config->date_start . ' ~ ' . $config->date_end,
+                    'cache_duration' => $duration,
+                ]);
             }
-            // 更新状态
-            $redis->hSet(self::REDIS_KEY_STATUS, $configKey, '1');
+        } else {
+            // 不在维护时间段内，推送结束维护通知（防重复推送）
+            $notifiedKey = self::REDIS_KEY_NOTIFIED . $configKey . ':end';
 
-            Log::info('客户端进入维护时间', [
-                'department_id' => $departmentId,
-                'config_id' => $config->id,
-                'status' => $config->status,
-                'week' => $config->num,
-                'time_range' => $config->date_start . ' ~ ' . $config->date_end,
-            ]);
-        }
-        // 状态转换：离开维护时间
-        elseif (!$isInMaintenance && $lastStatus === '1') {
-            $this->sendMaintenanceNotification($config, false);
-            // 清除已发送标记
-            $redis->del($notifiedKey);
-            // 更新状态
-            $redis->hSet(self::REDIS_KEY_STATUS, $configKey, '0');
+            if (!$redis->get($notifiedKey)) {
+                $this->sendMaintenanceNotification($config, false);
 
-            Log::info('客户端离开维护时间', [
-                'department_id' => $departmentId,
-                'config_id' => $config->id,
-                'status' => $config->status,
-            ]);
+                // 缓存较短时间，避免频繁推送 end
+                $redis->setex($notifiedKey, 300, '1');
+
+                Log::info('客户端维护结束推送', [
+                    'department_id' => $departmentId,
+                    'config_id' => $config->id,
+                ]);
+            }
         }
     }
 
@@ -129,6 +130,24 @@ class ClientMaintainService
         }
 
         return $currentTime >= $config->date_start && $currentTime <= $config->date_end;
+    }
+
+    /**
+     * 计算维护时段长度（秒）
+     */
+    private function getMaintenanceDuration(SystemSetting $config): int
+    {
+        $start = strtotime($config->date_start);
+        $end = strtotime($config->date_end);
+
+        if ($start === false || $end === false) {
+            return 3600; // 默认 1 小时
+        }
+
+        $duration = $end - $start;
+
+        // 最少 60 秒，最多 24 小时
+        return max(60, min($duration, 86400));
     }
 
     /**
@@ -192,6 +211,43 @@ class ClientMaintainService
     }
 
     /**
+     * 更新维护状态缓存
+     *
+     * @param int $departmentId 渠道ID
+     * @param bool $isInMaintenance 是否在维护中
+     * @param SystemSetting $config 维护配置
+     */
+    private function updateStatusCache(int $departmentId, bool $isInMaintenance, SystemSetting $config): void
+    {
+        try {
+            $cacheKey = self::REDIS_KEY_STATUS . $departmentId;
+            $cacheData = [
+                'is_maintenance' => $isInMaintenance,
+                'config' => [
+                    'status' => $config->status,
+                    'week' => $config->num,
+                    'start_time' => $config->date_start,
+                    'end_time' => $config->date_end,
+                ],
+                'message' => $config->status != 1
+                    ? '维护功能已关闭'
+                    : ($isInMaintenance ? '系统维护中' : '系统正常运行'),
+                'updated_at' => time(),
+            ];
+
+            $redis = Redis::connection();
+            // 缓存 5 分钟（与定时任务检查频率一致）
+            $redis->setex($cacheKey, 300, json_encode($cacheData));
+
+        } catch (\Throwable $e) {
+            Log::error('更新维护状态缓存失败', [
+                'error' => $e->getMessage(),
+                'department_id' => $departmentId,
+            ]);
+        }
+    }
+
+    /**
      * 获取当前维护状态
      *
      * @param int $departmentId 渠道ID（0=总配置）
@@ -200,6 +256,19 @@ class ClientMaintainService
     public function getMaintenanceStatus(int $departmentId = 0): array
     {
         try {
+            // 优先从缓存读取
+            $cacheKey = self::REDIS_KEY_STATUS . $departmentId;
+            $redis = Redis::connection();
+            $cached = $redis->get($cacheKey);
+
+            if ($cached) {
+                $data = json_decode($cached, true);
+                if ($data && isset($data['is_maintenance'])) {
+                    return $data;
+                }
+            }
+
+            // 缓存未命中，查询数据库
             $config = SystemSetting::query()
                 ->where('feature', 'client_maintain')
                 ->where('department_id', $departmentId)
@@ -218,7 +287,7 @@ class ClientMaintainService
             // 只有启用状态才检查维护时间
             $isInMaintenance = $isEnabled && $this->isInMaintenanceTime($config);
 
-            return [
+            $result = [
                 'is_maintenance' => $isInMaintenance,
                 'config' => [
                     'status' => $config->status,
@@ -230,6 +299,11 @@ class ClientMaintainService
                     ? '维护功能已关闭'
                     : ($isInMaintenance ? '系统维护中' : '系统正常运行'),
             ];
+
+            // 回写缓存
+            $this->updateStatusCache($departmentId, $isInMaintenance, $config);
+
+            return $result;
 
         } catch (\Throwable $e) {
             Log::error('获取维护状态失败', [

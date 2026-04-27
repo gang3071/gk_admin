@@ -278,6 +278,13 @@ class SystemSettingController
                 $actions->hideDel();
                 $actions->hideEdit();
             });
+
+            // 状态修改后立即推送（针对客户端维护配置）
+            $grid->editing(function ($id, $data) {
+                if (isset($data['status']) && isset($data['feature']) && $data['feature'] === 'client_maintain') {
+                    $this->triggerClientMaintainNotify($id, 'status_switch');
+                }
+            });
         });
     }
     
@@ -367,7 +374,56 @@ class SystemSettingController
             $form->timeRange('date_start', 'date_end', admin_trans('system_setting.time_range'))
                 ->value([$data->date_start, $data->date_end])
                 ->required();
+
+            // 保存后立即推送通知（时间、星期修改）
+            $form->saved(function (Form $form) use ($data) {
+                $this->triggerClientMaintainNotify($data->id, 'time_or_week_edit');
+            });
         });
+    }
+
+    /**
+     * 触发客户端维护通知推送
+     */
+    private function triggerClientMaintainNotify(int $configId, string $trigger = 'unknown'): void
+    {
+        try {
+            $config = SystemSetting::query()->find($configId);
+            if (!$config) {
+                return;
+            }
+
+            $service = new \app\service\ClientMaintainService();
+
+            // 清除推送缓存和状态缓存，强制立即推送和更新
+            $departmentId = $config->department_id ?? 0;
+            $configKey = $departmentId . ':' . $config->id;
+            $redis = \support\Redis::connection();
+
+            // 清除推送缓存
+            $redis->del('client_maintain:notified:' . $configKey . ':start');
+            $redis->del('client_maintain:notified:' . $configKey . ':end');
+
+            // 清除状态缓存（确保跨项目同步）
+            $redis->del('client_maintain:status:' . $departmentId);
+
+            // 立即检查并推送（同时会更新状态缓存）
+            $service->checkAndNotify();
+
+            \support\Log::info('客户端维护配置修改，触发立即推送和缓存更新', [
+                'trigger' => $trigger,
+                'config_id' => $configId,
+                'department_id' => $departmentId,
+                'status' => $config->status,
+                'week' => $config->num,
+                'time_range' => $config->date_start . ' ~ ' . $config->date_end,
+            ]);
+        } catch (\Throwable $e) {
+            \support\Log::error('触发客户端维护推送失败', [
+                'error' => $e->getMessage(),
+                'config_id' => $configId,
+            ]);
+        }
     }
 
     /**

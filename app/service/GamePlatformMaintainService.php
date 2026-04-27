@@ -17,11 +17,6 @@ class GamePlatformMaintainService
     private const REDIS_KEY_PREFIX = 'game_platform_maintain:';
 
     /**
-     * 维护状态键
-     */
-    private const REDIS_KEY_STATUS = self::REDIS_KEY_PREFIX . 'status';
-
-    /**
      * 维护通知已发送标记键
      */
     private const REDIS_KEY_NOTIFIED = self::REDIS_KEY_PREFIX . 'notified:';
@@ -68,44 +63,44 @@ class GamePlatformMaintainService
         // 检查是否处于维护时间段（只有启用状态才检查时间）
         $isInMaintenance = $isEnabled && $this->isInMaintenanceTime($platform);
 
-        // 获取上一次的维护状态
         $redis = Redis::connection();
-        $lastStatus = $redis->hGet(self::REDIS_KEY_STATUS, (string)$platformId);
-        $notifiedKey = self::REDIS_KEY_NOTIFIED . $platformId;
 
-        // 状态转换：进入维护时间
-        if ($isInMaintenance && $lastStatus !== '1') {
-            // 检查是否已经发送过通知（避免重复推送）
-            $notified = $redis->get($notifiedKey);
-            if (!$notified) {
+        if ($isInMaintenance) {
+            // 在维护时间段内，推送开始维护通知（防重复推送）
+            $notifiedKey = self::REDIS_KEY_NOTIFIED . $platformId . ':start';
+
+            if (!$redis->get($notifiedKey)) {
                 $this->sendMaintenanceNotification($platform, true);
-                // 标记已发送，设置过期时间（维护时段内有效）
-                $redis->setex($notifiedKey, 3600, '1');
+
+                // 缓存时间 = 维护时段长度，确保维护期间不重复推送
+                $duration = $this->getMaintenanceDuration($platform);
+                $redis->setex($notifiedKey, $duration, '1');
+
+                Log::info('游戏平台维护开始推送', [
+                    'platform_id' => $platformId,
+                    'platform_code' => $platformCode,
+                    'platform_name' => $platform->name,
+                    'week' => $platform->maintenance_week,
+                    'time_range' => $platform->maintenance_start_time . ' ~ ' . $platform->maintenance_end_time,
+                    'cache_duration' => $duration,
+                ]);
             }
-            // 更新状态
-            $redis->hSet(self::REDIS_KEY_STATUS, (string)$platformId, '1');
+        } else {
+            // 不在维护时间段内，推送结束维护通知（防重复推送）
+            $notifiedKey = self::REDIS_KEY_NOTIFIED . $platformId . ':end';
 
-            Log::info('游戏平台进入维护时间', [
-                'platform_id' => $platformId,
-                'platform_code' => $platformCode,
-                'platform_name' => $platform->name,
-                'week' => $platform->maintenance_week,
-                'time_range' => $platform->maintenance_start_time . ' ~ ' . $platform->maintenance_end_time,
-            ]);
-        }
-        // 状态转换：离开维护时间
-        elseif (!$isInMaintenance && $lastStatus === '1') {
-            $this->sendMaintenanceNotification($platform, false);
-            // 清除已发送标记
-            $redis->del($notifiedKey);
-            // 更新状态
-            $redis->hSet(self::REDIS_KEY_STATUS, (string)$platformId, '0');
+            if (!$redis->get($notifiedKey)) {
+                $this->sendMaintenanceNotification($platform, false);
 
-            Log::info('游戏平台离开维护时间', [
-                'platform_id' => $platformId,
-                'platform_code' => $platformCode,
-                'platform_name' => $platform->name,
-            ]);
+                // 缓存较短时间，避免频繁推送 end
+                $redis->setex($notifiedKey, 300, '1');
+
+                Log::info('游戏平台维护结束推送', [
+                    'platform_id' => $platformId,
+                    'platform_code' => $platformCode,
+                    'platform_name' => $platform->name,
+                ]);
+            }
         }
     }
 
@@ -129,6 +124,24 @@ class GamePlatformMaintainService
         }
 
         return $currentTime >= $platform->maintenance_start_time && $currentTime <= $platform->maintenance_end_time;
+    }
+
+    /**
+     * 计算维护时段长度（秒）
+     */
+    private function getMaintenanceDuration(GamePlatform $platform): int
+    {
+        $start = strtotime($platform->maintenance_start_time);
+        $end = strtotime($platform->maintenance_end_time);
+
+        if ($start === false || $end === false) {
+            return 3600; // 默认 1 小时
+        }
+
+        $duration = $end - $start;
+
+        // 最少 60 秒，最多 24 小时
+        return max(60, min($duration, 86400));
     }
 
     /**
