@@ -454,10 +454,10 @@ class AgentStoreProfitMonthlyExporter extends Excel
         $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
         $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
-        // 计算小计：(开分+投钞) - (洗分+彩金)
+        // 计算小计：(开分+投钞) - 洗分
+        // 注意：与列表计算方式保持一致，不减彩金
         $totalIn = bcadd(strval($rechargeAmount), strval($machinePutPoint), 2);
-        $totalOut = bcadd(strval($withdrawAmount), strval($lotteryAmount), 2);
-        $subtotal = bcsub($totalIn, $totalOut, 2);
+        $subtotal = bcsub($totalIn, strval($withdrawAmount), 2);
 
         return [
             'recharge_amount' => $rechargeAmount,
