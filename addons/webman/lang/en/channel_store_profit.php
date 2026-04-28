@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => 'Store Name',
+        'device_count' => 'Device Count',
         'store_username' => 'Username',
         'agent_name' => 'Agent',
         'remark' => 'Remark',

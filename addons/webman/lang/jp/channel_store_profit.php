@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => '店舗名',
+        'device_count' => 'デバイス数',
         'store_username' => 'ログインID',
         'agent_name' => '所属代理店',
         'remark' => '備考',

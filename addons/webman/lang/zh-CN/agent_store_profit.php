@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => '店家名称',
+        'device_count' => '设备数量',
         'store_username' => '登录账号',
         'recharge_amount' => '累计开分',
         'withdraw_amount' => '累计洗分',

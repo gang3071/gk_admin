@@ -170,8 +170,8 @@ class AgentStoreProfitMonthlyExporter extends Excel
      */
     private function writeFirstRow($monthStart, $currentTime)
     {
-        // 合并单元格 A1:H1
-        $this->sheet->mergeCells('A1:H1');
+        // 合并单元格 A1:I1
+        $this->sheet->mergeCells('A1:I1');
 
         $timeRange = date('Y-m-d H:i', strtotime($monthStart)) . ' 至 ' . date('Y-m-d H:i', strtotime($currentTime));
         $title = $timeRange . ' | 营业状况 | 总设备数：' . $this->totalDeviceCount . ' | 店家数：' . $this->totalStoreCount;
@@ -204,6 +204,7 @@ class AgentStoreProfitMonthlyExporter extends Excel
     {
         $headers = [
             '店家名称',
+            '设备数量',
             '开分',
             '投钞',
             '洗分',
@@ -220,7 +221,7 @@ class AgentStoreProfitMonthlyExporter extends Excel
         }
 
         // 表头样式
-        $this->sheet->getStyle('A' . $this->currentRow . ':H' . $this->currentRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $this->currentRow . ':I' . $this->currentRow)->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF']
@@ -250,17 +251,18 @@ class AgentStoreProfitMonthlyExporter extends Excel
     private function writeDataRow(array $item, int $index)
     {
         $this->sheet->setCellValue('A' . $this->currentRow, $item['store_name']);
-        $this->sheet->setCellValue('B' . $this->currentRow, number_format(floatval($item['recharge_amount']), 2));
-        $this->sheet->setCellValue('C' . $this->currentRow, number_format(floatval($item['machine_put_point']), 2));
-        $this->sheet->setCellValue('D' . $this->currentRow, number_format(floatval($item['withdraw_amount']), 2));
-        $this->sheet->setCellValue('E' . $this->currentRow, number_format(floatval($item['lottery_amount']), 2));
-        $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['subtotal']), 2));
-        $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['yesterday_subtotal']), 2));
-        $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['today_change']), 2));
+        $this->sheet->setCellValue('B' . $this->currentRow, $item['device_count']);
+        $this->sheet->setCellValue('C' . $this->currentRow, number_format(floatval($item['recharge_amount']), 2));
+        $this->sheet->setCellValue('D' . $this->currentRow, number_format(floatval($item['machine_put_point']), 2));
+        $this->sheet->setCellValue('E' . $this->currentRow, number_format(floatval($item['withdraw_amount']), 2));
+        $this->sheet->setCellValue('F' . $this->currentRow, number_format(floatval($item['lottery_amount']), 2));
+        $this->sheet->setCellValue('G' . $this->currentRow, number_format(floatval($item['subtotal']), 2));
+        $this->sheet->setCellValue('H' . $this->currentRow, number_format(floatval($item['yesterday_subtotal']), 2));
+        $this->sheet->setCellValue('I' . $this->currentRow, number_format(floatval($item['today_change']), 2));
 
         // 交替行背景色
         $bgColor = $index % 2 == 0 ? 'FFFFFF' : 'F5F5F5';
-        $this->sheet->getStyle('A' . $this->currentRow . ':H' . $this->currentRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $this->currentRow . ':I' . $this->currentRow)->applyFromArray([
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
                 'startColor' => ['rgb' => $bgColor]
@@ -279,17 +281,17 @@ class AgentStoreProfitMonthlyExporter extends Excel
 
         // 小计列颜色
         $subtotal = floatval($item['subtotal']);
-        $this->sheet->getStyle('F' . $this->currentRow)->getFont()->getColor()->setRGB($subtotal >= 0 ? '52C41A' : 'FF4D4F');
-        $this->sheet->getStyle('F' . $this->currentRow)->getFont()->setBold(true);
+        $this->sheet->getStyle('G' . $this->currentRow)->getFont()->getColor()->setRGB($subtotal >= 0 ? '52C41A' : 'FF4D4F');
+        $this->sheet->getStyle('G' . $this->currentRow)->getFont()->setBold(true);
 
         // 昨日小计列颜色
         $yesterdaySubtotal = floatval($item['yesterday_subtotal']);
-        $this->sheet->getStyle('G' . $this->currentRow)->getFont()->getColor()->setRGB($yesterdaySubtotal >= 0 ? '52C41A' : 'FF4D4F');
+        $this->sheet->getStyle('H' . $this->currentRow)->getFont()->getColor()->setRGB($yesterdaySubtotal >= 0 ? '52C41A' : 'FF4D4F');
 
         // 今日变化列颜色
         $todayChange = floatval($item['today_change']);
-        $this->sheet->getStyle('H' . $this->currentRow)->getFont()->getColor()->setRGB($todayChange >= 0 ? '52C41A' : 'FF4D4F');
-        $this->sheet->getStyle('H' . $this->currentRow)->getFont()->setBold(true);
+        $this->sheet->getStyle('I' . $this->currentRow)->getFont()->getColor()->setRGB($todayChange >= 0 ? '52C41A' : 'FF4D4F');
+        $this->sheet->getStyle('I' . $this->currentRow)->getFont()->setBold(true);
 
         $this->currentRow++;
     }
@@ -300,19 +302,20 @@ class AgentStoreProfitMonthlyExporter extends Excel
     private function setColumnWidths()
     {
         $this->sheet->getColumnDimension('A')->setWidth(20); // 店家名称
-        $this->sheet->getColumnDimension('B')->setWidth(15); // 开分
-        $this->sheet->getColumnDimension('C')->setWidth(15); // 投钞
-        $this->sheet->getColumnDimension('D')->setWidth(15); // 洗分
-        $this->sheet->getColumnDimension('E')->setWidth(15); // 彩金
-        $this->sheet->getColumnDimension('F')->setWidth(15); // 小计
-        $this->sheet->getColumnDimension('G')->setWidth(15); // 昨日小计
-        $this->sheet->getColumnDimension('H')->setWidth(15); // 今日变化
+        $this->sheet->getColumnDimension('B')->setWidth(12); // 设备数量
+        $this->sheet->getColumnDimension('C')->setWidth(15); // 开分
+        $this->sheet->getColumnDimension('D')->setWidth(15); // 投钞
+        $this->sheet->getColumnDimension('E')->setWidth(15); // 洗分
+        $this->sheet->getColumnDimension('F')->setWidth(15); // 彩金
+        $this->sheet->getColumnDimension('G')->setWidth(15); // 小计
+        $this->sheet->getColumnDimension('H')->setWidth(15); // 昨日小计
+        $this->sheet->getColumnDimension('I')->setWidth(15); // 今日变化
     }
 
     /**
      * 删除 ExAdmin 自动添加的多余列
      * ExAdmin 框架会自动将 Grid 中定义的所有列添加到导出中
-     * 我们需要删除 I、J、K、L 列（代理抽成、代理分润、渠道抽成、渠道分润）
+     * 我们需要删除 J、K、L、M 列（代理抽成、代理分润、渠道抽成、渠道分润）
      */
     private function removeExtraColumns()
     {
@@ -321,18 +324,18 @@ class AgentStoreProfitMonthlyExporter extends Excel
             $highestColumn = $this->sheet->getHighestColumn();
             $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
 
-            // 如果列数超过8列（H列），说明有多余的列
-            if ($highestColumnIndex > 8) {
-                $columnsToRemove = $highestColumnIndex - 8;
+            // 如果列数超过9列（I列），说明有多余的列
+            if ($highestColumnIndex > 9) {
+                $columnsToRemove = $highestColumnIndex - 9;
 
-                // 从 I 列开始删除所有多余列
+                // 从 J 列开始删除所有多余列
                 // removeColumn(列名或索引, 删除的列数)
-                $this->sheet->removeColumn('I', $columnsToRemove);
+                $this->sheet->removeColumn('J', $columnsToRemove);
 
                 \support\Log::info('removeExtraColumns: 已删除多余列', [
                     'original_columns' => $highestColumnIndex,
                     'removed_columns' => $columnsToRemove,
-                    'final_columns' => 8,
+                    'final_columns' => 9,
                 ]);
             }
         } catch (\Exception $e) {
@@ -369,13 +372,17 @@ class AgentStoreProfitMonthlyExporter extends Excel
                 ->pluck('id')
                 ->toArray();
 
+            // 统计设备数量
+            $deviceCount = count($playerIds);
+
             // 统计总设备数
-            $this->totalDeviceCount += count($playerIds);
+            $this->totalDeviceCount += $deviceCount;
 
             if (empty($playerIds)) {
                 // 没有玩家也要显示店家信息
                 $reportData[] = [
                     'store_name' => $store->nickname ?: $store->username,
+                    'device_count' => $deviceCount,
                     'recharge_amount' => 0,
                     'machine_put_point' => 0,
                     'withdraw_amount' => 0,
@@ -399,6 +406,7 @@ class AgentStoreProfitMonthlyExporter extends Excel
 
             $reportData[] = [
                 'store_name' => $store->nickname ?: $store->username,
+                'device_count' => $deviceCount,
                 'recharge_amount' => $monthlyData['recharge_amount'],
                 'machine_put_point' => $monthlyData['machine_put_point'],
                 'withdraw_amount' => $monthlyData['withdraw_amount'],
