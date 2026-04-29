@@ -5706,6 +5706,19 @@ class ChannelPlayerController
             });
         }
 
+        // 先获取渠道开启的游戏平台中属于百家的平台ID
+        $baijiaGamePlatformIds = GamePlatform::query()
+            ->whereIn('id', $channelGamePlatformIds)
+            ->where('status', 1)
+            ->get()
+            ->filter(function ($platform) {
+                // 筛选出包含真人视讯(3)或牌桌(5)的平台
+                $cateIds = json_decode($platform->cate_id, true);
+                return is_array($cateIds) && (in_array(3, $cateIds) || in_array(5, $cateIds));
+            })
+            ->pluck('id')
+            ->toArray();
+
         // 获取玩家已禁用的百家平台ID（game_id=0的记录）
         $selectedPlatformIds = PlayerDisabledGame::query()
             ->where('player_id', $player_id)
@@ -5714,15 +5727,13 @@ class ChannelPlayerController
             ->pluck('platform_id')
             ->toArray();
 
-        return Grid::create(new GamePlatform(), function (Grid $grid) use ($selectedPlatformIds, $player_id, $channelGamePlatformIds, $player) {
+        return Grid::create(new GamePlatform(), function (Grid $grid) use ($selectedPlatformIds, $player_id, $baijiaGamePlatformIds, $player) {
             $grid->title('百家禁用 - ' . $player->name);
 
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
-            // 只显示百家平台（真人视讯 CATE_LIVE_VIDEO=3 或 牌桌 CATE_TABLE=5）
-            $grid->model()->whereIn('id', $channelGamePlatformIds)
-                ->whereIn('cate_id', [3, 5])
-                ->where('status', 1)
+            // 只显示百家平台（已在上面筛选）
+            $grid->model()->whereIn('id', $baijiaGamePlatformIds)
                 ->orderBy('id', 'asc');
 
             // 处理禁用状态筛选
@@ -5739,15 +5750,6 @@ class ChannelPlayerController
             }
 
             $grid->driver()->setPk('id');
-            $page = Request::input('ex_admin_page', 1);
-            $size = Request::input('ex_admin_size', 50);
-            $param = [
-                'size' => $size,
-                'page' => $page,
-                'ex_admin_filter' => $exAdminFilter,
-                'player_id' => $player_id,
-            ];
-
             $grid->autoHeight();
             $grid->bordered(true);
 
@@ -5767,7 +5769,7 @@ class ChannelPlayerController
                 return $val;
             })->align('left');
 
-            $grid->actions(function (Actions $actions, GamePlatform $data) use ($player_id, $selectedPlatformIds) {
+            $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();
             })->hide();
