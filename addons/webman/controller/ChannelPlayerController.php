@@ -425,13 +425,14 @@ class ChannelPlayerController
                 return number_format(floatval($pureRecharge), 2);
             })->width(120)->align('center');
 
+            $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
 
             $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
