@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Class PlayerDisabledGame
- * 玩家禁用游戏表（记录被禁用的电子游戏）
+ * 玩家禁用游戏表（记录被禁用的电子游戏和百家平台）
  *
  * @property int id 主键
  * @property int player_id 玩家id
- * @property int game_id 游戏id（被禁用的游戏）
+ * @property int game_id 游戏id（被禁用的游戏，0表示禁用整个平台）
  * @property int platform_id 平台id
  * @property int status 状态(0:取消禁用,1:禁用生效)
  * @property string created_at 创建时间
