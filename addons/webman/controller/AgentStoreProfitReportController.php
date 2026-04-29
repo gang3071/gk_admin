@@ -67,12 +67,16 @@ class AgentStoreProfitReportController
                 ->pluck('id')
                 ->toArray();
 
+            // 统计设备数量（玩家数量）
+            $deviceCount = count($playerIds);
+
             if (empty($playerIds)) {
                 // 没有玩家也要显示店家信息
                 $reportData[] = [
                     'id' => $store->id,
                     'store_name' => $store->nickname,
                     'store_username' => $store->username,
+                    'device_count' => $deviceCount,
                     'agent_commission' => $store->agent_commission ?? 0,
                     'channel_commission' => $store->channel_commission ?? 0,
                     'recharge_amount' => 0,
@@ -145,6 +149,7 @@ class AgentStoreProfitReportController
                 'id' => $store->id,
                 'store_name' => $store->nickname,
                 'store_username' => $store->username,
+                'device_count' => $deviceCount,
                 'agent_commission' => $agentCommission,
                 'channel_commission' => $channelCommission,
                 'recharge_amount' => $rechargeAmount,
@@ -356,6 +361,8 @@ class AgentStoreProfitReportController
             $grid->column('id', 'ID')->width(80)->align('center');
 
             $grid->column('store_name', admin_trans('agent_store_profit.fields.store_name'))->width(150)->align('center');
+
+            $grid->column('device_count', admin_trans('agent_store_profit.fields.device_count'))->width(100)->align('center');
 
             $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 

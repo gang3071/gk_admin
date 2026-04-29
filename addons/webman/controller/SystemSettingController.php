@@ -96,6 +96,18 @@ class SystemSettingController
                         $time
                     ])->style(['cursor' => 'pointer']);
                     return Tag::create($html)->color('cyan')->modal([$this, 'editMachineMaintain'], ['data' => $data]);
+                })->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'client_maintain';
+                })->display(function ($value, SystemSetting $data) {
+                    $time = '';
+                    !empty($data->num) && $time .= admin_trans('system_setting.week.' . $data->num);
+                    !empty($data->date_start) && $time .= $data->date_start;
+                    !empty($data->date_end) && $time .= '~' . $data->date_end;
+                    $html = Html::create()->content([
+                        Icon::create('FieldTimeOutlined'),
+                        $time
+                    ])->style(['cursor' => 'pointer']);
+                    return Tag::create($html)->color('cyan')->modal([$this, 'editClientMaintain'], ['data' => $data]);
                 })->if(function ($value, SystemSetting $data) { // 条件2
                     return $data->feature === 'recharge_order_expiration';
                 })->editable(
@@ -329,6 +341,73 @@ class SystemSettingController
         });
     }
     
+    /**
+     * 客户端维护时间
+     * @auth true
+     * @param SystemSetting $data
+     * @return Form
+     */
+    public function editClientMaintain(SystemSetting $data): Form
+    {
+        /** @var SystemSetting $data */
+        $data = $data->where('feature', 'client_maintain')->first();
+        return Form::create($data, function (Form $form) use ($data) {
+            $form->title(admin_trans('system_setting.title'));
+            $form->select('num', admin_trans('system_setting.week_str'))
+                ->value($data->num)
+                ->options([
+                    1 => admin_trans('system_setting.week.1'),
+                    2 => admin_trans('system_setting.week.2'),
+                    3 => admin_trans('system_setting.week.3'),
+                    4 => admin_trans('system_setting.week.4'),
+                    5 => admin_trans('system_setting.week.5'),
+                    6 => admin_trans('system_setting.week.6'),
+                    7 => admin_trans('system_setting.week.7'),
+                ])->required();
+            $form->timeRange('date_start', 'date_end', admin_trans('system_setting.time_range'))
+                ->value([$data->date_start, $data->date_end])
+                ->required();
+
+            // 保存后立即推送通知（时间、星期修改）
+            $form->saved(function (Form $form) use ($data) {
+                $this->triggerClientMaintainNotify($data->id, 'time_or_week_edit');
+            });
+        });
+    }
+
+    /**
+     * 触发客户端维护通知推送
+     */
+    private function triggerClientMaintainNotify(int $configId, string $trigger = 'unknown'): void
+    {
+        try {
+            $config = SystemSetting::query()->find($configId);
+            if (!$config) {
+                return;
+            }
+
+            $service = new \app\service\ClientMaintainService();
+            $departmentId = $config->department_id ?? 0;
+
+            // 后台修改配置后，直接根据 status 推送，不重新计算时间
+            $service->notifyImmediately($configId);
+
+            \support\Log::info('客户端维护配置修改，触发立即推送和缓存更新', [
+                'trigger' => $trigger,
+                'config_id' => $configId,
+                'department_id' => $departmentId,
+                'status' => $config->status,
+                'week' => $config->num,
+                'time_range' => $config->date_start . ' ~ ' . $config->date_end,
+            ]);
+        } catch (\Throwable $e) {
+            \support\Log::error('触发客户端维护推送失败', [
+                'error' => $e->getMessage(),
+                'config_id' => $configId,
+            ]);
+        }
+    }
+
     /**
      * 机台保留时间
      * @auth true

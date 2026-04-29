@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => '店家名称',
+        'device_count' => '设备数量',
         'store_username' => '登录账号',
         'agent_name' => '所属代理',
         'remark' => '备注',

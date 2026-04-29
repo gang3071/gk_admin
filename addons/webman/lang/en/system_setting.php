@@ -7,6 +7,7 @@ return [
         'marquee' => 'Client marquee',
         'machine_marquee' => 'Machine marquee',
         'machine_maintain' => 'Weekly machine maintenance time period',
+        'client_maintain' => 'Weekly client maintenance time period',
         'feature' => 'function',
         'setting' => 'configuration',
         'status' => 'status',

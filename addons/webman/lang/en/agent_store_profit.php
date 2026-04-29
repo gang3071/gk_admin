@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => 'Store Name',
+        'device_count' => 'Device Count',
         'store_username' => 'Login Account',
         'recharge_amount' => 'Total Open Score',
         'withdraw_amount' => 'Total Wash Score',

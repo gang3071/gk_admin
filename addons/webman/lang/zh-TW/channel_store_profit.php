@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => '店家名稱',
+        'device_count' => '設備數量',
         'store_username' => '登錄賬號',
         'agent_name' => '所屬代理',
         'remark' => '備註',

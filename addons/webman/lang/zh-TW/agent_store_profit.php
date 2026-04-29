@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'store_name' => '店家名稱',
+        'device_count' => '設備數量',
         'store_username' => '登入帳號',
         'recharge_amount' => '累計開分',
         'withdraw_amount' => '累計洗分',

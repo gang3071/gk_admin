@@ -87,6 +87,9 @@ class ChannelStoreProfitReportController
                 ->pluck('id')
                 ->toArray();
 
+            // 统计设备数量（玩家数量）
+            $deviceCount = count($playerIds);
+
             if (empty($playerIds)) {
                 // 没有玩家也要显示店家信息
                 $reportData[] = [
@@ -94,6 +97,7 @@ class ChannelStoreProfitReportController
                     'store_name' => $store->nickname,
                     'store_username' => $store->username,
                     'agent_name' => $agentName,
+                    'device_count' => $deviceCount,
                     'agent_commission' => $store->agent_commission ?? 0,
                     'channel_commission' => $store->channel_commission ?? 0,
                     'remark' => $store->remark ?? '',
@@ -168,6 +172,7 @@ class ChannelStoreProfitReportController
                 'store_name' => $store->nickname,
                 'store_username' => $store->username,
                 'agent_name' => $agentName,
+                'device_count' => $deviceCount,
                 'agent_commission' => $agentCommission,
                 'channel_commission' => $channelCommission,
                 'remark' => $store->remark ?? '',
@@ -395,6 +400,8 @@ class ChannelStoreProfitReportController
             $grid->column('id', 'ID')->width(80)->align('center');
 
             $grid->column('store_name', admin_trans('channel_store_profit.fields.store_name'))->width(150)->align('center');
+
+            $grid->column('device_count', admin_trans('channel_store_profit.fields.device_count'))->width(100)->align('center');
 
             $grid->column('store_username', admin_trans('channel_store_profit.fields.store_username'))->width(120)->align('center');
 
