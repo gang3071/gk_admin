@@ -473,13 +473,19 @@ local ttl = tonumber(ARGV[2]) or 3600
 -- 读取当前余额
 local currentBalance = tonumber(redis.call('GET', key)) or 0
 
--- 余额检查
-if currentBalance < amount then
+-- 余额检查（添加 0.01 容差以解决浮点数精度问题）
+local tolerance = 0.01
+if currentBalance + tolerance < amount then
     return cjson.encode({ok = 0, error = 'insufficient_balance', balance = currentBalance, old = currentBalance})
 end
 
 -- 计算新余额
 local newBalance = currentBalance - amount
+
+-- 防止负数余额
+if newBalance < 0 then
+    newBalance = 0
+end
 
 -- 原子性写入
 redis.call('SETEX', key, ttl, newBalance)
