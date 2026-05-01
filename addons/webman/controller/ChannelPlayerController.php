@@ -596,6 +596,9 @@ class ChannelPlayerController
                 $actions->prepend(Button::create(admin_trans('offline_channel.electronic_game_disabled'))
                     ->drawer([$this, 'playerGameList'], ['player_id' => $data['id']])
                     ->type('primary'));
+                $actions->prepend(Button::create('百家禁用')
+                    ->drawer([$this, 'playerPlatformList'], ['player_id' => $data['id']])
+                    ->type('primary'));
                 $actions->prepend(Button::create(admin_trans('channel_agent.open_score'))
                     ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px'));
                 $actions->prepend(Button::create('游戏账号')
@@ -5662,5 +5665,229 @@ class ChannelPlayerController
             $grid->hideAdd();
             $grid->expandFilter();
         });
+    }
+
+    /**
+     * 玩家百家平台列表（Grid方式，仅线下渠道）
+     * @auth true
+     * @param int $player_id
+     * @return Grid
+     */
+    public function playerPlatformList(int $player_id): Grid
+    {
+        /** @var Player $player */
+        $player = Player::query()->with('channel')->find($player_id);
+
+        if (empty($player)) {
+            // 返回空Grid并显示错误
+            return Grid::create([], function (Grid $grid) {
+                $grid->title(admin_trans('channel_player.error.player_not_found'));
+            });
+        }
+
+        // 只有线下渠道才支持游戏级别权限管理
+        if ($player->channel->is_offline != 1) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->title(admin_trans('channel_player.error.offline_channel_only'));
+            });
+        }
+
+        // 获取玩家所在渠道开启的游戏平台
+        if (empty($player->channel->game_platform)) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->title(admin_trans('channel_player.error.no_game_platform'));
+            });
+        }
+
+        $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+        if (empty($channelGamePlatformIds)) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->title(admin_trans('channel_player.error.no_game_platform'));
+            });
+        }
+
+        // 先获取渠道开启的游戏平台中属于百家的平台ID
+        $baijiaGamePlatformIds = GamePlatform::query()
+            ->whereIn('id', $channelGamePlatformIds)
+            ->where('status', 1)
+            ->get()
+            ->filter(function ($platform) {
+                // 筛选出包含真人视讯(3)或牌桌(5)的平台
+                $cateIds = json_decode($platform->cate_id, true);
+                return is_array($cateIds) && (in_array(3, $cateIds) || in_array(5, $cateIds));
+            })
+            ->pluck('id')
+            ->toArray();
+
+        // 获取玩家已禁用的百家平台ID（game_id=0的记录）
+        $selectedPlatformIds = PlayerDisabledGame::query()
+            ->where('player_id', $player_id)
+            ->where('game_id', 0)
+            ->where('status', 1)
+            ->pluck('platform_id')
+            ->toArray();
+
+        return Grid::create(new GamePlatform(), function (Grid $grid) use ($selectedPlatformIds, $player_id, $baijiaGamePlatformIds, $player) {
+            $grid->title('百家禁用 - ' . $player->name);
+
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            // 只显示百家平台（已在上面筛选）
+            $grid->model()->whereIn('id', $baijiaGamePlatformIds)
+                ->orderBy('id', 'asc');
+
+            // 处理禁用状态筛选
+            if (isset($exAdminFilter['disabled_status']) && $exAdminFilter['disabled_status'] !== '') {
+                if ($exAdminFilter['disabled_status'] == 1) {
+                    // 只显示已禁用的平台
+                    $grid->model()->whereIn('id', $selectedPlatformIds);
+                } elseif ($exAdminFilter['disabled_status'] == 0) {
+                    // 只显示未禁用的平台
+                    if (!empty($selectedPlatformIds)) {
+                        $grid->model()->whereNotIn('id', $selectedPlatformIds);
+                    }
+                }
+            }
+
+            $grid->driver()->setPk('id');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 平台名称（带图标）
+            $grid->column('name', '平台名称')->display(function ($val, GamePlatform $data) {
+                if ($data->logo) {
+                    $image = Image::create()
+                        ->width(50)
+                        ->height(50)
+                        ->style(['border-radius' => '8px', 'objectFit' => 'cover'])
+                        ->src($data->logo);
+                    return Html::create()->content([
+                        $image,
+                        Html::div()->content($val)->style(['margin-left' => '12px', 'font-weight' => '500'])
+                    ])->style(['display' => 'flex', 'align-items' => 'center']);
+                }
+                return $val;
+            })->align('left');
+
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            })->hide();
+
+            // 添加状态开关列
+            $grid->column('status_switch', '游戏状态')->display(function ($val, $data) use ($selectedPlatformIds, $player_id) {
+                // 判断当前平台是否被禁用：0=禁用，1=正常
+                $isDisabled = in_array($data->id, $selectedPlatformIds);
+                $status = $isDisabled ? 0 : 1;
+
+                return Switches::create(null, $status)
+                    ->options([[1 => '正常'], [0 => '禁用']])
+                    ->ajax([$this, 'togglePlatformDisableSwitch'], [
+                        'player_id' => $player_id,
+                        'platform_id' => $data->id
+                    ]);
+            })->align('center')->fixed('right')->width(120);
+
+            $grid->pagination()->pageSize(50);
+            $grid->hideDelete();
+            $grid->hideDeleteSelection();
+            $grid->hideTrashed();
+            $grid->filter(function (Filter $filter) {
+                $filter->eq()->select('disabled_status')
+                    ->placeholder('禁用状态')
+                    ->style(['width' => '120px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        1 => '已禁用',
+                        0 => '未禁用'
+                    ]);
+            });
+
+            $grid->expandFilter();
+            $grid->hideSelection();
+        });
+    }
+
+    /**
+     * 切换玩家百家平台禁用状态
+     * @auth true
+     * @group channel
+     * @param int $player_id
+     * @param int $platform_id
+     * @return Msg
+     */
+    public function togglePlatformDisableSwitch(int $player_id, int $platform_id): Msg
+    {
+        try {
+            /** @var Player $player */
+            $player = Player::query()->with('channel')->find($player_id);
+
+            if (empty($player)) {
+                return message_error(admin_trans('common.player_not_exist'));
+            }
+
+            // 只有线下渠道才支持游戏级别权限管理
+            if ($player->channel->is_offline != 1) {
+                return message_error(admin_trans('common.offline_channel_feature_only'));
+            }
+
+            // 验证平台是否存在
+            $platform = GamePlatform::query()->find($platform_id);
+            if (empty($platform)) {
+                return message_error('平台不存在');
+            }
+
+            // 获取渠道允许的游戏平台
+            $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
+            if (empty($channelGamePlatformIds) || !in_array($platform_id, $channelGamePlatformIds)) {
+                return message_error('平台不在渠道范围内');
+            }
+
+            // 查询当前是否已禁用（game_id=0）
+            $currentDisabled = PlayerDisabledGame::query()
+                ->where('player_id', $player_id)
+                ->where('platform_id', $platform_id)
+                ->where('game_id', 0)
+                ->where('status', 1)
+                ->exists();
+
+            Db::beginTransaction();
+            try {
+                if ($currentDisabled) {
+                    // 当前是禁用状态，切换为启用 - 从表中删除
+                    PlayerDisabledGame::query()
+                        ->where('player_id', $player_id)
+                        ->where('platform_id', $platform_id)
+                        ->where('game_id', 0)
+                        ->delete();
+                    $message = '平台已启用';
+                } else {
+                    // 当前是启用状态，切换为禁用 - 添加到表中（game_id=0）
+                    PlayerDisabledGame::query()->updateOrCreate(
+                        [
+                            'player_id' => $player_id,
+                            'platform_id' => $platform_id,
+                            'game_id' => 0,
+                        ],
+                        [
+                            'status' => 1,
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]
+                    );
+                    $message = '平台已禁用';
+                }
+
+                Db::commit();
+                // 返回成功消息，Switches组件会自动更新显示状态
+                return message_success($message);
+            } catch (Exception $e) {
+                Db::rollBack();
+                Log::error('toggle_platform_disable_switch', [$e->getMessage(), $e->getTrace()]);
+                return message_error($e->getMessage() ?? '操作失败');
+            }
+        } catch (Exception $e) {
+            Log::error('toggle_platform_disable_switch', [$e->getMessage(), $e->getTrace()]);
+            return message_error('操作失败：' . $e->getMessage());
+        }
     }
 }
