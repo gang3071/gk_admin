@@ -23,6 +23,36 @@ use ExAdmin\ui\support\Request;
 class StorePlayerController
 {
     /**
+     * 更新设备信息（用于可编辑列保存）
+     * @auth true
+     * @group store
+     */
+    public function update($id)
+    {
+        $admin = Admin::user();
+        $player = Player::query()
+            ->where('id', $id)
+            ->where('department_id', $admin->department_id)
+            ->where('store_admin_id', $admin->id)
+            ->where('is_promoter', 0)
+            ->first();
+
+        if (!$player) {
+            return admin_error(admin_trans('player.not_fount'));
+        }
+
+        $data = request()->post();
+
+        // 只允许更新 wash_point_config 字段
+        if (isset($data['wash_point_config'])) {
+            $player->wash_point_config = $data['wash_point_config'];
+            $player->save();
+        }
+
+        return admin_success(admin_trans('admin.edit_success'));
+    }
+
+    /**
      * 设备列表
      * @auth true
      * @group store
@@ -155,6 +185,7 @@ class StorePlayerController
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
+            $grid->model(Player::class);
 
             $grid->column('id', admin_trans('player.fields.id'))->width(80)->sortable()->align('center');
 
