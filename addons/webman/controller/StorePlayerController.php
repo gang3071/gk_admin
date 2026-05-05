@@ -10,6 +10,7 @@ use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
+use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -203,6 +204,15 @@ class StorePlayerController
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
+            })->width(120)->align('center');
+
+            $grid->column('wash_point_config', admin_trans('player.wash_point_config'))->editable(
+                Editable::number('wash_point_config')
+                    ->min(0)
+                    ->max(999999.99)
+                    ->precision(2)
+            )->display(function ($value) {
+                return number_format(floatval($value ?? 0), 2);
             })->width(120)->align('center');
 
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {

@@ -207,6 +207,7 @@ return [
     'total_machine_put_point' => '現金預金',
     'total_lottery_amount' => 'ジャックポット',
     'subtotal' => '小計',
+    'wash_point_config' => '洗分設定',
 
     // ゲーム関連
     'game_platform' => 'ゲームプラットフォーム',
