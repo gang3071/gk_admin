@@ -27,7 +27,6 @@ use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
-use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\image\Image;
@@ -162,19 +161,6 @@ class ChannelAgentController
                 return Tag::create($value . '%')->color('blue');
             })->width(100)->align('center');
 
-            // 洗分配置
-            $grid->column('wash_point_config', admin_trans('channel_agent.fields.wash_point_config'))
-                ->display(function ($value) {
-                    return number_format(floatval($value ?? 0), 2);
-                })
-                ->editable(
-                    (new Editable)->number('wash_point_config')
-                        ->min(0)
-                        ->max(999999.99)
-                        ->precision(2)
-                )
-                ->width(120)->align('center');
-
             $grid->column('status', admin_trans('channel_agent.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('channel_agent.tag.disabled'))->color('red'),
@@ -229,43 +215,6 @@ class ChannelAgentController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->expandFilter();
-
-            // 处理可编辑列的保存
-            $grid->updateing(function ($ids, $data) use ($admin) {
-                try {
-                    if (isset($ids[0])) {
-                        // 查找店家账号
-                        $storeUser = AdminUser::query()
-                            ->where('id', $ids[0])
-                            ->where('type', AdminUser::TYPE_STORE);
-
-                        // 根据权限进行过滤
-                        if ($admin->type === AdminUser::TYPE_AGENT) {
-                            // 代理：只能修改自己下属的店家
-                            $storeUser->where('parent_admin_id', $admin->id);
-                        } elseif ($admin->type === AdminUser::TYPE_CHANNEL) {
-                            // 渠道：只能修改同部门的店家
-                            $storeUser->where('department_id', $admin->department_id);
-                        }
-
-                        $storeUser = $storeUser->first();
-
-                        if (!$storeUser) {
-                            return message_error(admin_trans('admin.not_found'));
-                        }
-
-                        // 更新洗分配置
-                        if (isset($data['wash_point_config'])) {
-                            $storeUser->wash_point_config = $data['wash_point_config'];
-                            $storeUser->save();
-                            return message_success(admin_trans('admin.edit_success'));
-                        }
-                    }
-                    return message_error(admin_trans('form.save_fail'));
-                } catch (\Exception $e) {
-                    return message_error(admin_trans('form.save_fail') . ': ' . $e->getMessage());
-                }
-            });
         });
     }
 

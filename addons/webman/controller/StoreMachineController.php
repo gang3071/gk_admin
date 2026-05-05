@@ -19,6 +19,7 @@ use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
+use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -156,6 +157,19 @@ class StoreMachineController
                 }
                 return Tag::create($value . '%')->color('blue');
             })->width(100)->align('center');
+
+            // 洗分配置
+            $grid->column('wash_point_config', admin_trans('store_machine.fields.wash_point_config'))
+                ->display(function ($value) {
+                    return number_format(floatval($value ?? 0), 2);
+                })
+                ->editable(
+                    (new Editable)->number('wash_point_config')
+                        ->min(0)
+                        ->max(999999.99)
+                        ->precision(2)
+                )
+                ->width(120)->align('center');
 
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
                 return match ($value) {
@@ -337,6 +351,36 @@ class StoreMachineController
             $grid->hideDelete();
             $grid->setForm()->drawer($this->createStoreMachineForm());
             $grid->expandFilter();
+
+            // 处理可编辑列的保存
+            $grid->updateing(function ($ids, $data) use ($currentDepartmentId) {
+                try {
+                    if (isset($ids[0])) {
+                        // 查找店家账号（需要验证权限：通过代理的 department_id）
+                        $storeUser = AdminUser::query()
+                            ->join('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
+                            ->where('admin_users.id', $ids[0])
+                            ->where('admin_users.type', AdminUser::TYPE_STORE)
+                            ->where('parent_admin.department_id', $currentDepartmentId)
+                            ->select('admin_users.*')
+                            ->first();
+
+                        if (!$storeUser) {
+                            return message_error(admin_trans('admin.not_found'));
+                        }
+
+                        // 更新洗分配置
+                        if (isset($data['wash_point_config'])) {
+                            $storeUser->wash_point_config = $data['wash_point_config'];
+                            $storeUser->save();
+                            return message_success(admin_trans('admin.edit_success'));
+                        }
+                    }
+                    return message_error(admin_trans('form.save_fail'));
+                } catch (\Exception $e) {
+                    return message_error(admin_trans('form.save_fail') . ': ' . $e->getMessage());
+                }
+            });
         });
     }
 

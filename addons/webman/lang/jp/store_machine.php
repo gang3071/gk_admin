@@ -16,6 +16,7 @@ return [
         'department_name' => '部門名',
         'agent_commission' => '代理手数料',
         'channel_commission' => 'チャネル手数料',
+        'wash_point_config' => '洗分設定',
         'status' => 'ステータス',
         'created_at' => '作成日時',
         'parent_agent' => '上位代理',
