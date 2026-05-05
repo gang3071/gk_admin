@@ -23,36 +23,6 @@ use ExAdmin\ui\support\Request;
 class StorePlayerController
 {
     /**
-     * 更新设备信息（用于可编辑列保存）
-     * @auth true
-     * @group store
-     */
-    public function update($id)
-    {
-        $admin = Admin::user();
-        $player = Player::query()
-            ->where('id', $id)
-            ->where('department_id', $admin->department_id)
-            ->where('store_admin_id', $admin->id)
-            ->where('is_promoter', 0)
-            ->first();
-
-        if (!$player) {
-            return admin_error(admin_trans('player.not_fount'));
-        }
-
-        $data = request()->post();
-
-        // 只允许更新 wash_point_config 字段
-        if (isset($data['wash_point_config'])) {
-            $player->wash_point_config = $data['wash_point_config'];
-            $player->save();
-        }
-
-        return admin_success(admin_trans('admin.edit_success'));
-    }
-
-    /**
      * 设备列表
      * @auth true
      * @group store
@@ -185,7 +155,6 @@ class StorePlayerController
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
-            $grid->model(Player::class);
 
             $grid->column('id', admin_trans('player.fields.id'))->width(80)->sortable()->align('center');
 
@@ -237,14 +206,17 @@ class StorePlayerController
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
-            $grid->column('wash_point_config', admin_trans('player.wash_point_config'))->editable(
-                Editable::number('wash_point_config')
-                    ->min(0)
-                    ->max(999999.99)
-                    ->precision(2)
-            )->display(function ($value) {
-                return number_format(floatval($value ?? 0), 2);
-            })->width(120)->align('center');
+            $grid->column('wash_point_config', admin_trans('player.wash_point_config'))
+                ->display(function ($value) {
+                    return number_format(floatval($value ?? 0), 2);
+                })
+                ->editable(
+                    (new Editable)->number('wash_point_config')
+                        ->min(0)
+                        ->max(999999.99)
+                        ->precision(2)
+                )
+                ->width(120)->align('center');
 
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
@@ -304,6 +276,44 @@ class StorePlayerController
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $playerCount);
             $grid->attr('mongo_model', $list);
+
+            // 处理可编辑列的保存
+            $grid->updateing(function ($ids, $data) use ($storeAdminId, $departmentId) {
+                try {
+                    if (isset($ids[0])) {
+                        // 验证权限：确保是当前店家的设备
+                        $player = Player::query()
+                            ->where('id', $ids[0])
+                            ->where('department_id', $departmentId)
+                            ->where('store_admin_id', $storeAdminId)
+                            ->where('is_promoter', 0)
+                            ->first();
+
+                        if (!$player) {
+                            return message_error(admin_trans('player.not_fount'));
+                        }
+
+                        // 获取要更新的数据（可能在 $data 或 $data['data'] 中）
+                        $updateData = $data['data'] ?? $data;
+
+                        // 也尝试从请求中直接获取
+                        $requestValue = request()->input('wash_point_config');
+                        if (empty($updateData['wash_point_config']) && !is_null($requestValue)) {
+                            $updateData['wash_point_config'] = $requestValue;
+                        }
+
+                        // 只允许更新 wash_point_config 字段
+                        if (isset($updateData['wash_point_config'])) {
+                            $player->wash_point_config = $updateData['wash_point_config'];
+                            $player->save();
+                            return message_success(admin_trans('admin.edit_success'));
+                        }
+                    }
+                    return message_error(admin_trans('form.save_fail'));
+                } catch (\Exception $e) {
+                    return message_error(admin_trans('form.save_fail') . ': ' . $e->getMessage());
+                }
+            });
 
             // 如果没有数据，显示提示信息
             if ($playerCount == 0) {
