@@ -10,7 +10,6 @@ use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
-use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -206,18 +205,6 @@ class StorePlayerController
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
-            $grid->column('wash_point_config', admin_trans('player.wash_point_config'))
-                ->display(function ($value) {
-                    return number_format(floatval($value ?? 0), 2);
-                })
-                ->editable(
-                    (new Editable)->number('wash_point_config')
-                        ->min(0)
-                        ->max(999999.99)
-                        ->precision(2)
-                )
-                ->width(120)->align('center');
-
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('admin.close'))->color('red'),
@@ -276,44 +263,6 @@ class StorePlayerController
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $playerCount);
             $grid->attr('mongo_model', $list);
-
-            // 处理可编辑列的保存
-            $grid->updateing(function ($ids, $data) use ($storeAdminId, $departmentId) {
-                try {
-                    if (isset($ids[0])) {
-                        // 验证权限：确保是当前店家的设备
-                        $player = Player::query()
-                            ->where('id', $ids[0])
-                            ->where('department_id', $departmentId)
-                            ->where('store_admin_id', $storeAdminId)
-                            ->where('is_promoter', 0)
-                            ->first();
-
-                        if (!$player) {
-                            return message_error(admin_trans('player.not_fount'));
-                        }
-
-                        // 获取要更新的数据（可能在 $data 或 $data['data'] 中）
-                        $updateData = $data['data'] ?? $data;
-
-                        // 也尝试从请求中直接获取
-                        $requestValue = request()->input('wash_point_config');
-                        if (empty($updateData['wash_point_config']) && !is_null($requestValue)) {
-                            $updateData['wash_point_config'] = $requestValue;
-                        }
-
-                        // 只允许更新 wash_point_config 字段
-                        if (isset($updateData['wash_point_config'])) {
-                            $player->wash_point_config = $updateData['wash_point_config'];
-                            $player->save();
-                            return message_success(admin_trans('admin.edit_success'));
-                        }
-                    }
-                    return message_error(admin_trans('form.save_fail'));
-                } catch (\Exception $e) {
-                    return message_error(admin_trans('form.save_fail') . ': ' . $e->getMessage());
-                }
-            });
 
             // 如果没有数据，显示提示信息
             if ($playerCount == 0) {

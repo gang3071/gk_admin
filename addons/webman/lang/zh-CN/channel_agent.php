@@ -17,6 +17,7 @@ return [
         'department_name' => '部门名称',
         'agent_commission' => '代理抽成',
         'channel_commission' => '渠道抽成',
+        'wash_point_config' => '洗分配置',
         'status' => '状态',
         'created_at' => '创建时间',
         'recharge_amount' => '累计开分',
