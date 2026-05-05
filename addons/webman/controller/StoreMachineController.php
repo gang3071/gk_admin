@@ -373,7 +373,7 @@ class StoreMachineController
                         if (isset($data['wash_point_config'])) {
                             $storeUser->wash_point_config = $data['wash_point_config'];
                             $storeUser->save();
-                            return message_success(admin_trans('admin.save_success'));
+                            return message_success(admin_trans('form.save_success'));
                         }
                     }
                     return message_error(admin_trans('form.save_fail'));
