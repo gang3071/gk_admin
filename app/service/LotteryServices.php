@@ -9,6 +9,8 @@ use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerGameRecord;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\service\GameLotteryServices;
+use addons\webman\service\LotteryProbabilityService;
 use Exception;
 use support\Cache;
 use support\Db;

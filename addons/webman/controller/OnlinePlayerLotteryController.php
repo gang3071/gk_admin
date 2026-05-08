@@ -7,6 +7,7 @@ use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\service\GameLotteryServices;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\layout\Space;
 use ExAdmin\ui\support\Request;
@@ -293,10 +294,10 @@ class OnlinePlayerLotteryController
             DB::commit();
 
             // 清除彩金缓存
-            \app\service\GameLotteryServices::clearAllCache();
+            GameLotteryServices::clearAllCache();
 
             // 推送彩池数据变化
-            \app\service\GameLotteryServices::pushLotteryPoolData();
+            GameLotteryServices::pushLotteryPoolData();
 
             // 发送Socket消息给玩家
             try {
