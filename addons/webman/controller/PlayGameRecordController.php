@@ -157,6 +157,12 @@ class PlayGameRecordController
                 }
                 return Html::create()->content([(float)$val])->style(['color' => '#cd201f']);
             })->sortable()->align('center');
+            $grid->column('balance_before', admin_trans('play_game_record.fields.balance_before'))->display(function ($val) {
+                return $val !== null ? (float)$val : 0;
+            })->align('center');
+            $grid->column('balance_after', admin_trans('play_game_record.fields.balance_after'))->display(function ($val) {
+                return $val !== null ? (float)$val : 0;
+            })->align('center');
             $grid->column('reward', admin_trans('play_game_record.fields.reward'))->display(function ($val) {
                 return Html::create()->content(['+' . (float)$val])->style(['color' => 'green']);
             })->align('center');

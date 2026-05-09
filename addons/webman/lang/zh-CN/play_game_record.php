@@ -11,6 +11,8 @@ return [
         'bet' => '押注额',
         'win' => '贏取额',
         'diff' => '输赢金额',
+        'balance_before' => '下注前余额',
+        'balance_after' => '下注后余额',
         'reward' => '奖金(不计入贏取)',
         'order_no' => '单号(游戏平台)',
         'status' => '状态',
