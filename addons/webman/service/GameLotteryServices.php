@@ -1967,7 +1967,7 @@ LUA;
      * @param string $channelLang 渠道语言代码 (例如: zh-CN, zh-TW, en, th, vi)
      * @return string
      */
-    private function getLocalizedGameName(int $platformId, string $gameCode, string $channelLang): string
+    public function getLocalizedGameName(int $platformId, string $gameCode, string $channelLang): string
     {
         try {
             // 1. 通过 platform_id 和 game_code 查询 GameExtend
