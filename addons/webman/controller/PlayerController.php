@@ -3307,13 +3307,9 @@ class PlayerController
                 }
                 DB::beginTransaction();
                 try {
-                    // ✅ 添加行锁，防止高并发冲突
-                    $playerWallet = PlayerPlatformCash::query()
-                        ->where('player_id', $player->id)
-                        ->lockForUpdate()
-                        ->first();
+                    // ✅ 从 Redis 读取提现前余额
+                    $beforeGameAmount = \addons\webman\service\WalletService::getBalance($player->id);
 
-                    $beforeGameAmount = $playerWallet->money;
                     // 生成订单
                     $playerWithdrawRecord = new PlayerWithdrawRecord();
                     $playerWithdrawRecord->player_id = $player->id;
@@ -3336,9 +3332,10 @@ class PlayerController
                     $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
                         [], 'message');
                     $playerWithdrawRecord->save();
-                    // 玩家钱包扣减
-                    $playerWallet->money = bcsub($playerWallet->money, $playerWithdrawRecord->point, 2);
-                    $playerWallet->save(); // ✅ 触发模型事件，自动同步 Redis
+
+                    // ✅ 使用 WalletService 原子扣款
+                    $afterGameAmount = \addons\webman\service\WalletService::deduct($player->id, $playerWithdrawRecord->point);
+
                     // 更新玩家统计
                     $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
                         $playerWithdrawRecord->point, 2);
@@ -3354,7 +3351,7 @@ class PlayerController
                     $playerDeliveryRecord->source = 'artificial_withdrawal';
                     $playerDeliveryRecord->amount = $playerWithdrawRecord->point;
                     $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    $playerDeliveryRecord->amount_after = $playerWallet->money;
+                    $playerDeliveryRecord->amount_after = $afterGameAmount;  // ✅ 使用返回值
                     $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
                     $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
                     $playerDeliveryRecord->save();
@@ -3374,7 +3371,7 @@ class PlayerController
                     $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
                         [], 'message');
                     $playerMoneyEditLog->origin_money = $beforeGameAmount;
-                    $playerMoneyEditLog->after_money = $player->machine_wallet->money;
+                    $playerMoneyEditLog->after_money = $afterGameAmount;  // ✅ 使用返回值
                     $playerMoneyEditLog->save();
                     DB::commit();
                 } catch (\Exception $e) {

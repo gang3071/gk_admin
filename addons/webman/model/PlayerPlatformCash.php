@@ -36,14 +36,41 @@ class PlayerPlatformCash extends Model
     }
 
     /**
-     * 点数
+     * 余额访问器 - 从 Redis 缓存读取余额
      *
-     * @param $value
-     * @return float
+     * 优先级：
+     * 1. 如果 money 字段有脏数据（刚修改未保存），返回修改后的值
+     * 2. 否则从 Redis 缓存读取余额
+     * 3. 缓存未命中则从数据库 player_platform_cash.money 读取
+     *
+     * @param mixed $value 数据库原始值
+     * @return float 余额
      */
     public function getMoneyAttribute($value): float
     {
-        return floatval($value);
+        // 如果 money 字段有脏数据（刚修改还未保存），直接返回当前值
+        if ($this->isDirty('money')) {
+            return (float)$this->attributes['money'];
+        }
+
+        // 从缓存读取余额
+        try {
+            return \addons\webman\service\WalletService::getBalance($this->player_id, 1);
+        } catch (\Throwable $e) {
+            // 缓存异常时降级到数据库 player_platform_cash.money
+            \support\Log::warning('PlayerPlatformCash::getMoneyAttribute: 缓存读取失败，降级到数据库', [
+                'player_id' => $this->player_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            // 降级：直接查询 player_platform_cash.money（使用原生查询避免访问器循环）
+            $balance = \support\Db::table($this->getTable())
+                ->where('player_id', $this->player_id)
+                ->where('platform_id', $this->platform_id ?? 1)
+                ->value('money');
+
+            return $balance !== null ? (float)$balance : 0.0;
+        }
     }
     
     /**

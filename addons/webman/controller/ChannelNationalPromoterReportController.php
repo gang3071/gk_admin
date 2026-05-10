@@ -192,13 +192,11 @@ class ChannelNationalPromoterReportController
                 $playProfitIds = array_merge($playProfitIds, $validIds);
                 /** @var Player $player */
                 $player = Player::query()->find($item->recommend_id);
-                // ✅ 从 Redis 读取当前实时余额
-                $currentBalance = WalletService::getBalance($player->id);
-                $amountBefore = $currentBalance;
-                // 基于实时余额计算新余额
-                $newBalance = bcadd($currentBalance, $item->money, 2);
-                $player->machine_wallet->money = $newBalance;
-                $player->machine_wallet->save();
+                // ✅ 从 Redis 读取余额（结算前）
+                $amountBefore = WalletService::getBalance($player->id);
+
+                // ✅ 使用 WalletService 原子加款（客损返佣）
+                $newBalance = WalletService::add($player->id, $item->money);
 
                 // 寫入金流明細
                 $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -263,13 +261,11 @@ class ChannelNationalPromoterReportController
             });
             $playProfitIds = array_merge($playProfitIds, $validIds);
             $player = Player::query()->find($id);
-            // ✅ 从 Redis 读取当前实时余额
-            $currentBalance = WalletService::getBalance($player->id);
-            $amountBefore = $currentBalance;
-            // 基于实时余额计算新余额
-            $newBalance = bcadd($currentBalance, $data->money, 2);
-            $player->machine_wallet->money = $newBalance;
-            $player->machine_wallet->save();
+            // ✅ 从 Redis 读取余额（结算前）
+            $amountBefore = WalletService::getBalance($player->id);
+
+            // ✅ 使用 WalletService 原子加款（客损返佣）
+            $newBalance = WalletService::add($player->id, $data->money);
 
             // 寫入金流明細
             $playerDeliveryRecord = new PlayerDeliveryRecord;
