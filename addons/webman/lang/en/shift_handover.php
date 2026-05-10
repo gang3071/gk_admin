@@ -19,6 +19,8 @@ return [
 
     // Error messages
     'error' => [
+        'end_time_required' => 'End time is required',
+        'start_time_required' => 'Start time is required',
         'end_time_future' => 'End time cannot exceed current time',
         'start_time_future' => 'Start time cannot be in the future',
         'start_gte_end' => 'Start time must be earlier than end time',

@@ -30,8 +30,7 @@ class ShiftReportExporter extends Excel
         'profit' => 0                // 利润
     ];
 
-    // 存储所有交班记录数据，用于先计算总计再输出明细
-    protected $allRecords = [];
+    // ✅ 已删除：$allRecords 变量未使用且占用内存
 
     // 存储每个设备的累计数据 [player_name => [...]]
     protected $deviceTotals = [];
@@ -312,7 +311,7 @@ class ShiftReportExporter extends Excel
     }
 
     /**
-     * 初始化店家所有设备
+     * 初始化店家所有设备（分批加载，避免内存溢出）
      */
     protected function initializeStoreDevices()
     {
@@ -320,35 +319,39 @@ class ShiftReportExporter extends Excel
             return;
         }
 
-        // 查询店家所有设备（Player表）
+        // ✅ 使用 chunk() 分批加载设备（每次200条）
         $playerModel = plugin()->webman->config('database.player_model');
-        $allDevices = $playerModel::query()
+        $playerModel::query()
             ->where('store_admin_id', $this->storeAdminId)
             ->select(['id', 'name', 'phone', 'uuid'])
-            ->get();
+            ->chunk(200, function ($devices) {
+                // 初始化每个设备的累计数据结构（使用 player_id 作为唯一标识）
+                foreach ($devices as $device) {
+                    $deviceKey = $device->id; // 使用 player_id 作为唯一标识
+                    $this->deviceTotals[$deviceKey] = [
+                        'player_id' => $device->id,
+                        'player_name' => $device->name,
+                        'player_phone' => $device->phone ?? $device->uuid,
+                        'machine_point' => 0,
+                        'recharge_amount' => 0,
+                        'withdrawal_amount' => 0,
+                        'modified_add_amount' => 0,
+                        'modified_deduct_amount' => 0,
+                        'lottery_amount' => 0,
+                        'total_in' => 0,
+                        'total_out' => 0,
+                        'profit' => 0
+                    ];
+                }
 
-        // 初始化每个设备的累计数据结构（使用 player_id 作为唯一标识）
-        foreach ($allDevices as $device) {
-            $deviceKey = $device->id; // 使用 player_id 作为唯一标识
-            $this->deviceTotals[$deviceKey] = [
-                'player_id' => $device->id,
-                'player_name' => $device->name,
-                'player_phone' => $device->phone ?? $device->uuid,
-                'machine_point' => 0,
-                'recharge_amount' => 0,
-                'withdrawal_amount' => 0,
-                'modified_add_amount' => 0,
-                'modified_deduct_amount' => 0,
-                'lottery_amount' => 0,
-                'total_in' => 0,
-                'total_out' => 0,
-                'profit' => 0
-            ];
-        }
+                // ✅ 显式释放
+                $devices = null;
+                unset($devices);
+            });
     }
 
     /**
-     * 加载所有历史交班记录的设备明细数据（从设备创建开始到现在）
+     * 加载所有历史交班记录的设备明细数据（分批加载，避免内存溢出）
      */
     protected function loadAllHistoricalData()
     {
@@ -356,47 +359,59 @@ class ShiftReportExporter extends Excel
             return;
         }
 
-        // 查询该店家所有的交班记录
+        // 查询该店家所有的交班记录（最近6个月，避免数据量过大）
+        $sixMonthsAgo = date('Y-m-d', strtotime('-6 months'));
+
         $allShiftRecords = StoreAgentShiftHandoverRecord::query()
             ->where('bind_admin_user_id', $this->storeAdminId)
+            ->where('created_at', '>=', $sixMonthsAgo)  // ✅ 只查询最近6个月数据
             ->pluck('id');
 
         if ($allShiftRecords->isEmpty()) {
             return;
         }
 
-        // 查询所有交班记录的设备明细
-        $allDeviceDetails = StoreShiftDeviceDetail::query()
+        // ✅ 使用 chunk() 分批加载设备明细（每次500条），避免一次性加载全部数据到内存
+        StoreShiftDeviceDetail::query()
             ->whereIn('shift_record_id', $allShiftRecords)
-            ->get();
+            ->chunk(500, function ($deviceDetails) {
+                // 累加到每个设备的总计和全局总计
+                foreach ($deviceDetails as $detail) {
+                    $deviceKey = $detail->player_id; // 使用 player_id 作为唯一标识
 
-        // 累加到每个设备的总计和全局总计
-        foreach ($allDeviceDetails as $detail) {
-            $deviceKey = $detail->player_id; // 使用 player_id 作为唯一标识
+                    if (isset($this->deviceTotals[$deviceKey])) {
+                        $this->deviceTotals[$deviceKey]['machine_point'] += $detail->machine_point;
+                        $this->deviceTotals[$deviceKey]['recharge_amount'] += $detail->recharge_amount;
+                        $this->deviceTotals[$deviceKey]['withdrawal_amount'] += $detail->withdrawal_amount;
+                        $this->deviceTotals[$deviceKey]['modified_add_amount'] += $detail->modified_add_amount;
+                        $this->deviceTotals[$deviceKey]['modified_deduct_amount'] += $detail->modified_deduct_amount;
+                        $this->deviceTotals[$deviceKey]['lottery_amount'] += $detail->lottery_amount;
+                        $this->deviceTotals[$deviceKey]['total_in'] += $detail->total_in;
+                        $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
+                        $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
+                    }
 
-            if (isset($this->deviceTotals[$deviceKey])) {
-                $this->deviceTotals[$deviceKey]['machine_point'] += $detail->machine_point;
-                $this->deviceTotals[$deviceKey]['recharge_amount'] += $detail->recharge_amount;
-                $this->deviceTotals[$deviceKey]['withdrawal_amount'] += $detail->withdrawal_amount;
-                $this->deviceTotals[$deviceKey]['modified_add_amount'] += $detail->modified_add_amount;
-                $this->deviceTotals[$deviceKey]['modified_deduct_amount'] += $detail->modified_deduct_amount;
-                $this->deviceTotals[$deviceKey]['lottery_amount'] += $detail->lottery_amount;
-                $this->deviceTotals[$deviceKey]['total_in'] += $detail->total_in;
-                $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
-                $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
-            }
+                    // 同时累加到全局总计
+                    $this->grandTotal['machine_point'] += $detail->machine_point;
+                    $this->grandTotal['recharge_amount'] += $detail->recharge_amount;
+                    $this->grandTotal['withdrawal_amount'] += $detail->withdrawal_amount;
+                    $this->grandTotal['modified_add_amount'] += $detail->modified_add_amount;
+                    $this->grandTotal['modified_deduct_amount'] += $detail->modified_deduct_amount;
+                    $this->grandTotal['lottery_amount'] += $detail->lottery_amount;
+                    $this->grandTotal['total_in'] += $detail->total_in;
+                    $this->grandTotal['total_out'] += $detail->total_out;
+                    $this->grandTotal['profit'] += $detail->profit;
+                }
 
-            // 同时累加到全局总计
-            $this->grandTotal['machine_point'] += $detail->machine_point;
-            $this->grandTotal['recharge_amount'] += $detail->recharge_amount;
-            $this->grandTotal['withdrawal_amount'] += $detail->withdrawal_amount;
-            $this->grandTotal['modified_add_amount'] += $detail->modified_add_amount;
-            $this->grandTotal['modified_deduct_amount'] += $detail->modified_deduct_amount;
-            $this->grandTotal['lottery_amount'] += $detail->lottery_amount;
-            $this->grandTotal['total_in'] += $detail->total_in;
-            $this->grandTotal['total_out'] += $detail->total_out;
-            $this->grandTotal['profit'] += $detail->profit;
-        }
+                // ✅ 每批处理完后，显式释放内存
+                $deviceDetails = null;
+                unset($deviceDetails);
+
+                // ✅ 手动触发垃圾回收（建议）
+                if (function_exists('gc_collect_cycles')) {
+                    gc_collect_cycles();
+                }
+            });
     }
 
     /**

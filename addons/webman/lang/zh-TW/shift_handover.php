@@ -19,6 +19,8 @@ return [
 
     // 錯誤訊息
     'error' => [
+        'end_time_required' => '結束時間不能為空',
+        'start_time_required' => '開始時間不能為空',
         'end_time_future' => '結束時間不能超過當前時間',
         'start_time_future' => '開始時間不能是未來時間',
         'start_gte_end' => '開始時間必須早於結束時間',

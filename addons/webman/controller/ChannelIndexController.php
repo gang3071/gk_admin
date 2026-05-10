@@ -2619,7 +2619,12 @@ class ChannelIndexController
                 $transactionStarted = false;
                 try {
                     $admin = Admin::user();
+
+                    // ✅ 修复：验证必填字段
                     $endTime = $form->input('end_time');
+                    if (empty($endTime)) {
+                        return message_error(admin_trans('shift_handover.error.end_time_required'));
+                    }
 
                     // 1. 查询最后一条交班记录（在事务外）
                     /** @var StoreAgentShiftHandoverRecord $storeAgentShiftHandover */
@@ -2633,6 +2638,10 @@ class ChannelIndexController
                         $startTime = $storeAgentShiftHandover->end_time;
                     } else {
                         $startTime = $form->input('start_time');
+                        // ✅ 修复：第一次交班时验证 start_time 必填
+                        if (empty($startTime)) {
+                            return message_error(admin_trans('shift_handover.error.start_time_required'));
+                        }
                     }
 
                     // 3. 时间验证（在事务外）
@@ -2897,19 +2906,39 @@ class ChannelIndexController
                     return message_success(admin_trans('shift_handover.error.shift_success'));
 
                 } catch (\Exception $e) {
+                    // ✅ 优化：异常处理 + 资源清理
                     if ($transactionStarted) {
                         DB::rollBack();
                     }
+
+                    // 记录错误日志（简化 trace，避免日志过大）
                     Log::error(admin_trans('common.auto_shift.manual_shift_failed'), [
                         'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
+                        'trace' => substr($e->getTraceAsString(), 0, 500),  // ✅ 限制长度，避免日志对象过大
                         'user_id' => Admin::id(),
                         'file' => $e->getFile(),
                         'line' => $e->getLine(),
                         'start_time' => $startTime ?? null,
                         'end_time' => $endTime ?? null
                     ]);
+
+                    // ✅ 显式释放可能的大对象
+                    $playerDeliveryRecord = null;
+                    $result = null;
+                    $currency = null;
+                    unset($playerDeliveryRecord, $result, $currency);
+
+                    // ✅ 手动触发垃圾回收（清理异常对象）
+                    if (function_exists('gc_collect_cycles')) {
+                        gc_collect_cycles();
+                    }
+
                     return message_error(admin_trans('shift_handover.shift_failed') . $e->getMessage());
+                } finally {
+                    // ✅ 无论成功还是失败，都确保释放资源
+                    $startTime = null;
+                    $endTime = null;
+                    unset($startTime, $endTime);
                 }
             });
         });

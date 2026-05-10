@@ -19,6 +19,8 @@ return [
 
     // エラーメッセージ
     'error' => [
+        'end_time_required' => '終了時間は必須です',
+        'start_time_required' => '開始時間は必須です',
         'end_time_future' => '終了時間は現在時刻を超えることはできません',
         'start_time_future' => '開始時間は未来の時間にはできません',
         'start_gte_end' => '開始時間は終了時間より前でなければなりません',
