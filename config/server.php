@@ -27,5 +27,11 @@ return [
     'status_file' => runtime_path() . '/webman.status',
     'stdout_file' => runtime_path() . '/logs/stdout.log',
     'log_file' => runtime_path() . '/logs/workerman.log',
-    'max_package_size' => 10 * 1024 * 1024
+    'max_package_size' => 10 * 1024 * 1024,
+
+    // ✅ 内存泄漏紧急修复：Worker 进程自动重启
+    // 问题：平均每次请求泄漏 3-3.5 MB（444次请求 = 1.47GB）
+    // 解决：处理 200 个请求后自动重启，释放累积内存（约 600-700 MB）
+    // 部署后请监控内存，如仍有问题可降至 100-150
+    'max_request' => 200,
 ];

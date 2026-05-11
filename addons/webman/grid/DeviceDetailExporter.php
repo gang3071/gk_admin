@@ -2,10 +2,6 @@
 
 namespace addons\webman\grid;
 
-use addons\webman\model\PlayerLotteryRecord;
-use addons\webman\model\PlayerMoneyEditLog;
-use addons\webman\model\PlayerRechargeRecord;
-use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
@@ -46,6 +42,13 @@ class DeviceDetailExporter extends Excel
 
     /**
      * 获取设备的历史交易记录
+     *
+     * ✅ 已优化：修复多查询 + 内存排序问题
+     * - 修复前：4 次独立查询 + PHP usort() 内存排序
+     * - 修复后：1 次 UNION ALL 查询 + 数据库 ORDER BY 排序
+     * - 性能提升：减少 75% 查询次数，减少内存排序开销
+     * - 内存优化：避免加载 4 份独立数据集到内存
+     *
      * @param int $playerId 设备ID
      * @param string $startTime 开始时间
      * @param string $endTime 结束时间
@@ -53,81 +56,98 @@ class DeviceDetailExporter extends Excel
      */
     protected function getDeviceTransactionHistory(int $playerId, string $startTime, string $endTime): array
     {
-        $records = [];
+        // ✅ 使用 UNION ALL 合并 4 个查询为 1 个，并在数据库层排序
+        $records = \support\Db::select("
+            (
+                SELECT
+                    created_at as time,
+                    'recharge' as type_key,
+                    money as amount,
+                    COALESCE(remark, '') as remark
+                FROM player_recharge_record
+                WHERE player_id = ?
+                    AND created_at BETWEEN ? AND ?
+                    AND status = 1
+            )
+            UNION ALL
+            (
+                SELECT
+                    created_at as time,
+                    'withdrawal' as type_key,
+                    money as amount,
+                    COALESCE(remark, '') as remark
+                FROM player_withdraw_record
+                WHERE player_id = ?
+                    AND created_at BETWEEN ? AND ?
+                    AND status = 1
+            )
+            UNION ALL
+            (
+                SELECT
+                    created_at as time,
+                    'lottery' as type_key,
+                    amount,
+                    COALESCE(lottery_name, '') as remark
+                FROM player_lottery_record
+                WHERE player_id = ?
+                    AND created_at BETWEEN ? AND ?
+            )
+            UNION ALL
+            (
+                SELECT
+                    created_at as time,
+                    CASE WHEN money > 0 THEN 'add_point' ELSE 'deduct_point' END as type_key,
+                    ABS(money) as amount,
+                    COALESCE(remark, '') as remark
+                FROM player_money_edit_log
+                WHERE player_id = ?
+                    AND created_at BETWEEN ? AND ?
+            )
+            ORDER BY time ASC
+        ", [
+            // 开分记录参数
+            $playerId, $startTime, $endTime,
+            // 洗分记录参数
+            $playerId, $startTime, $endTime,
+            // 彩金记录参数
+            $playerId, $startTime, $endTime,
+            // 加点/扣点记录参数
+            $playerId, $startTime, $endTime,
+        ]);
 
-        // 1. 开分记录
-        $recharges = PlayerRechargeRecord::where('player_id', $playerId)
-            ->whereBetween('created_at', [$startTime, $endTime])
-            ->where('status', 1) // 已完成
-            ->orderBy('created_at')
-            ->get();
-
-        foreach ($recharges as $record) {
-            $records[] = [
-                'time' => $record->created_at,
-                'type' => admin_trans('shift_handover.transaction.type_recharge'),
-                'type_key' => 'recharge',
-                'amount' => $record->money,
-                'remark' => $record->remark ?? ''
+        // ✅ 直接映射结果，无需循环和排序
+        $result = [];
+        foreach ($records as $record) {
+            $result[] = [
+                'time' => $record->time,
+                'type' => $this->getTransactionTypeName($record->type_key),
+                'type_key' => $record->type_key,
+                'amount' => (float)$record->amount,
+                'remark' => $record->remark
             ];
         }
 
-        // 2. 洗分记录
-        $withdrawals = PlayerWithdrawRecord::where('player_id', $playerId)
-            ->whereBetween('created_at', [$startTime, $endTime])
-            ->where('status', 1) // 已完成
-            ->orderBy('created_at')
-            ->get();
+        // ✅ 显式释放查询结果，帮助垃圾回收
+        $records = null;
+        unset($records);
 
-        foreach ($withdrawals as $record) {
-            $records[] = [
-                'time' => $record->created_at,
-                'type' => admin_trans('shift_handover.transaction.type_withdrawal'),
-                'type_key' => 'withdrawal',
-                'amount' => $record->money,
-                'remark' => $record->remark ?? ''
-            ];
-        }
+        return $result;
+    }
 
-        // 3. 彩金记录
-        $lotteries = PlayerLotteryRecord::where('player_id', $playerId)
-            ->whereBetween('created_at', [$startTime, $endTime])
-            ->orderBy('created_at')
-            ->get();
+    /**
+     * 获取交易类型名称（翻译）
+     */
+    private function getTransactionTypeName(string $typeKey): string
+    {
+        $typeMap = [
+            'recharge' => admin_trans('shift_handover.transaction.type_recharge'),
+            'withdrawal' => admin_trans('shift_handover.transaction.type_withdrawal'),
+            'lottery' => admin_trans('shift_handover.transaction.type_lottery'),
+            'add_point' => admin_trans('shift_handover.transaction.type_add_point'),
+            'deduct_point' => admin_trans('shift_handover.transaction.type_deduct_point'),
+        ];
 
-        foreach ($lotteries as $record) {
-            $records[] = [
-                'time' => $record->created_at,
-                'type' => admin_trans('shift_handover.transaction.type_lottery'),
-                'type_key' => 'lottery',
-                'amount' => $record->amount,
-                'remark' => $record->lottery_name ?? ''
-            ];
-        }
-
-        // 4. 后台加点/扣点记录
-        $edits = PlayerMoneyEditLog::where('player_id', $playerId)
-            ->whereBetween('created_at', [$startTime, $endTime])
-            ->orderBy('created_at')
-            ->get();
-
-        foreach ($edits as $record) {
-            $isAddPoint = $record->money > 0;
-            $records[] = [
-                'time' => $record->created_at,
-                'type' => $isAddPoint ? admin_trans('shift_handover.transaction.type_add_point') : admin_trans('shift_handover.transaction.type_deduct_point'),
-                'type_key' => $isAddPoint ? 'add_point' : 'deduct_point',
-                'amount' => abs($record->money),
-                'remark' => $record->remark ?? ''
-            ];
-        }
-
-        // 按时间排序
-        usort($records, function ($a, $b) {
-            return strtotime($a['time']) - strtotime($b['time']);
-        });
-
-        return $records;
+        return $typeMap[$typeKey] ?? $typeKey;
     }
 
     public function write(array $data, \Closure $finish = null)
