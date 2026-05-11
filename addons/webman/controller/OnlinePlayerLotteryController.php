@@ -7,6 +7,8 @@ use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\model\PlayGameRecord;
+use addons\webman\service\GameLotteryServices;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\layout\Space;
 use ExAdmin\ui\support\Request;
@@ -293,10 +295,38 @@ class OnlinePlayerLotteryController
             DB::commit();
 
             // 清除彩金缓存
-            \app\service\GameLotteryServices::clearAllCache();
+            GameLotteryServices::clearAllCache();
 
             // 推送彩池数据变化
-            \app\service\GameLotteryServices::pushLotteryPoolData();
+            GameLotteryServices::pushLotteryPoolData();
+
+            // 获取玩家渠道的默认语言（使用 nullsafe 操作符避免 channel 为 null 时报错）
+            $channelLang = $player->channel?->lang ?? 'zh-TW';
+
+            // 获取游戏名称或机台信息
+            $gameName = '';
+            $machineInfo = '';
+
+            if ($record->source == PlayerLotteryRecord::SOURCE_GAME) {
+                // 电子游戏：获取游戏名称
+                if ($record->play_game_record_id) {
+                    $playGameRecord = PlayGameRecord::query()
+                        ->where('id', $record->play_game_record_id)
+                        ->first();
+
+                    if ($playGameRecord) {
+                        // 根据渠道语言获取游戏名称
+                        $gameName = (new GameLotteryServices())->getLocalizedGameName(
+                            $playGameRecord->platform_id,
+                            $playGameRecord->game_code,
+                            $channelLang
+                        );
+                    }
+                }
+            } elseif ($record->source == PlayerLotteryRecord::SOURCE_MACHINE) {
+                // 实体机台：获取机台名称和编号
+                $machineInfo = $record->machine_name . '(' . $record->machine_code . ')';
+            }
 
             // 发送Socket消息给玩家
             try {
@@ -313,6 +343,10 @@ class OnlinePlayerLotteryController
                     'lottery_pool_amount' => $lottery->amount,
                     'lottery_rate' => $lottery->rate,
                     'is_manual' => 1, // 标记为手动发放
+                    'game_name' => $gameName, // 手动发放无游戏名称
+                    'machine_info' => $machineInfo, // 手动发放无机台信息
+                    'created_at' => date('Y-m-d H:i:s', strtotime($record->created_at)),
+                    'source' => $record->source, // 来源：手动发放
                 ]);
 
                 sendSocketMessage('player-' . $player->id, [
@@ -321,6 +355,8 @@ class OnlinePlayerLotteryController
                     'notice_type' => Notice::TYPE_LOTTERY,
                     'notice_title' => $notice->title,
                     'notice_content' => $notice->content,
+                    'game_name' => $gameName,
+                    'machine_info' => $machineInfo,
                     'amount' => $amount,
                     'notice_num' => Notice::query()->where('player_id', $player->id)->where('status', 0)->count('*')
                 ]);

@@ -206,6 +206,7 @@ return [
     'total_machine_put_point' => '投鈔',
     'total_lottery_amount' => '彩金',
     'subtotal' => '小計',
+    'wash_point_config' => '洗分配置',
 
     // 遊戲相關
     'game_platform' => '遊戲平台',

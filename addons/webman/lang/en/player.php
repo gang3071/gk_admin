@@ -206,6 +206,7 @@ return [
     'total_machine_put_point' => 'Cash Deposit',
     'total_lottery_amount' => 'Jackpot',
     'subtotal' => 'Subtotal',
+    'wash_point_config' => 'Wash Point Config',
 
     // Game Related
     'game_platform' => 'Game Platform',

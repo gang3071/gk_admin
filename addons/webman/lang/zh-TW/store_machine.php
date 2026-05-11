@@ -16,6 +16,7 @@ return [
         'department_name' => '部門名稱',
         'agent_commission' => '代理抽成',
         'channel_commission' => '管道抽成',
+        'wash_point_config' => '洗分配置',
         'status' => '狀態',
         'created_at' => '建立時間',
         'parent_agent' => '上級代理',

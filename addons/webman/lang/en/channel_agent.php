@@ -17,6 +17,7 @@ return [
         'department_name' => 'Department Name',
         'agent_commission' => 'Agent Commission',
         'channel_commission' => 'Channel Commission',
+        'wash_point_config' => 'Wash Point Config',
         'status' => 'Status',
         'created_at' => 'Created At',
         'recharge_amount' => 'Total Credited',
