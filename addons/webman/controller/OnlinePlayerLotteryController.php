@@ -278,6 +278,14 @@ class OnlinePlayerLotteryController
 
             // 扣减彩金池
             $lottery->amount = bcsub($lottery->amount, $amount, 4);
+
+            // 派彩成功后补充到保底金额（如果启用了自动补充）
+            if ($lottery->auto_refill_status == 1 && $lottery->auto_refill_amount > 0) {
+                if ($lottery->amount < $lottery->auto_refill_amount) {
+                    $lottery->amount = $lottery->auto_refill_amount;
+                }
+            }
+
             $lottery->save();
 
             // 发送站内信
@@ -315,7 +323,6 @@ class OnlinePlayerLotteryController
                         ->first();
 
                     if ($playGameRecord) {
-                        // 根据渠道语言获取游戏名称
                         $gameName = (new GameLotteryServices())->getLocalizedGameName(
                             $playGameRecord->platform_id,
                             $playGameRecord->game_code,
@@ -326,6 +333,34 @@ class OnlinePlayerLotteryController
             } elseif ($record->source == PlayerLotteryRecord::SOURCE_MACHINE) {
                 // 实体机台：获取机台名称和编号
                 $machineInfo = $record->machine_name . '(' . $record->machine_code . ')';
+            } elseif ($record->source == PlayerLotteryRecord::SOURCE_MANUAL) {
+                // 手动发放：查询玩家最近一条游戏记录获取游戏名称
+                /** @var PlayGameRecord $lastPlayRecord */
+                $lastPlayRecord = PlayGameRecord::query()
+                    ->where('player_id', $player->id)
+                    ->orderByDesc('id')
+                    ->first();
+
+                if ($lastPlayRecord) {
+                    $gameName = (new GameLotteryServices())->getLocalizedGameName(
+                        $lastPlayRecord->platform_id,
+                        $lastPlayRecord->game_code,
+                        $channelLang
+                    );
+                    Log::info('手动发放彩金-获取最近游戏记录', [
+                        'record_id' => $record->id,
+                        'player_id' => $player->id,
+                        'play_game_record_id' => $lastPlayRecord->id,
+                        'platform_id' => $lastPlayRecord->platform_id,
+                        'game_code' => $lastPlayRecord->game_code,
+                        'game_name' => $gameName,
+                    ]);
+                } else {
+                    Log::info('手动发放彩金-玩家无游戏记录', [
+                        'record_id' => $record->id,
+                        'player_id' => $player->id,
+                    ]);
+                }
             }
 
             // 发送Socket消息给玩家
