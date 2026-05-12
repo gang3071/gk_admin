@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\model\GameLottery;
+use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -12,6 +13,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\support\Request;
 use support\Log;
 
@@ -823,7 +825,7 @@ class GameLotteryController
                 ->get();
 
             // 查询清除时间后的所有押注记录
-            $records = \app\model\PlayGameRecord::query()
+            $records = PlayGameRecord::query()
                 ->where('created_at', '>=', $lastClearTime)
                 ->where('status', 1) // 只统计结算完成的记录
                 ->select(['id', 'bet', 'created_at'])
