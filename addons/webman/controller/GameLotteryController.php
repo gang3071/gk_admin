@@ -171,7 +171,8 @@ class GameLotteryController
                 Button::create(admin_trans('lottery.verify_stats'))
                     ->icon(Icon::create('CalculatorOutlined'))
                     ->type('primary')
-                    ->handler([$this, 'verifyStats']),
+                    ->confirm(admin_trans('lottery.verify_stats_confirm'), [$this, 'verifyStats'])
+                    ->gridRefresh(),
                 Button::create(admin_trans('lottery.clear_stats'))
                     ->icon(Icon::create('DeleteOutlined'))
                     ->type('danger')
@@ -796,9 +797,9 @@ class GameLotteryController
     /**
      * 验证统计数据准确性（根据押注记录计算实际值）
      * @auth true
-     * @return \support\Response
+     * @return Notification
      */
-    public function verifyStats(): \support\Response
+    public function verifyStats(): Notification
     {
         try {
             $redis = \support\Redis::connection()->client();
@@ -807,11 +808,10 @@ class GameLotteryController
             $lastClearTime = $redis->get('game_lottery_stats:last_clear_time');
 
             if (!$lastClearTime) {
-                return json([
-                    'code' => 0,
-                    'msg' => admin_trans('lottery.verify_no_clear_time'),
-                    'data' => null
-                ]);
+                return notification_error(
+                    admin_trans('lottery.verify_error_title'),
+                    admin_trans('lottery.verify_no_clear_time')
+                );
             }
 
             // 获取所有启用的彩金
@@ -832,15 +832,10 @@ class GameLotteryController
             $recordCount = count($records);
 
             if ($recordCount === 0) {
-                return json([
-                    'code' => 0,
-                    'msg' => admin_trans('lottery.verify_no_records'),
-                    'data' => [
-                        'clear_time' => $lastClearTime,
-                        'record_count' => 0,
-                        'lotteries' => []
-                    ]
-                ]);
+                return notification_warning(
+                    admin_trans('lottery.verify_warning_title'),
+                    admin_trans('lottery.verify_no_records') . "\n\n统计时间: {$lastClearTime}"
+                );
             }
 
             // 计算理论统计值（按代码逻辑）
@@ -875,6 +870,7 @@ class GameLotteryController
             // 获取 Redis 实际统计值并对比
             $results = [];
             $hasDiscrepancy = false;
+            $hasError = false;
 
             foreach ($lotteries as $lottery) {
                 $id = $lottery->id;
@@ -882,7 +878,6 @@ class GameLotteryController
                 // 获取 Redis 统计值
                 $actualTotal = (int)$redis->get('game_lottery_stats:total:' . $id) ?: 0;
                 $actualWin = (int)$redis->get('game_lottery_stats:win:' . $id) ?: 0;
-                $clearTime = $redis->get('game_lottery_stats:clear_time:' . $id) ?: $lastClearTime;
 
                 $expectedTotal = $expectedStats[$id]['expected_total'];
                 $diff = $actualTotal - $expectedTotal;
@@ -890,74 +885,81 @@ class GameLotteryController
 
                 // 计算中奖率
                 $actualWinRate = $actualTotal > 0 ? round(($actualWin / $actualTotal) * 100, 8) : 0;
-                $configWinRate = round($lottery->win_ratio * 100, 8);
-
-                // 判断是否准确
-                $isAccurate = ($diff == 0);
-                if (!$isAccurate) {
-                    $hasDiscrepancy = true;
-                }
 
                 // 判断状态
-                $status = 'accurate'; // 准确
+                $statusIcon = '✅';
                 $statusText = admin_trans('lottery.verify_status_accurate');
 
-                if ($diff > 0) {
-                    if ($diffPercent > 0 && $diffPercent <= 80) {
-                        $status = 'warning'; // 偏高但正常
-                        $statusText = admin_trans('lottery.verify_status_high_normal');
-                    } elseif ($diffPercent > 80) {
-                        $status = 'error'; // 偏高异常
-                        $statusText = admin_trans('lottery.verify_status_high_abnormal');
-                    }
+                if ($diff == 0) {
+                    // 准确
+                } elseif ($diff > 0 && $diffPercent <= 80) {
+                    $statusIcon = '⚠️';
+                    $statusText = admin_trans('lottery.verify_status_high_normal');
+                    $hasDiscrepancy = true;
+                } elseif ($diff > 0 && $diffPercent > 80) {
+                    $statusIcon = '❌';
+                    $statusText = admin_trans('lottery.verify_status_high_abnormal');
+                    $hasDiscrepancy = true;
+                    $hasError = true;
                 } elseif ($diff < 0) {
-                    $status = 'error'; // 偏低异常
+                    $statusIcon = '❌';
                     $statusText = admin_trans('lottery.verify_status_low');
+                    $hasDiscrepancy = true;
+                    $hasError = true;
                 }
 
                 $results[] = [
-                    'id' => $id,
                     'name' => $lottery->name,
-                    'base_bet_amount' => $lottery->base_bet_amount,
-                    'clear_time' => $clearTime,
-                    'expected_total' => $expectedTotal,
-                    'actual_total' => $actualTotal,
-                    'actual_win' => $actualWin,
-                    'diff' => $diff,
-                    'diff_percent' => $diffPercent,
-                    'actual_win_rate' => $actualWinRate,
-                    'config_win_rate' => $configWinRate,
-                    'status' => $status,
+                    'expected' => number_format($expectedTotal),
+                    'actual' => number_format($actualTotal),
+                    'diff' => ($diff > 0 ? '+' : '') . number_format($diff) . ' (' . ($diff > 0 ? '+' : '') . $diffPercent . '%)',
+                    'win' => number_format($actualWin),
+                    'win_rate' => $actualWinRate . '%',
+                    'status_icon' => $statusIcon,
                     'status_text' => $statusText,
                 ];
             }
 
-            // 押注金额分布统计
-            $betDistribution = [];
-            foreach ($records as $record) {
-                $bet = floatval($record->bet);
-                $betRange = floor($bet / 10) * 10; // 按10的倍数分组
+            // 构建结果消息
+            $message = "统计时间: {$lastClearTime}\n";
+            $message .= "押注记录: " . number_format($recordCount) . " 条\n\n";
+            $message .= str_repeat('─', 60) . "\n\n";
 
-                if (!isset($betDistribution[$betRange])) {
-                    $betDistribution[$betRange] = 0;
-                }
-                $betDistribution[$betRange]++;
+            foreach ($results as $result) {
+                $message .= "{$result['status_icon']} 【{$result['name']}】\n";
+                $message .= "  理论值: {$result['expected']}\n";
+                $message .= "  实际值: {$result['actual']}\n";
+                $message .= "  偏差: {$result['diff']}\n";
+                $message .= "  中奖: {$result['win']} 次 (中奖率: {$result['win_rate']})\n";
+                $message .= "  状态: {$result['status_text']}\n\n";
             }
-            ksort($betDistribution);
 
-            return json([
-                'code' => 1,
-                'msg' => admin_trans('lottery.verify_success'),
-                'data' => [
-                    'summary' => [
-                        'clear_time' => $lastClearTime,
-                        'record_count' => $recordCount,
-                        'has_discrepancy' => $hasDiscrepancy,
-                    ],
-                    'lotteries' => $results,
-                    'bet_distribution' => $betDistribution,
-                ]
+            $message .= str_repeat('─', 60) . "\n\n";
+
+            if (!$hasDiscrepancy) {
+                $message .= "✅ 所有彩金统计完全准确！";
+            } elseif (!$hasError) {
+                $message .= "⚠️ 存在偏差，但在正常范围内（0-80%）\n";
+                $message .= "这是由于代码提前统计理论机会数，但可能提前中奖退出导致\n";
+                $message .= "建议使用双轨统计方案";
+            } else {
+                $message .= "❌ 发现异常偏差！\n";
+                $message .= "• 偏高 > 80%: 可能存在重复统计\n";
+                $message .= "• 偏低（负值）: 可能统计有遗漏\n";
+                $message .= "请检查代码逻辑或查看日志";
+            }
+
+            Log::info(admin_trans('lottery.log.verify_stats_success'), [
+                'clear_time' => $lastClearTime,
+                'record_count' => $recordCount,
+                'has_discrepancy' => $hasDiscrepancy,
+                'results' => $results
             ]);
+
+            return notification_success(
+                admin_trans('lottery.verify_success_title'),
+                $message
+            );
 
         } catch (\Exception $e) {
             Log::error(admin_trans('lottery.log.verify_stats_error'), [
@@ -965,11 +967,10 @@ class GameLotteryController
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return json([
-                'code' => 0,
-                'msg' => admin_trans('lottery.verify_error') . ': ' . $e->getMessage(),
-                'data' => null
-            ]);
+            return notification_error(
+                admin_trans('lottery.verify_error_title'),
+                admin_trans('lottery.verify_error') . ': ' . $e->getMessage()
+            );
         }
     }
 }
