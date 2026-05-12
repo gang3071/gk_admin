@@ -128,16 +128,25 @@ class GameLotteryController
                     $dailyChecks = (int)$redis->get('game_lottery_stats:daily:total:' . $data->id . ':' . $today) ?: 0;
                     $dailyWins = (int)$redis->get('game_lottery_stats:daily:win:' . $data->id . ':' . $today) ?: 0;
 
+                    // 获取统计开始时间
+                    $clearTime = $redis->get('game_lottery_stats:clear_time:' . $data->id);
+                    if (!$clearTime) {
+                        $clearTime = $redis->get('game_lottery_stats:last_clear_time') ?: admin_trans('lottery.stats_no_clear_time');
+                    }
+
                     // 计算中奖率（保留8位小数以显示极低概率）
                     $totalWinRate = $totalChecks > 0 ? round(($totalWins / $totalChecks) * 100, 8) : 0;
                     $dailyWinRate = $dailyChecks > 0 ? round(($dailyWins / $dailyChecks) * 100, 8) : 0;
 
                     return Html::create()->content([
+                        // 统计开始时间
+                        Html::div()->content(admin_trans('lottery.stats_start_time') . ': ' . $clearTime)
+                            ->style(['font-size' => '11px', 'color' => '#999', 'margin-bottom' => '4px']),
                         // 总统计
-                        Html::div()->content(admin_trans('lottery.stats_total') . ': ' . $totalChecks . admin_trans('lottery.stats_times') . ' / ' . $totalWins . admin_trans('lottery.stats_win') . ' (' . $totalWinRate . '%)')
+                        Html::div()->content(admin_trans('lottery.stats_total') . ': ' . number_format($totalChecks) . admin_trans('lottery.stats_times') . ' / ' . number_format($totalWins) . admin_trans('lottery.stats_win') . ' (' . $totalWinRate . '%)')
                             ->style(['font-size' => '12px', 'color' => '#1890ff']),
                         // 今日统计
-                        Html::div()->content(admin_trans('lottery.stats_today') . ': ' . $dailyChecks . admin_trans('lottery.stats_times') . ' / ' . $dailyWins . admin_trans('lottery.stats_win') . ' (' . $dailyWinRate . '%)')
+                        Html::div()->content(admin_trans('lottery.stats_today') . ': ' . number_format($dailyChecks) . admin_trans('lottery.stats_times') . ' / ' . number_format($dailyWins) . admin_trans('lottery.stats_win') . ' (' . $dailyWinRate . '%)')
                             ->style(['font-size' => '12px', 'color' => '#52c41a', 'margin-top' => '4px']),
                     ]);
                 } catch (\Exception $e) {
@@ -157,8 +166,12 @@ class GameLotteryController
             $grid->hideDelete();
             $grid->hideSelection();
 
-            // 添加清理统计数据按钮
+            // 添加工具按钮
             $grid->tools([
+                Button::create(admin_trans('lottery.verify_stats'))
+                    ->icon(Icon::create('CalculatorOutlined'))
+                    ->type('primary')
+                    ->handler([$this, 'verifyStats']),
                 Button::create(admin_trans('lottery.clear_stats'))
                     ->icon(Icon::create('DeleteOutlined'))
                     ->type('danger')
@@ -701,6 +714,7 @@ class GameLotteryController
         try {
             $redis = \support\Redis::connection()->client();
             $today = date('Y-m-d');
+            $clearTime = date('Y-m-d H:i:s'); // 记录清除时间
 
             // 获取所有启用的彩金ID
             $lotteries = GameLottery::query()
@@ -749,17 +763,25 @@ class GameLotteryController
                         'lottery_id' => $id,
                         'cleared_keys' => $cleared,
                     ];
+
+                    // 记录该彩金的清除时间
+                    $clearTimeKey = 'game_lottery_stats:clear_time:' . $id;
+                    $redis->set($clearTimeKey, $clearTime);
                 }
             }
 
+            // 记录全局清除时间（用于整体验证）
+            $redis->set('game_lottery_stats:last_clear_time', $clearTime);
+
             Log::info(admin_trans('lottery.log.clear_stats_success'), [
+                'clear_time' => $clearTime,
                 'cleared_count' => $clearedCount,
                 'details' => $details
             ]);
 
             return notification_success(
                 admin_trans('lottery.clear_stats_success_title'),
-                admin_trans('lottery.clear_stats_success_message', null, ['{count}' => $clearedCount]) . "\n\n" . admin_trans('lottery.clear_stats_details')
+                admin_trans('lottery.clear_stats_success_message', null, ['{count}' => $clearedCount]) . "\n\n" . admin_trans('lottery.clear_stats_details') . "\n清除时间: {$clearTime}"
             );
 
         } catch (\Exception $e) {
@@ -768,6 +790,186 @@ class GameLotteryController
                 'trace' => $e->getTraceAsString()
             ]);
             return notification_error(admin_trans('lottery.clear_stats_error_title'), $e->getMessage());
+        }
+    }
+
+    /**
+     * 验证统计数据准确性（根据押注记录计算实际值）
+     * @auth true
+     * @return \support\Response
+     */
+    public function verifyStats(): \support\Response
+    {
+        try {
+            $redis = \support\Redis::connection()->client();
+
+            // 获取清除时间
+            $lastClearTime = $redis->get('game_lottery_stats:last_clear_time');
+
+            if (!$lastClearTime) {
+                return json([
+                    'code' => 0,
+                    'msg' => admin_trans('lottery.verify_no_clear_time'),
+                    'data' => null
+                ]);
+            }
+
+            // 获取所有启用的彩金
+            $lotteries = GameLottery::query()
+                ->select(['id', 'name', 'base_bet_amount', 'win_ratio'])
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->orderBy('sort', 'desc')
+                ->get();
+
+            // 查询清除时间后的所有押注记录
+            $records = \app\model\PlayGameRecord::query()
+                ->where('created_at', '>=', $lastClearTime)
+                ->where('status', 1) // 只统计结算完成的记录
+                ->select(['id', 'bet', 'created_at'])
+                ->get();
+
+            $recordCount = count($records);
+
+            if ($recordCount === 0) {
+                return json([
+                    'code' => 0,
+                    'msg' => admin_trans('lottery.verify_no_records'),
+                    'data' => [
+                        'clear_time' => $lastClearTime,
+                        'record_count' => 0,
+                        'lotteries' => []
+                    ]
+                ]);
+            }
+
+            // 计算理论统计值（按代码逻辑）
+            $expectedStats = [];
+            foreach ($lotteries as $lottery) {
+                $expectedStats[$lottery->id] = [
+                    'name' => $lottery->name,
+                    'base_bet_amount' => $lottery->base_bet_amount,
+                    'win_ratio' => $lottery->win_ratio,
+                    'expected_total' => 0,
+                ];
+            }
+
+            // 遍历押注记录计算理论值
+            foreach ($records as $record) {
+                $bet = floatval($record->bet);
+
+                foreach ($lotteries as $lottery) {
+                    if ($lottery->base_bet_amount <= 0) {
+                        continue;
+                    }
+
+                    // 计算 participate_times（与代码逻辑完全一致）
+                    $participateTimes = intval(floor($bet / $lottery->base_bet_amount));
+
+                    if ($participateTimes > 0) {
+                        $expectedStats[$lottery->id]['expected_total'] += $participateTimes;
+                    }
+                }
+            }
+
+            // 获取 Redis 实际统计值并对比
+            $results = [];
+            $hasDiscrepancy = false;
+
+            foreach ($lotteries as $lottery) {
+                $id = $lottery->id;
+
+                // 获取 Redis 统计值
+                $actualTotal = (int)$redis->get('game_lottery_stats:total:' . $id) ?: 0;
+                $actualWin = (int)$redis->get('game_lottery_stats:win:' . $id) ?: 0;
+                $clearTime = $redis->get('game_lottery_stats:clear_time:' . $id) ?: $lastClearTime;
+
+                $expectedTotal = $expectedStats[$id]['expected_total'];
+                $diff = $actualTotal - $expectedTotal;
+                $diffPercent = $expectedTotal > 0 ? round(($diff / $expectedTotal) * 100, 2) : 0;
+
+                // 计算中奖率
+                $actualWinRate = $actualTotal > 0 ? round(($actualWin / $actualTotal) * 100, 8) : 0;
+                $configWinRate = round($lottery->win_ratio * 100, 8);
+
+                // 判断是否准确
+                $isAccurate = ($diff == 0);
+                if (!$isAccurate) {
+                    $hasDiscrepancy = true;
+                }
+
+                // 判断状态
+                $status = 'accurate'; // 准确
+                $statusText = admin_trans('lottery.verify_status_accurate');
+
+                if ($diff > 0) {
+                    if ($diffPercent > 0 && $diffPercent <= 80) {
+                        $status = 'warning'; // 偏高但正常
+                        $statusText = admin_trans('lottery.verify_status_high_normal');
+                    } elseif ($diffPercent > 80) {
+                        $status = 'error'; // 偏高异常
+                        $statusText = admin_trans('lottery.verify_status_high_abnormal');
+                    }
+                } elseif ($diff < 0) {
+                    $status = 'error'; // 偏低异常
+                    $statusText = admin_trans('lottery.verify_status_low');
+                }
+
+                $results[] = [
+                    'id' => $id,
+                    'name' => $lottery->name,
+                    'base_bet_amount' => $lottery->base_bet_amount,
+                    'clear_time' => $clearTime,
+                    'expected_total' => $expectedTotal,
+                    'actual_total' => $actualTotal,
+                    'actual_win' => $actualWin,
+                    'diff' => $diff,
+                    'diff_percent' => $diffPercent,
+                    'actual_win_rate' => $actualWinRate,
+                    'config_win_rate' => $configWinRate,
+                    'status' => $status,
+                    'status_text' => $statusText,
+                ];
+            }
+
+            // 押注金额分布统计
+            $betDistribution = [];
+            foreach ($records as $record) {
+                $bet = floatval($record->bet);
+                $betRange = floor($bet / 10) * 10; // 按10的倍数分组
+
+                if (!isset($betDistribution[$betRange])) {
+                    $betDistribution[$betRange] = 0;
+                }
+                $betDistribution[$betRange]++;
+            }
+            ksort($betDistribution);
+
+            return json([
+                'code' => 1,
+                'msg' => admin_trans('lottery.verify_success'),
+                'data' => [
+                    'summary' => [
+                        'clear_time' => $lastClearTime,
+                        'record_count' => $recordCount,
+                        'has_discrepancy' => $hasDiscrepancy,
+                    ],
+                    'lotteries' => $results,
+                    'bet_distribution' => $betDistribution,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error(admin_trans('lottery.log.verify_stats_error'), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return json([
+                'code' => 0,
+                'msg' => admin_trans('lottery.verify_error') . ': ' . $e->getMessage(),
+                'data' => null
+            ]);
         }
     }
 }
