@@ -670,6 +670,24 @@ class GameLotteryController
                 ];
                 $form->input('burst_trigger_config', json_encode($triggerConfig));
             });
+
+            // 保存成功后的回调：清除 gk_work 的彩金缓存
+            $form->saved(function (Form $form) {
+                try {
+                    $redis = \support\Redis::connection()->client();
+
+                    // 删除 gk_work 的彩金列表缓存
+                    $redis->del('game_lottery_list');
+                    $redis->del('game_pool_3');
+
+                    \support\Log::info('清除 gk_work 彩金缓存成功', [
+                        'lottery_id' => $form->driver()->get('id'),
+                        'action' => $form->isEdit() ? 'update' : 'create',
+                    ]);
+                } catch (\Exception $e) {
+                    \support\Log::error('清除 gk_work 彩金缓存失败: ' . $e->getMessage());
+                }
+            });
         })->labelWidth('150');
     }
 
