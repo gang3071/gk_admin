@@ -827,7 +827,7 @@ class GameLotteryController
             // 查询清除时间后的所有押注记录
             $records = PlayGameRecord::query()
                 ->where('created_at', '>=', $lastClearTime)
-                ->where('status', 1) // 只统计结算完成的记录
+                ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED) // 只统计已结算的记录
                 ->select(['id', 'bet', 'created_at'])
                 ->get();
 
