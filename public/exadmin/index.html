@@ -319,5 +319,81 @@
   }
 })();
 </script>
+
+<!-- 🎯 "记住我"功能修复脚本 (2026-05-13) -->
+<script>
+(function() {
+  'use strict';
+  console.log('[RememberMe] 修复脚本已加载');
+
+  // 拦截fetch请求，在登录成功后保存"记住我"标记
+  const originalFetch = window.fetch;
+  window.fetch = function(...args) {
+    return originalFetch.apply(this, args).then(response => {
+      const clonedResponse = response.clone();
+
+      // 检查是否是登录接口
+      if (args[0] && (args[0].includes('/ex-admin/login/check') || args[0].endsWith('/login/check'))) {
+        clonedResponse.json().then(data => {
+          if (data.code === 0 && data.data) {
+            // 根据当前域名判断source
+            const hostname = window.location.hostname;
+            let source = 'admin';
+            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+            if (data.data.remember_me) {
+              console.log('[RememberMe] 检测到"记住我"勾选，保存15天标记');
+
+              const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
+              localStorage.setItem('ex_admin_token_expire_' + source, tokenExpireTime.toString());
+              localStorage.setItem('ex_admin_remember_me_' + source, 'true');
+
+              console.log('[RememberMe] 已保存，token有效期至: ' + new Date(tokenExpireTime).toLocaleString());
+            } else {
+              console.log('[RememberMe] 未勾选"记住我"，清除标记');
+              localStorage.removeItem('ex_admin_token_expire_' + source);
+              localStorage.removeItem('ex_admin_remember_me_' + source);
+            }
+          }
+        }).catch(function(err) {
+          // 忽略解析错误
+        });
+      }
+
+      return response;
+    });
+  };
+
+  // 页面加载时检查并显示状态
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      const hostname = window.location.hostname;
+      let source = 'admin';
+      if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+      else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+      else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+      const tokenKey = '/' + source + '_ex-admin-token';
+      const hasToken = localStorage.getItem(tokenKey);
+      const rememberMe = localStorage.getItem('ex_admin_remember_me_' + source);
+      const expireTime = localStorage.getItem('ex_admin_token_expire_' + source);
+
+      if (hasToken && rememberMe === 'true' && expireTime) {
+        const now = Date.now();
+        const expire = parseInt(expireTime);
+        if (expire > now) {
+          console.log('[RememberMe] ✅ 已登录，token有效期至: ' + new Date(expire).toLocaleString());
+        } else {
+          console.log('[RememberMe] ❌ Token已过期，清除');
+          localStorage.removeItem('ex_admin_token_expire_' + source);
+          localStorage.removeItem('ex_admin_remember_me_' + source);
+        }
+      }
+    }, 1000);
+  });
+})();
+</script>
 </body>
 </html>
