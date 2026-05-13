@@ -250,6 +250,22 @@ export default {
                     if (res.data && res.data.locale) {
                         this.setCookie('ex_admin_lang', res.data.locale, 365);
                     }
+
+                    // 🎯 处理"记住我"功能 - 确保token在关闭浏览器后仍然有效
+                    if (res.data && res.data.remember_me && this.loginForm.remember_me) {
+                        // 勾选"记住我"时，设置token存储标记
+                        // 15天免登录：设置一个标记告诉框架使用localStorage并设置过期时间
+                        const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000); // 15天后
+                        localStorage.setItem('ex_admin_token_expire', tokenExpireTime.toString());
+                        localStorage.setItem('ex_admin_remember_me', 'true');
+                        console.log('[Login] 记住我已启用，token将保存15天');
+                    } else {
+                        // 未勾选"记住我"，清除记住我标记
+                        localStorage.removeItem('ex_admin_token_expire');
+                        localStorage.removeItem('ex_admin_remember_me');
+                        console.log('[Login] 未启用记住我，使用默认token过期时间');
+                    }
+
                     this.$router.push(this.redirect || '/' )
                 }).finally(() => {
                     this.loading = false
