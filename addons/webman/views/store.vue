@@ -193,9 +193,19 @@ export default {
         this.getVerify()
     },
     mounted() {
+        // 检查是否有保存的语言设置
         const savedLang = localStorage.getItem('locale');
-        if (savedLang && this.translations[savedLang]) {
+        const cookieLang = this.getCookie('ex_admin_lang');
+
+        // 如果既没有localStorage也没有cookie，设置默认为繁体中文
+        if (!savedLang && !cookieLang) {
+            this.currentLang = 'zh-TW';
+            localStorage.setItem('locale', 'zh-TW');
+            this.setCookie('ex_admin_lang', 'zh-TW', 365);
+        } else if (savedLang && this.translations[savedLang]) {
             this.currentLang = savedLang;
+        } else if (cookieLang && this.translations[cookieLang]) {
+            this.currentLang = cookieLang;
         }
     },
     methods: {
@@ -253,6 +263,17 @@ export default {
             const expires = new Date();
             expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
             document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+        },
+
+        getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for(let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
         }
     }
 }
