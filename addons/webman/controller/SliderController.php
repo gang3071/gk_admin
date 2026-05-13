@@ -77,7 +77,7 @@ class SliderController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('slider.title'));
             $form->image('picture_url', admin_trans('slider.fields.picture_url'))
-                ->ext('jpg,png,jpeg')
+                ->ext('jpg,png,jpeg,webp')
                 ->fileSize('5m')
                 ->help(admin_trans('slider.help.picture_url_size'))
                 ->required();
