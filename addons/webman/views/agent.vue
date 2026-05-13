@@ -252,15 +252,20 @@ export default {
                     }
 
                     // 🎯 处理"记住我"功能 - 确保token在关闭浏览器后仍然有效
+                    // 使用source区分不同后台，避免互相影响
+                    const source = this.loginForm.source || 'agent';
+                    const tokenExpireKey = `ex_admin_token_expire_${source}`;
+                    const rememberMeKey = `ex_admin_remember_me_${source}`;
+
                     if (res.data && res.data.remember_me && this.loginForm.remember_me) {
                         const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
-                        localStorage.setItem('ex_admin_token_expire', tokenExpireTime.toString());
-                        localStorage.setItem('ex_admin_remember_me', 'true');
-                        console.log('[Login] 记住我已启用，token将保存15天');
+                        localStorage.setItem(tokenExpireKey, tokenExpireTime.toString());
+                        localStorage.setItem(rememberMeKey, 'true');
+                        console.log(`[Login-${source}] 记住我已启用，token将保存15天`);
                     } else {
-                        localStorage.removeItem('ex_admin_token_expire');
-                        localStorage.removeItem('ex_admin_remember_me');
-                        console.log('[Login] 未启用记住我，使用默认token过期时间');
+                        localStorage.removeItem(tokenExpireKey);
+                        localStorage.removeItem(rememberMeKey);
+                        console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
                     this.$router.push(this.redirect || '/' )
