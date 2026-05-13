@@ -77,8 +77,8 @@ class SliderController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('slider.title'));
             $form->image('picture_url', admin_trans('slider.fields.picture_url'))
-                ->ext('jpg,png,jpeg,webp')
-                ->fileSize('5m')
+                ->ext('jpg,png,jpeg,webp,mp4')
+                ->fileSize('60m')
                 ->help(admin_trans('slider.help.picture_url_size'))
                 ->required();
             $form->select('department_id', admin_trans('slider.fields.department_id'))->options($this->getChannelOptions())->required();
