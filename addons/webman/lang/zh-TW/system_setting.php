@@ -30,6 +30,7 @@ return [
         'app_password' => '密碼管理',
         'jackpot_screen_domain' => '大屏彩金Domain',
         'turn_relay_ip' => 'TURN中繼IP',
+        'high_score_broadcast_threshold' => '高分廣播閾值',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字元',
@@ -49,6 +50,9 @@ return [
         7 => '星期天',
     ],
     'week_str' => '星期',
+    'minutes' => '分鐘',
     'time_range' => '日期範圍',
-    'master' => '總配置'
+    'master' => '總配置',
+    'points' => '分',
+    'disabled' => '已禁用'
 ];

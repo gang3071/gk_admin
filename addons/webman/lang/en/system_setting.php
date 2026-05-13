@@ -30,6 +30,7 @@ return [
         'app_password' => 'password management',
         'jackpot_screen_domain' => 'Jackpot Screen Domain',
         'turn_relay_ip' => 'TURN Relay IP',
+        'high_score_broadcast_threshold' => 'High Score Broadcast Threshold',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',
@@ -51,5 +52,7 @@ return [
     'week_str' => 'week',
     'minutes' => 'minutes',
     'time_range' => 'Date range',
-    'master' => 'Total configuration'
+    'master' => 'Total configuration',
+    'points' => 'points',
+    'disabled' => 'Disabled'
 ];

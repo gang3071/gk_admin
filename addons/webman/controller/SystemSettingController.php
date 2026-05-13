@@ -269,6 +269,21 @@ class SystemSettingController
                         ->rule(['max:100' => admin_trans('system_setting.turn_relay_ip_max_len')])
                 )->display(function ($value, SystemSetting $data) {
                     return $data->content;
+                })->width('20%')->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'high_score_broadcast_threshold';
+                })->editable(
+                    (new Editable)->text('num')
+                        ->rule([
+                            'numeric' => admin_trans('validator.numeric'),
+                            'max:999999999' => admin_trans('validator.max', null, ['{max}' => 999999999]),
+                            'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                        ])->addonAfter(admin_trans('system_setting.points'))
+                )->display(function ($val, SystemSetting $data) {
+                    if (empty($data->num) || $data->num <= 0) {
+                        return '<span style="color: #999;">0 (' . admin_trans('system_setting.disabled') . ')</span>';
+                    }
+                    return '<span style="color: #52c41a; font-weight: bold;">' . number_format($data->num, 0) . ' ' . admin_trans('system_setting.points') . '</span>';
                 })->width('20%')->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');

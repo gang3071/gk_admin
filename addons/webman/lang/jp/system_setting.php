@@ -30,6 +30,7 @@ return [
         'app_password' => 'パスワード管理',
         'jackpot_screen_domain' => 'ジャックポット画面ドメイン',
         'turn_relay_ip' => 'TURNリレーIP',
+        'high_score_broadcast_threshold' => 'ハイスコア放送しきい値',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
@@ -52,4 +53,6 @@ return [
     'minutes' => '分',
     'time_range' => '日付範囲',
     'master' => '全体構成',
+    'points' => 'ポイント',
+    'disabled' => '無効'
 ];

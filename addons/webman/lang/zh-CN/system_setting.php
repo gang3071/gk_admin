@@ -30,6 +30,7 @@ return [
         'app_password' => '密码管理',
         'jackpot_screen_domain' => '大屏彩金Domain',
         'turn_relay_ip' => 'TURN中继IP',
+        'high_score_broadcast_threshold' => '高分广播阈值',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字符',
@@ -51,5 +52,7 @@ return [
     'week_str' => '星期',
     'minutes' => '分钟',
     'time_range' => '日期范围',
-    'master' => '总配置'
+    'master' => '总配置',
+    'points' => '分',
+    'disabled' => '已禁用'
 ];
