@@ -56,6 +56,7 @@ class PostController
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateRange('created_at_start', 'created_at_end', '')->placeholder([admin_trans('public_msg.created_at_start'), admin_trans('public_msg.created_at_end')]);
             });
+
             $grid->setForm()->modal($this->form());
             $grid->expandFilter();
         });
