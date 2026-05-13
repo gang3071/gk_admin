@@ -680,6 +680,18 @@ class ChannelController
                         }
                         $externalApp->save();
 
+                        // 🎉 创建高分广播配置（2026-05-13）
+                        $systemSettingModel = plugin()->webman->config('database.system_setting_model');
+                        if ($systemSettingModel && class_exists($systemSettingModel)) {
+                            $highScoreSetting = new $systemSettingModel();
+                            $highScoreSetting->department_id = $adminDepartment->id;
+                            $highScoreSetting->feature = 'high_score_broadcast_threshold';
+                            $highScoreSetting->num = 5000; // 默认阈值 5000 分
+                            $highScoreSetting->content = '';
+                            $highScoreSetting->status = 0; // 默认禁用
+                            $highScoreSetting->save();
+                        }
+
                         // 更新部门path（必须在事务内完成）
                         $adminDepartment->path = $adminDepartment->id;
                         $adminDepartment->save();
