@@ -24,6 +24,7 @@ return [
     'runtime_path' => base_path(false) . DIRECTORY_SEPARATOR . 'runtime',
     'controller_suffix' => 'Controller',
     'controller_reuse' => false,
+    'locale' => 'zh-TW', // 默认语言：繁体中文
     'currency' => env('currency', 'TWD'),
     'env' => env('APP_ENV', 'pro'),
     'profit' => 'task', // 分润结算模式(task任务模式每天结算前天, event事件模式实时结算)

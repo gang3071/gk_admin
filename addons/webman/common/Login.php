@@ -88,6 +88,7 @@ class Login extends LoginAbstract
                     'username_required' => '请输入账号',
                     'password_required' => '密码输入长度不能少于5位',
                     'verify_required' => '请输入验证码',
+                    'remember_me' => '记住我（15天免登录）',
                 ],
                 'zh-TW' => [
                     'title' => $titles['zh-TW'],
@@ -98,6 +99,7 @@ class Login extends LoginAbstract
                     'username_required' => '請輸入帳號',
                     'password_required' => '密碼輸入長度不能少於5位',
                     'verify_required' => '請輸入驗證碼',
+                    'remember_me' => '記住我（15天免登入）',
                 ],
                 'en' => [
                     'title' => $titles['en'],
@@ -108,6 +110,7 @@ class Login extends LoginAbstract
                     'username_required' => 'Please enter username',
                     'password_required' => 'Password must be at least 5 characters',
                     'verify_required' => 'Please enter verification code',
+                    'remember_me' => 'Remember me (15 days)',
                 ],
                 'jp' => [
                     'title' => $titles['jp'],
@@ -118,6 +121,7 @@ class Login extends LoginAbstract
                     'username_required' => 'ユーザー名を入力してください',
                     'password_required' => 'パスワードは5文字以上である必要があります',
                     'verify_required' => '認証コードを入力してください',
+                    'remember_me' => 'ログイン状態を保存（15日間）',
                 ],
             ],
         ]);
@@ -145,6 +149,7 @@ class Login extends LoginAbstract
                     'username_required' => '请输入账号',
                     'password_required' => '密码输入长度不能少于5位',
                     'verify_required' => '请输入验证码',
+                    'remember_me' => '记住我（15天免登录）',
                 ],
                 'zh-TW' => [
                     'title' => '渠道登入',
@@ -155,6 +160,7 @@ class Login extends LoginAbstract
                     'username_required' => '請輸入帳號',
                     'password_required' => '密碼輸入長度不能少於5位',
                     'verify_required' => '請輸入驗證碼',
+                    'remember_me' => '記住我（15天免登入）',
                 ],
                 'en' => [
                     'title' => 'Channel Login',
@@ -165,6 +171,7 @@ class Login extends LoginAbstract
                     'username_required' => 'Please enter username',
                     'password_required' => 'Password must be at least 5 characters',
                     'verify_required' => 'Please enter verification code',
+                    'remember_me' => 'Remember me (15 days)',
                 ],
                 'jp' => [
                     'title' => 'チャネルログイン',
@@ -175,6 +182,7 @@ class Login extends LoginAbstract
                     'username_required' => 'ユーザー名を入力してください',
                     'password_required' => 'パスワードは5文字以上である必要があります',
                     'verify_required' => '認証コードを入力してください',
+                    'remember_me' => 'ログイン状態を保存（15日間）',
                 ],
             ],
         ]);
@@ -202,6 +210,7 @@ class Login extends LoginAbstract
                     'username_required' => '请输入账号',
                     'password_required' => '密码输入长度不能少于5位',
                     'verify_required' => '请输入验证码',
+                    'remember_me' => '记住我（15天免登录）',
                 ],
                 'zh-TW' => [
                     'title' => '代理登入',
@@ -212,6 +221,7 @@ class Login extends LoginAbstract
                     'username_required' => '請輸入帳號',
                     'password_required' => '密碼輸入長度不能少於5位',
                     'verify_required' => '請輸入驗證碼',
+                    'remember_me' => '記住我（15天免登入）',
                 ],
                 'en' => [
                     'title' => 'Agent Login',
@@ -222,6 +232,7 @@ class Login extends LoginAbstract
                     'username_required' => 'Please enter username',
                     'password_required' => 'Password must be at least 5 characters',
                     'verify_required' => 'Please enter verification code',
+                    'remember_me' => 'Remember me (15 days)',
                 ],
                 'jp' => [
                     'title' => 'エージェントログイン',
@@ -232,6 +243,7 @@ class Login extends LoginAbstract
                     'username_required' => 'ユーザー名を入力してください',
                     'password_required' => 'パスワードは5文字以上である必要があります',
                     'verify_required' => '認証コードを入力してください',
+                    'remember_me' => 'ログイン状態を保存（15日間）',
                 ],
             ],
         ]);
@@ -259,6 +271,7 @@ class Login extends LoginAbstract
                     'username_required' => '请输入账号',
                     'password_required' => '密码输入长度不能少于5位',
                     'verify_required' => '请输入验证码',
+                    'remember_me' => '记住我（15天免登录）',
                 ],
                 'zh-TW' => [
                     'title' => '店機登入',
@@ -269,6 +282,7 @@ class Login extends LoginAbstract
                     'username_required' => '請輸入帳號',
                     'password_required' => '密碼輸入長度不能少於5位',
                     'verify_required' => '請輸入驗證碼',
+                    'remember_me' => '記住我（15天免登入）',
                 ],
                 'en' => [
                     'title' => 'Store Login',
@@ -279,6 +293,7 @@ class Login extends LoginAbstract
                     'username_required' => 'Please enter username',
                     'password_required' => 'Password must be at least 5 characters',
                     'verify_required' => 'Please enter verification code',
+                    'remember_me' => 'Remember me (15 days)',
                 ],
                 'jp' => [
                     'title' => '店舗ログイン',
@@ -289,6 +304,7 @@ class Login extends LoginAbstract
                     'username_required' => 'ユーザー名を入力してください',
                     'password_required' => 'パスワードは5文字以上である必要があります',
                     'verify_required' => '認証コードを入力してください',
+                    'remember_me' => 'ログイン状態を保存（15日間）',
                 ],
             ],
         ]);
@@ -344,9 +360,40 @@ class Login extends LoginAbstract
             }
         }
 
+        // 处理"记住我"功能 - 15天免登录
+        $rememberMe = $data['remember_me'] ?? false;
+        $tokenExpire = $rememberMe ? 15 * 24 * 3600 : null; // 15天或默认
+
+        // 生成带自定义过期时间的token
+        $userData = $user->toArray();
+        if ($tokenExpire) {
+            $userData['token_expire'] = time() + $tokenExpire;
+        }
+        $userData['token_time'] = time();
+
+        // 使用自定义过期时间编码token
+        $config = admin_config('admin.token');
+        $key = $config['key'];
+        $unique = $config['unique'];
+        $pk = $user->getKeyName();
+
+        $token = openssl_encrypt(json_encode($userData), 'AES-128-ECB', $key);
+        if($token === false){
+            throw new \Exception('token生成失败');
+        }
+
+        // 保存token到缓存
+        $driver = new \addons\webman\token\driver\Cache();
+        $driver->set($token, $tokenExpire ?: $config['expire']);
+
+        if ($unique && isset($userData[$pk])) {
+            $driver->setLastToken($userData[$pk], $token, $tokenExpire ?: $config['expire']);
+        }
+
         return message_success(admin_trans('login.success'))->data([
-            'token' => Token::encode($user->toArray()),
+            'token' => $token,
             'locale' => $locale, // 返回locale给前端，让前端设置cookie
+            'remember_me' => $rememberMe, // 返回记住我状态
         ]);
     }
     

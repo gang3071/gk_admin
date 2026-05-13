@@ -55,6 +55,11 @@
                                 </template>
                             </a-input-password>
                         </a-form-item>
+                        <a-form-item>
+                            <a-checkbox v-model:checked="loginForm.remember_me">
+                                {{trans.remember_me}}
+                            </a-checkbox>
+                        </a-form-item>
                         <div v-if="verification" style="display: flex;justify-content: space-between;">
                             <a-form-item name="verify" style="flex:1;margin-right: 10px">
                                 <a-input
@@ -101,7 +106,8 @@ export default {
                     login_button: '登录',
                     username_required: '请输入账号',
                     password_required: '密码输入长度不能少于5位',
-                    verify_required: '请输入验证码'
+                    verify_required: '请输入验证码',
+                    remember_me: '记住我（15天免登录）'
                 },
                 'zh-TW': {
                     title: '店機登入',
@@ -111,7 +117,8 @@ export default {
                     login_button: '登入',
                     username_required: '請輸入帳號',
                     password_required: '密碼輸入長度不能少於5位',
-                    verify_required: '請輸入驗證碼'
+                    verify_required: '請輸入驗證碼',
+                    remember_me: '記住我（15天免登入）'
                 },
                 'en': {
                     title: 'Store Login',
@@ -121,7 +128,8 @@ export default {
                     login_button: 'Login',
                     username_required: 'Please enter username',
                     password_required: 'Password must be at least 5 characters',
-                    verify_required: 'Please enter verification code'
+                    verify_required: 'Please enter verification code',
+                    remember_me: 'Remember me (15 days)'
                 },
                 'jp': {
                     title: '店舗ログイン',
@@ -131,7 +139,8 @@ export default {
                     login_button: 'ログイン',
                     username_required: 'ユーザー名を入力してください',
                     password_required: 'パスワードは5文字以上である必要があります',
-                    verify_required: '認証コードを入力してください'
+                    verify_required: '認証コードを入力してください',
+                    remember_me: 'ログイン状態を保存（15日間）'
                 }
             })
         }
@@ -146,6 +155,7 @@ export default {
               verify: '',
               hash: '',
               source: 'store',
+              remember_me: false,
             },
             loginRules: {},
             loading: false,

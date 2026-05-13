@@ -5,8 +5,8 @@ return [
     'ui' => [
         //语言
         'lang' => [
-            // 默认语言
-            'default' => config('app.locale', 'zh-CN'),
+            // 默认语言（繁体中文）
+            'default' => config('app.locale', 'zh-TW'),
             //语言列表
             'list' => [
                 'zh-CN' => '中文简体',
