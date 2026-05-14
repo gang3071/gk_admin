@@ -354,9 +354,9 @@ class GameController
                         ->required()->maxlength(200)
                         ->help(admin_trans('game.help.name'));
                     $form->image("content." . $k . ".picture", admin_trans('game.fields.picture'))
-                        ->ext('jpg,png,jpeg')
+                        ->ext('jpg,png,jpeg,webp')
                         ->value($langContent['picture'] ?? '')
-                        ->fileSize('3m')
+                        ->fileSize('5m')
                         ->help(admin_trans('game.help.picture_size'))
                         ->required();
                     $form->myEditor("content." . $k . ".description", admin_trans('game.fields.description'))
