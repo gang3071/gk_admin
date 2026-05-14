@@ -320,6 +320,107 @@
 })();
 </script>
 
+<!-- 🎯 Token自动恢复 - 在应用启动前设置axios header (2026-05-14) -->
+<script>
+(function() {
+  'use strict';
+
+  // 获取source
+  function getSource() {
+    const hostname = window.location.hostname;
+    if (hostname.includes('zi-test') || hostname.includes('channel')) return 'channel';
+    if (hostname.includes('agent-test') || hostname.includes('agent')) return 'agent';
+    if (hostname.includes('store-test') || hostname.includes('store')) return 'store';
+    return 'admin';
+  }
+
+  // 检查并恢复token
+  function restoreToken() {
+    const source = getSource();
+    const tokenKey = '/' + source + '_ex-admin-token';
+    const rememberMeKey = 'ex_admin_remember_me_' + source;
+    const expireKey = 'ex_admin_token_expire_' + source;
+
+    const token = localStorage.getItem(tokenKey);
+    const rememberMe = localStorage.getItem(rememberMeKey);
+    const expireTime = localStorage.getItem(expireKey);
+
+    if (!token || rememberMe !== 'true' || !expireTime) {
+      console.log('[TokenRestore] 未找到有效的记住我token');
+      return null;
+    }
+
+    const now = Date.now();
+    const expire = parseInt(expireTime);
+
+    if (expire <= now) {
+      console.log('[TokenRestore] Token已过期，清除');
+      localStorage.removeItem(tokenKey);
+      localStorage.removeItem(rememberMeKey);
+      localStorage.removeItem(expireKey);
+      return null;
+    }
+
+    console.log('[TokenRestore] ✅ 找到有效token，过期时间:', new Date(expire).toLocaleString());
+    return token;
+  }
+
+  const token = restoreToken();
+
+  if (token) {
+    // 等待axios加载并设置默认header
+    let attempts = 0;
+    const maxAttempts = 100;
+
+    const checkAxios = setInterval(function() {
+      attempts++;
+
+      if (window.axios) {
+        clearInterval(checkAxios);
+        console.log('[TokenRestore] Axios已加载，设置Authorization header');
+        window.axios.defaults.headers.common['Authorization'] = token;
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkAxios);
+        console.warn('[TokenRestore] 10秒内未找到axios实例');
+      }
+    }, 100);
+
+    // 同时拦截XMLHttpRequest（备用方案）
+    const originalOpen = XMLHttpRequest.prototype.open;
+    const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+    XMLHttpRequest.prototype.open = function() {
+      this._url = arguments[1];
+      return originalOpen.apply(this, arguments);
+    };
+
+    XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+      // 如果是Authorization header且值为空或不存在，自动设置token
+      if (header === 'Authorization' && !value && token) {
+        console.log('[TokenRestore] 自动注入token到XMLHttpRequest:', this._url);
+        value = token;
+      }
+      return originalSetRequestHeader.call(this, header, value);
+    };
+
+    // 拦截fetch请求（更通用）
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options) {
+      options = options || {};
+      options.headers = options.headers || {};
+
+      // 如果没有Authorization header，自动添加
+      if (!options.headers['Authorization'] && !options.headers['authorization'] && token) {
+        console.log('[TokenRestore] 自动注入token到fetch:', url);
+        options.headers['Authorization'] = token;
+      }
+
+      return originalFetch.call(this, url, options);
+    };
+  }
+})();
+</script>
+
 <!-- 🎯 "记住我"功能修复脚本 (2026-05-13) -->
 <script>
 (function() {
@@ -393,6 +494,115 @@
       }
     }, 1000);
   });
+})();
+</script>
+
+<!-- 🎯 Vue Router拦截 - 阻止已登录用户跳转到登录页 (2026-05-13) -->
+<script>
+(function() {
+  'use strict';
+  console.log('[RouterGuard] 路由守卫已加载');
+
+  // 检查用户是否应该自动登录
+  function shouldAutoLogin() {
+    const hostname = window.location.hostname;
+    let source = 'admin';
+    if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+    else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+    else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+    const tokenKey = '/' + source + '_ex-admin-token';
+    const hasToken = localStorage.getItem(tokenKey);
+    const rememberMe = localStorage.getItem('ex_admin_remember_me_' + source);
+    const expireTime = localStorage.getItem('ex_admin_token_expire_' + source);
+
+    if (!hasToken || rememberMe !== 'true' || !expireTime) {
+      return false;
+    }
+
+    const now = Date.now();
+    const expire = parseInt(expireTime);
+    if (expire <= now) {
+      console.log('[RouterGuard] Token已过期，需要重新登录');
+      localStorage.removeItem('ex_admin_token_expire_' + source);
+      localStorage.removeItem('ex_admin_remember_me_' + source);
+      return false;
+    }
+
+    console.log('[RouterGuard] ✅ 检测到有效的记住我token，应该自动登录');
+    return true;
+  }
+
+  // 等待Vue Router加载并拦截
+  var attempts = 0;
+  var maxAttempts = 100;
+
+  var checkRouter = setInterval(function() {
+    attempts++;
+
+    // 尝试获取Vue Router实例
+    var router = null;
+    if (window.$router) {
+      router = window.$router;
+    } else if (window.app && window.app.$router) {
+      router = window.app.$router;
+    } else if (window.__VUE_ROUTER__) {
+      router = window.__VUE_ROUTER__;
+    }
+
+    if (router && typeof router.beforeEach === 'function') {
+      clearInterval(checkRouter);
+      console.log('[RouterGuard] Vue Router已找到，注入守卫');
+
+      // 注入路由守卫
+      router.beforeEach(function(to, from, next) {
+        console.log('[RouterGuard] 路由导航:', from.path, '=>', to.path);
+
+        // 如果要跳转到登录页
+        if (to.path && to.path.indexOf('/login/index') > -1) {
+          // 检查是否有有效的记住我token
+          if (shouldAutoLogin()) {
+            console.log('[RouterGuard] 🛑 阻止跳转到登录页，重定向到首页');
+            next('/');
+            return;
+          }
+        }
+
+        next();
+      });
+
+      // 如果当前就在登录页且有有效token，立即跳转
+      if (window.location.hash && window.location.hash.indexOf('/login/index') > -1 && shouldAutoLogin()) {
+        console.log('[RouterGuard] 🔄 当前在登录页但有有效token，跳转到首页');
+        setTimeout(function() {
+          window.location.hash = '/';
+        }, 100);
+      }
+
+    } else if (attempts >= maxAttempts) {
+      clearInterval(checkRouter);
+      console.warn('[RouterGuard] 10秒内未找到Vue Router，使用备用方案');
+
+      // 备用方案：直接检测URL变化
+      if (shouldAutoLogin()) {
+        var originalHash = window.location.hash;
+
+        setInterval(function() {
+          var currentHash = window.location.hash;
+          if (currentHash.indexOf('/login/index') > -1 && shouldAutoLogin()) {
+            console.log('[RouterGuard] 🔄 检测到登录页，重定向到首页');
+            window.location.hash = '/';
+          }
+        }, 500);
+
+        // 如果当前就在登录页，立即跳转
+        if (originalHash.indexOf('/login/index') > -1) {
+          console.log('[RouterGuard] 🔄 页面加载时在登录页，跳转到首页');
+          window.location.hash = '/';
+        }
+      }
+    }
+  }, 100);
 })();
 </script>
 </body>
