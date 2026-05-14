@@ -53,13 +53,13 @@ class DeviceController
                 })
                 ->align('center');
 
-            $grid->column('agent.name', admin_trans('device.fields.agent_name'))
+            $grid->column('agent.nickname', admin_trans('device.fields.agent_name'))
                 ->display(function ($value, $data) {
                     return $value ?: admin_trans('device.no_agent');
                 })
                 ->align('center');
 
-            $grid->column('store.name', admin_trans('device.fields.store_name'))
+            $grid->column('store.nickname', admin_trans('device.fields.store_name'))
                 ->display(function ($value, $data) {
                     return $value ?: admin_trans('device.no_store');
                 })
@@ -227,7 +227,7 @@ class DeviceController
         foreach ($agents as $agent) {
             $options[] = [
                 'value' => $agent->id,
-                'label' => $agent->name,
+                'label' => $agent->nickname,
             ];
         }
 
@@ -253,7 +253,7 @@ class DeviceController
 
         // 获取该代理下的店家
         $stores = AdminUser::where('type', AdminUser::TYPE_STORE)
-            ->where('parent_id', $agentAdminId)
+            ->where('agent_admin_id', $agentAdminId)
             ->where('status', AdminUser::STATUS_ENABLED)
             ->get();
 
@@ -261,7 +261,7 @@ class DeviceController
         foreach ($stores as $store) {
             $options[] = [
                 'value' => $store->id,
-                'label' => $store->name,
+                'label' => $store->nickname,
             ];
         }
 
