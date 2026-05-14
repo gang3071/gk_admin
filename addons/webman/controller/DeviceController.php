@@ -220,7 +220,7 @@ class DeviceController
         // 获取该渠道下的代理
         $agents = AdminUser::where('type', AdminUser::TYPE_AGENT)
             ->where('department_id', $departmentId)
-            ->where('status', AdminUser::STATUS_ENABLE)
+            ->where('status', AdminUser::STATUS_ENABLED)
             ->get();
 
         $options = [['value' => 0, 'label' => admin_trans('device.no_agent')]];
@@ -254,7 +254,7 @@ class DeviceController
         // 获取该代理下的店家
         $stores = AdminUser::where('type', AdminUser::TYPE_STORE)
             ->where('parent_id', $agentAdminId)
-            ->where('status', AdminUser::STATUS_ENABLE)
+            ->where('status', AdminUser::STATUS_ENABLED)
             ->get();
 
         $options = [['value' => 0, 'label' => admin_trans('device.no_store')]];
