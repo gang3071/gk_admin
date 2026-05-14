@@ -47,7 +47,7 @@ return [
         'data_center' => '資料中心',
 //用戶管理
         'user_manage' => '玩家管理',
-        'user_manage_list' => '設備清單',
+        'user_manage_list' => '玩家清單',
         'accounting_change_records' => '賬變記錄',
 //遊戲管理
         'game_manager' => '遊戲管理',
