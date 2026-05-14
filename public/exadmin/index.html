@@ -100,13 +100,11 @@
         script.onload = () => {
           this.scriptLoaded = true;
           this.scriptLoading = false;
-          console.log('[PushManager] Push.js loaded successfully');
           resolve();
         };
         script.onerror = () => {
           this.scriptLoading = false;
           var error = new Error('Failed to load push.js');
-          console.error('[PushManager]', error);
           reject(error);
         };
         document.head.appendChild(script);
@@ -121,7 +119,6 @@
       }
 
       if (this.connection && this.wsUrl !== wsUrl) {
-        console.warn('[PushManager] WebSocket URL changed, disconnecting old connection');
         this.disconnect();
       }
 
@@ -135,10 +132,8 @@
           auth: this.authUrl
         });
 
-        console.log('[PushManager] WebSocket connection created');
         return this.connection;
       } catch (error) {
-        console.error('[PushManager] Init failed:', error);
         throw error;
       }
     }
@@ -147,7 +142,6 @@
       context = context || null;
 
       if (!this.connection) {
-        console.error('[PushManager] No connection available, call init() first');
         return null;
       }
 
@@ -178,16 +172,14 @@
                   item.handler(data);
                 }
               } catch (error) {
-                console.error('[PushManager] Message handler error:', error);
+                // Silent error
               }
             });
           });
         }
 
-        console.log('[PushManager] Channel subscribed:', channelName);
         return channel;
       } catch (error) {
-        console.error('[PushManager] Subscribe failed:', channelName, error);
         return null;
       }
     }
@@ -214,9 +206,8 @@
           channelInfo.channel.unsubscribe();
         }
         this.channels.delete(channelName);
-        console.log('[PushManager] Channel unsubscribed:', channelName);
       } catch (error) {
-        console.error('[PushManager] Unsubscribe failed:', channelName, error);
+        // Silent error
       }
     }
 
@@ -233,7 +224,7 @@
               channelInfo.channel.unsubscribe();
             }
           } catch (error) {
-            console.error('[PushManager] Unsubscribe channel failed:', error);
+            // Silent error
           }
         });
         this.channels.clear();
@@ -243,10 +234,8 @@
         }
         this.connection = null;
         this.wsUrl = null;
-
-        console.log('[PushManager] Disconnected');
       } catch (error) {
-        console.error('[PushManager] Disconnect failed:', error);
+        // Silent error
       }
     }
 
@@ -264,14 +253,12 @@
 
   // 挂载到全局 window 对象
   window.$pushManager = pushManagerInstance;
-  console.log('[PushManager] Mounted to window.$pushManager');
 
   // 尝试自动注入到 Vue
   function installToVue() {
     // Vue 2
     if (typeof window.Vue !== 'undefined' && window.Vue.prototype) {
       window.Vue.prototype.$pushManager = pushManagerInstance;
-      console.log('[PushManager] Auto-installed to Vue 2');
       return true;
     }
 
@@ -279,7 +266,6 @@
     if (typeof window.Vue !== 'undefined' && window.Vue.config) {
       if (window.Vue.config.globalProperties) {
         window.Vue.config.globalProperties.$pushManager = pushManagerInstance;
-        console.log('[PushManager] Auto-installed to Vue 3');
         return true;
       }
     }
@@ -292,10 +278,8 @@
 
   // 如果安装失败，等待 Vue 加载
   if (!installed) {
-    console.log('[PushManager] Vue not found, waiting...');
-
     var attempts = 0;
-    var maxAttempts = 100;
+    var maxAttempts = 10; // 1秒内检测
 
     var checkVue = setInterval(function() {
       attempts++;
@@ -304,7 +288,6 @@
         clearInterval(checkVue);
       } else if (attempts >= maxAttempts) {
         clearInterval(checkVue);
-        console.warn('[PushManager] Vue not found after 10s, but window.$pushManager is still available');
       }
     }, 100);
   }
@@ -346,7 +329,6 @@
     const expireTime = localStorage.getItem(expireKey);
 
     if (!token || rememberMe !== 'true' || !expireTime) {
-      console.log('[TokenRestore] 未找到有效的记住我token');
       return null;
     }
 
@@ -354,14 +336,12 @@
     const expire = parseInt(expireTime);
 
     if (expire <= now) {
-      console.log('[TokenRestore] Token已过期，清除');
       localStorage.removeItem(tokenKey);
       localStorage.removeItem(rememberMeKey);
       localStorage.removeItem(expireKey);
       return null;
     }
 
-    console.log('[TokenRestore] ✅ 找到有效token，过期时间:', new Date(expire).toLocaleString());
     return token;
   }
 
@@ -370,18 +350,16 @@
   if (token) {
     // 等待axios加载并设置默认header
     let attempts = 0;
-    const maxAttempts = 100;
+    const maxAttempts = 10; // 1秒内检测
 
     const checkAxios = setInterval(function() {
       attempts++;
 
       if (window.axios) {
         clearInterval(checkAxios);
-        console.log('[TokenRestore] Axios已加载，设置Authorization header');
         window.axios.defaults.headers.common['Authorization'] = token;
       } else if (attempts >= maxAttempts) {
         clearInterval(checkAxios);
-        console.warn('[TokenRestore] 10秒内未找到axios实例');
       }
     }, 100);
 
@@ -397,7 +375,6 @@
     XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
       // 如果是Authorization header且值为空或不存在，自动设置token
       if (header === 'Authorization' && !value && token) {
-        console.log('[TokenRestore] 自动注入token到XMLHttpRequest:', this._url);
         value = token;
       }
       return originalSetRequestHeader.call(this, header, value);
@@ -411,7 +388,6 @@
 
       // 如果没有Authorization header，自动添加
       if (!options.headers['Authorization'] && !options.headers['authorization'] && token) {
-        console.log('[TokenRestore] 自动注入token到fetch:', url);
         options.headers['Authorization'] = token;
       }
 
@@ -425,7 +401,6 @@
 <script>
 (function() {
   'use strict';
-  console.log('[RememberMe] 修复脚本已加载');
 
   // 拦截fetch请求，在登录成功后保存"记住我"标记
   const originalFetch = window.fetch;
@@ -445,15 +420,10 @@
             else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
 
             if (data.data.remember_me) {
-              console.log('[RememberMe] 检测到"记住我"勾选，保存15天标记');
-
               const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
               localStorage.setItem('ex_admin_token_expire_' + source, tokenExpireTime.toString());
               localStorage.setItem('ex_admin_remember_me_' + source, 'true');
-
-              console.log('[RememberMe] 已保存，token有效期至: ' + new Date(tokenExpireTime).toLocaleString());
             } else {
-              console.log('[RememberMe] 未勾选"记住我"，清除标记');
               localStorage.removeItem('ex_admin_token_expire_' + source);
               localStorage.removeItem('ex_admin_remember_me_' + source);
             }
@@ -484,10 +454,7 @@
       if (hasToken && rememberMe === 'true' && expireTime) {
         const now = Date.now();
         const expire = parseInt(expireTime);
-        if (expire > now) {
-          console.log('[RememberMe] ✅ 已登录，token有效期至: ' + new Date(expire).toLocaleString());
-        } else {
-          console.log('[RememberMe] ❌ Token已过期，清除');
+        if (expire <= now) {
           localStorage.removeItem('ex_admin_token_expire_' + source);
           localStorage.removeItem('ex_admin_remember_me_' + source);
         }
@@ -501,7 +468,6 @@
 <script>
 (function() {
   'use strict';
-  console.log('[RouterGuard] 路由守卫已加载');
 
   // 检查用户是否应该自动登录
   function shouldAutoLogin() {
@@ -523,19 +489,17 @@
     const now = Date.now();
     const expire = parseInt(expireTime);
     if (expire <= now) {
-      console.log('[RouterGuard] Token已过期，需要重新登录');
       localStorage.removeItem('ex_admin_token_expire_' + source);
       localStorage.removeItem('ex_admin_remember_me_' + source);
       return false;
     }
 
-    console.log('[RouterGuard] ✅ 检测到有效的记住我token，应该自动登录');
     return true;
   }
 
   // 等待Vue Router加载并拦截
   var attempts = 0;
-  var maxAttempts = 100;
+  var maxAttempts = 10; // 1秒内检测
 
   var checkRouter = setInterval(function() {
     attempts++;
@@ -552,17 +516,13 @@
 
     if (router && typeof router.beforeEach === 'function') {
       clearInterval(checkRouter);
-      console.log('[RouterGuard] Vue Router已找到，注入守卫');
 
       // 注入路由守卫
       router.beforeEach(function(to, from, next) {
-        console.log('[RouterGuard] 路由导航:', from.path, '=>', to.path);
-
         // 如果要跳转到登录页
         if (to.path && to.path.indexOf('/login/index') > -1) {
           // 检查是否有有效的记住我token
           if (shouldAutoLogin()) {
-            console.log('[RouterGuard] 🛑 阻止跳转到登录页，重定向到首页');
             next('/');
             return;
           }
@@ -573,7 +533,6 @@
 
       // 如果当前就在登录页且有有效token，立即跳转
       if (window.location.hash && window.location.hash.indexOf('/login/index') > -1 && shouldAutoLogin()) {
-        console.log('[RouterGuard] 🔄 当前在登录页但有有效token，跳转到首页');
         setTimeout(function() {
           window.location.hash = '/';
         }, 100);
@@ -581,7 +540,6 @@
 
     } else if (attempts >= maxAttempts) {
       clearInterval(checkRouter);
-      console.warn('[RouterGuard] 10秒内未找到Vue Router，使用备用方案');
 
       // 备用方案：直接检测URL变化
       if (shouldAutoLogin()) {
@@ -590,14 +548,12 @@
         setInterval(function() {
           var currentHash = window.location.hash;
           if (currentHash.indexOf('/login/index') > -1 && shouldAutoLogin()) {
-            console.log('[RouterGuard] 🔄 检测到登录页，重定向到首页');
             window.location.hash = '/';
           }
         }, 500);
 
         // 如果当前就在登录页，立即跳转
         if (originalHash.indexOf('/login/index') > -1) {
-          console.log('[RouterGuard] 🔄 页面加载时在登录页，跳转到首页');
           window.location.hash = '/';
         }
       }
