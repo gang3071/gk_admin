@@ -124,25 +124,27 @@ class DeviceController
                 ->help(admin_trans('device.device_no_help'));
 
             // 渠道选择
-            $form->select('department_id', admin_trans('device.fields.channel_name'))
+            $departmentField = $form->select('department_id', admin_trans('device.fields.channel_name'))
                 ->required()
                 ->showSearch()
                 ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']))
-                ->load('agent_admin_id', admin_url(['addons-webman-controller-DeviceController', 'getAgentOptions']))
                 ->help(admin_trans('device.select_channel_first'));
 
             // 代理选择（根据渠道动态加载）
-            $form->select('agent_admin_id', admin_trans('device.fields.agent_name'))
+            $agentField = $form->select('agent_admin_id', admin_trans('device.fields.agent_name'))
                 ->showSearch()
-                ->options([0 => admin_trans('device.no_agent')])
-                ->load('store_admin_id', admin_url(['addons-webman-controller-DeviceController', 'getStoreOptions']))
+                ->remoteOptions(admin_url(['addons-webman-controller-DeviceController', 'getAgentOptions']))
                 ->help(admin_trans('device.agent_help'));
 
             // 店家选择（根据代理动态加载）
-            $form->select('store_admin_id', admin_trans('device.fields.store_name'))
+            $storeField = $form->select('store_admin_id', admin_trans('device.fields.store_name'))
                 ->showSearch()
-                ->options([0 => admin_trans('device.no_store')])
+                ->remoteOptions(admin_url(['addons-webman-controller-DeviceController', 'getStoreOptions']))
                 ->help(admin_trans('device.store_help'));
+
+            // 设置级联关系
+            $departmentField->load($agentField, admin_url(['addons-webman-controller-DeviceController', 'getAgentOptions']));
+            $agentField->load($storeField, admin_url(['addons-webman-controller-DeviceController', 'getStoreOptions']));
 
             $form->text('device_model', admin_trans('device.fields.device_model'))
                 ->maxlength(100);
@@ -198,19 +200,20 @@ class DeviceController
      */
     public function getAgentOptions(): Response
     {
-        $departmentId = Request::input('q');
+        $request = Request::input();
+        $departmentId = $request['q'] ?? $request['department_id'] ?? '';
 
         if (empty($departmentId)) {
-            return jsonResponse([
-                0 => admin_trans('device.no_agent')
+            return Response::success([
+                ['value' => 0, 'label' => admin_trans('device.no_agent')]
             ]);
         }
 
         // 检查是否为线下渠道
         $channel = Channel::where('department_id', $departmentId)->first();
         if (!$channel || $channel->is_offline == 0) {
-            return jsonResponse([
-                0 => admin_trans('device.no_agent')
+            return Response::success([
+                ['value' => 0, 'label' => admin_trans('device.no_agent')]
             ]);
         }
 
@@ -218,12 +221,17 @@ class DeviceController
         $agents = AdminUser::where('type', AdminUser::TYPE_AGENT)
             ->where('department_id', $departmentId)
             ->where('status', AdminUser::STATUS_ENABLE)
-            ->pluck('name', 'id')
-            ->toArray();
+            ->get();
 
-        $options = [0 => admin_trans('device.no_agent')] + $agents;
+        $data = [['value' => 0, 'label' => admin_trans('device.no_agent')]];
+        foreach ($agents as $agent) {
+            $data[] = [
+                'value' => $agent->id,
+                'label' => $agent->name,
+            ];
+        }
 
-        return jsonResponse($options);
+        return Response::success($data);
     }
 
     /**
@@ -232,11 +240,12 @@ class DeviceController
      */
     public function getStoreOptions(): Response
     {
-        $agentAdminId = Request::input('q');
+        $request = Request::input();
+        $agentAdminId = $request['q'] ?? $request['agent_admin_id'] ?? '';
 
         if (empty($agentAdminId)) {
-            return jsonResponse([
-                0 => admin_trans('device.no_store')
+            return Response::success([
+                ['value' => 0, 'label' => admin_trans('device.no_store')]
             ]);
         }
 
@@ -244,11 +253,16 @@ class DeviceController
         $stores = AdminUser::where('type', AdminUser::TYPE_STORE)
             ->where('parent_id', $agentAdminId)
             ->where('status', AdminUser::STATUS_ENABLE)
-            ->pluck('name', 'id')
-            ->toArray();
+            ->get();
 
-        $options = [0 => admin_trans('device.no_store')] + $stores;
+        $data = [['value' => 0, 'label' => admin_trans('device.no_store')]];
+        foreach ($stores as $store) {
+            $data[] = [
+                'value' => $store->id,
+                'label' => $store->name,
+            ];
+        }
 
-        return jsonResponse($options);
+        return Response::success($data);
     }
 }
