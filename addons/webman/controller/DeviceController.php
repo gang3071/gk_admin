@@ -29,12 +29,12 @@ class DeviceController
      */
     public function index(): Grid
     {
-        return Grid::make(new Device(), function (Grid $grid) {
+        return Grid::create(new Device(), function (Grid $grid) {
             $grid->title(admin_trans('device.title'));
             $grid->bordered(true);
             $grid->autoHeight();
 
-            $grid->model()->with(['channel', 'department', 'agent', 'store'])->orderBy('id', 'desc');
+            $grid->model()->with(['channel', 'agent', 'store'])->orderBy('id', 'desc');
 
             // 列配置
             $grid->column('id', 'ID')->width(80)->sortable()->fixed(true);
@@ -107,7 +107,7 @@ class DeviceController
      */
     public function form(): Form
     {
-        return Form::make(new Device(), function (Form $form) {
+        return Form::create(new Device(), function (Form $form) {
             if ($form->isEdit()) {
                 $form->title(admin_trans('device.edit_device'));
             } else {
