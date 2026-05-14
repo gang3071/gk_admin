@@ -800,18 +800,10 @@ return [
         'url' => 'ex-admin/addons-webman-controller-PlayerController/index',
         'title' => '玩家列表',
     ],
-    // 设备管理（独立顶级菜单）
-    [
-        'id' => 'addons\webman\controller\DeviceController-',
-        'pid' => 0,
-        'url' => '',
-        'group' => 'department',
-        'title' => '设备管理',
-        'children' => []
-    ],
+    // 设备列表（顶级主菜单）
     [
         'id' => 'addons\webman\controller\DeviceController\index',
-        'pid' => 'addons\webman\controller\DeviceController-',
+        'pid' => 0,
         'action' => 'index',
         'method' => 'get',
         'group' => 'department',
