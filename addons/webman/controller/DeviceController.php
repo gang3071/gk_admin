@@ -253,7 +253,7 @@ class DeviceController
 
         // 获取该代理下的店家
         $stores = AdminUser::where('type', AdminUser::TYPE_STORE)
-            ->where('agent_admin_id', $agentAdminId)
+            ->where('parent_admin_id', $agentAdminId)
             ->where('status', AdminUser::STATUS_ENABLED)
             ->get();
 
