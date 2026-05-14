@@ -157,7 +157,15 @@ class Eloquent extends GridAbstract
         }
         foreach ($ids as $id) {
             $model = $this->repository->find($id);
+
+            // 获取主键名称，防止主键被更新
+            $primaryKey = $model->getKeyName();
+
             foreach ($data as $field => $value) {
+                // 跳过主键字段和时间戳字段
+                if ($field === $primaryKey || $field === 'created_at' || $field === 'updated_at') {
+                    continue;
+                }
                 $model->$field = $value;
             }
             $model->save();
