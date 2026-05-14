@@ -133,13 +133,11 @@ class DeviceController
             // 代理选择（根据渠道动态加载）
             $agentField = $form->select('agent_admin_id', admin_trans('device.fields.agent_name'))
                 ->showSearch()
-                ->remoteOptions(admin_url(['addons-webman-controller-DeviceController', 'getAgentOptions']))
                 ->help(admin_trans('device.agent_help'));
 
             // 店家选择（根据代理动态加载）
             $storeField = $form->select('store_admin_id', admin_trans('device.fields.store_name'))
                 ->showSearch()
-                ->remoteOptions(admin_url(['addons-webman-controller-DeviceController', 'getStoreOptions']))
                 ->help(admin_trans('device.store_help'));
 
             // 设置级联关系
@@ -203,19 +201,20 @@ class DeviceController
         $request = Request::input();
         $data = $request['data'] ?? [];
         $departmentId = $request['value'] ?? $data['department_id'] ?? $request['q'] ?? $request['department_id'] ?? '';
+        $optionsField = $request['optionsField'] ?? 'agent_admin_id';
 
         if (empty($departmentId)) {
-            return Response::success([
+            return Response::success([$optionsField => [
                 ['value' => 0, 'label' => admin_trans('device.no_agent')]
-            ]);
+            ]]);
         }
 
         // 检查是否为线下渠道
         $channel = Channel::where('department_id', $departmentId)->first();
         if (!$channel || $channel->is_offline == 0) {
-            return Response::success([
+            return Response::success([$optionsField => [
                 ['value' => 0, 'label' => admin_trans('device.no_agent')]
-            ]);
+            ]]);
         }
 
         // 获取该渠道下的代理
@@ -224,15 +223,15 @@ class DeviceController
             ->where('status', AdminUser::STATUS_ENABLE)
             ->get();
 
-        $data = [['value' => 0, 'label' => admin_trans('device.no_agent')]];
+        $options = [['value' => 0, 'label' => admin_trans('device.no_agent')]];
         foreach ($agents as $agent) {
-            $data[] = [
+            $options[] = [
                 'value' => $agent->id,
                 'label' => $agent->name,
             ];
         }
 
-        return Response::success($data);
+        return Response::success([$optionsField => $options]);
     }
 
     /**
@@ -244,11 +243,12 @@ class DeviceController
         $request = Request::input();
         $data = $request['data'] ?? [];
         $agentAdminId = $request['value'] ?? $data['agent_admin_id'] ?? $request['q'] ?? $request['agent_admin_id'] ?? '';
+        $optionsField = $request['optionsField'] ?? 'store_admin_id';
 
         if (empty($agentAdminId)) {
-            return Response::success([
+            return Response::success([$optionsField => [
                 ['value' => 0, 'label' => admin_trans('device.no_store')]
-            ]);
+            ]]);
         }
 
         // 获取该代理下的店家
@@ -257,14 +257,14 @@ class DeviceController
             ->where('status', AdminUser::STATUS_ENABLE)
             ->get();
 
-        $data = [['value' => 0, 'label' => admin_trans('device.no_store')]];
+        $options = [['value' => 0, 'label' => admin_trans('device.no_store')]];
         foreach ($stores as $store) {
-            $data[] = [
+            $options[] = [
                 'value' => $store->id,
                 'label' => $store->name,
             ];
         }
 
-        return Response::success($data);
+        return Response::success([$optionsField => $options]);
     }
 }
