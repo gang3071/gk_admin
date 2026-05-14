@@ -177,6 +177,7 @@ class PlayerController
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select([
                 'player.*',
+                'player.player_source',
                 'player_extend.email',
                 'player_extend.line',
                 'player_extend.recharge_amount',
@@ -263,6 +264,15 @@ class PlayerController
             }
             if (isset($requestFilter['search_is_promoter']) && in_array($requestFilter['search_is_promoter'], [0, 1])) {
                 $query->where('player.is_promoter', $requestFilter['search_is_promoter']);
+            }
+            if (!empty($requestFilter['search_player_source'])) {
+                if ($requestFilter['search_player_source'] == 'offline') {
+                    // 线下玩家
+                    $query->where('player.player_source', Player::PLAYER_SOURCE_OFFLINE);
+                } elseif ($requestFilter['search_player_source'] == 'online') {
+                    // 线上玩家
+                    $query->where('player.player_source', Player::PLAYER_SOURCE_ONLINE);
+                }
             }
             if (!empty($requestFilter['email'])) {
                 $query->where('player_extend.email', 'like', '%' . $requestFilter['email'] . '%');
@@ -357,6 +367,14 @@ class PlayerController
                 }
                 return Html::create()->content($tags)->style(['display' => 'inline-flex', 'text-align' => 'center']);
             })->ellipsis(true)->width(200)->align('center');
+            $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($val, $data) {
+                // 使用新的 player_source 字段判断线上/线下
+                if ($val == Player::PLAYER_SOURCE_OFFLINE) {
+                    return Tag::create(admin_trans('player.fields.player_source_offline'))->color('orange');
+                } else {
+                    return Tag::create(admin_trans('player.fields.player_source_online'))->color('blue');
+                }
+            })->ellipsis(true)->align('center');
             $grid->column('real_name', admin_trans('player.fields.real_name'))->display(function ($value) {
                 return Str::of($value)->limit(20, ' (...)');
             })->editable(
@@ -504,6 +522,15 @@ class PlayerController
                     ->options([
                         0 => admin_trans('player.not_promoter'),
                         1 => admin_trans('player.promoter'),
+                    ]);
+                $filter->select('search_player_source')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player.fields.player_source'))
+                    ->options([
+                        'online' => admin_trans('player.fields.player_source_online'),
+                        'offline' => admin_trans('player.fields.player_source_offline'),
                     ]);
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');

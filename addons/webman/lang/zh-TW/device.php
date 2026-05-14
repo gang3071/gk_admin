@@ -2,8 +2,10 @@
 
 return [
     // 頁面標題
-    'title' => '設備管理',
+    'title' => '設備列表',
     'create' => '新增設備',
+    'add_device' => '添加設備',
+    'edit_device' => '編輯設備',
     'edit' => '編輯設備',
     'ip_list' => 'IP綁定列表',
     'ip_management' => 'IP管理',
@@ -63,7 +65,10 @@ return [
 
     // 消息提示
     'device_no_exists' => '設備號已存在',
+    'device_no_help' => '設備的唯一編號，不可重複',
     'invalid_ip_address' => 'IP地址格式不正確',
     'ip_already_exists' => 'IP地址已存在',
     'delete_confirm' => '確定要刪除該設備嗎？刪除後將同時刪除所有綁定的IP地址。',
+    'save_success' => '保存成功',
+    'select_channel_first' => '請先選擇渠道',
 ];

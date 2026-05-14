@@ -70,6 +70,9 @@ return [
         'status_offline_open' => 'オフライン分割',
         'status_baccarat' => '真人百家',
         'machine_crash_amount' => 'クラッシュ金額',
+        'player_source' => 'プレイヤーソース',
+        'player_source_online' => 'オンライン',
+        'player_source_offline' => 'オフライン',
     ],
     'player_no_change' => 'プレイヤーは変更されていません',
     'not_fount' => 'プレーヤーが見つかりませんでした',
@@ -296,4 +299,10 @@ return [
     // マシンクラッシュ通知メッセージ
     'machine_crashed_contact_admin' => '⚠️ デバイス残高がクラッシュ金額に達しました。管理者にお問い合わせください！',
     'machine_crash_unlocked' => '✓ デバイスのクラッシュ状態が解除されました。通常通りご利用いただけます。',
+
+    // プレイヤーソースオプション
+    'player_source_options' => [
+        1 => 'オンライン',
+        2 => 'オフライン',
+    ],
 ];

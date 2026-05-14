@@ -2,8 +2,10 @@
 
 return [
     // Page Title
-    'title' => 'Device Management',
+    'title' => 'Device List',
     'create' => 'Add Device',
+    'add_device' => 'Add Device',
+    'edit_device' => 'Edit Device',
     'edit' => 'Edit Device',
     'ip_list' => 'IP Binding List',
     'ip_management' => 'IP Management',
@@ -63,7 +65,10 @@ return [
 
     // Messages
     'device_no_exists' => 'Device number already exists',
+    'device_no_help' => 'Unique device number, cannot be duplicated',
     'invalid_ip_address' => 'Invalid IP address format',
     'ip_already_exists' => 'IP address already exists',
     'delete_confirm' => 'Are you sure you want to delete this device? All bound IP addresses will also be deleted.',
+    'save_success' => 'Save successfully',
+    'select_channel_first' => 'Please select channel first',
 ];

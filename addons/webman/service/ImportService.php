@@ -69,6 +69,7 @@ class ImportService
                 $player->recommend_id = $recommendPlayer->id ?? 0;
                 $player->recommended_code = $row['recommended_code'] ?? 0;
                 $player->avatar = config('def_avatar.1');
+                $player->player_source = Player::PLAYER_SOURCE_OFFLINE; // 导入的玩家默认都是线下玩家
                 $player->save();
 
                 // 更新推荐人的玩家数量（使用 save() 确保事务一致性和触发模型事件）

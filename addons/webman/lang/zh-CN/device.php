@@ -2,8 +2,10 @@
 
 return [
     // 页面标题
-    'title' => '设备管理',
+    'title' => '设备列表',
     'create' => '新增设备',
+    'add_device' => '添加设备',
+    'edit_device' => '编辑设备',
     'edit' => '编辑设备',
     'ip_list' => 'IP绑定列表',
     'ip_management' => 'IP管理',
@@ -63,7 +65,10 @@ return [
 
     // 消息提示
     'device_no_exists' => '设备号已存在',
+    'device_no_help' => '设备的唯一编号，不可重复',
     'invalid_ip_address' => 'IP地址格式不正确',
     'ip_already_exists' => 'IP地址已存在',
     'delete_confirm' => '确定要删除该设备吗？删除后将同时删除所有绑定的IP地址。',
+    'save_success' => '保存成功',
+    'select_channel_first' => '请先选择渠道',
 ];

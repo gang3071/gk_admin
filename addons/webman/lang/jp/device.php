@@ -2,8 +2,10 @@
 
 return [
     // ページタイトル
-    'title' => 'デバイス管理',
+    'title' => 'デバイスリスト',
     'create' => 'デバイス追加',
+    'add_device' => 'デバイス追加',
+    'edit_device' => 'デバイス編集',
     'edit' => 'デバイス編集',
     'ip_list' => 'IPバインドリスト',
     'ip_management' => 'IP管理',
@@ -63,7 +65,10 @@ return [
 
     // メッセージ
     'device_no_exists' => 'デバイス番号が既に存在します',
+    'device_no_help' => '一意のデバイス番号、重複不可',
     'invalid_ip_address' => 'IPアドレスの形式が正しくありません',
     'ip_already_exists' => 'IPアドレスが既に存在します',
     'delete_confirm' => 'このデバイスを削除してもよろしいですか？削除すると、バインドされたすべてのIPアドレスも削除されます。',
+    'save_success' => '保存に成功しました',
+    'select_channel_first' => '最初にチャネルを選択してください',
 ];

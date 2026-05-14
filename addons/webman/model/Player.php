@@ -57,6 +57,7 @@ use support\Cache;
  * @property string status_baccarat 真人百家
  * @property string account 账户
  * @property int player_type 玩家类型
+ * @property int player_source 玩家来源 1-线上 2-线下
  *
  * @property PlayerExtend player_extend
  * @property PlayerPlatformCash machine_wallet
@@ -90,6 +91,10 @@ class Player extends Model
     const PLAYER_TYPE_NORMAL = 1; // 普通玩家
     const PLAYER_TYPE_AGENT = 2; // 代理
     const PLAYER_TYPE_STORE_MACHINE = 3; // 店家
+
+    // 玩家来源常量
+    const PLAYER_SOURCE_ONLINE = 1; // 线上玩家
+    const PLAYER_SOURCE_OFFLINE = 2; // 线下玩家
 
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];

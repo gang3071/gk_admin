@@ -3,7 +3,7 @@
 use addons\webman\model\PlayerMoneyEditLog;
 
 return [
-    'title' => '设备列表',
+    'title' => '玩家列表',
     'coin_title' => '币商列表',
     'details' => '玩家详情',
     'coin_merchant' => '币商',
@@ -70,6 +70,9 @@ return [
         'status_offline_open' => '线下开分',
         'status_baccarat' => '真人百家',
         'machine_crash_amount' => '爆机金额',
+        'player_source' => '玩家来源',
+        'player_source_online' => '线上',
+        'player_source_offline' => '线下',
     ],
     'player_no_change' => '玩家沒有變動',
     'not_fount' => '未找到该玩家',
@@ -296,4 +299,10 @@ return [
     // 爆机通知消息
     'machine_crashed_contact_admin' => '⚠️ 您的设备余额已达到爆机金额，请联系管理员处理！',
     'machine_crash_unlocked' => '✓ 您的设备爆机状态已解除，可继续正常使用。',
+
+    // 玩家来源选项
+    'player_source_options' => [
+        1 => '线上',
+        2 => '线下',
+    ],
 ];

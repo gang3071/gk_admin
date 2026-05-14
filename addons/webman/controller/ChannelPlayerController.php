@@ -3848,6 +3848,7 @@ class ChannelPlayerController
                 $player->department_id = Admin::user()->department_id;
                 $player->recommend_code = createCode();
                 $player->recommend_id = 0; // 新架构：不使用推荐系统，设为 0
+                $player->player_source = Player::PLAYER_SOURCE_OFFLINE; // 批量生成的玩家默认都是线下玩家
 
                 // 新架构：关联到店家和代理
                 $player->store_admin_id = $storeAdmin->id; // 归属店家

@@ -70,6 +70,9 @@ return [
         'status_offline_open' => 'Offline separation',
         'status_baccarat' => 'Hundreds of Real People',
         'machine_crash_amount' => 'Crash Amount',
+        'player_source' => 'Player Source',
+        'player_source_online' => 'Online',
+        'player_source_offline' => 'Offline',
     ],
     'player_no_change' => 'The player has not changed',
     'not_fount' => 'The player was not found',
@@ -295,4 +298,10 @@ return [
     // Machine Crash Notification Messages
     'machine_crashed_contact_admin' => '⚠️ Your device balance has reached the crash amount, please contact the administrator!',
     'machine_crash_unlocked' => '✓ Your device crash status has been released, you can continue to use normally.',
+
+    // Player Source Options
+    'player_source_options' => [
+        1 => 'Online',
+        2 => 'Offline',
+    ],
 ];
