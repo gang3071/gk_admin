@@ -201,7 +201,8 @@ class DeviceController
     public function getAgentOptions(): Response
     {
         $request = Request::input();
-        $departmentId = $request['value'] ?? $request['q'] ?? $request['department_id'] ?? '';
+        $data = $request['data'] ?? [];
+        $departmentId = $request['value'] ?? $data['department_id'] ?? $request['q'] ?? $request['department_id'] ?? '';
 
         if (empty($departmentId)) {
             return Response::success([
@@ -241,7 +242,8 @@ class DeviceController
     public function getStoreOptions(): Response
     {
         $request = Request::input();
-        $agentAdminId = $request['value'] ?? $request['q'] ?? $request['agent_admin_id'] ?? '';
+        $data = $request['data'] ?? [];
+        $agentAdminId = $request['value'] ?? $data['agent_admin_id'] ?? $request['q'] ?? $request['agent_admin_id'] ?? '';
 
         if (empty($agentAdminId)) {
             return Response::success([
