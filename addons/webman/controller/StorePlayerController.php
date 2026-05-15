@@ -4,16 +4,20 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Player;
+use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PhoneSmsLog;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\support\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * 店机后台 - 设备列表
@@ -169,6 +173,14 @@ class StorePlayerController
 
             $grid->column('phone', admin_trans('player.fields.phone'))->width(120)->align('center');
 
+            $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($value) {
+                return match ($value) {
+                    Player::PLAYER_SOURCE_ONLINE => Tag::create(admin_trans('player.fields.player_source_online'))->color('blue'),
+                    Player::PLAYER_SOURCE_OFFLINE => Tag::create(admin_trans('player.fields.player_source_offline'))->color('orange'),
+                    default => Tag::create('-')->color('default'),
+                };
+            })->width(100)->align('center');
+
             $grid->column('wallet_money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
@@ -255,7 +267,7 @@ class StorePlayerController
                 $actions->hideDel();
             });
 
-            $grid->hideAdd();
+            $grid->addButton()->modal($this->form());
             $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideSelection();
@@ -273,6 +285,98 @@ class StorePlayerController
 
                 $grid->emptyText(admin_trans('player.no_device_data'));
             }
+        });
+    }
+
+    /**
+     * 添加玩家表单
+     * @auth true
+     * @group store
+     * @return Form
+     */
+    public function form(): Form
+    {
+        $options = [];
+        foreach (config('def_avatar') as $key => $item) {
+            $options[$key] = Avatar::create()->style(['padding' => '1px'])->src($item)->shape('square');
+        }
+        return Form::create(new Player(), function (Form $form) use ($options) {
+            $form->title(admin_trans('player.add_player'));
+            $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
+            $form->radio('avatar_type', admin_trans('player.avatar_type'))
+                ->button()
+                ->default(2)
+                ->options([
+                    1 => admin_trans('player.upload_avatar'),
+                    2 => admin_trans('player.def_avatar')
+                ])
+                ->when(1, function (Form $form) {
+                    $form->image('avatar',
+                        admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
+                })->when(2, function (Form $form) use ($options) {
+                    $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                        ->default(1)
+                        ->options($options);
+                });
+            $form->select('country_code', admin_trans('player.fields.country_code'))->options([
+                PhoneSmsLog::COUNTRY_CODE_CH => PhoneSmsLog::COUNTRY_CODE_CH,
+                PhoneSmsLog::COUNTRY_CODE_TW => PhoneSmsLog::COUNTRY_CODE_TW,
+                PhoneSmsLog::COUNTRY_CODE_JP => PhoneSmsLog::COUNTRY_CODE_JP
+            ])->required();
+            $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+            $form->password('password', admin_trans('player.new_password'))
+                ->rule([
+                    'confirmed' => admin_trans('player.password_confim_validate'),
+                    'min:6' => admin_trans('player.password_min_number')
+                ])
+                ->value('')
+                ->required();
+            $form->password('password_confirmation', admin_trans('player.confim_password'))
+                ->required();
+
+            $form->saved(function () {
+                return message_success(admin_trans('player.save_player_info_success'));
+            });
+            $form->saving(function (Form $form) {
+                $admin = Admin::user();
+                $phone = $form->input('phone');
+                $password = $form->input('password');
+
+                $existingPlayer = Player::query()->where('phone', $phone)->first();
+                if (!empty($existingPlayer)) {
+                    return message_error(admin_trans('player.phone_has_register'));
+                }
+
+                DB::beginTransaction();
+                try {
+                    $player = new Player();
+                    $player->phone = $phone;
+                    $player->name = $form->input('name');
+                    if ($form->input('avatar_type') == 1) {
+                        $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
+                    }
+                    if ($form->input('avatar_type') == 2) {
+                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
+                    }
+                    $player->country_code = $form->input('country_code');
+                    $player->type = Player::TYPE_PLAYER;
+                    $player->currency = $admin->department->currency ?? 'CNY';
+                    $player->department_id = $admin->department_id;
+                    $player->store_admin_id = $admin->id;
+                    $player->password = $password;
+                    $player->uuid = generate15DigitUniqueId();
+                    $player->recommend_code = createCode();
+                    $player->save();
+
+                    addPlayerExtend($player);
+
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    return message_error($e->getMessage());
+                }
+                return message_success(admin_trans('player.save_player_info_success'));
+            });
         });
     }
 }

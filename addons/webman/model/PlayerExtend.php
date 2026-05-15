@@ -18,7 +18,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string qq qq账号
  * @property string telegram
  * @property string birthday 生日
- * @property string id_number 身份证
+ * @property string id_number 身份证号
+ * @property string id_card_front 身份证正面照
+ * @property string id_card_back 身份证反面照
+ * @property string personal_photo 个人照片
  * @property string address 地址
  * @property string wechat 微信
  * @property string whatsapp 海外微信
@@ -46,7 +49,7 @@ class PlayerExtend extends Model
 {
     use SoftDeletes, HasDateTimeFormatter;
 
-    protected $fillable = ['remark', 'player_id', 'sex', 'email', 'ip', 'qq', 'telegram', 'birthday', 'id_number', 'address', 'wechat', 'whatsapp', 'facebook', 'line', 'remark'];
+    protected $fillable = ['remark', 'player_id', 'sex', 'email', 'ip', 'qq', 'telegram', 'birthday', 'id_number', 'id_card_front', 'id_card_back', 'personal_photo', 'address', 'wechat', 'whatsapp', 'facebook', 'line', 'remark'];
 
     public function __construct(array $attributes = [])
     {
@@ -150,6 +153,9 @@ class PlayerExtend extends Model
                 'telegram',
                 'birthday',
                 'id_number',
+                'id_card_front',
+                'id_card_back',
+                'personal_photo',
                 'address',
                 'wechat',
                 'whatsapp',

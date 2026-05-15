@@ -87,6 +87,9 @@ class AdminDeviceController
                     ->options(AdminDevice::getStatusList());
             });
 
+            // 隐藏清空数据按钮
+            $grid->hideDelete();
+
             // 工具栏按钮
             $grid->tools([
                 Button::create(admin_trans('device.add_device'))
