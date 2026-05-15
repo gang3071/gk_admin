@@ -6,6 +6,7 @@ return [
     'title' => '玩家列表',
     'coin_title' => '币商列表',
     'details' => '玩家详情',
+    'view' => '查看',
     'coin_merchant' => '币商',
     'player' => '玩家',
     'cancel_coin' => '取消币商',

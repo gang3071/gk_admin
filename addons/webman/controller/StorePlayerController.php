@@ -7,7 +7,6 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
-use addons\webman\model\PhoneSmsLog;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -17,7 +16,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\support\Request;
-use Illuminate\Support\Facades\DB;
+use support\Db;
 
 /**
  * 店机后台 - 设备列表
@@ -265,12 +264,12 @@ class StorePlayerController
             $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
                 $actions->hideDel();
+                $actions->detail()->modal($this->viewForm())->width('60%');
             });
 
-            $grid->addButton()->modal($this->form());
+//            $grid->addButton()->modal($this->form());
             $grid->hideDelete();
             $grid->hideDeleteSelection();
-            $grid->hideSelection();
             $grid->expandFilter();
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $playerCount);
@@ -318,12 +317,11 @@ class StorePlayerController
                         ->default(1)
                         ->options($options);
                 });
-            $form->select('country_code', admin_trans('player.fields.country_code'))->options([
-                PhoneSmsLog::COUNTRY_CODE_CH => PhoneSmsLog::COUNTRY_CODE_CH,
-                PhoneSmsLog::COUNTRY_CODE_TW => PhoneSmsLog::COUNTRY_CODE_TW,
-                PhoneSmsLog::COUNTRY_CODE_JP => PhoneSmsLog::COUNTRY_CODE_JP
-            ])->required();
             $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+            $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
+            $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+            $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+            $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
             $form->password('password', admin_trans('player.new_password'))
                 ->rule([
                     'confirmed' => admin_trans('player.password_confim_validate'),
@@ -358,7 +356,8 @@ class StorePlayerController
                     if ($form->input('avatar_type') == 2) {
                         $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
                     }
-                    $player->country_code = $form->input('country_code');
+                    $player->country_code = '86';
+                    $player->player_source = Player::PLAYER_SOURCE_ONLINE;
                     $player->type = Player::TYPE_PLAYER;
                     $player->currency = $admin->department->currency ?? 'CNY';
                     $player->department_id = $admin->department_id;
@@ -370,12 +369,84 @@ class StorePlayerController
 
                     addPlayerExtend($player);
 
+                    PlayerExtend::query()->where('player_id', $player->id)->update([
+                        'id_number' => $form->input('id_number'),
+                        'id_card_front' => $form->input('id_card_front'),
+                        'id_card_back' => $form->input('id_card_back'),
+                        'personal_photo' => $form->input('personal_photo'),
+                    ]);
+
                     DB::commit();
                 } catch (\Exception $e) {
                     DB::rollBack();
                     return message_error($e->getMessage());
                 }
                 return message_success(admin_trans('player.save_player_info_success'));
+            });
+        });
+    }
+
+    /**
+     * 查看玩家详情（只读）
+     * @auth true
+     * @group store
+     * @return Form
+     */
+    public function viewForm(): Form
+    {
+        return Form::create(new Player(), function (Form $form) {
+            $form->title(admin_trans('player.details'));
+            $form->actions(function ($action) {
+                $action->hide();
+            });
+            $form->row(function (Form $form) {
+                $form->column(function (Form $form) {
+                    $form->desc('id', admin_trans('player.fields.id'));
+                    $form->desc('name', admin_trans('player.fields.name'));
+                    $form->desc('phone', admin_trans('player.fields.phone'));
+                    $form->desc('uuid', admin_trans('player.fields.uuid'));
+                    $avatarVal = $form->input('avatar');
+                    $nameVal = $form->input('name') ?: admin_trans('player.unnamed');
+                    $src = !empty($avatarVal)
+                        ? (is_numeric($avatarVal) ? config('def_avatar.' . $avatarVal) : $avatarVal)
+                        : '';
+                    $avatarHtml = $src
+                        ? '<img src="' . $src . '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px" />'
+                        : '<span style="display:inline-block;width:40px;height:40px;border-radius:50%;background:#ccc;text-align:center;line-height:40px;color:#fff;margin-right:8px">'
+                            . mb_substr($nameVal, 0, 1) . '</span>';
+                    $form->desc('avatar', admin_trans('player.fields.avatar'))
+                        ->value($avatarHtml . '<span>' . e($nameVal) . '</span>');
+                    $form->desc('player_source', admin_trans('player.fields.player_source'))
+                        ->value(match ($form->input('player_source')) {
+                            Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
+                            Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
+                            default => '-',
+                        });
+                    $form->desc('status', admin_trans('player.fields.status'))
+                        ->value($form->input('status') == 1 ? admin_trans('admin.open') : admin_trans('admin.close'));
+                    $form->desc('is_test', admin_trans('player.fields.is_test'))
+                        ->value($form->input('is_test') == 1 ? admin_trans('player.promoter') : admin_trans('player.not_test'));
+                    $form->desc('created_at', admin_trans('player.fields.created_at'))
+                        ->value($form->input('created_at') ? date('Y-m-d H:i:s', strtotime($form->input('created_at'))) : '');
+                })->span(12);
+
+                $form->column(function (Form $form) {
+                    $form->desc('player_extend.id_number', admin_trans('player_extend.fields.id_number'));
+                    $idCardFront = $form->input('player_extend.id_card_front');
+                    $idCardBack = $form->input('player_extend.id_card_back');
+                    $personalPhoto = $form->input('player_extend.personal_photo');
+                    $form->desc('player_extend.id_card_front', admin_trans('player_extend.fields.id_card_front'))
+                        ->value($idCardFront ? '<img src="' . $idCardFront . '" style="max-width:120px;max-height:80px;border-radius:4px;object-fit:cover" />' : '-');
+                    $form->desc('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))
+                        ->value($idCardBack ? '<img src="' . $idCardBack . '" style="max-width:120px;max-height:80px;border-radius:4px;object-fit:cover" />' : '-');
+                    $form->desc('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))
+                        ->value($personalPhoto ? '<img src="' . $personalPhoto . '" style="max-width:120px;max-height:80px;border-radius:4px;object-fit:cover" />' : '-');
+                    $form->desc('player_extend.address', admin_trans('player_extend.fields.address'));
+                    $form->desc('player_extend.birthday', admin_trans('player_extend.fields.birthday'));
+                    $form->desc('player_extend.email', admin_trans('player_extend.fields.email'));
+                    $form->desc('player_extend.line', admin_trans('player_extend.fields.line'));
+                    $form->desc('player_extend.remark', admin_trans('player_extend.fields.remark'));
+                })->span(12);
             });
         });
     }
