@@ -4,8 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\model\AdminUser;
 use addons\webman\model\Channel;
-use addons\webman\model\Device;
-use addons\webman\model\DeviceIp;
+use addons\webman\model\AdminDevice;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -21,7 +20,7 @@ use support\Db;
 /**
  * 总后台设备管理控制器
  */
-class DeviceController
+class AdminDeviceController
 {
     /**
      * 设备列表
@@ -29,7 +28,7 @@ class DeviceController
      */
     public function index(): Grid
     {
-        return Grid::create(new Device(), function (Grid $grid) {
+        return Grid::create(new AdminDevice(), function (Grid $grid) {
             $grid->title(admin_trans('device.title'));
             $grid->bordered(true);
             $grid->autoHeight();
@@ -85,7 +84,7 @@ class DeviceController
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('device.fields.status'))
-                    ->options(Device::getStatusList());
+                    ->options(AdminDevice::getStatusList());
             });
 
             // 工具栏按钮
@@ -96,8 +95,6 @@ class DeviceController
                     ->modal($this->form())
                     ->width('60%'),
             ]);
-
-            $grid->export();
         });
     }
 
@@ -107,7 +104,7 @@ class DeviceController
      */
     public function form(): Form
     {
-        return Form::create(new Device(), function (Form $form) {
+        return Form::create(new AdminDevice(), function (Form $form) {
             if ($form->isEdit()) {
                 $form->title(admin_trans('device.edit_device'));
             } else {
@@ -141,15 +138,15 @@ class DeviceController
                 ->help(admin_trans('device.store_help'));
 
             // 设置级联关系
-            $departmentField->load($agentField, admin_url(['addons-webman-controller-DeviceController', 'getAgentOptions']));
-            $agentField->load($storeField, admin_url(['addons-webman-controller-DeviceController', 'getStoreOptions']));
+            $departmentField->load($agentField, admin_url(['addons-webman-controller-AdminDeviceController', 'getAgentOptions']));
+            $agentField->load($storeField, admin_url(['addons-webman-controller-AdminDeviceController', 'getStoreOptions']));
 
             $form->text('device_model', admin_trans('device.fields.device_model'))
                 ->maxlength(100);
 
             $form->radio('status', admin_trans('device.fields.status'))
-                ->options(Device::getStatusList())
-                ->default(Device::STATUS_ENABLED)
+                ->options(AdminDevice::getStatusList())
+                ->default(AdminDevice::STATUS_ENABLED)
                 ->required();
 
             $form->textarea('remark', admin_trans('device.fields.remark'))
@@ -162,7 +159,7 @@ class DeviceController
                 $deviceNo = $form->input('device_no');
                 $id = $form->input('id');
 
-                $exists = Device::where('device_no', $deviceNo)
+                $exists = AdminDevice::where('device_no', $deviceNo)
                     ->when($id, function ($query) use ($id) {
                         $query->where('id', '!=', $id);
                     })
@@ -176,13 +173,13 @@ class DeviceController
                 $departmentId = $form->input('department_id');
                 $channel = Channel::where('department_id', $departmentId)->first();
                 if ($channel) {
-                    $form->driver()->set('channel_id', $channel->id);
+                    $form->input('channel_id', $channel->id);
                 }
 
                 // 如果是线上渠道，清空代理和店家
                 if ($channel && $channel->is_offline == 0) {
-                    $form->driver()->set('agent_admin_id', 0);
-                    $form->driver()->set('store_admin_id', 0);
+                    $form->input('agent_admin_id', 0);
+                    $form->input('store_admin_id', 0);
                 }
             });
 
