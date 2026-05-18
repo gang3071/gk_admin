@@ -124,10 +124,16 @@ class AdminDeviceController
                 ->help(admin_trans('device.device_no_help'));
 
             // 渠道选择
+            $channelOptions = [];
+            $channels = Channel::orderBy('created_at', 'desc')->get();
+            foreach ($channels as $channel) {
+                $channelOptions[$channel->department_id] = $channel->name;
+            }
+
             $departmentField = $form->select('department_id', admin_trans('device.fields.channel_name'))
                 ->required()
                 ->showSearch()
-                ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']))
+                ->options($channelOptions)
                 ->help(admin_trans('device.select_channel_first'));
 
             // 代理选择（根据渠道动态加载）
@@ -143,6 +149,9 @@ class AdminDeviceController
             // 设置级联关系
             $departmentField->load($agentField, admin_url(['addons-webman-controller-AdminDeviceController', 'getAgentOptions']));
             $agentField->load($storeField, admin_url(['addons-webman-controller-AdminDeviceController', 'getStoreOptions']));
+
+            // 切换渠道时清空代理和店家
+            $departmentField->event('change', ['agent_admin_id' => null, 'store_admin_id' => null], 'variable');
 
             $form->text('device_model', admin_trans('device.fields.device_model'))
                 ->maxlength(100);
