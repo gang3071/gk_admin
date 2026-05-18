@@ -65,8 +65,9 @@ export default {
         // 初始化连接（单例）
         await pushManager.init(this.ws);
 
-        // 订阅频道
-        this.channelName = `private-admin_group-${this.type}-${this.department_id}-${this.id}`;
+        // 订阅频道 - 统一使用固定格式以匹配后端推送
+        // 后端推送格式: private-admin_group-admin-1-{machineId}
+        this.channelName = `private-admin_group-admin-1-${this.id}`;
         pushManager.subscribe(this.channelName, this.handleMessage, this);
 
         console.log('[MachineStatus] WebSocket initialized successfully');
