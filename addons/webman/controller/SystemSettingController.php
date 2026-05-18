@@ -281,9 +281,18 @@ class SystemSettingController
                         ])->addonAfter(admin_trans('system_setting.points'))
                 )->display(function ($val, SystemSetting $data) {
                     if (empty($data->num) || $data->num <= 0) {
-                        return '<span style="color: #999;">0 (' . admin_trans('system_setting.disabled') . ')</span>';
+                        return Html::create('0 (' . admin_trans('system_setting.disabled') . ')')
+                            ->style([
+                                'color' => '#999',
+                                'fontSize' => '13px'
+                            ]);
                     }
-                    return '<span style="color: #52c41a; font-weight: bold;">' . number_format($data->num, 0) . ' ' . admin_trans('system_setting.points') . '</span>';
+                    return Html::create(number_format($data->num, 0) . ' ' . admin_trans('system_setting.points'))
+                        ->style([
+                            'color' => '#52c41a',
+                            'fontWeight' => 'bold',
+                            'fontSize' => '14px'
+                        ]);
                 })->width('20%')->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');
