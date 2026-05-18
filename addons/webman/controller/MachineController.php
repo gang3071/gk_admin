@@ -235,7 +235,13 @@ class MachineController
         )
             ->align('left');
         $grid->column('viewers', admin_trans('machine.fields.viewers'))->display(function ($val, Machine $data) {
-            return getViewers($data->id);
+            $media = MachineMedia::where('machine_id', $data->id)->whereNull('deleted_at')->first();
+            if (!$media) {
+                return 0;
+            }
+            $mediaServer = new MediaServer($media->push_ip, $media->media_app);
+            $viewers = $mediaServer->getViewers($media->stream_name);
+            return $viewers !== false ? $viewers : 0;
         })->align('center');
         $grid->column('min_point', admin_trans('machine.fields.min_point'))->align('center');
         $grid->column('max_point', admin_trans('machine.fields.max_point'))->align('center');
