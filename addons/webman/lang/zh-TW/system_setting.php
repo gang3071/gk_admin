@@ -31,6 +31,7 @@ return [
         'jackpot_screen_domain' => '大屏彩金Domain',
         'turn_relay_ip' => 'TURN中繼IP',
         'high_score_broadcast_threshold' => '高分廣播閾值',
+        'device_collect' => '店機設備收集開關',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字元',
