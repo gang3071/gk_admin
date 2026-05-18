@@ -31,6 +31,7 @@ return [
         'jackpot_screen_domain' => 'ジャックポット画面ドメイン',
         'turn_relay_ip' => 'TURNリレーIP',
         'high_score_broadcast_threshold' => 'ハイスコア放送しきい値',
+        'device_collect' => 'デバイス収集スイッチ',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
