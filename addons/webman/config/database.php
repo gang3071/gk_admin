@@ -333,5 +333,14 @@ return [
         //充值满赠账变记录
         'player_money_edit_log_bonus_table' => 'player_money_edit_log_bonus',
         'player_money_edit_log_bonus_model' => \addons\webman\model\PlayerMoneyEditLogBonus::class,
+        //设备表（渠道后台使用）
+        'device_table' => 'device',
+        'device_model' => \addons\webman\model\Device::class,
+        //总后台设备表
+        'admin_device_table' => 'admin_device',
+        'admin_device_model' => \addons\webman\model\AdminDevice::class,
+        //设备IP表
+        'device_ip_table' => 'device_ip',
+        'device_ip_model' => \addons\webman\model\DeviceIp::class,
     ],
 ];

@@ -725,6 +725,12 @@ class PlayerController
                             });
                         $form->text('player_extend.id_number',
                             admin_trans('player_extend.fields.id_number'))->ruleAlphaNum()->maxlength(20);
+                        $form->image('player_extend.id_card_front',
+                            admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
+                        $form->image('player_extend.id_card_back',
+                            admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
+                        $form->image('player_extend.personal_photo',
+                            admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
                         $form->switch('is_test',
                             admin_trans('player.fields.is_test'));
                         $form->desc('the_last_player_login_record.created_at',
@@ -819,6 +825,9 @@ class PlayerController
                             'address' => $form->input('player_extend.address'),
                             'birthday' => $form->input('player_extend.birthday'),
                             'id_number' => $form->input('player_extend.id_number'),
+                            'id_card_front' => $form->input('player_extend.id_card_front'),
+                            'id_card_back' => $form->input('player_extend.id_card_back'),
+                            'personal_photo' => $form->input('player_extend.personal_photo'),
                             'email' => $form->input('player_extend.email'),
                             'line' => $form->input('player_extend.line'),
                             'remark' => $form->input('player_extend.remark'),

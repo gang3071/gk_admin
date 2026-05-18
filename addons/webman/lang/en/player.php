@@ -6,6 +6,7 @@ return [
     'title' => 'Player list',
     'coin_title' => 'Coin dealer list',
     'details' => 'Player details',
+    'view' => 'View',
     'coin_merchant' => 'Coin Merchant',
     'player' => 'player',
     'cancel_coin' => 'Cancel Coin Dealer',
