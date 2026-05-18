@@ -2055,8 +2055,12 @@ class ChannelPlayerPromoterController
             $playerPromoter->last_settlement_time = date('Y-m-d');
             $playerPromoter->last_settlement_timestamp = date('Y-m-d H:i:s');
             //线下站结算只产生记录不增加余额
-            $amountBefore = $playerPromoter->player->machine_wallet->money;
-            $amountAfter = bcadd($amountBefore, $settlement, 2);
+            // ✅ 从 Redis 读取推广员余额（结算前）
+            $amountBefore = \addons\webman\service\WalletService::getBalance($playerPromoter->player_id);
+
+            // ✅ 使用 WalletService 原子加款（推广员收益结算）
+            $amountAfter = \addons\webman\service\WalletService::add($playerPromoter->player_id, $settlement);
+
             $playerDeliveryRecord = new PlayerDeliveryRecord;
             $playerDeliveryRecord->player_id = $playerPromoter->player_id;
             $playerDeliveryRecord->department_id = $playerPromoter->department_id;
@@ -2066,7 +2070,7 @@ class ChannelPlayerPromoterController
             $playerDeliveryRecord->source = 'profit';
             $playerDeliveryRecord->amount = $settlement;
             $playerDeliveryRecord->amount_before = $amountBefore;
-            $playerDeliveryRecord->amount_after = $amountAfter;
+            $playerDeliveryRecord->amount_after = $amountAfter;  // ✅ 使用返回值
             $playerDeliveryRecord->tradeno = $promoterProfitSettlementRecord->tradeno ?? '';
             $playerDeliveryRecord->remark = '';
             $playerDeliveryRecord->save();
@@ -2193,9 +2197,12 @@ class ChannelPlayerPromoterController
                     ]);
             }
             if ($is_settlement && $settlement > 0) {
-                // 增加钱包余额
-                $amountBefore = $playerPromoter->player->machine_wallet->money;
-                $amountAfter = bcadd($amountBefore, $settlement, 2);
+                // ✅ 从 Redis 读取推广员余额（结算前）
+                $amountBefore = \addons\webman\service\WalletService::getBalance($playerPromoter->player_id);
+
+                // ✅ 使用 WalletService 原子加款（推广员收益结算）
+                $amountAfter = \addons\webman\service\WalletService::add($playerPromoter->player_id, $settlement);
+
                 $playerDeliveryRecord = new PlayerDeliveryRecord;
                 $playerDeliveryRecord->player_id = $playerPromoter->player_id;
                 $playerDeliveryRecord->department_id = $playerPromoter->department_id;
@@ -2205,13 +2212,10 @@ class ChannelPlayerPromoterController
                 $playerDeliveryRecord->source = 'profit';
                 $playerDeliveryRecord->amount = $settlement;
                 $playerDeliveryRecord->amount_before = $amountBefore;
-                $playerDeliveryRecord->amount_after = $amountAfter;
+                $playerDeliveryRecord->amount_after = $amountAfter;  // ✅ 使用返回值
                 $playerDeliveryRecord->tradeno = $promoterProfitSettlementRecord->tradeno ?? '';
                 $playerDeliveryRecord->remark = '';
                 $playerDeliveryRecord->save();
-
-                $playerPromoter->player->machine_wallet->money = $amountAfter;
-                $playerPromoter->player->machine_wallet->save();
             }
             $playerPromoter->push();
             DB::commit();

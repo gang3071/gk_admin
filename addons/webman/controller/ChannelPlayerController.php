@@ -5130,8 +5130,8 @@ class ChannelPlayerController
                 // 开分逻辑
                 DB::beginTransaction();
                 try {
-                    /** @var PlayerPlatformCash $deviceWallet */
-                    $deviceWallet = PlayerPlatformCash::query()->where('player_id', $devicePlayer->id)->lockForUpdate()->first();
+                    // ✅ 从 Redis 读取充值前余额
+                    $beforeGameAmount = \addons\webman\service\WalletService::getBalance($devicePlayer->id);
 
                     // 生成充值订单
                     $playerRechargeRecord = new PlayerRechargeRecord();
@@ -5157,9 +5157,8 @@ class ChannelPlayerController
                     $playerRechargeRecord->user_name = Admin::user()->name ?? '';
                     $playerRechargeRecord->save();
 
-                    // 更新玩家钱包
-                    $deviceWallet->money = bcadd($deviceWallet->money, $playerRechargeRecord->point, 2);
-                    $deviceWallet->save();
+                    // ✅ 使用 WalletService 原子加款（主玩家充值）
+                    $afterGameAmount = \addons\webman\service\WalletService::add($devicePlayer->id, $playerRechargeRecord->point);
 
                     // 更新玩家充值总额
                     $devicePlayer->player_extend->recharge_amount = bcadd($devicePlayer->player_extend->recharge_amount,
@@ -5176,12 +5175,13 @@ class ChannelPlayerController
                             // 推广员为全民代理
                             if (!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1) {
                                 // 首充返佣金额
-                                /** @var PlayerPlatformCash $recommendPlayerWallet */
-                                $recommendPlayerWallet = PlayerPlatformCash::query()->where('player_id',
-                                    $devicePlayer->recommend_id)->lockForUpdate()->first();
-                                $beforeRechargeAmount = $recommendPlayerWallet->money;
                                 $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
-                                $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $rechargeRebate, 2);
+
+                                // ✅ 从 Redis 读取推荐人余额（返佣前）
+                                $beforeRechargeAmount = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                                // ✅ 使用 WalletService 原子加款（推荐人返佣）
+                                $afterRechargeAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $rechargeRebate);
 
                                 // 写入首充金流明细
                                 $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -5193,7 +5193,7 @@ class ChannelPlayerController
                                 $playerDeliveryRecord->source = 'national_promoter';
                                 $playerDeliveryRecord->amount = $rechargeRebate;
                                 $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
-                                $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                $playerDeliveryRecord->amount_after = $afterRechargeAmount;  // ✅ 使用返回值
                                 $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                                 $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                                 $playerDeliveryRecord->save();
@@ -5208,8 +5208,13 @@ class ChannelPlayerController
 
                                 if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
                                     $inviteMoney = $national_invite->money;
-                                    $amount_before = $recommendPlayerWallet->money;
-                                    $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $inviteMoney, 2);
+
+                                    // ✅ 从 Redis 读取推荐人余额（邀请奖励前）
+                                    $amount_before = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                                    // ✅ 使用 WalletService 原子加款（邀请奖励）
+                                    $afterInviteAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $inviteMoney);
+
                                     // 写入金流明细
                                     $inviteDeliveryRecord = new PlayerDeliveryRecord;
                                     $inviteDeliveryRecord->player_id = $recommendPlayer->id;
@@ -5220,13 +5225,12 @@ class ChannelPlayerController
                                     $inviteDeliveryRecord->source = 'national_promoter';
                                     $inviteDeliveryRecord->amount = $inviteMoney;
                                     $inviteDeliveryRecord->amount_before = $amount_before;
-                                    $inviteDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                    $inviteDeliveryRecord->amount_after = $afterInviteAmount;  // ✅ 使用返回值
                                     $inviteDeliveryRecord->tradeno = '';
                                     $inviteDeliveryRecord->remark = '';
                                     $inviteDeliveryRecord->save();
                                 }
                                 $recommendPlayer->push();
-                                $recommendPlayerWallet->save();
 
                                 // 全民代理收益记录
                                 $nationalProfitRecord = new NationalProfitRecord();

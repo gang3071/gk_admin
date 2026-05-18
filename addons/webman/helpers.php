@@ -598,13 +598,11 @@ if (!function_exists('machineWashRemainder')) {
             //依照比值轉成錢包幣值 無條件捨去
             $game_amount = floor($floor_money * ($machine->odds_x ?? 1) / ($machine->odds_y ?? 1));
 
-            /** @var PlayerPlatformCash $machineWallet */
-            $machineWallet = PlayerPlatformCash::query()->where('platform_id',
-                PlayerPlatformCash::PLATFORM_SELF)->where('player_id', $player->id)->first();
-            $beforeGameAmount = $machineWallet->money;
-            $machineWallet->money = bcadd($machineWallet->money, $game_amount, 2);
-            $machineWallet->save();
-            $afterGameAmount = $machineWallet->money;
+            // ✅ 从 Redis 读取实时余额（废弃函数，已修复但建议使用 machineWashZero）
+            $beforeGameAmount = \addons\webman\service\WalletService::getBalance($player->id);
+
+            // ✅ 使用 WalletService 原子加款
+            $afterGameAmount = \addons\webman\service\WalletService::add($player->id, $game_amount);
 
             if (!empty($gameRecord)) {
                 $gameRecord->wash_point = bcadd($gameRecord->wash_point, $wash_point, 2);
@@ -1256,17 +1254,20 @@ if (!function_exists('playerUpdateMoney')) {
             throw new Exception(admin_trans('player.wallet.wallet_action_log_not_found'));
         }
 
-        //玩家加點數
-        /** @var PlayerPlatformCash $machineWallet */
-        $machineWallet = PlayerPlatformCash::query()->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)->where('player_id',
-            $player->id)->lockForUpdate()->first();
-        $originMoney = $machineWallet->money;
+        // ✅ 从 Redis 读取主玩家余额（操作前）
+        $originMoney = \addons\webman\service\WalletService::getBalance($player->id);
+
+        // ✅ 主玩家加/扣款（使用 WalletService 原子操作）
         if ($type == PlayerMoneyEditLog::TYPE_INCREASE) {
-            $machineWallet->money = bcadd($machineWallet->money, $money, 2);
+            // ✅ 使用 WalletService 原子加款
+            $afterMoney = \addons\webman\service\WalletService::add($player->id, $money);
+
+            // 首充激活全民代理 + 推荐人返佣 + 邀请奖励
             if (isset($player->national_promoter->status) && $player->national_promoter->status == 0 && in_array($deliveryType, [PlayerDeliveryRecord::TYPE_PRESENT_IN, PlayerDeliveryRecord::TYPE_RECHARGE])) {
                 $player->national_promoter->created_at = date('Y-m-d H:i:s');
                 $player->national_promoter->status = 1;
                 $player->push();
+
                 if (!empty($player->recommend_id) && $player->channel->national_promoter_status == 1) {
                     //玩家上级推广员信息
                     /** @var Player $recommendPlayer */
@@ -1274,12 +1275,13 @@ if (!function_exists('playerUpdateMoney')) {
                     //推广员为全民代理
                     if (!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1) {
                         //首充返佣金额
-                        /** @var PlayerPlatformCash $recommendPlayerWallet */
-                        $recommendPlayerWallet = PlayerPlatformCash::query()->where('player_id',
-                            $player->recommend_id)->lockForUpdate()->first();
-                        $beforeRechargeAmount = $recommendPlayerWallet->money;
                         $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
-                        $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $rechargeRebate, 2);
+
+                        // ✅ 从 Redis 读取推荐人余额（返佣前）
+                        $beforeRechargeAmount = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                        // ✅ 使用 WalletService 原子加款（推荐人返佣）
+                        $afterRechargeAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $rechargeRebate);
 
                         //寫入首充金流明細
                         $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -1291,7 +1293,7 @@ if (!function_exists('playerUpdateMoney')) {
                         $playerDeliveryRecord->source = 'national_promoter';
                         $playerDeliveryRecord->amount = $rechargeRebate;
                         $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
-                        $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                        $playerDeliveryRecord->amount_after = $afterRechargeAmount;  // ✅ 使用返回值
                         $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
                         $playerDeliveryRecord->remark = $target->remark ?? '';
                         $playerDeliveryRecord->save();
@@ -1305,9 +1307,14 @@ if (!function_exists('playerUpdateMoney')) {
                             ->where('max', '>=', $recommendPlayer->national_promoter->invite_num)->first();
 
                         if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
-                            $money = $national_invite->money;
-                            $amount_before = $recommendPlayerWallet->money;
-                            $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $money, 2);
+                            $inviteMoney = $national_invite->money;
+
+                            // ✅ 从 Redis 读取推荐人余额（邀请奖励前）
+                            $amount_before = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                            // ✅ 使用 WalletService 原子加款（邀请奖励）
+                            $afterInviteAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $inviteMoney);
+
                             // 寫入金流明細
                             $playerDeliveryRecord = new PlayerDeliveryRecord;
                             $playerDeliveryRecord->player_id = $recommendPlayer->id;
@@ -1316,15 +1323,14 @@ if (!function_exists('playerUpdateMoney')) {
                             $playerDeliveryRecord->target_id = $national_invite->id;
                             $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_NATIONAL_INVITE;
                             $playerDeliveryRecord->source = 'national_promoter';
-                            $playerDeliveryRecord->amount = $money;
+                            $playerDeliveryRecord->amount = $inviteMoney;
                             $playerDeliveryRecord->amount_before = $amount_before;
-                            $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                            $playerDeliveryRecord->amount_after = $afterInviteAmount;  // ✅ 使用返回值
                             $playerDeliveryRecord->tradeno = '';
                             $playerDeliveryRecord->remark = '';
                             $playerDeliveryRecord->save();
                         }
                         $recommendPlayer->push();
-                        $recommendPlayerWallet->save();
 
                         $nationalProfitRecord = new NationalProfitRecord();
                         $nationalProfitRecord->uid = $player->id;
@@ -1337,19 +1343,17 @@ if (!function_exists('playerUpdateMoney')) {
                 }
             }
         } else {
+            // 扣款前检查余额
             if ($money > $originMoney) {
                 throw new Exception(admin_trans('player.wallet.insufficient_player_money'));
             }
-            $machineWallet->money = bcsub($machineWallet->money, $money, 2);
-        }
-        $machineWallet->save();
 
-        // ✅ 关键修复：更新玩家的 Redis 钱包缓存
-        \addons\webman\service\WalletService::updateCache(
-            $player->id,
-            PlayerPlatformCash::PLATFORM_SELF,
-            $machineWallet->money
-        );
+            // ✅ 使用 WalletService 原子扣款
+            $afterMoney = \addons\webman\service\WalletService::deduct($player->id, $money);
+        }
+
+        // ✅ 删除数据库操作和手动 updateCache() 调用
+        // WalletService 已经更新了 Redis，模型事件会自动同步数据库
 
         switch ($deliveryType) {
             case PlayerDeliveryRecord::TYPE_PRESENT_IN:
@@ -1372,6 +1376,7 @@ if (!function_exists('playerUpdateMoney')) {
                 $playerExtend->present_out_amount = bcadd($playerExtend->present_out_amount, $money, 2);
                 $playerExtend->save();
         }
+
         //寫入金流明細
         if ($action == PlayerMoneyEditLog::SPECIAL) {
             $deliveryType = PlayerDeliveryRecord::TYPE_SPECIAL;
@@ -1385,14 +1390,14 @@ if (!function_exists('playerUpdateMoney')) {
         $playerDeliveryRecord->source = $source;
         $playerDeliveryRecord->amount = $money;
         $playerDeliveryRecord->amount_before = $originMoney;
-        $playerDeliveryRecord->amount_after = $machineWallet->money;
+        $playerDeliveryRecord->amount_after = $afterMoney;  // ✅ 使用 WalletService 返回值
         $playerDeliveryRecord->tradeno = $target->tradeno ?? '';
         $playerDeliveryRecord->remark = $target->remark ?? '';
         $playerDeliveryRecord->user_id = Admin::id() ?? 0;
         $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
         $playerDeliveryRecord->save();
 
-        return $machineWallet->money;
+        return $afterMoney;  // ✅ 返回 WalletService 的返回值
     }
 }
 
