@@ -35,6 +35,9 @@ class AdminDeviceController
 
             $grid->model()->with(['channel', 'agent', 'store'])->orderBy('id', 'desc');
 
+            // 默认展开筛选
+            $grid->expandFilter();
+
             // 列配置
             $grid->column('id', 'ID')->width(80)->sortable()->fixed(true);
 
@@ -78,10 +81,32 @@ class AdminDeviceController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('device_name')->placeholder(admin_trans('device.fields.device_name'));
                 $filter->like()->text('device_no')->placeholder(admin_trans('device.fields.device_no'));
-                $filter->eq()->select('channel_id')
+
+                // 渠道筛选
+                $channelOptions = [];
+                $channels = Channel::orderBy('created_at', 'desc')->get();
+                foreach ($channels as $channel) {
+                    $channelOptions[$channel->department_id] = $channel->name;
+                }
+                $channelFilter = $filter->eq()->select('department_id')
                     ->placeholder(admin_trans('device.fields.channel_name'))
                     ->showSearch()
-                    ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
+                    ->options($channelOptions);
+
+                // 代理筛选
+                $agentFilter = $filter->eq()->select('agent_admin_id')
+                    ->placeholder(admin_trans('device.fields.agent_name'))
+                    ->showSearch();
+
+                // 店家筛选
+                $storeFilter = $filter->eq()->select('store_admin_id')
+                    ->placeholder(admin_trans('device.fields.store_name'))
+                    ->showSearch();
+
+                // 设置级联关系
+                $channelFilter->load($agentFilter, admin_url(['addons-webman-controller-AdminDeviceController', 'getAgentOptions']));
+                $agentFilter->load($storeFilter, admin_url(['addons-webman-controller-AdminDeviceController', 'getStoreOptions']));
+
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('device.fields.status'))
                     ->options(AdminDevice::getStatusList());
