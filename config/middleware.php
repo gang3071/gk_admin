@@ -13,11 +13,18 @@
  */
 
 use addons\webman\middleware\AccessControl;
-use addons\webman\middleware\Lang;
 
 return [
     // 全局中间件
     '' => [
         AccessControl::class,  // CORS跨域支持
+
+        // ⚠️ 临时禁用：内存泄漏审计中间件（需要时取消注释）
+        // 使用方法：
+        // 1. 取消下行注释
+        // 2. 重启服务: php start.php restart
+        // 3. 观察日志: tail -f runtime/logs/webman.log | grep "内存泄漏"
+        // 4. 定位完毕后重新注释掉
+        // MemoryAudit::class,
     ],
 ];

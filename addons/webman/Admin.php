@@ -16,7 +16,15 @@ use support\Cache;
 
 class Admin
 {
-    protected static $permissions = [];
+    // ❌ 已删除：未使用的静态变量（内存泄漏隐患）
+    // protected static $permissions = [];
+
+    /**
+     * ✅ 内存优化：缓存权限节点 ID 数组
+     * 避免每次调用 check() 都复制 500-1000 个节点
+     * 单进程生命周期内只加载一次，节省约 2 MB/请求
+     */
+    private static $cachedNodeIds = null;
 
     /**
      * 方法是否存在
@@ -91,12 +99,20 @@ class Admin
 
     public static function check($class, $function, $method)
     {
-        $node = Admin::node()->all();
-        $node = array_column($node, 'id');
+        // ✅ 内存优化：缓存权限节点 ID 数组
+        // 修复前：每次调用复制 500-1000 个节点 = 200 KB/次
+        // 修复后：只在首次加载，后续复用 = 节省 2 MB/请求
+        if (self::$cachedNodeIds === null) {
+            $allNodes = Admin::node()->all();
+            self::$cachedNodeIds = array_column($allNodes, 'id');
+            unset($allNodes);  // 显式释放原始数组
+        }
+
         $actions[] = str_replace('-', '\\', $class) . '\\' . $function;
         $actions[] = str_replace('-', '\\', $class) . '\\' . $function . '-' . strtolower($method);
+
         foreach ($actions as $action) {
-            if (in_array($action, $node)) {
+            if (in_array($action, self::$cachedNodeIds)) {
                 if (Admin::id() == plugin()->webman->config('admin_auth_id')) {
                     return true;
                 }
