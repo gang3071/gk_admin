@@ -778,6 +778,9 @@ class MachineController
                         $insertData = [];
                         /** @var MachineTencentPlay $machineTencentPlay */
                         $machineTencentPlay = MachineTencentPlay::query()->where('status', 1)->first();
+                        if (empty($machineTencentPlay)) {
+                            throw new Exception(admin_trans('machine_media.tencent_play_config_not_found'));
+                        }
                         $pushData = getPushUrl($media->machine->code, $machineTencentPlay->push_domain,
                             $machineTencentPlay->push_key);
                         $pushList[] = [
@@ -830,6 +833,9 @@ class MachineController
                     if ($isAms == 0) {
                         /** @var MachineTencentPlay $machineTencentPlay */
                         $machineTencentPlay = MachineTencentPlay::query()->where('status', 1)->first();
+                        if (empty($machineTencentPlay)) {
+                            throw new Exception(admin_trans('machine_media.tencent_play_config_not_found'));
+                        }
                         $pushData = getPushUrl($media->machine->code, $machineTencentPlay->push_domain,
                             $machineTencentPlay->push_key);
                         $pushList[] = [
@@ -924,6 +930,9 @@ class MachineController
             $insertData = [];
             /** @var MachineTencentPlay $machineTencentPlay */
             $machineTencentPlay = MachineTencentPlay::query()->where('status', 1)->first();
+            if (empty($machineTencentPlay)) {
+                throw new Exception(admin_trans('machine_media.tencent_play_config_not_found'));
+            }
             $pushData = getPushUrl($media->machine->code, $machineTencentPlay->push_domain,
                 $machineTencentPlay->push_key);
             $pushList[] = [

@@ -11,6 +11,7 @@ return [
     'media_line' => '再生ライン',
     'media_app_not_found' => 'メディア サービス APP が設定されていません',
     'pull_ip_not_found' => 'プル IP が設定されていません',
+    'tencent_play_config_not_found' => '有効なTencent Cloud再生設定が見つかりません。最初にシステム設定で構成してください',
     'media_title' => 'ビデオ再生アドレス',
     'play_address' => 'プレイアドレス',
     

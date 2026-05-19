@@ -12,6 +12,7 @@ return [
     'media_line' => 'Playback line',
     'media_app_not_found' => 'Media service APP is not set',
     'pull_ip_not_found' => 'Pull IP not set',
+    'tencent_play_config_not_found' => 'No enabled Tencent Cloud playback configuration found, please configure it in system settings first',
     'media_title' => 'Video playback address',
     'play_address' => 'Play address',
     'fields' => [
