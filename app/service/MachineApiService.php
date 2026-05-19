@@ -3,9 +3,8 @@
 namespace app\service;
 
 use Exception;
-use Illuminate\Http\Client\PendingRequest;
-use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Http;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use support\Log;
 
 /**
@@ -34,16 +33,25 @@ class MachineApiService
     public static function sendCmd(int $machineId, string $cmd, int $data = 0, int $adminId = 0, string $lang = 'zh_CN'): array
     {
         try {
-            $response = self::createClient($adminId)
-                ->post('/api/admin/machine/send-cmd', [
+            $client = self::createClient($adminId);
+            $response = $client->post('/api/admin/machine/send-cmd', [
+                'json' => [
                     'machine_id' => $machineId,
                     'cmd' => $cmd,
                     'data' => $data,
                     'lang' => $lang,
-                ]);
+                ]
+            ]);
 
             return self::handleResponse($response, '发送机台指令');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::sendCmd failed', [
+                'machine_id' => $machineId,
+                'cmd' => $cmd,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::sendCmd failed', [
                 'machine_id' => $machineId,
@@ -57,19 +65,21 @@ class MachineApiService
     /**
      * 创建 HTTP 客户端
      * @param int $adminId 管理员ID
-     * @return PendingRequest
+     * @return Client
      */
-    private static function createClient(int $adminId = 0): PendingRequest
+    private static function createClient(int $adminId = 0): Client
     {
         self::init();
 
-        return Http::baseUrl(self::$baseUrl)
-            ->timeout(30)
-            ->withHeaders([
+        return new Client([
+            'base_uri' => self::$baseUrl,
+            'timeout' => 30,
+            'headers' => [
                 'X-Admin-Id' => $adminId,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json',
-            ]);
+            ],
+        ]);
     }
 
     /**
@@ -85,18 +95,21 @@ class MachineApiService
     /**
      * 处理响应
      *
-     * @param Response $response HTTP响应
+     * @param \Psr\Http\Message\ResponseInterface $response HTTP响应
      * @param string $action 操作名称
      * @return array
      * @throws Exception
      */
-    private static function handleResponse(Response $response, string $action): array
+    private static function handleResponse($response, string $action): array
     {
-        if (!$response->successful()) {
-            throw new Exception("{$action}失败: HTTP {$response->status()}");
+        $statusCode = $response->getStatusCode();
+
+        if ($statusCode < 200 || $statusCode >= 300) {
+            throw new Exception("{$action}失败: HTTP {$statusCode}");
         }
 
-        $data = $response->json();
+        $body = (string)$response->getBody();
+        $data = json_decode($body, true);
 
         if (!isset($data['code'])) {
             throw new Exception("{$action}失败: 响应格式错误");
@@ -121,14 +134,22 @@ class MachineApiService
     public static function getMachineStatus(int $machineId, string $lang = 'zh_CN'): array
     {
         try {
-            $response = self::createClient()
-                ->post('/api/admin/machine/status', [
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/status', [
+                'json' => [
                     'machine_id' => $machineId,
                     'lang' => $lang,
-                ]);
+                ]
+            ]);
 
             return self::handleResponse($response, '获取机台状态');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::getMachineStatus failed', [
+                'machine_id' => $machineId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::getMachineStatus failed', [
                 'machine_id' => $machineId,
@@ -148,13 +169,21 @@ class MachineApiService
     public static function checkOnline(int $machineId): array
     {
         try {
-            $response = self::createClient()
-                ->post('/api/admin/machine/check-online', [
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/check-online', [
+                'json' => [
                     'machine_id' => $machineId,
-                ]);
+                ]
+            ]);
 
             return self::handleResponse($response, '检查机台在线');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::checkOnline failed', [
+                'machine_id' => $machineId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::checkOnline failed', [
                 'machine_id' => $machineId,
@@ -174,13 +203,21 @@ class MachineApiService
     public static function batchCheckOnline(array $machineIds): array
     {
         try {
-            $response = self::createClient()
-                ->post('/api/admin/machine/batch-check-online', [
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/batch-check-online', [
+                'json' => [
                     'machine_ids' => $machineIds,
-                ]);
+                ]
+            ]);
 
             return self::handleResponse($response, '批量检查机台在线');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::batchCheckOnline failed', [
+                'machine_ids' => $machineIds,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::batchCheckOnline failed', [
                 'machine_ids' => $machineIds,
@@ -203,16 +240,25 @@ class MachineApiService
     public static function getDescription(int $machineId, string $fun = '', int $data = 0, string $lang = 'zh_CN'): array
     {
         try {
-            $response = self::createClient()
-                ->post('/api/admin/machine/get-description', [
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/get-description', [
+                'json' => [
                     'machine_id' => $machineId,
                     'fun' => $fun,
                     'data' => $data,
                     'lang' => $lang,
-                ]);
+                ]
+            ]);
 
             return self::handleResponse($response, '获取机台操作描述');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::getDescription failed', [
+                'machine_id' => $machineId,
+                'fun' => $fun,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::getDescription failed', [
                 'machine_id' => $machineId,
@@ -250,11 +296,16 @@ class MachineApiService
     public static function getGatewayInfo(): array
     {
         try {
-            $response = self::createClient()
-                ->get('/api/admin/machine/gateway-info');
+            $client = self::createClient();
+            $response = $client->get('/api/admin/machine/gateway-info');
 
             return self::handleResponse($response, '获取Gateway信息');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::getGatewayInfo failed', [
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::getGatewayInfo failed', [
                 'error' => $e->getMessage()
@@ -274,14 +325,21 @@ class MachineApiService
     public static function getAllOnlineStatus(int $departmentId = 0, ?string $type = null): array
     {
         try {
-            $response = self::createClient()
-                ->post('/api/admin/machine/all-online-status', [
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/all-online-status', [
+                'json' => [
                     'department_id' => $departmentId,
                     'type' => $type,
-                ]);
+                ]
+            ]);
 
             return self::handleResponse($response, '获取所有机台在线状态');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::getAllOnlineStatus failed', [
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::getAllOnlineStatus failed', [
                 'error' => $e->getMessage()
@@ -299,11 +357,16 @@ class MachineApiService
     public static function getOnlineStatistics(): array
     {
         try {
-            $response = self::createClient()
-                ->get('/api/admin/machine/online-statistics');
+            $client = self::createClient();
+            $response = $client->get('/api/admin/machine/online-statistics');
 
             return self::handleResponse($response, '获取机台在线统计');
 
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::getOnlineStatistics failed', [
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
         } catch (Exception $e) {
             Log::error('MachineApiService::getOnlineStatistics failed', [
                 'error' => $e->getMessage()
