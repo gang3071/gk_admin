@@ -21,7 +21,6 @@ use addons\webman\model\PlayerActivityPhaseRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWithdrawRecord;
-use app\service\machine\MachineServices;
 use ExAdmin\ui\component\navigation\menu\MenuItem;
 use ExAdmin\ui\contract\SystemAbstract;
 use ExAdmin\ui\response\Response;
@@ -353,7 +352,19 @@ class System extends SystemAbstract
                 case Notice::TYPE_MACHINE_LOCK:
                     /** @var Machine $machine */
                     $machine = Machine::find($item->source_id);
-                    $services = MachineServices::createServices($machine);
+
+                    // 通过 API 获取机台锁状态
+                    $hasLock = 0;
+                    try {
+                        $result = \app\service\MachineApiService::getMachineStatus($machine->id);
+                        $hasLock = $result['machine_info']['has_lock'] ?? 0;
+                    } catch (\Exception $e) {
+                        \support\Log::warning('Get machine lock status failed', [
+                            'machine_id' => $machine->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+
                     $content = admin_trans('notice.content.' . $item->type, '', [
                         '{machine_code}' => $machine->code,
                     ]);
@@ -364,7 +375,7 @@ class System extends SystemAbstract
                         'content' => $content,
                         'type' => $item->type,
                         'created_at' => $createTime,
-                        'machine_status' => $services->has_lock,
+                        'machine_status' => $hasLock,
                         'url' => admin_url([MachineController::class, 'infoList'])
                     ];
                     break;
@@ -408,23 +419,37 @@ class System extends SystemAbstract
         if ($machine->deleted_at != null) {
             return Response::success([], admin_trans('machine_action.machine_has_delete'), 100);
         }
-        
+
         try {
-            $machineServices = MachineServices::createServices($machine,
-                Container::getInstance()->translator->getLocale());
             if ($cmd == 'all') {
+                // 通过 API 获取机台描述信息
+                $result = \app\service\MachineApiService::getDescription(
+                    $machine->id,
+                    'all',
+                    0,
+                    Container::getInstance()->translator->getLocale()
+                );
+
                 sendSocketMessage('private-admin-1-' . Admin::id(), [
                     'msg_type' => 'machine_action_result',
                     'id' => $machine->id,
-                    'description' => $machineServices->getDescription(),
+                    'description' => $result['description'] ?? '',
                 ]);
+                $data = $result;
             } else {
-                $data = $machineServices->sendCmd($cmd, $data ?? 0, 'admin', Admin::id());
+                // 通过 API 发送机台指令
+                $data = \app\service\MachineApiService::sendCmd(
+                    $machine->id,
+                    $cmd,
+                    $data ?? 0,
+                    Admin::id(),
+                    Container::getInstance()->translator->getLocale()
+                );
             }
         } catch (Exception $e) {
             return Response::success([], $e->getMessage(), 100);
         }
-        
+
         return Response::success($data);
     }
 

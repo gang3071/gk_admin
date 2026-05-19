@@ -6,12 +6,12 @@ use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use addons\webman\model\Notice;
 use app\service\LotteryServices;
+use Exception;
 use GatewayWorker\Lib\Gateway;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Log;
 use support\Redis;
-use think\Exception;
 use Webman\Push\PushException;
 use Webman\RedisQueue\Client;
 

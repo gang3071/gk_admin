@@ -2516,8 +2516,7 @@ class ChannelPlayerController
                         $playerMoneyEditLog->inmoney = $playerRechargeRecord->inmoney;
                         $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerMoneyEditLog->origin_money = $beforeGameAmount;
                         $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
                         $playerMoneyEditLog->save();
@@ -2606,8 +2605,7 @@ class ChannelPlayerController
                         $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
                         $playerWithdrawRecord->remark = $form->input('remark') ?? '';
                         $playerWithdrawRecord->user_id = Admin::id() ?? 0;
-                        $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerWithdrawRecord->save();
 
                         $withdrawAmount = $playerWithdrawRecord->point;
@@ -2655,8 +2653,7 @@ class ChannelPlayerController
                         $playerMoneyEditLog->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee, 2);
                         $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerMoneyEditLog->origin_money = $beforeGameAmount;
                         $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
                         $playerMoneyEditLog->save();
@@ -5269,7 +5266,7 @@ class ChannelPlayerController
                 } catch (Exception $e) {
                     DB::rollBack();
                     Log::error('store_open_score', [$e->getTrace()]);
-                    return message_error($e->getMessage() ?? trans('system_error', [], 'message'));
+                    return message_error($e->getMessage() ?? admin_trans('message.system_error'));
                 }
 
                 // 发送充值通知（发送游戏点数）

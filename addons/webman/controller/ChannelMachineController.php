@@ -11,7 +11,6 @@ use addons\webman\model\MachineKeepingLog;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\Player;
 use addons\webman\service\WalletService;
-use app\service\machine\MachineServices;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -29,7 +28,7 @@ use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Arr;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
-use think\Exception;
+use Exception;
 use Webman\Push\PushException;
 
 /**
@@ -546,6 +545,39 @@ class ChannelMachineController
             }, function ($query) use ($quickSearch) {
                 $query->orderBy('last_game_at', 'desc');
             })->forPage($page, $pageSize)->get();
+
+        // 批量获取机台状态（避免 N+1 问题）
+        $machineIds = $data->pluck('id')->toArray();
+        $statusMap = [];
+
+        if (!empty($machineIds)) {
+            try {
+                $statusResults = \app\service\MachineApiService::batchGetMachineStatus($machineIds);
+                foreach ($statusResults as $result) {
+                    $status = new \stdClass();
+                    // 合并 machine_info 数据
+                    if (isset($result['machine_info'])) {
+                        foreach ($result['machine_info'] as $key => $value) {
+                            $status->$key = $value;
+                        }
+                    }
+                    // 合并 cache_data 数据（移除键名前缀）
+                    if (isset($result['cache_data'])) {
+                        foreach ($result['cache_data'] as $key => $value) {
+                            $cleanKey = str_replace('machine_tcp_data_cache_' . $result['machine_id'] . '_', '', $key);
+                            $status->$cleanKey = $value;
+                        }
+                    }
+                    $statusMap[$result['machine_id']] = $status;
+                }
+            } catch (\Exception $e) {
+                \support\Log::error('Batch get machine status failed', [
+                    'error' => $e->getMessage(),
+                    'machine_ids' => $machineIds
+                ]);
+            }
+        }
+
         $list = [];
         /** @var Machine $item */
         foreach ($data as $item) {
@@ -565,8 +597,9 @@ class ChannelMachineController
                 $mediaKey++;
             }
 
-            $services = MachineServices::createServices($item);
-            $seconds = $services->keep_seconds;
+            // 使用批量获取的状态数据（避免 N+1 问题）
+            $services = $statusMap[$item->id] ?? new \stdClass();
+            $seconds = $services->keep_seconds ?? 0;
             if ($seconds > 3600) {
                 $hours = intval($seconds / 3600);
                 $time = $hours . ":" . gmstrftime('%M:%S', $seconds);
@@ -579,11 +612,11 @@ class ChannelMachineController
             if (!empty($giveCache)) {
                 $givePoint = $giveCache['gift_point'] ?? 0;
             }
-            $wash = floor((($services->point - $givePoint)) * ($item->odds_x ?? 1) / ($item->odds_y ?? 1));
-            $lastPointAt = $services->last_point_at;
-            $lastPlayTime = $services->last_play_time;
-            $playStartTime = $services->play_start_time;
-            $actionTime = $services->action_time;
+            $wash = floor(((($services->point ?? 0) - $givePoint)) * ($item->odds_x ?? 1) / ($item->odds_y ?? 1));
+            $lastPointAt = $services->last_point_at ?? 0;
+            $lastPlayTime = $services->last_play_time ?? 0;
+            $playStartTime = $services->play_start_time ?? 0;
+            $actionTime = $services->action_time ?? 0;
             $machineData = [
                 'id' => $item->id,
                 'name' => $item->name,
@@ -599,34 +632,34 @@ class ChannelMachineController
                 'last_game_at' => $item->last_game_at ?? '',
                 'last_point_at' => !empty($lastPointAt) ? date('Y-m-d H:i:s', $lastPointAt) : '',
                 'last_play_time' => !empty($lastPlayTime) ? date('Y-m-d H:i:s', $lastPlayTime) : '',
-                'auto' => $services->auto,
-                'reward_status' => $services->reward_status,
+                'auto' => $services->auto ?? 0,
+                'reward_status' => $services->reward_status ?? 0,
                 'play_start_time' => !empty($playStartTime) ? date('Y-m-d H:i:s', $playStartTime) : '',
-                'point' => $services->point,
-                'score' => $services->score,
-                'player_open_point' => $services->player_open_point,
-                'player_wash_point' => $services->player_wash_point,
+                'point' => $services->point ?? 0,
+                'score' => $services->score ?? 0,
+                'player_open_point' => $services->player_open_point ?? 0,
+                'player_wash_point' => $services->player_wash_point ?? 0,
                 'action_time' => !empty($actionTime) ? date('Y-m-d H:i:s', $actionTime) : '',
-                'keeping' => $services->keeping,
+                'keeping' => $services->keeping ?? 0,
                 'wash' => $wash > 0 ? $wash : 0,
                 'src_list' => $srcList,
                 'iframe_src' => $iframeSrc,
             ];
             switch ($item->type) {
                 case GameType::TYPE_SLOT:
-                    $machineData['move_point'] = $services->move_point;
-                    $machineData['bet'] = $services->bet;
-                    $machineData['win'] = $services->win;
-                    $machineData['bb'] = $services->bb;
-                    $machineData['rb'] = $services->rb;
-                    $machineData['player_pressure'] = $services->bet - $services->player_pressure;
-                    $machineData['player_score'] = $services->win - $services->player_score;
+                    $machineData['move_point'] = $services->move_point ?? 0;
+                    $machineData['bet'] = $services->bet ?? 0;
+                    $machineData['win'] = $services->win ?? 0;
+                    $machineData['bb'] = $services->bb ?? 0;
+                    $machineData['rb'] = $services->rb ?? 0;
+                    $machineData['player_pressure'] = ($services->bet ?? 0) - ($services->player_pressure ?? 0);
+                    $machineData['player_score'] = ($services->win ?? 0) - ($services->player_score ?? 0);
                     break;
                 case GameType::TYPE_STEEL_BALL:
-                    $machineData['turn'] = $services->turn;
-                    $machineData['win_number'] = $services->win_number;
-                    $machineData['push_auto'] = $services->push_auto;
-                    $machineData['player_win_number'] = $services->win_number - $services->player_win_number;
+                    $machineData['turn'] = $services->turn ?? 0;
+                    $machineData['win_number'] = $services->win_number ?? 0;
+                    $machineData['push_auto'] = $services->push_auto ?? 0;
+                    $machineData['player_win_number'] = ($services->win_number ?? 0) - ($services->player_win_number ?? 0);
                     break;
             }
             $list[] = $machineData;
@@ -660,10 +693,16 @@ class ChannelMachineController
         if (empty($machine)) {
             return message_error(admin_trans('machine.has_un_gaming'));
         }
-        $services = MachineServices::createServices($machine, Container::getInstance()->translator->getLocale());
+
+        // 通过 API 获取机台状态
+        $status = $this->getMachineStatusViaApi($machine, Container::getInstance()->translator->getLocale());
+
         if ($machine->gaming == 0) {
             return message_error(admin_trans('machine.has_un_gaming'));
         }
+
+        $newKeepSeconds = $status->keep_seconds ?? 0;
+
         if (!empty($duration) && $duration > 0) {
             switch ($actionType) {
                 case 2:
@@ -674,36 +713,82 @@ class ChannelMachineController
                     break;
             }
             if ($type == 1) {
-                $services->keep_seconds = bcadd($services->keep_seconds, $duration);
+                $newKeepSeconds = bcadd($newKeepSeconds, $duration);
             } else {
-                $services->keep_seconds = max(bcsub($services->keep_seconds, $duration), 0);
+                $newKeepSeconds = max(bcsub($newKeepSeconds, $duration), 0);
             }
+
+            // 通过 API 更新保留时长
+            \app\service\MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds);
         }
+
         sendSocketMessage('player-' . $machine->gaming_user_id . '-' . $machine->id, [
             'msg_type' => 'player_machine_keeping',
             'player_id' => $machine->gaming_user_id,
             'machine_id' => $machine->id,
-            'keep_seconds' => $services->keep_seconds,
-            'keeping' => $services->keeping
+            'keep_seconds' => $newKeepSeconds,
+            'keeping' => $status->keeping ?? 0
         ]);
         sendSocketMessage('player-' . $machine->gaming_user_id, [
             'msg_type' => 'player_machine_keeping',
             'player_id' => $machine->gaming_user_id,
             'machine_id' => $machine->id,
-            'keep_seconds' => $services->keep_seconds,
-            'keeping' => $services->keeping
+            'keep_seconds' => $newKeepSeconds,
+            'keeping' => $status->keeping ?? 0
         ]);
 
         $machineKeepingLog = new MachineKeepingLog();
         $machineKeepingLog->player_id = 0;
         $machineKeepingLog->machine_id = $machine->id;
         $machineKeepingLog->machine_name = $machine->name;
-        $machineKeepingLog->keep_seconds = $services->keep_seconds;
+        $machineKeepingLog->keep_seconds = $newKeepSeconds;
         $machineKeepingLog->is_system = 2;
         $machineKeepingLog->user_id = Admin::id();
         $machineKeepingLog->department_id = Admin::user()->department_id;
         $machineKeepingLog->save();
 
         return message_success(admin_trans('machine.action.action_success'));
+    }
+
+    /**
+     * 通过 API 获取机台状态
+     *
+     * @param Machine $machine 机台对象
+     * @param string $lang 语言
+     * @return object 返回一个包含机台状态的对象
+     */
+    private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
+    {
+        try {
+            $result = \app\service\MachineApiService::getMachineStatus($machine->id, $lang);
+
+            // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
+            $status = new \stdClass();
+
+            // 从 machine_info 中提取数据
+            if (isset($result['machine_info'])) {
+                foreach ($result['machine_info'] as $key => $value) {
+                    $status->$key = $value;
+                }
+            }
+
+            // 从 cache_data 中提取数据
+            if (isset($result['cache_data'])) {
+                foreach ($result['cache_data'] as $key => $value) {
+                    // 移除前缀
+                    $cleanKey = str_replace('machine_tcp_data_cache_' . $machine->id . '_', '', $key);
+                    $status->$cleanKey = $value;
+                }
+            }
+
+            return $status;
+        } catch (\Exception $e) {
+            \support\Log::error('Get machine status via API failed', [
+                'machine_id' => $machine->id,
+                'error' => $e->getMessage()
+            ]);
+            // 返回一个空对象，避免后续代码报错
+            return new \stdClass();
+        }
     }
 }

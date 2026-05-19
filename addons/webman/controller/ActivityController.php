@@ -24,8 +24,8 @@ use ExAdmin\ui\component\layout\Space;
 use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use support\Db;
-use think\Exception;
 
 /**
  * 活动管理

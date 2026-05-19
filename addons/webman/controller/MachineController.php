@@ -18,7 +18,6 @@ use addons\webman\model\Player;
 use addons\webman\service\MediaServer;
 use addons\webman\service\WalletService;
 use app\service\machine\Jackpot;
-use app\service\machine\MachineServices;
 use app\service\machine\Slot;
 use app\service\machine\SongJackpot;
 use app\service\machine\SongSlot;
@@ -796,8 +795,7 @@ class MachineController
                     $media->sort = $sort;
                     $media->is_ams = $isAms;
                     $media->user_id = Admin::id() ?? 0;
-                    $media->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
+                    $media->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                     $pushList = [];
                     $insertData = [];
                     if ($isAms == 0) {
@@ -1237,9 +1235,11 @@ class MachineController
         return Form::create(new $this->model(), function (Form $form) use ($id) {
             /** @var Machine $data */
             $data = $form->driver()->model()->where('id', $id)->first();
-            $services = MachineServices::createServices($data, Container::getInstance()->translator->getLocale());
-            $data->keep_seconds = $services->keep_seconds;
-            $data->keeping = $services->keeping;
+
+            // 通过 API 获取机台状态
+            $status = $this->getMachineStatusViaApi($data, Container::getInstance()->translator->getLocale());
+            $data->keep_seconds = $status->keep_seconds ?? 0;
+            $data->keeping = $status->keeping ?? 0;
             $form->push(Detail::create($data, function (Detail $detail) {
                 $detail->item('keep_seconds', admin_trans('machine.fields.keep_seconds'))->display(function ($val) {
                     return CarbonInterval::seconds($val)->cascade()->forHumans(null, true);
@@ -1283,13 +1283,18 @@ class MachineController
             $form->saving(function (Form $form) use ($id, $data) {
                 /** @var Machine $machine */
                 $machine = $form->driver()->model()->where('id', $id)->first();
-                $services = MachineServices::createServices($machine,
-                    Container::getInstance()->translator->getLocale());
+
+                // 通过 API 获取机台当前状态
+                $status = $this->getMachineStatusViaApi($machine, Container::getInstance()->translator->getLocale());
+
                 if ($machine->gaming == 0) {
                     return message_error(admin_trans('machine.has_un_gaming'));
                 }
+
                 $inputData = $form->input();
                 $duration = 0;
+                $newKeepSeconds = $status->keep_seconds ?? 0;
+
                 if (isset($inputData['duration']) && !empty($inputData['duration']) && $inputData['duration'] > 0) {
                     switch ($inputData['type']) {
                         case 1:
@@ -1303,37 +1308,40 @@ class MachineController
                             break;
                     }
                     if ($inputData['action_type'] == 1) {
-                        $services->keep_seconds = bcadd($services->keep_seconds, $duration);
+                        $newKeepSeconds = bcadd($newKeepSeconds, $duration);
                     } else {
-                        $services->keep_seconds = max(bcsub($services->keep_seconds, $duration), 0);
+                        $newKeepSeconds = max(bcsub($newKeepSeconds, $duration), 0);
                     }
+
+                    // 通过 API 更新保留时长
+                    MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds);
                 }
+
                 sendSocketMessage('player-' . $machine->gaming_user_id . '-' . $machine->id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
                 sendSocketMessage('player-' . $machine->gaming_user_id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
 
                 $machineKeepingLog = new MachineKeepingLog();
                 $machineKeepingLog->player_id = 0;
                 $machineKeepingLog->machine_id = $data->id;
                 $machineKeepingLog->machine_name = $data->name;
-                $machineKeepingLog->keep_seconds = $services->keep_seconds;
+                $machineKeepingLog->keep_seconds = $newKeepSeconds;
                 $machineKeepingLog->is_system = 2;
                 $machineKeepingLog->user_id = Admin::id();
                 $machineKeepingLog->department_id = Admin::user()->department_id;
                 $machineKeepingLog->remark = $inputData['remark'];
                 $machineKeepingLog->save();
-
 
                 return message_success(admin_trans('machine.action.action_success'));
             });
@@ -2008,15 +2016,16 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine);
-            $services->has_lock = $data['has_lock'];
-            if ($services->has_lock == 1) {
+            // 通过 API 更新机台锁状态
+            MachineApiService::updateMachineState($machine->id, 'has_lock', $data['has_lock']);
+
+            if ($data['has_lock'] == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
             }
         } catch (\Exception $e) {
             return message_error($e->getMessage());
         }
-        
+
         return message_success(admin_trans('machine.action.action_success'));
     }
 
@@ -2070,22 +2079,25 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine);
-            if ($services->keeping == 1) {
+            // 通过 API 获取机台状态
+            $status = $this->getMachineStatusViaApi($machine);
+
+            if ($status->keeping == 1) {
                 //鋼珠自動中不能保留
                 if ($machine->type == 0) {
-                    if ($services->auto == 1) {
+                    if ($status->auto == 1) {
                         throw new Exception(admin_trans('machine.btn.no_keeping'));
                     }
                 }
-                $services->keeping = 1;
-                $services->keeping_user_id = $machine->gaming_user_id;
-                $services->last_keep_at = time();
+                // 通过 API 更新保留状态
+                MachineApiService::updateMachineState($machine->id, 'keeping', 1);
+                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', $machine->gaming_user_id);
+                MachineApiService::updateMachineState($machine->id, 'last_keep_at', time());
             } else {
-                $services->keeping = 0;
-                $services->keeping_user_id = 0;
+                MachineApiService::updateMachineState($machine->id, 'keeping', 0);
+                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', 0);
             }
-            $services->last_play_time = time();
+            MachineApiService::updateMachineState($machine->id, 'last_play_time', time());
         } catch (\Exception $e) {
             return message_error($e->getMessage());
         }

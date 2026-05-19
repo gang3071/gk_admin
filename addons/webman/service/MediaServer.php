@@ -8,6 +8,7 @@ use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineMediaPush;
 use addons\webman\model\MachineRecording;
 use addons\webman\model\MachineTencentPlay;
+use Exception;
 use support\Db;
 use support\Log;
 use TencentCloud\Common\Credential;
@@ -19,7 +20,6 @@ use TencentCloud\Live\V20180801\Models\DescribeLiveStreamStateRequest;
 use TencentCloud\Live\V20180801\Models\DescribeStreamPlayInfoListRequest;
 use TencentCloud\Live\V20180801\Models\ForbidLiveStreamRequest;
 use TencentCloud\Live\V20180801\Models\ResumeLiveStreamRequest;
-use think\Exception;
 use WebmanTech\LaravelHttpClient\Facades\Http;
 
 class MediaServer

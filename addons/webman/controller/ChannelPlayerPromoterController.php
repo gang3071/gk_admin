@@ -45,10 +45,10 @@ use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use Illuminate\Support\Str;
 use support\Db;
 use support\Log;
-use think\Exception;
 use Webman\RedisQueue\Client;
 
 /**

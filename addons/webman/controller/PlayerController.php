@@ -43,7 +43,6 @@ use addons\webman\model\PromoterProfitRecord;
 use addons\webman\model\SystemSetting;
 use addons\webman\service\WalletService;
 use app\exception\GameException;
-use app\service\machine\MachineServices;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -68,11 +67,11 @@ use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Db;
 use support\Log;
-use think\Exception;
 use Webman\Push\PushException;
 
 /**
@@ -2020,24 +2019,33 @@ class PlayerController
         $machine->gaming = 1;
         $machine->last_game_at = date('Y-m-d H:i:s');
         $machine->save();
-        $services = MachineServices::createServices($machine);
+
+        // 通过 API 获取机台状态
+        $status = $this->getMachineStatusViaApi($machine);
+
         if ($machine->gaming_user_id != $changePlayer->id) {
             //斯洛 移分off
             if ($machine->type == GameType::TYPE_SLOT) {
-                if ($services->move_point == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
-                    $services->sendCmd($services::MOVE_POINT_ON, 0, 'player', $changePlayer->id);
+                if (($status->move_point ?? 0) == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
+                    // 通过 API 发送移分指令
+                    $cmdClass = match([$machine->type, $machine->control_type]) {
+                        [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => \app\service\machine\Slot::class,
+                        [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => \app\service\machine\SongSlot::class,
+                        default => \app\service\machine\Slot::class,
+                    };
+                    \app\service\MachineApiService::sendCmd($machine->id, $cmdClass::MOVE_POINT_ON, 0, $changePlayer->id);
                 }
-                $playerScore = $services->player_score;
-                $playerPressure = $services->player_pressure;
+                $playerScore = $status->player_score ?? 0;
+                $playerPressure = $status->player_pressure ?? 0;
                 if (empty($playerPressure)) {
-                    $services->player_pressure = $services->bet;
+                    \app\service\MachineApiService::updateMachineState($machine->id, 'player_pressure', $status->bet ?? 0);
                 }
                 if (empty($playerScore)) {
-                    $services->player_score = $services->win;
+                    \app\service\MachineApiService::updateMachineState($machine->id, 'player_score', $status->win ?? 0);
                 }
             }
             if ($machine->type == GameType::TYPE_STEEL_BALL) {
-                $services->player_win_number = 0;
+                \app\service\MachineApiService::updateMachineState($machine->id, 'player_win_number', 0);
             }
             //记录游戏局记录
             /** @var PlayerGameRecord $gameRecord */
@@ -2064,9 +2072,11 @@ class PlayerController
             $machine->last_point_at = date('Y-m-d H:i:s');
             $machine->save();
 
-            $services->last_play_time = time();
-            $services->gaming = 1;
-            $services->gaming_user_id = $changePlayer->id;
+            // 通过 API 更新机台状态
+            \app\service\MachineApiService::updateMachineState($machine->id, 'last_play_time', time());
+            \app\service\MachineApiService::updateMachineState($machine->id, 'gaming', 1);
+            \app\service\MachineApiService::updateMachineState($machine->id, 'gaming_user_id', $changePlayer->id);
+
             // 玩家上分后需剔除其他观看中玩家
             sendSocketMessage('group-' . $machine->id, [
                 'msg_type' => 'machine_start',
@@ -2075,24 +2085,27 @@ class PlayerController
                 'machine_code' => $machine->code,
                 'gaming_user_id' => $machine->gaming_user_id,
             ]);
+
             /** @var SystemSetting $setting */
             $setting = SystemSetting::where('feature', 'gift_keeping_minutes')->where('status', 1)->first();
             if (!empty($setting) && $setting->num >= 0) {
-                $services->keep_seconds = bcmul($setting->num, 60);
+                $newKeepSeconds = bcmul($setting->num, 60);
+                \app\service\MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds);
+
                 // 发送增加保留时长消息
                 sendSocketMessage('player-' . $machine->gaming_user_id . '-' . $machine->id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
                 sendSocketMessage('player-' . $machine->gaming_user_id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
             }
         }
@@ -3280,8 +3293,7 @@ class PlayerController
                         $playerMoneyEditLog->inmoney = $playerRechargeRecord->inmoney;
                         $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerMoneyEditLog->origin_money = $beforeGameAmount;
                         $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
                         $playerMoneyEditLog->save();
@@ -3365,8 +3377,7 @@ class PlayerController
                     $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
                     $playerWithdrawRecord->remark = $form->input('remark') ?? '';
                     $playerWithdrawRecord->user_id = Admin::id() ?? 0;
-                    $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
+                    $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                     $playerWithdrawRecord->save();
 
                     // ✅ 使用 WalletService 原子扣款
@@ -3404,8 +3415,7 @@ class PlayerController
                     $playerMoneyEditLog->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee, 2);
                     $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                     $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                    $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
+                    $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                     $playerMoneyEditLog->origin_money = $beforeGameAmount;
                     $playerMoneyEditLog->after_money = $afterGameAmount;  // ✅ 使用返回值
                     $playerMoneyEditLog->save();
@@ -3807,5 +3817,47 @@ class PlayerController
             $grid->hideAdd();
             $grid->expandFilter();
         });
+    }
+
+    /**
+     * 通过 API 获取机台状态
+     *
+     * @param Machine $machine 机台对象
+     * @param string $lang 语言
+     * @return object 返回一个包含机台状态的对象
+     */
+    private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
+    {
+        try {
+            $result = \app\service\MachineApiService::getMachineStatus($machine->id, $lang);
+
+            // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
+            $status = new \stdClass();
+
+            // 从 machine_info 中提取数据
+            if (isset($result['machine_info'])) {
+                foreach ($result['machine_info'] as $key => $value) {
+                    $status->$key = $value;
+                }
+            }
+
+            // 从 cache_data 中提取数据
+            if (isset($result['cache_data'])) {
+                foreach ($result['cache_data'] as $key => $value) {
+                    // 移除前缀
+                    $cleanKey = str_replace('machine_tcp_data_cache_' . $machine->id . '_', '', $key);
+                    $status->$cleanKey = $value;
+                }
+            }
+
+            return $status;
+        } catch (\Exception $e) {
+            \support\Log::error('Get machine status via API failed', [
+                'machine_id' => $machine->id,
+                'error' => $e->getMessage()
+            ]);
+            // 返回一个空对象，避免后续代码报错
+            return new \stdClass();
+        }
     }
 }

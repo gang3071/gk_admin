@@ -374,4 +374,82 @@ class MachineApiService
             throw $e;
         }
     }
+
+    /**
+     * 批量获取机台状态
+     *
+     * @param array $machineIds 机台ID列表
+     * @param string $lang 语言
+     * @return array
+     * @throws Exception
+     */
+    public static function batchGetMachineStatus(array $machineIds, string $lang = 'zh_CN'): array
+    {
+        try {
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/batch-status', [
+                'json' => [
+                    'machine_ids' => $machineIds,
+                    'lang' => $lang,
+                ]
+            ]);
+
+            return self::handleResponse($response, '批量获取机台状态');
+
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::batchGetMachineStatus failed', [
+                'machine_ids' => $machineIds,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            Log::error('MachineApiService::batchGetMachineStatus failed', [
+                'machine_ids' => $machineIds,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * 更新机台状态
+     *
+     * @param int $machineId 机台ID
+     * @param string $field 字段名
+     * @param mixed $value 字段值
+     * @param string $lang 语言
+     * @return array
+     * @throws Exception
+     */
+    public static function updateMachineState(int $machineId, string $field, $value, string $lang = 'zh_CN'): array
+    {
+        try {
+            $client = self::createClient();
+            $response = $client->post('/api/admin/machine/update-state', [
+                'json' => [
+                    'machine_id' => $machineId,
+                    'field' => $field,
+                    'value' => $value,
+                    'lang' => $lang,
+                ]
+            ]);
+
+            return self::handleResponse($response, '更新机台状态');
+
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::updateMachineState failed', [
+                'machine_id' => $machineId,
+                'field' => $field,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            Log::error('MachineApiService::updateMachineState failed', [
+                'machine_id' => $machineId,
+                'field' => $field,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
 }

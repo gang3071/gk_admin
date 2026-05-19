@@ -162,7 +162,7 @@ class AnnouncementController
             $form->saving(function (Form $form) {
                 if (!$form->isEdit()) {
                     $form->input('admin_id', Admin::id());
-                    $form->input('admin_name', !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic', [], 'message'));
+                    $form->input('admin_name', !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic'));
                 }
             });
             $form->layout('vertical');

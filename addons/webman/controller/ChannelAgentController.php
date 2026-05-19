@@ -1369,7 +1369,7 @@ class ChannelAgentController
                 } catch (Exception $e) {
                     DB::rollBack();
                     Log::error('store_open_score', [$e->getTrace()]);
-                    return message_error($e->getMessage() ?? trans('system_error', [], 'message'));
+                    return message_error($e->getMessage() ?? admin_trans('message.system_error'));
                 }
 
                 // 发送充值通知（发送游戏点数）

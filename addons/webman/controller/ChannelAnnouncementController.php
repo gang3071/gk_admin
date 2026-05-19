@@ -156,7 +156,7 @@ class ChannelAnnouncementController
                 if (!$form->isEdit()) {
                     $form->input('admin_id', Admin::id());
                     $form->input('department_id', Admin::user()->department_id);
-                    $form->input('admin_name', !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic', [], 'message'));
+                    $form->input('admin_name', !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic'));
                 }
             });
             $form->layout('vertical');
