@@ -37,6 +37,7 @@ class AgentStoreProfitReportController
         $exAdminFilter = Request::input('ex_admin_filter', []);
         $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
         $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
+        $dateType = $exAdminFilter['date_type'] ?? null;
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
         // 获取代理下的所有店家
@@ -94,12 +95,16 @@ class AgentStoreProfitReportController
             $deliveryQuery = PlayerDeliveryRecord::query()
                 ->whereIn('player_id', $playerIds);
 
-            // 时间筛选
-            if (!empty($createdAtStart)) {
-                $deliveryQuery->where('created_at', '>=', $createdAtStart);
-            }
-            if (!empty($createdAtEnd)) {
-                $deliveryQuery->where('created_at', '<=', $createdAtEnd);
+            // 时间筛选：优先使用结算周期，否则使用手动时间范围
+            if (!empty($dateType)) {
+                $deliveryQuery->where(getDateWhere($dateType, 'created_at'));
+            } else {
+                if (!empty($createdAtStart)) {
+                    $deliveryQuery->where('created_at', '>=', $createdAtStart);
+                }
+                if (!empty($createdAtEnd)) {
+                    $deliveryQuery->where('created_at', '<=', $createdAtEnd);
+                }
             }
 
             $deliveryData = $deliveryQuery->selectRaw("
@@ -113,12 +118,16 @@ class AgentStoreProfitReportController
                 ->whereIn('player_id', $playerIds)
                 ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
 
-            // 时间筛选
-            if (!empty($createdAtStart)) {
-                $lotteryQuery->where('created_at', '>=', $createdAtStart);
-            }
-            if (!empty($createdAtEnd)) {
-                $lotteryQuery->where('created_at', '<=', $createdAtEnd);
+            // 时间筛选：优先使用结算周期，否则使用手动时间范围
+            if (!empty($dateType)) {
+                $lotteryQuery->where(getDateWhere($dateType, 'created_at'));
+            } else {
+                if (!empty($createdAtStart)) {
+                    $lotteryQuery->where('created_at', '>=', $createdAtStart);
+                }
+                if (!empty($createdAtEnd)) {
+                    $lotteryQuery->where('created_at', '<=', $createdAtEnd);
+                }
             }
 
             $lotteryData = $lotteryQuery->selectRaw("
@@ -412,6 +421,21 @@ class AgentStoreProfitReportController
                     ->placeholder(admin_trans('agent_store_profit.filter.select_store'))
                     ->options(['' => admin_trans('agent_store_profit.filter.all_stores')] + $storeOptions)
                     ->style(['width' => '300px']);
+
+                // 结算周期下拉选择
+                $filter->select('date_type')
+                    ->placeholder(admin_trans('machine_report.fields.date_type'))
+                    ->showSearch()
+                    ->dropdownMatchSelectWidth()
+                    ->style(['width' => '200px'])
+                    ->options([
+                        1 => admin_trans('machine_report.date_type.1'),
+                        2 => admin_trans('machine_report.date_type.2'),
+                        3 => admin_trans('machine_report.date_type.3'),
+                        4 => admin_trans('machine_report.date_type.4'),
+                        5 => admin_trans('machine_report.date_type.5'),
+                        6 => admin_trans('machine_report.date_type.6'),
+                    ]);
 
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
