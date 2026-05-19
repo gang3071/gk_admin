@@ -1686,10 +1686,11 @@ if (!function_exists('getMachineAction')) {
         }
         $optionList = [];
         if (!empty($data)) {
+            // 翻译键修正：machine_action.function.{type}_{controlType}.{item}
             foreach ($data as $item) {
                 $optionList[] = [
                     'key' => $item,
-                    'action' => admin_trans('machine_action.machine_action.' . $type . '.' . $item),
+                    'action' => admin_trans('machine_action.function.' . $type . '_' . $controlType . '.' . $item),
                 ];
             }
         }
