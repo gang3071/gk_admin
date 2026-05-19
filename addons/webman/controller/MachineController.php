@@ -719,23 +719,23 @@ class MachineController
         $isAms = 0,
     ): bool|MachineMedia {
         if (!empty($pushIp) || !empty($mediaIp) || !empty($pullIp) || !empty($mediaApp)) {
-            Db::beginTransaction();
-            try {
-                if (empty($pushIp)) {
-                    throw new Exception(admin_trans('machine_media.push_ip_not_found'));
-                }
-                if (empty($pullIp)) {
-                    throw new Exception(admin_trans('machine_media.pull_ip_not_found'));
-                }
-                if (empty($mediaIp)) {
-                    throw new Exception(admin_trans('machine_media.media_ip_not_found'));
-                }
-                if (empty($code)) {
-                    throw new Exception(admin_trans('machine_media.media_name_not_found'));
-                }
-                if (empty($mediaApp)) {
-                    throw new Exception(admin_trans('machine_media.media_app_not_found'));
-                }
+            // ⚠️ 移除内层事务，由外层调用者控制事务
+            // 这样可以避免嵌套事务导致的锁等待超时问题
+            if (empty($pushIp)) {
+                throw new Exception(admin_trans('machine_media.push_ip_not_found'));
+            }
+            if (empty($pullIp)) {
+                throw new Exception(admin_trans('machine_media.pull_ip_not_found'));
+            }
+            if (empty($mediaIp)) {
+                throw new Exception(admin_trans('machine_media.media_ip_not_found'));
+            }
+            if (empty($code)) {
+                throw new Exception(admin_trans('machine_media.media_name_not_found'));
+            }
+            if (empty($mediaApp)) {
+                throw new Exception(admin_trans('machine_media.media_app_not_found'));
+            }
                 /** @var MachineMedia $media */
                 if (!empty($mediaId)) {
                     $media = MachineMedia::find($mediaId);
@@ -839,11 +839,6 @@ class MachineController
                         MachineMediaPush::query()->insert($insertData);
                     }
                 }
-                Db::commit();
-            } catch (\Exception) {
-                Db::rollback();
-                throw new Exception(admin_trans('machine_media.get_media_fail'));
-            }
 
             return $media;
         }

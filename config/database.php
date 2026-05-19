@@ -42,7 +42,10 @@ return [
             'strict' => true,
             'engine' => null,
             'options' => [
-                \PDO::ATTR_TIMEOUT => 3
+                // 增加连接超时时间，避免复杂操作时超时
+                \PDO::ATTR_TIMEOUT => 10,
+                // 设置字符集
+                \PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4, SESSION wait_timeout = 28800, SESSION interactive_timeout = 28800'
             ],
         ],
     ]
