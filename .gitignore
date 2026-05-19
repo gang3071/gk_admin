@@ -10,8 +10,10 @@ composer.lock
 .env
 .env.local
 .env.*.local
+.env.*.example
 # Firebase/Google Cloud credentials
 comechat-d5578-b1ad675314bd.json
+
 # IDE
 .idea/
 .vscode/
@@ -47,3 +49,72 @@ Desktop.ini
 
 # Admin assets (可选，如果需要提交则注释掉)
 # /public/admin/
+
+# ==========================================
+# Claude Code 配置
+# ==========================================
+.claude/
+
+# ==========================================
+# 文档和脚本（保留关键文档）
+# ==========================================
+# 忽略所有 Markdown 文档
+*.md
+# 但保留关键文档
+!README.md
+!CLAUDE.md
+
+# 文档目录
+/docs/
+
+# ==========================================
+# 数据库相关
+# ==========================================
+# 调试 SQL 脚本
+*.sql
+# 但保留 Phinx 迁移目录中的 PHP 迁移文件（排除 SQL）
+!database/phinx_migrations/*.php
+
+# 数据库修复脚本目录
+/database/fixes/
+
+# 数据库迁移文档和脚本
+/database/migrations/*.md
+/database/migrations/*.sql
+/database/migrations/*.sh
+/database/migrations/*.bat
+/database/migrations/*.php
+
+# 但保留 Phinx 配置
+!phinx.php
+
+# ==========================================
+# 脚本文件
+# ==========================================
+# Shell 脚本
+*.sh
+# 批处理脚本
+*.bat
+
+# 工具脚本
+create_translations.php
+export_translations_from_db.php
+find_untranslated.sh
+check_redis_status.sh
+diagnose_machine_status.sh
+fix_auto_shift.sh
+fix_auto_shift.bat
+monitor_queue.sh
+restart_queue.sh
+update_dependencies.sh
+update_dependencies.bat
+verify_mongodb_cleanup.sh
+verify_mongodb_cleanup.bat
+
+# 脚本目录
+/scripts/
+
+# ==========================================
+# 临时代码和常量
+# ==========================================
+/app/constants/
