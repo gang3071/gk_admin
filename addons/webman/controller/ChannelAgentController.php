@@ -1057,7 +1057,6 @@ class ChannelAgentController
             }
 
             // 店家不再有 PlayerPlatformCash，设为 null
-            $storePlatformCash = null;
             /** @var PlayerPlatformCash $machinePlatformCash */
             $machinePlatformCash = PlayerPlatformCash::query()->where('player_id', $data['id'])->first();
 
@@ -1142,7 +1141,7 @@ class ChannelAgentController
                     $jsPointsUnit = admin_trans('channel_agent.js.points_unit');
                     $jsExchangeRateLabel = admin_trans('channel_agent.js.exchange_rate_label');
                     $form->push(Html::markdown(
-                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>' . $jsConversionPreview . '</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">' . $jsPleaseEnterAmount . '</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 ' . $jsPointsUnit . '</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">' . $jsExchangeRateLabel . ' 1 ' . $currencySymbol . ' = ' . $ratio . ' ' . admin_trans('channel_agent.game_points') . '</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '",pu="' . $jsPointsUnit . '",pea="' . $jsPleaseEnterAmount . '";function u(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" "+pu,p.style.color="#0ea5e9"):(m.textContent=pea,p.textContent="0 "+pu,p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
+                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>' . $jsConversionPreview . '</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">' . $jsPleaseEnterAmount . '</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 ' . $jsPointsUnit . '</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">' . $jsExchangeRateLabel . ' 1 ' . $currencySymbol . ' = ' . $ratio . ' ' . admin_trans('channel_agent.game_points') . '</div></div><script>(function(){var r=' . $ratio . ',s="' . $currencySymbol . '",pu="' . $jsPointsUnit . '",pea="' . $jsPleaseEnterAmount . '";function u(){setTimeout(function(){var i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){var v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" "+pu,p.style.color="#0ea5e9"):(m.textContent=pea,p.textContent="0 "+pu,p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
                     ));
                 }
             } else {
@@ -1355,15 +1354,11 @@ class ChannelAgentController
                     $rechargeDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
                     $rechargeDeliveryRecord->source = 'artificial_recharge';
                     $rechargeDeliveryRecord->amount = $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_before = $deviceWallet->money - $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_after = $deviceWallet->money;
+                    $rechargeDeliveryRecord->amount_before = $beforeGameAmount;
+                    $rechargeDeliveryRecord->amount_after = $afterGameAmount;
                     $rechargeDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                     $rechargeDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                     $rechargeDeliveryRecord->save();
-
-                    // 注意：旧的推荐系统营收统计已移除
-                    // 新架构中，营收统计通过 StoreAgentProfitRecord 表记录
-                    // 可通过查询相关记录表实时计算，而不是在此累加
 
                     DB::commit();
                 } catch (Exception $e) {

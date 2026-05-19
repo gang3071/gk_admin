@@ -150,7 +150,7 @@ class System extends SystemAbstract
     
     /**
      * 上传写入数据库
-     * @param $data 上传入库数据
+     * @param $data
      * @return Response
      */
     public function upload($data): Response
@@ -165,9 +165,9 @@ class System extends SystemAbstract
     
     /**
      * 验证权限
-     * @param $class 类名
-     * @param $function 方法
-     * @param $method 请求method
+     * @param $class
+     * @param $function
+     * @param $method
      * @return bool
      */
     public function checkPermissions($class, $function, $method): bool
