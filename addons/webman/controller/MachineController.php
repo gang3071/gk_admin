@@ -41,7 +41,6 @@ use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Col;
-use ExAdmin\ui\component\layout\Divider;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\component\navigation\dropdown\Dropdown;
@@ -540,32 +539,62 @@ class MachineController
                 })
                 ->pane(admin_trans('machine_media.media_line'), function (Form $form) {
                     $form->hasMany('machine_media', '', function (Form $form) {
+                        $form->hidden('id');
+
+                        // 第一行：推流地址 + 拉流地址
                         $form->row(function (Form $form) {
-                            $form->hidden('id');
-                            $form->password('push_ip',
-                                admin_trans('machine_media.fields.push_ip'))->visibilityToggle(false)->span(11)->required();
-                            $form->push(Divider::create()->content(' '));
-                            $form->text('pull_ip', admin_trans('machine_media.fields.pull_ip'))->span(11)->required();
-                            $form->text('media_ip', admin_trans('machine_media.fields.media_ip'))->span(11)->required();
-                            $form->push(Divider::create()->content(' '));
-                            $form->select('media_app', admin_trans('machine_media.fields.media_app'))
-                                ->options([
-                                    'WebRTCAppEE' => 'WebRTCAppEE',
-                                    'ShenQi' => 'ShenQi',
-                                    'h265' => 'h265',
-                                    'life' => 'life',
-                                ])
-                                ->default('WebRTCAppEE')
-                                ->required()
-                                ->showSearch()
-                                ->span(11)
-                                ->dropdownMatchSelectWidth()
-                                ->style(['width' => '100%']);
-                            $form->text('stream_name',
-                                admin_trans('machine_media.fields.stream_name'))->span(11)->disabled(true)->help(admin_trans('machine.help.stream_name'));
-                            $form->push(Divider::create()->content(' '));
-                            $form->switch('is_ams', admin_trans('machine_media.fields.is_ams'));
-                        })->class(['activity-phase-has-many']);
+                            $form->column(function (Form $form) {
+                                $form->password('push_ip', admin_trans('machine_media.fields.push_ip'))
+                                    ->visibilityToggle(false)
+                                    ->required()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+
+                            $form->column(function (Form $form) {
+                                $form->text('pull_ip', admin_trans('machine_media.fields.pull_ip'))
+                                    ->required()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+                        });
+
+                        // 第二行：流媒体地址 + 流媒体APP
+                        $form->row(function (Form $form) {
+                            $form->column(function (Form $form) {
+                                $form->text('media_ip', admin_trans('machine_media.fields.media_ip'))
+                                    ->required()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+
+                            $form->column(function (Form $form) {
+                                $form->select('media_app', admin_trans('machine_media.fields.media_app'))
+                                    ->options([
+                                        'WebRTCAppEE' => 'WebRTCAppEE',
+                                        'ShenQi' => 'ShenQi',
+                                        'h265' => 'h265',
+                                        'life' => 'life',
+                                    ])
+                                    ->default('WebRTCAppEE')
+                                    ->required()
+                                    ->showSearch()
+                                    ->dropdownMatchSelectWidth()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+                        });
+
+                        // 第三行：流名称 + AMS开关
+                        $form->row(function (Form $form) {
+                            $form->column(function (Form $form) {
+                                $form->text('stream_name', admin_trans('machine_media.fields.stream_name'))
+                                    ->disabled(true)
+                                    ->help(admin_trans('machine.help.stream_name'))
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+
+                            $form->column(function (Form $form) {
+                                $form->switch('is_ams', admin_trans('machine_media.fields.is_ams'))
+                                    ->default(false);
+                            })->span(12);
+                        });
                     })->sortField('sort')->defaultRow(1);
                 })->destroyInactiveTabPane(false);
 
