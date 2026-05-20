@@ -50,6 +50,9 @@ class SliderController
                     ->rule(['max:200' => admin_trans('slider.url_max_length')])
             );
             $grid->column('channel.name', admin_trans('slider.fields.department_id'))->align('center');
+            $grid->column('ad_position', admin_trans('slider.fields.ad_position'))->display(function ($val) {
+                return admin_trans('slider.ad_position.' . $val);
+            })->align('center');
             $grid->column('status', admin_trans('slider.fields.status'))->switch()->align('center');
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
@@ -59,6 +62,17 @@ class SliderController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('announcement.fields.department_id'))
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
+                $filter->eq()->select('ad_position')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('slider.fields.ad_position'))
+                    ->options([
+                        0 => admin_trans('slider.ad_position.0'),
+                        1 => admin_trans('slider.ad_position.1'),
+                        2 => admin_trans('slider.ad_position.2'),
+                        3 => admin_trans('slider.ad_position.3'),
+                    ]);
             });
             $grid->hideDelete();
             $grid->expandFilter();
@@ -82,6 +96,13 @@ class SliderController
                 ->help(admin_trans('slider.help.picture_url_size'))
                 ->required();
             $form->select('department_id', admin_trans('slider.fields.department_id'))->options($this->getChannelOptions())->required();
+            $form->select('ad_position', admin_trans('slider.fields.ad_position'))
+                ->options([
+                    0 => admin_trans('slider.ad_position.0'),
+                    1 => admin_trans('slider.ad_position.1'),
+                    2 => admin_trans('slider.ad_position.2'),
+                    3 => admin_trans('slider.ad_position.3'),
+                ])->required();
             $form->text('url', admin_trans('slider.fields.url'))->ruleUrl()->maxlength(200);
             $form->myEditor('content', admin_trans('slider.fields.content'));
             $form->number('sort', admin_trans('slider.fields.sort'))->default($this->model::max('sort') + 1);
