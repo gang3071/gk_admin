@@ -6,8 +6,6 @@ use addons\webman\Admin;
 use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -74,6 +72,16 @@ class ChannelPlayGameRecordController
             if (!empty($exAdminFilter['player_uuid'])) {
                 $grid->model()->where('player_uuid', 'like', $exAdminFilter['player_uuid'] . '%');
             }
+            if (!empty($exAdminFilter['player_name'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('name', 'like', '%' . $exAdminFilter['player_name'] . '%');
+                });
+            }
+            if (!empty($exAdminFilter['player_phone'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('phone', 'like', '%' . $exAdminFilter['player_phone'] . '%');
+                });
+            }
             if (isset($exAdminFilter['date_type'])) {
                 $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'updated_at'));
             }
@@ -85,7 +93,7 @@ class ChannelPlayGameRecordController
             }
             if (isset($exAdminFilter['search_type'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('is_test', $exAdminFilter['search_type']);
+                    $query->where('player_source', $exAdminFilter['search_type']);
                 });
             }
             $grid->model()->orderBy('id', 'desc');
@@ -106,23 +114,27 @@ class ChannelPlayGameRecordController
             $grid->hideDeleteSelection();
             $grid->hideSelection();
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center');
-            $grid->column('player.name', admin_trans('player.fields.account'))->display(function (
-                $val,
-                PlayGameRecord $data
-            ) {
-                $image = $data->player->avatar ? Avatar::create()->src(is_numeric($data->player->avatar) ? config('def_avatar.' . $data->player->avatar) : $data->player->avatar) : Avatar::create()->icon(Icon::create('UserOutlined'));
-                return Html::create()->content([
-                    $image,
-                    Html::div()->content($data->player->name)
-                ]);
-            })->fixed(true)->align('center');
             $grid->column('player.uuid',
-                admin_trans('player.fields.uuid'))->fixed(true)->ellipsis(true)->align('center');
-            $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayGameRecord $data) {
+                admin_trans('player.fields.uuid'))->ellipsis(true)->align('center');
+            $grid->column('player.name', admin_trans('player.fields.name'))->align('center')->display(function ($val, PlayGameRecord $data) {
+                return $data->player ? $data->player->name : '';
+            });
+            $grid->column('player.phone', admin_trans('player.fields.phone'))->align('center')->display(function ($val, PlayGameRecord $data) {
+                return $data->player ? $data->player->phone : '';
+            });
+            $grid->column('player.player_source', admin_trans('player.fields.player_source'))->display(function ($val, PlayGameRecord $data) {
+                if (!$data->player) {
+                    return Html::create()->content([
+                        Tag::create(admin_trans('common.data_not_found'))->color('default')
+                    ]);
+                }
+
                 return Html::create()->content([
-                    $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
+                    $data->player->player_source == 1
+                        ? Tag::create(admin_trans('player.fields.player_source_online'))->color('green')
+                        : Tag::create(admin_trans('player.fields.player_source_offline'))->color('blue')
                 ]);
-            })->fixed(true)->align('center');
+            })->align('center');
             $grid->column('channel.name', admin_trans('channel.fields.name'))->align('center');
             $grid->column('platform_name', admin_trans('game_platform.fields.name'))->display(function (
                 $val,
@@ -144,6 +156,12 @@ class ChannelPlayGameRecordController
                 }
                 return Html::create()->content([(float)$val])->style(['color' => '#cd201f']);
             })->sortable()->align('center');
+            $grid->column('balance_before', admin_trans('play_game_record.fields.balance_before'))->display(function ($val) {
+                return $val !== null ? (float)$val : 0;
+            })->align('center');
+            $grid->column('balance_after', admin_trans('play_game_record.fields.balance_after'))->display(function ($val) {
+                return $val !== null ? (float)$val : 0;
+            })->align('center');
             $grid->column('reward', admin_trans('play_game_record.fields.reward'))->display(function ($val) {
                 return Html::create()->content(['+' . $val])->style(['color' => 'green']);
             })->align('center');
@@ -175,6 +193,8 @@ class ChannelPlayGameRecordController
             });
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player_uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player_name')->placeholder(admin_trans('player.fields.name'));
+                $filter->like()->text('player_phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('order_no')->placeholder(admin_trans('play_game_record.fields.order_no'));
                 $filter->like()->text('game_code')->placeholder(admin_trans('play_game_record.fields.game_code'));
                 $filter->eq()->select('status')
@@ -190,10 +210,10 @@ class ChannelPlayGameRecordController
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player.fields.type'))
+                    ->placeholder(admin_trans('player.fields.player_source'))
                     ->options([
-                        0 => admin_trans('player.player'),
-                        1 => admin_trans('player.fields.is_test'),
+                        1 => admin_trans('player.fields.player_source_online'),
+                        2 => admin_trans('player.fields.player_source_offline'),
                     ]);
                 $filter->eq()->select('platform_id')
                     ->showSearch()

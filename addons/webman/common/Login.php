@@ -634,6 +634,16 @@ class Login extends LoginAbstract
                 if (!empty($exAdminFilter['player_uuid'])) {
                     $query->where('player_uuid', 'like', $exAdminFilter['player_uuid'] . '%');
                 }
+                if (!empty($exAdminFilter['player_name'])) {
+                    $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('name', 'like', '%' . $exAdminFilter['player_name'] . '%');
+                    });
+                }
+                if (!empty($exAdminFilter['player_phone'])) {
+                    $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('phone', 'like', '%' . $exAdminFilter['player_phone'] . '%');
+                    });
+                }
                 if (isset($exAdminFilter['date_type'])) {
                     $query->where(getDateWhere($exAdminFilter['date_type'], 'updated_at'));
                 }
@@ -645,7 +655,7 @@ class Login extends LoginAbstract
                 }
                 if (isset($exAdminFilter['search_type'])) {
                     $query->whereHas('player', function ($query) use ($exAdminFilter) {
-                        $query->where('is_test', $exAdminFilter['search_type']);
+                        $query->where('player_source', $exAdminFilter['search_type']);
                     });
                 }
                 // 店家筛选（应用于统计查询）
