@@ -642,9 +642,9 @@ return [
         'id' => 'addons\webman\controller\MachineController\changeLock',
         'pid' => 'addons\webman\controller\MachineController\infoList',
         'action' => 'changeLock',
-        'method' => '',
+        'method' => 'post',
         'group' => 'department',
-        'url' => 'ex-admin/addons-webman-controller-MachineController/changeLock',
+        'url' => 'ex-admin/machine/changeLock',
         'title' => '机台锁切换',
     ],
     [

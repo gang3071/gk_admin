@@ -1114,7 +1114,7 @@ class MachineController
                 $services = $this->getMachineStatusViaApi($data);
                 return Switches::create(null, $services->has_lock ?? 0)
                     ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
+                    ->url('ex-admin/machine/changeLock')
                     ->field('has_lock')
                     ->params([
                         'id' => [$data->id],
@@ -1750,7 +1750,7 @@ class MachineController
                 $services = $this->getMachineStatusViaApi($data);
                 return Switches::create(null, $services->has_lock ?? 0)
                     ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
+                    ->url('ex-admin/machine/changeLock')
                     ->field('has_lock')
                     ->params([
                         'id' => [$data->id],
