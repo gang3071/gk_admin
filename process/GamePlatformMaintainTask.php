@@ -3,9 +3,8 @@
 namespace process;
 
 use app\service\GamePlatformMaintainService;
-use Workerman\Timer;
-use Workerman\Worker;
 use support\Log;
+use Workerman\Crontab\Crontab;
 
 /**
  * 游戏平台维护时间监听任务
@@ -20,14 +19,14 @@ class GamePlatformMaintainTask
     /**
      * Worker 启动时的回调
      */
-    public function onWorkerStart(Worker $worker): void
+    public function onWorkerStart(): void
     {
-        // 每分钟检查一次维护时间
-        Timer::add(60, function() {
+        // 每分钟检查一次维护时间（Cron 表达式：秒 分 时 日 月 周）
+        new Crontab('0 */1 * * * *', function () {
             $this->checkMaintenanceTime();
         });
 
-        echo "GamePlatformMaintainTask: 游戏平台维护时间监听任务已启动，每60秒检查一次\n";
+        echo "GamePlatformMaintainTask: 游戏平台维护时间监听任务已启动，每分钟检查一次\n";
 
         // 启动时立即执行一次检查
         $this->checkMaintenanceTime();
@@ -38,9 +37,18 @@ class GamePlatformMaintainTask
      */
     private function checkMaintenanceTime(): void
     {
+        // ✅ 设置内存限制，防止无限增长
+        ini_set('memory_limit', '512M');
+
         try {
             $service = new GamePlatformMaintainService();
             $service->checkAndNotify();
+
+            // ✅ 显式释放 Service 实例
+            unset($service);
+
+            // ✅ 强制垃圾回收
+            gc_collect_cycles();
 
         } catch (\Throwable $e) {
             Log::error('游戏平台维护时间检查异常', [
@@ -50,7 +58,8 @@ class GamePlatformMaintainTask
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            echo "[GamePlatformMaintain] 检查异常: {$e->getMessage()}\n";
+            // ✅ 异常情况也要清理内存
+            gc_collect_cycles();
         }
     }
 }

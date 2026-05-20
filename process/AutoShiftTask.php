@@ -4,9 +4,8 @@ namespace process;
 
 use addons\webman\model\StoreAutoShiftConfig;
 use app\service\store\AutoShiftService;
-use Workerman\Timer;
-use Workerman\Worker;
 use support\Log;
+use Workerman\Crontab\Crontab;
 
 /**
  * 自动交班定时任务
@@ -21,14 +20,14 @@ class AutoShiftTask
     /**
      * Worker 启动时的回调
      */
-    public function onWorkerStart(Worker $worker)
+    public function onWorkerStart()
     {
-        // 每分钟执行一次检查
-        Timer::add(60, function() {
+        // 每分钟执行一次检查（Cron 表达式：秒 分 时 日 月 周）
+        new Crontab('0 */1 * * * *', function () {
             $this->checkAndExecuteAutoShift();
         });
 
-        echo "AutoShiftTask: 自动交班定时任务已启动，每60秒检查一次\n";
+        echo "AutoShiftTask: 自动交班定时任务已启动，每分钟检查一次\n";
     }
 
     /**
@@ -36,12 +35,19 @@ class AutoShiftTask
      */
     private function checkAndExecuteAutoShift(): void
     {
+        // ✅ 设置内存限制，防止无限增长
+        ini_set('memory_limit', '512M');
+
         try {
             /** @var AutoShiftService $service */
             $service = new AutoShiftService();
             $configs = $service->getPendingConfigs();
 
             if (empty($configs)) {
+                // ✅ 显式释放变量
+                unset($service, $configs);
+                // ✅ 强制垃圾回收
+                gc_collect_cycles();
                 return;
             }
 
@@ -56,6 +62,8 @@ class AutoShiftTask
                     $config = StoreAutoShiftConfig::query()->find($configData['id']);
 
                     if (!$config || !$config->is_enabled) {
+                        // ✅ 及时释放不需要的模型实例
+                        unset($config);
                         continue;
                     }
 
@@ -73,6 +81,9 @@ class AutoShiftTask
                         echo "[AutoShift] 执行失败 - Config ID: {$config->id}, Error: {$result['msg']}\n";
                     }
 
+                    // ✅ 循环内释放大对象
+                    unset($config, $result);
+
                 } catch (\Exception $e) {
                     Log::error('执行单个自动交班任务失败', [
                         'config_id' => $configData['id'] ?? 'unknown',
@@ -84,13 +95,19 @@ class AutoShiftTask
                 }
             }
 
+            // ✅ 任务完成后显式释放所有大对象
+            unset($service, $configs);
+
+            // ✅ 强制 PHP 垃圾回收
+            gc_collect_cycles();
+
         } catch (\Exception $e) {
             Log::error('自动交班定时任务执行异常', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
-
-            echo "[AutoShift] 定时任务异常: {$e->getMessage()}\n";
+            // ✅ 异常情况也要清理内存
+            gc_collect_cycles();
         }
     }
 }
