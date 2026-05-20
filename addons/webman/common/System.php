@@ -447,7 +447,19 @@ class System extends SystemAbstract
                 );
             }
         } catch (Exception $e) {
-            return Response::success([], $e->getMessage(), 100);
+            // 记录详细错误日志
+            \support\Log::error('机台指令执行失败', [
+                'machine_id' => $machine->id,
+                'machine_code' => $machine->code,
+                'cmd' => $cmd,
+                'data' => $data,
+                'admin_id' => Admin::id(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            // 返回具体的错误信息
+            return Response::success([], '发送机台指令失败: ' . $e->getMessage(), 100);
         }
 
         return Response::success($data);
