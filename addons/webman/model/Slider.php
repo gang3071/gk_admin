@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string picture_url 图片地址
  * @property int status 状态
  * @property int sort 排序
- * @property int ad_position 广告位 1-电子游戏大厅 2-实体大厅 3-待机页面
+ * @property int ad_position 广告位 1-电子游戏大厅(默认) 2-实体大厅 3-待机页面
  * @property int activity_id 关联活动id
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间

@@ -68,7 +68,6 @@ class SliderController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('slider.fields.ad_position'))
                     ->options([
-                        0 => admin_trans('slider.ad_position.0'),
                         1 => admin_trans('slider.ad_position.1'),
                         2 => admin_trans('slider.ad_position.2'),
                         3 => admin_trans('slider.ad_position.3'),
@@ -90,19 +89,34 @@ class SliderController
 
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('slider.title'));
-            $form->image('picture_url', admin_trans('slider.fields.picture_url'))
-                ->ext('jpg,png,jpeg,webp,mp4')
-                ->fileSize('60m')
-                ->help(admin_trans('slider.help.picture_url_size'))
-                ->required();
             $form->select('department_id', admin_trans('slider.fields.department_id'))->options($this->getChannelOptions())->required();
             $form->select('ad_position', admin_trans('slider.fields.ad_position'))
                 ->options([
-                    0 => admin_trans('slider.ad_position.0'),
                     1 => admin_trans('slider.ad_position.1'),
                     2 => admin_trans('slider.ad_position.2'),
                     3 => admin_trans('slider.ad_position.3'),
-                ])->required();
+                ])->required()
+                ->when(1, function ($form) {
+                    $form->image('picture_url', admin_trans('slider.fields.picture_url'))
+                        ->ext('jpg,png,jpeg,webp,mp4')
+                        ->fileSize('60m')
+                        ->help(admin_trans('slider.help.picture_size_1'))
+                        ->required();
+                })
+                ->when(2, function ($form) {
+                    $form->image('picture_url', admin_trans('slider.fields.picture_url'))
+                        ->ext('jpg,png,jpeg,webp,mp4')
+                        ->fileSize('60m')
+                        ->help(admin_trans('slider.help.picture_size_2'))
+                        ->required();
+                })
+                ->when(3, function ($form) {
+                    $form->image('picture_url', admin_trans('slider.fields.picture_url'))
+                        ->ext('jpg,png,jpeg,webp,mp4')
+                        ->fileSize('60m')
+                        ->help(admin_trans('slider.help.picture_size_3'))
+                        ->required();
+                });
             $form->text('url', admin_trans('slider.fields.url'))->ruleUrl()->maxlength(200);
             $form->myEditor('content', admin_trans('slider.fields.content'));
             $form->number('sort', admin_trans('slider.fields.sort'))->default($this->model::max('sort') + 1);
