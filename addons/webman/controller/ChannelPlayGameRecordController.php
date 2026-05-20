@@ -115,7 +115,7 @@ class ChannelPlayGameRecordController
             $grid->hideSelection();
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center');
             $grid->column('player.uuid',
-                admin_trans('player.fields.uuid'))->fixed(true)->ellipsis(true)->align('center');
+                admin_trans('player.fields.uuid'))->ellipsis(true)->align('center');
             $grid->column('player.name', admin_trans('player.fields.name'))->align('center')->display(function ($val, PlayGameRecord $data) {
                 return $data->player ? $data->player->name : '';
             });
@@ -134,7 +134,7 @@ class ChannelPlayGameRecordController
                         ? Tag::create(admin_trans('player.fields.player_source_online'))->color('green')
                         : Tag::create(admin_trans('player.fields.player_source_offline'))->color('blue')
                 ]);
-            })->fixed(true)->align('center');
+            })->align('center');
             $grid->column('channel.name', admin_trans('channel.fields.name'))->align('center');
             $grid->column('platform_name', admin_trans('game_platform.fields.name'))->display(function (
                 $val,

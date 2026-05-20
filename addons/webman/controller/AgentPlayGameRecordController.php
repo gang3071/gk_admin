@@ -122,7 +122,7 @@ class AgentPlayGameRecordController
 
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center')->width(80);
             $grid->column('player.name', admin_trans('player.fields.name'))->align('center')->width(120);
-            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->fixed(true)->copy()->align('center')->width(150);
+            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->copy()->align('center')->width(150);
             $grid->column('player.phone', admin_trans('player.fields.phone'))->align('center')->width(120)->display(function ($val, PlayGameRecord $data) {
                 return $data->player ? $data->player->phone : '';
             });
@@ -138,7 +138,7 @@ class AgentPlayGameRecordController
                         ? Tag::create(admin_trans('player.fields.player_source_online'))->color('green')
                         : Tag::create(admin_trans('player.fields.player_source_offline'))->color('blue')
                 ]);
-            })->fixed(true)->align('center')->width(100);
+            })->align('center')->width(100);
             $grid->column('player.storeAdmin.nickname', admin_trans('admin.store'))->display(function (
                 $val,
                 PlayGameRecord $data

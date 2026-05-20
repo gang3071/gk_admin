@@ -111,7 +111,7 @@ class PlayGameRecordController
                     ]);
                 }
                 return $data->player->uuid;
-            })->fixed(true)->align('center');
+            })->align('center');
             $grid->column('player.name', admin_trans('player.fields.name'))->align('center')->display(function ($val, PlayGameRecord $data) {
                 return $data->player ? $data->player->name : '';
             });
@@ -131,7 +131,7 @@ class PlayGameRecordController
                         ? Tag::create(admin_trans('player.fields.player_source_online'))->color('green')
                         : Tag::create(admin_trans('player.fields.player_source_offline'))->color('blue')
                 ]);
-            })->fixed(true)->align('center');
+            })->align('center');
             $grid->column('channel.name', admin_trans('channel.fields.name'))->align('center');
             $grid->column('platform_name', admin_trans('game_platform.fields.name'))->display(function (
                 $val,
