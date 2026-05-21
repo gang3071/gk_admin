@@ -48,7 +48,14 @@ class WithdrawRecordController
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
             $grid->title(admin_trans('player_withdraw_record.title'));
-            $grid->model()->with(['player', 'channel', 'player.player_extend'])->orderBy('created_at', 'desc');
+            // ✅ 内存优化：限制关联加载字段
+            // 修复前：加载完整的 player, channel, player_extend 对象
+            // 修复后：只加载必要字段
+            $grid->model()->with([
+                'player:id,uuid,name,phone,department_id',       // 限制玩家字段
+                'channel:id,department_id,name',                  // 限制渠道字段
+                'player.player_extend:id,player_id,real_name',   // 限制扩展字段
+            ])->orderBy('created_at', 'desc');
             $exAdminFilter = Request::input('ex_admin_filter', []);
             if (!empty($exAdminFilter)) {
                 if (!empty($exAdminFilter['currency'])) {

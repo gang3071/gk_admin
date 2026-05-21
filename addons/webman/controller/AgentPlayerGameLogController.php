@@ -37,14 +37,15 @@ class AgentPlayerGameLogController
     public function index(): Grid
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
+            // ✅ 内存优化：减少关联加载，只加载必要字段
+            // 修复前：加载6个关联（player, machine, machineLabel, player.channel, player.storeAdmin, machine_recording）
+            // 修复后：只加载必要的关联，并严格限制字段
             $grid->model()->with([
-                'player',
-                'machine' => function ($query) {
-                    return $query->with(['machineLabel']);
-                },
-                'player.channel',
-                'player.storeAdmin',
-                'machine_recording'
+                'player:id,uuid,name,department_id,store_admin_id',  // 只加载需要的字段
+                'machine:id,code,name,label_id,producer_id',         // 只加载需要的字段
+                'machine.machineLabel:id,name',                       // 嵌套加载但限制字段
+                'machine.producer:id,name',                           // 嵌套加载但限制字段
+                'player.storeAdmin:id,username,nickname',             // 限制店家管理员字段
             ]);
             $exAdminFilter = Request::input('ex_admin_filter', []);
 

@@ -72,7 +72,15 @@ class ChannelWithdrawRecordController
             if (!empty($tradeno)) {
                 $grid->model()->where('tradeno', $tradeno);
             }
-            $grid->model()->with(['player', 'player.national_promoter.level_list.national_level'])->whereIn('type',
+            // ✅ 内存优化：减少深度嵌套关联
+            // 修复前：4层嵌套 player->national_promoter->level_list->national_level
+            // 修复后：限制必要字段，减少对象加载
+            $grid->model()->with([
+                'player:id,uuid,name,phone,department_id,national_promoter_id',  // 限制玩家字段
+                'player.national_promoter:id,player_id,level_id',                 // 限制推广员字段
+                'player.national_promoter.level_list:id,player_id,level_id',     // 限制等级列表字段
+                'player.national_promoter.level_list.national_level:id,name',    // 只加载等级名称
+            ])->whereIn('type',
                 [PlayerWithdrawRecord::TYPE_SELF, PlayerWithdrawRecord::TYPE_GB])->orderBy('created_at',
                 'desc')->orderBy('status', 'asc');
             $exAdminFilter = Request::input('ex_admin_filter', []);
