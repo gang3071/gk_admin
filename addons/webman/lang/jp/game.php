@@ -14,6 +14,8 @@ return [
         'is_hot' => 'ヒットするかどうか',
         'is_ios' => 'IOSシステムが示すかどうか',
         'picture' => 'ゲーム画像',
+        'big_picture' => 'ゲーム大画像',
+        'enable_big_picture' => '大画像を有効にする',
         'description' => '記述情報',
         'status' => '状態',
         'sort' => 'ソート',
@@ -29,6 +31,7 @@ return [
     'help' => [
         'name' => 'ゲーム名を入力してください',
         'picture_size' => 'ゲーム画像サイズは3 MB」を超えてはならず',
+        'big_picture_size' => 'ゲーム大画像サイズは5MBを超えてはなりません',
     ],
     'not_fount' => 'ゲームが見つかりませんでした',
     'enter_game' => 'ゲームに入る',

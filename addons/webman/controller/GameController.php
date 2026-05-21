@@ -338,6 +338,8 @@ class GameController
                                 'name' => $content->name,
                                 'description' => $content->description,
                                 'picture' => $content->picture,
+                                'big_picture' => $content->big_picture,
+                                'enable_big_picture' => $content->enable_big_picture,
                                 'id' => $content->id,
                             ]
                         ];
@@ -359,6 +361,13 @@ class GameController
                         ->fileSize('5m')
                         ->help(admin_trans('game.help.picture_size'))
                         ->required();
+                    $form->image("content." . $k . ".big_picture", admin_trans('game.fields.big_picture'))
+                        ->ext('jpg,png,jpeg,webp')
+                        ->value($langContent['big_picture'] ?? '')
+                        ->fileSize('5m')
+                        ->help(admin_trans('game.help.big_picture_size'));
+                    $form->switch("content." . $k . ".enable_big_picture", admin_trans('game.fields.enable_big_picture'))
+                        ->value($langContent['enable_big_picture'] ?? 0);
                     $form->myEditor("content." . $k . ".description", admin_trans('game.fields.description'))
                         ->value($langContent['description'] ?? '');
                     $form->hidden('content_id')->default($langContent['id'] ?? '');
@@ -394,6 +403,8 @@ class GameController
                                 'name' => $content['name'] ?? '',
                                 'description' => $content['description'] ?? '',
                                 'picture' => $content['picture'] ?? '',
+                                'big_picture' => $content['big_picture'] ?? '',
+                                'enable_big_picture' => $content['enable_big_picture'] ?? 0,
                             ]
                         );
                     }
