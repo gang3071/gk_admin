@@ -325,6 +325,8 @@ class GameController
                     3 => admin_trans('game.display_mode.3'),
                 ])
                 ->required();
+            $form->switch('enable_big_picture', admin_trans('game.fields.enable_big_picture'))
+                ->default(0);
             $langList = plugin()->webman->config('ui.lang.list');
             $tabs = $form->tabs()->destroyInactiveTabPane();
             $contents = [];
@@ -339,7 +341,6 @@ class GameController
                                 'description' => $content->description,
                                 'picture' => $content->picture,
                                 'big_picture' => $content->big_picture,
-                                'enable_big_picture' => $content->enable_big_picture,
                                 'id' => $content->id,
                             ]
                         ];
@@ -366,8 +367,6 @@ class GameController
                         ->value($langContent['big_picture'] ?? '')
                         ->fileSize('5m')
                         ->help(admin_trans('game.help.big_picture_size'));
-                    $form->switch("content." . $k . ".enable_big_picture", admin_trans('game.fields.enable_big_picture'))
-                        ->value($langContent['enable_big_picture'] ?? 0);
                     $form->myEditor("content." . $k . ".description", admin_trans('game.fields.description'))
                         ->value($langContent['description'] ?? '');
                     $form->hidden('content_id')->default($langContent['id'] ?? '');
@@ -386,6 +385,7 @@ class GameController
                     $game->is_hot = $form->input('is_hot');
                     $game->is_new = $form->input('is_new');
                     $game->display_mode = $form->input('display_mode');
+                    $game->enable_big_picture = $form->input('enable_big_picture');
                     $game->platform_id = $form->input('platform_id');
                     $game->game_extend_id = $form->input('game_extend_id');
                     $game->cate_id = $form->input('cate_id');
@@ -404,7 +404,6 @@ class GameController
                                 'description' => $content['description'] ?? '',
                                 'picture' => $content['picture'] ?? '',
                                 'big_picture' => $content['big_picture'] ?? '',
-                                'enable_big_picture' => $content['enable_big_picture'] ?? 0,
                             ]
                         );
                     }
