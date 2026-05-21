@@ -3,7 +3,6 @@
 namespace addons\webman\traits;
 
 use addons\webman\Admin;
-use addons\webman\model\AdminRole;
 use addons\webman\model\AdminUser;
 use support\Cache;
 use support\Db;
@@ -13,6 +12,10 @@ use support\Db;
  */
 trait DataPermissions
 {
+    // ✅ 防止全局作用域重复注册（内存泄漏修复）
+    // 记录哪些模型类已经注册了全局作用域
+    private static $scopeRegistered = [];
+
     //全部数据权限
     private $FULL_DATA_RIGHTS = 0;
     //自定义数据权限
@@ -43,6 +46,13 @@ trait DataPermissions
      */
     public function initializeDataPermissions()
     {
+        // ✅ 内存泄漏修复：检查当前模型类是否已注册全局作用域
+        // 避免每次实例化时都重复注册，导致静态闭包累积
+        $modelClass = static::class;
+        if (isset(self::$scopeRegistered[$modelClass])) {
+            return;  // 已注册，直接返回
+        }
+
         $adminId = Admin::id();
         if ($adminId && plugin()->webman->config('admin_auth_id') != $adminId && count($this->dataAuth) > 0) {
 
@@ -76,6 +86,9 @@ trait DataPermissions
                     });
                 }
             });
+
+            // ✅ 标记当前模型类已注册，防止下次重复注册
+            self::$scopeRegistered[$modelClass] = true;
         }
     }
 
