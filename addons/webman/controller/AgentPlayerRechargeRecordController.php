@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\PlayerRechargeRecord;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
@@ -40,11 +41,11 @@ class AgentPlayerRechargeRecordController
             $grid->bordered(true);
             $grid->autoHeight();
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
 
             // 代理：只查询所有下级店家的玩家记录
-            $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
+            $storeIds = $admin->childStores()->where('type', AdminUser::TYPE_STORE)->pluck('id');
             $playerIds = \addons\webman\model\Player::query()->whereIn('store_admin_id', $storeIds)->pluck('id');
 
             $grid->model()->with(['player', 'channel_recharge_setting'])
