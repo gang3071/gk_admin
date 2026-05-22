@@ -61,8 +61,9 @@ class WalletService
             $balance = self::getBalanceFromDB($playerId, $platformId);
 
             // 🔧 整数化改造：更新缓存时转换为"分"
+            // ⚠️ 永不过期：Redis 是余额的唯一实时标准
             $balanceInCents = (int)round($balance * 100);
-            Redis::setex($cacheKey, self::CACHE_TTL, $balanceInCents);
+            Redis::set($cacheKey, $balanceInCents);
 
             return self::fixPrecision($balance);
         } catch (\Throwable $e) {
@@ -152,8 +153,9 @@ class WalletService
         try {
             $cacheKey = self::getCacheKey($playerId, $platformId);
             // 🔧 整数化改造：元 × 100 → 分
+            // ⚠️ 永不过期：Redis 是余额的唯一实时标准
             $balanceInCents = (int)round($balance * 100);
-            Redis::setex($cacheKey, self::CACHE_TTL, $balanceInCents);
+            Redis::set($cacheKey, $balanceInCents);
             return true;
         } catch (\Throwable $e) {
             Log::warning('WalletService: Failed to update cache', [
@@ -288,8 +290,9 @@ class WalletService
                 try {
                     $cacheKey = self::getCacheKey($wallet->player_id, $platformId);
                     // 🔧 整数化改造：元 × 100 → 分
+                    // ⚠️ 永不过期：Redis 是余额的唯一实时标准
                     $balanceInCents = (int)round($balance * 100);
-                    Redis::setex($cacheKey, self::CACHE_TTL, $balanceInCents);
+                    Redis::set($cacheKey, $balanceInCents);
                 } catch (\Throwable $e) {
                     // 忽略缓存回填失败
                 }
@@ -303,7 +306,8 @@ class WalletService
                     try {
                         $cacheKey = self::getCacheKey($playerId, $platformId);
                         // 🔧 整数化改造：0 分（整数）
-                        Redis::setex($cacheKey, self::CACHE_TTL, 0);
+                        // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+                        Redis::set($cacheKey, 0);
                     } catch (\Throwable $e) {
                         // 忽略缓存回填失败
                     }
@@ -393,8 +397,9 @@ class WalletService
                 try {
                     $cacheKey = self::getCacheKey($wallet->player_id, $platformId);
                     // 🔧 整数化改造：元 × 100 → 分
+                    // ⚠️ 永不过期：Redis 是余额的唯一实时标准
                     $balanceInCents = (int)round($balance * 100);
-                    Redis::setex($cacheKey, self::CACHE_TTL, $balanceInCents);
+                    Redis::set($cacheKey, $balanceInCents);
                     $successCount++;
                 } catch (\Throwable $e) {
                     $failedCount++;
@@ -407,7 +412,8 @@ class WalletService
                 try {
                     $cacheKey = self::getCacheKey($playerId, $platformId);
                     // 🔧 整数化改造：0 分（整数）
-                    Redis::setex($cacheKey, self::CACHE_TTL, 0);
+                    // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+                    Redis::set($cacheKey, 0);
                     $successCount++;
                 } catch (\Throwable $e) {
                     $failedCount++;
@@ -464,8 +470,8 @@ local currentBalanceInCents = tonumber(redis.call('GET', key)) or 0
 -- 整数加法
 local newBalanceInCents = currentBalanceInCents + amountInCents
 
--- 存储"分"（整数）
-redis.call('SETEX', key, ttl, newBalanceInCents)
+-- 存储"分"（整数，永不过期）
+redis.call('SET', key, newBalanceInCents)
 
 return cjson.encode({
     ok = 1,
@@ -520,8 +526,8 @@ if newBalanceInCents < 0 then
     newBalanceInCents = 0
 end
 
--- 原子性写入
-redis.call('SETEX', key, ttl, newBalanceInCents)
+-- 原子性写入（永不过期）
+redis.call('SET', key, newBalanceInCents)
 
 return cjson.encode({
     ok = 1,
