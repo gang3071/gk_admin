@@ -21,7 +21,7 @@ return [
         'database' => env('REDIS_DB', 0),
         'timeout' => 2.5,
         'read_timeout' => 2.5,
-        'persistent' => true,
+        'persistent' => false,  // ✅ 修复内存泄漏：Webman 常驻内存环境不需要持久连接
         'retry_interval' => 100,
 
         'options' => [
