@@ -25,9 +25,9 @@ class WalletService
 
     /**
      * 缓存过期时间（秒）
-     * ⚠️ 60天：活跃玩家长期缓存，僵尸玩家自动清理
+     * ⚠️ 已废弃：余额缓存现在永不过期（Redis as Single Source of Truth）
      */
-    private const CACHE_TTL = 5184000; // 60天 (60 * 24 * 3600)
+    // private const CACHE_TTL = 5184000; // 60天 (60 * 24 * 3600)
 
     /**
      * 获取玩家余额（带 Redis 缓存）
@@ -548,7 +548,7 @@ LUA;
      * @return float 新余额
      * @throws \RuntimeException Redis 执行失败时抛出
      */
-    public static function atomicIncrement(int $playerId, float $amount, int $ttl = 3600): float
+    public static function atomicIncrement(int $playerId, float $amount, int $ttl = 0): float
     {
         if ($amount < 0) {
             throw new \InvalidArgumentException("增加金额必须大于0，当前值：{$amount}");
@@ -616,7 +616,7 @@ LUA;
      * @return array 成功：{ok: 1, balance: 新余额, old: 旧余额} 或 失败：{ok: 0, error: "insufficient_balance", balance: 当前余额}
      * @throws \RuntimeException Redis 执行失败时抛出
      */
-    public static function atomicDecrement(int $playerId, float $amount, int $ttl = 3600): array
+    public static function atomicDecrement(int $playerId, float $amount, int $ttl = 0): array
     {
         if ($amount < 0) {
             throw new \InvalidArgumentException("减少金额必须大于0，当前值：{$amount}");
