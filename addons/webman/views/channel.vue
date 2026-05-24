@@ -147,7 +147,7 @@ export default {
     },
     data() {
         return {
-            currentLang: 'zh-CN',
+            currentLang: 'zh-TW',
             verification: false,
             loginForm: {
               username: '',
@@ -185,6 +185,23 @@ export default {
         }
     },
     created(){
+        // 🎯 提前检查token，避免登录页面"一闪"
+        const token = this.getCookie('ex_admin_token') || localStorage.getItem('ex_admin_token');
+        const source = 'channel';
+        const rememberMeKey = `ex_admin_remember_me_${source}`;
+        const tokenExpireKey = `ex_admin_token_expire_${source}`;
+
+        // 如果有token且记住我功能已启用
+        if (token && localStorage.getItem(rememberMeKey) === 'true') {
+            const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
+            // 检查是否过期
+            if (expireTime && Date.now() < expireTime) {
+                // 直接跳转到首页，不渲染登录页面
+                this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/index');
+                return;
+            }
+        }
+
         this.updateRules();
         if(this.deBug){
           this.loginForm.username = '';
@@ -268,7 +285,7 @@ export default {
                         console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
-                    this.$router.push(this.redirect || '/' )
+                    this.$router.push(this.redirect || '/ex-admin/addons-webman-controller-ChannelIndexController/index' )
                 }).finally(() => {
                     this.loading = false
                 }).catch(()=>{

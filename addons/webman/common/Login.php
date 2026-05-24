@@ -372,7 +372,16 @@ class Login extends LoginAbstract
         $userData['token_time'] = time();
 
         // 使用自定义过期时间编码token
-        $config = admin_config('admin.token');
+        // ✅ 修复：添加容错处理，优先从配置读取，否则使用默认值
+        $config = admin_config('admin.token') ?: config('admin.token');
+        if (!$config) {
+            // 默认配置（如果配置文件不存在）
+            $config = [
+                'key' => 'gkAdminTokenKey',  // 16位密钥
+                'unique' => true,
+                'expire' => 7 * 24 * 3600,   // 7天
+            ];
+        }
         $key = $config['key'];
         $unique = $config['unique'];
         $pk = $user->getKeyName();
