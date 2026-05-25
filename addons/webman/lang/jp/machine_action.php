@@ -104,6 +104,7 @@ return [
             SongJackpot::TURN_UP_ALL => 'すべて上昇',
             SongJackpot::TURN_DOWN_ALL => 'すべて下降',
             SongJackpot::AUTO_UP_TURN => '自動上昇（ゲーム開始）',
+            SongJackpot::TURN_TO_POINT => '回転数>>スコア',
             SongJackpot::POINT_TO_TURN => 'スコア>>回転数',
             SongJackpot::SCORE_TO_POINT => '得点>>スコア',
             SongJackpot::REWARD_SWITCH => 'メーター切替',

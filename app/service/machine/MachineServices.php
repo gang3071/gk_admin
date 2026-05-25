@@ -196,6 +196,7 @@ class MachineServices
                 SongJackpot::TURN_UP_ALL,
                 SongJackpot::TURN_DOWN_ALL,
                 SongJackpot::AUTO_UP_TURN,
+                SongJackpot::TURN_TO_POINT,
                 SongJackpot::POINT_TO_TURN,
                 SongJackpot::SCORE_TO_POINT,
                 SongJackpot::REWARD_SWITCH,

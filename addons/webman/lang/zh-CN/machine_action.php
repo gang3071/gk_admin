@@ -103,6 +103,7 @@ return [
             SongJackpot::TURN_UP_ALL => '全部上转',
             SongJackpot::TURN_DOWN_ALL => '全部下转',
             SongJackpot::AUTO_UP_TURN => '自动上转（开始游戏）',
+            SongJackpot::TURN_TO_POINT => '转数>>分数',
             SongJackpot::POINT_TO_TURN => '分数>>转数',
             SongJackpot::SCORE_TO_POINT => '得分>>分数',
             SongJackpot::REWARD_SWITCH => '看表切换',

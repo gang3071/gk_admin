@@ -103,6 +103,7 @@ return [
             SongJackpot::TURN_UP_ALL => 'All Upward',
             SongJackpot::TURN_DOWN_ALL => 'All Down',
             SongJackpot::AUTO_UP_TURN => 'Auto Up (Start Game)',
+            SongJackpot::TURN_TO_POINT => 'Spins>>Score',
             SongJackpot::POINT_TO_TURN => 'Score>>Spins',
             SongJackpot::SCORE_TO_POINT => 'Win Score>>Score',
             SongJackpot::REWARD_SWITCH => 'Watch Switching',
