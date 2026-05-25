@@ -106,7 +106,6 @@ return [
             SongJackpot::POINT_TO_TURN => '分數>>轉數',
             SongJackpot::SCORE_TO_POINT => '得分>>分數',
             SongJackpot::REWARD_SWITCH => '看錶切換',
-            SongJackpot::TESTING => '測試連接',
             SongJackpot::MACHINE_POINT => '當前分數',
             SongJackpot::MACHINE_SCORE => '當前得分',
             SongJackpot::MACHINE_TURN => '當前轉數',
