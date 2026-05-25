@@ -92,6 +92,7 @@ return [
             Jackpot::WIN_NUMBER => '中洞の授賞回数を読み取る',
             Jackpot::READ_OPEN_POINT => '総分割回数を読み取る',
             Jackpot::READ_WASH_POINT => '総ダウン回数を読み取る',
+            Jackpot::CLEAR_LOG => 'ログをクリア',
             Jackpot::PUSH . Jackpot::PUSH_STOP => 'PUSH停止',
             Jackpot::PUSH . Jackpot::PUSH_ONE => 'PUSH 1回',
             Jackpot::PUSH . Jackpot::PUSH_TWO => 'PUSH 1秒に2回',

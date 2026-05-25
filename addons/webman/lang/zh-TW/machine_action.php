@@ -91,6 +91,7 @@ return [
             Jackpot::WIN_NUMBER => '讀取中洞兌獎次數',
             Jackpot::READ_OPEN_POINT => '讀取總開分次數',
             Jackpot::READ_WASH_POINT => '讀取總下分次數',
+            Jackpot::CLEAR_LOG => '清除日誌',
             Jackpot::PUSH . Jackpot::PUSH_STOP => 'PUSH停止',
             Jackpot::PUSH . Jackpot::PUSH_ONE => 'PUSH1次',
             Jackpot::PUSH . Jackpot::PUSH_TWO => 'PUSH 1秒2次',

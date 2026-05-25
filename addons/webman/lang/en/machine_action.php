@@ -91,6 +91,7 @@ return [
             Jackpot::WIN_NUMBER => 'Read the number of times the middle hole is redeemed',
             Jackpot::READ_OPEN_POINT => 'Read total split count',
             Jackpot::READ_WASH_POINT => 'Read total number of partitions',
+            Jackpot::CLEAR_LOG => 'Clear Log',
             Jackpot::PUSH . Jackpot::PUSH_STOP => 'PUSH stop',
             Jackpot::PUSH . Jackpot::PUSH_ONE => 'PUSH1 times',
             Jackpot::PUSH . Jackpot::PUSH_TWO => 'PUSH twice a second',
