@@ -68,581 +68,400 @@
 
 <!-- WebSocket Push Manager - Inline Version -->
 <script>
-(function() {
-  'use strict';
+    (function() {
+        'use strict';
 
-  class PushManager {
-    constructor() {
-      this.connection = null;
-      this.scriptLoaded = false;
-      this.scriptLoading = false;
-      this.scriptPromise = null;
-      this.channels = new Map();
-      this.wsUrl = null;
-      this.appKey = '20f94408fc4c52845f162e92a253c7a3';
-      this.authUrl = 'https://api.supergames9.com/plugin/webman/push/auth';
-    }
-
-    loadScript() {
-      if (this.scriptLoaded) {
-        return Promise.resolve();
-      }
-
-      if (this.scriptLoading) {
-        return this.scriptPromise;
-      }
-
-      this.scriptLoading = true;
-      this.scriptPromise = new Promise((resolve, reject) => {
-        var script = document.createElement('script');
-        // 从 API 服务器加载 push.js
-        script.src = 'https://api.supergames9.com/plugin/webman/push/push.js';
-        script.onload = () => {
-          this.scriptLoaded = true;
-          this.scriptLoading = false;
-          resolve();
-        };
-        script.onerror = () => {
-          this.scriptLoading = false;
-          var error = new Error('Failed to load push.js');
-          reject(error);
-        };
-        document.head.appendChild(script);
-      });
-
-      return this.scriptPromise;
-    }
-
-    async init(wsUrl) {
-      if (this.connection && this.wsUrl === wsUrl) {
-        return this.connection;
-      }
-
-      if (this.connection && this.wsUrl !== wsUrl) {
-        this.disconnect();
-      }
-
-      try {
-        await this.loadScript();
-
-        this.wsUrl = wsUrl;
-        this.connection = new Push({
-          url: this.wsUrl,
-          app_key: this.appKey,
-          auth: this.authUrl
-        });
-
-        return this.connection;
-      } catch (error) {
-        throw error;
-      }
-    }
-
-    subscribe(channelName, messageHandler, context) {
-      context = context || null;
-
-      if (!this.connection) {
-        return null;
-      }
-
-      if (this.channels.has(channelName)) {
-        var existingChannel = this.channels.get(channelName);
-        if (messageHandler) {
-          existingChannel.handlers.push({ handler: messageHandler, context: context });
-        }
-        return existingChannel.channel;
-      }
-
-      try {
-        var channel = this.connection.subscribe(channelName);
-
-        var channelInfo = {
-          channel: channel,
-          handlers: messageHandler ? [{ handler: messageHandler, context: context }] : []
-        };
-        this.channels.set(channelName, channelInfo);
-
-        if (messageHandler) {
-          channel.on('message', (data) => {
-            channelInfo.handlers.forEach(function(item) {
-              try {
-                if (item.context) {
-                  item.handler.call(item.context, data);
-                } else {
-                  item.handler(data);
-                }
-              } catch (error) {
-                // Silent error
-              }
-            });
-          });
-        }
-
-        return channel;
-      } catch (error) {
-        return null;
-      }
-    }
-
-    unsubscribe(channelName, messageHandler) {
-      if (!this.channels.has(channelName)) {
-        return;
-      }
-
-      var channelInfo = this.channels.get(channelName);
-
-      if (messageHandler) {
-        channelInfo.handlers = channelInfo.handlers.filter(function(item) {
-          return item.handler !== messageHandler;
-        });
-
-        if (channelInfo.handlers.length > 0) {
-          return;
-        }
-      }
-
-      try {
-        if (channelInfo.channel && typeof channelInfo.channel.unsubscribe === 'function') {
-          channelInfo.channel.unsubscribe();
-        }
-        this.channels.delete(channelName);
-      } catch (error) {
-        // Silent error
-      }
-    }
-
-    disconnect() {
-      if (!this.connection) {
-        return;
-      }
-
-      var self = this;
-      try {
-        this.channels.forEach(function(channelInfo) {
-          try {
-            if (channelInfo.channel && typeof channelInfo.channel.unsubscribe === 'function') {
-              channelInfo.channel.unsubscribe();
+        class PushManager {
+            constructor() {
+                this.connection = null;
+                this.scriptLoaded = false;
+                this.scriptLoading = false;
+                this.scriptPromise = null;
+                this.channels = new Map();
+                this.wsUrl = null;
+                this.appKey = '20f94408fc4c52845f162e92a253c7a3';
+                this.authUrl = 'https://api.supergames9.com/plugin/webman/push/auth';
             }
-          } catch (error) {
-            // Silent error
-          }
-        });
-        this.channels.clear();
 
-        if (typeof this.connection.disconnect === 'function') {
-          this.connection.disconnect();
+            loadScript() {
+                if (this.scriptLoaded) {
+                    return Promise.resolve();
+                }
+
+                if (this.scriptLoading) {
+                    return this.scriptPromise;
+                }
+
+                this.scriptLoading = true;
+                this.scriptPromise = new Promise((resolve, reject) => {
+                    var script = document.createElement('script');
+                    // 从 API 服务器加载 push.js
+                    script.src = 'https://api.supergames9.com/plugin/webman/push/push.js';
+                    script.onload = () => {
+                        this.scriptLoaded = true;
+                        this.scriptLoading = false;
+                        resolve();
+                    };
+                    script.onerror = () => {
+                        this.scriptLoading = false;
+                        var error = new Error('Failed to load push.js');
+                        reject(error);
+                    };
+                    document.head.appendChild(script);
+                });
+
+                return this.scriptPromise;
+            }
+
+            async init(wsUrl) {
+                if (this.connection && this.wsUrl === wsUrl) {
+                    return this.connection;
+                }
+
+                if (this.connection && this.wsUrl !== wsUrl) {
+                    this.disconnect();
+                }
+
+                try {
+                    await this.loadScript();
+
+                    this.wsUrl = wsUrl;
+                    this.connection = new Push({
+                        url: this.wsUrl,
+                        app_key: this.appKey,
+                        auth: this.authUrl
+                    });
+
+                    return this.connection;
+                } catch (error) {
+                    throw error;
+                }
+            }
+
+            subscribe(channelName, messageHandler, context) {
+                context = context || null;
+
+                if (!this.connection) {
+                    return null;
+                }
+
+                if (this.channels.has(channelName)) {
+                    var existingChannel = this.channels.get(channelName);
+                    if (messageHandler) {
+                        existingChannel.handlers.push({ handler: messageHandler, context: context });
+                    }
+                    return existingChannel.channel;
+                }
+
+                try {
+                    var channel = this.connection.subscribe(channelName);
+
+                    var channelInfo = {
+                        channel: channel,
+                        handlers: messageHandler ? [{ handler: messageHandler, context: context }] : []
+                    };
+                    this.channels.set(channelName, channelInfo);
+
+                    if (messageHandler) {
+                        channel.on('message', (data) => {
+                            channelInfo.handlers.forEach(function(item) {
+                                try {
+                                    if (item.context) {
+                                        item.handler.call(item.context, data);
+                                    } else {
+                                        item.handler(data);
+                                    }
+                                } catch (error) {
+                                    // Silent error
+                                }
+                            });
+                        });
+                    }
+
+                    return channel;
+                } catch (error) {
+                    return null;
+                }
+            }
+
+            unsubscribe(channelName, messageHandler) {
+                if (!this.channels.has(channelName)) {
+                    return;
+                }
+
+                var channelInfo = this.channels.get(channelName);
+
+                if (messageHandler) {
+                    channelInfo.handlers = channelInfo.handlers.filter(function(item) {
+                        return item.handler !== messageHandler;
+                    });
+
+                    if (channelInfo.handlers.length > 0) {
+                        return;
+                    }
+                }
+
+                try {
+                    if (channelInfo.channel && typeof channelInfo.channel.unsubscribe === 'function') {
+                        channelInfo.channel.unsubscribe();
+                    }
+                    this.channels.delete(channelName);
+                } catch (error) {
+                    // Silent error
+                }
+            }
+
+            disconnect() {
+                if (!this.connection) {
+                    return;
+                }
+
+                var self = this;
+                try {
+                    this.channels.forEach(function(channelInfo) {
+                        try {
+                            if (channelInfo.channel && typeof channelInfo.channel.unsubscribe === 'function') {
+                                channelInfo.channel.unsubscribe();
+                            }
+                        } catch (error) {
+                            // Silent error
+                        }
+                    });
+                    this.channels.clear();
+
+                    if (typeof this.connection.disconnect === 'function') {
+                        this.connection.disconnect();
+                    }
+                    this.connection = null;
+                    this.wsUrl = null;
+                } catch (error) {
+                    // Silent error
+                }
+            }
+
+            isConnected() {
+                return this.connection !== null;
+            }
+
+            getChannels() {
+                return Array.from(this.channels.keys());
+            }
         }
-        this.connection = null;
-        this.wsUrl = null;
-      } catch (error) {
-        // Silent error
-      }
-    }
 
-    isConnected() {
-      return this.connection !== null;
-    }
+        // 创建单例实例
+        var pushManagerInstance = new PushManager();
 
-    getChannels() {
-      return Array.from(this.channels.keys());
-    }
-  }
+        // 挂载到全局 window 对象
+        window.$pushManager = pushManagerInstance;
 
-  // 创建单例实例
-  var pushManagerInstance = new PushManager();
+        // 尝试自动注入到 Vue
+        function installToVue() {
+            // Vue 2
+            if (typeof window.Vue !== 'undefined' && window.Vue.prototype) {
+                window.Vue.prototype.$pushManager = pushManagerInstance;
+                return true;
+            }
 
-  // 挂载到全局 window 对象
-  window.$pushManager = pushManagerInstance;
+            // Vue 3
+            if (typeof window.Vue !== 'undefined' && window.Vue.config) {
+                if (window.Vue.config.globalProperties) {
+                    window.Vue.config.globalProperties.$pushManager = pushManagerInstance;
+                    return true;
+                }
+            }
 
-  // 尝试自动注入到 Vue
-  function installToVue() {
-    // Vue 2
-    if (typeof window.Vue !== 'undefined' && window.Vue.prototype) {
-      window.Vue.prototype.$pushManager = pushManagerInstance;
-      return true;
-    }
+            return false;
+        }
 
-    // Vue 3
-    if (typeof window.Vue !== 'undefined' && window.Vue.config) {
-      if (window.Vue.config.globalProperties) {
-        window.Vue.config.globalProperties.$pushManager = pushManagerInstance;
-        return true;
-      }
-    }
+        // 立即尝试安装
+        var installed = installToVue();
 
-    return false;
-  }
+        // 如果安装失败，等待 Vue 加载
+        if (!installed) {
+            var attempts = 0;
+            var maxAttempts = 10; // 1秒内检测
 
-  // 立即尝试安装
-  var installed = installToVue();
+            var checkVue = setInterval(function() {
+                attempts++;
 
-  // 如果安装失败，等待 Vue 加载
-  if (!installed) {
-    var attempts = 0;
-    var maxAttempts = 10; // 1秒内检测
+                if (installToVue()) {
+                    clearInterval(checkVue);
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkVue);
+                }
+            }, 100);
+        }
 
-    var checkVue = setInterval(function() {
-      attempts++;
-
-      if (installToVue()) {
-        clearInterval(checkVue);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkVue);
-      }
-    }, 100);
-  }
-
-  // 同时监听 DOMContentLoaded 事件
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(function() {
-        installToVue();
-      }, 500);
-    });
-  }
-})();
+        // 同时监听 DOMContentLoaded 事件
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(function() {
+                    installToVue();
+                }, 500);
+            });
+        }
+    })();
 </script>
 
 <!-- 🎯 Token自动恢复 - 在应用启动前设置axios header (2026-05-14) -->
 <script>
-(function() {
-  'use strict';
+    (function() {
+        'use strict';
 
-  // 获取source
-  function getSource() {
-    const hostname = window.location.hostname;
-    if (hostname.includes('zi-test') || hostname.includes('channel')) return 'channel';
-    if (hostname.includes('agent-test') || hostname.includes('agent')) return 'agent';
-    if (hostname.includes('store-test') || hostname.includes('store')) return 'store';
-    return 'admin';
-  }
+        // 获取source
+        function getSource() {
+            const hostname = window.location.hostname;
+            if (hostname.includes('zi-test') || hostname.includes('channel')) return 'channel';
+            if (hostname.includes('agent-test') || hostname.includes('agent')) return 'agent';
+            if (hostname.includes('store-test') || hostname.includes('store')) return 'store';
+            return 'admin';
+        }
 
-  // 检查并恢复token
-  function restoreToken() {
-    const source = getSource();
-    const tokenKey = '/' + source + '_ex-admin-token';
-    const rememberMeKey = 'ex_admin_remember_me_' + source;
-    const expireKey = 'ex_admin_token_expire_' + source;
+        // 检查并恢复token
+        function restoreToken() {
+            const source = getSource();
+            const tokenKey = '/' + source + '_ex-admin-token';
+            const rememberMeKey = 'ex_admin_remember_me_' + source;
+            const expireKey = 'ex_admin_token_expire_' + source;
 
-    const token = localStorage.getItem(tokenKey);
-    const rememberMe = localStorage.getItem(rememberMeKey);
-    const expireTime = localStorage.getItem(expireKey);
+            const token = localStorage.getItem(tokenKey);
+            const rememberMe = localStorage.getItem(rememberMeKey);
+            const expireTime = localStorage.getItem(expireKey);
 
-    if (!token || rememberMe !== 'true' || !expireTime) {
-      return null;
-    }
+            if (!token || rememberMe !== 'true' || !expireTime) {
+                return null;
+            }
 
-    const now = Date.now();
-    const expire = parseInt(expireTime);
+            const now = Date.now();
+            const expire = parseInt(expireTime);
 
-    if (expire <= now) {
-      localStorage.removeItem(tokenKey);
-      localStorage.removeItem(rememberMeKey);
-      localStorage.removeItem(expireKey);
-      return null;
-    }
+            if (expire <= now) {
+                localStorage.removeItem(tokenKey);
+                localStorage.removeItem(rememberMeKey);
+                localStorage.removeItem(expireKey);
+                return null;
+            }
 
-    return token;
-  }
+            return token;
+        }
 
-  const token = restoreToken();
+        const token = restoreToken();
 
-  if (token) {
-    // 等待axios加载并设置默认header
-    let attempts = 0;
-    const maxAttempts = 10; // 1秒内检测
+        if (token) {
+            // 等待axios加载并设置默认header
+            let attempts = 0;
+            const maxAttempts = 10; // 1秒内检测
 
-    const checkAxios = setInterval(function() {
-      attempts++;
+            const checkAxios = setInterval(function() {
+                attempts++;
 
-      if (window.axios) {
-        clearInterval(checkAxios);
-        window.axios.defaults.headers.common['Authorization'] = token;
-      } else if (attempts >= maxAttempts) {
-        clearInterval(checkAxios);
-      }
-    }, 100);
+                if (window.axios) {
+                    clearInterval(checkAxios);
+                    window.axios.defaults.headers.common['Authorization'] = token;
+                } else if (attempts >= maxAttempts) {
+                    clearInterval(checkAxios);
+                }
+            }, 100);
 
-    // 同时拦截XMLHttpRequest（备用方案）
-    const originalOpen = XMLHttpRequest.prototype.open;
-    const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+            // 同时拦截XMLHttpRequest（备用方案）
+            const originalOpen = XMLHttpRequest.prototype.open;
+            const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
 
-    XMLHttpRequest.prototype.open = function() {
-      this._url = arguments[1];
-      return originalOpen.apply(this, arguments);
-    };
+            XMLHttpRequest.prototype.open = function() {
+                this._url = arguments[1];
+                return originalOpen.apply(this, arguments);
+            };
 
-    XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
-      // 如果是Authorization header且值为空或不存在，自动设置token
-      if (header === 'Authorization' && !value && token) {
-        value = token;
-      }
-      return originalSetRequestHeader.call(this, header, value);
-    };
+            XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+                // 如果是Authorization header且值为空或不存在，自动设置token
+                if (header === 'Authorization' && !value && token) {
+                    value = token;
+                }
+                return originalSetRequestHeader.call(this, header, value);
+            };
 
-    // 拦截fetch请求（更通用）
-    const originalFetch = window.fetch;
-    window.fetch = function(url, options) {
-      options = options || {};
-      options.headers = options.headers || {};
+            // 拦截fetch请求（更通用）
+            const originalFetch = window.fetch;
+            window.fetch = function(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
 
-      // 如果没有Authorization header，自动添加
-      if (!options.headers['Authorization'] && !options.headers['authorization'] && token) {
-        options.headers['Authorization'] = token;
-      }
+                // 如果没有Authorization header，自动添加
+                if (!options.headers['Authorization'] && !options.headers['authorization'] && token) {
+                    options.headers['Authorization'] = token;
+                }
 
-      return originalFetch.call(this, url, options);
-    };
-  }
-})();
+                return originalFetch.call(this, url, options);
+            };
+        }
+    })();
 </script>
 
 <!-- 🎯 "记住我"功能修复脚本 (2026-05-13) -->
 <script>
-(function() {
-  'use strict';
+    (function() {
+        'use strict';
 
-  // 拦截fetch请求，在登录成功后保存"记住我"标记
-  const originalFetch = window.fetch;
-  window.fetch = function(...args) {
-    return originalFetch.apply(this, args).then(response => {
-      const clonedResponse = response.clone();
+        // 拦截fetch请求，在登录成功后保存"记住我"标记
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            return originalFetch.apply(this, args).then(response => {
+                const clonedResponse = response.clone();
 
-      // 检查是否是登录接口
-      if (args[0] && (args[0].includes('/ex-admin/login/check') || args[0].endsWith('/login/check'))) {
-        clonedResponse.json().then(data => {
-          if (data.code === 0 && data.data) {
-            // 根据当前域名判断source
-            const hostname = window.location.hostname;
-            let source = 'admin';
-            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
-            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
-            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+                // 检查是否是登录接口
+                if (args[0] && (args[0].includes('/ex-admin/login/check') || args[0].endsWith('/login/check'))) {
+                    clonedResponse.json().then(data => {
+                        if (data.code === 0 && data.data) {
+                            // 根据当前域名判断source
+                            const hostname = window.location.hostname;
+                            let source = 'admin';
+                            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+                            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+                            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
 
-            if (data.data.remember_me) {
-              const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
-              localStorage.setItem('ex_admin_token_expire_' + source, tokenExpireTime.toString());
-              localStorage.setItem('ex_admin_remember_me_' + source, 'true');
-            } else {
-              localStorage.removeItem('ex_admin_token_expire_' + source);
-              localStorage.removeItem('ex_admin_remember_me_' + source);
-            }
-          }
-        }).catch(function(err) {
-          // 忽略解析错误
-        });
-      }
+                            if (data.data.remember_me) {
+                                const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
+                                localStorage.setItem('ex_admin_token_expire_' + source, tokenExpireTime.toString());
+                                localStorage.setItem('ex_admin_remember_me_' + source, 'true');
+                            } else {
+                                localStorage.removeItem('ex_admin_token_expire_' + source);
+                                localStorage.removeItem('ex_admin_remember_me_' + source);
+                            }
+                        }
+                    }).catch(function(err) {
+                        // 忽略解析错误
+                    });
+                }
 
-      return response;
-    });
-  };
+                return response;
+            });
+        };
 
-  // 页面加载时检查并显示状态
-  window.addEventListener('load', function() {
-    setTimeout(function() {
-      const hostname = window.location.hostname;
-      let source = 'admin';
-      if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
-      else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
-      else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
-
-      const tokenKey = '/' + source + '_ex-admin-token';
-      const hasToken = localStorage.getItem(tokenKey);
-      const rememberMe = localStorage.getItem('ex_admin_remember_me_' + source);
-      const expireTime = localStorage.getItem('ex_admin_token_expire_' + source);
-
-      if (hasToken && rememberMe === 'true' && expireTime) {
-        const now = Date.now();
-        const expire = parseInt(expireTime);
-        if (expire <= now) {
-          localStorage.removeItem('ex_admin_token_expire_' + source);
-          localStorage.removeItem('ex_admin_remember_me_' + source);
-        }
-      }
-    }, 1000);
-  });
-})();
-</script>
-
-<!-- 🎯 Vue Router拦截 - 阻止已登录用户跳转到登录页 (2026-05-13) -->
-<script>
-(function() {
-  'use strict';
-
-  // 检查用户是否应该自动登录
-  function shouldAutoLogin() {
-    const hostname = window.location.hostname;
-    let source = 'admin';
-    if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
-    else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
-    else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
-
-    const tokenKey = '/' + source + '_ex-admin-token';
-    const hasToken = localStorage.getItem(tokenKey);
-    const rememberMe = localStorage.getItem('ex_admin_remember_me_' + source);
-    const expireTime = localStorage.getItem('ex_admin_token_expire_' + source);
-
-    if (!hasToken || rememberMe !== 'true' || !expireTime) {
-      return false;
-    }
-
-    const now = Date.now();
-    const expire = parseInt(expireTime);
-    if (expire <= now) {
-      localStorage.removeItem('ex_admin_token_expire_' + source);
-      localStorage.removeItem('ex_admin_remember_me_' + source);
-      return false;
-    }
-
-    return true;
-  }
-
-  // 等待Vue Router加载并拦截
-  var attempts = 0;
-  var maxAttempts = 10; // 1秒内检测
-
-  var checkRouter = setInterval(function() {
-    attempts++;
-
-    // 尝试获取Vue Router实例
-    var router = null;
-    if (window.$router) {
-      router = window.$router;
-    } else if (window.app && window.app.$router) {
-      router = window.app.$router;
-    } else if (window.__VUE_ROUTER__) {
-      router = window.__VUE_ROUTER__;
-    }
-
-    if (router && typeof router.beforeEach === 'function') {
-      clearInterval(checkRouter);
-
-      // 注入路由守卫
-      router.beforeEach(function(to, from, next) {
-        // 如果要跳转到登录页
-        if (to.path && to.path.indexOf('/login/index') > -1) {
-          // 检查是否有有效的记住我token
-          if (shouldAutoLogin()) {
-            next('/');
-            return;
-          }
-        }
-
-        next();
-      });
-
-      // 如果当前就在登录页且有有效token，立即跳转
-      if (window.location.hash && window.location.hash.indexOf('/login/index') > -1 && shouldAutoLogin()) {
-        setTimeout(function() {
-          window.location.hash = '/';
-        }, 100);
-      }
-
-    } else if (attempts >= maxAttempts) {
-      clearInterval(checkRouter);
-
-      // 备用方案：直接检测URL变化
-      if (shouldAutoLogin()) {
-        var originalHash = window.location.hash;
-
-        setInterval(function() {
-          var currentHash = window.location.hash;
-          if (currentHash.indexOf('/login/index') > -1 && shouldAutoLogin()) {
-            window.location.hash = '/';
-          }
-        }, 500);
-
-        // 如果当前就在登录页，立即跳转
-        if (originalHash.indexOf('/login/index') > -1) {
-          window.location.hash = '/';
-        }
-      }
-    }
-  }, 100);
-})();
-</script>
-
-<!-- 🎯 监听退出登录并自动跳转 (2026-05-26) -->
-<script>
-(function() {
-  'use strict';
-
-  // 拦截 axios 响应，监听退出登录
-  function setupLogoutInterceptor() {
-    if (!window.axios) {
-      return false;
-    }
-
-    // 添加响应拦截器
-    window.axios.interceptors.response.use(
-      function(response) {
-        // 检查是否是退出登录的响应
-        if (response.config && response.config.url &&
-            (response.config.url.includes('/login/logout') || response.config.url.endsWith('/logout'))) {
-
-          // 如果退出成功
-          if (response.data && response.data.code === 0) {
-            // 获取当前域名对应的 source
-            const hostname = window.location.hostname;
-            let source = 'admin';
-            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
-            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
-            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
-
-            // 清理"记住我"数据
-            const rememberMeKey = 'ex_admin_remember_me_' + source;
-            const tokenExpireKey = 'ex_admin_token_expire_' + source;
-
-            localStorage.removeItem(rememberMeKey);
-            localStorage.removeItem(tokenExpireKey);
-            localStorage.removeItem('ex_admin_token');
-            localStorage.removeItem('/' + source + '_ex-admin-token');
-
-            // 清理 Cookie
-            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-
-            // 延迟跳转，确保清理完成
-            // ExAdmin 使用 hash 路由模式，根据 source 跳转到对应的后台登录页
+        // 页面加载时检查并显示状态
+        window.addEventListener('load', function() {
             setTimeout(function() {
-              let loginPath = '/admin#/login/index'; // 默认总后台
+                const hostname = window.location.hostname;
+                let source = 'admin';
+                if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+                else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+                else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
 
-              if (source === 'channel') {
-                loginPath = '/channel#/login/index';
-              } else if (source === 'agent') {
-                loginPath = '/agent#/login/index';
-              } else if (source === 'store') {
-                loginPath = '/store#/login/index';
-              }
+                const tokenKey = '/' + source + '_ex-admin-token';
+                const hasToken = localStorage.getItem(tokenKey);
+                const rememberMe = localStorage.getItem('ex_admin_remember_me_' + source);
+                const expireTime = localStorage.getItem('ex_admin_token_expire_' + source);
 
-              window.location.href = loginPath;
-            }, 100);
-          }
-        }
-
-        return response;
-      },
-      function(error) {
-        return Promise.reject(error);
-      }
-    );
-
-    return true;
-  }
-
-  // 等待 axios 加载
-  let attempts = 0;
-  const maxAttempts = 20; // 2秒内检测
-
-  const checkAxios = setInterval(function() {
-    attempts++;
-
-    if (setupLogoutInterceptor()) {
-      clearInterval(checkAxios);
-    } else if (attempts >= maxAttempts) {
-      clearInterval(checkAxios);
-    }
-  }, 100);
-})();
+                if (hasToken && rememberMe === 'true' && expireTime) {
+                    const now = Date.now();
+                    const expire = parseInt(expireTime);
+                    if (expire <= now) {
+                        localStorage.removeItem('ex_admin_token_expire_' + source);
+                        localStorage.removeItem('ex_admin_remember_me_' + source);
+                    }
+                }
+            }, 1000);
+        });
+    })();
 </script>
 </body>
 </html>
