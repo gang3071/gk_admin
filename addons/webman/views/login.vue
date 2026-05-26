@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <div class="lang-switch">
+        <div v-if="!isCheckingAuth" class="lang-switch">
             <a-select v-model:value="currentLang" size="small" style="width: 120px" @change="handleLangChange">
                 <a-select-option value="zh-CN">简体中文</a-select-option>
                 <a-select-option value="zh-TW">繁體中文</a-select-option>
@@ -8,7 +8,15 @@
                 <a-select-option value="jp">日本語</a-select-option>
             </a-select>
         </div>
-        <div class="login-layout">
+        <div v-if="isCheckingAuth" class="checking-auth">
+            <div class="loading-content">
+                <img v-if="webLogo" class="loading-logo" src="/exadmin/img/login_logo.png" />
+                <div class="loading-text">{{webName}}</div>
+                <a-spin size="large" />
+                <div class="loading-hint">{{trans.checking_auth || '正在验证登录状态...'}}</div>
+            </div>
+        </div>
+        <div v-else class="login-layout">
             <div class="left">
                 <div class="logo-container">
                     <img src="/exadmin/img/login_logo.png" class="logo" v-if="webLogo" />
@@ -107,7 +115,8 @@ export default {
                     username_required: '请输入账号',
                     password_required: '密码输入长度不能少于5位',
                     verify_required: '请输入验证码',
-                    remember_me: '记住我（15天免登录）'
+                    remember_me: '记住我（15天免登录）',
+                    checking_auth: '正在验证登录状态...'
                 },
                 'zh-TW': {
                     title: '登入',
@@ -118,7 +127,8 @@ export default {
                     username_required: '請輸入帳號',
                     password_required: '密碼輸入長度不能少於5位',
                     verify_required: '請輸入驗證碼',
-                    remember_me: '記住我（15天免登入）'
+                    remember_me: '記住我（15天免登入）',
+                    checking_auth: '正在驗證登入狀態...'
                 },
                 'en': {
                     title: 'Login',
@@ -129,7 +139,8 @@ export default {
                     username_required: 'Please enter username',
                     password_required: 'Password must be at least 5 characters',
                     verify_required: 'Please enter verification code',
-                    remember_me: 'Remember me (15 days)'
+                    remember_me: 'Remember me (15 days)',
+                    checking_auth: 'Checking login status...'
                 },
                 'jp': {
                     title: 'ログイン',
@@ -140,7 +151,8 @@ export default {
                     username_required: 'ユーザー名を入力してください',
                     password_required: 'パスワードは5文字以上である必要があります',
                     verify_required: '認証コードを入力してください',
-                    remember_me: 'ログイン状態を保存（15日間）'
+                    remember_me: 'ログイン状態を保存（15日間）',
+                    checking_auth: 'ログイン状態を確認中...'
                 }
             })
         }
@@ -149,6 +161,7 @@ export default {
         return {
             currentLang: 'zh-TW',
             verification: false,
+            isCheckingAuth: true,
             loginForm: {
               username: '',
               password: '',
@@ -186,21 +199,61 @@ export default {
     },
     created(){
         // 🎯 提前检查token，避免登录页面"一闪"
-        const token = this.getCookie('ex_admin_token') || localStorage.getItem('ex_admin_token');
+        const cookieToken = this.getCookie('ex_admin_token');
+        const localToken = localStorage.getItem('ex_admin_token');
+        const token = cookieToken || localToken;
         const source = 'admin';
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
-        // 如果有token且记住我功能已启用
-        if (token && localStorage.getItem(rememberMeKey) === 'true') {
-            const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
-            // 检查是否过期
-            if (expireTime && Date.now() < expireTime) {
-                // 直接跳转到首页，不渲染登录页面
-                this.$router.replace(this.redirect || '/');
+        console.log('=== 检查15天免登录状态 (Admin) ===');
+        console.log('Cookie Token:', cookieToken ? '存在' : '不存在', cookieToken || '');
+        console.log('LocalStorage Token:', localToken ? '存在' : '不存在', localToken || '');
+        console.log('最终Token:', token ? '存在' : '不存在');
+        console.log('记住我:', localStorage.getItem(rememberMeKey));
+        console.log('过期时间戳:', localStorage.getItem(tokenExpireKey));
+        console.log('所有Cookies:', document.cookie);
+
+        // 🎯 修复：即使Token丢失，但如果"记住我"功能启用且未过期，也应该引导用户
+        const rememberMe = localStorage.getItem(rememberMeKey) === 'true';
+        const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
+        const now = Date.now();
+
+        if (rememberMe && expireTime && now < expireTime) {
+            console.log('当前时间:', now);
+            console.log('过期时间:', expireTime);
+            console.log('剩余时间(天):', ((expireTime - now) / (24 * 60 * 60 * 1000)).toFixed(2));
+
+            if (token) {
+                console.log('✅ Token有效，准备跳转到首页');
+                // 使用 nextTick 确保在组件完全初始化后再跳转
+                this.$nextTick(() => {
+                    const targetPath = this.redirect || '/';
+                    console.log('跳转到:', targetPath);
+                    this.$router.replace(targetPath);
+                });
                 return;
+            } else {
+                console.warn('⚠️ 记住我功能已启用且未过期，但Token丢失！');
+                console.warn('可能原因：');
+                console.warn('1. Cookie被浏览器/插件清除了');
+                console.warn('2. Cookie的domain/path设置不正确');
+                console.warn('3. 跨域或安全策略限制');
+                console.warn('建议：检查登录时setCookie的实现，确保设置了正确的domain和path');
             }
+        } else if (rememberMe) {
+            console.log('❌ Token已过期，清除本地数据');
+            // 清除过期的token和相关数据
+            localStorage.removeItem(tokenExpireKey);
+            localStorage.removeItem(rememberMeKey);
+            localStorage.removeItem('ex_admin_token');
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        } else {
+            console.log('❌ 未启用记住我功能');
         }
+
+        // 显示登录页面
+        this.isCheckingAuth = false;
 
         this.updateRules();
         if(this.deBug){
@@ -274,17 +327,27 @@ export default {
                     const tokenExpireKey = `ex_admin_token_expire_${source}`;
                     const rememberMeKey = `ex_admin_remember_me_${source}`;
 
+                    // 🔑 获取登录返回的Token
+                    const token = res.data && res.data.token ? res.data.token : localStorage.getItem('ex_admin_token');
+
                     if (res.data && res.data.remember_me && this.loginForm.remember_me) {
-                        // 勾选"记住我"时，设置token存储标记
-                        // 15天免登录：设置一个标记告诉框架使用localStorage并设置过期时间
-                        const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000); // 15天后
+                        const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
                         localStorage.setItem(tokenExpireKey, tokenExpireTime.toString());
                         localStorage.setItem(rememberMeKey, 'true');
+
+                        // 🎯 关键修复：将Token保存到Cookie，设置15天过期
+                        if (token) {
+                            this.setCookie('ex_admin_token', token, 15);
+                            console.log(`[Login-${source}] Token已保存到Cookie，15天后过期`);
+                        }
                         console.log(`[Login-${source}] 记住我已启用，token将保存15天`);
                     } else {
-                        // 未勾选"记住我"，清除记住我标记
                         localStorage.removeItem(tokenExpireKey);
                         localStorage.removeItem(rememberMeKey);
+                        // 如果未勾选"记住我"，使用短期Cookie（会话级别）
+                        if (token) {
+                            this.setCookie('ex_admin_token', token, 1); // 1天
+                        }
                         console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
@@ -323,6 +386,80 @@ export default {
     top: 20px;
     right: 30px;
     z-index: 100;
+}
+
+/* Loading 页面样式 */
+.checking-auth {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #FFFFFF;
+    z-index: 9999;
+}
+
+.loading-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.loading-logo {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 30px;
+    animation: logoFloat 2s ease-in-out infinite;
+}
+
+.loading-text {
+    font-size: 28px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 30px;
+    letter-spacing: 2px;
+}
+
+.loading-hint {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #999;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes logoFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 0.6;
+    }
+    50% {
+        opacity: 1;
+    }
 }
 
 .logo{
@@ -461,5 +598,13 @@ export default {
     height: 40px;
     cursor: pointer;
     border: 1px solid #ccc;
+}
+
+.checking-auth {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
 }
 </style>
