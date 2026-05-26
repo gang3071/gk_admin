@@ -469,6 +469,63 @@
 (function() {
   'use strict';
 
+  // ========== 方案1：拦截原生 XMLHttpRequest (不依赖 axios) ==========
+  console.log('[退出登录拦截器] 开始设置 XMLHttpRequest 拦截...');
+
+  var originalOpen = XMLHttpRequest.prototype.open;
+  var originalSend = XMLHttpRequest.prototype.send;
+
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this._url = url;
+    this._method = method;
+    return originalOpen.apply(this, arguments);
+  };
+
+  XMLHttpRequest.prototype.send = function(body) {
+    var xhr = this;
+    var url = this._url || '';
+
+    // 监听响应完成
+    xhr.addEventListener('load', function() {
+      // 检测是否是退出登录请求
+      if (url.includes('/login/logout') || url.includes('/ex-admin/login/logout')) {
+        console.log('[退出登录拦截器-XHR] ✅ 检测到退出登录请求:', url);
+
+        // 判断当前是哪个后台
+        var hostname = window.location.hostname;
+        var source = 'admin';
+        if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+        else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+        else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+        // 设置"强制清理"标记
+        sessionStorage.setItem('force_cleanup_' + source, 'true');
+        console.log('[退出登录拦截器-XHR] 已设置 force_cleanup 标记:', source);
+
+        // 立即清理所有"记住我"数据
+        ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
+          localStorage.removeItem('ex_admin_remember_me_' + s);
+          localStorage.removeItem('ex_admin_token_expire_' + s);
+          localStorage.removeItem('/' + s + '_ex-admin-token');
+          sessionStorage.removeItem('auto_login_attempt_' + s);
+        });
+
+        // 清理通用 token
+        localStorage.removeItem('ex_admin_token');
+
+        // 清理 Cookie
+        document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+        console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！');
+      }
+    });
+
+    return originalSend.apply(this, arguments);
+  };
+
+  console.log('[退出登录拦截器] XMLHttpRequest 拦截设置完成！');
+
+  // ========== 方案2：axios 拦截器（备用，如果 axios 可用） ==========
   // 全局标记：是否正在处理 401 错误
   var handling401 = false;
 
@@ -507,17 +564,28 @@
           console.log('[拦截器] 捕获响应:', response.config.url, response.data);
         }
 
-        // 检查是否需要清理存储（后端返回 clear_storage: true）
-        if (response.data && response.data.data && response.data.data.clear_storage === true) {
-          console.log('[退出登录拦截器] ✅ 检测到 clear_storage 标记，开始清理数据...');
+        // 🎯 检测退出登录请求
+        if (response.config && response.config.url && response.config.url.includes('/login/logout')) {
+          console.log('[退出登录拦截器] ✅ 检测到退出登录请求，开始清理数据...');
+
+          // 判断当前是哪个后台
+          var hostname = window.location.hostname;
+          var source = 'admin';
+          if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+          else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+          else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+          // 设置"强制清理"标记，登录页会读取这个标记
+          sessionStorage.setItem('force_cleanup_' + source, 'true');
+          console.log('[退出登录拦截器] 已设置 force_cleanup 标记:', source);
 
           // 立即清理所有"记住我"数据
-          ['admin', 'channel', 'agent', 'store'].forEach(function(source) {
-            console.log('[退出登录拦截器] 清理 source:', source);
-            localStorage.removeItem('ex_admin_remember_me_' + source);
-            localStorage.removeItem('ex_admin_token_expire_' + source);
-            localStorage.removeItem('/' + source + '_ex-admin-token');
-            sessionStorage.removeItem('auto_login_attempt_' + source);
+          ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
+            console.log('[退出登录拦截器] 清理 source:', s);
+            localStorage.removeItem('ex_admin_remember_me_' + s);
+            localStorage.removeItem('ex_admin_token_expire_' + s);
+            localStorage.removeItem('/' + s + '_ex-admin-token');
+            sessionStorage.removeItem('auto_login_attempt_' + s);
           });
 
           // 清理通用 token
@@ -528,6 +596,18 @@
 
           console.log('[退出登录拦截器] ✅ 数据清理完成！');
           console.log('[退出登录拦截器] localStorage 剩余项:', Object.keys(localStorage));
+        }
+
+        // 检查是否需要清理存储（后端返回 clear_storage: true，备用方案）
+        if (response.data && response.data.data && response.data.data.clear_storage === true) {
+          console.log('[退出登录拦截器] ✅ 检测到 clear_storage 标记（备用方案）');
+          var hostname = window.location.hostname;
+          var source = 'admin';
+          if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+          else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+          else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+          sessionStorage.setItem('force_cleanup_' + source, 'true');
         }
 
         return response;
