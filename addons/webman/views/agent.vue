@@ -197,7 +197,7 @@ export default {
             // 检查是否过期
             if (expireTime && Date.now() < expireTime) {
                 // 直接跳转到首页，不渲染登录页面
-                this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex');
+                this.$router.replace('/agent#/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex');
                 return;
             }
         }
@@ -285,7 +285,7 @@ export default {
                         console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
-                    this.$router.push(this.redirect || '/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex' )
+                    this.$router.push(this.redirect || '/agent#/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex' )
                 }).finally(() => {
                     this.loading = false
                 }).catch(()=>{

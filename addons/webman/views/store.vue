@@ -197,7 +197,7 @@ export default {
             // 检查是否过期
             if (expireTime && Date.now() < expireTime) {
                 // 直接跳转到首页，不渲染登录页面
-                this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex');
+                this.$router.replace('/store#/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex');
                 return;
             }
         }
