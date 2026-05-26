@@ -561,5 +561,77 @@
   }, 100);
 })();
 </script>
+
+<!-- 🎯 监听退出登录并自动跳转 (2026-05-26) -->
+<script>
+(function() {
+  'use strict';
+
+  // 拦截 axios 响应，监听退出登录
+  function setupLogoutInterceptor() {
+    if (!window.axios) {
+      return false;
+    }
+
+    // 添加响应拦截器
+    window.axios.interceptors.response.use(
+      function(response) {
+        // 检查是否是退出登录的响应
+        if (response.config && response.config.url &&
+            (response.config.url.includes('/login/logout') || response.config.url.endsWith('/logout'))) {
+
+          // 如果退出成功
+          if (response.data && response.data.code === 0) {
+            // 获取当前域名对应的 source
+            const hostname = window.location.hostname;
+            let source = 'admin';
+            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+            // 清理"记住我"数据
+            const rememberMeKey = 'ex_admin_remember_me_' + source;
+            const tokenExpireKey = 'ex_admin_token_expire_' + source;
+
+            localStorage.removeItem(rememberMeKey);
+            localStorage.removeItem(tokenExpireKey);
+            localStorage.removeItem('ex_admin_token');
+            localStorage.removeItem('/' + source + '_ex-admin-token');
+
+            // 清理 Cookie
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+            // 延迟跳转，确保清理完成
+            setTimeout(function() {
+              window.location.href = '/ex-admin/login/index';
+            }, 100);
+          }
+        }
+
+        return response;
+      },
+      function(error) {
+        return Promise.reject(error);
+      }
+    );
+
+    return true;
+  }
+
+  // 等待 axios 加载
+  let attempts = 0;
+  const maxAttempts = 20; // 2秒内检测
+
+  const checkAxios = setInterval(function() {
+    attempts++;
+
+    if (setupLogoutInterceptor()) {
+      clearInterval(checkAxios);
+    } else if (attempts >= maxAttempts) {
+      clearInterval(checkAxios);
+    }
+  }, 100);
+})();
+</script>
 </body>
 </html>
