@@ -189,7 +189,9 @@ export default {
         }
     },
     created(){
-        const token = this.getCookie('ex_admin_token') || localStorage.getItem('ex_admin_token');
+        const cookieToken = this.getCookie('ex_admin_token');
+        const localToken = localStorage.getItem('ex_admin_token');
+        const token = cookieToken || localToken;
         const source = 'admin';
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
@@ -199,18 +201,15 @@ export default {
         const now = Date.now();
 
         if (rememberMe && expireTime && now < expireTime && token) {
+            // Token有效，跳转到首页
             this.$nextTick(() => {
                 this.$router.replace(this.redirect || '/');
             });
             return;
         }
 
-        if (rememberMe && (!expireTime || now >= expireTime)) {
-            localStorage.removeItem(tokenExpireKey);
-            localStorage.removeItem(rememberMeKey);
-            localStorage.removeItem('ex_admin_token');
-            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-        }
+        // 清理过期或无效的记住我数据
+        this.clearRememberMeData(source);
 
         // 显示登录页面
         this.isCheckingAuth = false;
@@ -239,6 +238,19 @@ export default {
         }
     },
     methods: {
+        clearRememberMeData(source) {
+            // 清理所有记住我相关的数据
+            const rememberMeKey = `ex_admin_remember_me_${source}`;
+            const tokenExpireKey = `ex_admin_token_expire_${source}`;
+
+            localStorage.removeItem(rememberMeKey);
+            localStorage.removeItem(tokenExpireKey);
+            localStorage.removeItem('ex_admin_token');
+
+            // 清理Cookie
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        },
+
         handleLangChange(value) {
             localStorage.setItem('locale', value);
         },
