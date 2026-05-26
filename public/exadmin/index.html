@@ -506,66 +506,75 @@
             var isLoginPage = currentHash.includes('/login/index') || currentHash.includes('/channel/index') ||
                              currentHash.includes('/agent/index') || currentHash.includes('/store/index');
 
-            // 🎯 防止重复处理：如果正在处理或已在登录页，跳过
-            if (handling401 || isLoginPage) {
-              if (isLoginPage) {
-                console.log('[XHR 拦截器] 401 错误：已在登录页，忽略');
-              } else {
-                console.log('[XHR 拦截器] 401 错误：正在处理中，忽略');
-              }
+            // 🎯 检查请求的资源类型：如果是受保护的资源，说明不在登录页的功能状态
+            var isProtectedResource = url && (
+              url.includes('/system/info') ||
+              url.includes('/system/user') ||
+              url.includes('/dashboard') ||
+              url.includes('/ex-admin/')
+            );
+
+            // 🎯 防止重复处理：如果正在处理，跳过
+            // 但如果是受保护的资源返回 401，即使 hash 显示在登录页也要处理（这是自动跳转阶段的情况）
+            if (handling401) {
+              console.log('[XHR 拦截器] 401 错误：正在处理中，忽略');
+              return;
+            }
+
+            // 如果在登录页且不是受保护的资源请求，跳过
+            if (isLoginPage && !isProtectedResource) {
+              console.log('[XHR 拦截器] 401 错误：已在登录页且非受保护资源，忽略');
               return;
             }
 
             // 设置处理标记
             handling401 = true;
 
-            if (!isLoginPage) {
-              console.log('[XHR 拦截器] 401 错误：不在登录页，清理数据并跳转');
+            console.log('[XHR 拦截器] 401 错误：清理数据并跳转到登录页');
 
-              // 判断当前是哪个后台
-              var hostname = window.location.hostname;
-              var source = 'admin';
-              var loginPath = '#/login/index';
+            // 判断当前是哪个后台
+            var hostname = window.location.hostname;
+            var source = 'admin';
+            var loginPath = '#/login/index';
 
-              if (hostname.includes('zi-test') || hostname.includes('channel')) {
-                source = 'channel';
-                loginPath = '#/channel/index';
-              } else if (hostname.includes('agent-test') || hostname.includes('agent')) {
-                source = 'agent';
-                loginPath = '#/agent/index';
-              } else if (hostname.includes('store-test') || hostname.includes('store')) {
-                source = 'store';
-                loginPath = '#/store/index';
-              }
-
-              // 设置"强制清理"标记
-              sessionStorage.setItem('force_cleanup_' + source, 'true');
-
-              // 清理所有"记住我"数据
-              ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
-                localStorage.removeItem('ex_admin_remember_me_' + s);
-                localStorage.removeItem('ex_admin_token_expire_' + s);
-                localStorage.removeItem('/' + s + '_ex-admin-token');
-                sessionStorage.removeItem('auto_login_attempt_' + s);
-              });
-
-              // 清理通用 token
-              localStorage.removeItem('ex_admin_token');
-
-              // 清理 Cookie
-              document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-
-              console.log('[XHR 拦截器] 401 处理：数据已清理，准备跳转到:', loginPath);
-
-              // 跳转到登录页
-              setTimeout(function() {
-                window.location.hash = loginPath;
-                // 跳转后重置标记（延迟重置，确保跳转完成）
-                setTimeout(function() {
-                  handling401 = false;
-                }, 1000);
-              }, 100);
+            if (hostname.includes('zi-test') || hostname.includes('channel')) {
+              source = 'channel';
+              loginPath = '#/channel/index';
+            } else if (hostname.includes('agent-test') || hostname.includes('agent')) {
+              source = 'agent';
+              loginPath = '#/agent/index';
+            } else if (hostname.includes('store-test') || hostname.includes('store')) {
+              source = 'store';
+              loginPath = '#/store/index';
             }
+
+            // 设置"强制清理"标记
+            sessionStorage.setItem('force_cleanup_' + source, 'true');
+
+            // 清理所有"记住我"数据
+            ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
+              localStorage.removeItem('ex_admin_remember_me_' + s);
+              localStorage.removeItem('ex_admin_token_expire_' + s);
+              localStorage.removeItem('/' + s + '_ex-admin-token');
+              sessionStorage.removeItem('auto_login_attempt_' + s);
+            });
+
+            // 清理通用 token
+            localStorage.removeItem('ex_admin_token');
+
+            // 清理 Cookie
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+            console.log('[XHR 拦截器] 401 处理：数据已清理，准备跳转到:', loginPath);
+
+            // 跳转到登录页
+            setTimeout(function() {
+              window.location.hash = loginPath;
+              // 跳转后重置标记（延迟重置，确保跳转完成）
+              setTimeout(function() {
+                handling401 = false;
+              }, 1000);
+            }, 100);
           }
 
           // 检测是否是退出登录请求（多种可能的 URL 格式）
@@ -575,9 +584,18 @@
             // 判断当前是哪个后台
             var hostname = window.location.hostname;
             var source = 'admin';
-            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
-            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
-            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+            var loginPath = '#/login/index';
+
+            if (hostname.includes('zi-test') || hostname.includes('channel')) {
+              source = 'channel';
+              loginPath = '#/channel/index';
+            } else if (hostname.includes('agent-test') || hostname.includes('agent')) {
+              source = 'agent';
+              loginPath = '#/agent/index';
+            } else if (hostname.includes('store-test') || hostname.includes('store')) {
+              source = 'store';
+              loginPath = '#/store/index';
+            }
 
             // 设置"强制清理"标记
             sessionStorage.setItem('force_cleanup_' + source, 'true');
@@ -597,7 +615,12 @@
             // 清理 Cookie
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-            console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！');
+            console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！准备跳转到:', loginPath);
+
+            // 🎯 跳转到登录页
+            setTimeout(function() {
+              window.location.hash = loginPath;
+            }, 100);
           }
         } catch (e) {
           // 静默失败，不影响页面
