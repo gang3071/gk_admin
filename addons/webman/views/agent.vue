@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <div class="lang-switch">
+        <div v-if="!isCheckingAuth" class="lang-switch">
             <a-select v-model:value="currentLang" size="small" style="width: 120px" @change="handleLangChange">
                 <a-select-option value="zh-CN">简体中文</a-select-option>
                 <a-select-option value="zh-TW">繁體中文</a-select-option>
@@ -8,7 +8,10 @@
                 <a-select-option value="jp">日本語</a-select-option>
             </a-select>
         </div>
-        <div class="login-layout">
+        <div v-if="isCheckingAuth" class="checking-auth">
+            <a-spin size="large" />
+        </div>
+        <div v-else class="login-layout">
             <div class="left">
                 <div class="logo-container">
                     <img src="/exadmin/img/login_logo.png" class="logo" v-if="webLogo" />
@@ -149,6 +152,7 @@ export default {
         return {
             currentLang: 'zh-TW',
             verification: false,
+            isCheckingAuth: true,
             loginForm: {
               username: '',
               password: '',
@@ -201,6 +205,9 @@ export default {
                 return;
             }
         }
+
+        // 显示登录页面
+        this.isCheckingAuth = false;
 
         this.updateRules();
         if(this.deBug){
@@ -278,11 +285,9 @@ export default {
                         const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
                         localStorage.setItem(tokenExpireKey, tokenExpireTime.toString());
                         localStorage.setItem(rememberMeKey, 'true');
-                        console.log(`[Login-${source}] 记住我已启用，token将保存15天`);
                     } else {
                         localStorage.removeItem(tokenExpireKey);
                         localStorage.removeItem(rememberMeKey);
-                        console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
                     this.$router.push(this.redirect || '/agent#/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex' )
@@ -458,5 +463,13 @@ export default {
     height: 40px;
     cursor: pointer;
     border: 1px solid #ccc;
+}
+
+.checking-auth {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
 }
 </style>

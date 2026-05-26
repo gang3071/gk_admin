@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <div class="lang-switch">
+        <div v-if="!isCheckingAuth" class="lang-switch">
             <a-select v-model:value="currentLang" size="small" style="width: 120px" @change="handleLangChange">
                 <a-select-option value="zh-CN">简体中文</a-select-option>
                 <a-select-option value="zh-TW">繁體中文</a-select-option>
@@ -8,7 +8,10 @@
                 <a-select-option value="jp">日本語</a-select-option>
             </a-select>
         </div>
-        <div class="login-layout">
+        <div v-if="isCheckingAuth" class="checking-auth">
+            <a-spin size="large" />
+        </div>
+        <div v-else class="login-layout">
             <div class="left">
                 <div class="logo-container">
                     <img src="/exadmin/img/login_logo.png" class="logo" v-if="webLogo" />
@@ -149,6 +152,7 @@ export default {
         return {
             currentLang: 'zh-TW',
             verification: false,
+            isCheckingAuth: true,
             loginForm: {
               username: '',
               password: '',
@@ -186,21 +190,36 @@ export default {
     },
     created(){
         // 🎯 提前检查token，避免登录页面"一闪"
-        const token = this.getCookie('ex_admin_token') || localStorage.getItem('ex_admin_token');
+        const cookieToken = this.getCookie('ex_admin_token');
+        const localToken = localStorage.getItem('ex_admin_token');
+        const token = cookieToken || localToken;
         const source = 'channel';
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
-        // 如果有token且记住我功能已启用
-        if (token && localStorage.getItem(rememberMeKey) === 'true') {
-            const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
-            // 检查是否过期
-            if (expireTime && Date.now() < expireTime) {
-                // 直接跳转到首页，不渲染登录页面
-                this.$router.replace('/channel#/ex-admin/addons-webman-controller-ChannelIndexController/index');
+        // 检查"记住我"功能状态
+        const rememberMe = localStorage.getItem(rememberMeKey) === 'true';
+        const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
+        const now = Date.now();
+
+        if (rememberMe && expireTime && now < expireTime) {
+            if (token) {
+                // Token有效，直接跳转到首页
+                this.$nextTick(() => {
+                    this.$router.replace('/channel#/ex-admin/addons-webman-controller-ChannelIndexController/index');
+                });
                 return;
             }
+        } else if (rememberMe) {
+            // Token已过期，清除本地数据
+            localStorage.removeItem(tokenExpireKey);
+            localStorage.removeItem(rememberMeKey);
+            localStorage.removeItem('ex_admin_token');
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         }
+
+        // 显示登录页面
+        this.isCheckingAuth = false;
 
         this.updateRules();
         if(this.deBug){
@@ -278,11 +297,9 @@ export default {
                         const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
                         localStorage.setItem(tokenExpireKey, tokenExpireTime.toString());
                         localStorage.setItem(rememberMeKey, 'true');
-                        console.log(`[Login-${source}] 记住我已启用，token将保存15天`);
                     } else {
                         localStorage.removeItem(tokenExpireKey);
                         localStorage.removeItem(rememberMeKey);
-                        console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
                     this.$router.push(this.redirect || '/channel#/ex-admin/addons-webman-controller-ChannelIndexController/index' )
@@ -458,5 +475,13 @@ export default {
     height: 40px;
     cursor: pointer;
     border: 1px solid #ccc;
+}
+
+.checking-auth {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%;
 }
 </style>
