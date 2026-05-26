@@ -152,7 +152,7 @@ export default {
         return {
             currentLang: 'zh-TW',
             verification: false,
-            isCheckingAuth: true,
+            isCheckingAuth: true,  // 初始为 true，显示 loading
             loginForm: {
               username: '',
               password: '',
@@ -224,8 +224,8 @@ export default {
             // 记录尝试时间，用于检测重定向循环
             sessionStorage.setItem(autoLoginAttemptKey, now.toString());
 
-            // 先设置为 false，避免页面卡在 loading 状态
-            this.isCheckingAuth = false;
+            // ✅ 保持 loading 状态，不显示登录表单
+            // this.isCheckingAuth = false; // 注释掉，保持 loading
 
             this.$nextTick(() => {
                 this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex');
