@@ -208,6 +208,9 @@ export default {
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         }
 
+        // 显示登录页面
+        this.isCheckingAuth = false;
+
         this.updateRules();
         if(this.deBug){
           this.loginForm.username = '';
