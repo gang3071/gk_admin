@@ -198,39 +198,30 @@ export default {
         }
     },
     created(){
-        // 🎯 提前检查token，避免登录页面"一闪"
-        const cookieToken = this.getCookie('ex_admin_token');
-        const localToken = localStorage.getItem('ex_admin_token');
-        const token = cookieToken || localToken;
+        const token = this.getCookie('ex_admin_token') || localStorage.getItem('ex_admin_token');
         const source = 'store';
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
-        // 检查"记住我"功能状态
         const rememberMe = localStorage.getItem(rememberMeKey) === 'true';
         const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
         const now = Date.now();
 
-        if (rememberMe && expireTime && now < expireTime) {
-            if (token) {
-                // Token有效，直接跳转到首页
-                this.$nextTick(() => {
-                    const targetPath = '/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex';
-                    this.$router.replace(targetPath);
-                });
-                return;
-            }
-        } else if (rememberMe) {
-            // Token已过期，清除本地数据
+        if (rememberMe && expireTime && now < expireTime && token) {
+            this.$nextTick(() => {
+                this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex');
+            });
+            return;
+        }
+
+        if (rememberMe && (!expireTime || now >= expireTime)) {
             localStorage.removeItem(tokenExpireKey);
             localStorage.removeItem(rememberMeKey);
             localStorage.removeItem('ex_admin_token');
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         }
 
-        // 显示登录页面
         this.isCheckingAuth = false;
-
         this.updateRules();
         if(this.deBug){
           this.loginForm.username = '';
