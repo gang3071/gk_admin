@@ -9,12 +9,7 @@
             </a-select>
         </div>
         <div v-if="isCheckingAuth" class="checking-auth">
-            <div class="loading-content">
-                <img v-if="webLogo" class="loading-logo" src="/exadmin/img/login_logo.png" />
-                <div class="loading-text">{{webName}}</div>
-                <a-spin size="large" />
-                <div class="loading-hint">{{trans.checking_auth || '正在验证登录状态...'}}</div>
-            </div>
+            <a-spin size="large" />
         </div>
         <div v-else class="login-layout">
             <div class="left">
@@ -116,7 +111,6 @@ export default {
                     password_required: '密码输入长度不能少于5位',
                     verify_required: '请输入验证码',
                     remember_me: '记住我（15天免登录）',
-                    checking_auth: '正在验证登录状态...'
                 },
                 'zh-TW': {
                     title: '店機登入',
@@ -128,7 +122,6 @@ export default {
                     password_required: '密碼輸入長度不能少於5位',
                     verify_required: '請輸入驗證碼',
                     remember_me: '記住我（15天免登入）',
-                    checking_auth: '正在驗證登入狀態...'
                 },
                 'en': {
                     title: 'Store Login',
@@ -140,7 +133,6 @@ export default {
                     password_required: 'Password must be at least 5 characters',
                     verify_required: 'Please enter verification code',
                     remember_me: 'Remember me (15 days)',
-                    checking_auth: 'Checking login status...'
                 },
                 'jp': {
                     title: '店舗ログイン',
@@ -152,7 +144,6 @@ export default {
                     password_required: 'パスワードは5文字以上である必要があります',
                     verify_required: '認証コードを入力してください',
                     remember_me: 'ログイン状態を保存（15日間）',
-                    checking_auth: 'ログイン状態を確認中...'
                 }
             })
         }
@@ -366,35 +357,9 @@ export default {
     z-index: 9999;
 }
 
-.loading-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.5s ease-in;
-}
 
-.loading-logo {
-    width: 120px;
-    height: 120px;
-    margin-bottom: 30px;
-    animation: logoFloat 2s ease-in-out infinite;
-}
 
-.loading-text {
-    font-size: 28px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 30px;
-    letter-spacing: 2px;
-}
 
-.loading-hint {
-    margin-top: 20px;
-    font-size: 14px;
-    color: #999;
-    animation: pulse 1.5s ease-in-out infinite;
-}
 
 /* 动画效果 */
 @keyframes fadeIn {
@@ -408,14 +373,6 @@ export default {
     }
 }
 
-@keyframes logoFloat {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-10px);
-    }
-}
 
 @keyframes pulse {
     0%, 100% {
