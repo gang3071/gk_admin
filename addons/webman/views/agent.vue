@@ -198,16 +198,18 @@ export default {
         const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
         const now = Date.now();
 
+        // 如果启用了记住我功能且token有效，跳转到首页
         if (rememberMe && expireTime && now < expireTime && token) {
-            // Token有效，跳转到首页
             this.$nextTick(() => {
-                this.$router.replace('/agent#/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex');
+                this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex');
             });
             return;
         }
 
-        // 清理过期或无效的记住我数据
-        this.clearRememberMeData(source);
+        // 如果记住我功能已启用但token过期，清理数据
+        if (rememberMe && (!expireTime || now >= expireTime)) {
+            this.clearRememberMeData(source);
+        }
 
         // 显示登录页面
         this.isCheckingAuth = false;
@@ -245,7 +247,7 @@ export default {
             localStorage.removeItem(tokenExpireKey);
             localStorage.removeItem('ex_admin_token');
 
-            // 清理Cookie
+            // 清理Cookie中的token
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         },
 
