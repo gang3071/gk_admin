@@ -194,7 +194,16 @@ export default {
         // 🎯 关键修复：检查是否是退出登录后跳转过来的
         // 如果 URL 中有 redirect 参数，说明是从其他页面跳转过来的（通常是退出登录）
         // 需要先清理"记住我"数据，避免自动登录
-        if (window.location.search.includes('redirect=')) {
+        // ⚠️ 注意：在 hash 路由模式下，参数可能在 hash 中，也可能在 search 中
+        const fullUrl = window.location.href;
+        const hashUrl = window.location.hash;
+        const searchUrl = window.location.search;
+
+        console.log('[登录页 created] 完整 URL:', fullUrl);
+        console.log('[登录页 created] hash:', hashUrl);
+        console.log('[登录页 created] search:', searchUrl);
+
+        if (fullUrl.includes('redirect=') || hashUrl.includes('redirect=') || searchUrl.includes('redirect=')) {
             console.log('[登录页 created] ⚠️ 检测到 redirect 参数，可能是退出登录，先清理数据');
             this.clearRememberMeData(source);
             sessionStorage.removeItem('auto_login_attempt_' + source);

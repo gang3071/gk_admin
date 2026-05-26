@@ -612,17 +612,28 @@
 
   // 等待 axios 加载
   var attempts = 0;
-  var maxAttempts = 20;
+  var maxAttempts = 50; // 增加到 50 次尝试（5 秒）
 
   var checkAxios = setInterval(function() {
     attempts++;
 
+    // 尝试多个可能的 axios 对象位置
+    if (!window.axios) {
+      // 尝试从 Vue 实例获取
+      if (window.Vue && window.Vue.prototype && window.Vue.prototype.$request) {
+        window.axios = window.Vue.prototype.$request;
+        console.log('[退出登录拦截器] 从 Vue.prototype.$request 获取到 axios');
+      }
+    }
+
     if (setupLogoutCleanup()) {
       clearInterval(checkAxios);
-      console.log('[退出登录拦截器] axios 拦截器设置成功！');
+      console.log('[退出登录拦截器] axios 拦截器设置成功！尝试次数:', attempts);
     } else if (attempts >= maxAttempts) {
       clearInterval(checkAxios);
-      console.warn('[退出登录拦截器] ⚠️ 超时：未找到 axios');
+      console.warn('[退出登录拦截器] ⚠️ 超时：未找到 axios，已尝试', attempts, '次');
+      console.warn('[退出登录拦截器] window.axios:', typeof window.axios);
+      console.warn('[退出登录拦截器] window.Vue:', typeof window.Vue);
     }
   }, 100);
 })();
