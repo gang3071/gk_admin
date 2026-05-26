@@ -194,8 +194,35 @@ export default {
         const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
         const now = Date.now();
 
+        // 检测重定向循环：如果短时间内多次尝试自动登录，说明 token 在服务器端无效
+        const autoLoginAttemptKey = `auto_login_attempt_${source}`;
+        const lastAttempt = sessionStorage.getItem(autoLoginAttemptKey);
+        const attemptTime = lastAttempt ? parseInt(lastAttempt) : 0;
+        const timeSinceLastAttempt = now - attemptTime;
+
+        // 如果 5 秒内再次尝试自动登录，说明出现了重定向循环（服务器拒绝了 token）
+        if (timeSinceLastAttempt < 5000) {
+            // 清除无效的"记住我"数据，打破循环
+            this.clearRememberMeData(source);
+            sessionStorage.removeItem(autoLoginAttemptKey);
+            this.isCheckingAuth = false;
+            this.updateRules();
+            if(this.deBug){
+              this.loginForm.username = '';
+              this.loginForm.password = '';
+            }
+            this.getVerify();
+            return;
+        }
+
         // 如果启用了记住我功能且token有效，跳转到首页
         if (rememberMe && expireTime && now < expireTime && token) {
+            // 记录尝试时间，用于检测重定向循环
+            sessionStorage.setItem(autoLoginAttemptKey, now.toString());
+
+            // 先设置为 false，避免页面卡在 loading 状态
+            this.isCheckingAuth = false;
+
             this.$nextTick(() => {
                 this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex');
             });
@@ -351,6 +378,19 @@ export default {
     top: 20px;
     right: 30px;
     z-index: 100;
+}
+
+.checking-auth {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #FFFFFF;
+    z-index: 1000;
 }
 
 
