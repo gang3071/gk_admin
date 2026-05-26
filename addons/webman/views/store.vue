@@ -1,6 +1,6 @@
 <template>
     <div class="container">
-        <div v-if="!isCheckingAuth" class="lang-switch">
+        <div class="lang-switch">
             <a-select v-model:value="currentLang" size="small" style="width: 120px" @change="handleLangChange">
                 <a-select-option value="zh-CN">简体中文</a-select-option>
                 <a-select-option value="zh-TW">繁體中文</a-select-option>
@@ -8,10 +8,7 @@
                 <a-select-option value="jp">日本語</a-select-option>
             </a-select>
         </div>
-        <div v-if="isCheckingAuth" class="checking-auth">
-            <a-spin size="large" />
-        </div>
-        <div v-else class="login-layout">
+        <div class="login-layout">
             <div class="left">
                 <div class="logo-container">
                     <img src="/exadmin/img/login_logo.png" class="logo" v-if="webLogo" />
@@ -152,7 +149,6 @@ export default {
         return {
             currentLang: 'zh-TW',
             verification: false,
-            isCheckingAuth: true,
             loginForm: {
               username: '',
               password: '',
@@ -212,7 +208,6 @@ export default {
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         }
 
-        this.isCheckingAuth = false;
         this.updateRules();
         if(this.deBug){
           this.loginForm.username = '';
@@ -343,19 +338,6 @@ export default {
     z-index: 100;
 }
 
-/* Loading 页面样式 */
-.checking-auth {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #FFFFFF;
-    z-index: 9999;
-}
 
 
 
@@ -521,11 +503,4 @@ export default {
     border: 1px solid #ccc;
 }
 
-.checking-auth {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100%;
-    width: 100%;
-}
 </style>
