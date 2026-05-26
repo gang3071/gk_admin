@@ -191,15 +191,41 @@ export default {
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
+        console.log('=== 检查15天免登录状态 ===');
+        console.log('Token:', token ? '存在' : '不存在');
+        console.log('记住我:', localStorage.getItem(rememberMeKey));
+        console.log('过期时间戳:', localStorage.getItem(tokenExpireKey));
+
         // 如果有token且记住我功能已启用
         if (token && localStorage.getItem(rememberMeKey) === 'true') {
             const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
+            const now = Date.now();
+
+            console.log('当前时间:', now);
+            console.log('过期时间:', expireTime);
+            console.log('剩余时间(天):', ((expireTime - now) / (24 * 60 * 60 * 1000)).toFixed(2));
+
             // 检查是否过期
-            if (expireTime && Date.now() < expireTime) {
-                // 直接跳转到首页，不渲染登录页面
-                this.$router.replace('/store#/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex');
+            if (expireTime && now < expireTime) {
+                console.log('✅ Token有效，准备跳转到首页');
+                // 使用 nextTick 确保在组件完全初始化后再跳转
+                this.$nextTick(() => {
+                    // 🎯 修复：路径保持一致，与登录成功后的路径一致
+                    const targetPath = '/ex-admin/addons-webman-controller-ChannelIndexController/storeIndex';
+                    console.log('跳转到:', targetPath);
+                    this.$router.replace(targetPath);
+                });
                 return;
+            } else {
+                console.log('❌ Token已过期，清除本地数据');
+                // 清除过期的token和相关数据
+                localStorage.removeItem(tokenExpireKey);
+                localStorage.removeItem(rememberMeKey);
+                localStorage.removeItem('ex_admin_token');
+                document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             }
+        } else {
+            console.log('❌ 无有效的免登录信息');
         }
 
         this.updateRules();
