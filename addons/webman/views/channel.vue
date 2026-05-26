@@ -207,6 +207,17 @@ export default {
             console.log('[登录页 created] ⚠️ 检测到 redirect 参数，可能是退出登录，先清理数据');
             this.clearRememberMeData(source);
             sessionStorage.removeItem('auto_login_attempt_' + source);
+
+            // 🎯 清理后立即显示登录表单，不要继续执行后面的自动登录逻辑
+            console.log('[登录页 created] 数据已清理，显示登录表单');
+            this.isCheckingAuth = false;
+            this.updateRules();
+            if(this.deBug){
+              this.loginForm.username = '';
+              this.loginForm.password = '';
+            }
+            this.getVerify();
+            return; // 🎯 关键：阻止后续代码执行
         }
 
         const cookieToken = this.getCookie('ex_admin_token');
