@@ -190,11 +190,10 @@ export default {
     },
     created(){
         const source = 'agent';
+        const autoLoginAttemptKey = `auto_login_attempt_${source}`;
+        const rememberMeKey = `ex_admin_remember_me_${source}`;
+        const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
-        // 🎯 关键修复：检查是否是退出登录后跳转过来的
-        // 如果 URL 中有 redirect 参数，说明是从其他页面跳转过来的（通常是退出登录）
-        // 需要先清理"记住我"数据，避免自动登录
-        // ⚠️ 注意：在 hash 路由模式下，参数可能在 hash 中，也可能在 search 中
         const fullUrl = window.location.href;
         const hashUrl = window.location.hash;
         const searchUrl = window.location.search;
@@ -203,12 +202,15 @@ export default {
         console.log('[登录页 created] hash:', hashUrl);
         console.log('[登录页 created] search:', searchUrl);
 
-        if (fullUrl.includes('redirect=') || hashUrl.includes('redirect=') || searchUrl.includes('redirect=')) {
-            console.log('[登录页 created] ⚠️ 检测到 redirect 参数，可能是退出登录，先清理数据');
-            this.clearRememberMeData(source);
-            sessionStorage.removeItem('auto_login_attempt_' + source);
+        const forceCleanup = sessionStorage.getItem('force_cleanup_' + source);
+        console.log('[登录页 created] forceCleanup 标记:', forceCleanup);
 
-            // 🎯 清理后立即显示登录表单，不要继续执行后面的自动登录逻辑
+        if (fullUrl.includes('redirect=') || hashUrl.includes('redirect=') || searchUrl.includes('redirect=') || forceCleanup === 'true') {
+            console.log('[登录页 created] ⚠️ 检测到需要清理数据（redirect 或 force_cleanup）');
+            this.clearRememberMeData(source);
+            sessionStorage.removeItem(autoLoginAttemptKey);
+            sessionStorage.removeItem('force_cleanup_' + source);
+
             console.log('[登录页 created] 数据已清理，显示登录表单');
             this.isCheckingAuth = false;
             this.updateRules();
@@ -217,14 +219,12 @@ export default {
               this.loginForm.password = '';
             }
             this.getVerify();
-            return; // 🎯 关键：阻止后续代码执行
+            return;
         }
 
         const cookieToken = this.getCookie('ex_admin_token');
         const localToken = localStorage.getItem('ex_admin_token');
         const token = cookieToken || localToken;
-        const rememberMeKey = `ex_admin_remember_me_${source}`;
-        const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
         const rememberMe = localStorage.getItem(rememberMeKey) === 'true';
         const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
@@ -235,7 +235,6 @@ export default {
         console.log('[登录页 created] expireTime:', expireTime, '当前时间:', now);
 
         // 检测重定向循环：如果短时间内多次尝试自动登录，说明 token 在服务器端无效
-        const autoLoginAttemptKey = `auto_login_attempt_${source}`;
         const lastAttempt = sessionStorage.getItem(autoLoginAttemptKey);
         const attemptTime = lastAttempt ? parseInt(lastAttempt) : 0;
         const timeSinceLastAttempt = now - attemptTime;
