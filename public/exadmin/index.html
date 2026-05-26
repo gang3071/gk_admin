@@ -474,13 +474,23 @@
       return false;
     }
 
+    console.log('[退出登录拦截器] 已注册 axios 响应拦截器');
+
     // 添加响应拦截器
     window.axios.interceptors.response.use(
       function(response) {
+        // 打印所有响应，方便调试
+        if (response.config && response.config.url) {
+          console.log('[拦截器] 捕获响应:', response.config.url, response.data);
+        }
+
         // 检查是否需要清理存储（后端返回 clear_storage: true）
         if (response.data && response.data.data && response.data.data.clear_storage === true) {
+          console.log('[退出登录拦截器] ✅ 检测到 clear_storage 标记，开始清理数据...');
+
           // 立即清理所有"记住我"数据
           ['admin', 'channel', 'agent', 'store'].forEach(function(source) {
+            console.log('[退出登录拦截器] 清理 source:', source);
             localStorage.removeItem('ex_admin_remember_me_' + source);
             localStorage.removeItem('ex_admin_token_expire_' + source);
             localStorage.removeItem('/' + source + '_ex-admin-token');
@@ -492,6 +502,9 @@
 
           // 清理 Cookie
           document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+          console.log('[退出登录拦截器] ✅ 数据清理完成！');
+          console.log('[退出登录拦截器] localStorage 剩余项:', Object.keys(localStorage));
         }
 
         return response;
@@ -513,8 +526,10 @@
 
     if (setupLogoutCleanup()) {
       clearInterval(checkAxios);
+      console.log('[退出登录拦截器] axios 拦截器设置成功！');
     } else if (attempts >= maxAttempts) {
       clearInterval(checkAxios);
+      console.warn('[退出登录拦截器] ⚠️ 超时：未找到 axios');
     }
   }, 100);
 })();
