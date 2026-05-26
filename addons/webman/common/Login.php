@@ -428,11 +428,7 @@ class Login extends LoginAbstract
         Token::logout();
         $permissionKey = 'ADMIN_PERMISSIONS_' . Admin::id();
         Cache::delete($permissionKey);
-
-        // 返回清理指令，让前端清理记住我数据和token
-        return message_success(admin_trans('login.logout'))->data([
-            'clear_storage' => true, // 通知前端清理localStorage和Cookie
-        ]);
+        return message_success(admin_trans('login.logout'));
     }
     
     /**
