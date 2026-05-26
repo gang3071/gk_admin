@@ -472,6 +472,9 @@
   // ========== 方案1：拦截原生 XMLHttpRequest (不依赖 axios) ==========
   console.log('[退出登录拦截器] 开始设置 XMLHttpRequest 拦截...');
 
+  // 🎯 防止重复处理 401 错误
+  var handling401 = false;
+
   var originalOpen = XMLHttpRequest.prototype.open;
   var originalSend = XMLHttpRequest.prototype.send;
 
@@ -485,47 +488,133 @@
     var xhr = this;
     var url = this._url || '';
 
-    // 监听响应完成
-    xhr.addEventListener('load', function() {
-      // 检测是否是退出登录请求
-      if (url.includes('/login/logout') || url.includes('/ex-admin/login/logout')) {
-        console.log('[退出登录拦截器-XHR] ✅ 检测到退出登录请求:', url);
+    // 监听响应完成（包装在 try-catch 中，确保不会阻塞页面）
+    try {
+      xhr.addEventListener('load', function() {
+        try {
+          // 🎯 调试：打印所有请求，找出退出登录的真实 URL
+          if (url && (url.includes('login') || url.includes('logout') || url.includes('system'))) {
+            console.log('[XHR 拦截器] 请求:', url, '状态:', xhr.status);
+          }
 
-        // 判断当前是哪个后台
-        var hostname = window.location.hostname;
-        var source = 'admin';
-        if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
-        else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
-        else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+          // 🎯 处理 401 认证错误 - 自动跳转到登录页
+          if (xhr.status === 401) {
+            console.log('[XHR 拦截器] ⚠️ 检测到 401 错误:', url);
 
-        // 设置"强制清理"标记
-        sessionStorage.setItem('force_cleanup_' + source, 'true');
-        console.log('[退出登录拦截器-XHR] 已设置 force_cleanup 标记:', source);
+            // 检查是否已在登录页
+            var currentHash = window.location.hash || '';
+            var isLoginPage = currentHash.includes('/login/index') || currentHash.includes('/channel/index') ||
+                             currentHash.includes('/agent/index') || currentHash.includes('/store/index');
 
-        // 立即清理所有"记住我"数据
-        ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
-          localStorage.removeItem('ex_admin_remember_me_' + s);
-          localStorage.removeItem('ex_admin_token_expire_' + s);
-          localStorage.removeItem('/' + s + '_ex-admin-token');
-          sessionStorage.removeItem('auto_login_attempt_' + s);
-        });
+            // 🎯 防止重复处理：如果正在处理或已在登录页，跳过
+            if (handling401 || isLoginPage) {
+              if (isLoginPage) {
+                console.log('[XHR 拦截器] 401 错误：已在登录页，忽略');
+              } else {
+                console.log('[XHR 拦截器] 401 错误：正在处理中，忽略');
+              }
+              return;
+            }
 
-        // 清理通用 token
-        localStorage.removeItem('ex_admin_token');
+            // 设置处理标记
+            handling401 = true;
 
-        // 清理 Cookie
-        document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            if (!isLoginPage) {
+              console.log('[XHR 拦截器] 401 错误：不在登录页，清理数据并跳转');
 
-        console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！');
-      }
-    });
+              // 判断当前是哪个后台
+              var hostname = window.location.hostname;
+              var source = 'admin';
+              var loginPath = '#/login/index';
+
+              if (hostname.includes('zi-test') || hostname.includes('channel')) {
+                source = 'channel';
+                loginPath = '#/channel/index';
+              } else if (hostname.includes('agent-test') || hostname.includes('agent')) {
+                source = 'agent';
+                loginPath = '#/agent/index';
+              } else if (hostname.includes('store-test') || hostname.includes('store')) {
+                source = 'store';
+                loginPath = '#/store/index';
+              }
+
+              // 设置"强制清理"标记
+              sessionStorage.setItem('force_cleanup_' + source, 'true');
+
+              // 清理所有"记住我"数据
+              ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
+                localStorage.removeItem('ex_admin_remember_me_' + s);
+                localStorage.removeItem('ex_admin_token_expire_' + s);
+                localStorage.removeItem('/' + s + '_ex-admin-token');
+                sessionStorage.removeItem('auto_login_attempt_' + s);
+              });
+
+              // 清理通用 token
+              localStorage.removeItem('ex_admin_token');
+
+              // 清理 Cookie
+              document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+              console.log('[XHR 拦截器] 401 处理：数据已清理，准备跳转到:', loginPath);
+
+              // 跳转到登录页
+              setTimeout(function() {
+                window.location.hash = loginPath;
+                // 跳转后重置标记（延迟重置，确保跳转完成）
+                setTimeout(function() {
+                  handling401 = false;
+                }, 1000);
+              }, 100);
+            }
+          }
+
+          // 检测是否是退出登录请求（多种可能的 URL 格式）
+          if (url && (url.includes('logout') || url.includes('/login/logout') || url.includes('/ex-admin/login/logout'))) {
+            console.log('[退出登录拦截器-XHR] ✅ 检测到退出登录请求:', url);
+
+            // 判断当前是哪个后台
+            var hostname = window.location.hostname;
+            var source = 'admin';
+            if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
+            else if (hostname.includes('agent-test') || hostname.includes('agent')) source = 'agent';
+            else if (hostname.includes('store-test') || hostname.includes('store')) source = 'store';
+
+            // 设置"强制清理"标记
+            sessionStorage.setItem('force_cleanup_' + source, 'true');
+            console.log('[退出登录拦截器-XHR] 已设置 force_cleanup 标记:', source);
+
+            // 立即清理所有"记住我"数据
+            ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
+              localStorage.removeItem('ex_admin_remember_me_' + s);
+              localStorage.removeItem('ex_admin_token_expire_' + s);
+              localStorage.removeItem('/' + s + '_ex-admin-token');
+              sessionStorage.removeItem('auto_login_attempt_' + s);
+            });
+
+            // 清理通用 token
+            localStorage.removeItem('ex_admin_token');
+
+            // 清理 Cookie
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+            console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！');
+          }
+        } catch (e) {
+          // 静默失败，不影响页面
+          console.error('[XHR 拦截器] 处理响应时出错:', e);
+        }
+      });
+    } catch (e) {
+      // 静默失败，不影响页面
+      console.error('[XHR 拦截器] 设置监听器时出错:', e);
+    }
 
     return originalSend.apply(this, arguments);
   };
 
   console.log('[退出登录拦截器] XMLHttpRequest 拦截设置完成！');
 
-  // ========== 方案2：axios 拦截器（备用，如果 axios 可用） ==========
+  // ========== 方案2：axios 拦截器（稍后尝试设置，不阻塞页面加载） ==========
   // 全局标记：是否正在处理 401 错误
   var handling401 = false;
 
@@ -690,32 +779,34 @@
     return true;
   }
 
-  // 等待 axios 加载
-  var attempts = 0;
-  var maxAttempts = 50; // 增加到 50 次尝试（5 秒）
+  // 🎯 延迟尝试设置 axios 拦截器（不阻塞页面加载）
+  // XHR 拦截器已经够用了，这个只是额外的保险
+  setTimeout(function() {
+    var attempts = 0;
+    var maxAttempts = 10; // 只尝试 10 次（1 秒）
 
-  var checkAxios = setInterval(function() {
-    attempts++;
+    var checkAxios = setInterval(function() {
+      attempts++;
 
-    // 尝试多个可能的 axios 对象位置
-    if (!window.axios) {
-      // 尝试从 Vue 实例获取
-      if (window.Vue && window.Vue.prototype && window.Vue.prototype.$request) {
-        window.axios = window.Vue.prototype.$request;
-        console.log('[退出登录拦截器] 从 Vue.prototype.$request 获取到 axios');
+      // 尝试多个可能的 axios 对象位置
+      if (!window.axios) {
+        // 尝试从 Vue 实例获取
+        if (window.Vue && window.Vue.prototype && window.Vue.prototype.$request) {
+          window.axios = window.Vue.prototype.$request;
+          console.log('[退出登录拦截器] 从 Vue.prototype.$request 获取到 axios');
+        }
       }
-    }
 
-    if (setupLogoutCleanup()) {
-      clearInterval(checkAxios);
-      console.log('[退出登录拦截器] axios 拦截器设置成功！尝试次数:', attempts);
-    } else if (attempts >= maxAttempts) {
-      clearInterval(checkAxios);
-      console.warn('[退出登录拦截器] ⚠️ 超时：未找到 axios，已尝试', attempts, '次');
-      console.warn('[退出登录拦截器] window.axios:', typeof window.axios);
-      console.warn('[退出登录拦截器] window.Vue:', typeof window.Vue);
-    }
-  }, 100);
+      if (setupLogoutCleanup()) {
+        clearInterval(checkAxios);
+        console.log('[退出登录拦截器] axios 拦截器设置成功！尝试次数:', attempts);
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkAxios);
+        // XHR 拦截器已经可以工作了，所以这里只是静默失败
+        console.log('[退出登录拦截器] axios 未找到，使用 XHR 拦截器');
+      }
+    }, 100);
+  }, 2000); // 延迟 2 秒后再开始尝试，确保页面先加载
 })();
 </script>
 </body>

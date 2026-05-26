@@ -236,25 +236,28 @@ export default {
 
         // 检测重定向循环：如果短时间内多次尝试自动登录，说明 token 在服务器端无效
         const lastAttempt = sessionStorage.getItem(autoLoginAttemptKey);
-        const attemptTime = lastAttempt ? parseInt(lastAttempt) : 0;
-        const timeSinceLastAttempt = now - attemptTime;
 
-        console.log('[登录页 created] timeSinceLastAttempt:', timeSinceLastAttempt);
+        console.log('[登录页 created] lastAttempt:', lastAttempt);
 
-        // 如果 5 秒内再次尝试自动登录，说明出现了重定向循环（服务器拒绝了 token）
-        if (timeSinceLastAttempt < 5000) {
-            console.log('[登录页 created] ⚠️ 检测到重定向循环，清理数据');
-            // 清除无效的"记住我"数据，打破循环
-            this.clearRememberMeData(source);
-            sessionStorage.removeItem(autoLoginAttemptKey);
-            this.isCheckingAuth = false;
-            this.updateRules();
-            if(this.deBug){
-              this.loginForm.username = '';
-              this.loginForm.password = '';
+        if (lastAttempt) {
+            const attemptTime = parseInt(lastAttempt);
+            const timeSinceLastAttempt = now - attemptTime;
+
+            console.log('[登录页 created] timeSinceLastAttempt:', timeSinceLastAttempt, 'ms');
+
+            if (timeSinceLastAttempt < 5000 && timeSinceLastAttempt >= 0) {
+                console.log('[登录页 created] ⚠️ 检测到重定向循环（5秒内重复访问），清理数据');
+                this.clearRememberMeData(source);
+                sessionStorage.removeItem(autoLoginAttemptKey);
+                this.isCheckingAuth = false;
+                this.updateRules();
+                if(this.deBug){
+                  this.loginForm.username = '';
+                  this.loginForm.password = '';
+                }
+                this.getVerify();
+                return;
             }
-            this.getVerify();
-            return;
         }
 
         // 如果启用了记住我功能且token有效，跳转到首页
@@ -312,13 +315,17 @@ export default {
             // 清理所有记住我相关的数据
             const rememberMeKey = `ex_admin_remember_me_${source}`;
             const tokenExpireKey = `ex_admin_token_expire_${source}`;
+            const sourceTokenKey = `/${source}_ex-admin-token`;
 
             localStorage.removeItem(rememberMeKey);
             localStorage.removeItem(tokenExpireKey);
+            localStorage.removeItem(sourceTokenKey);
             localStorage.removeItem('ex_admin_token');
 
             // 清理Cookie中的token
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+            console.log('[clearRememberMeData] 已清理:', source, '的所有数据');
         },
 
         handleLangChange(value) {
