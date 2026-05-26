@@ -602,8 +602,19 @@
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
             // 延迟跳转，确保清理完成
+            // ExAdmin 使用 hash 路由模式，根据 source 跳转到对应的后台登录页
             setTimeout(function() {
-              window.location.href = '/ex-admin/login/index';
+              let loginPath = '/admin#/login/index'; // 默认总后台
+
+              if (source === 'channel') {
+                loginPath = '/channel#/login/index';
+              } else if (source === 'agent') {
+                loginPath = '/agent#/login/index';
+              } else if (source === 'store') {
+                loginPath = '/store#/login/index';
+              }
+
+              window.location.href = loginPath;
             }, 100);
           }
         }
