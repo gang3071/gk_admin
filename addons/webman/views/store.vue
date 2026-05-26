@@ -186,27 +186,32 @@ export default {
     },
     created(){
         // 🎯 提前检查token，避免登录页面"一闪"
-        const token = this.getCookie('ex_admin_token') || localStorage.getItem('ex_admin_token');
+        const cookieToken = this.getCookie('ex_admin_token');
+        const localToken = localStorage.getItem('ex_admin_token');
+        const token = cookieToken || localToken;
         const source = 'store';
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
         console.log('=== 检查15天免登录状态 ===');
-        console.log('Token:', token ? '存在' : '不存在');
+        console.log('Cookie Token:', cookieToken ? '存在' : '不存在', cookieToken || '');
+        console.log('LocalStorage Token:', localToken ? '存在' : '不存在', localToken || '');
+        console.log('最终Token:', token ? '存在' : '不存在');
         console.log('记住我:', localStorage.getItem(rememberMeKey));
         console.log('过期时间戳:', localStorage.getItem(tokenExpireKey));
+        console.log('所有Cookies:', document.cookie);
 
-        // 如果有token且记住我功能已启用
-        if (token && localStorage.getItem(rememberMeKey) === 'true') {
-            const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
-            const now = Date.now();
+        // 🎯 修复：即使Token丢失，但如果"记住我"功能启用且未过期，也应该引导用户
+        const rememberMe = localStorage.getItem(rememberMeKey) === 'true';
+        const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
+        const now = Date.now();
 
+        if (rememberMe && expireTime && now < expireTime) {
             console.log('当前时间:', now);
             console.log('过期时间:', expireTime);
             console.log('剩余时间(天):', ((expireTime - now) / (24 * 60 * 60 * 1000)).toFixed(2));
 
-            // 检查是否过期
-            if (expireTime && now < expireTime) {
+            if (token) {
                 console.log('✅ Token有效，准备跳转到首页');
                 // 使用 nextTick 确保在组件完全初始化后再跳转
                 this.$nextTick(() => {
@@ -217,15 +222,22 @@ export default {
                 });
                 return;
             } else {
-                console.log('❌ Token已过期，清除本地数据');
-                // 清除过期的token和相关数据
-                localStorage.removeItem(tokenExpireKey);
-                localStorage.removeItem(rememberMeKey);
-                localStorage.removeItem('ex_admin_token');
-                document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                console.warn('⚠️ 记住我功能已启用且未过期，但Token丢失！');
+                console.warn('可能原因：');
+                console.warn('1. Cookie被浏览器/插件清除了');
+                console.warn('2. Cookie的domain/path设置不正确');
+                console.warn('3. 跨域或安全策略限制');
+                console.warn('建议：检查登录时setCookie的实现，确保设置了正确的domain和path');
             }
+        } else if (rememberMe) {
+            console.log('❌ Token已过期，清除本地数据');
+            // 清除过期的token和相关数据
+            localStorage.removeItem(tokenExpireKey);
+            localStorage.removeItem(rememberMeKey);
+            localStorage.removeItem('ex_admin_token');
+            document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         } else {
-            console.log('❌ 无有效的免登录信息');
+            console.log('❌ 未启用记住我功能');
         }
 
         this.updateRules();
@@ -300,14 +312,27 @@ export default {
                     const tokenExpireKey = `ex_admin_token_expire_${source}`;
                     const rememberMeKey = `ex_admin_remember_me_${source}`;
 
+                    // 🔑 获取登录返回的Token
+                    const token = res.data && res.data.token ? res.data.token : localStorage.getItem('ex_admin_token');
+
                     if (res.data && res.data.remember_me && this.loginForm.remember_me) {
                         const tokenExpireTime = Date.now() + (15 * 24 * 60 * 60 * 1000);
                         localStorage.setItem(tokenExpireKey, tokenExpireTime.toString());
                         localStorage.setItem(rememberMeKey, 'true');
+
+                        // 🎯 关键修复：将Token保存到Cookie，设置15天过期
+                        if (token) {
+                            this.setCookie('ex_admin_token', token, 15);
+                            console.log(`[Login-${source}] Token已保存到Cookie，15天后过期`);
+                        }
                         console.log(`[Login-${source}] 记住我已启用，token将保存15天`);
                     } else {
                         localStorage.removeItem(tokenExpireKey);
                         localStorage.removeItem(rememberMeKey);
+                        // 如果未勾选"记住我"，使用短期Cookie（会话级别）
+                        if (token) {
+                            this.setCookie('ex_admin_token', token, 1); // 1天
+                        }
                         console.log(`[Login-${source}] 未启用记住我，使用默认token过期时间`);
                     }
 
