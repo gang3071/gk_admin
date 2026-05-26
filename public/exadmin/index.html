@@ -567,14 +567,37 @@
 
             console.log('[XHR 拦截器] 401 处理：数据已清理，准备跳转到:', loginPath);
 
-            // 跳转到登录页
-            setTimeout(function() {
+            // 🎯 检查当前 hash，避免重复跳转
+            var currentHash = window.location.hash;
+            if (currentHash !== loginPath) {
+              console.log('[XHR 拦截器] 401 处理：当前页面不是登录页，执行跳转');
+              // 立即跳转到登录页，不延迟（避免期间又有请求触发）
               window.location.hash = loginPath;
-              // 跳转后重置标记（延迟重置，确保跳转完成）
-              setTimeout(function() {
+            } else {
+              console.log('[XHR 拦截器] 401 处理：已在登录页，无需跳转');
+              // 如果已经在登录页，立即重置标记
+              handling401 = false;
+              return;
+            }
+
+            // 🎯 监听 hash 变化，跳转完成后立即重置标记
+            var resetHandling = function() {
+              if (window.location.hash === loginPath) {
                 handling401 = false;
-              }, 1000);
-            }, 100);
+                console.log('[XHR 拦截器] 401 处理：已跳转到登录页，重置 handling401');
+                window.removeEventListener('hashchange', resetHandling);
+              }
+            };
+            window.addEventListener('hashchange', resetHandling);
+
+            // 🎯 备用方案：300ms 后强制重置（防止 hashchange 事件未触发）
+            setTimeout(function() {
+              if (handling401) {
+                handling401 = false;
+                console.log('[XHR 拦截器] 401 处理：超时强制重置 handling401');
+                window.removeEventListener('hashchange', resetHandling);
+              }
+            }, 300);
           }
 
           // 检测是否是退出登录请求（多种可能的 URL 格式）
@@ -617,10 +640,8 @@
 
             console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！准备跳转到:', loginPath);
 
-            // 🎯 跳转到登录页
-            setTimeout(function() {
-              window.location.hash = loginPath;
-            }, 100);
+            // 🎯 立即跳转到登录页
+            window.location.hash = loginPath;
           }
         } catch (e) {
           // 静默失败，不影响页面
