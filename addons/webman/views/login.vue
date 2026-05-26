@@ -189,10 +189,20 @@ export default {
         }
     },
     created(){
+        const source = 'admin';
+
+        // 🎯 关键修复：检查是否是退出登录后跳转过来的
+        // 如果 URL 中有 redirect 参数，说明是从其他页面跳转过来的（通常是退出登录）
+        // 需要先清理"记住我"数据，避免自动登录
+        if (window.location.search.includes('redirect=')) {
+            console.log('[登录页 created] ⚠️ 检测到 redirect 参数，可能是退出登录，先清理数据');
+            this.clearRememberMeData(source);
+            sessionStorage.removeItem('auto_login_attempt_' + source);
+        }
+
         const cookieToken = this.getCookie('ex_admin_token');
         const localToken = localStorage.getItem('ex_admin_token');
         const token = cookieToken || localToken;
-        const source = 'admin';
         const rememberMeKey = `ex_admin_remember_me_${source}`;
         const tokenExpireKey = `ex_admin_token_expire_${source}`;
 
