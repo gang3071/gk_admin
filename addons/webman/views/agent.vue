@@ -198,14 +198,21 @@ export default {
         const expireTime = parseInt(localStorage.getItem(tokenExpireKey));
         const now = Date.now();
 
+        console.log('[登录页 created] token:', token ? '存在' : '不存在');
+        console.log('[登录页 created] rememberMe:', rememberMe);
+        console.log('[登录页 created] expireTime:', expireTime, '当前时间:', now);
+
         // 检测重定向循环：如果短时间内多次尝试自动登录，说明 token 在服务器端无效
         const autoLoginAttemptKey = `auto_login_attempt_${source}`;
         const lastAttempt = sessionStorage.getItem(autoLoginAttemptKey);
         const attemptTime = lastAttempt ? parseInt(lastAttempt) : 0;
         const timeSinceLastAttempt = now - attemptTime;
 
+        console.log('[登录页 created] timeSinceLastAttempt:', timeSinceLastAttempt);
+
         // 如果 5 秒内再次尝试自动登录，说明出现了重定向循环（服务器拒绝了 token）
         if (timeSinceLastAttempt < 5000) {
+            console.log('[登录页 created] ⚠️ 检测到重定向循环，清理数据');
             // 清除无效的"记住我"数据，打破循环
             this.clearRememberMeData(source);
             sessionStorage.removeItem(autoLoginAttemptKey);
@@ -221,6 +228,7 @@ export default {
 
         // 如果启用了记住我功能且token有效，跳转到首页
         if (rememberMe && expireTime && now < expireTime && token) {
+            console.log('[登录页 created] ✅ 检测到有效 token，准备自动跳转');
             // 记录尝试时间，用于检测重定向循环
             sessionStorage.setItem(autoLoginAttemptKey, now.toString());
 
@@ -228,13 +236,17 @@ export default {
             // this.isCheckingAuth = false; // 注释掉，保持 loading
 
             this.$nextTick(() => {
+                console.log('[登录页 created] 执行跳转到首页');
                 this.$router.replace('/ex-admin/addons-webman-controller-ChannelIndexController/agentIndex');
             });
             return;
         }
 
+        console.log('[登录页 created] ❌ 没有有效 token，显示登录表单');
+
         // 如果记住我功能已启用但token过期，清理数据
         if (rememberMe && (!expireTime || now >= expireTime)) {
+            console.log('[登录页 created] 清理过期的"记住我"数据');
             this.clearRememberMeData(source);
         }
 
