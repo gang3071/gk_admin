@@ -272,5 +272,7 @@ return [
         'limit_management' => '制限管理',
         'limit_group_management' => '制限グループ管理',
         'platform_config' => 'プラットフォーム設定',
+        //VIPレベル管理
+        'vip_level' => 'VIPレベル管理',
     ]
 ];
