@@ -425,7 +425,7 @@ class StorePlayerController
                 // 统计时间范围筛选（影响累计数据）
                 $filter->form()->hidden('stats_start_time');
                 $filter->form()->hidden('stats_end_time');
-                $filter->form()->dateTimeRange('stats_start_time', 'stats_end_time', admin_trans('player.stats_time_range'))
+                $filter->form()->dateTimeRange('stats_start_time', 'stats_end_time', '')
                     ->placeholder([
                         admin_trans('player.stats_start_time'),
                         admin_trans('player.stats_end_time')
@@ -455,7 +455,7 @@ class StorePlayerController
                 // 创建时间范围筛选
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', admin_trans('player.created_time_range'))
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')
                     ->placeholder([
                         admin_trans('public_msg.created_at_start'),
                         admin_trans('public_msg.created_at_end')
@@ -468,10 +468,8 @@ class StorePlayerController
                 $actions->detail()->modal($this->viewForm())->width('60%');
             });
 
-//            $grid->addButton()->modal($this->form());
             $grid->hideDelete();
             $grid->hideDeleteSelection();
-            $grid->expandFilter();
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $playerCount);
             $grid->attr('mongo_model', $list);
