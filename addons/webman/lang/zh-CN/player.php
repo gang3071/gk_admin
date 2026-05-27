@@ -212,6 +212,13 @@ return [
     'total_lottery_amount' => '彩金',
     'subtotal' => '小计',
     'wash_point_config' => '洗分配置',
+    'current_shift_stats' => '当前班次统计',
+    'current_shift_help' => '当前未交班数据（从上次交班时间至今）',
+    'stats_time_range' => '统计时间范围',
+    'stats_start_time' => '统计开始时间',
+    'stats_end_time' => '统计结束时间',
+    'stats_time_range_help' => '筛选统计数据的时间范围（不影响当前班次统计）',
+    'created_time_range' => '创建时间范围',
 
     // 游戏相关
     'game_platform' => '游戏平台',
