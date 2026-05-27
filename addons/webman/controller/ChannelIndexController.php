@@ -2268,50 +2268,54 @@ class ChannelIndexController
             );
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
-            // ========== 第一行：交班按钮和运营统计标题 ==========
+            // ========== 第一行：操作栏 ==========
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Button::create(admin_trans('data_center.shift_handover'))->modal([$this, 'shiftHandover']),
+                        Button::create(admin_trans('data_center.shift_handover'))
+                            ->modal([$this, 'shiftHandover'])
+                            ->type('primary'),
                         Html::create(admin_trans('shift_handover.start_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))
                             ->style([
-                                'color' => 'rgb(26 148 169)',
-                                'fontSize' => '14px',
-                                'marginLeft' => '20px',
-                                'fontWeight' => 'bold',
+                                'color' => '#409EFF',
+                                'fontSize' => '13px',
+                                'marginLeft' => '16px',
+                                'fontWeight' => '500',
                             ]),
                         Html::create()->content([
-                            Icon::create('clock-circle')->style(['marginRight' => '4px', 'fontSize' => '12px']),
+                            Icon::create('clock-circle')->style(['marginRight' => '4px', 'fontSize' => '13px']),
                             Html::create($autoShiftStatusText)->style([
-                                'fontSize' => '12px',
-                                'color' => $autoShiftStatusColor
+                                'fontSize' => '13px',
+                                'color' => $autoShiftStatusColor,
+                                'fontWeight' => '500'
                             ])
                         ])->style([
                             'display' => 'flex',
                             'alignItems' => 'center',
-                            'marginLeft' => '20px'
+                            'marginLeft' => '16px'
                         ])
                     ])->style([
                         'display' => 'flex',
                         'alignItems' => 'center'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
+                    'padding' => '12px 16px',
                     'display' => 'flex',
                     'alignItems' => 'center',
-                    'height' => '48px'
+                    'backgroundColor' => '#f5f7fa'
                 ])
-            , 18);
+            , 24);
 
-            // 运营统计标题和筛选
+            // ========== 第二行：运营统计标题 ==========
             $row->column(
                 Card::create([
                     Row::create()->column([
+                        Icon::create('bar-chart')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#409EFF']),
                         Html::create(admin_trans('data_center.operation_statistics'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '14px',
                             'fontWeight' => 'bold',
                             'color' => '#303133',
-                            'marginRight' => '10px'
+                            'marginRight' => 'auto'
                         ]),
                         $timeDropdown
                     ])->style([
@@ -2319,374 +2323,278 @@ class ChannelIndexController
                         'alignItems' => 'center'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
+                    'padding' => '10px 16px',
                     'display' => 'flex',
                     'alignItems' => 'center',
-                    'height' => '48px'
+                    'borderLeft' => '3px solid #409EFF'
                 ])
-            , 6);
+            , 24);
 
-            // ========== 第二行：运营统计数据卡片 ==========
-            // 上分总和（运营统计，受时间筛选影响）- 对应充值总额
+            // ========== 第三行：运营统计数据卡片（6个指标）==========
+            // 上分总和
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('data_center.total_score_up'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($operationStatistics['recharge_total'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#67C23A'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 6);
+            , 4);
 
-            // 下分总和（运营统计，受时间筛选影响）- 对应提现总额
+            // 下分总和
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('data_center.total_score_down'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($operationStatistics['withdrawal_total'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#F56C6C'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 6);
+            , 4);
 
-            // 投钞总和（运营统计，受时间筛选影响）
+            // 投钞总和
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('data_center.machine_put_total'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($operationStatistics['machine_put_point'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#409EFF'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 6);
-
-            // 小计（上分 - 下分）
-            $row->column(
-                Card::create([
-                    Row::create()->column([
-                        Html::create(admin_trans('data_center.subtotal'))->style([
-                            'fontSize' => '13px',
-                            'color' => '#909399',
-                            'marginRight' => 'auto'
-                        ]),
-                        Html::create(number_format(floatval($subtotal), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
-                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C'
-                        ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
-                    ])
-                ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
-                ])
-            , 6);
-
-            // ========== 第三行：拉彩统计 ==========
-            // 拉彩统计标题
-            $row->column(
-                Card::create([
-                    Row::create()->column([
-                        Html::create(admin_trans('data_center.lottery_statistics'))->style([
-                            'fontSize' => '13px',
-                            'fontWeight' => 'bold',
-                            'color' => '#303133',
-                            'marginRight' => '10px'
-                        ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center'
-                    ])
-                ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
-                ])
-            , 6);
+            , 4);
 
             // 拉彩次数
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('data_center.lottery_count'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(intval($lotteryStatistics['lottery_count'] ?? 0)))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#E6A23C'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 9);
+            , 4);
 
             // 拉彩金额
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('data_center.lottery_score'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($lotteryStatistics['lottery_amount'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#E6A23C'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 9);
+            , 4);
+
+            // 小计
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::create(admin_trans('data_center.subtotal'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '4px'
+                        ]),
+                        Html::create(number_format(floatval($subtotal), 2))->style([
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
+                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C'
+                        ])
+                    ])
+                ])->bodyStyle([
+                    'padding' => '12px',
+                    'textAlign' => 'center',
+                    'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
+                ])
+            , 4);
 
             // ========== 第四行：当前班次实时统计标题 ==========
             $row->column(
                 Card::create([
                     Row::create()->column([
-                        Icon::create('clock-circle')->style(['marginRight' => '8px', 'fontSize' => '14px', 'color' => '#409EFF']),
+                        Icon::create('dashboard')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#67C23A']),
                         Html::create(admin_trans('shift_handover.current_shift_statistics'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '14px',
                             'fontWeight' => 'bold',
                             'color' => '#303133',
+                            'marginRight' => 'auto'
                         ]),
                         Html::create(admin_trans('shift_handover.shift_start') . ': ' . ($lastShiftTime ?? admin_trans('shift_handover.none')))->style([
                             'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginLeft' => '10px'
+                            'color' => '#67C23A',
+                            'fontWeight' => '500'
                         ])
                     ])->style([
                         'display' => 'flex',
                         'alignItems' => 'center'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
+                    'padding' => '10px 16px',
                     'display' => 'flex',
                     'alignItems' => 'center',
-                    'height' => '48px',
-                    'backgroundColor' => '#f0f9ff'
+                    'borderLeft' => '3px solid #67C23A'
                 ])
             , 24);
 
-            // ========== 第五行：当前班次数据（第一行：3个数据项） ==========
+            // ========== 第五行：当前班次数据卡片（5个指标）==========
+            $currentShiftProfit = floatval($currentShiftStats['total_profit'] ?? 0);
+
             // 机台投钞点数
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('shift_handover.machine_put_point'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($currentShiftStats['machine_put_point'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#409EFF'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 8);
+            , 5);
 
             // 总收入
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('shift_handover.total_income'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($currentShiftStats['total_income'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#67C23A'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 8);
+            , 5);
 
             // 总支出
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('shift_handover.total_outcome'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($currentShiftStats['total_outcome'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#F56C6C'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 8);
+            , 5);
 
-            // ========== 第六行：当前班次数据（第二行：2个数据项） ==========
             // 彩金
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('shift_handover.lottery_amount'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
                         Html::create(number_format(floatval($currentShiftStats['lottery_amount'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
+                            'fontSize' => '18px',
+                            'fontWeight' => 'bold',
                             'color' => '#E6A23C'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center'
                 ])
-            , 12);
+            , 4);
 
-            // 总利润
+            // 总利润（高亮显示）
             $row->column(
                 Card::create([
-                    Row::create()->column([
+                    Html::div()->content([
                         Html::create(admin_trans('shift_handover.total_profit'))->style([
-                            'fontSize' => '13px',
+                            'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginRight' => 'auto'
+                            'marginBottom' => '4px'
                         ]),
-                        Html::create(number_format(floatval($currentShiftStats['total_profit'] ?? 0), 2))->style([
-                            'fontSize' => '16px',
-                            'fontWeight' => '600',
-                            'color' => floatval($currentShiftStats['total_profit'] ?? 0) >= 0 ? '#67C23A' : '#F56C6C'
+                        Html::create(number_format($currentShiftProfit, 2))->style([
+                            'fontSize' => '20px',
+                            'fontWeight' => 'bold',
+                            'color' => $currentShiftProfit >= 0 ? '#67C23A' : '#F56C6C'
                         ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center',
-                        'justifyContent' => 'space-between',
-                        'width' => '100%'
                     ])
                 ])->bodyStyle([
-                    'padding' => '10px 13px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'height' => '48px'
+                    'padding' => '12px',
+                    'textAlign' => 'center',
+                    'backgroundColor' => $currentShiftProfit >= 0 ? '#f0f9ff' : '#fef0f0',
+                    'borderLeft' => '3px solid ' . ($currentShiftProfit >= 0 ? '#67C23A' : '#F56C6C')
                 ])
-            , 12);
+            , 5);
 
             // ========== 第七行：设备和分成信息 ==========
             $row->column(

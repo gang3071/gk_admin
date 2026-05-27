@@ -517,12 +517,11 @@ class StorePlayerController
                 // 设备注册时间范围筛选
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', admin_trans('player.device_created_time_range'))
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')
                     ->placeholder([
                         admin_trans('player.device_created_start_time'),
                         admin_trans('player.device_created_end_time')
-                    ])
-                    ->help(admin_trans('player.device_created_time_range_help'));
+                    ]);
             });
 
             $grid->actions(function (Actions $actions) {
