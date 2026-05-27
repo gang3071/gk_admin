@@ -264,19 +264,40 @@ class StorePlayerController
 
             $grid->header($layout);
 
-            $grid->column('id', admin_trans('player.fields.id'))->width(80)->sortable()->align('center');
+            $grid->column('id', admin_trans('player.fields.id'))->display(function ($value) {
+                return Html::create($value)->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500',
+                    'color' => '#606266'
+                ]);
+            })->width(70)->sortable()->align('center')->fixed(true);
 
             $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
-                    ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
-                    : Avatar::create()->content(mb_substr($val ?: 'U', 0, 1));
+                    ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])->size(32)
+                    : Avatar::create()->content(mb_substr($val ?: 'U', 0, 1))->size(32);
                 return Html::create()->content([
                     $avatar,
-                    Html::div()->content($val ?: admin_trans('player.unnamed'))->style(['margin-left' => '8px'])
+                    Html::div()->content($val ?: admin_trans('player.unnamed'))->style([
+                        'marginLeft' => '8px',
+                        'fontSize' => '13px',
+                        'fontWeight' => '500',
+                        'color' => '#303133',
+                        'whiteSpace' => 'nowrap',
+                        'overflow' => 'hidden',
+                        'textOverflow' => 'ellipsis'
+                    ])
+                ])->style([
+                    'display' => 'flex',
+                    'alignItems' => 'center'
                 ]);
-            })->width(150);
+            })->width(150)->fixed(true);
 
-            $grid->column('phone', admin_trans('player.fields.phone'))->width(120)->align('center');
+            $grid->column('phone', admin_trans('player.fields.phone'))->display(function ($value) {
+                return Html::create($value ?: '-')->style([
+                    'fontSize' => '13px'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($value) {
                 return match ($value) {
@@ -284,11 +305,14 @@ class StorePlayerController
                     Player::PLAYER_SOURCE_OFFLINE => Tag::create(admin_trans('player.fields.player_source_offline'))->color('orange'),
                     default => Tag::create('-')->color('default'),
                 };
-            })->width(100)->align('center');
+            })->width(90)->align('center');
 
             $grid->column('wallet_money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
                 if ($val == 1) {
@@ -296,31 +320,47 @@ class StorePlayerController
                 } else {
                     return Tag::create(admin_trans('player.normal'))->color('green');
                 }
-            })->width(100)->align('center');
+            })->width(90)->align('center');
 
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value, $data) {
                 // 累计开分需要扣除投钞金额（因为开分字段已包含投钞）
                 $pureRecharge = $data['pure_recharge_amount'] ?? 0;
-                return number_format(floatval($pureRecharge), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($pureRecharge), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
 
             $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
-                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => 'bold',
+                    'color' => $color
+                ]);
+            })->width(110)->align('center');
 
             // === 当前未交班数据列（合并显示） ===
             $grid->column('current_shift_stats', admin_trans('player.current_shift_stats'))->display(function ($value, $data) {
@@ -330,80 +370,91 @@ class StorePlayerController
                     // 投钞点数
                     Html::div()->content([
                         Html::create(admin_trans('shift_handover.machine_put_point') . ': ')->style([
-                            'fontSize' => '12px',
+                            'fontSize' => '11px',
                             'color' => '#666',
                             'display' => 'inline-block',
-                            'width' => '70px'
+                            'width' => '60px',
+                            'textAlign' => 'left'
                         ]),
                         Html::create(number_format(floatval($data['current_machine_put_point']), 2))->style([
-                            'fontSize' => '12px',
-                            'fontWeight' => '500'
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#303133'
                         ])
-                    ])->style(['marginBottom' => '4px']),
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
 
                     // 总收入
                     Html::div()->content([
                         Html::create(admin_trans('shift_handover.total_in') . ': ')->style([
-                            'fontSize' => '12px',
+                            'fontSize' => '11px',
                             'color' => '#666',
                             'display' => 'inline-block',
-                            'width' => '70px'
+                            'width' => '60px',
+                            'textAlign' => 'left'
                         ]),
                         Html::create(number_format(floatval($data['current_total_income']), 2))->style([
-                            'fontSize' => '12px',
-                            'fontWeight' => '500'
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#67C23A'
                         ])
-                    ])->style(['marginBottom' => '4px']),
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
 
                     // 总支出
                     Html::div()->content([
                         Html::create(admin_trans('shift_handover.total_out') . ': ')->style([
-                            'fontSize' => '12px',
+                            'fontSize' => '11px',
                             'color' => '#666',
                             'display' => 'inline-block',
-                            'width' => '70px'
+                            'width' => '60px',
+                            'textAlign' => 'left'
                         ]),
                         Html::create(number_format(floatval($data['current_total_outcome']), 2))->style([
-                            'fontSize' => '12px',
-                            'fontWeight' => '500'
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#F56C6C'
                         ])
-                    ])->style(['marginBottom' => '4px']),
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
 
                     // 彩金
                     Html::div()->content([
                         Html::create(admin_trans('shift_handover.lottery_amount') . ': ')->style([
-                            'fontSize' => '12px',
+                            'fontSize' => '11px',
                             'color' => '#666',
                             'display' => 'inline-block',
-                            'width' => '70px'
+                            'width' => '60px',
+                            'textAlign' => 'left'
                         ]),
                         Html::create(number_format(floatval($data['current_lottery_amount']), 2))->style([
-                            'fontSize' => '12px',
-                            'fontWeight' => '500'
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#E6A23C'
                         ])
-                    ])->style(['marginBottom' => '4px']),
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
 
                     // 总利润
                     Html::div()->content([
                         Html::create(admin_trans('shift_handover.label.total_profit') . ': ')->style([
-                            'fontSize' => '12px',
+                            'fontSize' => '11px',
                             'color' => '#666',
                             'display' => 'inline-block',
-                            'width' => '70px'
+                            'width' => '60px',
+                            'textAlign' => 'left',
+                            'fontWeight' => 'bold'
                         ]),
                         Html::create(number_format(floatval($data['current_total_profit']), 2))->style([
-                            'fontSize' => '12px',
+                            'fontSize' => '11px',
                             'fontWeight' => 'bold',
                             'color' => $profitColor
                         ])
-                    ])
+                    ])->style(['display' => 'flex', 'alignItems' => 'center'])
                 ])->style([
-                    'padding' => '8px',
+                    'padding' => '6px 8px',
                     'backgroundColor' => '#f0f9ff',
                     'borderRadius' => '4px',
-                    'lineHeight' => '1.5'
+                    'lineHeight' => '1.4',
+                    'minWidth' => '150px'
                 ]);
-            })->width(180)->help(admin_trans('player.current_shift_help'));
+            })->width(170)->help(admin_trans('player.current_shift_help'));
 
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
@@ -411,9 +462,14 @@ class StorePlayerController
                     1 => Tag::create(admin_trans('admin.open'))->color('green'),
                     default => Tag::create(admin_trans('admin.unknown'))->color('default'),
                 };
-            })->width(80)->align('center');
+            })->width(70)->align('center');
 
-            $grid->column('created_at', admin_trans('player.fields.created_at'))->width(160)->align('center');
+            $grid->column('created_at', admin_trans('player.fields.created_at'))->display(function ($value) {
+                return Html::create($value)->style([
+                    'fontSize' => '12px',
+                    'color' => '#606266'
+                ]);
+            })->width(150)->align('center');
 
             $grid->filter(function (Filter $filter) use ($playerOptions) {
                 // 设备下拉选择
