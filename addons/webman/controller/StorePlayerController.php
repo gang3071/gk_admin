@@ -366,7 +366,7 @@ class StorePlayerController
             $grid->column('current_shift_stats', admin_trans('player.current_shift_stats'))->display(function ($value, $data) {
                 $profitColor = $data['current_total_profit'] >= 0 ? '#3f8600' : '#cf1322';
 
-                return Html::create()->content([
+                return Html::div()->content([
                     // 投钞点数
                     Html::div()->content([
                         Html::create(admin_trans('shift_handover.machine_put_point') . ': ')->style([
@@ -433,20 +433,19 @@ class StorePlayerController
 
                     // 总利润
                     Html::div()->content([
-                        Html::create(admin_trans('shift_handover.label.total_profit') . ': ')->style([
+                        Html::create(admin_trans('shift_handover.label.total_profit'))->style([
                             'fontSize' => '11px',
                             'color' => '#666',
                             'display' => 'inline-block',
                             'width' => '60px',
-                            'textAlign' => 'left',
-                            'fontWeight' => 'bold'
+                            'textAlign' => 'left'
                         ]),
                         Html::create(number_format(floatval($data['current_total_profit']), 2))->style([
                             'fontSize' => '11px',
-                            'fontWeight' => 'bold',
+                            'fontWeight' => '500',
                             'color' => $profitColor
                         ])
-                    ])->style(['display' => 'flex', 'alignItems' => 'center'])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center'])
                 ])->style([
                     'padding' => '6px 8px',
                     'backgroundColor' => '#f0f9ff',
