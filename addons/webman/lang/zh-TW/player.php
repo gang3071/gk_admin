@@ -216,7 +216,10 @@ return [
     'stats_start_time' => '統計開始時間',
     'stats_end_time' => '統計結束時間',
     'stats_time_range_help' => '篩選統計數據的時間範圍（不影響當前班次統計）',
-    'created_time_range' => '創建時間範圍',
+    'device_created_start_time' => '設備註冊開始時間',
+    'device_created_end_time' => '設備註冊結束時間',
+    'device_created_time_range' => '設備註冊時間',
+    'device_created_time_range_help' => '篩選設備註冊到系統的時間範圍',
 
     // 遊戲相關
     'game_platform' => '遊戲平台',

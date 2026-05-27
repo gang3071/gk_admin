@@ -217,7 +217,10 @@ return [
     'stats_start_time' => '統計開始時間',
     'stats_end_time' => '統計終了時間',
     'stats_time_range_help' => '統計データの時間範囲をフィルタ（現在のシフト統計には影響しません）',
-    'created_time_range' => '作成時間範囲',
+    'device_created_start_time' => 'デバイス登録開始時刻',
+    'device_created_end_time' => 'デバイス登録終了時刻',
+    'device_created_time_range' => 'デバイス登録時間',
+    'device_created_time_range_help' => 'システムへのデバイス登録時刻でフィルタ',
 
     // ゲーム関連
     'game_platform' => 'ゲームプラットフォーム',
