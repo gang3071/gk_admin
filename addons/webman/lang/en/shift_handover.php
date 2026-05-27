@@ -23,6 +23,8 @@ return [
     'machine_put_point' => 'Machine Cash Input Points',
     'total_income' => 'Total Income',
     'total_outcome' => 'Total Outcome',
+    'lottery_amount' => 'Lottery Amount',
+    'total_profit' => 'Total Profit',
 
     // Error messages
     'error' => [

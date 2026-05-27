@@ -23,6 +23,8 @@ return [
     'machine_put_point' => '機台投鈔點數',
     'total_income' => '總收入',
     'total_outcome' => '總支出',
+    'lottery_amount' => '彩金',
+    'total_profit' => '總利潤',
 
     // 錯誤訊息
     'error' => [

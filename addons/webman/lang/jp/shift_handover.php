@@ -23,6 +23,8 @@ return [
     'machine_put_point' => '機械投入ポイント',
     'total_income' => '総収入',
     'total_outcome' => '総支出',
+    'lottery_amount' => '抽選金額',
+    'total_profit' => '総利益',
 
     // エラーメッセージ
     'error' => [

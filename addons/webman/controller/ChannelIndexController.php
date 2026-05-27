@@ -2274,16 +2274,27 @@ class ChannelIndexController
                     Row::create()->column([
                         Button::create(admin_trans('data_center.shift_handover'))
                             ->modal([$this, 'shiftHandover'])
-                            ->type('primary'),
-                        Html::create(admin_trans('shift_handover.start_time') . ': ' . ($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none')))
-                            ->style([
-                                'color' => '#409EFF',
+                            ->type('primary')
+                            ->size('default'),
+                        Html::div()->content([
+                            Icon::create('calendar')->style(['marginRight' => '6px', 'fontSize' => '14px', 'color' => '#606266']),
+                            Html::create(admin_trans('shift_handover.start_time') . ': ')->style([
+                                'color' => '#606266',
                                 'fontSize' => '13px',
-                                'marginLeft' => '16px',
                                 'fontWeight' => '500',
                             ]),
+                            Html::create($storeAgentShiftHandoverRecord->end_time ?? admin_trans('shift_handover.none'))->style([
+                                'color' => '#409EFF',
+                                'fontSize' => '13px',
+                                'fontWeight' => 'bold',
+                            ])
+                        ])->style([
+                            'display' => 'flex',
+                            'alignItems' => 'center',
+                            'marginLeft' => '20px'
+                        ]),
                         Html::create()->content([
-                            Icon::create('clock-circle')->style(['marginRight' => '4px', 'fontSize' => '13px']),
+                            Icon::create('clock-circle')->style(['marginRight' => '6px', 'fontSize' => '14px', 'color' => $autoShiftStatusColor]),
                             Html::create($autoShiftStatusText)->style([
                                 'fontSize' => '13px',
                                 'color' => $autoShiftStatusColor,
@@ -2292,21 +2303,110 @@ class ChannelIndexController
                         ])->style([
                             'display' => 'flex',
                             'alignItems' => 'center',
-                            'marginLeft' => '16px'
+                            'marginLeft' => '20px'
                         ])
                     ])->style([
                         'display' => 'flex',
                         'alignItems' => 'center'
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px 16px',
+                    'padding' => '10px 16px',
                     'display' => 'flex',
                     'alignItems' => 'center',
-                    'backgroundColor' => '#f5f7fa'
+                    'borderLeft' => '3px solid #409EFF'
                 ])
             , 24);
 
-            // ========== 第二行：运营统计标题 ==========
+            // ========== 第二行：设备和分成信息 ==========
+            // 总设备数
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('data_center.total_devices'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format(floatval($playerNum)))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#409EFF',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 绑定代理
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('data_center.bound_agent'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? admin_trans('shift_handover.none')) : admin_trans('shift_handover.none'))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#67C23A',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 当期上缴金额
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('data_center.current_payment_amount'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format(floatval($info['profit_amount'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#E6A23C',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 上缴比例
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('data_center.payment_ratio'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(floatval($info['ratio'] ?? 0) . '%')->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#909399',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // ========== 第三行：运营统计标题 ==========
             $row->column(
                 Card::create([
                     Row::create()->column([
@@ -2347,7 +2447,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2369,7 +2469,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2391,7 +2491,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2413,7 +2513,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2435,7 +2535,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2457,7 +2557,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center',
                     'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
@@ -2511,7 +2611,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2533,7 +2633,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2555,7 +2655,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2577,7 +2677,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
@@ -2599,7 +2699,7 @@ class ChannelIndexController
                             'wordBreak' => 'break-all'
                         ])
                     ])
-                ])->bodyStyle([
+                ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center',
                     'backgroundColor' => $currentShiftProfit >= 0 ? '#f0f9ff' : '#fef0f0',
@@ -2607,74 +2707,7 @@ class ChannelIndexController
                 ])
             , 5);
 
-            // ========== 第七行：设备和分成信息 ==========
-            $row->column(
-                Card::create([
-                    Row::create()->column(Icon::create('fas fa-television')->style([
-                        'fontSize' => '36px',
-                        'color' => '#409eff',
-                        'marginRight' => '15px'
-                    ]), 4),
-                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_devices'))->value(floatval($playerNum))
-                        ->valueStyle([
-                            'fontSize' => '16px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'textAlign' => 'center'
-                        ]), 10),
-                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.bound_agent'))->value($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? '') : '')
-                        ->valueStyle([
-                            'fontSize' => '16px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'textAlign' => 'center'
-                        ]), 10),
-                ])->bodyStyle([
-                    'display' => 'flex',
-                    'align-items' => 'center',
-                    'padding' => '10px 13px'
-                ])->hoverable()->headStyle([
-                    'height' => '0px',
-                    'border-bottom' => '0px',
-                    'min-height' => '0px'
-                ])
-                , 12);
-
-            $row->column(
-                Card::create([
-                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
-                        'fontSize' => '36px',
-                        'color' => '#409eff',
-                        'marginRight' => '15px'
-                    ]), 4),
-                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_payment_amount'))->value(floatval($info['profit_amount'] ?? 0))
-                        ->valueStyle([
-                            'fontSize' => '16px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'textAlign' => 'center'
-                        ]), 10),
-                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.payment_ratio'))->value(floatval($info['ratio'] ?? 0) . '%')
-                        ->valueStyle([
-                            'fontSize' => '16px',
-                            'fontWeight' => '500',
-                            'textAlign' => 'center'
-                        ])->style([
-                            'textAlign' => 'center'
-                        ]), 10),
-                ])->bodyStyle([
-                    'display' => 'flex',
-                    'align-items' => 'center',
-                    'padding' => '10px 13px'
-                ])->hoverable()->headStyle([
-                    'height' => '0px',
-                    'border-bottom' => '0px',
-                    'min-height' => '0px'
-                ])
-                , 12);
+            // ========== 图表区域 ==========
             $row->column(Card::create($this->openWashChart([$store->id]))->hoverable(), 16);
             $row->column(Card::create($this->moneyChart([$store->id]))->hoverable(), 8);
             $row->column(Card::create($this->revenueChart([$store->id]))->hoverable(), 12);
