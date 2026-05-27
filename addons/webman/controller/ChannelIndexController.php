@@ -2261,7 +2261,11 @@ class ChannelIndexController
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal =$operationStatistics['withdrawal_total'] ?? 0;
+            $outcomeTotal = bcadd(
+                $operationStatistics['withdrawal_total'] ?? 0,
+                $lotteryStatistics['lottery_amount'] ?? 0,
+                2
+            );
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // ========== 第一行：交班按钮和运营统计标题 ==========

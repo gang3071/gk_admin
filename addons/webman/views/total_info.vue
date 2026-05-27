@@ -147,8 +147,23 @@ export default {
         lg: {min: 992, max: 1200, columns: 4},
         xl: {min: 1200, max: 1600, columns: 5},
         xxl: {min: 1600, columns: 6}
-      }
+      },
+      currentFilter: null  // 存储当前筛选参数
     };
+  },
+  watch: {
+    // 监听筛选参数变化
+    ex_admin_filter: {
+      handler(newVal) {
+        this.currentFilter = newVal;
+        // 如果面板已展开且已加载过数据，自动刷新
+        if (this.activeKey.includes('1') && this.hasLoaded) {
+          this.fetchData();
+        }
+      },
+      deep: true,
+      immediate: true
+    }
   },
   methods: {
     // 获取数值样式 - 已修改为根据正负数设置颜色
@@ -195,11 +210,15 @@ export default {
     async fetchData() {
       this.loading = true;
       this.error = false;
+
+      // 使用存储的最新筛选参数
+      const filterToUse = this.currentFilter || this.ex_admin_filter;
+
       this.$request({
         url: 'ex-admin/login/totalInfo',
         method: 'post',
         data: {
-          ex_admin_filter: this.ex_admin_filter,
+          ex_admin_filter: filterToUse,
           type: this.type,
           player_id: this.player_id,
           department_id: this.department_id,

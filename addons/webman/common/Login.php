@@ -1666,12 +1666,35 @@ class Login extends LoginAbstract
                 $currentAdmin = Admin::user();
                 $storeAdminId = $currentAdmin->id;
 
-                // 获取店家管理的所有设备（玩家）
-                $playerIds = Player::query()
+                // 获取店家管理的设备（玩家），应用筛选条件
+                $playerQuery = Player::query()
                     ->where('store_admin_id', $storeAdminId)
-                    ->where('is_promoter', 0)
-                    ->pluck('id')
-                    ->toArray();
+                    ->where('is_promoter', 0);
+
+                // 应用筛选条件
+                if (!empty($exAdminFilter['player_id'])) {
+                    $playerQuery->where('id', $exAdminFilter['player_id']);
+                }
+                if (!empty($exAdminFilter['status'])) {
+                    $playerQuery->where('status', $exAdminFilter['status']);
+                }
+                if (!empty($exAdminFilter['is_crashed'])) {
+                    $playerQuery->where('is_crashed', $exAdminFilter['is_crashed']);
+                }
+                if (!empty($exAdminFilter['phone'])) {
+                    $playerQuery->where('phone', 'like', '%' . $exAdminFilter['phone'] . '%');
+                }
+                if (!empty($exAdminFilter['name'])) {
+                    $playerQuery->where('name', 'like', '%' . $exAdminFilter['name'] . '%');
+                }
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $playerQuery->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $playerQuery->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+
+                $playerIds = $playerQuery->pluck('id')->toArray();
 
                 if (empty($playerIds)) {
                     $data = [
@@ -1744,10 +1767,18 @@ class Login extends LoginAbstract
                 // 统计彩金数据
                 $lotteryAmount = $lotteryQuery->sum('amount') ?? 0;
 
-                // 计算小计 = 开分 - 洗分
+                // 计算小计 = (开分 + 投钞) - (洗分 + 彩金)
                 $rechargeAmount = floatval($deliveryStats->recharge_amount ?? 0);
+                $machinePutPoint = floatval($deliveryStats->machine_put_point ?? 0);
                 $withdrawAmount = floatval($deliveryStats->withdraw_amount ?? 0);
-                $subtotal = bcsub($rechargeAmount, $withdrawAmount, 2);
+                $lotteryAmountFloat = floatval($lotteryAmount);
+
+                // 收入 = 开分 + 投钞
+                $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
+                // 支出 = 洗分 + 彩金
+                $outcomeTotal = bcadd($withdrawAmount, $lotteryAmountFloat, 2);
+                // 小计 = 收入 - 支出
+                $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
                 $data = [
                     [

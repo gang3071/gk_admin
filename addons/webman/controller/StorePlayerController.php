@@ -180,13 +180,20 @@ class StorePlayerController
                 $item['lottery_amount'] = floatval($lotteryAmount);
             }
 
-            // 计算累计小计 = 开分 - 洗分
+            // 计算累计小计 = (开分 + 投钞) - (洗分 + 彩金)
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
-            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
+            $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
+
+            // 收入 = 开分 + 投钞
+            $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
+            // 支出 = 洗分 + 彩金
+            $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
+            // 小计 = 收入 - 支出
+            $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // 存储纯开分金额（扣除投钞后），用于展示
-            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
 
             // === 2. 当前未交班数据（不受时间筛选影响） ===
