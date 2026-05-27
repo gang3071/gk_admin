@@ -4,9 +4,12 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Player;
+use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PlayerWithdrawRecord;
+use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -15,6 +18,8 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 use support\Db;
 
@@ -53,6 +58,13 @@ class StorePlayerController
 
         // 获取筛选条件
         $requestFilter = Request::input('ex_admin_filter', []);
+
+        // 查询最后一次交班记录时间
+        $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
+            ->where('bind_admin_user_id', $storeAdminId)
+            ->orderBy('id', 'desc')
+            ->first();
+        $lastShiftTime = $lastShiftRecord ? $lastShiftRecord->end_time : null;
 
         // 查询条件：店家管理的玩家（设备）
         // 关闭数据权限，因为我们手动控制了权限（department_id + store_admin_id）
@@ -112,27 +124,116 @@ class StorePlayerController
             unset($item);
         }
 
-        // 计算每个设备的彩金和小计
+        // 计算每个设备的统计数据
         foreach ($list as &$item) {
-            // 查询该设备的累计彩金
-            $lotteryAmount = PlayerLotteryRecord::query()
-                ->where('player_id', $item['id'])
-                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                ->sum('amount') ?? 0;
+            $playerId = $item['id'];
 
-            $item['lottery_amount'] = $lotteryAmount;
+            // === 1. 累计数据（受时间筛选影响） ===
+            // 检查是否有统计时间范围筛选
+            $hasStatsTimeFilter = !empty($requestFilter['stats_start_time']) || !empty($requestFilter['stats_end_time']);
 
-            // 计算小计 = 开分 - (洗分 + 彩金)
-            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
-            // 注意：洗分（recharge_amount）已经包含了彩金，所以不需要再加彩金
+            if ($hasStatsTimeFilter) {
+                // 查询筛选时间段内的财务记录
+                $deliveryQuery = PlayerDeliveryRecord::query()
+                    ->where('player_id', $playerId);
+
+                if (!empty($requestFilter['stats_start_time'])) {
+                    $deliveryQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+                }
+                if (!empty($requestFilter['stats_end_time'])) {
+                    $deliveryQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+                }
+
+                $deliveryStats = $deliveryQuery->selectRaw("
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount
+                ")->first();
+
+                // 查询筛选时间段内的彩金
+                $lotteryQuery = PlayerLotteryRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
+
+                if (!empty($requestFilter['stats_start_time'])) {
+                    $lotteryQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+                }
+                if (!empty($requestFilter['stats_end_time'])) {
+                    $lotteryQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+                }
+
+                $lotteryAmount = $lotteryQuery->sum('amount') ?? 0;
+
+                // 覆盖累计数据
+                $item['machine_put_point'] = floatval($deliveryStats->machine_put_point ?? 0);
+                $item['recharge_amount'] = floatval($deliveryStats->recharge_amount ?? 0);
+                $item['withdraw_amount'] = floatval($deliveryStats->withdraw_amount ?? 0);
+                $item['lottery_amount'] = floatval($lotteryAmount);
+            } else {
+                // 没有时间筛选，使用 player_extend 的累计数据
+                // 查询累计彩金
+                $lotteryAmount = PlayerLotteryRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                    ->sum('amount') ?? 0;
+
+                $item['lottery_amount'] = floatval($lotteryAmount);
+            }
+
+            // 计算累计小计 = (开分 + 投钞) - (洗分 + 彩金)
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+            $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
 
-            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
+            // 收入 = 开分 + 投钞
+            $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
+            // 支出 = 洗分 + 彩金
+            $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
+            // 小计 = 收入 - 支出
+            $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // 存储纯开分金额（扣除投钞后），用于展示
-            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+
+            // === 2. 当前未交班数据（不受时间筛选影响） ===
+            // 查询从最后交班时间到现在的财务数据
+            $currentShiftDeliveryQuery = PlayerDeliveryRecord::query()
+                ->where('player_id', $playerId);
+
+            if ($lastShiftTime) {
+                $currentShiftDeliveryQuery->where('created_at', '>', $lastShiftTime);
+            }
+
+            $currentShiftDelivery = $currentShiftDeliveryQuery->selectRaw("
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS current_machine_put_point,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS current_total_income,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS current_total_outcome
+            ")->first();
+
+            // 查询从最后交班时间到现在的彩金
+            $currentShiftLotteryQuery = PlayerLotteryRecord::query()
+                ->where('player_id', $playerId)
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
+
+            if ($lastShiftTime) {
+                $currentShiftLotteryQuery->where('created_at', '>', $lastShiftTime);
+            }
+
+            $currentShiftLottery = $currentShiftLotteryQuery->sum('amount') ?? 0;
+
+            // 存储当前未交班数据
+            $item['current_machine_put_point'] = floatval($currentShiftDelivery->current_machine_put_point ?? 0);
+            $item['current_total_income'] = floatval($currentShiftDelivery->current_total_income ?? 0);
+            $item['current_total_outcome'] = floatval($currentShiftDelivery->current_total_outcome ?? 0);
+            $item['current_lottery_amount'] = floatval($currentShiftLottery);
+
+            // 计算当前未交班总利润 = 总收入 - 总支出 - 彩金
+            $item['current_total_profit'] = bcsub(
+                bcsub($item['current_total_income'], $item['current_total_outcome'], 2),
+                $item['current_lottery_amount'],
+                2
+            );
         }
 
         // 获取设备选项列表用于筛选器下拉选择
@@ -153,24 +254,57 @@ class StorePlayerController
             })
             ->toArray();
 
-        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions) {
+        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
-            $grid->column('id', admin_trans('player.fields.id'))->width(80)->sortable()->align('center');
+            // 添加统计信息面板
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($requestFilter) {
+                $row->gutter([10, 0]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $requestFilter,
+                    'type' => 'StorePlayer',
+                ]));
+            })->style(['background' => '#fff']);
+
+            $grid->header($layout);
+
+            $grid->column('id', admin_trans('player.fields.id'))->display(function ($value) {
+                return Html::create($value)->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500',
+                    'color' => '#606266'
+                ]);
+            })->width(70)->sortable()->align('center')->fixed(true);
 
             $grid->column('name', admin_trans('player.fields.device_name'))->display(function ($val, $data) {
                 $avatar = !empty($data['avatar'])
-                    ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])
-                    : Avatar::create()->content(mb_substr($val ?: 'U', 0, 1));
+                    ? Avatar::create()->src(is_numeric($data['avatar']) ? config('def_avatar.' . $data['avatar']) : $data['avatar'])->size(32)
+                    : Avatar::create()->content(mb_substr($val ?: 'U', 0, 1))->size(32);
                 return Html::create()->content([
                     $avatar,
-                    Html::div()->content($val ?: admin_trans('player.unnamed'))->style(['margin-left' => '8px'])
+                    Html::div()->content($val ?: admin_trans('player.unnamed'))->style([
+                        'marginLeft' => '8px',
+                        'fontSize' => '13px',
+                        'fontWeight' => '500',
+                        'color' => '#303133',
+                        'whiteSpace' => 'nowrap',
+                        'overflow' => 'hidden',
+                        'textOverflow' => 'ellipsis'
+                    ])
+                ])->style([
+                    'display' => 'flex',
+                    'alignItems' => 'center'
                 ]);
-            })->width(150);
+            })->width(150)->fixed(true);
 
-            $grid->column('phone', admin_trans('player.fields.phone'))->width(120)->align('center');
+            $grid->column('phone', admin_trans('player.fields.phone'))->display(function ($value) {
+                return Html::create($value ?: '-')->style([
+                    'fontSize' => '13px'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($value) {
                 return match ($value) {
@@ -178,11 +312,14 @@ class StorePlayerController
                     Player::PLAYER_SOURCE_OFFLINE => Tag::create(admin_trans('player.fields.player_source_offline'))->color('orange'),
                     default => Tag::create('-')->color('default'),
                 };
-            })->width(100)->align('center');
+            })->width(90)->align('center');
 
             $grid->column('wallet_money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('is_crashed', admin_trans('player.is_crashed'))->display(function ($val, $data) {
                 if ($val == 1) {
@@ -190,31 +327,140 @@ class StorePlayerController
                 } else {
                     return Tag::create(admin_trans('player.normal'))->color('green');
                 }
-            })->width(100)->align('center');
+            })->width(90)->align('center');
 
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value, $data) {
                 // 累计开分需要扣除投钞金额（因为开分字段已包含投钞）
                 $pureRecharge = $data['pure_recharge_amount'] ?? 0;
-                return number_format(floatval($pureRecharge), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($pureRecharge), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
 
             $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
 
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
-                return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
-            })->width(120)->align('center');
+                return Html::create(number_format(floatval($value), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => 'bold',
+                    'color' => $color
+                ]);
+            })->width(110)->align('center');
+
+            // === 当前未交班数据列（合并显示） ===
+            $grid->column('current_shift_stats', admin_trans('player.current_shift_stats'))->display(function ($value, $data) {
+                $profitColor = $data['current_total_profit'] >= 0 ? '#3f8600' : '#cf1322';
+
+                return Html::div()->content([
+                    // 投钞点数
+                    Html::div()->content([
+                        Html::create(admin_trans('shift_handover.machine_put_point') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_machine_put_point']), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#303133'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 总收入
+                    Html::div()->content([
+                        Html::create(admin_trans('shift_handover.total_in') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_total_income']), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#67C23A'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 总支出
+                    Html::div()->content([
+                        Html::create(admin_trans('shift_handover.total_out') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_total_outcome']), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#F56C6C'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 彩金
+                    Html::div()->content([
+                        Html::create(admin_trans('shift_handover.lottery_amount') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_lottery_amount']), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#E6A23C'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 总利润
+                    Html::div()->content([
+                        Html::create(admin_trans('shift_handover.label.total_profit'))->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_total_profit']), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => $profitColor
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center'])
+                ])->style([
+                    'padding' => '6px 8px',
+                    'backgroundColor' => '#f0f9ff',
+                    'borderRadius' => '4px',
+                    'lineHeight' => '1.4',
+                    'minWidth' => '150px'
+                ]);
+            })->width(170)->help(admin_trans('player.current_shift_help'));
 
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
@@ -222,9 +468,14 @@ class StorePlayerController
                     1 => Tag::create(admin_trans('admin.open'))->color('green'),
                     default => Tag::create(admin_trans('admin.unknown'))->color('default'),
                 };
-            })->width(80)->align('center');
+            })->width(70)->align('center');
 
-            $grid->column('created_at', admin_trans('player.fields.created_at'))->width(160)->align('center');
+            $grid->column('created_at', admin_trans('player.fields.created_at'))->display(function ($value) {
+                return Html::create($value)->style([
+                    'fontSize' => '12px',
+                    'color' => '#606266'
+                ]);
+            })->width(150)->align('center');
 
             $grid->filter(function (Filter $filter) use ($playerOptions) {
                 // 设备下拉选择
@@ -232,6 +483,16 @@ class StorePlayerController
                     ->placeholder(admin_trans('player.filter.select_device'))
                     ->options(['' => admin_trans('public_msg.all')] + $playerOptions)
                     ->style(['width' => '300px']);
+
+                // 统计时间范围筛选（影响累计数据）
+                $filter->form()->hidden('stats_start_time');
+                $filter->form()->hidden('stats_end_time');
+                $filter->form()->dateTimeRange('stats_start_time', 'stats_end_time', '')
+                    ->placeholder([
+                        admin_trans('player.stats_start_time'),
+                        admin_trans('player.stats_end_time')
+                    ])
+                    ->help(admin_trans('player.stats_time_range_help'));
 
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('player.fields.status'))
@@ -253,12 +514,14 @@ class StorePlayerController
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
 
+                // 设备注册时间范围筛选
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
-                    admin_trans('public_msg.created_at_start'),
-                    admin_trans('public_msg.created_at_end')
-                ]);
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')
+                    ->placeholder([
+                        admin_trans('player.device_created_start_time'),
+                        admin_trans('player.device_created_end_time')
+                    ]);
             });
 
             $grid->actions(function (Actions $actions) {
@@ -267,10 +530,8 @@ class StorePlayerController
                 $actions->detail()->modal($this->viewForm())->width('60%');
             });
 
-//            $grid->addButton()->modal($this->form());
             $grid->hideDelete();
             $grid->hideDeleteSelection();
-            $grid->expandFilter();
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $playerCount);
             $grid->attr('mongo_model', $list);

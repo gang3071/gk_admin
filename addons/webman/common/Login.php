@@ -1670,6 +1670,161 @@ class Login extends LoginAbstract
 
                 break;
 
+            case 'StorePlayer':
+                // 店家后台设备统计
+                /** @var \addons\webman\model\AdminUser $currentAdmin */
+                $currentAdmin = Admin::user();
+                $storeAdminId = $currentAdmin->id;
+
+                // 获取店家管理的设备（玩家），应用筛选条件
+                $playerQuery = Player::query()
+                    ->where('store_admin_id', $storeAdminId)
+                    ->where('is_promoter', 0);
+
+                // 应用筛选条件
+                if (!empty($exAdminFilter['player_id'])) {
+                    $playerQuery->where('id', $exAdminFilter['player_id']);
+                }
+                if (!empty($exAdminFilter['status'])) {
+                    $playerQuery->where('status', $exAdminFilter['status']);
+                }
+                if (!empty($exAdminFilter['is_crashed'])) {
+                    $playerQuery->where('is_crashed', $exAdminFilter['is_crashed']);
+                }
+                if (!empty($exAdminFilter['phone'])) {
+                    $playerQuery->where('phone', 'like', '%' . $exAdminFilter['phone'] . '%');
+                }
+                if (!empty($exAdminFilter['name'])) {
+                    $playerQuery->where('name', 'like', '%' . $exAdminFilter['name'] . '%');
+                }
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $playerQuery->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $playerQuery->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+
+                $playerIds = $playerQuery->pluck('id')->toArray();
+
+                if (empty($playerIds)) {
+                    $data = [
+                        [
+                            'title' => admin_trans('player.total_recharge_amount'),
+                            'number' => 0,
+                            'prefix' => '',
+                            'suffix' => ''
+                        ],
+                        [
+                            'title' => admin_trans('player.total_machine_put_point'),
+                            'number' => 0,
+                            'prefix' => '',
+                            'suffix' => ''
+                        ],
+                        [
+                            'title' => admin_trans('player.total_withdraw_amount'),
+                            'number' => 0,
+                            'prefix' => '',
+                            'suffix' => ''
+                        ],
+                        [
+                            'title' => admin_trans('player.total_lottery_amount'),
+                            'number' => 0,
+                            'prefix' => '',
+                            'suffix' => ''
+                        ],
+                        [
+                            'title' => admin_trans('player.subtotal'),
+                            'number' => 0,
+                            'prefix' => '',
+                            'suffix' => ''
+                        ],
+                    ];
+                    break;
+                }
+
+                // 创建财务记录查询
+                $deliveryQuery = PlayerDeliveryRecord::query()
+                    ->whereIn('player_id', $playerIds);
+
+                // 应用统计时间范围筛选
+                if (!empty($exAdminFilter['stats_start_time'])) {
+                    $deliveryQuery->where('created_at', '>=', $exAdminFilter['stats_start_time']);
+                }
+                if (!empty($exAdminFilter['stats_end_time'])) {
+                    $deliveryQuery->where('created_at', '<=', $exAdminFilter['stats_end_time']);
+                }
+
+                // 统计财务数据
+                $deliveryStats = $deliveryQuery->selectRaw("
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount
+                ")->first();
+
+                // 创建彩金记录查询
+                $lotteryQuery = PlayerLotteryRecord::query()
+                    ->whereIn('player_id', $playerIds)
+                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
+
+                // 应用统计时间范围筛选
+                if (!empty($exAdminFilter['stats_start_time'])) {
+                    $lotteryQuery->where('created_at', '>=', $exAdminFilter['stats_start_time']);
+                }
+                if (!empty($exAdminFilter['stats_end_time'])) {
+                    $lotteryQuery->where('created_at', '<=', $exAdminFilter['stats_end_time']);
+                }
+
+                // 统计彩金数据
+                $lotteryAmount = $lotteryQuery->sum('amount') ?? 0;
+
+                // 计算小计 = (开分 + 投钞) - (洗分 + 彩金)
+                $rechargeAmount = floatval($deliveryStats->recharge_amount ?? 0);
+                $machinePutPoint = floatval($deliveryStats->machine_put_point ?? 0);
+                $withdrawAmount = floatval($deliveryStats->withdraw_amount ?? 0);
+                $lotteryAmountFloat = floatval($lotteryAmount);
+
+                // 收入 = 开分 + 投钞
+                $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
+                // 支出 = 洗分 + 彩金
+                $outcomeTotal = bcadd($withdrawAmount, $lotteryAmountFloat, 2);
+                // 小计 = 收入 - 支出
+                $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
+
+                $data = [
+                    [
+                        'title' => admin_trans('player.total_recharge_amount'),
+                        'number' => $rechargeAmount,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player.total_machine_put_point'),
+                        'number' => floatval($deliveryStats->machine_put_point ?? 0),
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player.total_withdraw_amount'),
+                        'number' => $withdrawAmount,
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player.total_lottery_amount'),
+                        'number' => floatval($lotteryAmount),
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('player.subtotal'),
+                        'number' => floatval($subtotal),
+                        'prefix' => '',
+                        'suffix' => ''
+                    ],
+                ];
+
+                break;
+
             case 'PlayerLotteryRecord':
             case 'ChannelPlayerLotteryRecord':
                 // 创建基础查询（只包含权限过滤）

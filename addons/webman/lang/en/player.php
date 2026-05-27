@@ -211,6 +211,16 @@ return [
     'total_lottery_amount' => 'Jackpot',
     'subtotal' => 'Subtotal',
     'wash_point_config' => 'Wash Point Config',
+    'current_shift_stats' => 'Current Shift Stats',
+    'current_shift_help' => 'Current unhandled shift data (from last shift time to now)',
+    'stats_time_range' => 'Statistics Time Range',
+    'stats_start_time' => 'Statistics Start Time',
+    'stats_end_time' => 'Statistics End Time',
+    'stats_time_range_help' => 'Filter statistics data time range (does not affect current shift stats)',
+    'device_created_start_time' => 'Device Registration Start Time',
+    'device_created_end_time' => 'Device Registration End Time',
+    'device_created_time_range' => 'Device Registration Time',
+    'device_created_time_range_help' => 'Filter devices by registration time to the system',
 
     // Game Related
     'game_platform' => 'Game Platform',

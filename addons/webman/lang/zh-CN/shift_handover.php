@@ -17,6 +17,15 @@ return [
     'none' => '无',
     'last_shift_time' => '上次交班时间',
 
+    // 当前班次统计
+    'current_shift_statistics' => '当前班次实时统计',
+    'shift_start' => '班次开始',
+    'machine_put_point' => '机台投钞点数',
+    'total_income' => '总收入',
+    'total_outcome' => '总支出',
+    'lottery_amount' => '彩金',
+    'total_profit' => '总利润',
+
     // 错误消息
     'error' => [
         'end_time_required' => '结束时间不能为空',

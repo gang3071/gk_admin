@@ -17,6 +17,15 @@ return [
     'none' => 'なし',
     'last_shift_time' => '前回の交代時間',
 
+    // 現在のシフト統計
+    'current_shift_statistics' => '現在のシフトリアルタイム統計',
+    'shift_start' => 'シフト開始',
+    'machine_put_point' => '機械投入ポイント',
+    'total_income' => '総収入',
+    'total_outcome' => '総支出',
+    'lottery_amount' => '抽選金額',
+    'total_profit' => '総利益',
+
     // エラーメッセージ
     'error' => [
         'end_time_required' => '終了時間は必須です',

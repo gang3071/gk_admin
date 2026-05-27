@@ -17,6 +17,15 @@ return [
     'none' => 'None',
     'last_shift_time' => 'Last Shift Time',
 
+    // Current Shift Statistics
+    'current_shift_statistics' => 'Current Shift Real-time Statistics',
+    'shift_start' => 'Shift Start',
+    'machine_put_point' => 'Machine Cash Input Points',
+    'total_income' => 'Total Income',
+    'total_outcome' => 'Total Outcome',
+    'lottery_amount' => 'Lottery Amount',
+    'total_profit' => 'Total Profit',
+
     // Error messages
     'error' => [
         'end_time_required' => 'End time is required',

@@ -17,6 +17,15 @@ return [
     'none' => '無',
     'last_shift_time' => '上次交班時間',
 
+    // 當前班次統計
+    'current_shift_statistics' => '當前班次實時統計',
+    'shift_start' => '班次開始',
+    'machine_put_point' => '機台投鈔點數',
+    'total_income' => '總收入',
+    'total_outcome' => '總支出',
+    'lottery_amount' => '彩金',
+    'total_profit' => '總利潤',
+
     // 錯誤訊息
     'error' => [
         'end_time_required' => '結束時間不能為空',
