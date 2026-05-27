@@ -2335,19 +2335,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('data_center.total_score_up'))->style([
+                        Html::div()->content(admin_trans('data_center.total_score_up'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['recharge_total'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($operationStatistics['recharge_total'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#67C23A'
+                            'color' => '#67C23A',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 4);
@@ -2356,19 +2357,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('data_center.total_score_down'))->style([
+                        Html::div()->content(admin_trans('data_center.total_score_down'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['withdrawal_total'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($operationStatistics['withdrawal_total'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#F56C6C'
+                            'color' => '#F56C6C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 4);
@@ -2377,19 +2379,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('data_center.machine_put_total'))->style([
+                        Html::div()->content(admin_trans('data_center.machine_put_total'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($operationStatistics['machine_put_point'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($operationStatistics['machine_put_point'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#409EFF'
+                            'color' => '#409EFF',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 4);
@@ -2398,19 +2401,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('data_center.lottery_count'))->style([
+                        Html::div()->content(admin_trans('data_center.lottery_count'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(intval($lotteryStatistics['lottery_count'] ?? 0)))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(intval($lotteryStatistics['lottery_count'] ?? 0)))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#E6A23C'
+                            'color' => '#E6A23C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 4);
@@ -2419,19 +2423,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('data_center.lottery_score'))->style([
+                        Html::div()->content(admin_trans('data_center.lottery_score'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($lotteryStatistics['lottery_amount'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($lotteryStatistics['lottery_amount'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#E6A23C'
+                            'color' => '#E6A23C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 4);
@@ -2440,19 +2445,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('data_center.subtotal'))->style([
+                        Html::div()->content(admin_trans('data_center.subtotal'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($subtotal), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($subtotal), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C'
+                            'color' => floatval($subtotal) >= 0 ? '#67C23A' : '#F56C6C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center',
                     'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
                 ])
@@ -2493,19 +2499,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('shift_handover.machine_put_point'))->style([
+                        Html::div()->content(admin_trans('shift_handover.machine_put_point'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($currentShiftStats['machine_put_point'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($currentShiftStats['machine_put_point'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#409EFF'
+                            'color' => '#409EFF',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 5);
@@ -2514,19 +2521,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('shift_handover.total_income'))->style([
+                        Html::div()->content(admin_trans('shift_handover.total_income'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($currentShiftStats['total_income'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($currentShiftStats['total_income'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#67C23A'
+                            'color' => '#67C23A',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 5);
@@ -2535,19 +2543,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('shift_handover.total_outcome'))->style([
+                        Html::div()->content(admin_trans('shift_handover.total_outcome'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($currentShiftStats['total_outcome'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($currentShiftStats['total_outcome'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#F56C6C'
+                            'color' => '#F56C6C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 5);
@@ -2556,19 +2565,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('shift_handover.lottery_amount'))->style([
+                        Html::div()->content(admin_trans('shift_handover.lottery_amount'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format(floatval($currentShiftStats['lottery_amount'] ?? 0), 2))->style([
-                            'fontSize' => '18px',
+                        Html::div()->content(number_format(floatval($currentShiftStats['lottery_amount'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
-                            'color' => '#E6A23C'
+                            'color' => '#E6A23C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
             , 4);
@@ -2577,19 +2587,20 @@ class ChannelIndexController
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::create(admin_trans('shift_handover.total_profit'))->style([
+                        Html::div()->content(admin_trans('shift_handover.total_profit'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
-                            'marginBottom' => '4px'
+                            'marginBottom' => '8px'
                         ]),
-                        Html::create(number_format($currentShiftProfit, 2))->style([
-                            'fontSize' => '20px',
+                        Html::div()->content(number_format($currentShiftProfit, 2))->style([
+                            'fontSize' => '16px',
                             'fontWeight' => 'bold',
-                            'color' => $currentShiftProfit >= 0 ? '#67C23A' : '#F56C6C'
+                            'color' => $currentShiftProfit >= 0 ? '#67C23A' : '#F56C6C',
+                            'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->bodyStyle([
-                    'padding' => '12px',
+                    'padding' => '12px 8px',
                     'textAlign' => 'center',
                     'backgroundColor' => $currentShiftProfit >= 0 ? '#f0f9ff' : '#fef0f0',
                     'borderLeft' => '3px solid ' . ($currentShiftProfit >= 0 ? '#67C23A' : '#F56C6C')
