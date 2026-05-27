@@ -2,8 +2,8 @@
     <div class="container">
         <div v-if="!isCheckingAuth" class="lang-switch">
             <a-select v-model:value="currentLang" size="small" style="width: 120px" @change="handleLangChange">
-                <a-select-option value="zh-CN">简体中文</a-select-option>
-                <a-select-option value="zh-TW">繁體中文</a-select-option>
+              <a-select-option value="zh-TW">繁體中文</a-select-option>
+              <a-select-option value="zh-CN">简体中文</a-select-option>
                 <a-select-option value="en">English</a-select-option>
                 <a-select-option value="jp">日本語</a-select-option>
             </a-select>
