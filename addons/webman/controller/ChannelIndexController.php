@@ -2318,93 +2318,75 @@ class ChannelIndexController
             , 24);
 
             // ========== 第二行：设备和分成信息 ==========
-            // 总设备数
+            // 总设备数 + 绑定代理
             $row->column(
                 Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('data_center.total_devices'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format(floatval($playerNum)))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#409EFF',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
+                    Row::create()->column(Icon::create('fas fa-television')->style([
+                        'fontSize' => '36px',
+                        'color' => '#409eff',
+                        'marginRight' => '15px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.total_devices'))->value(floatval($playerNum))
+                        ->valueStyle([
+                            'fontSize' => '16px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.bound_agent'))->value($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? '') : '')
+                        ->valueStyle([
+                            'fontSize' => '16px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center',
+                    'padding' => '10px 13px'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
                 ])
-            , 6);
+                , 12);
 
-            // 绑定代理
+            // 当期上缴金额 + 上缴比例
             $row->column(
                 Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('data_center.bound_agent'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content($store->parent_admin_id ? (\addons\webman\model\AdminUser::find($store->parent_admin_id)->username ?? admin_trans('shift_handover.none')) : admin_trans('shift_handover.none'))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#67C23A',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
+                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                        'fontSize' => '36px',
+                        'color' => '#409eff',
+                        'marginRight' => '15px'
+                    ]), 4),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_payment_amount'))->value(floatval($info['profit_amount'] ?? 0))
+                        ->valueStyle([
+                            'fontSize' => '16px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'textAlign' => 'center'
+                        ]), 10),
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.payment_ratio'))->value(floatval($info['ratio'] ?? 0) . '%')
+                        ->valueStyle([
+                            'fontSize' => '16px',
+                            'fontWeight' => '500',
+                            'textAlign' => 'center'
+                        ])->style([
+                            'textAlign' => 'center'
+                        ]), 10),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center',
+                    'padding' => '10px 13px'
+                ])->hoverable()->headStyle([
+                    'height' => '0px',
+                    'border-bottom' => '0px',
+                    'min-height' => '0px'
                 ])
-            , 6);
-
-            // 当期上缴金额
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('data_center.current_payment_amount'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format(floatval($info['profit_amount'] ?? 0), 2))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#E6A23C',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 6);
-
-            // 上缴比例
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('data_center.payment_ratio'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(floatval($info['ratio'] ?? 0) . '%')->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#909399',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 6);
+                , 12);
 
             // ========== 第三行：运营统计标题 ==========
             $row->column(
