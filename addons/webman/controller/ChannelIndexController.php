@@ -2514,7 +2514,7 @@ class ChannelIndexController
                 ])
             , 9);
 
-            // ========== 第四行：当前班次实时统计 ==========
+            // ========== 第四行：当前班次实时统计标题 ==========
             $row->column(
                 Card::create([
                     Row::create()->column([
@@ -2542,6 +2542,7 @@ class ChannelIndexController
                 ])
             , 24);
 
+            // ========== 第五行：当前班次数据（第一行：3个数据项） ==========
             // 机台投钞点数
             $row->column(
                 Card::create([
@@ -2568,7 +2569,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '48px'
                 ])
-            , 6);
+            , 8);
 
             // 总收入
             $row->column(
@@ -2596,7 +2597,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '48px'
                 ])
-            , 6);
+            , 8);
 
             // 总支出
             $row->column(
@@ -2624,8 +2625,9 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '48px'
                 ])
-            , 6);
+            , 8);
 
+            // ========== 第六行：当前班次数据（第二行：2个数据项） ==========
             // 彩金
             $row->column(
                 Card::create([
@@ -2652,7 +2654,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '48px'
                 ])
-            , 6);
+            , 12);
 
             // 总利润
             $row->column(
@@ -2680,9 +2682,9 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '48px'
                 ])
-            , 6);
+            , 12);
 
-            // ========== 第五行：设备和分成信息 ==========
+            // ========== 第七行：设备和分成信息 ==========
             $row->column(
                 Card::create([
                     Row::create()->column(Icon::create('fas fa-television')->style([
