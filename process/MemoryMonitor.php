@@ -194,12 +194,29 @@ class MemoryMonitor
 
         // 警告信息
         if (!empty($dangers)) {
-            Log::error(sprintf(
-                "🔴 危险进程: %d 个 (PID: %s) - 内存超过 %d MB",
-                count($dangers),
-                implode(', ', $dangers),
-                self::DANGER_THRESHOLD
-            ));
+            // 改为 warning，避免发送 Telegram（除非内存超过 1 GB）
+            $maxMemory = 0;
+            foreach ($dangers as $pid) {
+                if (isset(self::$memoryHistory[$pid][time()])) {
+                    $maxMemory = max($maxMemory, self::$memoryHistory[$pid][time()]);
+                }
+            }
+
+            if ($maxMemory >= 1000) {
+                // 超过 1 GB，发送 Telegram
+                Log::error(sprintf(
+                    "🔴 极度危险！进程内存超过 1 GB (PID: %s)",
+                    implode(', ', $dangers)
+                ));
+            } else {
+                // 只记录 warning
+                Log::warning(sprintf(
+                    "⚠️ 危险进程: %d 个 (PID: %s) - 内存超过 %d MB",
+                    count($dangers),
+                    implode(', ', $dangers),
+                    self::DANGER_THRESHOLD
+                ));
+            }
         }
 
         if (!empty($warnings)) {
@@ -642,7 +659,7 @@ class MemoryMonitor
         // 记录生成时间
         self::$lastEmergencyReportTime = $now;
 
-        Log::error("📄 严重内存问题！紧急报告已保存: {$reportFile}");
+        Log::warning("📄 内存紧急报告已保存: {$reportFile}");
     }
 
     /**
