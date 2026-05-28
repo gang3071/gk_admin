@@ -13,11 +13,21 @@
  */
 
 use addons\webman\middleware\AccessControl;
+use addons\webman\middleware\AccessLogger;
+use addons\webman\middleware\MemoryTracker;
 
 return [
     // 全局中间件
     '' => [
         AccessControl::class,  // CORS跨域支持
+
+        // HTTP访问日志中间件（记录所有请求，类似Nginx access.log）
+        // 如果觉得日志太多，可以注释掉此行
+        AccessLogger::class,
+
+        // 内存追踪中间件（请求级别监控）
+        // 自动记录高内存请求（≥ 5 MB），生成热点统计
+        MemoryTracker::class,
 
         // ⚠️ 临时禁用：内存泄漏审计中间件（需要时取消注释）
         // 使用方法：

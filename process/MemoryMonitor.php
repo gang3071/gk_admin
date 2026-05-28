@@ -212,14 +212,39 @@ class MemoryMonitor
         }
 
         if (!empty($abnormalGrowths)) {
-            Log::error("⚡ 检测到异常内存增长:");
+            // 检查是否有严重泄漏（增长率超过 20 MB/分钟或内存超过 200 MB）
+            $isCritical = false;
             foreach ($abnormalGrowths as $ag) {
-                Log::error(sprintf(
-                    "   PID %s: 增长率 %.2f MB/分钟 (当前 %.2f MB)",
-                    $ag['pid'],
-                    $ag['rate'],
-                    $ag['memory']
-                ));
+                if ($ag['rate'] >= 20 || $ag['memory'] >= 200) {
+                    $isCritical = true;
+                    break;
+                }
+            }
+
+            if ($isCritical) {
+                // 严重泄漏 - 发送 Telegram 警报
+                Log::error("🔴 严重内存泄漏警报！");
+                foreach ($abnormalGrowths as $ag) {
+                    if ($ag['rate'] >= 20 || $ag['memory'] >= 200) {
+                        Log::error(sprintf(
+                            "   PID %s: 增长率 %.2f MB/分钟 (当前 %.2f MB)",
+                            $ag['pid'],
+                            $ag['rate'],
+                            $ag['memory']
+                        ));
+                    }
+                }
+            } else {
+                // 普通异常增长 - 只记录日志，不发送 Telegram
+                Log::warning("⚡ 检测到异常内存增长:");
+                foreach ($abnormalGrowths as $ag) {
+                    Log::warning(sprintf(
+                        "   PID %s: 增长率 %.2f MB/分钟 (当前 %.2f MB)",
+                        $ag['pid'],
+                        $ag['rate'],
+                        $ag['memory']
+                    ));
+                }
             }
 
             // 自动分析泄漏源
@@ -336,9 +361,9 @@ class MemoryMonitor
      */
     private function analyzeLeak(array $abnormalGrowths)
     {
-        Log::error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Log::error("🔍 内存泄漏分析");
-        Log::error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Log::info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        Log::info("🔍 内存泄漏分析");
+        Log::info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         foreach ($abnormalGrowths as $ag) {
             $pid = $ag['pid'];
@@ -374,14 +399,14 @@ class MemoryMonitor
                 $possibleCauses[] = "单次请求内存偏高 - 建议优化查询逻辑";
             }
 
-            Log::error("PID {$pid} 分析:");
-            Log::error("  当前内存: {$memory} MB");
-            Log::error("  增长率: {$rate} MB/分钟");
-            Log::error("  预估请求数: {$estimatedRequests}");
-            Log::error("  平均每请求: " . round($avgPerRequest, 2) . " MB");
-            Log::error("  可能原因:");
+            Log::info("PID {$pid} 分析:");
+            Log::info("  当前内存: {$memory} MB");
+            Log::info("  增长率: {$rate} MB/分钟");
+            Log::info("  预估请求数: {$estimatedRequests}");
+            Log::info("  平均每请求: " . round($avgPerRequest, 2) . " MB");
+            Log::info("  可能原因:");
             foreach ($possibleCauses as $cause) {
-                Log::error("    • {$cause}");
+                Log::info("    • {$cause}");
             }
 
             // 检查最近的代码修复是否生效
@@ -391,7 +416,7 @@ class MemoryMonitor
             $this->findRecentHighMemoryRequests($pid);
         }
 
-        Log::error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        Log::info("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     }
 
     /**
@@ -401,7 +426,7 @@ class MemoryMonitor
      */
     private function checkFixEffectiveness(float $avgPerRequest)
     {
-        Log::error("  修复验证:");
+        Log::info("  修复验证:");
 
         if ($avgPerRequest < 3) {
             Log::info("    ✅ 修复已生效 - 单次请求内存正常（< 3 MB）");
@@ -409,12 +434,22 @@ class MemoryMonitor
             Log::warning("    ⚠️ 修复部分生效 - 单次请求内存偏高（3-5 MB）");
             Log::warning("    建议检查是否还有其他未优化的查询");
         } else {
-            Log::error("    ❌ 修复未生效或存在其他泄漏源");
-            Log::error("    单次请求内存: {$avgPerRequest} MB（预期 < 3 MB）");
-            Log::error("    请检查:");
-            Log::error("      1. 代码是否已正确部署");
-            Log::error("      2. 服务是否已重启（php start.php restart）");
-            Log::error("      3. 是否还有其他未修复的泄漏点");
+            // 严重泄漏才发送 error 级别（会触发 Telegram）
+            if ($avgPerRequest >= 10) {
+                Log::error("    🔴 严重泄漏！单次请求内存: " . round($avgPerRequest, 2) . " MB（预期 < 3 MB）");
+                Log::error("    请立即检查:");
+                Log::error("      1. 代码是否已正确部署");
+                Log::error("      2. 服务是否已重启（php start.php restart）");
+                Log::error("      3. 是否还有其他未修复的泄漏点");
+            } else {
+                // 中度泄漏使用 warning
+                Log::warning("    ❌ 修复未生效或存在其他泄漏源");
+                Log::warning("    单次请求内存: " . round($avgPerRequest, 2) . " MB（预期 < 3 MB）");
+                Log::warning("    请检查:");
+                Log::warning("      1. 代码是否已正确部署");
+                Log::warning("      2. 服务是否已重启（php start.php restart）");
+                Log::warning("      3. 是否还有其他未修复的泄漏点");
+            }
         }
     }
 
@@ -425,13 +460,20 @@ class MemoryMonitor
      */
     private function findRecentHighMemoryRequests(int $pid)
     {
-        Log::error("  🎯 定位问题接口:");
+        Log::info("  🎯 定位问题接口:");
 
+        // 支持 RotatingFileHandler 的日期轮转日志
         $logFile = runtime_path() . '/logs/webman.log';
 
+        // 如果 webman.log 不存在，尝试查找今天的日志文件 webman-YYYY-MM-DD.log
         if (!file_exists($logFile)) {
-            Log::error("    ⚠️ 日志文件不存在，无法定位");
-            return;
+            $todayLogFile = runtime_path() . '/logs/webman-' . date('Y-m-d') . '.log';
+            if (file_exists($todayLogFile)) {
+                $logFile = $todayLogFile;
+            } else {
+                Log::warning("    ⚠️ 日志文件不存在: webman.log 和 webman-" . date('Y-m-d') . ".log 都不存在");
+                return;
+            }
         }
 
         // 读取最近的1000行日志
@@ -465,13 +507,13 @@ class MemoryMonitor
             // 显示最近5个
             $recent = array_slice($highMemoryRequests, -5);
 
-            Log::error("    发现 " . count($highMemoryRequests) . " 个高内存请求（显示最近5个）:");
+            Log::info("    发现 " . count($highMemoryRequests) . " 个高内存请求（显示最近5个）:");
 
             foreach ($recent as $req) {
                 if (empty($req['controller'])) continue;
 
                 $icon = $req['memory'] >= 10 ? '🔴' : '⚠️';
-                Log::error("      {$icon} {$req['controller']} - {$req['memory']} MB");
+                Log::info("      {$icon} {$req['controller']} - {$req['memory']} MB");
             }
 
             // 统计最常见的高内存接口
@@ -486,16 +528,16 @@ class MemoryMonitor
                 $topController = array_key_first($controllerCounts);
                 $count = $controllerCounts[$topController];
 
-                Log::error("");
-                Log::error("    🎯 最可能的问题接口:");
-                Log::error("      → {$topController}");
-                Log::error("      → 出现次数: {$count}");
-                Log::error("      → 建议: 立即检查此控制器的代码");
-                Log::error("      → 运行: php analyze_memory_hotspot.php 查看详细分析");
+                Log::info("");
+                Log::info("    🎯 最可能的问题接口:");
+                Log::info("      → {$topController}");
+                Log::info("      → 出现次数: {$count}");
+                Log::info("      → 建议: 立即检查此控制器的代码");
+                Log::info("      → 运行: php analyze_memory_hotspot.php 查看详细分析");
             }
         } else {
-            Log::error("    ✅ 最近未检测到高内存请求（< 5 MB）");
-            Log::error("    → 可能是旧的泄漏问题或已修复");
+            Log::info("    ✅ 最近未检测到高内存请求（< 5 MB）");
+            Log::info("    → 可能是旧的泄漏问题或已修复");
         }
     }
 
