@@ -55,17 +55,17 @@ class ChannelIndexController
         $playerData = $this->playerData();
         $loginData = $this->loginData();
 
-        // 获取当前渠道下的玩家ID
+        // ✅ 内存优化：获取当前渠道信息（无需加载 playerIds）
         $departmentId = Admin::user()->department_id;
-        $playerIds = Player::query()
-            ->where('department_id', $departmentId)
-            ->where('is_promoter', 0)
-            ->pluck('id');
 
-        // 运营统计数据（受时间筛选影响）- 优化为与玩家报表一致
+        // 运营统计数据（使用子查询替代 whereIn）
         $operationStatisticsQuery = PlayerDeliveryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($departmentId) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.department_id', $departmentId)
+                    ->where('player.is_promoter', 0);
             })
             ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
                 $this->applyDateWhere($query, $data_type, 'created_at');
@@ -83,10 +83,14 @@ class ChannelIndexController
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
         ];
 
-        // 拉彩统计数据（受时间筛选影响）
+        // ✅ 拉彩统计数据（使用子查询，channelIndex 使用 department_id）
         $lotteryStatisticsQuery = PlayerLotteryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($departmentId) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_lottery_record.player_id')
+                    ->where('player.department_id', $departmentId)
+                    ->where('player.is_promoter', 0);
             })
             ->when($data_type && $data_type !== 'all', function ($query) use ($data_type) {
                 $this->applyDateWhere($query, $data_type, 'created_at');
@@ -1283,18 +1287,16 @@ class ChannelIndexController
             }
         };
 
-        // 5. 查询全部历史数据（充值、提现、投钞）- 优化为与渠道后台一致，使用 PlayerDeliveryRecord
-        // 获取下级店家的所有玩家ID
-        $playerIds = Player::query()
-            ->where('department_id', $agent->department_id)
-            ->whereIn('store_admin_id', $storeIds)
-            ->where('is_promoter', 0)
-            ->pluck('id');
-
+        // ✅ 内存优化：使用子查询替代 playerIds
         // 统一使用 PlayerDeliveryRecord 查询
         $deliveryStatisticsQuery = PlayerDeliveryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($agent, $storeIds) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.department_id', $agent->department_id)
+                    ->whereIn('player.store_admin_id', $storeIds)
+                    ->where('player.is_promoter', 0);
             })
             ->when($data_type, $timeFilter)
             ->selectRaw("
@@ -1308,10 +1310,15 @@ class ChannelIndexController
         $withdrawAmount = $deliveryStatisticsQuery->withdrawal_total ?? 0;
         $machinePutPoint = $deliveryStatisticsQuery->machine_put_point ?? 0;
 
-        // 查询电子游戏总押注
+        // ✅ 查询电子游戏总押注（使用子查询）
         $electronicBetTotal = PlayGameRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($agent, $storeIds) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'play_game_record.player_id')
+                    ->where('player.department_id', $agent->department_id)
+                    ->whereIn('player.store_admin_id', $storeIds)
+                    ->where('player.is_promoter', 0);
             })
             ->when($data_type, $timeFilter)
             ->sum('bet') ?? 0;
@@ -1340,10 +1347,15 @@ class ChannelIndexController
             ->when($data_type, $timeFilter)
             ->sum('pressure') ?? 0;
 
-        // 查询拉彩统计数据
+        // ✅ 查询拉彩统计数据（使用子查询）
         $lotteryStatisticsQuery = PlayerLotteryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($agent, $storeIds) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_lottery_record.player_id')
+                    ->where('player.department_id', $agent->department_id)
+                    ->whereIn('player.store_admin_id', $storeIds)
+                    ->where('player.is_promoter', 0);
             })
             ->when($data_type, $timeFilter)
             ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
@@ -2045,23 +2057,23 @@ class ChannelIndexController
         $autoShiftStatusText = $autoShiftEnabled ? admin_trans('shift_handover.auto_shift_status_enabled') : admin_trans('shift_handover.auto_shift_status_disabled');
         $autoShiftStatusColor = $autoShiftEnabled ? '#67C23A' : '#909399';
 
-        // 查询店家下的玩家（使用 store_admin_id）
+        // ✅ 内存优化：合并查询，避免重复
+        // 修复前：count() + get() = 2 次查询 + 全量加载
+        // 修复后：只查询一次，使用子查询替代 whereIn
         $playerNum = Player::query()
             ->where('department_id', $store->department_id)
             ->where('store_admin_id', $store->id)
             ->where('is_promoter', 0)
             ->count();
-        $playerIds = Player::query()
-            ->where('department_id', $store->department_id)
-            ->where('store_admin_id', $store->id)
-            ->where('is_promoter', 0)
-            ->get()
-            ->pluck('id');
 
-        // 运营统计数据（受时间筛选影响）- 优化为与渠道后台一致
+        // ✅ 运营统计数据（使用子查询替代 whereIn）
         $operationStatisticsQuery = PlayerDeliveryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
             })
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'created_at'));
@@ -2079,10 +2091,14 @@ class ChannelIndexController
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
         ];
 
-        // 拉彩统计数据（受时间筛选影响）
+        // ✅ 拉彩统计数据（使用子查询替代 whereIn）
         $lotteryStatisticsQuery = PlayerLotteryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_lottery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
             })
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'created_at'));
@@ -2109,10 +2125,14 @@ class ChannelIndexController
         // 获取上次交班时间（如果没有交班记录，则统计所有数据）
         $lastShiftTime = $lastShiftRecord ? $lastShiftRecord->end_time : null;
 
-        // 当前班次统计：投钞、收入、支出
+        // ✅ 当前班次统计：投钞、收入、支出（使用子查询）
         $currentShiftDeliveryQuery = PlayerDeliveryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
             })
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
@@ -2124,10 +2144,14 @@ class ChannelIndexController
             ")
             ->first();
 
-        // 当前班次统计：彩金
+        // ✅ 当前班次统计：彩金（使用子查询）
         $currentShiftLotteryQuery = PlayerLotteryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_lottery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
             })
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
@@ -2159,10 +2183,14 @@ class ChannelIndexController
             2
         );
 
-        // 总数据统计（不受时间筛选影响，用于"总充值"、"总提现"、"总投钞"卡片）
+        // ✅ 总数据统计（使用子查询）
         $totalStatisticsQuery = PlayerDeliveryRecord::query()
-            ->when(!empty($playerIds), function ($query) use ($playerIds) {
-                $query->whereIn('player_id', $playerIds);
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
             })
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
@@ -2184,9 +2212,15 @@ class ChannelIndexController
         $adjustAmount = $store->adjust_amount ?? 0;
         $lastSettlementTimestamp = $store->last_settlement_timestamp;
 
-        // 统计交易数据
+        // ✅ 统计交易数据（使用子查询）
         $totalData = PlayerDeliveryRecord::query()
-            ->whereIn('player_id', $playerIds)
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
+            })
             ->when(!empty($lastSettlementTimestamp), function ($query) use ($lastSettlementTimestamp) {
                 $query->where('created_at', '>=', $lastSettlementTimestamp);
             })->selectRaw('

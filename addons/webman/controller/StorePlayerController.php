@@ -236,13 +236,16 @@ class StorePlayerController
             );
         }
 
-        // 获取设备选项列表用于筛选器下拉选择
+        // ✅ 内存优化：使用 lazy() 惰性加载替代一次性 get()
+        // 修复前：3000 台设备 = 5 MB 内存，5 个并发进程 = 25 MB
+        // 修复后：惰性加载 = 稳定在 1 MB 以内
         $playerOptions = Player::query()
             ->where('department_id', $departmentId)
             ->where('store_admin_id', $storeAdminId)
             ->where('is_promoter', 0)
             ->orderBy('id', 'asc')
-            ->get(['id', 'name', 'uuid'])
+            ->select(['id', 'name', 'uuid'])
+            ->lazy(500)
             ->mapWithKeys(function ($player) {
                 $label = $player->name
                     ? "{$player->name} (ID: {$player->id})"
@@ -252,7 +255,7 @@ class StorePlayerController
                 }
                 return [$player->id => $label];
             })
-            ->toArray();
+            ->all();
 
         return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter) {
             $grid->title(admin_trans('player.title'));

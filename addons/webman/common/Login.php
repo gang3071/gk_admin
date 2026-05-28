@@ -1666,37 +1666,38 @@ class Login extends LoginAbstract
                 $currentAdmin = Admin::user();
                 $storeAdminId = $currentAdmin->id;
 
-                // 获取店家管理的设备（玩家），应用筛选条件
-                $playerQuery = Player::query()
-                    ->where('store_admin_id', $storeAdminId)
-                    ->where('is_promoter', 0);
+                // ✅ 内存优化：定义筛选条件闭包，避免代码重复
+                $applyPlayerFilters = function ($query) use ($storeAdminId, $exAdminFilter) {
+                    $query->where('store_admin_id', $storeAdminId)
+                        ->where('is_promoter', 0);
 
-                // 应用筛选条件
-                if (!empty($exAdminFilter['player_id'])) {
-                    $playerQuery->where('id', $exAdminFilter['player_id']);
-                }
-                if (!empty($exAdminFilter['status'])) {
-                    $playerQuery->where('status', $exAdminFilter['status']);
-                }
-                if (!empty($exAdminFilter['is_crashed'])) {
-                    $playerQuery->where('is_crashed', $exAdminFilter['is_crashed']);
-                }
-                if (!empty($exAdminFilter['phone'])) {
-                    $playerQuery->where('phone', 'like', '%' . $exAdminFilter['phone'] . '%');
-                }
-                if (!empty($exAdminFilter['name'])) {
-                    $playerQuery->where('name', 'like', '%' . $exAdminFilter['name'] . '%');
-                }
-                if (!empty($exAdminFilter['created_at_start'])) {
-                    $playerQuery->where('created_at', '>=', $exAdminFilter['created_at_start']);
-                }
-                if (!empty($exAdminFilter['created_at_end'])) {
-                    $playerQuery->where('created_at', '<=', $exAdminFilter['created_at_end']);
-                }
+                    if (!empty($exAdminFilter['player_id'])) {
+                        $query->where('id', $exAdminFilter['player_id']);
+                    }
+                    if (!empty($exAdminFilter['status'])) {
+                        $query->where('status', $exAdminFilter['status']);
+                    }
+                    if (!empty($exAdminFilter['is_crashed'])) {
+                        $query->where('is_crashed', $exAdminFilter['is_crashed']);
+                    }
+                    if (!empty($exAdminFilter['phone'])) {
+                        $query->where('phone', 'like', '%' . $exAdminFilter['phone'] . '%');
+                    }
+                    if (!empty($exAdminFilter['name'])) {
+                        $query->where('name', 'like', '%' . $exAdminFilter['name'] . '%');
+                    }
+                    if (!empty($exAdminFilter['created_at_start'])) {
+                        $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                    }
+                    if (!empty($exAdminFilter['created_at_end'])) {
+                        $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                    }
+                };
 
-                $playerIds = $playerQuery->pluck('id')->toArray();
+                // 检查是否有符合条件的设备
+                $hasPlayers = Player::query()->where($applyPlayerFilters)->exists();
 
-                if (empty($playerIds)) {
+                if (!$hasPlayers) {
                     $data = [
                         [
                             'title' => admin_trans('player.total_recharge_amount'),
@@ -1732,9 +1733,14 @@ class Login extends LoginAbstract
                     break;
                 }
 
-                // 创建财务记录查询
+                // ✅ 使用 whereExists 子查询，复用筛选条件
                 $deliveryQuery = PlayerDeliveryRecord::query()
-                    ->whereIn('player_id', $playerIds);
+                    ->whereExists(function ($query) use ($applyPlayerFilters) {
+                        $query->selectRaw(1)
+                            ->from('player')
+                            ->whereColumn('player.id', 'player_delivery_record.player_id')
+                            ->where($applyPlayerFilters);
+                    });
 
                 // 应用统计时间范围筛选
                 if (!empty($exAdminFilter['stats_start_time'])) {
@@ -1751,9 +1757,14 @@ class Login extends LoginAbstract
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount
                 ")->first();
 
-                // 创建彩金记录查询
+                // ✅ 使用 whereExists 子查询，复用筛选条件
                 $lotteryQuery = PlayerLotteryRecord::query()
-                    ->whereIn('player_id', $playerIds)
+                    ->whereExists(function ($query) use ($applyPlayerFilters) {
+                        $query->selectRaw(1)
+                            ->from('player')
+                            ->whereColumn('player.id', 'player_lottery_record.player_id')
+                            ->where($applyPlayerFilters);
+                    })
                     ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
 
                 // 应用统计时间范围筛选
