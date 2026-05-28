@@ -2274,7 +2274,6 @@ class ChannelIndexController
             $playerNum,
             $operationStatistics,
             $lotteryStatistics,
-            $playerIds,
             $store,
             $info,
             $dateType,
