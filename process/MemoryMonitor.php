@@ -542,6 +542,16 @@ class MemoryMonitor
     }
 
     /**
+     * 上次生成紧急报告的时间戳
+     */
+    private static $lastEmergencyReportTime = 0;
+
+    /**
+     * 紧急报告生成间隔（秒）
+     */
+    const EMERGENCY_REPORT_INTERVAL = 3600; // 1小时
+
+    /**
      * 生成紧急报告
      *
      * @param array $dangers
@@ -549,7 +559,38 @@ class MemoryMonitor
      */
     private function generateEmergencyReport(array $dangers, array $abnormalGrowths)
     {
-        $reportFile = runtime_path() . '/logs/memory_emergency_' . date('YmdHis') . '.log';
+        // 检查是否需要生成报告
+        $now = time();
+
+        // 1. 检查是否有真正严重的问题
+        $isCritical = false;
+
+        // 检查是否有危险进程
+        if (!empty($dangers)) {
+            $isCritical = true;
+        }
+
+        // 检查是否有严重泄漏（增长率 >= 20 MB/分钟）
+        foreach ($abnormalGrowths as $ag) {
+            if ($ag['rate'] >= 20) {
+                $isCritical = true;
+                break;
+            }
+        }
+
+        // 2. 只在严重问题时生成报告，且限制频率
+        if (!$isCritical) {
+            return; // 不是严重问题，不生成报告
+        }
+
+        // 3. 限制生成频率（每小时最多一次）
+        if ($now - self::$lastEmergencyReportTime < self::EMERGENCY_REPORT_INTERVAL) {
+            Log::info("📄 紧急报告已在 " . round(($now - self::$lastEmergencyReportTime) / 60) . " 分钟前生成，跳过本次生成");
+            return;
+        }
+
+        // 4. 使用每日报告文件（覆盖写入）
+        $reportFile = runtime_path() . '/logs/memory_emergency_' . date('Ymd') . '.log';
 
         $report = [];
         $report[] = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
@@ -598,7 +639,10 @@ class MemoryMonitor
         $reportContent = implode("\n", $report);
         file_put_contents($reportFile, $reportContent);
 
-        Log::error("📄 紧急报告已保存: {$reportFile}");
+        // 记录生成时间
+        self::$lastEmergencyReportTime = $now;
+
+        Log::error("📄 严重内存问题！紧急报告已保存: {$reportFile}");
     }
 
     /**
