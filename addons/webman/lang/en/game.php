@@ -14,6 +14,8 @@ return [
         'is_hot' => 'Is it popular',
         'is_ios' => 'Does the IOS system display',
         'picture' => 'Game picture',
+        'big_picture' => 'Game big picture',
+        'enable_big_picture' => 'Enable big picture',
         'description' => 'Description Information',
         'status' => 'State',
         'sort' => 'Sort ',
@@ -29,6 +31,7 @@ return [
     'help' => [
         'name' => 'Please enter the game name',
         'picture_size' => 'The game image size cannot exceed 3MB',
+        'big_picture_size' => 'The game big image size cannot exceed 5MB',
     ],
     'not_fount' => 'The electronic game was not found',
     'enter_game' => 'Enter the game',

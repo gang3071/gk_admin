@@ -14,6 +14,8 @@ return [
         'is_hot' => '是否热门',
         'is_ios' => 'IOS系统是否展示',
         'picture' => '游戏图片',
+        'big_picture' => '游戏大图',
+        'enable_big_picture' => '是否启用大图',
         'description' => '描述信息',
         'status' => '状态',
         'sort' => '排序',
@@ -29,6 +31,7 @@ return [
     'help' => [
         'name' => '请输入游戏名称',
         'picture_size' => '游戏图片大小不能超过 3MB',
+        'big_picture_size' => '游戏大图大小不能超过 5MB',
     ],
     'not_fount' => '未找到该电子游戏',
     'enter_game' => '进入游戏',
