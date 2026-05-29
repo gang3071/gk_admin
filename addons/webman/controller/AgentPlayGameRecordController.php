@@ -85,6 +85,11 @@ class AgentPlayGameRecordController
                     $query->where('uuid', 'like', $exAdminFilter['player']['uuid'] . '%');
                 });
             }
+            if (!empty($exAdminFilter['player_phone'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('phone', 'like', '%' . $exAdminFilter['player_phone'] . '%');
+                });
+            }
             if (isset($exAdminFilter['status']) && $exAdminFilter['status'] != null) {
                 $grid->model()->where('status', $exAdminFilter['status']);
             }
@@ -99,7 +104,7 @@ class AgentPlayGameRecordController
             }
             if (isset($exAdminFilter['search_type'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('is_test', $exAdminFilter['search_type']);
+                    $query->where('player_source', $exAdminFilter['search_type']);
                 });
             }
 
@@ -116,15 +121,24 @@ class AgentPlayGameRecordController
             $grid->header($layout);
 
             $grid->column('id', admin_trans('play_game_record.fields.id'))->fixed(true)->align('center')->width(80);
-            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center')->width(120);
-            $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->copy()->align('center')->width(150);
-            $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayGameRecord $data) {
+            $grid->column('player.name', admin_trans('player.fields.name'))->align('center')->width(120);
+            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->copy()->align('center')->width(150);
+            $grid->column('player.phone', admin_trans('player.fields.phone'))->align('center')->width(120)->display(function ($val, PlayGameRecord $data) {
+                return $data->player ? $data->player->phone : '';
+            });
+            $grid->column('player.player_source', admin_trans('player.fields.player_source'))->display(function ($val, PlayGameRecord $data) {
+                if (!$data->player) {
+                    return Html::create()->content([
+                        Tag::create(admin_trans('common.data_not_found'))->color('default')
+                    ]);
+                }
+
                 return Html::create()->content([
-                    $data->player->is_test == 1
-                        ? Tag::create(admin_trans('player.fields.is_test'))->color('red')
-                        : Tag::create(admin_trans('player.player'))->color('green')
+                    $data->player->player_source == 1
+                        ? Tag::create(admin_trans('player.fields.player_source_online'))->color('green')
+                        : Tag::create(admin_trans('player.fields.player_source_offline'))->color('blue')
                 ]);
-            })->fixed(true)->align('center')->width(100);
+            })->align('center')->width(100);
             $grid->column('player.storeAdmin.nickname', admin_trans('admin.store'))->display(function (
                 $val,
                 PlayGameRecord $data
@@ -150,6 +164,12 @@ class AgentPlayGameRecordController
                 }
                 return Html::create()->content([(float)$val])->style(['color' => '#cd201f']);
             })->sortable()->align('center')->width(120);
+            $grid->column('balance_before', admin_trans('play_game_record.fields.balance_before'))->display(function ($val) {
+                return $val !== null ? (float)$val : 0;
+            })->align('center')->width(120);
+            $grid->column('balance_after', admin_trans('play_game_record.fields.balance_after'))->display(function ($val) {
+                return $val !== null ? (float)$val : 0;
+            })->align('center')->width(120);
             $grid->column('reward', admin_trans('play_game_record.fields.reward'))->display(function ($val) {
                 return Html::create()->content(['+' . $val])->style(['color' => 'green']);
             })->align('center')->width(120);
@@ -171,8 +191,9 @@ class AgentPlayGameRecordController
                     ->placeholder(admin_trans('admin.store'))
                     ->remoteOptions(admin_url([ChannelAgentController::class, 'getStoreOptions']));
 
-                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
-                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+                $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.name'));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player_phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('order_no')->placeholder(admin_trans('play_game_record.fields.order_no'));
                 $filter->like()->text('game_code')->placeholder(admin_trans('play_game_record.fields.game_code'));
 
@@ -190,10 +211,10 @@ class AgentPlayGameRecordController
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player.fields.type'))
+                    ->placeholder(admin_trans('player.fields.player_source'))
                     ->options([
-                        0 => admin_trans('player.player'),
-                        1 => admin_trans('player.fields.is_test'),
+                        1 => admin_trans('player.fields.player_source_online'),
+                        2 => admin_trans('player.fields.player_source_offline'),
                     ]);
 
                 $filter->eq()->select('platform_id')

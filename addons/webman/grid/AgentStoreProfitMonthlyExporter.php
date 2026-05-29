@@ -357,6 +357,7 @@ class AgentStoreProfitMonthlyExporter extends Excel
         $stores = $admin->childStores()
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
+            ->orderBy('id', 'desc')
             ->get();
 
         $this->totalStoreCount = $stores->count();
