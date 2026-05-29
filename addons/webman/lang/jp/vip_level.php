@@ -26,7 +26,7 @@ return [
         'min_claim_amount' => '最小受取額',
         'birthday_bonus' => '誕生日ボーナス金額',
         'sort' => '小さい値が最初に表示されます',
-        'cashback_ratio' => 'キャッシュバック率。例：0.01は0.01%を意味します',
+        'cashback_ratio' => 'キャッシュバック率。100=100%、0.1=0.1%',
     ],
     'status' => [
         0 => '無効',

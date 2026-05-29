@@ -26,7 +26,7 @@ return [
         'min_claim_amount' => '最小领取额',
         'birthday_bonus' => '生日礼金',
         'sort' => '数值越小越靠前',
-        'cashback_ratio' => '反水比例，例如输入0.01表示0.01%',
+        'cashback_ratio' => '反水比例，100=100%，0.1=0.1%',
     ],
     'status' => [
         0 => '禁用',

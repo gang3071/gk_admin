@@ -26,7 +26,7 @@ return [
         'min_claim_amount' => 'Minimum claim amount',
         'birthday_bonus' => 'Birthday bonus amount',
         'sort' => 'Lower values appear first',
-        'cashback_ratio' => 'Cashback ratio, e.g., 0.01 means 0.01%',
+        'cashback_ratio' => 'Cashback ratio, 100=100%, 0.1=0.1%',
     ],
     'status' => [
         0 => 'Disabled',
