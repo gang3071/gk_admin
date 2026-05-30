@@ -308,8 +308,7 @@ class GameController
             }
             if ($form->isEdit()) {
                 $string = $form->driver()->get('channel_hidden');
-                $channelArr = explode(',', trim($string, '[]'));
-                $channelArr = array_map('trim', $channelArr);
+                $channelArr = json_decode($string, true) ?? [];
                 $form->checkbox('channel_hidden', admin_trans('game.fields.channel_hidden'))
                     ->value($channelArr)
                     ->options($optionList);
@@ -327,6 +326,8 @@ class GameController
                 ->required();
             $form->switch('enable_big_picture', admin_trans('game.fields.enable_big_picture'))
                 ->default(0);
+            $form->switch('enable_portrait_picture', admin_trans('game.fields.enable_portrait_picture'))
+                ->default(0);
             $langList = plugin()->webman->config('ui.lang.list');
             $tabs = $form->tabs()->destroyInactiveTabPane();
             $contents = [];
@@ -341,6 +342,7 @@ class GameController
                                 'description' => $content->description,
                                 'picture' => $content->picture,
                                 'big_picture' => $content->big_picture,
+                                'portrait_picture' => $content->portrait_picture,
                                 'id' => $content->id,
                             ]
                         ];
@@ -367,6 +369,11 @@ class GameController
                         ->value($langContent['big_picture'] ?? '')
                         ->fileSize('5m')
                         ->help(admin_trans('game.help.big_picture_size'));
+                    $form->image("content." . $k . ".portrait_picture", admin_trans('game.fields.portrait_picture'))
+                        ->ext('jpg,png,jpeg,webp')
+                        ->value($langContent['portrait_picture'] ?? '')
+                        ->fileSize('5m')
+                        ->help(admin_trans('game.help.portrait_picture_size'));
                     $form->myEditor("content." . $k . ".description", admin_trans('game.fields.description'))
                         ->value($langContent['description'] ?? '');
                     $form->hidden('content_id')->default($langContent['id'] ?? '');
@@ -386,6 +393,7 @@ class GameController
                     $game->is_new = $form->input('is_new');
                     $game->display_mode = $form->input('display_mode');
                     $game->enable_big_picture = $form->input('enable_big_picture');
+                    $game->enable_portrait_picture = $form->input('enable_portrait_picture');
                     $game->platform_id = $form->input('platform_id');
                     $game->game_extend_id = $form->input('game_extend_id');
                     $game->cate_id = $form->input('cate_id');
@@ -404,6 +412,7 @@ class GameController
                                 'description' => $content['description'] ?? '',
                                 'picture' => $content['picture'] ?? '',
                                 'big_picture' => $content['big_picture'] ?? '',
+                                'portrait_picture' => $content['portrait_picture'] ?? '',
                             ]
                         );
                     }

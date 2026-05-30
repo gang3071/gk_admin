@@ -48,7 +48,8 @@ class ChannelStoreProfitReportController
         $allStoresQuery = AdminUser::query()
             ->where('department_id', $admin->department_id)
             ->where('type', AdminUser::TYPE_STORE)
-            ->where('status', 1);
+            ->where('status', 1)
+            ->orderBy('id', 'desc');
 
         // 如果选择了特定代理，只查询该代理下的店家
         if (!empty($selectedAgentId)) {

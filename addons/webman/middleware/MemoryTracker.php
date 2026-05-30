@@ -254,22 +254,28 @@ class MemoryTracker implements MiddlewareInterface
         $uri = $request->uri();
         $method = $request->method();
 
-        Log::error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Log::error("🔴 极高内存请求警报！");
-        Log::error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        Log::error("时间: " . date('Y-m-d H:i:s'));
-        Log::error("控制器: {$controller}");
-        Log::error("请求: {$method} {$uri}");
-        Log::error("内存消耗: {$memoryMB} MB（超过 " . self::CRITICAL_MEMORY_THRESHOLD . " MB 阈值）");
-        Log::error("响应时间: {$timeMs} ms");
-        Log::error("");
-        Log::error("🔍 这是一个严重的内存问题！");
-        Log::error("建议立即检查此接口的代码:");
-        Log::error("  1. 查找控制器: {$controller}");
-        Log::error("  2. 检查是否有全量数据加载 (->get())");
-        Log::error("  3. 检查是否有大数组操作 (whereIn with 1000+ IDs)");
-        Log::error("  4. 检查是否有循环中的数据库查询");
-        Log::error("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        // 只有真正严重的情况（>= 20 MB）才发送 Telegram
+        if ($memoryMB >= 20) {
+            Log::error("🔴 严重内存泄漏！控制器: {$controller} | 内存: {$memoryMB} MB | 请求: {$method} {$uri}");
+        } else {
+            // 10-20 MB 只记录 warning，不发送 Telegram
+            Log::warning("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            Log::warning("⚠️ 极高内存请求检测");
+            Log::warning("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            Log::warning("时间: " . date('Y-m-d H:i:s'));
+            Log::warning("控制器: {$controller}");
+            Log::warning("请求: {$method} {$uri}");
+            Log::warning("内存消耗: {$memoryMB} MB（超过 " . self::CRITICAL_MEMORY_THRESHOLD . " MB 阈值）");
+            Log::warning("响应时间: {$timeMs} ms");
+            Log::warning("");
+            Log::warning("🔍 这是一个严重的内存问题！");
+            Log::warning("建议立即检查此接口的代码:");
+            Log::warning("  1. 查找控制器: {$controller}");
+            Log::warning("  2. 检查是否有全量数据加载 (->get())");
+            Log::warning("  3. 检查是否有大数组操作 (whereIn with 1000+ IDs)");
+            Log::warning("  4. 检查是否有循环中的数据库查询");
+            Log::warning("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+        }
 
         // 同时写入紧急报告文件
         $this->writeEmergencyReport($controller, $memoryMB, $timeMs, $uri, $request);

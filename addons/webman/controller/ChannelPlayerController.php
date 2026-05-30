@@ -399,6 +399,14 @@ class ChannelPlayerController
                 })->width(120)->align('center');
             }
 
+            $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($val) {
+                if ($val == Player::PLAYER_SOURCE_OFFLINE) {
+                    return Tag::create(admin_trans('player.fields.player_source_offline'))->color('orange');
+                } else {
+                    return Tag::create(admin_trans('player.fields.player_source_online'))->color('blue');
+                }
+            })->ellipsis(true)->align('center');
+
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
                 $val,

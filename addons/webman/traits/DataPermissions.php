@@ -99,7 +99,7 @@ trait DataPermissions
      */
     private function getUserRole($adminId)
     {
-        $cacheKey = 'data_perm:role_user:' . $adminId;
+        $cacheKey = 'data_perm.role_user.' . $adminId;
 
         if (Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
@@ -190,7 +190,7 @@ trait DataPermissions
      */
     private function getDepartmentAndBelowIds($adminId, $department_id)
     {
-        $cacheKey = 'data_perm:dept_below:' . $adminId . ':' . $department_id;
+        $cacheKey = 'data_perm.dept_below.' . $adminId . '.' . $department_id;
 
         if (Cache::has($cacheKey)) {
             return Cache::get($cacheKey);
@@ -223,7 +223,7 @@ trait DataPermissions
      */
     private function getDepartmentIds($department_id)
     {
-        $cacheKey = 'data_perm:dept:' . $department_id;
+        $cacheKey = 'data_perm.dept.' . $department_id;
 
         if (Cache::has($cacheKey)) {
             return Cache::get($cacheKey);

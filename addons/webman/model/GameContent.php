@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string description 游戏说明
  * @property string picture 游戏图片
  * @property string big_picture 游戏大图
+z * @property string portrait_picture 游戏竖图
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  *
@@ -35,6 +36,7 @@ class GameContent extends Model
         'description',
         'picture',
         'big_picture',
+        'portrait_picture',
         'created_at',
         'updated_at',
     ];
