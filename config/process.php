@@ -1,4 +1,5 @@
 <?php
+
 use Workerman\Worker;
 
 return [
@@ -24,13 +25,13 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
-
-    // 内存监控进程（每分钟监控一次，自动分析内存泄漏）
-    'memory_monitor' => [
-        'handler' => process\MemoryMonitor::class,
-        'reloadable' => true,
-        'constructor' => []
-    ],
+//
+//    // 内存监控进程（每分钟监控一次，自动分析内存泄漏）
+//    'memory_monitor' => [
+//        'handler' => process\MemoryMonitor::class,
+//        'reloadable' => true,
+//        'constructor' => []
+//    ],
 
     // VIP反水补算定时任务
     'vip_cashback' => [
