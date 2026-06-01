@@ -47,6 +47,7 @@ use support\Cache;
  * @property int activity_status 活动状态(0:禁用,1:启用)
  * @property int lottery_status 彩金状态(0:禁用,1:启用)
  * @property int status_machine 实体机台开关 0关闭1-开启
+ * @property int vip_level_status 会员等级开关(0:禁用,1:启用)
  * @property int line_client_id line client id
  * @property float recharge_amount 官方总充值点数
  * @property float withdraw_amount 官方总提现点数

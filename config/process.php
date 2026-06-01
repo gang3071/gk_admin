@@ -23,4 +23,11 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // VIP反水补算定时任务
+    'vip_cashback' => [
+        'handler' => process\VipCashbackTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];

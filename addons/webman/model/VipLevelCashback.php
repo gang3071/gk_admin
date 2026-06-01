@@ -50,4 +50,70 @@ class VipLevelCashback extends Model
     {
         return $this->belongsTo(GamePlatform::class, 'platform_id');
     }
+
+    // =========================================================================
+    // DB 查询方法
+    // =========================================================================
+
+    /**
+     * 获取指定VIP等级和平台的反水比例
+     * @param int $vipLevelId
+     * @param int $platformId
+     * @return float
+     */
+    public static function getCashbackRatio(int $vipLevelId, int $platformId): float
+    {
+        $cashback = static::query()
+            ->where('vip_level_id', $vipLevelId)
+            ->where('platform_id', $platformId)
+            ->where('status', 1)
+            ->first();
+
+        return static::extractCashbackRatio($cashback);
+    }
+
+    // =========================================================================
+    // 纯函数方法（不依赖数据库，可单元测试）
+    // =========================================================================
+
+    /**
+     * 从查询结果提取反水比例
+     *
+     * @param VipLevelCashback|null $cashback
+     * @return float
+     */
+    public static function extractCashbackRatio(?VipLevelCashback $cashback): float
+    {
+        return $cashback ? $cashback->cashback_ratio : 0;
+    }
+
+    /**
+     * 计算反水金额
+     *
+     * @param float $bet 下注金额
+     * @param float $cashbackRatio 反水比例
+     * @return float
+     */
+    public static function calculateCashbackAmount(float $bet, float $cashbackRatio): float
+    {
+        if ($bet <= 0 || $cashbackRatio <= 0) {
+            return 0;
+        }
+        return round($bet * $cashbackRatio / 100, 2);
+    }
+
+    /**
+     * 格式化反水数据用于存储
+     *
+     * @param float $cashbackRatio 反水比例
+     * @param float $cashbackAmount 反水金额
+     * @return array [cashback_ratio, cashback_amount] 存储值（0值转为null）
+     */
+    public static function formatForStorage(float $cashbackRatio, float $cashbackAmount): array
+    {
+        return [
+            'cashback_ratio' => $cashbackRatio > 0 ? $cashbackRatio : null,
+            'cashback_amount' => $cashbackAmount > 0 ? $cashbackAmount : null,
+        ];
+    }
 }

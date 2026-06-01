@@ -71,4 +71,27 @@ class PlayerVipPeriod extends Model
     {
         return max(0, $currentTotalBetAmount - $this->start_bet_amount);
     }
+
+    /**
+     * 检查周期是否已过期
+     * @param int $limitDays 限制天数
+     * @return bool
+     */
+    public function isExpired(int $limitDays): bool
+    {
+        $expireAt = strtotime($this->started_at) + ($limitDays * 86400);
+        return time() > $expireAt;
+    }
+
+    /**
+     * 获取剩余天数
+     * @param int $limitDays 限制天数
+     * @return int
+     */
+    public function getRemainingDays(int $limitDays): int
+    {
+        $expireAt = strtotime($this->started_at) + ($limitDays * 86400);
+        $remaining = $expireAt - time();
+        return max(0, ceil($remaining / 86400));
+    }
 }
