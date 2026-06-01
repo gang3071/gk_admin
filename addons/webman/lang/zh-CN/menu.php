@@ -272,5 +272,7 @@ return [
         'limit_management' => '限红管理',
         'limit_group_management' => '限红组管理',
         'platform_config' => '平台配置',
+        //VIP等级管理
+        'vip_level' => 'VIP等级管理',
     ]
 ];

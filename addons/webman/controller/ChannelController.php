@@ -139,6 +139,7 @@ class ChannelController
             $grid->column('created_at', admin_trans('channel.fields.create_at'))->align('center');
             $grid->column('status', admin_trans('channel.fields.status'))->switch();
             $grid->column('is_offline', admin_trans('channel.fields.is_offline'))->switch();
+            $grid->column('vip_level_status', admin_trans('channel.fields.vip_level_status'))->switch();
             $grid->column('lang', admin_trans('channel.fields.lang'))->display(function ($val) {
                 return Html::create()->content([
                     admin_config('ui.lang.list')[$val] ?? ''
@@ -360,6 +361,10 @@ class ChannelController
                         ->maxlength(500)
                         ->ruleUrl();
                 });
+
+            // 会员等级开关
+            $form->switch('vip_level_status', admin_trans('channel.fields.vip_level_status'))
+                ->help(admin_trans('channel.help.vip_level_status'));
 
             $form->textarea('externalApp.white_ip', admin_trans('channel.fields.white_ip'))
                 ->showCount()
@@ -600,6 +605,7 @@ class ChannelController
                             $channel->app_force_update = $form->input('app_force_update') ? 1 : 0;
                             $channel->app_download_url = $form->input('app_download_url');
                         }
+                        $channel->vip_level_status = $form->input('vip_level_status') ? 1 : 0;
                         $channel->currency = $form->input('currency');
                         $channel->machine_media_line = $form->input('machine_media_line');
                         $channel->download_url = $form->input('download_url');
@@ -746,6 +752,7 @@ class ChannelController
                             $channel->app_force_update = $form->input('app_force_update') ? 1 : 0;
                             $channel->app_download_url = $form->input('app_download_url');
                         }
+                        $channel->vip_level_status = $form->input('vip_level_status') ? 1 : 0;
                         $channel->currency = $form->input('currency');
                         $channel->machine_media_line = $form->input('machine_media_line');
                         $channel->download_url = $form->input('download_url');

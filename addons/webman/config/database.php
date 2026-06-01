@@ -342,5 +342,14 @@ return [
         //设备IP表
         'device_ip_table' => 'device_ip',
         'device_ip_model' => \addons\webman\model\DeviceIp::class,
+        //VIP等级表
+        'vip_level_table' => 'vip_level',
+        'vip_level_model' => \addons\webman\model\VipLevel::class,
+        //玩家VIP周期记录表
+        'player_vip_period_table' => 'player_vip_period',
+        'player_vip_period_model' => \addons\webman\model\PlayerVipPeriod::class,
+        //VIP等级反水比例表
+        'vip_level_cashback_table' => 'vip_level_cashback',
+        'vip_level_cashback_model' => \addons\webman\model\VipLevelCashback::class,
     ],
 ];

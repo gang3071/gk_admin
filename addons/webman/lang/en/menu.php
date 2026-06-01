@@ -272,5 +272,7 @@ return [
         'limit_management' => 'Limit Management',
         'limit_group_management' => 'Limit Group Management',
         'platform_config' => 'Platform Configuration',
+        //VIP Level Management
+        'vip_level' => 'VIP Level Management',
     ]
 ];
