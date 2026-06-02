@@ -59,6 +59,7 @@ return [
         'white_ip' => 'IPホワイトリスト',
         'activity_status' => 'アクティブ機能',
         'lottery_status' => 'プラチナ機能',
+        'lottery_ticket_enabled' => '抽選券機能',
         'eh_payment_recharge_status' => 'EHチャージ',
         'eh_payment_withdraw_status' => 'EH現金化',
         'client_version' => 'クライアントバージョン番号',

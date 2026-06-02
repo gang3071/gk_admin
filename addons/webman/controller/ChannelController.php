@@ -496,6 +496,9 @@ class ChannelController
                 if ($channel->lottery_status == 1) {
                     $channelFunction[] = 'lottery_status';
                 }
+                if ($channel->lottery_ticket_enabled == 1) {
+                    $channelFunction[] = 'lottery_ticket_enabled';
+                }
                 if ($channel->eh_payment_recharge_status == 1) {
                     $channelFunction[] = 'eh_payment_recharge_status';
                 }
@@ -523,6 +526,7 @@ class ChannelController
                         'ranking_status' => admin_trans('channel.fields.ranking_status'),
                         'activity_status' => admin_trans('channel.fields.activity_status'),
                         'lottery_status' => admin_trans('channel.fields.lottery_status'),
+                        'lottery_ticket_enabled' => admin_trans('channel.fields.lottery_ticket_enabled'),
                         'gb_payment_recharge_status' => admin_trans('channel.fields.gb_payment_recharge_status'),
                         'gb_payment_withdraw_status' => admin_trans('channel.fields.gb_payment_withdraw_status'),
                         'status_machine' => admin_trans('channel.fields.status_machine'),
@@ -630,6 +634,7 @@ class ChannelController
                         $channel->ranking_status = in_array('ranking_status', $channelFunction);
                         $channel->activity_status = in_array('activity_status', $channelFunction);
                         $channel->lottery_status = in_array('lottery_status', $channelFunction);
+                        $channel->lottery_ticket_enabled = in_array('lottery_ticket_enabled', $channelFunction);
                         $channel->gb_payment_recharge_status = in_array('gb_payment_recharge_status', $channelFunction);
                         $channel->gb_payment_withdraw_status = in_array('gb_payment_withdraw_status', $channelFunction);
                         $channel->status_machine = in_array('status_machine', $channelFunction);
@@ -776,6 +781,7 @@ class ChannelController
                         $channel->ranking_status = in_array('ranking_status', $channelFunction);
                         $channel->activity_status = in_array('activity_status', $channelFunction);
                         $channel->lottery_status = in_array('lottery_status', $channelFunction);
+                        $channel->lottery_ticket_enabled = in_array('lottery_ticket_enabled', $channelFunction);
                         $channel->status_machine = in_array('status_machine', $channelFunction);
                         $channel->eh_payment_recharge_status = in_array('eh_payment_recharge_status', $channelFunction);
                         $channel->eh_payment_withdraw_status = in_array('eh_payment_withdraw_status', $channelFunction);
