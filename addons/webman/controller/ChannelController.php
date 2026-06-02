@@ -616,6 +616,7 @@ class ChannelController
                         $channel->department_id = $adminDepartment->id;
                         $channel->user_id = $adminUser->id;
                         $channel->site_id = gen_uuid(); // 站点标识
+                        $channel->status = 1; // 默认启用渠道
                         $channel->recharge_status = in_array('recharge_status', $channelFunction);
                         $channel->q_talk_recharge_status = in_array('q_talk_recharge_status', $channelFunction);
                         $channel->q_talk_point_status = in_array('q_talk_point_status', $channelFunction);
