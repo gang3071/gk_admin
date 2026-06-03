@@ -68,6 +68,7 @@ return [
         'white_ip' => 'IP whitelist',
         'activity_status' => 'Activity Function',
         'lottery_status' => 'Lottery function',
+        'lottery_ticket_enabled' => 'Lottery Ticket Function',
         'eh_payment_recharge_status' => 'EH Open Score',
         'eh_payment_withdraw_status' => 'EH Wash Score',
         'client_version' => 'Client version number',

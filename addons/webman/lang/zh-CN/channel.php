@@ -67,6 +67,7 @@ return [
         'white_ip' => 'IP白名单',
         'activity_status' => '活动功能',
         'lottery_status' => '彩金功能',
+        'lottery_ticket_enabled' => '摸奖券功能',
         'eh_payment_recharge_status' => 'EH开分',
         'eh_payment_withdraw_status' => 'EH洗分',
         'client_version' => '客户端版本号',
