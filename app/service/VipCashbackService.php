@@ -6,7 +6,6 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
-use support\Db;
 use support\Log;
 
 /**
@@ -20,6 +19,63 @@ class VipCashbackService
      * 每批处理记录数
      */
     const BATCH_SIZE = 200;
+
+    /**
+     * @var callable|null 日志回调（可注入，用于单元测试）
+     */
+    private $logger = null;
+
+    /**
+     * @var string|null 起始日期（只查询该时间之后的记录）
+     */
+    private $sinceDate = null;
+
+    /**
+     * 设置日志回调
+     * @param callable $logger function(string $level, string $message, array $context = [])
+     * @return $this
+     */
+    public function setLogger(callable $logger): self
+    {
+        $this->logger = $logger;
+        return $this;
+    }
+
+    /**
+     * 设置起始日期过滤
+     * @param string $date Y-m-d H:i:s 格式
+     * @return $this
+     */
+    public function setSinceDate(string $date): self
+    {
+        $this->sinceDate = $date;
+        return $this;
+    }
+
+    /**
+     * 获取起始日期
+     * @return string|null
+     */
+    public function getSinceDate(): ?string
+    {
+        return $this->sinceDate;
+    }
+
+    /**
+     * 写日志
+     */
+    private function log(string $level, string $message, array $context = []): void
+    {
+        if ($this->logger) {
+            ($this->logger)($level, $message, $context);
+            return;
+        }
+        try {
+            Log::channel('vip')->$level($message, $context);
+        } catch (\Throwable $e) {
+            // 测试环境忽略日志错误
+        }
+    }
 
     /**
      * 执行反水补算
@@ -36,14 +92,7 @@ class VipCashbackService
 
         try {
             // 查询已结算但未计算反水的游戏记录
-            // 条件：settlement_status=已结算 且 vip_level_id 为 NULL 且 bet > 0
-            $records = PlayGameRecord::query()
-                ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
-                ->whereNull('vip_level_id')
-                ->where('bet', '>', 0)
-                ->orderBy('id', 'asc')
-                ->limit(self::BATCH_SIZE)
-                ->get();
+            $records = $this->queryUnsettledRecords();
 
             if ($records->isEmpty()) {
                 return $result;
@@ -52,22 +101,19 @@ class VipCashbackService
             $result['processed'] = $records->count();
 
             // 批量获取玩家信息
-            $playerIds = $records->pluck('player_id')->unique()->toArray();
-            $players = Player::query()
-                ->whereIn('id', $playerIds)
-                ->get()
-                ->keyBy('id');
+            $playerIds = $records->pluck('player_id')->unique();
+            $players = $this->queryPlayers($playerIds);
 
-            // 批量获取VIP等级（用于默认等级）
+            // 获取默认VIP等级（最低等级）
             $defaultLevel = VipLevel::query()
                 ->where('status', VipLevel::STATUS_ENABLED)
                 ->orderBy('sort', 'asc')
                 ->first();
 
-            // 逐条处理（因为需要关联不同平台的反水比例）
+            // 逐条处理
             foreach ($records as $record) {
                 try {
-                    $player = $players[$record->player_id] ?? null;
+                    $player = $players->get($record->player_id);
                     if (!$player) {
                         $result['skipped']++;
                         continue;
@@ -78,34 +124,29 @@ class VipCashbackService
                     if (empty($vipLevelId)) {
                         if ($defaultLevel) {
                             $vipLevelId = $defaultLevel->id;
-                            // 设置玩家默认VIP等级
-                            $player->vip_level_id = $defaultLevel->id;
-                            $player->save();
+                            $this->assignDefaultVipLevel($player, $defaultLevel->id);
                         } else {
                             $result['skipped']++;
                             continue;
                         }
                     }
 
-                    // 查询该平台的反水比例
+                    // 计算反水
                     $cashbackRatio = VipLevelCashback::getCashbackRatio($vipLevelId, $record->platform_id);
                     $cashbackAmount = VipLevelCashback::calculateCashbackAmount($record->bet, $cashbackRatio);
                     $storageData = VipLevelCashback::formatForStorage($cashbackRatio, $cashbackAmount);
 
                     // 更新游戏记录
-                    $record->vip_level_id = $vipLevelId;
-                    $record->cashback_ratio = $storageData['cashback_ratio'];
-                    $record->cashback_amount = $storageData['cashback_amount'];
-                    $record->save();
+                    $this->updateRecordCashback($record, $vipLevelId, $storageData);
 
                     // 更新玩家总打码量
-                    $player->increment('total_bet_amount', $record->bet);
+                    $this->incrementPlayerBetAmount($player, $record->bet);
 
                     $result['updated']++;
 
                 } catch (\Throwable $e) {
                     $result['errors']++;
-                    Log::error('VIP反水补算单条记录失败', [
+                    $this->log('error', 'VIP反水补算单条记录失败', [
                         'record_id' => $record->id,
                         'player_id' => $record->player_id,
                         'error' => $e->getMessage(),
@@ -114,16 +155,85 @@ class VipCashbackService
             }
 
             if ($result['updated'] > 0) {
-                Log::info('VIP反水补算完成', $result);
+                $this->log('info', 'VIP反水补算完成', $result);
             }
 
         } catch (\Throwable $e) {
-            Log::error('VIP反水补算服务异常', [
+            $this->log('error', 'VIP反水补算服务异常', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
         }
 
         return $result;
+    }
+
+    /**
+     * 查询已结算但未反水的游戏记录
+     * @return \Illuminate\Support\Collection
+     */
+    protected function queryUnsettledRecords()
+    {
+        $query = PlayGameRecord::query()
+            ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
+            ->whereNull('vip_level_id')
+            ->where('bet', '>', 0);
+
+        if ($this->sinceDate) {
+            $query->where('created_at', '>=', $this->sinceDate);
+        }
+
+        return $query->orderBy('id', 'asc')
+            ->limit(self::BATCH_SIZE)
+            ->get();
+    }
+
+    /**
+     * 批量查询玩家
+     * @param \Illuminate\Support\Collection $playerIds
+     * @return \Illuminate\Support\Collection
+     */
+    protected function queryPlayers($playerIds)
+    {
+        return Player::query()
+            ->whereIn('id', $playerIds)
+            ->where('player_source', Player::PLAYER_SOURCE_ONLINE)
+            ->get()
+            ->keyBy('id');
+    }
+
+    /**
+     * 为玩家分配默认VIP等级
+     * @param Player $player
+     * @param int $levelId
+     */
+    protected function assignDefaultVipLevel($player, int $levelId): void
+    {
+        $player->vip_level_id = $levelId;
+        $player->save();
+    }
+
+    /**
+     * 更新游戏记录的反水数据
+     * @param PlayGameRecord $record
+     * @param int $vipLevelId
+     * @param array $storageData
+     */
+    protected function updateRecordCashback($record, int $vipLevelId, array $storageData): void
+    {
+        $record->vip_level_id = $vipLevelId;
+        $record->cashback_ratio = $storageData['cashback_ratio'];
+        $record->cashback_amount = $storageData['cashback_amount'];
+        $record->save();
+    }
+
+    /**
+     * 增加玩家总打码量
+     * @param Player $player
+     * @param float $betAmount
+     */
+    protected function incrementPlayerBetAmount($player, float $betAmount): void
+    {
+        $player->increment('total_bet_amount', $betAmount);
     }
 }

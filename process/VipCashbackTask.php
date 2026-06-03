@@ -17,14 +17,26 @@ use Workerman\Crontab\Crontab;
 class VipCashbackTask
 {
     /**
+     * @var \Monolog\Logger|null
+     */
+    private $log = null;
+
+    /**
      * Worker 启动时的回调
      */
     public function onWorkerStart()
     {
+        $this->log = Log::channel('vip');
+
         // 每5分钟执行一次（Cron 表达式：秒 分 时 日 月 周）
         new Crontab('0 */5 * * * *', function () {
             $this->doWork();
         });
+
+        $this->log->info('VipCashbackTask 进程已启动', [
+            'schedule' => '*/5 * * * *',
+            'pid' => getmypid(),
+        ]);
 
         echo "VipCashbackTask: VIP反水补算任务已启动，每5分钟执行一次\n";
     }
@@ -36,21 +48,51 @@ class VipCashbackTask
     {
         ini_set('memory_limit', '512M');
 
+        $startTime = microtime(true);
+
         try {
+            $this->log->info('VipCashbackTask 开始执行', [
+                'since_date' => '2026-06-02 00:00:00',
+                'memory' => memory_get_usage(true),
+            ]);
+
             $service = new VipCashbackService();
+            $service->setSinceDate('2026-06-02 00:00:00');
             $result = $service->execute();
 
+            $elapsed = round(microtime(true) - $startTime, 3);
+
+            $this->log->info('VipCashbackTask 执行完成', [
+                'processed' => $result['processed'],
+                'updated' => $result['updated'],
+                'skipped' => $result['skipped'],
+                'errors' => $result['errors'],
+                'elapsed_seconds' => $elapsed,
+                'memory_peak' => memory_get_peak_usage(true),
+            ]);
+
+            if ($result['errors'] > 0) {
+                $this->log->warning('VipCashbackTask 存在错误', [
+                    'errors' => $result['errors'],
+                ]);
+            }
+
             if ($result['processed'] > 0) {
-                echo "[VipCashback] 处理完成 - processed: {$result['processed']}, updated: {$result['updated']}, skipped: {$result['skipped']}, errors: {$result['errors']}\n";
+                echo "[VipCashback] 处理完成 - processed: {$result['updated']}, updated: {$result['updated']}, skipped: {$result['skipped']}, errors: {$result['errors']}, elapsed: {$elapsed}s\n";
             }
 
             unset($service, $result);
             gc_collect_cycles();
 
         } catch (\Throwable $e) {
-            Log::error('VIP反水补算任务异常', [
+            $elapsed = round(microtime(true) - $startTime, 3);
+
+            $this->log->error('VipCashbackTask 执行异常', [
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'elapsed_seconds' => $elapsed,
             ]);
 
             echo "[VipCashback] 执行异常 - Error: {$e->getMessage()}\n";

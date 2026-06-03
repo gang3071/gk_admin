@@ -14,6 +14,18 @@ use support\Log;
 class VipService
 {
     /**
+     * 写VIP日志
+     */
+    private static function log(string $level, string $message, array $context = []): void
+    {
+        try {
+            Log::channel('vip')->$level($message, $context);
+        } catch (\Throwable $e) {
+            Log::$level($message, $context);
+        }
+    }
+
+    /**
      * 处理下注后的VIP逻辑
      * @param Player $player 玩家
      * @param float $betAmount 本次下注金额
@@ -22,6 +34,11 @@ class VipService
     public static function handleBet(Player $player, float $betAmount): void
     {
         try {
+            // 只处理线上玩家
+            if ($player->player_source != Player::PLAYER_SOURCE_ONLINE) {
+                return;
+            }
+
             // 1. 更新玩家总打码量（累计不清零）
             $player->increment('total_bet_amount', $betAmount);
             $player->refresh();
@@ -38,10 +55,11 @@ class VipService
             // 4. 检查保级条件
             static::checkRetain($player);
         } catch (\Exception $e) {
-            Log::error('VIP handleBet failed', [
+            static::log('error', 'VIP handleBet failed', [
                 'player_id' => $player->id,
                 'bet_amount' => $betAmount,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }
@@ -64,7 +82,7 @@ class VipService
         // 创建升级周期记录
         static::createPeriod($player, $minLevel, PlayerVipPeriod::PERIOD_TYPE_UPGRADE);
 
-        Log::info('VIP init level', [
+        static::log('info', 'VIP init level', [
             'player_id' => $player->id,
             'level_id' => $minLevel->id,
             'level_name' => $minLevel->name,
@@ -142,7 +160,7 @@ class VipService
             // 创建新的升级周期
             static::createPeriod($player, $currentLevel, PlayerVipPeriod::PERIOD_TYPE_UPGRADE);
 
-            Log::info('VIP upgrade period expired', [
+            static::log('info', 'VIP upgrade period expired', [
                 'player_id' => $player->id,
                 'level_id' => $currentLevel->id,
                 'period_bet_amount' => $periodBetAmount,
@@ -188,7 +206,7 @@ class VipService
         // 创建新等级的保级周期
         static::createPeriod($player, $nextLevel, PlayerVipPeriod::PERIOD_TYPE_RETAIN);
 
-        Log::info('VIP upgrade success', [
+        static::log('info', 'VIP upgrade success', [
             'player_id' => $player->id,
             'old_level' => $currentLevel->id,
             'new_level' => $nextLevel->id,
@@ -233,7 +251,7 @@ class VipService
 
                 static::createPeriod($player, $currentLevel, PlayerVipPeriod::PERIOD_TYPE_RETAIN);
 
-                Log::info('VIP retain success', [
+                static::log('info', 'VIP retain success', [
                     'player_id' => $player->id,
                     'level_id' => $currentLevel->id,
                     'period_bet_amount' => $periodBetAmount,
@@ -284,7 +302,7 @@ class VipService
         // 创建新等级的保级周期
         static::createPeriod($player, $prevLevel, PlayerVipPeriod::PERIOD_TYPE_RETAIN);
 
-        Log::info('VIP downgrade', [
+        static::log('info', 'VIP downgrade', [
             'player_id' => $player->id,
             'old_level' => $currentLevel->id,
             'new_level' => $prevLevel->id,
