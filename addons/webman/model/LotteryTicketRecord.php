@@ -43,6 +43,7 @@ class LotteryTicketRecord extends Model
     const PRIZE_TYPE_CASH = 'cash';       // 现金
     const PRIZE_TYPE_BONUS = 'bonus';     // 红利
     const PRIZE_TYPE_ITEM = 'item';       // 实物
+    const PRIZE_TYPE_POINTS = 'points';   // 积分
     const PRIZE_TYPE_EMPTY = 'empty';     // 未中奖
 
     protected $table = 'lottery_ticket_record';
