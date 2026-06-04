@@ -94,8 +94,14 @@ class MenuController
                 $actions->hideDel();  // 隐藏每行的删除按钮
             });
 
-            // ❌ 禁用批量删除
+            // ❌ 禁用批量操作（隐藏复选框和批量删除按钮）
             $grid->hideSelection();
+
+            // ❌ 禁用回收站功能
+            $grid->hideTrashed();
+
+            // ❌ 设置空工具栏（禁用创建按钮和其他工具按钮）
+            $grid->tools([]);
 
             $grid->updated(function (){
                 return message_success(admin_trans('grid.update_success'))->refreshMenu();

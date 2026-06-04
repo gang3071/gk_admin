@@ -274,5 +274,10 @@ return [
         'platform_config' => '平台配置',
         //VIP等级管理
         'vip_level' => 'VIP等级管理',
+        //摸奖券管理
+        'lottery_ticket_manage' => '摸奖券管理',
+        'lottery_ticket_dashboard' => '进行中的活动',
+        'lottery_ticket_history' => '历史活动记录',
+        'lottery_ticket_records' => '中奖记录',
     ]
 ];
