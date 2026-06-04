@@ -142,6 +142,9 @@ class VipCashbackService
                     // 更新玩家总打码量
                     $this->incrementPlayerBetAmount($player, $record->bet);
 
+                    // 触发VIP升降级检查
+                    $this->triggerVipUpgradeCheck($player, $record->bet);
+
                     $result['updated']++;
 
                 } catch (\Throwable $e) {
@@ -235,5 +238,22 @@ class VipCashbackService
     protected function incrementPlayerBetAmount($player, float $betAmount): void
     {
         $player->increment('total_bet_amount', $betAmount);
+    }
+
+    /**
+     * 触发VIP升降级检查
+     * @param Player $player
+     * @param float $betAmount
+     */
+    protected function triggerVipUpgradeCheck($player, float $betAmount): void
+    {
+        try {
+            VipService::handleBet($player, $betAmount);
+        } catch (\Throwable $e) {
+            $this->log('warning', 'VIP升降级检查失败', [
+                'player_id' => $player->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
