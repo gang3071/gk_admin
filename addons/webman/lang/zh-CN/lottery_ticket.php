@@ -14,6 +14,7 @@ return [
     // 字段
     'fields' => [
         'id' => 'ID',
+        'name' => '活动名称',
         'activity_name' => '活动名称',
         'description' => '活动说明',
         'start_time' => '开始时间',

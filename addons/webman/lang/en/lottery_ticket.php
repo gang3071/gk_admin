@@ -14,6 +14,7 @@ return [
     // Fields
     'fields' => [
         'id' => 'ID',
+        'name' => 'Campaign Name',
         'activity_name' => 'Campaign Name',
         'description' => 'Description',
         'start_time' => 'Start Time',

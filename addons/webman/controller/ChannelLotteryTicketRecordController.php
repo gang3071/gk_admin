@@ -30,17 +30,21 @@ class ChannelLotteryTicketRecordController
 
             // 只显示当前渠道的记录
             $departmentId = Admin::user()->department_id;
+
+            // 获取玩家表名
+            $playerTable = plugin()->webman->config('database.player_table', 'yjb_player');
+
             $grid->model()
                 ->select([
-                    'lottery_ticket_records.*',
-                    'players.name as player_name',
-                    'players.phone as player_phone',
-                    'lottery_ticket_activities.name'
+                    'lottery_ticket_record.*',
+                    $playerTable . '.name as player_name',
+                    $playerTable . '.phone as player_phone',
+                    'lottery_ticket_activity.name as activity_name'
                 ])
-                ->leftJoin('players', 'lottery_ticket_records.player_id', '=', 'players.id')
-                ->leftJoin('lottery_ticket_activities', 'lottery_ticket_records.activity_id', '=', 'lottery_ticket_activities.id')
-                ->where('lottery_ticket_records.department_id', $departmentId)
-                ->orderBy('lottery_ticket_records.draw_time', 'desc');
+                ->leftJoin($playerTable, 'lottery_ticket_record.player_id', '=', $playerTable . '.id')
+                ->leftJoin('lottery_ticket_activity', 'lottery_ticket_record.activity_id', '=', 'lottery_ticket_activity.id')
+                ->where('lottery_ticket_record.department_id', $departmentId)
+                ->orderBy('lottery_ticket_record.draw_time', 'desc');
 
             // 列定义
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
@@ -92,27 +96,27 @@ class ChannelLotteryTicketRecordController
             $grid->column('draw_time', admin_trans('lottery_ticket.fields.draw_time'))->width(160);
 
             // 筛选
-            $grid->filter(function (Filter $filter) use ($departmentId) {
+            $grid->filter(function (Filter $filter) use ($departmentId, $playerTable) {
                 // 活动筛选
                 $activities = LotteryTicketActivity::where('department_id', $departmentId)
                     ->orderBy('created_at', 'desc')
                     ->pluck('name', 'id')
                     ->toArray();
 
-                $filter->eq()->select('lottery_ticket_records.activity_id')
+                $filter->eq()->select('lottery_ticket_record.activity_id')
                     ->placeholder(admin_trans('lottery_ticket.fields.name'))
                     ->options($activities);
 
                 // 玩家名称筛选
-                $filter->like()->text('players.name')
+                $filter->like()->text($playerTable . '.name')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_name'));
 
                 // 玩家手机筛选
-                $filter->like()->text('players.phone')
+                $filter->like()->text($playerTable . '.phone')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_phone'));
 
                 // 奖品类型筛选
-                $filter->eq()->select('lottery_ticket_records.prize_type')
+                $filter->eq()->select('lottery_ticket_record.prize_type')
                     ->placeholder(admin_trans('lottery_ticket.fields.prize_type'))
                     ->options([
                         LotteryTicketRecord::PRIZE_TYPE_CASH => admin_trans('lottery_ticket.prize_type.cash'),
@@ -123,7 +127,7 @@ class ChannelLotteryTicketRecordController
                     ]);
 
                 // 发放状态筛选
-                $filter->eq()->select('lottery_ticket_records.status')
+                $filter->eq()->select('lottery_ticket_record.status')
                     ->placeholder(admin_trans('lottery_ticket.fields.record_status'))
                     ->options([
                         LotteryTicketRecord::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),
