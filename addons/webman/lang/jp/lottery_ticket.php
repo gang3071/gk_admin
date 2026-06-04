@@ -14,6 +14,7 @@ return [
     // フィールド
     'fields' => [
         'id' => 'ID',
+        'name' => 'キャンペーン名',
         'activity_name' => 'キャンペーン名',
         'description' => '説明',
         'start_time' => '開始時間',
