@@ -1817,4 +1817,121 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelAdminUserLimitGroupController/getGamePlatformOptions',
         'title' => '获取游戏平台选项',
     ],
+
+    // ========================================
+    // 摸奖券管理
+    // ========================================
+    [
+        'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'channel',
+        'title' => '摸奖券管理',
+        'children' => [
+            // 进行中的活动
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/index',
+                'title' => '进行中的活动',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index-delete',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'index',
+                'method' => 'delete',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/index',
+                'title' => '删除活动',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\form-post',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'form',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/form',
+                'title' => '创建活动',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\form-put',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'form',
+                'method' => 'put',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/form',
+                'title' => '编辑活动',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\closeActivity',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'closeActivity',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/closeActivity',
+                'title' => '关闭活动',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\prizeConfig',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'prizeConfig',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/prizeConfig',
+                'title' => '奖品配置',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\savePrizeConfig',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'savePrizeConfig',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/savePrizeConfig',
+                'title' => '保存奖品配置',
+            ],
+
+            // 历史活动记录
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\historyList',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController-',
+                'action' => 'historyList',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/historyList',
+                'title' => '历史活动记录',
+            ],
+
+            // 中奖记录
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/index',
+                'title' => '中奖记录',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\grantPrize',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'action' => 'grantPrize',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/grantPrize',
+                'title' => '发放奖品',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\exportRecords',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'action' => 'exportRecords',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/exportRecords',
+                'title' => '导出中奖记录',
+            ],
+        ]
+    ],
 ];

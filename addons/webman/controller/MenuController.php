@@ -3,11 +3,13 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\constant\MenuConstant;
 use addons\webman\model\AdminDepartment;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\support\Arr;
@@ -53,28 +55,49 @@ class MenuController
             $grid->model()->where('type', $type)->orderBy('sort');
             $grid->autoHeight();
             $grid->tree();
+
             $grid->column('name', admin_trans('menu.fields.name'))->display(function ($value, $data) {
-                return Html::create([
-                    Icon::create($data['icon']),
-                    ' ',
-                    $value
-                ]);
+                $icon = Icon::create($data['icon']);
+
+                // 如果是受控菜单，显示标识
+                if (MenuConstant::isControlledMenu($value)) {
+                    return Html::create([
+                        $icon,
+                        ' ',
+                        $value,
+                        ' ',
+                        Html::create('🔒')->style(['color' => '#ff9800', 'font-size' => '12px'])
+                            ->attr('title', '此菜单受功能开关控制')
+                    ]);
+                }
+
+                return Html::create([$icon, ' ', $value]);
             });
+
             $grid->column('url', admin_trans('menu.fields.url'))->display(function ($value) {
                 if (empty($value) || $value == '#') {
                     return $value;
                 }
                 return Html::create($value)->tag('a')->redirect($value);
             });
+
             $grid->column('status', admin_trans('menu.fields.status'))->switch();
             $grid->column('open', admin_trans('menu.fields.open'))->switch();
             $grid->sortInput();
             $grid->expandFilter();
+
+            // ✅ 只允许编辑，禁用创建和删除
             $grid->setForm()->modal($this->form());
-            $grid->updated(function (){
-                return message_success(admin_trans('grid.update_success'))->refreshMenu();
+
+            // ❌ 禁用删除功能（隐藏操作列中的删除按钮）
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();  // 隐藏每行的删除按钮
             });
-            $grid->deleted(function (){
+
+            // ❌ 禁用批量删除
+            $grid->hideSelection();
+
+            $grid->updated(function (){
                 return message_success(admin_trans('grid.update_success'))->refreshMenu();
             });
         });
@@ -90,7 +113,18 @@ class MenuController
     {
         return Form::create(new $this->model,function (Form $form) use($pid){
             $form->title(admin_trans('menu.title'));
-            $form->text('name', admin_trans('menu.fields.name'))->required();
+
+            // ⚠️ 编辑时禁用name字段修改
+            if ($form->isEdit()) {
+                $menuName = $form->input('name');
+                $isControlled = MenuConstant::isControlledMenu($menuName);
+
+                $form->desc('name', admin_trans('menu.fields.name'))
+                    ->value($menuName . ($isControlled ? ' 🔒 (受功能开关控制)' : ''))
+                    ->help($isControlled ? admin_trans('menu.help.controlled_menu') : '');
+            } else {
+                $form->text('name', admin_trans('menu.fields.name'))->required();
+            }
             $form->radio('type', admin_trans('menu.fields.type'))
                 ->default(AdminDepartment::TYPE_DEPARTMENT)
                 ->disabled($form->isEdit())
