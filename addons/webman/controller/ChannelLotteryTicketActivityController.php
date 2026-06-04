@@ -40,7 +40,7 @@ class ChannelLotteryTicketActivityController
 
             // 列定义
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
-            $grid->column('activity_name', admin_trans('lottery_ticket.fields.activity_name'))->width(200);
+            $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(200);
             $grid->column('start_time', admin_trans('lottery_ticket.fields.start_time'))->width(160);
             $grid->column('end_time', admin_trans('lottery_ticket.fields.end_time'))->width(160);
 
@@ -76,8 +76,8 @@ class ChannelLotteryTicketActivityController
 
             // 筛选
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('activity_name')
-                    ->placeholder(admin_trans('lottery_ticket.fields.activity_name'));
+                $filter->like()->text('name')
+                    ->placeholder(admin_trans('lottery_ticket.fields.name'));
 
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('lottery_ticket.fields.status'))
@@ -125,7 +125,7 @@ class ChannelLotteryTicketActivityController
         return Form::create(new LotteryTicketActivity(), function (Form $form) {
             $form->title(admin_trans('lottery_ticket.title'));
 
-            $form->text('activity_name', admin_trans('lottery_ticket.fields.activity_name'))
+            $form->text('name', admin_trans('lottery_ticket.fields.name'))
                 ->required()
                 ->maxlength(100);
 
@@ -202,7 +202,7 @@ class ChannelLotteryTicketActivityController
 
             // 列定义（与index相同）
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
-            $grid->column('activity_name', admin_trans('lottery_ticket.fields.activity_name'))->width(200);
+            $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(200);
             $grid->column('start_time', admin_trans('lottery_ticket.fields.start_time'))->width(160);
             $grid->column('end_time', admin_trans('lottery_ticket.fields.end_time'))->width(160);
 
@@ -270,7 +270,7 @@ class ChannelLotteryTicketActivityController
         }
 
         return Form::create(new LotteryTicketPrizeLevel(), function (Form $form) use ($activity) {
-            $form->title(admin_trans('lottery_ticket.fields.prize_config') . ' - ' . $activity->activity_name);
+            $form->title(admin_trans('lottery_ticket.fields.prize_config') . ' - ' . $activity->name);
 
             // 获取现有奖品等级
             $existingLevels = LotteryTicketPrizeLevel::where('activity_id', $activity->id)

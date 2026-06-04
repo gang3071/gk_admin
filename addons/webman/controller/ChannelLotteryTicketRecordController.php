@@ -35,7 +35,7 @@ class ChannelLotteryTicketRecordController
                     'lottery_ticket_records.*',
                     'players.name as player_name',
                     'players.phone as player_phone',
-                    'lottery_ticket_activities.activity_name'
+                    'lottery_ticket_activities.name'
                 ])
                 ->leftJoin('players', 'lottery_ticket_records.player_id', '=', 'players.id')
                 ->leftJoin('lottery_ticket_activities', 'lottery_ticket_records.activity_id', '=', 'lottery_ticket_activities.id')
@@ -45,7 +45,7 @@ class ChannelLotteryTicketRecordController
             // 列定义
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
 
-            $grid->column('activity_name', admin_trans('lottery_ticket.fields.activity_name'))->width(180);
+            $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(180);
 
             $grid->column('player_name', admin_trans('lottery_ticket.fields.player_name'))->width(120);
 
@@ -96,11 +96,11 @@ class ChannelLotteryTicketRecordController
                 // 活动筛选
                 $activities = LotteryTicketActivity::where('department_id', $departmentId)
                     ->orderBy('created_at', 'desc')
-                    ->pluck('activity_name', 'id')
+                    ->pluck('name', 'id')
                     ->toArray();
 
                 $filter->eq()->select('lottery_ticket_records.activity_id')
-                    ->placeholder(admin_trans('lottery_ticket.fields.activity_name'))
+                    ->placeholder(admin_trans('lottery_ticket.fields.name'))
                     ->options($activities);
 
                 // 玩家名称筛选
