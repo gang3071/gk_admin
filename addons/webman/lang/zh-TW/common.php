@@ -165,4 +165,7 @@ return [
     'total' => '合計',
     'detail' => '詳情',
     'chart' => '圖表',
+    'start_time' => '開始時間',
+    'end_time' => '結束時間',
+    'no_permission' => '沒有權限',
 ];

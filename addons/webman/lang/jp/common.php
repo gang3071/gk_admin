@@ -160,4 +160,9 @@ return [
         'night' => '夜番',
         'night_desc' => '夜番自動引継ぎ（00:00-08:00）',
     ],
+
+    // 共通UI
+    'start_time' => '開始時間',
+    'end_time' => '終了時間',
+    'no_permission' => '権限がありません',
 ];
