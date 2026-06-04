@@ -160,4 +160,9 @@ return [
         'night' => 'Night Shift',
         'night_desc' => 'Night shift auto handover (00:00-08:00)',
     ],
+
+    // Common UI
+    'start_time' => 'Start Time',
+    'end_time' => 'End Time',
+    'no_permission' => 'No Permission',
 ];
