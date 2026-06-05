@@ -112,6 +112,16 @@ class MenuConstant
         'lottery_ticket_records',        // 中奖记录
     ];
 
+    /**
+     * VIP等级功能菜单
+     * 控制字段：channel.vip_level_status
+     */
+    const VIP_LEVEL_MENUS = [
+        'vip_level_manage',              // VIP等级管理（父菜单）
+        'vip_level_list',                // VIP等级列表
+        'vip_level_cashback',            // VIP返水配置
+    ];
+
     // ==========================================
     // 辅助方法
     // ==========================================
@@ -133,6 +143,7 @@ class MenuConstant
             'lottery' => self::LOTTERY_MENUS,
             'activity' => self::ACTIVITY_MENUS,
             'lottery_ticket' => self::LOTTERY_TICKET_MENUS,
+            'vip_level' => self::VIP_LEVEL_MENUS,
         ];
 
         return $featureMap[$feature] ?? [];
@@ -164,7 +175,8 @@ class MenuConstant
             self::ONLINE_EXCLUDE_MENUS,
             self::LOTTERY_MENUS,
             self::ACTIVITY_MENUS,
-            self::LOTTERY_TICKET_MENUS
+            self::LOTTERY_TICKET_MENUS,
+            self::VIP_LEVEL_MENUS
         );
     }
 
@@ -215,6 +227,11 @@ class MenuConstant
                 'field' => 'channel.lottery_ticket_enabled',
                 'menus' => self::LOTTERY_TICKET_MENUS,
                 'description' => '摸奖券功能开关（0:关闭，1:开启）',
+            ],
+            'vip_level' => [
+                'field' => 'channel.vip_level_status',
+                'menus' => self::VIP_LEVEL_MENUS,
+                'description' => 'VIP等级功能开关（0:关闭，1:开启）',
             ],
         ];
     }

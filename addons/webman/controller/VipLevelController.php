@@ -2,16 +2,16 @@
 
 namespace addons\webman\controller;
 
+use addons\webman\Admin;
+use addons\webman\model\GamePlatform;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
-use addons\webman\model\GamePlatform;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\tag\Tag;
 use support\Log;
 
 /**
@@ -36,7 +36,13 @@ class VipLevelController
             $grid->title(admin_trans('vip_level.title'));
             $grid->autoHeight();
             $grid->bordered(true);
-            $grid->model()->orderBy('sort', 'asc')->orderBy('id', 'asc');
+
+            // 只显示当前渠道的VIP等级
+            $departmentId = Admin::user()->department_id;
+            $grid->model()
+                ->where('department_id', $departmentId)
+                ->orderBy('sort', 'asc')
+                ->orderBy('id', 'asc');
             $grid->column('id', admin_trans('vip_level.fields.id'))->width(80)->align('center');
             $grid->column('name', admin_trans('vip_level.fields.name'))->align('center');
             $grid->column('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))->align('center');
@@ -75,6 +81,10 @@ class VipLevelController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('vip_level.title'));
             $form->labelWidth(180);
+
+            // 隐藏字段：自动设置当前渠道department_id
+            $form->hidden('department_id')->default(Admin::user()->department_id);
+
             $form->text('name', admin_trans('vip_level.fields.name'))->required()->maxlength(50);
             $form->number('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))
                 ->min(0)

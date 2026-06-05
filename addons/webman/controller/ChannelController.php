@@ -14,6 +14,7 @@ use addons\webman\model\ExternalApp;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
+use addons\webman\service\VipLevelService;
 use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Copy;
@@ -708,6 +709,23 @@ class ChannelController
                         $adminDepartment->path = $adminDepartment->id;
                         $adminDepartment->save();
 
+                        // 如果开启了VIP等级功能，自动创建10个默认VIP等级
+                        if ($channel->vip_level_status == 1) {
+                            $vipResult = VipLevelService::createDefaultLevelsForChannel($adminDepartment->id);
+                            if (!$vipResult['success']) {
+                                // VIP等级创建失败不影响渠道创建，只记录日志
+                                Log::warning("渠道创建成功，但VIP等级创建失败: {$vipResult['message']}", [
+                                    'department_id' => $adminDepartment->id,
+                                    'channel_name' => $channel->name
+                                ]);
+                            } else {
+                                Log::info("渠道创建成功，已自动创建 {$vipResult['count']} 个VIP等级", [
+                                    'department_id' => $adminDepartment->id,
+                                    'channel_name' => $channel->name
+                                ]);
+                            }
+                        }
+
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();
@@ -742,6 +760,9 @@ class ChannelController
 
                     DB::beginTransaction();
                     try {
+                        // 记录旧的VIP等级状态
+                        $oldVipLevelStatus = $channel->vip_level_status;
+
                         $channel->name = $form->input('name');
                         $channel->type = $form->input('type');
                         $channel->sms_name = $form->input('sms_name');
@@ -827,6 +848,26 @@ class ChannelController
                         if (!empty($insert)) {
                             ChannelGameWeb::query()->insert($insert);
                         }
+
+                        // 如果VIP等级状态从禁用改为启用，且该渠道下没有VIP等级，则自动创建10个默认等级
+                        if ($oldVipLevelStatus == 0 && $channel->vip_level_status == 1) {
+                            if (!VipLevelService::hasVipLevels($channel->department_id)) {
+                                $vipResult = VipLevelService::createDefaultLevelsForChannel($channel->department_id);
+                                if (!$vipResult['success']) {
+                                    // VIP等级创建失败不影响渠道保存，只记录日志
+                                    Log::warning("渠道保存成功，但VIP等级创建失败: {$vipResult['message']}", [
+                                        'department_id' => $channel->department_id,
+                                        'channel_name' => $channel->name
+                                    ]);
+                                } else {
+                                    Log::info("VIP等级功能已开启，自动创建 {$vipResult['count']} 个VIP等级", [
+                                        'department_id' => $channel->department_id,
+                                        'channel_name' => $channel->name
+                                    ]);
+                                }
+                            }
+                        }
+
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();
