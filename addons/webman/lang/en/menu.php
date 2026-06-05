@@ -274,6 +274,7 @@ return [
         'platform_config' => 'Platform Configuration',
         //VIP Level Management
         'vip_level' => 'VIP Level Management',
+        'channel_vip_level' => 'VIP Level Management',
         //Lottery Ticket Management
         'lottery_ticket_manage' => 'Lottery Ticket Management',
         'lottery_ticket_dashboard' => 'Active Campaigns',

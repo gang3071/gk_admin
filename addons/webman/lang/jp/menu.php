@@ -274,6 +274,7 @@ return [
         'platform_config' => 'プラットフォーム設定',
         //VIPレベル管理
         'vip_level' => 'VIPレベル管理',
+        'channel_vip_level' => 'VIPレベル管理',
         //抽選券管理
         'lottery_ticket_manage' => '抽選券管理',
         'lottery_ticket_dashboard' => '実施中のキャンペーン',

@@ -274,6 +274,7 @@ return [
         'platform_config' => '平台配置',
         //VIP等级管理
         'vip_level' => 'VIP等级管理',
+        'channel_vip_level' => 'VIP等级管理',
         //摸奖券管理
         'lottery_ticket_manage' => '摸奖券管理',
         'lottery_ticket_dashboard' => '进行中的活动',

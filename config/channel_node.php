@@ -1934,4 +1934,68 @@ return [
             ],
         ]
     ],
+
+    // VIP等级管理
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'channel',
+        'title' => 'VIP等级管理',
+        'children' => []
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/index',
+        'title' => 'VIP等级列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\index-save',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'action' => 'index',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/index',
+        'title' => '新增VIP等级',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\index-update',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'action' => 'index',
+        'method' => 'put',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/index',
+        'title' => '编辑VIP等级',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\index-delete',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'action' => 'index',
+        'method' => 'delete',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/index',
+        'title' => '删除VIP等级',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\cashback',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'action' => 'cashback',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/cashback',
+        'title' => '反水比例设置',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\cashback-save',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\cashback',
+        'action' => 'cashback',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/cashback',
+        'title' => '保存反水比例',
+    ],
 ];

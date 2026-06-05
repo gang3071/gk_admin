@@ -33,7 +33,7 @@ class ChannelVipLevelController
     public function index(): Grid
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
-            $grid->title(admin_trans('channel_vip_level.title'));
+            $grid->title(admin_trans('vip_level.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
@@ -44,31 +44,31 @@ class ChannelVipLevelController
                 ->orderBy('sort', 'asc')
                 ->orderBy('id', 'asc');
 
-            $grid->column('id', admin_trans('channel_vip_level.fields.id'))->width(80)->align('center');
-            $grid->column('name', admin_trans('channel_vip_level.fields.name'))->align('center');
-            $grid->column('upgrade_limit_days', admin_trans('channel_vip_level.fields.upgrade_limit_days'))->align('center');
-            $grid->column('retain_level_days', admin_trans('channel_vip_level.fields.retain_level_days'))->align('center');
-            $grid->column('retain_level_bet_amount', admin_trans('channel_vip_level.fields.retain_level_bet_amount'))->align('center');
-            $grid->column('upgrade_bet_amount', admin_trans('channel_vip_level.fields.upgrade_bet_amount'))->align('center');
-            $grid->column('min_claim_amount', admin_trans('channel_vip_level.fields.min_claim_amount'))->align('center');
-            $grid->column('birthday_bonus', admin_trans('channel_vip_level.fields.birthday_bonus'))->align('center');
-            $grid->column('sort', admin_trans('channel_vip_level.fields.sort'))->sortable()->width(80)->align('center');
+            $grid->column('id', admin_trans('vip_level.fields.id'))->width(80)->align('center');
+            $grid->column('name', admin_trans('vip_level.fields.name'))->align('center');
+            $grid->column('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))->align('center');
+            $grid->column('retain_level_days', admin_trans('vip_level.fields.retain_level_days'))->align('center');
+            $grid->column('retain_level_bet_amount', admin_trans('vip_level.fields.retain_level_bet_amount'))->align('center');
+            $grid->column('upgrade_bet_amount', admin_trans('vip_level.fields.upgrade_bet_amount'))->align('center');
+            $grid->column('min_claim_amount', admin_trans('vip_level.fields.min_claim_amount'))->align('center');
+            $grid->column('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))->align('center');
+            $grid->column('sort', admin_trans('vip_level.fields.sort'))->sortable()->width(80)->align('center');
 
             $grid->actions(function (Actions $actions, $data) {
                 $actions->prepend(
-                    Button::create(admin_trans('channel_vip_level.cashback'))
+                    Button::create(admin_trans('vip_level.cashback'))
                         ->icon(Icon::create('MoneyCollectOutlined'))
                         ->type('primary')
                         ->size('small')
                         ->drawer([$this, 'cashback'], ['vip_level_id' => $data['id']])
                         ->width('60%')
-                        ->title($data['name'] . ' - ' . admin_trans('channel_vip_level.cashback'))
+                        ->title($data['name'] . ' - ' . admin_trans('vip_level.cashback'))
                 );
             });
 
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
-                $filter->like('name', admin_trans('channel_vip_level.fields.name'));
+                $filter->like('name', admin_trans('vip_level.fields.name'));
             });
             $grid->expandFilter();
         });
@@ -82,39 +82,39 @@ class ChannelVipLevelController
     public function form(): Form
     {
         return Form::create(new $this->model(), function (Form $form) {
-            $form->title(admin_trans('channel_vip_level.title'));
+            $form->title(admin_trans('vip_level.title'));
             $form->labelWidth(180);
 
             // 隐藏字段：自动设置当前渠道department_id
             $form->hidden('department_id')->default(Admin::user()->department_id);
 
-            $form->text('name', admin_trans('channel_vip_level.fields.name'))->required()->maxlength(50);
-            $form->number('upgrade_limit_days', admin_trans('channel_vip_level.fields.upgrade_limit_days'))
+            $form->text('name', admin_trans('vip_level.fields.name'))->required()->maxlength(50);
+            $form->number('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))
                 ->min(0)
-                ->help(admin_trans('channel_vip_level.help.upgrade_limit_days'));
-            $form->number('retain_level_days', admin_trans('channel_vip_level.fields.retain_level_days'))
+                ->help(admin_trans('vip_level.help.upgrade_limit_days'));
+            $form->number('retain_level_days', admin_trans('vip_level.fields.retain_level_days'))
                 ->min(0)
-                ->help(admin_trans('channel_vip_level.help.retain_level_days'));
-            $form->number('retain_level_bet_amount', admin_trans('channel_vip_level.fields.retain_level_bet_amount'))
-                ->min(0)
-                ->step(0.01)
-                ->help(admin_trans('channel_vip_level.help.retain_level_bet_amount'));
-            $form->number('upgrade_bet_amount', admin_trans('channel_vip_level.fields.upgrade_bet_amount'))
+                ->help(admin_trans('vip_level.help.retain_level_days'));
+            $form->number('retain_level_bet_amount', admin_trans('vip_level.fields.retain_level_bet_amount'))
                 ->min(0)
                 ->step(0.01)
-                ->help(admin_trans('channel_vip_level.help.upgrade_bet_amount'));
-            $form->number('min_claim_amount', admin_trans('channel_vip_level.fields.min_claim_amount'))
+                ->help(admin_trans('vip_level.help.retain_level_bet_amount'));
+            $form->number('upgrade_bet_amount', admin_trans('vip_level.fields.upgrade_bet_amount'))
                 ->min(0)
                 ->step(0.01)
-                ->help(admin_trans('channel_vip_level.help.min_claim_amount'));
-            $form->number('birthday_bonus', admin_trans('channel_vip_level.fields.birthday_bonus'))
+                ->help(admin_trans('vip_level.help.upgrade_bet_amount'));
+            $form->number('min_claim_amount', admin_trans('vip_level.fields.min_claim_amount'))
                 ->min(0)
                 ->step(0.01)
-                ->help(admin_trans('channel_vip_level.help.birthday_bonus'));
-            $form->number('sort', admin_trans('channel_vip_level.fields.sort'))
+                ->help(admin_trans('vip_level.help.min_claim_amount'));
+            $form->number('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))
+                ->min(0)
+                ->step(0.01)
+                ->help(admin_trans('vip_level.help.birthday_bonus'));
+            $form->number('sort', admin_trans('vip_level.fields.sort'))
                 ->min(0)
                 ->default(0)
-                ->help(admin_trans('channel_vip_level.help.sort'));
+                ->help(admin_trans('vip_level.help.sort'));
         });
     }
 
@@ -131,7 +131,7 @@ class ChannelVipLevelController
         $existingCashbacks = VipLevelCashback::query()->where('vip_level_id', $vip_level_id)->pluck('cashback_ratio', 'platform_id')->toArray();
 
         return Form::create([], function (Form $form) use ($vipLevel, $platforms, $existingCashbacks) {
-            $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('channel_vip_level.cashback'));
+            $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('vip_level.cashback'));
             $form->labelWidth(180);
 
             foreach ($platforms as $platform) {
@@ -140,7 +140,7 @@ class ChannelVipLevelController
                     ->max(100)
                     ->step(0.01)
                     ->value($existingCashbacks[$platform->id] ?? 0)
-                    ->help(admin_trans('channel_vip_level.help.cashback_ratio'));
+                    ->help(admin_trans('vip_level.help.cashback_ratio'));
             }
 
             $form->saved(function (Form $form) {
