@@ -69,6 +69,10 @@ class Menu extends MenuAbstract
             ->when(!empty($channel) && $channel->lottery_ticket_enabled == 0, function ($query) {
                 $query->whereNotIn('name', MenuConstant::LOTTERY_TICKET_MENUS);
             })
+            // VIP等级功能开关
+            ->when(!empty($channel) && $channel->vip_level_status == 0, function ($query) {
+                $query->whereNotIn('name', MenuConstant::VIP_LEVEL_MENUS);
+            })
             ->orderBy('sort')->get()->toArray();
     }
 

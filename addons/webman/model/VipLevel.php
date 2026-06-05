@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * VIP等级
  * @property int id 主键
+ * @property int department_id 所属渠道部门ID(0=全局)
  * @property string name 等级名称
  * @property int upgrade_limit_days 升级限制时间（天数）
  * @property int retain_level_days 保级时间（天数）
@@ -31,6 +32,7 @@ class VipLevel extends Model
     const STATUS_ENABLED = 1;  // 启用
 
     protected $fillable = [
+        'department_id',
         'name',
         'upgrade_limit_days',
         'retain_level_days',
