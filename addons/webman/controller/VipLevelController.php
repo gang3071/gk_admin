@@ -46,11 +46,6 @@ class VipLevelController
             $grid->column('min_claim_amount', admin_trans('vip_level.fields.min_claim_amount'))->align('center');
             $grid->column('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))->align('center');
             $grid->column('sort', admin_trans('vip_level.fields.sort'))->sortable()->width(80)->align('center');
-            $grid->column('status', admin_trans('vip_level.fields.status'))
-                ->display(function ($value) {
-                    return Tag::create($value ? admin_trans('vip_level.status.1') : admin_trans('vip_level.status.0'))
-                        ->color($value ? '#87d068' : '#f50');
-                })->align('center');
             $grid->actions(function (Actions $actions, $data) {
                 $actions->prepend(
                     Button::create(admin_trans('vip_level.cashback'))
@@ -107,10 +102,6 @@ class VipLevelController
                 ->min(0)
                 ->default(0)
                 ->help(admin_trans('vip_level.help.sort'));
-            $form->switch('status', admin_trans('vip_level.fields.status'))
-                ->activeValue(1)
-                ->inactiveValue(0)
-                ->default(1);
         });
     }
 

@@ -3,6 +3,7 @@
 namespace app\service;
 
 use addons\webman\model\Player;
+use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
@@ -139,10 +140,7 @@ class VipCashbackService
                     // 更新游戏记录
                     $this->updateRecordCashback($record, $vipLevelId, $storageData);
 
-                    // 更新玩家总打码量
-                    $this->incrementPlayerBetAmount($player, $record->bet);
-
-                    // 触发VIP升降级检查
+                    // 触发VIP升降级检查（已包含打码量更新）
                     $this->triggerVipUpgradeCheck($player, $record->bet);
 
                     $result['updated']++;
@@ -178,7 +176,6 @@ class VipCashbackService
     protected function queryUnsettledRecords()
     {
         $query = PlayGameRecord::query()
-            ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
             ->whereNull('vip_level_id')
             ->where('bet', '>', 0);
 
@@ -214,6 +211,26 @@ class VipCashbackService
     {
         $player->vip_level_id = $levelId;
         $player->save();
+
+        // 创建升级周期记录
+        PlayerVipPeriod::query()->create([
+            'player_id' => $player->id,
+            'vip_level_id' => $levelId,
+            'period_type' => PlayerVipPeriod::PERIOD_TYPE_UPGRADE,
+            'start_bet_amount' => $player->total_bet_amount ?? 0,
+            'started_at' => now(),
+            'status' => PlayerVipPeriod::STATUS_ACTIVE,
+        ]);
+
+        // 创建保级周期记录
+        PlayerVipPeriod::query()->create([
+            'player_id' => $player->id,
+            'vip_level_id' => $levelId,
+            'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
+            'start_bet_amount' => $player->total_bet_amount ?? 0,
+            'started_at' => now(),
+            'status' => PlayerVipPeriod::STATUS_ACTIVE,
+        ]);
     }
 
     /**
