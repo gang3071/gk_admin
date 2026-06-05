@@ -218,7 +218,7 @@ class VipCashbackService
             'vip_level_id' => $levelId,
             'period_type' => PlayerVipPeriod::PERIOD_TYPE_UPGRADE,
             'start_bet_amount' => $player->total_bet_amount ?? 0,
-            'started_at' => now(),
+            'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
 
@@ -228,7 +228,7 @@ class VipCashbackService
             'vip_level_id' => $levelId,
             'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
             'start_bet_amount' => $player->total_bet_amount ?? 0,
-            'started_at' => now(),
+            'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
     }

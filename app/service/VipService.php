@@ -323,7 +323,7 @@ class VipService
             'vip_level_id' => $level->id,
             'period_type' => $periodType,
             'start_bet_amount' => $player->total_bet_amount,
-            'started_at' => now(),
+            'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
     }
