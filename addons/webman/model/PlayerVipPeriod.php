@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int vip_level_id VIP等级ID
  * @property string period_type 周期类型
  * @property float start_bet_amount 周期开始时的总打码量
+ * @property float period_bet_amount 周期内打码量总和
  * @property string started_at 周期开始时间
  * @property int status 状态
  * @property string created_at 创建时间
@@ -40,6 +41,7 @@ class PlayerVipPeriod extends Model
         'vip_level_id',
         'period_type',
         'start_bet_amount',
+        'period_bet_amount',
         'started_at',
         'status',
     ];

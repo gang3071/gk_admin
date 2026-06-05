@@ -263,6 +263,8 @@ class VipCashbackService
     protected function triggerVipUpgradeCheck($player, float $betAmount): void
     {
         try {
+            // 重新从数据库加载玩家数据，确保获取最新的 total_bet_amount
+            $player->refresh();
             VipService::handleBet($player, $betAmount);
         } catch (\Throwable $e) {
             $this->log('warning', 'VIP升降级检查失败', [
