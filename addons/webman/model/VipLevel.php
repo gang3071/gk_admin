@@ -55,7 +55,6 @@ class VipLevel extends Model
     public function getNextLevel(): ?VipLevel
     {
         return static::query()
-            ->where('status', self::STATUS_ENABLED)
             ->where('sort', '>', $this->sort)
             ->orderBy('sort', 'asc')
             ->first();
