@@ -117,6 +117,10 @@ class VipCashbackService
                     $player = $players->get($record->player_id);
                     if (!$player) {
                         $result['skipped']++;
+                        $this->log('debug', '跳过记录：玩家不存在或非线上玩家', [
+                            'record_id' => $record->id,
+                            'player_id' => $record->player_id,
+                        ]);
                         continue;
                     }
 
@@ -128,6 +132,10 @@ class VipCashbackService
                             $this->assignDefaultVipLevel($player, $defaultLevel->id);
                         } else {
                             $result['skipped']++;
+                            $this->log('debug', '跳过记录：无VIP等级且无默认等级', [
+                                'record_id' => $record->id,
+                                'player_id' => $record->player_id,
+                            ]);
                             continue;
                         }
                     }
@@ -211,16 +219,6 @@ class VipCashbackService
     {
         $player->vip_level_id = $levelId;
         $player->save();
-
-        // 创建升级周期记录
-        PlayerVipPeriod::query()->create([
-            'player_id' => $player->id,
-            'vip_level_id' => $levelId,
-            'period_type' => PlayerVipPeriod::PERIOD_TYPE_UPGRADE,
-            'start_bet_amount' => $player->total_bet_amount ?? 0,
-            'started_at' => date('Y-m-d H:i:s'),
-            'status' => PlayerVipPeriod::STATUS_ACTIVE,
-        ]);
 
         // 创建保级周期记录
         PlayerVipPeriod::query()->create([

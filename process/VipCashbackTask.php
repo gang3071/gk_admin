@@ -28,17 +28,20 @@ class VipCashbackTask
     {
         $this->log = Log::channel('vip');
 
-        // 每5分钟执行一次（Cron 表达式：秒 分 时 日 月 周）
-        new Crontab('0 */5 * * * *', function () {
-            $this->doWork();
-        });
-
         $this->log->info('VipCashbackTask 进程已启动', [
-            'schedule' => '*/5 * * * *',
+            'schedule' => '30/* * * * *',
             'pid' => getmypid(),
         ]);
 
         echo "VipCashbackTask: VIP反水补算任务已启动，每5分钟执行一次\n";
+
+        // 进程启动时立即执行一次
+        $this->doWork();
+
+        // 每5分钟执行一次（Cron 表达式：秒 分 时 日 月 周）
+        new Crontab('0 */5 * * * *', function () {
+            $this->doWork();
+        });
     }
 
     /**
@@ -50,14 +53,17 @@ class VipCashbackTask
 
         $startTime = microtime(true);
 
+        // 动态计算起始日期（昨天00:00:00）
+        $sinceDate = date('Y-m-d 00:00:00', strtotime('-1 day'));
+
         try {
             $this->log->info('VipCashbackTask 开始执行', [
-                'since_date' => '2026-06-02 00:00:00',
+                'since_date' => $sinceDate,
                 'memory' => memory_get_usage(true),
             ]);
 
             $service = new VipCashbackService();
-            $service->setSinceDate('2026-06-02 00:00:00');
+            $service->setSinceDate($sinceDate);
             $result = $service->execute();
 
             $elapsed = round(microtime(true) - $startTime, 3);
