@@ -116,7 +116,7 @@ class ChannelLotteryTicketActivityController
             $activity->has_prize_config = $activity->prizeLevels->count() > 0;
         });
 
-        return response()->json([
+        return json([
             'code' => 200,
             'data' => $activities,
             'message' => 'success'
@@ -141,7 +141,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$activity) {
-            return response()->json([
+            return json([
                 'code' => 404,
                 'message' => admin_trans('lottery_ticket.message.activity_not_found')
             ]);
@@ -162,7 +162,7 @@ class ChannelLotteryTicketActivityController
             ];
         })->toArray();
 
-        return response()->json([
+        return json([
             'code' => 200,
             'data' => $activity,
             'message' => 'success'
@@ -187,14 +187,14 @@ class ChannelLotteryTicketActivityController
 
         // 验证必填字段
         if (empty($name)) {
-            return response()->json([
+            return json([
                 'code' => 400,
                 'message' => admin_trans('lottery_ticket.error.name_required')
             ]);
         }
 
         if (empty($startTime) || empty($endTime)) {
-            return response()->json([
+            return json([
                 'code' => 400,
                 'message' => admin_trans('lottery_ticket.error.time_required')
             ]);
@@ -205,7 +205,7 @@ class ChannelLotteryTicketActivityController
         $endTimestamp = strtotime($endTime);
 
         if ($endTimestamp <= $startTimestamp) {
-            return response()->json([
+            return json([
                 'code' => 400,
                 'message' => admin_trans('lottery_ticket.error.invalid_time')
             ]);
@@ -214,7 +214,7 @@ class ChannelLotteryTicketActivityController
         // 验证奖品等级
         if (!empty($prizeLevels)) {
             if (count($prizeLevels) > 10) {
-                return response()->json([
+                return json([
                     'code' => 400,
                     'message' => admin_trans('lottery_ticket.error.too_many_levels', null, ['max' => 10])
                 ]);
@@ -222,7 +222,7 @@ class ChannelLotteryTicketActivityController
 
             $totalProbability = array_sum(array_column($prizeLevels, 'win_probability'));
             if ($totalProbability > 100) {
-                return response()->json([
+                return json([
                     'code' => 400,
                     'message' => admin_trans('lottery_ticket.error.probability_exceed', null, ['total' => $totalProbability])
                 ]);
@@ -252,7 +252,7 @@ class ChannelLotteryTicketActivityController
 
                 if (!$activity) {
                     Db::rollBack();
-                    return response()->json([
+                    return json([
                         'code' => 404,
                         'message' => admin_trans('lottery_ticket.message.activity_not_found')
                     ]);
@@ -261,7 +261,7 @@ class ChannelLotteryTicketActivityController
                 // 只允许编辑未开始的活动
                 if ($activity->status !== LotteryTicketActivity::STATUS_NOT_STARTED) {
                     Db::rollBack();
-                    return response()->json([
+                    return json([
                         'code' => 400,
                         'message' => admin_trans('lottery_ticket.error.cannot_edit_started')
                     ]);
@@ -313,14 +313,14 @@ class ChannelLotteryTicketActivityController
 
             Db::commit();
 
-            return response()->json([
+            return json([
                 'code' => 200,
                 'data' => $activity,
                 'message' => $id ? admin_trans('lottery_ticket.message.update_success') : admin_trans('lottery_ticket.message.create_success')
             ]);
         } catch (\Exception $e) {
             Db::rollBack();
-            return response()->json([
+            return json([
                 'code' => 500,
                 'message' => $e->getMessage()
             ]);
@@ -510,7 +510,7 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
-            return response()->json([
+            return json([
                 'code' => 404,
                 'message' => admin_trans('lottery_ticket.message.activity_not_found')
             ]);
@@ -518,7 +518,7 @@ class ChannelLotteryTicketActivityController
 
         // 检查是否属于当前渠道
         if ($activity->department_id != Admin::user()->department_id) {
-            return response()->json([
+            return json([
                 'code' => 403,
                 'message' => admin_trans('common.no_permission')
             ]);
@@ -526,7 +526,7 @@ class ChannelLotteryTicketActivityController
 
         // 只能关闭进行中的活动
         if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return response()->json([
+            return json([
                 'code' => 400,
                 'message' => admin_trans('lottery_ticket.message.activity_not_ongoing')
             ]);
@@ -535,7 +535,7 @@ class ChannelLotteryTicketActivityController
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
         $activity->save();
 
-        return response()->json([
+        return json([
             'code' => 200,
             'message' => admin_trans('lottery_ticket.message.close_success')
         ]);
