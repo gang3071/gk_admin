@@ -1892,6 +1892,34 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/savePrizeConfig',
                 'title' => '保存奖品配置',
             ],
+            // 新增API方法（Vue界面使用）
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\getActivities',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'getActivities',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivities',
+                'title' => '获取活动列表',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\getActivityDetail',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'getActivityDetail',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivityDetail',
+                'title' => '获取活动详情',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\saveActivity',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'saveActivity',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/saveActivity',
+                'title' => '保存活动',
+            ],
 
             // 历史活动记录
             [
@@ -1997,5 +2025,14 @@ return [
         'group' => 'channel',
         'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/cashback',
         'title' => '保存反水比例',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\importTemplate',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'action' => 'importTemplate',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/importTemplate',
+        'title' => '一键导入模板',
     ],
 ];

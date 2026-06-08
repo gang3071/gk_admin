@@ -17,6 +17,7 @@ use support\Log;
 
 /**
  * 渠道后台 - VIP等级管理
+ * @group channel
  */
 class ChannelVipLevelController
 {
