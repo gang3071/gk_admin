@@ -69,10 +69,6 @@
                     <eye-outlined/>
                     {{ trans.viewDetail }}
                   </a-menu-item>
-                  <a-menu-item key="prize" v-if="activity.status !== 2 && activity.status !== 3">
-                    <gift-outlined/>
-                    {{ trans.prizeConfig }}
-                  </a-menu-item>
                   <a-menu-item key="edit" v-if="activity.status === 0">
                     <edit-outlined/>
                     {{ trans.edit }}
@@ -407,66 +403,13 @@
 </template>
 
 <script>
-import dayjs from 'dayjs';
-
 export default {
   name: 'LotteryTicketActivities',
   props: {
     department_id: Number,
     trans: {
       type: Object,
-      default: () => ({
-        createActivity: '创建活动',
-        refresh: '刷新',
-        loading: '加载中...',
-        noActivities: '暂无活动',
-        createFirst: '立即创建',
-        viewDetail: '查看详情',
-        prizeConfig: '奖品配置',
-        edit: '编辑',
-        closeActivity: '关闭活动',
-        activityName: '活动名称',
-        activityNamePlaceholder: '请输入活动名称',
-        description: '活动说明',
-        descriptionPlaceholder: '请输入活动说明',
-        startTime: '开始时间',
-        endTime: '结束时间',
-        selectStartTime: '请选择开始时间',
-        selectEndTime: '请选择结束时间',
-        totalTickets: '总发放',
-        usedTickets: '已使用',
-        usageRate: '使用率',
-        noPrizeConfig: '尚未配置奖品等级',
-        editActivity: '编辑活动',
-        cancel: '取消',
-        submit: '提交',
-        prizeLevelConfig: '奖品等级配置',
-        prizeLevelHint: '最多可配置10个奖品等级，中奖概率总和不能超过100%',
-        addPrizeLevel: '添加奖品等级',
-        level: '等级',
-        levelRank: '等级排名',
-        selectLevelRank: '选择等级',
-        prizeType: '奖品类型',
-        selectPrizeType: '选择类型',
-        prizeTypeCash: '现金',
-        prizeTypeBonus: '红利',
-        prizeTypePoints: '积分',
-        prizeTypeItem: '实物',
-        prizeAmount: '奖品金额',
-        itemName: '实物名称',
-        prizeCount: '奖品数量',
-        winProbability: '中奖概率',
-        probabilityExceed: '概率总和超过100%',
-        totalProbability: '概率总和',
-        activityDetail: '活动详情',
-        timeRange: '活动时间',
-        status: '状态',
-        allStatus: '全部',
-        notStarted: '未开始',
-        ongoing: '进行中',
-        ended: '已结束',
-        closed: '已关闭',
-      })
+      default: () => ({})
     }
   },
   data() {
@@ -577,9 +520,6 @@ export default {
         case 'view':
           this.showDetail(activity);
           break;
-        case 'prize':
-          this.editPrizeConfig(activity);
-          break;
         case 'edit':
           this.editActivity(activity);
           break;
@@ -591,7 +531,6 @@ export default {
 
     // 查看详情
     async showDetail(activity) {
-      // 获取完整活动信息（包括奖品等级）
       try {
         const res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivityDetail',
@@ -609,23 +548,31 @@ export default {
     },
 
     // 编辑活动
-    editActivity(activity) {
-      this.formMode = 'edit';
-      this.formData = {
-        id: activity.id,
-        name: activity.name,
-        description: activity.description,
-        start_time: dayjs(activity.start_time),
-        end_time: dayjs(activity.end_time),
-        prize_levels: activity.prize_levels || []
-      };
-      this.formVisible = true;
-    },
+    async editActivity(activity) {
+      // 先获取完整数据
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivityDetail',
+          method: 'post',
+          data: {id: activity.id}
+        });
 
-    // 编辑奖品配置
-    editPrizeConfig(activity) {
-      // 跳转到奖品配置页面或弹窗
-      this.$message.info('奖品配置功能');
+        if (res.code === 200) {
+          const data = res.data;
+          this.formMode = 'edit';
+          this.formData = {
+            id: data.id,
+            name: data.name,
+            description: data.description,
+            start_time: this.$dayjs(data.start_time),
+            end_time: this.$dayjs(data.end_time),
+            prize_levels: data.prize_levels || []
+          };
+          this.formVisible = true;
+        }
+      } catch (error) {
+        this.$message.error('获取活动详情失败');
+      }
     },
 
     // 关闭活动
@@ -779,7 +726,9 @@ export default {
     },
 
     formatTime(time) {
-      return dayjs(time).format('YYYY-MM-DD HH:mm');
+      if (!time) return '';
+      // 使用 dayjs 格式化时间
+      return this.$dayjs(time).format('YYYY-MM-DD HH:mm');
     },
 
     getLevelName(rank) {
