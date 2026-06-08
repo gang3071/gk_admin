@@ -185,6 +185,7 @@ class ChannelLotteryTicketActivityController
         $id = request()->input('id');
         $name = request()->input('name');
         $description = request()->input('description', '');
+        $coverImage = request()->input('cover_image', '');
         $startTime = request()->input('start_time');
         $endTime = request()->input('end_time');
         $prizeLevels = request()->input('prize_levels', []);
@@ -248,6 +249,7 @@ class ChannelLotteryTicketActivityController
                 $activity->update([
                     'name' => $name,
                     'description' => $description,
+                    'cover_image' => $coverImage,
                     'start_time' => $startTime,
                     'end_time' => $endTime,
                     'status' => $status,
@@ -258,6 +260,7 @@ class ChannelLotteryTicketActivityController
                     'department_id' => $departmentId,
                     'name' => $name,
                     'description' => $description,
+                    'cover_image' => $coverImage,
                     'start_time' => $startTime,
                     'end_time' => $endTime,
                     'status' => $status,

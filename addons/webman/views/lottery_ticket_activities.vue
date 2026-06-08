@@ -184,6 +184,19 @@
           />
         </a-form-item>
 
+        <a-form-item label="活动封面图片">
+          <a-input v-model:value="formData.cover_image" placeholder="请输入图片URL地址"/>
+          <div style="margin-top: 8px; color: #999; font-size: 12px;">
+            建议尺寸：750x400px，支持jpg、png格式
+          </div>
+          <img
+              v-if="formData.cover_image"
+              :src="formData.cover_image"
+              style="max-width: 300px; margin-top: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
+              alt="封面预览"
+          />
+        </a-form-item>
+
         <a-row :gutter="16">
           <a-col :span="12">
             <a-form-item :label="trans.startTime" name="start_time">
@@ -422,6 +435,7 @@ export default {
       formData: {
         name: '',
         description: '',
+        cover_image: '',
         start_time: null,
         end_time: null,
         vip_configs: [],
@@ -518,6 +532,7 @@ export default {
       this.formData = {
         name: '',
         description: '',
+        cover_image: '',
         start_time: null,
         end_time: null,
         vip_configs: vipConfigs,
@@ -577,6 +592,7 @@ export default {
             id: data.id,
             name: data.name,
             description: data.description,
+            cover_image: data.cover_image || '',
             start_time: this.$dayjs(data.start_time),
             end_time: this.$dayjs(data.end_time),
             vip_configs: data.vip_configs || [],
