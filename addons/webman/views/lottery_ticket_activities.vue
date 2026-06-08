@@ -438,6 +438,8 @@ export default {
     }
   },
   mounted() {
+    console.log('Component mounted, department_id:', this.department_id);
+    console.log('VIP levels:', this.vip_levels);
     this.fetchActivities();
   },
   methods: {
@@ -453,8 +455,10 @@ export default {
           }
         });
 
+        console.log('API Response:', res);
         if (res.code === 200) {
           this.activities = res.data;
+          console.log('Activities loaded:', this.activities.length, this.activities);
         } else {
           this.$message.error(res.message || res.msg || '获取活动列表失败');
         }
