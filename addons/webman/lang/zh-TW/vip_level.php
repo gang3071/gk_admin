@@ -4,6 +4,9 @@ return [
     'title' => 'VIP等級管理',
     'cashback' => '反水比例',
     'cashback_title' => ':name - 反水比例設置',
+    'import_template' => '一鍵導入模板',
+    'import_confirm' => '確定要導入VIP默認模板嗎？將創建10個默認VIP等級（VIP1-VIP10）',
+    'import_error_exists' => '該渠道已有 {count} 個VIP等級，無需重複導入',
     'fields' => [
         'id' => 'ID',
         'name' => '等級名稱',

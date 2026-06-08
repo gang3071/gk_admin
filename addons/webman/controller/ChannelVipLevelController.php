@@ -6,6 +6,7 @@ use addons\webman\Admin;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
+use addons\webman\service\VipLevelService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
@@ -43,6 +44,22 @@ class ChannelVipLevelController
 
             // 只显示当前渠道的VIP等级
             $departmentId = Admin::user()->department_id;
+
+            // 添加"一键导入模板"按钮
+            $vipCount = VipLevel::query()
+                ->where('department_id', $departmentId)
+                ->count();
+
+            if ($vipCount === 0) {
+                // 如果没有VIP等级，显示导入按钮
+                $grid->addTopButton(
+                    Button::create(admin_trans('vip_level.import_template'))
+                        ->icon(Icon::create('DownloadOutlined'))
+                        ->type('primary')
+                        ->api(admin_url([$this, 'importTemplate']))
+                        ->confirm(admin_trans('vip_level.import_confirm'))
+                );
+            }
             $grid->model()
                 ->where('department_id', $departmentId)
                 ->orderBy('sort', 'asc')
@@ -166,5 +183,45 @@ class ChannelVipLevelController
                 }
             });
         });
+    }
+
+    /**
+     * 一键导入VIP默认模板
+     * @auth true
+     * @return mixed
+     */
+    public function importTemplate()
+    {
+        $departmentId = Admin::user()->department_id;
+
+        // 检查是否已有VIP等级
+        $existingCount = VipLevel::query()
+            ->where('department_id', $departmentId)
+            ->count();
+
+        if ($existingCount > 0) {
+            return jsonFailResponse(
+                admin_trans('vip_level.import_error_exists', null, ['count' => $existingCount]),
+                [],
+                400
+            );
+        }
+
+        // 调用服务创建默认VIP等级
+        $result = VipLevelService::createDefaultLevelsForChannel($departmentId);
+
+        if ($result['success']) {
+            Log::info('渠道管理员手动导入VIP模板成功', [
+                'department_id' => $departmentId,
+                'admin_id' => Admin::id(),
+                'count' => $result['count']
+            ]);
+
+            return jsonSuccessResponse($result['message'], [
+                'count' => $result['count']
+            ]);
+        } else {
+            return jsonFailResponse($result['message'], [], 500);
+        }
     }
 }

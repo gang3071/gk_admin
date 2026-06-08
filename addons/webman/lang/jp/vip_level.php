@@ -4,6 +4,9 @@ return [
     'title' => 'VIPレベル管理',
     'cashback' => 'キャッシュバック率',
     'cashback_title' => ':name - キャッシュバック率設定',
+    'import_template' => 'テンプレートをインポート',
+    'import_confirm' => 'デフォルトのVIPテンプレートをインポートしてもよろしいですか？10個のデフォルトVIPレベル（VIP1-VIP10）が作成されます',
+    'import_error_exists' => 'このチャネルには既に{count}個のVIPレベルがあります。再度インポートする必要はありません',
     'fields' => [
         'id' => 'ID',
         'name' => 'レベル名',
