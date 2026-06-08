@@ -37,6 +37,10 @@ class ChannelVipLevelController
             $grid->autoHeight();
             $grid->bordered(true);
 
+            // 隐藏添加按钮和清空数据按钮
+            $grid->hideCreateButton();
+            $grid->hideClearButton();
+
             // 只显示当前渠道的VIP等级
             $departmentId = Admin::user()->department_id;
             $grid->model()
@@ -46,7 +50,6 @@ class ChannelVipLevelController
 
             $grid->column('id', admin_trans('vip_level.fields.id'))->width(80)->align('center');
             $grid->column('name', admin_trans('vip_level.fields.name'))->align('center');
-            $grid->column('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))->align('center');
             $grid->column('retain_level_days', admin_trans('vip_level.fields.retain_level_days'))->align('center');
             $grid->column('retain_level_bet_amount', admin_trans('vip_level.fields.retain_level_bet_amount'))->align('center');
             $grid->column('upgrade_bet_amount', admin_trans('vip_level.fields.upgrade_bet_amount'))->align('center');
@@ -89,9 +92,6 @@ class ChannelVipLevelController
             $form->hidden('department_id')->default(Admin::user()->department_id);
 
             $form->text('name', admin_trans('vip_level.fields.name'))->required()->maxlength(50);
-            $form->number('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))
-                ->min(0)
-                ->help(admin_trans('vip_level.help.upgrade_limit_days'));
             $form->number('retain_level_days', admin_trans('vip_level.fields.retain_level_days'))
                 ->min(0)
                 ->help(admin_trans('vip_level.help.retain_level_days'));
