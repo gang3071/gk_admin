@@ -114,15 +114,10 @@ class ChannelLotteryTicketActivityController
             ->where('department_id', $departmentId);
 
         // 状态筛选
-        if ($statusFilter !== null && $statusFilter !== 'all') {
+        if ($statusFilter !== null && $statusFilter !== 'all' && $statusFilter !== '') {
             $query->where('status', $statusFilter);
-        } else {
-            // 默认只显示进行中和未开始的活动
-            $query->whereIn('status', [
-                LotteryTicketActivity::STATUS_NOT_STARTED,
-                LotteryTicketActivity::STATUS_ONGOING
-            ]);
         }
+        // 如果是'all'或者空，显示所有活动（不添加状态筛选）
 
         $activities = $query->orderBy('created_at', 'desc')->get();
 
