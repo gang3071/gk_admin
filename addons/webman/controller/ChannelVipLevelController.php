@@ -39,12 +39,29 @@ class ChannelVipLevelController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 隐藏添加按钮和清空数据按钮
+            // 只显示当前渠道的VIP等级
+            $departmentId = Admin::user()->department_id;
+
+            // 检查VIP等级数量
+            $vipCount = VipLevel::query()
+                ->where('department_id', $departmentId)
+                ->count();
+
+            // 隐藏默认的新增和清空按钮
             $grid->hideCreateButton();
             $grid->hideClearButton();
 
-            // 只显示当前渠道的VIP等级
-            $departmentId = Admin::user()->department_id;
+            // 如果没有VIP等级，在工具栏显示导入按钮
+            if ($vipCount === 0) {
+                $importButton = Button::create(admin_trans('vip_level.import_template'))
+                    ->icon(Icon::create('DownloadOutlined'))
+                    ->type('primary')
+                    ->api(admin_url([$this, 'importTemplate']))
+                    ->confirm(admin_trans('vip_level.import_confirm'));
+
+                $grid->tools($importButton);
+            }
+
             $grid->model()
                 ->where('department_id', $departmentId)
                 ->orderBy('sort', 'asc')
@@ -70,23 +87,6 @@ class ChannelVipLevelController
                         ->title($data['name'] . ' - ' . admin_trans('vip_level.cashback'))
                 );
             });
-
-            // 添加"一键导入模板"按钮（仅当没有VIP等级时显示）
-            $departmentId = Admin::user()->department_id;
-            $vipCount = VipLevel::query()
-                ->where('department_id', $departmentId)
-                ->count();
-
-            // 临时：总是显示按钮用于测试
-            // if ($vipCount === 0) {
-                $importButton = Button::create(admin_trans('vip_level.import_template'))
-                    ->icon(Icon::create('DownloadOutlined'))
-                    ->type('primary')
-                    ->api(admin_url([$this, 'importTemplate']))
-                    ->confirm(admin_trans('vip_level.import_confirm'));
-
-                $grid->header($importButton);
-            // }
 
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
