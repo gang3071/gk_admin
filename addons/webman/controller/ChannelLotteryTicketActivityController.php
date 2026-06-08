@@ -116,11 +116,7 @@ class ChannelLotteryTicketActivityController
             $activity->has_prize_config = $activity->prizeLevels->count() > 0;
         });
 
-        return json([
-            'code' => 200,
-            'data' => $activities,
-            'message' => 'success'
-        ]);
+        return jsonSuccessResponse('success', $activities->toArray());
     }
 
     /**
@@ -141,10 +137,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$activity) {
-            return json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
         }
 
         // 格式化奖品等级数据
@@ -162,11 +155,7 @@ class ChannelLotteryTicketActivityController
             ];
         })->toArray();
 
-        return json([
-            'code' => 200,
-            'data' => $activity,
-            'message' => 'success'
-        ]);
+        return jsonSuccessResponse('success', $activity->toArray());
     }
 
     /**
@@ -187,17 +176,11 @@ class ChannelLotteryTicketActivityController
 
         // 验证必填字段
         if (empty($name)) {
-            return json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.name_required')
-            ]);
+            return jsonFailResponse(admin_trans('lottery_ticket.error.name_required'), [], 400);
         }
 
         if (empty($startTime) || empty($endTime)) {
-            return json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.time_required')
-            ]);
+            return jsonFailResponse(admin_trans('lottery_ticket.error.time_required'), [], 400);
         }
 
         // 验证时间
@@ -205,27 +188,18 @@ class ChannelLotteryTicketActivityController
         $endTimestamp = strtotime($endTime);
 
         if ($endTimestamp <= $startTimestamp) {
-            return json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_time')
-            ]);
+            return jsonFailResponse(admin_trans('lottery_ticket.error.invalid_time'), [], 400);
         }
 
         // 验证奖品等级
         if (!empty($prizeLevels)) {
             if (count($prizeLevels) > 10) {
-                return json([
-                    'code' => 400,
-                    'message' => admin_trans('lottery_ticket.error.too_many_levels', null, ['max' => 10])
-                ]);
+                return jsonFailResponse(admin_trans('lottery_ticket.error.too_many_levels', null, ['max' => 10]), [], 400);
             }
 
             $totalProbability = array_sum(array_column($prizeLevels, 'win_probability'));
             if ($totalProbability > 100) {
-                return json([
-                    'code' => 400,
-                    'message' => admin_trans('lottery_ticket.error.probability_exceed', null, ['total' => $totalProbability])
-                ]);
+                return jsonFailResponse(admin_trans('lottery_ticket.error.probability_exceed', null, ['total' => $totalProbability]), [], 400);
             }
         }
 
@@ -252,19 +226,13 @@ class ChannelLotteryTicketActivityController
 
                 if (!$activity) {
                     Db::rollBack();
-                    return json([
-                        'code' => 404,
-                        'message' => admin_trans('lottery_ticket.message.activity_not_found')
-                    ]);
+                    return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
                 }
 
                 // 只允许编辑未开始的活动
                 if ($activity->status !== LotteryTicketActivity::STATUS_NOT_STARTED) {
                     Db::rollBack();
-                    return json([
-                        'code' => 400,
-                        'message' => admin_trans('lottery_ticket.error.cannot_edit_started')
-                    ]);
+                    return jsonFailResponse(admin_trans('lottery_ticket.error.cannot_edit_started'), [], 400);
                 }
 
                 $activity->update([
@@ -313,17 +281,11 @@ class ChannelLotteryTicketActivityController
 
             Db::commit();
 
-            return json([
-                'code' => 200,
-                'data' => $activity,
-                'message' => $id ? admin_trans('lottery_ticket.message.update_success') : admin_trans('lottery_ticket.message.create_success')
-            ]);
+            $message = $id ? admin_trans('lottery_ticket.message.update_success') : admin_trans('lottery_ticket.message.create_success');
+            return jsonSuccessResponse($message, $activity->toArray());
         } catch (\Exception $e) {
             Db::rollBack();
-            return json([
-                'code' => 500,
-                'message' => $e->getMessage()
-            ]);
+            return jsonFailResponse($e->getMessage(), [], 500);
         }
     }
 
@@ -510,34 +472,22 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
-            return json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
         }
 
         // 检查是否属于当前渠道
         if ($activity->department_id != Admin::user()->department_id) {
-            return json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return jsonFailResponse(admin_trans('common.no_permission'), [], 403);
         }
 
         // 只能关闭进行中的活动
         if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.message.activity_not_ongoing')
-            ]);
+            return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_ongoing'), [], 400);
         }
 
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
         $activity->save();
 
-        return json([
-            'code' => 200,
-            'message' => admin_trans('lottery_ticket.message.close_success')
-        ]);
+        return jsonSuccessResponse(admin_trans('lottery_ticket.message.close_success'));
     }
 }
