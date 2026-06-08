@@ -51,20 +51,28 @@ class ChannelVipLevelController
             $grid->hideCreateButton();
             $grid->hideClearButton();
 
-            // 如果没有VIP等级，在工具栏显示导入按钮
+            // 始终显示导入按钮（方便测试）
+            // 如果已有VIP等级，在按钮文字上显示数量
             if ($vipCount === 0) {
-                $importButton = Button::create(admin_trans('vip_level.import_template'))
-                    ->icon(Icon::create('DownloadOutlined'))
-                    ->type('primary')
-                    ->confirm(
-                        admin_trans('vip_level.import_confirm'),
-                        [$this, 'importTemplate'],
-                        [],
-                        'POST'
-                    );
-
-                $grid->tools($importButton);
+                $buttonText = admin_trans('vip_level.import_template');
+                $confirmText = admin_trans('vip_level.import_confirm');
+            } else {
+                $buttonText = admin_trans('vip_level.import_template') . ' (已有' . $vipCount . '个)';
+                $confirmText = admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]) .
+                               '\n\n继续导入将覆盖现有数据，是否继续？';
             }
+
+            $importButton = Button::create($buttonText)
+                ->icon(Icon::create('DownloadOutlined'))
+                ->type($vipCount === 0 ? 'primary' : 'default')
+                ->confirm(
+                    $confirmText,
+                    [$this, 'importTemplate'],
+                    [],
+                    'POST'
+                );
+
+            $grid->tools($importButton);
 
             $grid->model()
                 ->where('department_id', $departmentId)
