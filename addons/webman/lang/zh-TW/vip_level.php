@@ -7,6 +7,9 @@ return [
     'import_template' => '一鍵導入模板',
     'import_confirm' => '確定要導入VIP默認模板嗎？將創建10個默認VIP等級（VIP1-VIP10）',
     'import_error_exists' => '該渠道已有 {count} 個VIP等級，無需重複導入',
+    'already_exists_count' => '(已有{count}個)',
+    'import_confirm_override' => '繼續導入將覆蓋現有數據，是否繼續？',
+    'import_failed' => '導入失敗：',
     'fields' => [
         'id' => 'ID',
         'name' => '等級名稱',

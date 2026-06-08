@@ -113,6 +113,7 @@ return [
         'seventh' => '七等獎',
         'eighth' => '八等獎',
         'ninth' => '九等獎',
+        'default' => '等級:rank',
     ],
 
     // 中奖等级字段

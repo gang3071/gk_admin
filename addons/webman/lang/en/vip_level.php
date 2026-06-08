@@ -7,6 +7,9 @@ return [
     'import_template' => 'Import Template',
     'import_confirm' => 'Are you sure you want to import the default VIP template? This will create 10 default VIP levels (VIP1-VIP10)',
     'import_error_exists' => 'This channel already has {count} VIP level(s), no need to import again',
+    'already_exists_count' => '({count} existing)',
+    'import_confirm_override' => 'Continuing will override existing data, are you sure?',
+    'import_failed' => 'Import failed: ',
     'fields' => [
         'id' => 'ID',
         'name' => 'Level Name',

@@ -7,6 +7,9 @@ return [
     'import_template' => 'テンプレートをインポート',
     'import_confirm' => 'デフォルトのVIPテンプレートをインポートしてもよろしいですか？10個のデフォルトVIPレベル（VIP1-VIP10）が作成されます',
     'import_error_exists' => 'このチャネルには既に{count}個のVIPレベルがあります。再度インポートする必要はありません',
+    'already_exists_count' => '({count}個既存)',
+    'import_confirm_override' => '続行すると既存データが上書きされますが、よろしいですか？',
+    'import_failed' => 'インポート失敗：',
     'fields' => [
         'id' => 'ID',
         'name' => 'レベル名',

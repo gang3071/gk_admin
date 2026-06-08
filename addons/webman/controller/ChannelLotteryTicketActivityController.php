@@ -279,7 +279,7 @@ class ChannelLotteryTicketActivityController
                         'sort_order' => $index + 1,
                         'status' => LotteryTicketPrizeLevel::STATUS_ENABLED,
                         // 临时字段（待迁移后删除）
-                        'prize_type' => 1, // 1=现金
+                        'prize_type' => LotteryTicketPrizeLevel::PRIZE_TYPE_CASH,
                         'prize_item_name' => '',
                         'prize_item_image' => '',
                         'prize_count' => 0,
@@ -313,12 +313,8 @@ class ChannelLotteryTicketActivityController
      */
     private function getLevelName(int $rank): string
     {
-        $levelNames = [
-            '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
-            '五等奖', '六等奖', '七等奖', '八等奖', '九等奖'
-        ];
-
-        return $levelNames[$rank] ?? "等级{$rank}";
+        $levelNames = LotteryTicketPrizeLevel::getLevelNameOptions();
+        return $levelNames[$rank] ?? admin_trans('lottery_ticket.level_name.default', null, ['rank' => $rank]);
     }
 
     /**

@@ -57,9 +57,9 @@ class ChannelVipLevelController
                 $buttonText = admin_trans('vip_level.import_template');
                 $confirmText = admin_trans('vip_level.import_confirm');
             } else {
-                $buttonText = admin_trans('vip_level.import_template') . ' (已有' . $vipCount . '个)';
-                $confirmText = admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]) .
-                               '\n\n继续导入将覆盖现有数据，是否继续？';
+                $buttonText = admin_trans('vip_level.import_template') . ' ' . admin_trans('vip_level.already_exists_count', null, ['count' => $vipCount]);
+                $confirmText = admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]) . '\n\n' .
+                               admin_trans('vip_level.import_confirm_override');
             }
 
             $importButton = Button::create($buttonText)
@@ -193,7 +193,10 @@ class ChannelVipLevelController
                         );
                     }
                 } catch (\Throwable $e) {
-                    Log::error('VIP反水比例保存失败: ' . $e->getMessage());
+                    Log::error('VIP cashback save failed: ' . $e->getMessage(), [
+                        'vip_level_id' => $vipLevelId ?? 0,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
             });
         });
@@ -209,7 +212,7 @@ class ChannelVipLevelController
         try {
             $departmentId = Admin::user()->department_id;
 
-            Log::info('开始导入VIP模板', [
+            Log::info('Start importing VIP template', [
                 'department_id' => $departmentId,
                 'admin_id' => Admin::id(),
             ]);
@@ -220,7 +223,7 @@ class ChannelVipLevelController
                 ->count();
 
             if ($existingCount > 0) {
-                Log::warning('VIP等级已存在，无法导入', [
+                Log::warning('VIP levels already exist, cannot import', [
                     'department_id' => $departmentId,
                     'existing_count' => $existingCount,
                 ]);
@@ -236,7 +239,7 @@ class ChannelVipLevelController
             $result = VipLevelService::createDefaultLevelsForChannel($departmentId);
 
             if ($result['success']) {
-                Log::info('渠道管理员手动导入VIP模板成功', [
+                Log::info('Channel admin manually imported VIP template successfully', [
                     'department_id' => $departmentId,
                     'admin_id' => Admin::id(),
                     'count' => $result['count']
@@ -246,7 +249,7 @@ class ChannelVipLevelController
                     'count' => $result['count']
                 ]);
             } else {
-                Log::error('VIP模板导入失败', [
+                Log::error('VIP template import failed', [
                     'department_id' => $departmentId,
                     'error' => $result['message']
                 ]);
@@ -254,7 +257,7 @@ class ChannelVipLevelController
                 return jsonFailResponse($result['message'], [], 500);
             }
         } catch (\Throwable $e) {
-            Log::error('VIP模板导入异常', [
+            Log::error('VIP template import exception', [
                 'department_id' => $departmentId ?? 0,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
@@ -262,7 +265,7 @@ class ChannelVipLevelController
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return jsonFailResponse('导入失败：' . $e->getMessage(), [], 500);
+            return jsonFailResponse(admin_trans('vip_level.import_failed') . $e->getMessage(), [], 500);
         }
     }
 }

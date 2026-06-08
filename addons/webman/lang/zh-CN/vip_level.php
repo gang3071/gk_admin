@@ -7,6 +7,9 @@ return [
     'import_template' => '一键导入模板',
     'import_confirm' => '确定要导入VIP默认模板吗？将创建10个默认VIP等级（VIP1-VIP10）',
     'import_error_exists' => '该渠道已有 {count} 个VIP等级，无需重复导入',
+    'already_exists_count' => '(已有{count}个)',
+    'import_confirm_override' => '继续导入将覆盖现有数据，是否继续？',
+    'import_failed' => '导入失败：',
     'fields' => [
         'id' => 'ID',
         'name' => '等级名称',
