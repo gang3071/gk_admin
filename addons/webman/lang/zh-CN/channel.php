@@ -12,6 +12,7 @@ return [
     'save_success' => '保存成功',
     'create_failed_log' => '渠道新增失败',
     'not_fount' => '渠道不存在',
+    'vip_level_section' => 'VIP会员等级配置',
     'fields' => [
         'id' => '渠道ID',
         'name' => '渠道名称',

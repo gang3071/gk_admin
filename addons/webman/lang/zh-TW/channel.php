@@ -12,6 +12,7 @@ return [
     'save_success' => '保存成功',
     'create_failed_log' => '渠道新增失敗',
     'not_fount' => '通路不存在',
+    'vip_level_section' => 'VIP會員等級配置',
     'fields' => [
         'id' => '通路ID',
         'name' => '通路名稱',

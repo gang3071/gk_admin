@@ -12,6 +12,7 @@ return [
     'save_success' => '正常に保存',
     'create_failed_log' => 'チャネルの作成に失敗しました',
     'not_fount' => 'チャンネルが存在しません',
+    'vip_level_section' => 'VIP会員レベル設定',
     'fields' => [
         'id' => 'チャンネルID',
         'name' => 'チャンネル名',

@@ -12,6 +12,7 @@ return [
     'save_success' => 'save successfully',
     'create_failed_log' => 'Channel creation failed',
     'not_fount' => 'Channel does not exist',
+    'vip_level_section' => 'VIP Member Level Configuration',
     'fields' => [
         'id' => 'Channel ID',
         'name' => 'Channel name',
