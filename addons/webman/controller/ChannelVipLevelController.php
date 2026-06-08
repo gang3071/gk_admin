@@ -45,14 +45,14 @@ class ChannelVipLevelController
             // 只显示当前渠道的VIP等级
             $departmentId = Admin::user()->department_id;
 
-            // 添加"一键导入模板"按钮
+            // 添加"一键导入模板"按钮（仅当没有VIP等级时显示）
             $vipCount = VipLevel::query()
                 ->where('department_id', $departmentId)
                 ->count();
 
             if ($vipCount === 0) {
                 // 如果没有VIP等级，显示导入按钮
-                $grid->addTopButton(
+                $grid->addButton(
                     Button::create(admin_trans('vip_level.import_template'))
                         ->icon(Icon::create('DownloadOutlined'))
                         ->type('primary')
@@ -60,6 +60,7 @@ class ChannelVipLevelController
                         ->confirm(admin_trans('vip_level.import_confirm'))
                 );
             }
+
             $grid->model()
                 ->where('department_id', $departmentId)
                 ->orderBy('sort', 'asc')
