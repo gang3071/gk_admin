@@ -368,10 +368,8 @@ class ChannelController
             $form->switch('vip_level_status', admin_trans('channel.fields.vip_level_status'))
                 ->help(admin_trans('channel.help.vip_level_status'))
                 ->when([1], function (Form $form) {
-                    // 获取当前渠道的VIP等级列表
-                    $vipLevelOptions = [];
-                    $enabledLevelIds = [];
                     if ($form->isEdit()) {
+                        // 编辑模式：显示已有的VIP等级供选择启用/禁用
                         $id = $form->driver()->get('id');
                         $channel = Channel::find($id);
                         if ($channel) {
@@ -379,20 +377,31 @@ class ChannelController
                                 ->where('department_id', $channel->department_id)
                                 ->orderBy('sort', 'asc')
                                 ->get();
-                            foreach ($vipLevels as $level) {
-                                $vipLevelOptions[$level->id] = $level->name;
-                                if ($level->status == VipLevel::STATUS_ENABLED) {
-                                    $enabledLevelIds[] = $level->id;
+
+                            if ($vipLevels->count() > 0) {
+                                $vipLevelOptions = [];
+                                $enabledLevelIds = [];
+                                foreach ($vipLevels as $level) {
+                                    $vipLevelOptions[$level->id] = $level->name;
+                                    if ($level->status == VipLevel::STATUS_ENABLED) {
+                                        $enabledLevelIds[] = $level->id;
+                                    }
                                 }
+
+                                $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
+                                    ->options($vipLevelOptions)
+                                    ->value($enabledLevelIds)
+                                    ->help(admin_trans('channel.help.vip_levels'));
+                            } else {
+                                // 已有渠道但没有VIP等级，提示需要初始化
+                                $form->desc('vip_levels_notice', admin_trans('channel.fields.vip_levels'))
+                                    ->value('<div style="color: #ff4d4f;">该渠道尚未初始化VIP等级，请先在"VIP等级管理"中创建VIP等级。</div>');
                             }
                         }
-                    }
-
-                    if (!empty($vipLevelOptions)) {
-                        $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
-                            ->options($vipLevelOptions)
-                            ->value($enabledLevelIds)
-                            ->help(admin_trans('channel.help.vip_levels'));
+                    } else {
+                        // 创建模式：提示将自动创建10个默认VIP等级
+                        $form->desc('vip_levels_notice', admin_trans('channel.fields.vip_levels'))
+                            ->value('<div style="color: #52c41a;">开启VIP功能后，系统将自动创建10个默认VIP等级（VIP1-VIP10），所有等级默认启用。<br/>创建后可在"VIP等级管理"中进行调整。</div>');
                     }
                 });
 
