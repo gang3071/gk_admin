@@ -10,7 +10,6 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use support\Db;
-use support\Request;
 
 /**
  * 渠道后台-摸奖券活动管理
@@ -91,12 +90,11 @@ class ChannelLotteryTicketActivityController
      * 获取活动列表 (API)
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function getActivities(Request $request)
+    public function getActivities()
     {
-        $statusFilter = $request->input('status');
+        $statusFilter = request()->input('status');
         $departmentId = Admin::user()->department_id;
 
         $query = LotteryTicketActivity::query()
@@ -132,12 +130,11 @@ class ChannelLotteryTicketActivityController
      * 获取活动详情 (API)
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function getActivityDetail(Request $request)
+    public function getActivityDetail()
     {
-        $id = $request->input('id');
+        $id = request()->input('id');
         $departmentId = Admin::user()->department_id;
 
         $activity = LotteryTicketActivity::query()
@@ -179,18 +176,17 @@ class ChannelLotteryTicketActivityController
      * 保存活动 (API)
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function saveActivity(Request $request)
+    public function saveActivity()
     {
         $departmentId = Admin::user()->department_id;
-        $id = $request->input('id');
-        $name = $request->input('name');
-        $description = $request->input('description', '');
-        $startTime = $request->input('start_time');
-        $endTime = $request->input('end_time');
-        $prizeLevels = $request->input('prize_levels', []);
+        $id = request()->input('id');
+        $name = request()->input('name');
+        $description = request()->input('description', '');
+        $startTime = request()->input('start_time');
+        $endTime = request()->input('end_time');
+        $prizeLevels = request()->input('prize_levels', []);
 
         // 验证必填字段
         if (empty($name)) {
@@ -421,12 +417,11 @@ class ChannelLotteryTicketActivityController
      * 奖品配置
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function prizeConfig(Request $request)
+    public function prizeConfig()
     {
-        $id = $request->input('id');
+        $id = request()->input('id');
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
@@ -510,12 +505,11 @@ class ChannelLotteryTicketActivityController
      * 关闭活动
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function closeActivity(Request $request)
+    public function closeActivity()
     {
-        $id = $request->input('id');
+        $id = request()->input('id');
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
