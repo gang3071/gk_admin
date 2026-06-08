@@ -17,19 +17,8 @@ class VipLevelService
      */
     private const DEFAULT_VIP_LEVELS = [
         [
-            'name' => 'VIP0',
-            'sort' => 0,
-            'upgrade_limit_days' => 0,
-            'retain_level_days' => 30,
-            'retain_level_bet_amount' => 0,
-            'upgrade_bet_amount' => 1000,
-            'min_claim_amount' => 0,
-            'birthday_bonus' => 0,
-        ],
-        [
             'name' => 'VIP1',
             'sort' => 1,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 1000,
             'upgrade_bet_amount' => 5000,
@@ -39,7 +28,6 @@ class VipLevelService
         [
             'name' => 'VIP2',
             'sort' => 2,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 5000,
             'upgrade_bet_amount' => 20000,
@@ -49,7 +37,6 @@ class VipLevelService
         [
             'name' => 'VIP3',
             'sort' => 3,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 20000,
             'upgrade_bet_amount' => 50000,
@@ -59,7 +46,6 @@ class VipLevelService
         [
             'name' => 'VIP4',
             'sort' => 4,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 50000,
             'upgrade_bet_amount' => 100000,
@@ -69,7 +55,6 @@ class VipLevelService
         [
             'name' => 'VIP5',
             'sort' => 5,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 100000,
             'upgrade_bet_amount' => 200000,
@@ -79,7 +64,6 @@ class VipLevelService
         [
             'name' => 'VIP6',
             'sort' => 6,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 200000,
             'upgrade_bet_amount' => 500000,
@@ -89,7 +73,6 @@ class VipLevelService
         [
             'name' => 'VIP7',
             'sort' => 7,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 500000,
             'upgrade_bet_amount' => 1000000,
@@ -99,7 +82,6 @@ class VipLevelService
         [
             'name' => 'VIP8',
             'sort' => 8,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 1000000,
             'upgrade_bet_amount' => 2000000,
@@ -109,12 +91,20 @@ class VipLevelService
         [
             'name' => 'VIP9',
             'sort' => 9,
-            'upgrade_limit_days' => 7,
             'retain_level_days' => 30,
             'retain_level_bet_amount' => 2000000,
-            'upgrade_bet_amount' => 0,
+            'upgrade_bet_amount' => 5000000,
             'min_claim_amount' => 5000,
             'birthday_bonus' => 20000,
+        ],
+        [
+            'name' => 'VIP10',
+            'sort' => 10,
+            'retain_level_days' => 30,
+            'retain_level_bet_amount' => 5000000,
+            'upgrade_bet_amount' => 0,
+            'min_claim_amount' => 10000,
+            'birthday_bonus' => 50000,
         ],
     ];
 

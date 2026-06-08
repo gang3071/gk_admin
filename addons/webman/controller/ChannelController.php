@@ -14,6 +14,7 @@ use addons\webman\model\ExternalApp;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
+use addons\webman\model\VipLevel;
 use addons\webman\service\VipLevelService;
 use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
@@ -365,7 +366,35 @@ class ChannelController
 
             // 会员等级开关
             $form->switch('vip_level_status', admin_trans('channel.fields.vip_level_status'))
-                ->help(admin_trans('channel.help.vip_level_status'));
+                ->help(admin_trans('channel.help.vip_level_status'))
+                ->when([1], function (Form $form) {
+                    // 获取当前渠道的VIP等级列表
+                    $vipLevelOptions = [];
+                    $enabledLevelIds = [];
+                    if ($form->isEdit()) {
+                        $id = $form->driver()->get('id');
+                        $channel = Channel::find($id);
+                        if ($channel) {
+                            $vipLevels = VipLevel::query()
+                                ->where('department_id', $channel->department_id)
+                                ->orderBy('sort', 'asc')
+                                ->get();
+                            foreach ($vipLevels as $level) {
+                                $vipLevelOptions[$level->id] = $level->name;
+                                if ($level->status == VipLevel::STATUS_ENABLED) {
+                                    $enabledLevelIds[] = $level->id;
+                                }
+                            }
+                        }
+                    }
+
+                    if (!empty($vipLevelOptions)) {
+                        $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
+                            ->options($vipLevelOptions)
+                            ->value($enabledLevelIds)
+                            ->help(admin_trans('channel.help.vip_levels'));
+                    }
+                });
 
             $form->textarea('externalApp.white_ip', admin_trans('channel.fields.white_ip'))
                 ->showCount()
@@ -723,6 +752,42 @@ class ChannelController
                                     'department_id' => $adminDepartment->id,
                                     'channel_name' => $channel->name
                                 ]);
+
+                                // 处理VIP等级启用/禁用
+                                $selectedVipLevels = $form->input('vip_levels', []);
+                                if (!empty($selectedVipLevels)) {
+                                    // 获取所有VIP等级
+                                    $allVipLevels = VipLevel::query()
+                                        ->where('department_id', $adminDepartment->id)
+                                        ->pluck('id')
+                                        ->toArray();
+
+                                    // 启用选中的VIP等级
+                                    VipLevel::query()
+                                        ->where('department_id', $adminDepartment->id)
+                                        ->whereIn('id', $selectedVipLevels)
+                                        ->update(['status' => VipLevel::STATUS_ENABLED]);
+
+                                    // 禁用未选中的VIP等级
+                                    $unselectedLevels = array_diff($allVipLevels, $selectedVipLevels);
+                                    if (!empty($unselectedLevels)) {
+                                        VipLevel::query()
+                                            ->where('department_id', $adminDepartment->id)
+                                            ->whereIn('id', $unselectedLevels)
+                                            ->update(['status' => VipLevel::STATUS_DISABLED]);
+                                    }
+
+                                    Log::info("初始化VIP等级状态", [
+                                        'department_id' => $adminDepartment->id,
+                                        'enabled_levels' => $selectedVipLevels,
+                                        'disabled_levels' => $unselectedLevels,
+                                    ]);
+                                } else {
+                                    // 如果没有选择VIP等级，默认全部启用
+                                    Log::info("VIP等级全部启用（默认）", [
+                                        'department_id' => $adminDepartment->id,
+                                    ]);
+                                }
                             }
                         }
 
@@ -865,6 +930,39 @@ class ChannelController
                                         'channel_name' => $channel->name
                                     ]);
                                 }
+                            }
+                        }
+
+                        // 处理VIP等级启用/禁用（当VIP等级功能开启时）
+                        if ($channel->vip_level_status == 1) {
+                            $selectedVipLevels = $form->input('vip_levels', []);
+                            if (!empty($selectedVipLevels)) {
+                                // 获取该渠道的所有VIP等级
+                                $allVipLevels = VipLevel::query()
+                                    ->where('department_id', $channel->department_id)
+                                    ->pluck('id')
+                                    ->toArray();
+
+                                // 启用选中的VIP等级
+                                VipLevel::query()
+                                    ->where('department_id', $channel->department_id)
+                                    ->whereIn('id', $selectedVipLevels)
+                                    ->update(['status' => VipLevel::STATUS_ENABLED]);
+
+                                // 禁用未选中的VIP等级
+                                $unselectedLevels = array_diff($allVipLevels, $selectedVipLevels);
+                                if (!empty($unselectedLevels)) {
+                                    VipLevel::query()
+                                        ->where('department_id', $channel->department_id)
+                                        ->whereIn('id', $unselectedLevels)
+                                        ->update(['status' => VipLevel::STATUS_DISABLED]);
+                                }
+
+                                Log::info("更新VIP等级状态", [
+                                    'department_id' => $channel->department_id,
+                                    'enabled_levels' => $selectedVipLevels,
+                                    'disabled_levels' => $unselectedLevels,
+                                ]);
                             }
                         }
 
