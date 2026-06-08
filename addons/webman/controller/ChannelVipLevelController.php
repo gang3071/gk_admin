@@ -194,36 +194,63 @@ class ChannelVipLevelController
      */
     public function importTemplate()
     {
-        $departmentId = Admin::user()->department_id;
+        try {
+            $departmentId = Admin::user()->department_id;
 
-        // 检查是否已有VIP等级
-        $existingCount = VipLevel::query()
-            ->where('department_id', $departmentId)
-            ->count();
-
-        if ($existingCount > 0) {
-            return jsonFailResponse(
-                admin_trans('vip_level.import_error_exists', null, ['count' => $existingCount]),
-                [],
-                400
-            );
-        }
-
-        // 调用服务创建默认VIP等级
-        $result = VipLevelService::createDefaultLevelsForChannel($departmentId);
-
-        if ($result['success']) {
-            Log::info('渠道管理员手动导入VIP模板成功', [
+            Log::info('开始导入VIP模板', [
                 'department_id' => $departmentId,
                 'admin_id' => Admin::id(),
-                'count' => $result['count']
             ]);
 
-            return jsonSuccessResponse($result['message'], [
-                'count' => $result['count']
+            // 检查是否已有VIP等级
+            $existingCount = VipLevel::query()
+                ->where('department_id', $departmentId)
+                ->count();
+
+            if ($existingCount > 0) {
+                Log::warning('VIP等级已存在，无法导入', [
+                    'department_id' => $departmentId,
+                    'existing_count' => $existingCount,
+                ]);
+
+                return jsonFailResponse(
+                    admin_trans('vip_level.import_error_exists', null, ['count' => $existingCount]),
+                    [],
+                    400
+                );
+            }
+
+            // 调用服务创建默认VIP等级
+            $result = VipLevelService::createDefaultLevelsForChannel($departmentId);
+
+            if ($result['success']) {
+                Log::info('渠道管理员手动导入VIP模板成功', [
+                    'department_id' => $departmentId,
+                    'admin_id' => Admin::id(),
+                    'count' => $result['count']
+                ]);
+
+                return jsonSuccessResponse($result['message'], [
+                    'count' => $result['count']
+                ]);
+            } else {
+                Log::error('VIP模板导入失败', [
+                    'department_id' => $departmentId,
+                    'error' => $result['message']
+                ]);
+
+                return jsonFailResponse($result['message'], [], 500);
+            }
+        } catch (\Throwable $e) {
+            Log::error('VIP模板导入异常', [
+                'department_id' => $departmentId ?? 0,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
             ]);
-        } else {
-            return jsonFailResponse($result['message'], [], 500);
+
+            return jsonFailResponse('导入失败：' . $e->getMessage(), [], 500);
         }
     }
 }
