@@ -219,47 +219,48 @@
             style="margin-bottom: 16px;"
         />
 
-        <div v-for="(config, index) in formData.vip_configs" :key="index" class="vip-config-item">
-          <a-row :gutter="12">
-            <a-col :span="8">
-              <a-form-item label="VIP等级">
-                <a-select v-model:value="config.vip_level_id" placeholder="选择VIP等级" disabled>
-                  <a-select-option v-for="vipLevel in vip_levels" :key="vipLevel.id" :value="vipLevel.id">
-                    {{ vipLevel.name }}
-                  </a-select-option>
-                </a-select>
-              </a-form-item>
-            </a-col>
-            <a-col :span="8">
-              <a-form-item label="所需打码量">
-                <a-input-number
-                    v-model:value="config.bet_amount_required"
-                    :min="0"
-                    :precision="2"
-                    style="width: 100%;"
-                    placeholder="0.00"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :span="8">
-              <a-form-item label="发放券数">
-                <a-input-number
-                    v-model:value="config.ticket_count"
-                    :min="1"
-                    :precision="0"
-                    style="width: 100%;"
-                    placeholder="1"
-                />
-              </a-form-item>
-            </a-col>
-          </a-row>
+        <div v-if="formData.vip_configs && formData.vip_configs.length > 0">
+          <div v-for="(config, index) in formData.vip_configs" :key="config.vip_level_id || index" class="vip-config-item">
+            <a-row :gutter="12" align="middle">
+              <a-col :span="8">
+                <a-form-item label="VIP等级" style="margin-bottom: 0;">
+                  <a-tag color="blue" style="font-size: 14px; padding: 4px 12px;">
+                    {{ config.vip_level_name || getVipLevelName(config.vip_level_id) }}
+                  </a-tag>
+                </a-form-item>
+              </a-col>
+              <a-col :span="8">
+                <a-form-item label="所需打码量" style="margin-bottom: 0;">
+                  <a-input-number
+                      v-model:value="config.bet_amount_required"
+                      :min="0"
+                      :precision="2"
+                      style="width: 100%;"
+                      placeholder="0.00"
+                  />
+                </a-form-item>
+              </a-col>
+              <a-col :span="8">
+                <a-form-item label="发放券数" style="margin-bottom: 0;">
+                  <a-input-number
+                      v-model:value="config.ticket_count"
+                      :min="1"
+                      :precision="0"
+                      style="width: 100%;"
+                      placeholder="1"
+                  />
+                </a-form-item>
+              </a-col>
+            </a-row>
+          </div>
         </div>
+        <a-empty v-else description="暂无VIP等级数据" style="margin: 20px 0;"/>
 
         <!-- 奖品等级配置 -->
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
-            message="配置奖品等级和中奖概率(仅现金奖励),概率总和不能超过100%"
+            message="配置奖品等级和奖励金额(仅现金奖励)"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -281,7 +282,7 @@
             </template>
 
             <a-row :gutter="12">
-              <a-col :span="8">
+              <a-col :span="12">
                 <a-form-item :label="trans.levelRank">
                   <a-select v-model:value="level.level_rank" :placeholder="trans.selectLevelRank" @change="handleLevelRankChange(index)">
                     <a-select-option v-for="i in 10" :key="i" :value="i" :disabled="isLevelRankSelected(i, index)">
@@ -290,7 +291,7 @@
                   </a-select>
                 </a-form-item>
               </a-col>
-              <a-col :span="8">
+              <a-col :span="12">
                 <a-form-item label="奖励金额">
                   <a-input-number
                       v-model:value="level.prize_amount"
@@ -301,37 +302,9 @@
                   />
                 </a-form-item>
               </a-col>
-              <a-col :span="8">
-                <a-form-item :label="trans.winProbability">
-                  <a-input-number
-                      v-model:value="level.win_probability"
-                      :min="0"
-                      :max="100"
-                      :precision="2"
-                      addon-after="%"
-                      style="width: 100%;"
-                  />
-                </a-form-item>
-              </a-col>
             </a-row>
           </a-card>
         </div>
-
-        <!-- 概率总和提示 -->
-        <a-alert
-            v-if="getTotalProbability() > 100"
-            :message="`${trans.probabilityExceed}: ${getTotalProbability()}%`"
-            type="error"
-            show-icon
-            style="margin-bottom: 16px;"
-        />
-        <a-alert
-            v-else-if="formData.prize_levels.length > 0"
-            :message="`${trans.totalProbability}: ${getTotalProbability()}%`"
-            :type="getTotalProbability() === 100 ? 'success' : 'info'"
-            show-icon
-            style="margin-bottom: 16px;"
-        />
       </a-form>
 
       <div class="drawer-footer">
@@ -446,7 +419,6 @@ export default {
       prizeColumns: [
         {title: '等级', key: 'level_name', dataIndex: 'level_name'},
         {title: '奖励金额', key: 'prize_amount', dataIndex: 'prize_amount'},
-        {title: '概率(%)', dataIndex: 'win_probability'},
       ],
       levelNames: [
         '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
@@ -623,8 +595,7 @@ export default {
       this.formData.prize_levels.push({
         level_rank: null,
         level_name: '',
-        prize_amount: 0,
-        win_probability: 0
+        prize_amount: 0
       });
     },
 
@@ -646,13 +617,6 @@ export default {
       });
     },
 
-    // 获取概率总和
-    getTotalProbability() {
-      return this.formData.prize_levels.reduce((sum, level) => {
-        return sum + (parseFloat(level.win_probability) || 0);
-      }, 0).toFixed(2);
-    },
-
     // 表单提交
     async handleFormSubmit() {
       try {
@@ -661,12 +625,6 @@ export default {
         // 验证时间
         if (this.formData.end_time.isBefore(this.formData.start_time)) {
           this.$message.error('结束时间必须大于开始时间');
-          return;
-        }
-
-        // 验证概率
-        if (this.getTotalProbability() > 100) {
-          this.$message.error('中奖概率总和不能超过100%');
           return;
         }
 
@@ -752,6 +710,11 @@ export default {
 
     getLevelName(rank) {
       return this.levelNames[rank] || `等级${rank}`;
+    },
+
+    getVipLevelName(vipLevelId) {
+      const vipLevel = this.vip_levels.find(v => v.id === vipLevelId);
+      return vipLevel ? vipLevel.name : `VIP${vipLevelId}`;
     }
   }
 };
@@ -837,10 +800,17 @@ export default {
 }
 
 .vip-config-item {
-  margin-bottom: 12px;
-  padding: 12px;
-  background: #f5f5f5;
-  border-radius: 4px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  transition: all 0.3s;
+}
+
+.vip-config-item:hover {
+  background: #f0f0f0;
+  border-color: #d9d9d9;
 }
 
 .prize-level-item {

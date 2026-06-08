@@ -162,7 +162,6 @@ class ChannelLotteryTicketActivityController
                 'level_rank' => $level->level_rank,
                 'level_name' => $level->level_name,
                 'prize_amount' => $level->prize_amount,
-                'win_probability' => $level->win_probability,
             ];
         })->toArray();
 
@@ -209,11 +208,6 @@ class ChannelLotteryTicketActivityController
         if (!empty($prizeLevels)) {
             if (count($prizeLevels) > 10) {
                 return jsonFailResponse(admin_trans('lottery_ticket.error.too_many_levels', null, ['max' => 10]), [], 400);
-            }
-
-            $totalProbability = array_sum(array_column($prizeLevels, 'win_probability'));
-            if ($totalProbability > 100) {
-                return jsonFailResponse(admin_trans('lottery_ticket.error.probability_exceed', null, ['total' => $totalProbability]), [], 400);
             }
         }
 
@@ -282,7 +276,6 @@ class ChannelLotteryTicketActivityController
                         'level_rank' => $level['level_rank'] ?? ($index + 1),
                         'level_name' => $this->getLevelName($level['level_rank'] ?? ($index + 1)),
                         'prize_amount' => $level['prize_amount'] ?? 0,
-                        'win_probability' => $level['win_probability'] ?? 0,
                         'sort_order' => $index + 1,
                         'status' => LotteryTicketPrizeLevel::STATUS_ENABLED,
                     ]);
