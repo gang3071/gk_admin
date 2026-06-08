@@ -56,9 +56,12 @@ class ChannelVipLevelController
                 $importButton = Button::create(admin_trans('vip_level.import_template'))
                     ->icon(Icon::create('DownloadOutlined'))
                     ->type('primary')
-                    ->api('/ex-admin/addons-webman-controller-ChannelVipLevelController/importTemplate')
-                    ->method('post')
-                    ->confirm(admin_trans('vip_level.import_confirm'));
+                    ->confirm(
+                        admin_trans('vip_level.import_confirm'),
+                        [$this, 'importTemplate'],
+                        [],
+                        'POST'
+                    );
 
                 $grid->tools($importButton);
             }
