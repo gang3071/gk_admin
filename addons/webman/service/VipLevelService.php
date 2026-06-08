@@ -124,8 +124,8 @@ class VipLevelService
             ];
         }
 
-        // 检查渠道是否存在
-        $channel = Channel::find($departmentId);
+        // 检查渠道是否存在（通过department_id查找）
+        $channel = Channel::query()->where('department_id', $departmentId)->first();
         if (!$channel) {
             return [
                 'success' => false,
