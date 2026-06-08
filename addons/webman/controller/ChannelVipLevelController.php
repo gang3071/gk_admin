@@ -77,8 +77,8 @@ class ChannelVipLevelController
                 ->where('department_id', $departmentId)
                 ->count();
 
-            if ($vipCount === 0) {
-                // 如果没有VIP等级，在顶部显示导入按钮
+            // 临时：总是显示按钮用于测试
+            // if ($vipCount === 0) {
                 $importButton = Button::create(admin_trans('vip_level.import_template'))
                     ->icon(Icon::create('DownloadOutlined'))
                     ->type('primary')
@@ -86,7 +86,7 @@ class ChannelVipLevelController
                     ->confirm(admin_trans('vip_level.import_confirm'));
 
                 $grid->header($importButton);
-            }
+            // }
 
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
