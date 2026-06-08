@@ -114,6 +114,17 @@ class LotteryTicketActivity extends Model
     }
 
     /**
+     * VIP等级配置
+     * @return HasMany
+     */
+    public function vipConfigs(): HasMany
+    {
+        return $this->hasMany(LotteryTicketVipConfig::class, 'activity_id')
+            ->where('status', LotteryTicketVipConfig::STATUS_ENABLED)
+            ->orderBy('vip_level_id');
+    }
+
+    /**
      * 获取使用率
      * @return float
      */

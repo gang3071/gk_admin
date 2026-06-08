@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
+use addons\webman\model\LotteryTicketVipConfig;
 use addons\webman\model\VipLevel;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -141,7 +142,7 @@ class ChannelLotteryTicketActivityController
         $departmentId = Admin::user()->department_id;
 
         $activity = LotteryTicketActivity::query()
-            ->with(['prizeLevels'])
+            ->with(['prizeLevels', 'vipConfigs'])
             ->where('id', $id)
             ->where('department_id', $departmentId)
             ->first();
@@ -160,8 +161,14 @@ class ChannelLotteryTicketActivityController
             ];
         })->toArray();
 
-        // TODO: 获取VIP等级配置
-        $activity->vip_configs = [];
+        // 格式化VIP等级配置数据
+        $activity->vip_configs = $activity->vipConfigs->map(function ($config) {
+            return [
+                'vip_level_id' => $config->vip_level_id,
+                'bet_amount_required' => $config->bet_amount_required,
+                'ticket_count' => $config->ticket_count,
+            ];
+        })->toArray();
 
         return jsonSuccessResponse('success', $activity->toArray());
     }
@@ -287,8 +294,21 @@ class ChannelLotteryTicketActivityController
             // 保存VIP等级配置
             $vipConfigs = request()->input('vip_configs', []);
             if (!empty($vipConfigs)) {
-                // TODO: 保存到 lottery_ticket_vip_config 表
-                // 等待创建对应的模型后实现
+                // 删除旧的VIP配置
+                LotteryTicketVipConfig::where('activity_id', $activity->id)->delete();
+
+                // 创建新的VIP配置
+                foreach ($vipConfigs as $config) {
+                    if (isset($config['vip_level_id']) && isset($config['bet_amount_required']) && isset($config['ticket_count'])) {
+                        LotteryTicketVipConfig::create([
+                            'activity_id' => $activity->id,
+                            'vip_level_id' => $config['vip_level_id'],
+                            'bet_amount_required' => $config['bet_amount_required'] ?? 0,
+                            'ticket_count' => $config['ticket_count'] ?? 1,
+                            'status' => LotteryTicketVipConfig::STATUS_ENABLED,
+                        ]);
+                    }
+                }
             }
 
             Db::commit();
