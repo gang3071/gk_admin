@@ -25,6 +25,10 @@ return [
         'usage_rate' => '使用率',
         'prize_config' => '奖品配置',
         'created_at' => '创建时间',
+        'prize_level_config' => '奖品等级配置',
+        'total_probability' => '概率总和',
+        'level' => '等级',
+        'time_range' => '活动时间',
 
         // 中奖记录
         'player_name' => '玩家名称',
@@ -38,8 +42,24 @@ return [
         'draw_time' => '抽奖时间',
     ],
 
+    // 占位符
+    'placeholder' => [
+        'name' => '请输入活动名称',
+        'description' => '请输入活动说明',
+        'start_time' => '请选择开始时间',
+        'end_time' => '请选择结束时间',
+        'level_rank' => '请选择等级排名',
+        'prize_type' => '请选择奖品类型',
+    ],
+
+    // 标题
+    'title' => [
+        'activity_detail' => '活动详情',
+    ],
+
     // 活动状态
     'status' => [
+        'all' => '全部',
         'not_started' => '未开始',
         'ongoing' => '进行中',
         'ended' => '已结束',
@@ -111,11 +131,14 @@ return [
     // 操作
     'action' => [
         'create' => '创建活动',
+        'create_first' => '立即创建',
         'edit' => '编辑活动',
         'view' => '查看详情',
+        'view_detail' => '查看详情',
+        'prize_config' => '奖品配置',
         'close' => '关闭活动',
         'export' => '导出记录',
-        'grant' => '发放奖品',
+        'add_prize_level' => '添加奖品等级',
     ],
 
     // 统计
@@ -132,12 +155,15 @@ return [
         'create_success' => '活动创建成功',
         'update_success' => '活动更新成功',
         'close_success' => '活动关闭成功',
-        'close_confirm' => '确定要关闭此活动吗？',
         'activity_not_found' => '活动不存在',
         'activity_closed' => '活动已关闭',
+        'activity_not_ongoing' => '只能关闭进行中的活动',
         'time_conflict' => '活动时间冲突',
         'prize_level_saved' => '奖品等级保存成功',
         'prize_level_deleted' => '奖品等级删除成功',
+        'no_activities' => '暂无活动',
+        'no_prize_config' => '尚未配置奖品等级',
+        'prize_level_hint' => '最多可配置10个奖品等级,中奖概率总和不能超过100%',
     ],
 
     // 错误信息
@@ -145,8 +171,12 @@ return [
         'too_many_levels' => '最多只能设置 {max} 个奖品等级',
         'no_prize_levels' => '请至少设置一个奖品等级',
         'no_prizes' => '奖品数量不能为0',
-        'probability_exceed' => '中奖概率总和不能超过100%，当前总和：{total}%',
+        'probability_exceed' => '中奖概率总和不能超过100%,当前总和:{total}%',
         'level_rank_exists' => '该等级排名已存在',
         'invalid_prize_type' => '无效的奖品类型',
+        'name_required' => '请输入活动名称',
+        'time_required' => '请选择活动时间',
+        'invalid_time' => '结束时间必须大于开始时间',
+        'cannot_edit_started' => '只能编辑未开始的活动',
     ],
 ];

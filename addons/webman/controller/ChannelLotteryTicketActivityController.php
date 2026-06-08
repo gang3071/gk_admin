@@ -19,165 +19,334 @@ use support\Request;
 class ChannelLotteryTicketActivityController
 {
     /**
-     * 进行中的活动列表
+     * 进行中的活动列表 - 使用 Vue 组件展示
      * @auth true
      * @group channel
-     * @return Grid
+     * @return mixed
      */
-    public function index(): Grid
+    public function index()
     {
-        return Grid::create(new LotteryTicketActivity(), function (Grid $grid) {
-            $grid->title(admin_trans('lottery_ticket.menu.dashboard'));
-
-            // 只显示当前渠道的活动
-            $departmentId = Admin::user()->department_id;
-            $grid->model()->where('department_id', $departmentId)
-                ->whereIn('status', [
-                    LotteryTicketActivity::STATUS_NOT_STARTED,
-                    LotteryTicketActivity::STATUS_ONGOING
-                ])
-                ->orderBy('created_at', 'desc');
-
-            // 列定义
-            $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
-            $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(200);
-            $grid->column('start_time', admin_trans('lottery_ticket.fields.start_time'))->width(160);
-            $grid->column('end_time', admin_trans('lottery_ticket.fields.end_time'))->width(160);
-
-            $grid->column('status', admin_trans('lottery_ticket.fields.status'))->width(120)->display(function ($val) {
-                $colors = [
-                    LotteryTicketActivity::STATUS_NOT_STARTED => 'blue',
-                    LotteryTicketActivity::STATUS_ONGOING => 'green',
-                    LotteryTicketActivity::STATUS_ENDED => 'gray',
-                    LotteryTicketActivity::STATUS_CLOSED => 'red',
-                ];
-                $labels = [
-                    LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
-                    LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
-                    LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
-                    LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
-                ];
-
-                return \ExAdmin\ui\component\common\Tag::create($labels[$val] ?? admin_trans('lottery_ticket.status.unknown'))
-                    ->color($colors[$val] ?? 'default');
-            });
-
-            $grid->column('total_tickets', admin_trans('lottery_ticket.fields.total_tickets'))->width(120);
-            $grid->column('used_tickets', admin_trans('lottery_ticket.fields.used_tickets'))->width(120);
-            $grid->column('usage_rate', admin_trans('lottery_ticket.fields.usage_rate'))->width(120)->display(function ($val, $data) {
-                if ($data['total_tickets'] > 0) {
-                    $rate = round(($data['used_tickets'] / $data['total_tickets']) * 100, 2);
-                    return $rate . '%';
-                }
-                return '0%';
-            });
-
-            $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))->width(160);
-
-            // 筛选
-            $grid->filter(function (Filter $filter) {
-                $filter->like()->text('name')
-                    ->placeholder(admin_trans('lottery_ticket.fields.name'));
-
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('lottery_ticket.fields.status'))
-                    ->options([
-                        LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
-                        LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
-                    ]);
-            });
-
-            // 操作按钮
-            $grid->actions(function (Actions $actions, $data) {
-                // 奖品配置按钮
-                $actions->button(admin_trans('lottery_ticket.action.view'))
-                    ->modal([$this, 'prizeConfig'], ['id' => $data['id']])
-                    ->type('primary')
-                    ->size('small');
-
-                // 关闭活动按钮（仅进行中的活动可关闭）
-                if ($data['status'] == LotteryTicketActivity::STATUS_ONGOING) {
-                    $actions->button(admin_trans('lottery_ticket.action.close'))
-                        ->confirm(admin_trans('lottery_ticket.message.close_confirm'))
-                        ->ajax(admin_url([$this, 'closeActivity']), ['id' => $data['id']])
-                        ->type('danger')
-                        ->size('small');
-                }
-            });
-
-            // 表单配置
-            $grid->setForm()->drawer($this->form());
-
-            // 隐藏批量删除
-            $grid->hideSelection();
-            $grid->hideTrashed();
-        });
+        // 使用自定义 Vue 组件展示活动面板
+        return admin_view(
+            plugin()->webman->getPath() . '/views/lottery_ticket_activities.vue',
+            [
+                'department_id' => Admin::user()->department_id,
+                'trans' => [
+                    'createActivity' => admin_trans('lottery_ticket.action.create'),
+                    'refresh' => admin_trans('common.refresh'),
+                    'loading' => admin_trans('common.loading'),
+                    'noActivities' => admin_trans('lottery_ticket.message.no_activities'),
+                    'createFirst' => admin_trans('lottery_ticket.action.create_first'),
+                    'viewDetail' => admin_trans('lottery_ticket.action.view_detail'),
+                    'prizeConfig' => admin_trans('lottery_ticket.action.prize_config'),
+                    'edit' => admin_trans('common.edit'),
+                    'closeActivity' => admin_trans('lottery_ticket.action.close'),
+                    'activityName' => admin_trans('lottery_ticket.fields.name'),
+                    'activityNamePlaceholder' => admin_trans('lottery_ticket.placeholder.name'),
+                    'description' => admin_trans('lottery_ticket.fields.description'),
+                    'descriptionPlaceholder' => admin_trans('lottery_ticket.placeholder.description'),
+                    'startTime' => admin_trans('lottery_ticket.fields.start_time'),
+                    'endTime' => admin_trans('lottery_ticket.fields.end_time'),
+                    'selectStartTime' => admin_trans('lottery_ticket.placeholder.start_time'),
+                    'selectEndTime' => admin_trans('lottery_ticket.placeholder.end_time'),
+                    'totalTickets' => admin_trans('lottery_ticket.fields.total_tickets'),
+                    'usedTickets' => admin_trans('lottery_ticket.fields.used_tickets'),
+                    'usageRate' => admin_trans('lottery_ticket.fields.usage_rate'),
+                    'noPrizeConfig' => admin_trans('lottery_ticket.message.no_prize_config'),
+                    'editActivity' => admin_trans('lottery_ticket.action.edit'),
+                    'cancel' => admin_trans('common.cancel'),
+                    'submit' => admin_trans('common.submit'),
+                    'prizeLevelConfig' => admin_trans('lottery_ticket.fields.prize_level_config'),
+                    'prizeLevelHint' => admin_trans('lottery_ticket.message.prize_level_hint'),
+                    'addPrizeLevel' => admin_trans('lottery_ticket.action.add_prize_level'),
+                    'level' => admin_trans('lottery_ticket.fields.level'),
+                    'levelRank' => admin_trans('lottery_ticket.prize_level_fields.level_rank'),
+                    'selectLevelRank' => admin_trans('lottery_ticket.placeholder.level_rank'),
+                    'prizeType' => admin_trans('lottery_ticket.prize_level_fields.prize_type'),
+                    'selectPrizeType' => admin_trans('lottery_ticket.placeholder.prize_type'),
+                    'prizeTypeCash' => admin_trans('lottery_ticket.prize_type.cash'),
+                    'prizeTypeBonus' => admin_trans('lottery_ticket.prize_type.bonus'),
+                    'prizeTypePoints' => admin_trans('lottery_ticket.prize_type.points'),
+                    'prizeTypeItem' => admin_trans('lottery_ticket.prize_type.item'),
+                    'prizeAmount' => admin_trans('lottery_ticket.prize_level_fields.prize_amount'),
+                    'itemName' => admin_trans('lottery_ticket.prize_level_fields.prize_item_name'),
+                    'prizeCount' => admin_trans('lottery_ticket.prize_level_fields.prize_count'),
+                    'winProbability' => admin_trans('lottery_ticket.prize_level_fields.win_probability'),
+                    'probabilityExceed' => admin_trans('lottery_ticket.error.probability_exceed'),
+                    'totalProbability' => admin_trans('lottery_ticket.fields.total_probability'),
+                    'activityDetail' => admin_trans('lottery_ticket.title.activity_detail'),
+                    'timeRange' => admin_trans('lottery_ticket.fields.time_range'),
+                    'status' => admin_trans('lottery_ticket.fields.status'),
+                    'allStatus' => admin_trans('lottery_ticket.status.all'),
+                    'notStarted' => admin_trans('lottery_ticket.status.not_started'),
+                    'ongoing' => admin_trans('lottery_ticket.status.ongoing'),
+                    'ended' => admin_trans('lottery_ticket.status.ended'),
+                    'closed' => admin_trans('lottery_ticket.status.closed'),
+                ],
+            ]
+        );
     }
 
     /**
-     * 活动表单
+     * 获取活动列表 (API)
      * @auth true
      * @group channel
-     * @return Form
+     * @param Request $request
+     * @return mixed
      */
-    public function form(): Form
+    public function getActivities(Request $request)
     {
-        return Form::create(new LotteryTicketActivity(), function (Form $form) {
-            $form->title(admin_trans('lottery_ticket.title'));
+        $statusFilter = $request->input('status');
+        $departmentId = Admin::user()->department_id;
 
-            $form->text('name', admin_trans('lottery_ticket.fields.name'))
-                ->required()
-                ->maxlength(100);
+        $query = LotteryTicketActivity::query()
+            ->with(['prizeLevels'])
+            ->where('department_id', $departmentId);
 
-            $form->textarea('description', admin_trans('lottery_ticket.fields.description'))
-                ->maxlength(500)
-                ->showCount();
+        // 状态筛选
+        if ($statusFilter !== null && $statusFilter !== 'all') {
+            $query->where('status', $statusFilter);
+        } else {
+            // 默认只显示进行中和未开始的活动
+            $query->whereIn('status', [
+                LotteryTicketActivity::STATUS_NOT_STARTED,
+                LotteryTicketActivity::STATUS_ONGOING
+            ]);
+        }
 
-            $form->datetime('start_time', admin_trans('lottery_ticket.fields.start_time'))
-                ->required();
+        $activities = $query->orderBy('created_at', 'desc')->get();
 
-            $form->datetime('end_time', admin_trans('lottery_ticket.fields.end_time'))
-                ->required();
-
-            // 隐藏字段
-            $form->hidden('department_id')->default(Admin::user()->department_id);
-            $form->hidden('status')->default(LotteryTicketActivity::STATUS_NOT_STARTED);
-
-            $form->saving(function (Form $form) {
-                // 验证时间
-                $startTime = strtotime($form->input('start_time'));
-                $endTime = strtotime($form->input('end_time'));
-
-                if ($endTime <= $startTime) {
-                    return message_error('结束时间必须大于开始时间');
-                }
-
-                // 自动设置状态
-                $now = time();
-                $status = LotteryTicketActivity::STATUS_NOT_STARTED;
-
-                if ($now < $startTime) {
-                    $status = LotteryTicketActivity::STATUS_NOT_STARTED;
-                } elseif ($now >= $startTime && $now <= $endTime) {
-                    $status = LotteryTicketActivity::STATUS_ONGOING;
-                } else {
-                    $status = LotteryTicketActivity::STATUS_ENDED;
-                }
-
-                // 设置到模型属性，而不是 $form->data
-                if ($form->isEdit()) {
-                    $form->model()->status = $status;
-                } else {
-                    $form->input('status', $status);
-                }
-
-                return true;
-            });
-
-            $form->saved(function (Form $form) {
-                return message_success(admin_trans('lottery_ticket.message.create_success'));
-            });
+        // 为每个活动添加是否配置了奖品的标记
+        $activities->each(function ($activity) {
+            $activity->has_prize_config = $activity->prizeLevels->count() > 0;
         });
+
+        return response()->json([
+            'code' => 200,
+            'data' => $activities,
+            'message' => 'success'
+        ]);
+    }
+
+    /**
+     * 获取活动详情 (API)
+     * @auth true
+     * @group channel
+     * @param Request $request
+     * @return mixed
+     */
+    public function getActivityDetail(Request $request)
+    {
+        $id = $request->input('id');
+        $departmentId = Admin::user()->department_id;
+
+        $activity = LotteryTicketActivity::query()
+            ->with(['prizeLevels'])
+            ->where('id', $id)
+            ->where('department_id', $departmentId)
+            ->first();
+
+        if (!$activity) {
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
+        }
+
+        // 格式化奖品等级数据
+        $activity->prize_levels = $activity->prizeLevels->map(function ($level) {
+            return [
+                'id' => $level->id,
+                'level_rank' => $level->level_rank,
+                'level_name' => $level->level_name,
+                'prize_type' => $level->prize_type,
+                'prize_amount' => $level->prize_amount,
+                'prize_item_name' => $level->prize_item_name,
+                'prize_count' => $level->prize_count,
+                'win_probability' => $level->win_probability,
+                'description' => $level->description ?? '',
+            ];
+        })->toArray();
+
+        return response()->json([
+            'code' => 200,
+            'data' => $activity,
+            'message' => 'success'
+        ]);
+    }
+
+    /**
+     * 保存活动 (API)
+     * @auth true
+     * @group channel
+     * @param Request $request
+     * @return mixed
+     */
+    public function saveActivity(Request $request)
+    {
+        $departmentId = Admin::user()->department_id;
+        $id = $request->input('id');
+        $name = $request->input('name');
+        $description = $request->input('description', '');
+        $startTime = $request->input('start_time');
+        $endTime = $request->input('end_time');
+        $prizeLevels = $request->input('prize_levels', []);
+
+        // 验证必填字段
+        if (empty($name)) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.name_required')
+            ]);
+        }
+
+        if (empty($startTime) || empty($endTime)) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.time_required')
+            ]);
+        }
+
+        // 验证时间
+        $startTimestamp = strtotime($startTime);
+        $endTimestamp = strtotime($endTime);
+
+        if ($endTimestamp <= $startTimestamp) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.invalid_time')
+            ]);
+        }
+
+        // 验证奖品等级
+        if (!empty($prizeLevels)) {
+            if (count($prizeLevels) > 10) {
+                return response()->json([
+                    'code' => 400,
+                    'message' => admin_trans('lottery_ticket.error.too_many_levels', null, ['max' => 10])
+                ]);
+            }
+
+            $totalProbability = array_sum(array_column($prizeLevels, 'win_probability'));
+            if ($totalProbability > 100) {
+                return response()->json([
+                    'code' => 400,
+                    'message' => admin_trans('lottery_ticket.error.probability_exceed', null, ['total' => $totalProbability])
+                ]);
+            }
+        }
+
+        // 自动设置状态
+        $now = time();
+        $status = LotteryTicketActivity::STATUS_NOT_STARTED;
+
+        if ($now < $startTimestamp) {
+            $status = LotteryTicketActivity::STATUS_NOT_STARTED;
+        } elseif ($now >= $startTimestamp && $now <= $endTimestamp) {
+            $status = LotteryTicketActivity::STATUS_ONGOING;
+        } else {
+            $status = LotteryTicketActivity::STATUS_ENDED;
+        }
+
+        Db::beginTransaction();
+        try {
+            if ($id) {
+                // 编辑模式
+                $activity = LotteryTicketActivity::query()
+                    ->where('id', $id)
+                    ->where('department_id', $departmentId)
+                    ->first();
+
+                if (!$activity) {
+                    Db::rollBack();
+                    return response()->json([
+                        'code' => 404,
+                        'message' => admin_trans('lottery_ticket.message.activity_not_found')
+                    ]);
+                }
+
+                // 只允许编辑未开始的活动
+                if ($activity->status !== LotteryTicketActivity::STATUS_NOT_STARTED) {
+                    Db::rollBack();
+                    return response()->json([
+                        'code' => 400,
+                        'message' => admin_trans('lottery_ticket.error.cannot_edit_started')
+                    ]);
+                }
+
+                $activity->update([
+                    'name' => $name,
+                    'description' => $description,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'status' => $status,
+                ]);
+            } else {
+                // 创建模式
+                $activity = LotteryTicketActivity::create([
+                    'department_id' => $departmentId,
+                    'name' => $name,
+                    'description' => $description,
+                    'start_time' => $startTime,
+                    'end_time' => $endTime,
+                    'status' => $status,
+                    'total_tickets' => 0,
+                    'used_tickets' => 0,
+                ]);
+            }
+
+            // 保存奖品等级
+            if (!empty($prizeLevels)) {
+                // 删除旧的奖品等级
+                LotteryTicketPrizeLevel::where('activity_id', $activity->id)->delete();
+
+                // 创建新的奖品等级
+                foreach ($prizeLevels as $index => $level) {
+                    LotteryTicketPrizeLevel::create([
+                        'activity_id' => $activity->id,
+                        'level_rank' => $level['level_rank'] ?? ($index + 1),
+                        'level_name' => $this->getLevelName($level['level_rank'] ?? ($index + 1)),
+                        'prize_type' => $level['prize_type'] ?? 'cash',
+                        'prize_amount' => $level['prize_amount'] ?? 0,
+                        'prize_item_name' => $level['prize_item_name'] ?? '',
+                        'prize_count' => $level['prize_count'] ?? 0,
+                        'win_probability' => $level['win_probability'] ?? 0,
+                        'description' => $level['description'] ?? '',
+                        'sort_order' => $index + 1,
+                        'status' => LotteryTicketPrizeLevel::STATUS_ENABLED,
+                    ]);
+                }
+            }
+
+            Db::commit();
+
+            return response()->json([
+                'code' => 200,
+                'data' => $activity,
+                'message' => $id ? admin_trans('lottery_ticket.message.update_success') : admin_trans('lottery_ticket.message.create_success')
+            ]);
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return response()->json([
+                'code' => 500,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * 获取等级名称
+     * @param int $rank
+     * @return string
+     */
+    private function getLevelName(int $rank): string
+    {
+        $levelNames = [
+            '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
+            '五等奖', '六等奖', '七等奖', '八等奖', '九等奖'
+        ];
+
+        return $levelNames[$rank] ?? "等级{$rank}";
     }
 
     /**
@@ -200,7 +369,7 @@ class ChannelLotteryTicketActivityController
                 ])
                 ->orderBy('end_time', 'desc');
 
-            // 列定义（与index相同）
+            // 列定义(与index相同)
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
             $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(200);
             $grid->column('start_time', admin_trans('lottery_ticket.fields.start_time'))->width(160);
@@ -289,7 +458,7 @@ class ChannelLotteryTicketActivityController
                     ['title' => admin_trans('lottery_ticket.prize_level_fields.win_probability'), 'dataIndex' => 'win_probability', 'width' => 120],
                 ])
                 ->default($existingLevels)
-                ->help('最多可配置10个奖品等级，中奖概率总和不能超过100%');
+                ->help('最多可配置10个奖品等级,中奖概率总和不能超过100%');
 
             $form->saving(function (Form $form) use ($activity) {
                 $prizeLevels = $form->input('prize_levels', []);
@@ -350,22 +519,34 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
         }
 
         // 检查是否属于当前渠道
         if ($activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return response()->json([
+                'code' => 403,
+                'message' => admin_trans('common.no_permission')
+            ]);
         }
 
         // 只能关闭进行中的活动
         if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return message_error(admin_trans('lottery_ticket.message.activity_closed'));
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.message.activity_not_ongoing')
+            ]);
         }
 
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
         $activity->save();
 
-        return message_success(admin_trans('lottery_ticket.message.close_success'));
+        return response()->json([
+            'code' => 200,
+            'message' => admin_trans('lottery_ticket.message.close_success')
+        ]);
     }
 }

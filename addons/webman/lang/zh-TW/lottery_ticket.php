@@ -25,6 +25,10 @@ return [
         'usage_rate' => '使用率',
         'prize_config' => '獎品配置',
         'created_at' => '創建時間',
+        'prize_level_config' => '獎品等級配置',
+        'total_probability' => '概率總和',
+        'level' => '等級',
+        'time_range' => '活動時間',
 
         // 中奖记录
         'player_name' => '玩家名稱',
@@ -38,8 +42,24 @@ return [
         'draw_time' => '抽獎時間',
     ],
 
+    // 占位符
+    'placeholder' => [
+        'name' => '請輸入活動名稱',
+        'description' => '請輸入活動說明',
+        'start_time' => '請選擇開始時間',
+        'end_time' => '請選擇結束時間',
+        'level_rank' => '請選擇等級排名',
+        'prize_type' => '請選擇獎品類型',
+    ],
+
+    // 标题
+    'title' => [
+        'activity_detail' => '活動詳情',
+    ],
+
     // 活动状态
     'status' => [
+        'all' => '全部',
         'not_started' => '未開始',
         'ongoing' => '進行中',
         'ended' => '已結束',
@@ -111,10 +131,14 @@ return [
     // 操作
     'action' => [
         'create' => '創建活動',
+        'create_first' => '立即創建',
         'edit' => '編輯活動',
         'view' => '查看詳情',
+        'view_detail' => '查看詳情',
+        'prize_config' => '獎品配置',
         'close' => '關閉活動',
         'export' => '導出記錄',
+        'add_prize_level' => '添加獎品等級',
     ],
 
     // 统计
@@ -133,9 +157,13 @@ return [
         'close_success' => '活動關閉成功',
         'activity_not_found' => '活動不存在',
         'activity_closed' => '活動已關閉',
+        'activity_not_ongoing' => '只能關閉進行中的活動',
         'time_conflict' => '活動時間衝突',
         'prize_level_saved' => '獎品等級保存成功',
         'prize_level_deleted' => '獎品等級刪除成功',
+        'no_activities' => '暫無活動',
+        'no_prize_config' => '尚未配置獎品等級',
+        'prize_level_hint' => '最多可配置10個獎品等級,中獎概率總和不能超過100%',
     ],
 
     // 错误信息
@@ -146,5 +174,9 @@ return [
         'probability_exceed' => '中獎概率總和不能超過100%，當前總和：{total}%',
         'level_rank_exists' => '該等級排名已存在',
         'invalid_prize_type' => '無效的獎品類型',
+        'name_required' => '請輸入活動名稱',
+        'time_required' => '請選擇活動時間',
+        'invalid_time' => '結束時間必須大於開始時間',
+        'cannot_edit_started' => '只能編輯未開始的活動',
     ],
 ];
