@@ -124,3 +124,14 @@ verify_mongodb_cleanup.bat
 # 临时代码和常量
 # ==========================================
 /app/constants/
+
+# 测试和临时文件
+test_*.php
+analyze_*.php
+check_*.php
+cleanup_*.php
+diagnose_*.php
+windows_*.php
+create_master_*.php
+phinx.php
+QUICK_DEPLOY.txt
