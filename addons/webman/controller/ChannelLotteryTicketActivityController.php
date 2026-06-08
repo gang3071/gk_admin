@@ -162,6 +162,12 @@ class ChannelLotteryTicketActivityController
         })->toArray();
 
         // 格式化VIP等级配置数据
+        \support\Log::info('Loading VIP configs for activity', [
+            'activity_id' => $activity->id,
+            'vipConfigs_count' => $activity->vipConfigs ? $activity->vipConfigs->count() : 0,
+            'vipConfigs_data' => $activity->vipConfigs ? $activity->vipConfigs->toArray() : []
+        ]);
+
         $activity->vip_configs = $activity->vipConfigs->map(function ($config) {
             return [
                 'vip_level_id' => $config->vip_level_id,
@@ -286,22 +292,39 @@ class ChannelLotteryTicketActivityController
 
             // 保存VIP等级配置
             $vipConfigs = request()->input('vip_configs', []);
+            \support\Log::info('Saving VIP configs', [
+                'activity_id' => $activity->id,
+                'vip_configs_input' => $vipConfigs,
+                'vip_configs_count' => count($vipConfigs)
+            ]);
+
             if (!empty($vipConfigs)) {
                 // 删除旧的VIP配置
-                LotteryTicketVipConfig::where('activity_id', $activity->id)->delete();
+                $deletedCount = LotteryTicketVipConfig::where('activity_id', $activity->id)->delete();
+                \support\Log::info('Deleted old VIP configs', ['deleted_count' => $deletedCount]);
 
                 // 创建新的VIP配置
+                $createdCount = 0;
                 foreach ($vipConfigs as $config) {
                     if (isset($config['vip_level_id']) && isset($config['bet_amount_required']) && isset($config['ticket_count'])) {
-                        LotteryTicketVipConfig::create([
-                            'activity_id' => $activity->id,
-                            'vip_level_id' => $config['vip_level_id'],
-                            'bet_amount_required' => $config['bet_amount_required'] ?? 0,
-                            'ticket_count' => $config['ticket_count'] ?? 1,
-                            'status' => LotteryTicketVipConfig::STATUS_ENABLED,
-                        ]);
+                        try {
+                            LotteryTicketVipConfig::create([
+                                'activity_id' => $activity->id,
+                                'vip_level_id' => $config['vip_level_id'],
+                                'bet_amount_required' => $config['bet_amount_required'] ?? 0,
+                                'ticket_count' => $config['ticket_count'] ?? 1,
+                                'status' => LotteryTicketVipConfig::STATUS_ENABLED,
+                            ]);
+                            $createdCount++;
+                        } catch (\Exception $e) {
+                            \support\Log::error('Failed to create VIP config', [
+                                'error' => $e->getMessage(),
+                                'config' => $config
+                            ]);
+                        }
                     }
                 }
+                \support\Log::info('Created VIP configs', ['created_count' => $createdCount]);
             }
 
             Db::commit();
