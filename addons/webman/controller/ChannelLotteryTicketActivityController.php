@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
+use addons\webman\model\VipLevel;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -25,9 +26,23 @@ class ChannelLotteryTicketActivityController
      */
     public function index()
     {
+        $departmentId = Admin::user()->department_id;
+
+        // 获取当前渠道的VIP等级列表
+        $vipLevels = VipLevel::query()
+            ->where(function ($query) use ($departmentId) {
+                $query->where('department_id', $departmentId)
+                    ->orWhere('department_id', 0); // 包含全局等级
+            })
+            ->where('status', VipLevel::STATUS_ENABLED)
+            ->orderBy('sort', 'asc')
+            ->get(['id', 'name', 'sort'])
+            ->toArray();
+
         // 使用自定义 Vue 组件展示活动面板
         return admin_view(plugin()->webman->getPath() . '/views/lottery_ticket_activities.vue')->attrs([
-            'department_id' => Admin::user()->department_id,
+            'department_id' => $departmentId,
+            'vip_levels' => $vipLevels,
             'trans' => [
                 'createActivity' => admin_trans('lottery_ticket.action.create'),
                 'refresh' => admin_trans('common.refresh'),
@@ -140,20 +155,19 @@ class ChannelLotteryTicketActivityController
             return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
         }
 
-        // 格式化奖品等级数据
+        // 格式化奖品等级数据(仅现金奖励)
         $activity->prize_levels = $activity->prizeLevels->map(function ($level) {
             return [
                 'id' => $level->id,
                 'level_rank' => $level->level_rank,
                 'level_name' => $level->level_name,
-                'prize_type' => $level->prize_type,
                 'prize_amount' => $level->prize_amount,
-                'prize_item_name' => $level->prize_item_name,
-                'prize_count' => $level->prize_count,
                 'win_probability' => $level->win_probability,
-                'description' => $level->description ?? '',
             ];
         })->toArray();
+
+        // TODO: 获取VIP等级配置
+        $activity->vip_configs = [];
 
         return jsonSuccessResponse('success', $activity->toArray());
     }
@@ -256,7 +270,7 @@ class ChannelLotteryTicketActivityController
                 ]);
             }
 
-            // 保存奖品等级
+            // 保存奖品等级(只支持现金奖励)
             if (!empty($prizeLevels)) {
                 // 删除旧的奖品等级
                 LotteryTicketPrizeLevel::where('activity_id', $activity->id)->delete();
@@ -267,16 +281,19 @@ class ChannelLotteryTicketActivityController
                         'activity_id' => $activity->id,
                         'level_rank' => $level['level_rank'] ?? ($index + 1),
                         'level_name' => $this->getLevelName($level['level_rank'] ?? ($index + 1)),
-                        'prize_type' => $level['prize_type'] ?? 'cash',
                         'prize_amount' => $level['prize_amount'] ?? 0,
-                        'prize_item_name' => $level['prize_item_name'] ?? '',
-                        'prize_count' => $level['prize_count'] ?? 0,
                         'win_probability' => $level['win_probability'] ?? 0,
-                        'description' => $level['description'] ?? '',
                         'sort_order' => $index + 1,
                         'status' => LotteryTicketPrizeLevel::STATUS_ENABLED,
                     ]);
                 }
+            }
+
+            // 保存VIP等级配置
+            $vipConfigs = request()->input('vip_configs', []);
+            if (!empty($vipConfigs)) {
+                // TODO: 保存到 lottery_ticket_vip_config 表
+                // 等待创建对应的模型后实现
             }
 
             Db::commit();

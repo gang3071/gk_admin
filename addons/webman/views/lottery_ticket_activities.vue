@@ -47,7 +47,6 @@
             class="activity-card"
             :class="getCardClass(activity)"
         >
-          <!-- 卡片头部 -->
           <template #title>
             <div class="card-title">
               <a-tag :color="getStatusColor(activity.status)">
@@ -57,7 +56,6 @@
             </div>
           </template>
 
-          <!-- 卡片操作按钮 -->
           <template #extra>
             <a-dropdown :trigger="['click']">
               <a-button type="text" size="small">
@@ -82,9 +80,7 @@
             </a-dropdown>
           </template>
 
-          <!-- 卡片内容 -->
           <div class="activity-content">
-            <!-- 活动描述 -->
             <div class="description" v-if="activity.description">
               <a-typography-paragraph
                   :ellipsis="{ rows: 2, expandable: false }"
@@ -94,7 +90,6 @@
               </a-typography-paragraph>
             </div>
 
-            <!-- 活动时间 -->
             <div class="time-info">
               <div class="time-item">
                 <clock-circle-outlined style="margin-right: 4px; color: #52c41a;"/>
@@ -108,7 +103,6 @@
               </div>
             </div>
 
-            <!-- 统计信息 -->
             <a-divider style="margin: 12px 0;"/>
             <a-row :gutter="8">
               <a-col :span="12">
@@ -135,7 +129,6 @@
               </a-col>
             </a-row>
 
-            <!-- 使用率进度条 -->
             <div style="margin-top: 12px;">
               <div style="margin-bottom: 4px; font-size: 12px; color: #666;">
                 {{ trans.usageRate }}: {{ getUsageRate(activity) }}%
@@ -147,7 +140,6 @@
               />
             </div>
 
-            <!-- 奖品配置状态 -->
             <a-alert
                 v-if="!activity.has_prize_config"
                 :message="trans.noPrizeConfig"
@@ -168,7 +160,7 @@
     <a-drawer
         v-model:visible="formVisible"
         :title="formMode === 'create' ? trans.createActivity : trans.editActivity"
-        width="600"
+        width="720"
         :body-style="{ paddingBottom: '80px' }"
         @close="handleFormClose"
     >
@@ -217,11 +209,57 @@
           </a-col>
         </a-row>
 
+        <!-- VIP等级打码量配置 -->
+        <a-divider>VIP等级打码量配置</a-divider>
+
+        <a-alert
+            message="为每个VIP等级配置达到指定打码量后发放的摸奖券数量"
+            type="info"
+            show-icon
+            style="margin-bottom: 16px;"
+        />
+
+        <div v-for="(config, index) in formData.vip_configs" :key="index" class="vip-config-item">
+          <a-row :gutter="12">
+            <a-col :span="8">
+              <a-form-item label="VIP等级">
+                <a-select v-model:value="config.vip_level_id" placeholder="选择VIP等级" disabled>
+                  <a-select-option v-for="vipLevel in vip_levels" :key="vipLevel.id" :value="vipLevel.id">
+                    {{ vipLevel.name }}
+                  </a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item label="所需打码量">
+                <a-input-number
+                    v-model:value="config.bet_amount_required"
+                    :min="0"
+                    :precision="2"
+                    style="width: 100%;"
+                    placeholder="0.00"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="8">
+              <a-form-item label="发放券数">
+                <a-input-number
+                    v-model:value="config.ticket_count"
+                    :min="1"
+                    :precision="0"
+                    style="width: 100%;"
+                    placeholder="1"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </div>
+
         <!-- 奖品等级配置 -->
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
-            :message="trans.prizeLevelHint"
+            message="配置奖品等级和中奖概率(仅现金奖励),概率总和不能超过100%"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -243,48 +281,23 @@
             </template>
 
             <a-row :gutter="12">
-              <a-col :span="12">
+              <a-col :span="8">
                 <a-form-item :label="trans.levelRank">
-                  <a-select v-model:value="level.level_rank" :placeholder="trans.selectLevelRank">
-                    <a-select-option v-for="i in 10" :key="i" :value="i">
+                  <a-select v-model:value="level.level_rank" :placeholder="trans.selectLevelRank" @change="handleLevelRankChange(index)">
+                    <a-select-option v-for="i in 10" :key="i" :value="i" :disabled="isLevelRankSelected(i, index)">
                       {{ getLevelName(i) }}
                     </a-select-option>
                   </a-select>
                 </a-form-item>
               </a-col>
-              <a-col :span="12">
-                <a-form-item :label="trans.prizeType">
-                  <a-select v-model:value="level.prize_type" :placeholder="trans.selectPrizeType">
-                    <a-select-option value="cash">{{ trans.prizeTypeCash }}</a-select-option>
-                    <a-select-option value="bonus">{{ trans.prizeTypeBonus }}</a-select-option>
-                    <a-select-option value="points">{{ trans.prizeTypePoints }}</a-select-option>
-                    <a-select-option value="item">{{ trans.prizeTypeItem }}</a-select-option>
-                  </a-select>
-                </a-form-item>
-              </a-col>
-            </a-row>
-
-            <a-row :gutter="12">
               <a-col :span="8">
-                <a-form-item :label="trans.prizeAmount" v-if="level.prize_type !== 'item'">
+                <a-form-item label="奖励金额">
                   <a-input-number
                       v-model:value="level.prize_amount"
                       :min="0"
                       :precision="2"
                       style="width: 100%;"
-                  />
-                </a-form-item>
-                <a-form-item :label="trans.itemName" v-else>
-                  <a-input v-model:value="level.prize_item_name"/>
-                </a-form-item>
-              </a-col>
-              <a-col :span="8">
-                <a-form-item :label="trans.prizeCount">
-                  <a-input-number
-                      v-model:value="level.prize_count"
-                      :min="0"
-                      :precision="0"
-                      style="width: 100%;"
+                      placeholder="0.00"
                   />
                 </a-form-item>
               </a-col>
@@ -301,14 +314,6 @@
                 </a-form-item>
               </a-col>
             </a-row>
-
-            <a-form-item :label="trans.description">
-              <a-textarea
-                  v-model:value="level.description"
-                  :rows="2"
-                  :maxlength="200"
-              />
-            </a-form-item>
           </a-card>
         </div>
 
@@ -382,18 +387,10 @@
         >
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'level_name'">
-              {{ getLevelName(record.level_rank) }}
+              {{ record.level_name }}
             </template>
-            <template v-if="column.key === 'prize_type'">
-              {{ getPrizeTypeText(record.prize_type) }}
-            </template>
-            <template v-if="column.key === 'prize_display'">
-              <template v-if="record.prize_type === 'item'">
-                {{ record.prize_item_name }}
-              </template>
-              <template v-else>
-                {{ record.prize_amount }}
-              </template>
+            <template v-if="column.key === 'prize_amount'">
+              {{ record.prize_amount }}
             </template>
           </template>
         </a-table>
@@ -407,6 +404,10 @@ export default {
   name: 'LotteryTicketActivities',
   props: {
     department_id: Number,
+    vip_levels: {
+      type: Array,
+      default: () => []
+    },
     trans: {
       type: Object,
       default: () => ({})
@@ -427,6 +428,7 @@ export default {
         description: '',
         start_time: null,
         end_time: null,
+        vip_configs: [],
         prize_levels: []
       },
       formRules: {
@@ -442,10 +444,8 @@ export default {
         ]
       },
       prizeColumns: [
-        {title: '等级', key: 'level_name', dataIndex: 'level_rank'},
-        {title: '奖品类型', key: 'prize_type', dataIndex: 'prize_type'},
-        {title: '奖品', key: 'prize_display'},
-        {title: '数量', dataIndex: 'prize_count'},
+        {title: '等级', key: 'level_name', dataIndex: 'level_name'},
+        {title: '奖励金额', key: 'prize_amount', dataIndex: 'prize_amount'},
         {title: '概率(%)', dataIndex: 'win_probability'},
       ],
       levelNames: [
@@ -484,7 +484,7 @@ export default {
         if (res.code === 200) {
           this.activities = res.data;
         } else {
-          this.$message.error(res.message || '获取活动列表失败');
+          this.$message.error(res.message || res.msg || '获取活动列表失败');
         }
       } catch (error) {
         this.$message.error('获取活动列表失败');
@@ -502,11 +502,21 @@ export default {
     // 显示创建表单
     showCreateForm() {
       this.formMode = 'create';
+
+      // 初始化VIP配置
+      const vipConfigs = this.vip_levels.map(vipLevel => ({
+        vip_level_id: vipLevel.id,
+        vip_level_name: vipLevel.name,
+        bet_amount_required: 0,
+        ticket_count: 1
+      }));
+
       this.formData = {
         name: '',
         description: '',
         start_time: null,
         end_time: null,
+        vip_configs: vipConfigs,
         prize_levels: []
       };
       this.formVisible = true;
@@ -549,7 +559,6 @@ export default {
 
     // 编辑活动
     async editActivity(activity) {
-      // 先获取完整数据
       try {
         const res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivityDetail',
@@ -566,6 +575,7 @@ export default {
             description: data.description,
             start_time: this.$dayjs(data.start_time),
             end_time: this.$dayjs(data.end_time),
+            vip_configs: data.vip_configs || [],
             prize_levels: data.prize_levels || []
           };
           this.formVisible = true;
@@ -579,7 +589,7 @@ export default {
     closeActivity(activity) {
       this.$confirm({
         title: '确认关闭活动？',
-        content: '关闭后活动将立即停止，已发放的摸奖券将无法使用',
+        content: '关闭后活动将立即停止,已发放的摸奖券将无法使用',
         okText: '确认',
         cancelText: '取消',
         onOk: async () => {
@@ -594,7 +604,7 @@ export default {
               this.$message.success('活动已关闭');
               this.fetchActivities();
             } else {
-              this.$message.error(res.message || '关闭活动失败');
+              this.$message.error(res.message || res.msg || '关闭活动失败');
             }
           } catch (error) {
             this.$message.error('关闭活动失败');
@@ -611,19 +621,29 @@ export default {
       }
 
       this.formData.prize_levels.push({
-        level_rank: this.formData.prize_levels.length + 1,
-        prize_type: 'cash',
+        level_rank: null,
+        level_name: '',
         prize_amount: 0,
-        prize_item_name: '',
-        prize_count: 0,
-        win_probability: 0,
-        description: ''
+        win_probability: 0
       });
     },
 
     // 移除奖品等级
     removePrizeLevel(index) {
       this.formData.prize_levels.splice(index, 1);
+    },
+
+    // 等级排名变化时更新等级名称
+    handleLevelRankChange(index) {
+      const rank = this.formData.prize_levels[index].level_rank;
+      this.formData.prize_levels[index].level_name = this.getLevelName(rank);
+    },
+
+    // 检查等级排名是否已被选择
+    isLevelRankSelected(rank, currentIndex) {
+      return this.formData.prize_levels.some((level, index) => {
+        return index !== currentIndex && level.level_rank === rank;
+      });
     },
 
     // 获取概率总和
@@ -667,7 +687,7 @@ export default {
           this.formVisible = false;
           this.fetchActivities();
         } else {
-          this.$message.error(res.message || '操作失败');
+          this.$message.error(res.message || res.msg || '操作失败');
         }
       } catch (error) {
         console.error(error);
@@ -727,22 +747,11 @@ export default {
 
     formatTime(time) {
       if (!time) return '';
-      // 使用 dayjs 格式化时间
       return this.$dayjs(time).format('YYYY-MM-DD HH:mm');
     },
 
     getLevelName(rank) {
       return this.levelNames[rank] || `等级${rank}`;
-    },
-
-    getPrizeTypeText(type) {
-      const types = {
-        cash: this.trans.prizeTypeCash,
-        bonus: this.trans.prizeTypeBonus,
-        points: this.trans.prizeTypePoints,
-        item: this.trans.prizeTypeItem
-      };
-      return types[type] || type;
     }
   }
 };
@@ -825,6 +834,13 @@ export default {
 
 .time-item .value {
   color: #333;
+}
+
+.vip-config-item {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #f5f5f5;
+  border-radius: 4px;
 }
 
 .prize-level-item {
