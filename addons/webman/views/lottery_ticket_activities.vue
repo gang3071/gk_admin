@@ -367,6 +367,29 @@
             </template>
           </template>
         </a-table>
+
+        <!-- VIP等级配置列表 -->
+        <a-divider>VIP等级配置</a-divider>
+        <a-table
+            v-if="currentActivity.vip_configs && currentActivity.vip_configs.length > 0"
+            :columns="vipConfigColumns"
+            :data-source="currentActivity.vip_configs"
+            :pagination="false"
+            size="small"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'vip_level_name'">
+              {{ getVipLevelName(record.vip_level_id) }}
+            </template>
+            <template v-if="column.key === 'bet_amount_required'">
+              {{ record.bet_amount_required }}
+            </template>
+            <template v-if="column.key === 'ticket_count'">
+              {{ record.ticket_count }}
+            </template>
+          </template>
+        </a-table>
+        <a-empty v-else description="未配置VIP等级" />
       </template>
     </a-drawer>
   </div>
@@ -419,6 +442,11 @@ export default {
       prizeColumns: [
         {title: '等级', key: 'level_name', dataIndex: 'level_name'},
         {title: '奖励金额', key: 'prize_amount', dataIndex: 'prize_amount'},
+      ],
+      vipConfigColumns: [
+        {title: 'VIP等级', key: 'vip_level_name', dataIndex: 'vip_level_id'},
+        {title: '所需打码量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
+        {title: '发放券数', key: 'ticket_count', dataIndex: 'ticket_count'},
       ],
       levelNames: [
         '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
