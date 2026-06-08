@@ -280,13 +280,6 @@ class ChannelLotteryTicketActivityController
                         'prize_amount' => $level['prize_amount'] ?? 0,
                         'sort_order' => $index + 1,
                         'status' => LotteryTicketPrizeLevel::STATUS_ENABLED,
-                        // 临时字段（待迁移后删除）
-                        'prize_type' => LotteryTicketPrizeLevel::PRIZE_TYPE_CASH,
-                        'prize_item_name' => '',
-                        'prize_item_image' => '',
-                        'prize_count' => 0,
-                        'description' => '',
-                        'win_probability' => 0,
                     ]);
                 }
             }
