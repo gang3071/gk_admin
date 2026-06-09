@@ -125,30 +125,65 @@ class LotteryTicketBetProgressService
         $results = [];
 
         foreach ($progressRecords as $progress) {
-            // 检查活动是否仍在进行中
+            // 检查活动是否仍在进行中（支持两种状态：进行中、打码中）
             $activity = $progress->activity;
-            if (!$activity || $activity->status != LotteryTicketActivity::STATUS_ONGOING) {
+            if (!$activity || !in_array($activity->status, [
+                LotteryTicketActivity::STATUS_ONGOING,
+                LotteryTicketActivity::STATUS_BETTING,
+            ])) {
                 continue;
             }
 
+            // 统一事务管理（外层）
             Db::beginTransaction();
             try {
-                // 更新打码量
-                $oldBetAmount = $progress->current_bet_amount;
+                // 1. 更新打码量
                 $progress->current_bet_amount += $chipAmount;
 
-                // 检查是否需要发券
+                // 2. 检查并发券（在同一事务内）
+                $issuedCount = 0;
+                $firstTicketNo = null;
+
                 if ($progress->canIssueTickets()) {
                     $ticketsToIssue = $progress->getTicketsToIssue();
 
-                    // 发放摸奖券
-                    $issuedCount = self::issueTickets($progress, $ticketsToIssue);
+                    // 发放摸奖券（内部无事务）
+                    $issueResult = self::issueTickets($progress, $ticketsToIssue);
+                    $issuedCount = $issueResult['issued_count'];
+                    $firstTicketNo = $issueResult['first_ticket_no'];
 
                     // 更新周期数和发券数
-                    $newCycles = floor($progress->current_bet_amount / $progress->bet_amount_required);
-                    $progress->cycles_completed = $newCycles;
-                    $progress->total_tickets_issued += $issuedCount;
-                    $progress->last_issued_at = date('Y-m-d H:i:s');
+                    if ($issuedCount > 0) {
+                        $newCycles = floor($progress->current_bet_amount / $progress->bet_amount_required);
+                        $progress->cycles_completed = $newCycles;
+                        $progress->total_tickets_issued += $issuedCount;
+                        $progress->last_issued_at = date('Y-m-d H:i:s');
+                    }
+                }
+
+                // 3. 保存进度
+                $progress->save();
+
+                // 统一提交
+                Db::commit();
+
+                // 4. 事务外推送（不阻塞事务）
+                if ($issuedCount > 0 && $firstTicketNo) {
+                    try {
+                        // 查询第一张券用于推送
+                        $firstTicket = LotteryTicket::where('activity_id', $activity->id)
+                            ->where('player_id', $progress->player_id)
+                            ->where('ticket_no', $firstTicketNo)
+                            ->first();
+
+                        if ($firstTicket) {
+                            LotteryTicketPushService::pushTicketIssued($firstTicket, $issuedCount);
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('推送通知失败', [
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
 
                     $results[] = [
                         'activity_id' => $progress->activity_id,
@@ -158,15 +193,15 @@ class LotteryTicketBetProgressService
                     ];
                 }
 
-                $progress->save();
-
-                Db::commit();
             } catch (\Exception $e) {
                 Db::rollBack();
-                Log::error('更新打码进度失败: ' . $e->getMessage(), [
+                Log::error('更新打码进度失败', [
                     'player_id' => $playerId,
                     'activity_id' => $progress->activity_id,
-                    'chip_amount' => $chipAmount
+                    'chip_amount' => $chipAmount,
+                    'error' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
                 ]);
             }
         }
@@ -188,7 +223,10 @@ class LotteryTicketBetProgressService
     protected static function createProgressForPlayer(int $activityId, int $playerId): ?LotteryTicketBetProgress
     {
         $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity || $activity->status != LotteryTicketActivity::STATUS_ONGOING) {
+        if (!$activity || !in_array($activity->status, [
+            LotteryTicketActivity::STATUS_ONGOING,
+            LotteryTicketActivity::STATUS_BETTING,
+        ])) {
             return null;
         }
 
@@ -231,111 +269,84 @@ class LotteryTicketBetProgressService
      * - 第15张券：000014
      * - 最后1张券：999999
      *
+     * 重要：本方法不开启事务，由调用方统一管理事务
+     *
      * @param LotteryTicketBetProgress $progress 进度记录
      * @param int $count 发放数量
-     * @return int 实际发放数量
+     * @return array ['issued_count' => int, 'first_ticket_no' => string|null]
      */
-    protected static function issueTickets(LotteryTicketBetProgress $progress, int $count): int
+    protected static function issueTickets(LotteryTicketBetProgress $progress, int $count): array
     {
         if ($count <= 0) {
-            return 0;
+            return ['issued_count' => 0, 'first_ticket_no' => null];
         }
 
         $activity = $progress->activity;
         if (!$activity) {
-            return 0;
+            return ['issued_count' => 0, 'first_ticket_no' => null];
         }
 
-        // 使用数据库锁防止并发发券导致券号重复
-        Db::beginTransaction();
-        try {
-            // 锁定活动记录
-            $activity = LotteryTicketActivity::where('id', $activity->id)
-                ->lockForUpdate()
-                ->first();
+        // 锁定活动记录（在外层事务内）
+        $activity = LotteryTicketActivity::where('id', $activity->id)
+            ->lockForUpdate()
+            ->first();
 
-            // 检查是否还有足够的券号
-            $currentNo = $activity->current_ticket_no;
-            $maxNo = $activity->max_ticket_no;
+        // 检查是否还有足够的券号
+        $currentNo = $activity->current_ticket_no;
+        $maxNo = $activity->max_ticket_no;
 
-            if ($currentNo >= $maxNo) {
-                Log::warning('摸奖券已发放完毕', [
-                    'activity_id' => $activity->id,
-                    'current' => $currentNo,
-                    'max' => $maxNo,
-                ]);
-                Db::rollBack();
-                return 0;
+        if ($currentNo >= $maxNo) {
+            Log::warning('摸奖券已发放完毕', [
+                'activity_id' => $activity->id,
+                'current' => $currentNo,
+                'max' => $maxNo,
+            ]);
+            return ['issued_count' => 0, 'first_ticket_no' => null];
+        }
+
+        // 计算实际可发放数量
+        $availableCount = $maxNo - $currentNo;
+        $actualCount = min($count, $availableCount);
+
+        // 批量准备券数据
+        $ticketsData = [];
+        $now = date('Y-m-d H:i:s');
+        $firstTicketNo = null;
+
+        for ($i = 0; $i < $actualCount; $i++) {
+            $ticketNo = str_pad($currentNo + $i, 6, '0', STR_PAD_LEFT);
+
+            if ($i === 0) {
+                $firstTicketNo = $ticketNo;
             }
 
-            // 计算实际可发放数量
-            $availableCount = $maxNo - $currentNo;
-            $actualCount = min($count, $availableCount);
-
-            // 批量准备券数据
-            $ticketsData = [];
-            $now = date('Y-m-d H:i:s');
-
-            for ($i = 0; $i < $actualCount; $i++) {
-                $ticketNo = str_pad($currentNo + $i, 6, '0', STR_PAD_LEFT);
-
-                $ticketsData[] = [
-                    'activity_id' => $progress->activity_id,
-                    'player_id' => $progress->player_id,
-                    'department_id' => $progress->department_id,
-                    'ticket_no' => $ticketNo,
-                    'source' => 'betting',
-                    'status' => LotteryTicket::STATUS_UNUSED,
-                    'expires_at' => $activity->end_time,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
-            }
-
-            // 批量插入摸奖券
-            if (!empty($ticketsData)) {
-                LotteryTicket::insert($ticketsData);
-            }
-
-            // 更新活动的当前券号
-            $activity->current_ticket_no = $currentNo + $actualCount;
-            $activity->total_tickets += $actualCount;
-            $activity->save();
-
-            Db::commit();
-
-            // 发送推送通知（事务外执行）
-            if ($actualCount > 0) {
-                try {
-                    $firstTicket = LotteryTicket::where('activity_id', $activity->id)
-                        ->where('player_id', $progress->player_id)
-                        ->where('ticket_no', str_pad($currentNo, 6, '0', STR_PAD_LEFT))
-                        ->first();
-
-                    if ($firstTicket) {
-                        LotteryTicketPushService::pushTicketIssued($firstTicket, $actualCount);
-                    }
-                } catch (\Exception $e) {
-                    Log::warning('推送通知失败', [
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            return $actualCount;
-
-        } catch (\Exception $e) {
-            Db::rollBack();
-            Log::error('发放摸奖券失败', [
+            $ticketsData[] = [
                 'activity_id' => $progress->activity_id,
                 'player_id' => $progress->player_id,
-                'count' => $count,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-            ]);
-            return 0;
+                'department_id' => $progress->department_id,
+                'ticket_no' => $ticketNo,
+                'source' => 'betting',
+                'status' => LotteryTicket::STATUS_UNUSED,
+                'expires_at' => $activity->end_time,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
         }
+
+        // 批量插入摸奖券
+        if (!empty($ticketsData)) {
+            LotteryTicket::insert($ticketsData);
+        }
+
+        // 更新活动的当前券号
+        $activity->current_ticket_no = $currentNo + $actualCount;
+        $activity->total_tickets += $actualCount;
+        $activity->save();
+
+        return [
+            'issued_count' => $actualCount,
+            'first_ticket_no' => $firstTicketNo,
+        ];
     }
 
     /**
