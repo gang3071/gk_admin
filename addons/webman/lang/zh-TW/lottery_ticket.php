@@ -179,5 +179,14 @@ return [
         'time_required' => '請選擇活動時間',
         'invalid_time' => '結束時間必須大於開始時間',
         'cannot_edit_started' => '只能編輯未開始的活動',
+        'invalid_file' => '無效的文件',
+        'invalid_image_type' => '只支持 jpg、png 格式圖片',
+        'file_too_large' => '文件大小不能超過2MB',
+        'invalid_params' => '參數錯誤',
+    ],
+
+    // 帮助文本
+    'help' => [
+        'cover_image' => '建議尺寸：750x400px，支持jpg、png格式，文件大小不超過2MB',
     ],
 ];

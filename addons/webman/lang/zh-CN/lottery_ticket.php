@@ -179,5 +179,9 @@ return [
         'time_required' => '请选择活动时间',
         'invalid_time' => '结束时间必须大于开始时间',
         'cannot_edit_started' => '只能编辑未开始的活动',
+        'invalid_file' => '无效的文件',
+        'invalid_image_type' => '只支持 jpg、png 格式图片',
+        'file_too_large' => '文件大小不能超过2MB',
+        'invalid_params' => '参数错误',
     ],
 ];

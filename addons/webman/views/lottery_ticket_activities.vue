@@ -185,9 +185,18 @@
         </a-form-item>
 
         <a-form-item label="活动封面图片">
-          <a-input v-model:value="formData.cover_image" placeholder="请输入图片URL地址"/>
-          <div style="margin-top: 8px; color: #999; font-size: 12px;">
-            建议尺寸：750x400px，支持jpg、png格式
+          <input
+              type="file"
+              accept="image/jpg,image/jpeg,image/png"
+              @change="handleCoverUpload"
+              ref="coverInput"
+              style="display: block; margin-bottom: 8px;"
+          />
+          <div style="margin-top: 4px; margin-bottom: 8px; color: #999; font-size: 12px;">
+            建议尺寸：750x400px，支持jpg、png格式，文件大小不超过2MB
+          </div>
+          <div v-if="uploading" style="margin-top: 8px;">
+            <a-spin size="small"/> 上传中...
           </div>
           <img
               v-if="formData.cover_image"
@@ -432,6 +441,7 @@ export default {
       formMode: 'create',
       currentActivity: null,
       submitting: false,
+      uploading: false,
       formData: {
         name: '',
         description: '',
@@ -485,6 +495,52 @@ export default {
     this.fetchActivities();
   },
   methods: {
+    // 上传封面图片
+    async handleCoverUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // 验证文件类型
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+      if (!allowedTypes.includes(file.type)) {
+        this.$message.error('只支持 jpg、png 格式图片');
+        return;
+      }
+
+      // 验证文件大小
+      if (file.size > 2 * 1024 * 1024) {
+        this.$message.error('文件大小不能超过2MB');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      this.uploading = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
+          method: 'post',
+          data: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        if (res.code === 0) {
+          this.formData.cover_image = res.data.url;
+          this.$message.success('图片上传成功');
+        } else {
+          this.$message.error(res.msg || '上传失败');
+        }
+      } catch (error) {
+        this.$message.error('上传失败');
+        console.error(error);
+      } finally {
+        this.uploading = false;
+      }
+    },
+
     // 获取活动列表
     async fetchActivities() {
       this.loading = true;

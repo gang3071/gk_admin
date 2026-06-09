@@ -514,4 +514,53 @@ class ChannelLotteryTicketActivityController
 
         return jsonSuccessResponse(admin_trans('lottery_ticket.message.close_success'));
     }
+
+    /**
+     * 上传活动封面图片
+     * @auth true
+     * @group channel
+     * @return mixed
+     */
+    public function uploadCover()
+    {
+        $file = request()->file('file');
+
+        if (!$file || !$file->isValid()) {
+            return json(['code' => 400, 'msg' => admin_trans('lottery_ticket.error.invalid_file')]);
+        }
+
+        // 验证文件类型
+        $ext = strtolower($file->getUploadExtension());
+        $allowedExts = ['jpg', 'jpeg', 'png'];
+        if (!in_array($ext, $allowedExts)) {
+            return json(['code' => 400, 'msg' => admin_trans('lottery_ticket.error.invalid_image_type')]);
+        }
+
+        // 验证文件大小 (2MB)
+        if ($file->getSize() > 2 * 1024 * 1024) {
+            return json(['code' => 400, 'msg' => admin_trans('lottery_ticket.error.file_too_large')]);
+        }
+
+        try {
+            // 上传文件
+            $savePath = 'lottery_covers/' . date('Ym');
+            $fileName = uniqid() . '_' . time() . '.' . $ext;
+
+            // 移动文件到上传目录
+            $file->move(public_path() . '/upload/' . $savePath, $fileName);
+
+            $url = '/upload/' . $savePath . '/' . $fileName;
+
+            return json([
+                'code' => 0,
+                'msg' => admin_trans('lottery_ticket.message.upload_success'),
+                'data' => [
+                    'url' => $url,
+                    'full_url' => request()->host() . $url
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'msg' => $e->getMessage()]);
+        }
+    }
 }
