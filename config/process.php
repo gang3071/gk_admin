@@ -46,4 +46,12 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 摸奖券打码进度扫描任务（定时扫描增量游戏记录，批量更新进度）
+    // 用于处理 gk_work 批量插入的游戏记录
+    'lottery_bet_progress_scan' => [
+        'handler' => process\LotteryBetProgressScanTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];
