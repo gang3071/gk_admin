@@ -134,19 +134,31 @@
               </template>
             </a-statistic>
 
-            <!-- 编辑按钮 -->
-            <a-button
-                v-if="activity.status === 0"
-                type="primary"
-                block
-                style="margin-top: 12px;"
-                @click="editActivity(activity)"
-            >
-              <template #icon>
-                <edit-outlined/>
-              </template>
-              {{ trans.edit }}
-            </a-button>
+            <!-- 操作按钮 -->
+            <a-space direction="vertical" style="width: 100%; margin-top: 12px;">
+              <a-button
+                  v-if="activity.status === 0"
+                  type="primary"
+                  block
+                  @click="editActivity(activity)"
+              >
+                <template #icon>
+                  <edit-outlined/>
+                </template>
+                {{ trans.edit }}
+              </a-button>
+
+              <a-button
+                  type="default"
+                  block
+                  @click="showTicketList(activity)"
+              >
+                <template #icon>
+                  <unordered-list-outlined/>
+                </template>
+                查看发放列表
+              </a-button>
+            </a-space>
 
             <a-alert
                 v-if="!activity.has_prize_config"
@@ -481,6 +493,35 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 发放列表抽屉 -->
+    <a-drawer
+        v-model:visible="ticketListVisible"
+        title="摸奖券发放列表"
+        width="800px"
+        :body-style="{ padding: '16px' }"
+    >
+      <a-table
+          :columns="ticketColumns"
+          :data-source="ticketList"
+          :loading="ticketLoading"
+          :pagination="ticketPagination"
+          @change="handleTicketTableChange"
+          size="small"
+          :scroll="{ x: 800 }"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'status'">
+            <a-tag :color="getTicketStatusColor(record.status)">
+              {{ getTicketStatusText(record.status) }}
+            </a-tag>
+          </template>
+          <template v-if="column.key === 'source'">
+            {{ getSourceText(record.source) }}
+          </template>
+        </template>
+      </a-table>
+    </a-drawer>
   </div>
 </template>
 
@@ -506,12 +547,22 @@ export default {
       formVisible: false,
       detailVisible: false,
       recordVisible: false,
+      ticketListVisible: false,
       formMode: 'create',
       currentActivity: null,
       submitting: false,
       uploading: false,
       recordSubmitting: false,
       recordPrizeLevels: [],
+      ticketList: [],
+      ticketLoading: false,
+      ticketPagination: {
+        current: 1,
+        pageSize: 20,
+        total: 0,
+        showSizeChanger: true,
+        showTotal: (total) => `共 ${total} 条`,
+      },
       formData: {
         name: '',
         description: '',
@@ -556,6 +607,15 @@ export default {
         {title: 'VIP等级', key: 'vip_level_name', dataIndex: 'vip_level_id'},
         {title: '所需打码量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
         {title: '发放券数', key: 'ticket_count', dataIndex: 'ticket_count'},
+      ],
+      ticketColumns: [
+        {title: '券号', key: 'ticket_no', dataIndex: 'ticket_no', width: 180},
+        {title: '玩家', key: 'player_name', dataIndex: 'player_name', width: 120},
+        {title: '来源', key: 'source', dataIndex: 'source', width: 100},
+        {title: '状态', key: 'status', dataIndex: 'status', width: 100},
+        {title: '发放时间', key: 'created_at', dataIndex: 'created_at', width: 160},
+        {title: '使用时间', key: 'used_at', dataIndex: 'used_at', width: 160},
+        {title: '过期时间', key: 'expired_at', dataIndex: 'expired_at', width: 160},
       ],
       levelNames: [
         '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
@@ -1057,6 +1117,78 @@ export default {
     getVipLevelName(vipLevelId) {
       const vipLevel = this.vip_levels.find(v => v.id === vipLevelId);
       return vipLevel ? vipLevel.name : `VIP${vipLevelId}`;
+    },
+
+    // 显示发放列表
+    async showTicketList(activity) {
+      this.currentActivity = activity;
+      this.ticketListVisible = true;
+      this.ticketPagination.current = 1;
+      await this.fetchTicketList(activity.id);
+    },
+
+    // 获取发放列表
+    async fetchTicketList(activityId, page = 1) {
+      this.ticketLoading = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getTicketList',
+          method: 'post',
+          data: {
+            activity_id: activityId,
+            page: page,
+            size: this.ticketPagination.pageSize
+          }
+        });
+
+        if (res.code === 200) {
+          this.ticketList = res.data.list || [];
+          this.ticketPagination.total = res.data.total || 0;
+          this.ticketPagination.current = page;
+        } else {
+          this.$message.error(res.message || res.msg || '获取列表失败');
+        }
+      } catch (error) {
+        this.$message.error('获取列表失败');
+        console.error(error);
+      } finally {
+        this.ticketLoading = false;
+      }
+    },
+
+    // 表格分页变化
+    handleTicketTableChange(pagination) {
+      this.fetchTicketList(this.currentActivity.id, pagination.current);
+    },
+
+    // 获取券状态文本
+    getTicketStatusText(status) {
+      const statusMap = {
+        0: '未使用',
+        1: '已使用',
+        2: '已过期'
+      };
+      return statusMap[status] || '未知';
+    },
+
+    // 获取券状态颜色
+    getTicketStatusColor(status) {
+      const colorMap = {
+        0: 'green',
+        1: 'default',
+        2: 'red'
+      };
+      return colorMap[status] || 'default';
+    },
+
+    // 获取来源文本
+    getSourceText(source) {
+      const sourceMap = {
+        'recharge': '充值赠送',
+        'activity': '活动赠送',
+        'manual': '手动发放'
+      };
+      return sourceMap[source] || source;
     }
   }
 };

@@ -533,6 +533,66 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
+     * 获取摸奖券发放列表
+     * @auth true
+     * @group channel
+     * @return mixed
+     */
+    public function getTicketList()
+    {
+        $activityId = request()->input('activity_id');
+        $page = request()->input('page', 1);
+        $size = request()->input('size', 20);
+
+        if (!$activityId) {
+            return jsonFailResponse(admin_trans('lottery_ticket.error.invalid_params'), [], 400);
+        }
+
+        $departmentId = Admin::user()->department_id;
+
+        // 验证活动权限
+        $activity = LotteryTicketActivity::query()
+            ->where('id', $activityId)
+            ->where('department_id', $departmentId)
+            ->first();
+
+        if (!$activity) {
+            return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
+        }
+
+        // 获取发放列表
+        $query = \addons\webman\model\LotteryTicket::query()
+            ->where('activity_id', $activityId)
+            ->with(['player:id,name,uuid,phone'])
+            ->orderBy('created_at', 'desc');
+
+        $total = $query->count();
+        $list = $query->forPage($page, $size)->get();
+
+        // 格式化数据
+        $formattedList = $list->map(function ($ticket) {
+            return [
+                'id' => $ticket->id,
+                'ticket_no' => $ticket->ticket_no,
+                'player_name' => $ticket->player ? $ticket->player->name : '-',
+                'player_uuid' => $ticket->player ? $ticket->player->uuid : '-',
+                'source' => $ticket->source,
+                'status' => $ticket->status,
+                'created_at' => $ticket->created_at,
+                'used_at' => $ticket->used_at,
+                'expired_at' => $ticket->expired_at,
+            ];
+        })->toArray();
+
+        return jsonSuccessResponse('success', [
+            'list' => $formattedList,
+            'total' => $total,
+            'page' => $page,
+            'size' => $size,
+        ]);
+    }
+
+    /**
      * 录入中奖记录
      * @auth true
      * @group channel
