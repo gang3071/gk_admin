@@ -141,7 +141,6 @@ class ChannelController
             $grid->column('created_at', admin_trans('channel.fields.create_at'))->align('center');
             $grid->column('status', admin_trans('channel.fields.status'))->switch();
             $grid->column('is_offline', admin_trans('channel.fields.is_offline'))->switch();
-            $grid->column('vip_level_status', admin_trans('channel.fields.vip_level_status'))->switch();
             $grid->column('lang', admin_trans('channel.fields.lang'))->display(function ($val) {
                 return Html::create()->content([
                     admin_config('ui.lang.list')[$val] ?? ''
@@ -206,6 +205,9 @@ class ChannelController
                 }
                 if ($channel->lottery_status == 1) {
                     $channelFunction[] = 'lottery_status';
+                }
+                if ($channel->vip_level_status == 1) {
+                    $channelFunction[] = 'vip_level_status';
                 }
                 $html = Html::create();
                 foreach ($channelFunction as $option) {
@@ -503,6 +505,9 @@ class ChannelController
                 if ($channel->eh_payment_withdraw_status == 1) {
                     $channelFunction[] = 'eh_payment_withdraw_status';
                 }
+                if ($channel->vip_level_status == 1) {
+                    $channelFunction[] = 'vip_level_status';
+                }
             }
             $form->row(function (Form $form) use ($channelFunction) {
                 $form->checkbox('channel_function', admin_trans('channel.fields.channel_function'))
@@ -530,56 +535,43 @@ class ChannelController
                         'status_machine' => admin_trans('channel.fields.status_machine'),
                         'eh_payment_recharge_status' => admin_trans('channel.fields.eh_payment_recharge_status'),
                         'eh_payment_withdraw_status' => admin_trans('channel.fields.eh_payment_withdraw_status'),
+                        'vip_level_status' => admin_trans('channel.fields.vip_level_status'),
                     ])
                     ->help(admin_trans('channel.channel_function_help'))
                     ->when([1], function (Form $form) {
                         $form->text('line_client_id', admin_trans('channel.fields.line_client_id'))
                             ->maxlength('50')
                             ->help(admin_trans('channel.line_client_id_help'));
-                    });
-            });
-
-            // 会员等级开关（放在表单最后）
-            $form->divider(admin_trans('channel.vip_level_section'));
-            $form->switch('vip_level_status', admin_trans('channel.fields.vip_level_status'))
-                ->help(admin_trans('channel.help.vip_level_status'))
-                ->when([1], function (Form $form) {
-                    if ($form->isEdit()) {
-                        // 编辑模式：显示已有的VIP等级供选择启用/禁用
-                        $id = $form->driver()->get('id');
-                        $channel = Channel::find($id);
-                        if ($channel) {
-                            $vipLevels = VipLevel::query()
-                                ->where('department_id', $channel->department_id)
-                                ->orderBy('sort', 'asc')
-                                ->get();
-
-                            if ($vipLevels->count() > 0) {
-                                $vipLevelOptions = [];
-                                $enabledLevelIds = [];
+                    })
+                    ->when(['vip_level_status'], function (Form $form) {
+                        // 获取当前渠道的VIP等级列表
+                        $vipLevelOptions = [];
+                        $enabledLevelIds = [];
+                        if ($form->isEdit()) {
+                            $id = $form->driver()->get('id');
+                            $channel = Channel::find($id);
+                            if ($channel) {
+                                $vipLevels = VipLevel::query()
+                                    ->where('department_id', $channel->department_id)
+                                    ->orderBy('sort', 'asc')
+                                    ->get();
                                 foreach ($vipLevels as $level) {
                                     $vipLevelOptions[$level->id] = $level->name;
                                     if ($level->status == VipLevel::STATUS_ENABLED) {
                                         $enabledLevelIds[] = $level->id;
                                     }
                                 }
-
-                                $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
-                                    ->options($vipLevelOptions)
-                                    ->value($enabledLevelIds)
-                                    ->help(admin_trans('channel.help.vip_levels'));
-                            } else {
-                                // 已有渠道但没有VIP等级，提示需要初始化
-                                $form->desc('vip_levels_notice', admin_trans('channel.fields.vip_levels'))
-                                    ->value('<div style="color: #ff4d4f;">该渠道尚未初始化VIP等级，请先在"VIP等级管理"中创建VIP等级。</div>');
                             }
                         }
-                    } else {
-                        // 创建模式：提示将自动创建10个默认VIP等级
-                        $form->desc('vip_levels_notice', admin_trans('channel.fields.vip_levels'))
-                            ->value('<div style="color: #52c41a;">开启VIP功能后，系统将自动创建10个默认VIP等级（VIP1-VIP10），所有等级默认启用。<br/>创建后可在"VIP等级管理"中进行调整。</div>');
-                    }
-                });
+
+                        if (!empty($vipLevelOptions)) {
+                            $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
+                                ->options($vipLevelOptions)
+                                ->value($enabledLevelIds)
+                                ->help(admin_trans('channel.help.vip_levels'));
+                        }
+                    });
+            });
 
             $form->layout('vertical');
 
@@ -650,7 +642,7 @@ class ChannelController
                             $channel->app_force_update = $form->input('app_force_update') ? 1 : 0;
                             $channel->app_download_url = $form->input('app_download_url');
                         }
-                        $channel->vip_level_status = $form->input('vip_level_status') ? 1 : 0;
+                        $channel->vip_level_status = in_array('vip_level_status', $channelFunction) ? 1 : 0;
                         $channel->currency = $form->input('currency');
                         $channel->machine_media_line = $form->input('machine_media_line');
                         $channel->download_url = $form->input('download_url');
@@ -836,9 +828,6 @@ class ChannelController
 
                     DB::beginTransaction();
                     try {
-                        // 记录旧的VIP等级状态
-                        $oldVipLevelStatus = $channel->vip_level_status;
-
                         $channel->name = $form->input('name');
                         $channel->type = $form->input('type');
                         $channel->sms_name = $form->input('sms_name');
@@ -855,7 +844,7 @@ class ChannelController
                             $channel->app_force_update = $form->input('app_force_update') ? 1 : 0;
                             $channel->app_download_url = $form->input('app_download_url');
                         }
-                        $channel->vip_level_status = $form->input('vip_level_status') ? 1 : 0;
+                        $channel->vip_level_status = in_array('vip_level_status', $channelFunction) ? 1 : 0;
                         $channel->currency = $form->input('currency');
                         $channel->machine_media_line = $form->input('machine_media_line');
                         $channel->download_url = $form->input('download_url');
@@ -925,22 +914,19 @@ class ChannelController
                             ChannelGameWeb::query()->insert($insert);
                         }
 
-                        // 如果VIP等级状态从禁用改为启用，且该渠道下没有VIP等级，则自动创建10个默认等级
-                        if ($oldVipLevelStatus == 0 && $channel->vip_level_status == 1) {
-                            if (!VipLevelService::hasVipLevels($channel->department_id)) {
-                                $vipResult = VipLevelService::createDefaultLevelsForChannel($channel->department_id);
-                                if (!$vipResult['success']) {
-                                    // VIP等级创建失败不影响渠道保存，只记录日志
-                                    Log::warning("渠道保存成功，但VIP等级创建失败: {$vipResult['message']}", [
-                                        'department_id' => $channel->department_id,
-                                        'channel_name' => $channel->name
-                                    ]);
-                                } else {
-                                    Log::info("VIP等级功能已开启，自动创建 {$vipResult['count']} 个VIP等级", [
-                                        'department_id' => $channel->department_id,
-                                        'channel_name' => $channel->name
-                                    ]);
-                                }
+                        // 如果VIP等级功能开启，且该渠道下没有VIP等级，则自动创建默认等级
+                        if ($channel->vip_level_status == 1 && !VipLevelService::hasVipLevels($channel->department_id)) {
+                            $vipResult = VipLevelService::createDefaultLevelsForChannel($channel->department_id);
+                            if (!$vipResult['success']) {
+                                Log::warning("渠道保存成功，但VIP等级创建失败: {$vipResult['message']}", [
+                                    'department_id' => $channel->department_id,
+                                    'channel_name' => $channel->name
+                                ]);
+                            } else {
+                                Log::info("VIP等级功能已开启，自动创建 {$vipResult['count']} 个VIP等级", [
+                                    'department_id' => $channel->department_id,
+                                    'channel_name' => $channel->name
+                                ]);
                             }
                         }
 

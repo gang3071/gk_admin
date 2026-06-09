@@ -47,9 +47,9 @@ class ChannelVipLevelController
                 ->where('department_id', $departmentId)
                 ->count();
 
-            // 隐藏默认的新增和清空按钮
-            $grid->hideCreateButton();
-            $grid->hideClearButton();
+            // 隐藏添加按钮和清空数据按钮
+            $grid->hideAdd();
+            $grid->hideDelete();
 
             // 始终显示导入按钮（方便测试）
             // 如果已有VIP等级，在按钮文字上显示数量
