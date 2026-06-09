@@ -9,6 +9,7 @@ use addons\webman\model\Player;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\tag\Tag;
 use support\Request;
 
 /**
@@ -44,7 +45,7 @@ class ChannelLotteryTicketRecordController
                 ->leftJoin($playerTable, 'lottery_ticket_record.player_id', '=', $playerTable . '.id')
                 ->leftJoin('lottery_ticket_activity', 'lottery_ticket_record.activity_id', '=', 'lottery_ticket_activity.id')
                 ->where('lottery_ticket_record.department_id', $departmentId)
-                ->orderBy('lottery_ticket_record.draw_time', 'desc');
+                ->orderBy('lottery_ticket_record.created_at', 'desc');
 
             // 列定义
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
@@ -89,11 +90,11 @@ class ChannelLotteryTicketRecordController
                     LotteryTicketRecord::STATUS_FAILED => admin_trans('lottery_ticket.record_status.failed'),
                 ];
 
-                return \ExAdmin\ui\component\common\Tag::create($labels[$val] ?? admin_trans('lottery_ticket.record_status.unknown'))
+                return Tag::create($labels[$val] ?? admin_trans('lottery_ticket.record_status.unknown'))
                     ->color($colors[$val] ?? 'default');
             });
 
-            $grid->column('draw_time', admin_trans('lottery_ticket.fields.draw_time'))->width(160);
+            $grid->column('created_at', admin_trans('lottery_ticket.fields.draw_time'))->width(160);
 
             // 筛选
             $grid->filter(function (Filter $filter) use ($departmentId, $playerTable) {

@@ -11,6 +11,7 @@ use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\tag\Tag;
 use support\Db;
 
 /**
@@ -381,7 +382,7 @@ class ChannelLotteryTicketActivityController
                     LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
                 ];
 
-                return \ExAdmin\ui\component\common\Tag::create($labels[$val] ?? admin_trans('lottery_ticket.status.unknown'))
+                return Tag::create($labels[$val] ?? admin_trans('lottery_ticket.status.unknown'))
                     ->color($colors[$val] ?? 'default');
             });
 
