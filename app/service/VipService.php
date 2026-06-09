@@ -2,6 +2,7 @@
 
 namespace app\service;
 
+use addons\webman\model\Channel;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\VipLevel;
@@ -42,6 +43,14 @@ class VipService
         try {
             // 只处理线上玩家
             if ($player->player_source != Player::PLAYER_SOURCE_ONLINE) {
+                return;
+            }
+
+            // 检查玩家所在渠道是否开启了VIP等级功能
+            $channel = Channel::query()
+                ->where('department_id', $player->department_id)
+                ->first();
+            if (!$channel || empty($channel->vip_level_status)) {
                 return;
             }
 
