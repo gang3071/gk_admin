@@ -71,6 +71,10 @@
                     <edit-outlined/>
                     {{ trans.edit }}
                   </a-menu-item>
+                  <a-menu-item key="record" v-if="activity.status === 1">
+                    <trophy-outlined/>
+                    录入中奖
+                  </a-menu-item>
                   <a-menu-item key="live">
                     <video-camera-outlined/>
                     添加直播地址
@@ -96,18 +100,12 @@
 
             <!-- 活动描述 -->
             <div class="description" v-if="activity.description">
-              <div v-if="activity.description.length <= 100" style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
-                {{ activity.description }}
-              </div>
-              <div v-else style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
-                <span v-if="!activity.showFullDesc">
-                  {{ activity.description.substring(0, 100) }}...
-                  <a @click="toggleDescription(activity)" style="color: #1890ff; cursor: pointer; margin-left: 4px;">展开</a>
-                </span>
-                <span v-else>
-                  {{ activity.description }}
-                  <a @click="toggleDescription(activity)" style="color: #1890ff; cursor: pointer; margin-left: 4px;">收起</a>
-                </span>
+              <div style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
+                <a-typography-paragraph
+                    :ellipsis="{ rows: 3, expandable: true, symbol: '展开' }"
+                    :content="activity.description"
+                    style="margin-bottom: 0;"
+                />
               </div>
             </div>
 
@@ -424,6 +422,65 @@
         <a-empty v-else description="未配置VIP等级" />
       </template>
     </a-drawer>
+
+    <!-- 录入中奖弹窗 -->
+    <a-modal
+        v-model:visible="recordVisible"
+        title="录入中奖记录"
+        width="600px"
+        @ok="submitWinRecord"
+        @cancel="handleRecordClose"
+        :confirmLoading="recordSubmitting"
+    >
+      <a-form
+          :model="recordData"
+          :rules="recordRules"
+          layout="vertical"
+          ref="recordFormRef"
+      >
+        <a-form-item label="玩家账号" name="player_account">
+          <a-input
+              v-model:value="recordData.player_account"
+              placeholder="请输入玩家账号/手机号/UUID"
+          />
+        </a-form-item>
+
+        <a-form-item label="中奖等级" name="prize_level_id">
+          <a-select
+              v-model:value="recordData.prize_level_id"
+              placeholder="请选择中奖等级"
+              @change="handlePrizeLevelChange"
+          >
+            <a-select-option
+                v-for="level in recordPrizeLevels"
+                :key="level.id"
+                :value="level.id"
+            >
+              {{ level.level_name }} - {{ level.prize_amount }}元
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <a-form-item label="中奖金额" name="prize_amount">
+          <a-input-number
+              v-model:value="recordData.prize_amount"
+              :min="0"
+              :precision="2"
+              style="width: 100%;"
+              placeholder="选择等级后自动填充"
+              :disabled="true"
+          />
+        </a-form-item>
+
+        <a-form-item label="备注" name="remark">
+          <a-textarea
+              v-model:value="recordData.remark"
+              :rows="3"
+              placeholder="选填，可备注中奖详情"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -448,10 +505,13 @@ export default {
       statusFilter: 'all',
       formVisible: false,
       detailVisible: false,
+      recordVisible: false,
       formMode: 'create',
       currentActivity: null,
       submitting: false,
       uploading: false,
+      recordSubmitting: false,
+      recordPrizeLevels: [],
       formData: {
         name: '',
         description: '',
@@ -460,6 +520,13 @@ export default {
         end_time: null,
         vip_configs: [],
         prize_levels: []
+      },
+      recordData: {
+        activity_id: null,
+        player_account: '',
+        prize_level_id: null,
+        prize_amount: 0,
+        remark: ''
       },
       formRules: {
         name: [
@@ -471,6 +538,14 @@ export default {
         ],
         end_time: [
           {required: true, message: '请选择结束时间', trigger: 'change'}
+        ]
+      },
+      recordRules: {
+        player_account: [
+          {required: true, message: '请输入玩家账号', trigger: 'blur'}
+        ],
+        prize_level_id: [
+          {required: true, message: '请选择中奖等级', trigger: 'change'}
         ]
       },
       prizeColumns: [
@@ -618,6 +693,9 @@ export default {
         case 'edit':
           this.editActivity(activity);
           break;
+        case 'record':
+          this.showRecordModal(activity);
+          break;
         case 'live':
           this.showLiveModal(activity);
           break;
@@ -627,9 +705,90 @@ export default {
       }
     },
 
-    // 展开/收起描述
-    toggleDescription(activity) {
-      this.$set(activity, 'showFullDesc', !activity.showFullDesc);
+    // 显示录入中奖弹窗
+    async showRecordModal(activity) {
+      try {
+        // 获取活动详情和奖品等级
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivityDetail',
+          method: 'post',
+          data: {id: activity.id}
+        });
+
+        if (res.code === 200 && res.data) {
+          this.recordPrizeLevels = res.data.prize_levels || [];
+
+          if (this.recordPrizeLevels.length === 0) {
+            this.$message.warning('该活动尚未配置奖品等级');
+            return;
+          }
+
+          this.recordData = {
+            activity_id: activity.id,
+            player_account: '',
+            prize_level_id: null,
+            prize_amount: 0,
+            remark: ''
+          };
+
+          this.recordVisible = true;
+        } else {
+          this.$message.error('获取活动详情失败');
+        }
+      } catch (error) {
+        this.$message.error('获取活动详情失败');
+        console.error(error);
+      }
+    },
+
+    // 选择奖品等级后自动填充金额
+    handlePrizeLevelChange(levelId) {
+      const level = this.recordPrizeLevels.find(l => l.id === levelId);
+      if (level) {
+        this.recordData.prize_amount = level.prize_amount;
+      }
+    },
+
+    // 提交中奖记录
+    async submitWinRecord() {
+      try {
+        await this.$refs.recordFormRef.validate();
+
+        this.recordSubmitting = true;
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWin',
+          method: 'post',
+          data: this.recordData
+        });
+
+        if (res.code === 200) {
+          this.$message.success('中奖记录录入成功');
+          this.recordVisible = false;
+          this.fetchActivities();
+        } else {
+          this.$message.error(res.message || res.msg || '录入失败');
+        }
+      } catch (error) {
+        if (error.errorFields) {
+          return; // 验证失败，不处理
+        }
+        this.$message.error('录入失败');
+        console.error(error);
+      } finally {
+        this.recordSubmitting = false;
+      }
+    },
+
+    // 关闭录入弹窗
+    handleRecordClose() {
+      this.recordData = {
+        activity_id: null,
+        player_account: '',
+        prize_level_id: null,
+        prize_amount: 0,
+        remark: ''
+      };
+      this.$refs.recordFormRef?.resetFields();
     },
 
     // 显示直播地址弹窗

@@ -169,6 +169,7 @@ return [
         'prize_level_hint' => '最多可配置10個獎品等級,中獎概率總和不能超過100%',
         'upload_success' => '上傳成功',
         'live_url_updated' => '直播地址設置成功',
+        'record_success' => '中獎記錄錄入成功',
     ],
 
     // 错误信息
@@ -187,6 +188,9 @@ return [
         'invalid_image_type' => '只支持 jpg、png 格式圖片',
         'file_too_large' => '文件大小不能超過2MB',
         'invalid_params' => '參數錯誤',
+        'activity_not_ongoing' => '只能在進行中的活動錄入中獎',
+        'prize_level_not_found' => '獎品等級不存在',
+        'player_not_found' => '玩家不存在',
     ],
 
     // 帮助文本

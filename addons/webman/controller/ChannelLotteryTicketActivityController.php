@@ -516,6 +516,94 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
+     * 录入中奖记录
+     * @auth true
+     * @group channel
+     * @return mixed
+     */
+    public function recordWin()
+    {
+        $activityId = request()->input('activity_id');
+        $playerAccount = request()->input('player_account', '');
+        $prizeLevelId = request()->input('prize_level_id');
+        $prizeAmount = request()->input('prize_amount', 0);
+        $remark = request()->input('remark', '');
+
+        if (!$activityId || !$playerAccount || !$prizeLevelId) {
+            return jsonFailResponse(admin_trans('lottery_ticket.error.invalid_params'), [], 400);
+        }
+
+        $departmentId = Admin::user()->department_id;
+
+        // 验证活动
+        $activity = LotteryTicketActivity::query()
+            ->where('id', $activityId)
+            ->where('department_id', $departmentId)
+            ->first();
+
+        if (!$activity) {
+            return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
+        }
+
+        // 验证活动状态 (只能在进行中的活动录入)
+        if ($activity->status !== LotteryTicketActivity::STATUS_ONGOING) {
+            return jsonFailResponse(admin_trans('lottery_ticket.error.activity_not_ongoing'), [], 400);
+        }
+
+        // 验证奖品等级
+        $prizeLevel = LotteryTicketPrizeLevel::query()
+            ->where('id', $prizeLevelId)
+            ->where('activity_id', $activityId)
+            ->first();
+
+        if (!$prizeLevel) {
+            return jsonFailResponse(admin_trans('lottery_ticket.error.prize_level_not_found'), [], 404);
+        }
+
+        // 查找玩家 (支持手机号、UUID、账号等)
+        $player = \addons\webman\model\Player::query()
+            ->where('department_id', $departmentId)
+            ->where(function ($query) use ($playerAccount) {
+                $query->where('name', $playerAccount)
+                    ->orWhere('phone', $playerAccount)
+                    ->orWhere('uuid', $playerAccount);
+            })
+            ->first();
+
+        if (!$player) {
+            return jsonFailResponse(admin_trans('lottery_ticket.error.player_not_found'), [], 404);
+        }
+
+        Db::beginTransaction();
+        try {
+            // 创建中奖记录
+            $record = \addons\webman\model\LotteryTicketRecord::create([
+                'activity_id' => $activityId,
+                'player_id' => $player->id,
+                'ticket_no' => 'MANUAL_' . date('YmdHis') . rand(1000, 9999),
+                'prize_level_id' => $prizeLevelId,
+                'level_rank' => $prizeLevel->level_rank,
+                'level_name' => $prizeLevel->level_name,
+                'prize_type' => 1, // 现金
+                'prize_amount' => $prizeAmount,
+                'status' => 1, // 已发放
+                'draw_time' => date('Y-m-d H:i:s'),
+                'remark' => $remark ? '手动录入: ' . $remark : '手动录入中奖',
+            ]);
+
+            // 更新已使用券数
+            $activity->increment('used_tickets');
+
+            Db::commit();
+
+            return jsonSuccessResponse(admin_trans('lottery_ticket.message.record_success'), $record);
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return jsonFailResponse($e->getMessage(), [], 500);
+        }
+    }
+
+    /**
      * 更新直播地址
      * @auth true
      * @group channel
