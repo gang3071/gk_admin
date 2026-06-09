@@ -498,7 +498,7 @@
     <a-drawer
         v-model:visible="ticketListVisible"
         title="摸奖券发放列表"
-        width="800px"
+        width="680px"
         :body-style="{ padding: '16px' }"
     >
       <a-table
@@ -508,7 +508,7 @@
           :pagination="ticketPagination"
           @change="handleTicketTableChange"
           size="small"
-          :scroll="{ x: 800 }"
+          :scroll="{ x: 680 }"
       >
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
@@ -609,13 +609,12 @@ export default {
         {title: '发放券数', key: 'ticket_count', dataIndex: 'ticket_count'},
       ],
       ticketColumns: [
-        {title: '券号', key: 'ticket_no', dataIndex: 'ticket_no', width: 180},
-        {title: '玩家', key: 'player_name', dataIndex: 'player_name', width: 120},
-        {title: '来源', key: 'source', dataIndex: 'source', width: 100},
-        {title: '状态', key: 'status', dataIndex: 'status', width: 100},
-        {title: '发放时间', key: 'created_at', dataIndex: 'created_at', width: 160},
-        {title: '使用时间', key: 'used_at', dataIndex: 'used_at', width: 160},
-        {title: '过期时间', key: 'expired_at', dataIndex: 'expired_at', width: 160},
+        {title: '券号', key: 'ticket_no', dataIndex: 'ticket_no', width: 160, ellipsis: true},
+        {title: '玩家', key: 'player_name', dataIndex: 'player_name', width: 100},
+        {title: '来源', key: 'source', dataIndex: 'source', width: 90},
+        {title: '状态', key: 'status', dataIndex: 'status', width: 90},
+        {title: '发放时间', key: 'created_at', dataIndex: 'created_at', width: 150},
+        {title: '使用时间', key: 'used_at', dataIndex: 'used_at', width: 150},
       ],
       levelNames: [
         '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
