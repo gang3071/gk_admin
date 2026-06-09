@@ -440,64 +440,49 @@
       </template>
     </a-drawer>
 
-    <!-- 录入中奖弹窗 -->
-    <a-modal
+    <!-- 录入中奖抽屉 -->
+    <a-drawer
         v-model:visible="recordVisible"
         :title="trans.modalRecordWinTitle"
-        width="600px"
-        @ok="submitWinRecord"
-        @cancel="handleRecordClose"
-        :confirmLoading="recordSubmitting"
+        width="680px"
+        :body-style="{ paddingBottom: '80px' }"
     >
-      <a-form
-          :model="recordData"
-          :rules="recordRules"
-          layout="vertical"
-          ref="recordFormRef"
-      >
-        <a-form-item :label="trans.playerAccount" name="player_account">
-          <a-input
-              v-model:value="recordData.player_account"
-              :placeholder="trans.playerAccountPlaceholder"
-          />
-        </a-form-item>
+      <div v-for="(prizeLevel, index) in recordPrizeLevels" :key="prizeLevel.id">
+        <a-card size="small" :title="`${prizeLevel.level_name} - ${prizeLevel.prize_amount}元`" style="margin-bottom: 16px;">
+          <div v-for="(ticket, ticketIndex) in prizeLevel.tickets" :key="ticketIndex" style="margin-bottom: 8px;">
+            <a-space style="width: 100%;">
+              <a-input-number
+                  v-model:value="ticket.ticket_no"
+                  style="width: 200px;"
+                  placeholder="请输入券号(仅数字)"
+                  :controls="false"
+                  :precision="0"
+              />
+              <a-button
+                  type="text"
+                  danger
+                  size="small"
+                  @click="removeTicketInput(index, ticketIndex)"
+                  v-if="prizeLevel.tickets.length > 1"
+              >
+                <delete-outlined/>
+              </a-button>
+            </a-space>
+          </div>
+          <a-button type="dashed" block @click="addTicketInput(index)" style="margin-top: 8px;">
+            <plus-outlined/>
+            添加券号
+          </a-button>
+        </a-card>
+      </div>
 
-        <a-form-item :label="trans.prizeLevel" name="prize_level_id">
-          <a-select
-              v-model:value="recordData.prize_level_id"
-              :placeholder="trans.prizeLevelPlaceholder"
-              @change="handlePrizeLevelChange"
-          >
-            <a-select-option
-                v-for="level in recordPrizeLevels"
-                :key="level.id"
-                :value="level.id"
-            >
-              {{ level.level_name }} - {{ level.prize_amount }}元
-            </a-select-option>
-          </a-select>
-        </a-form-item>
-
-        <a-form-item :label="trans.prizeAmount" name="prize_amount">
-          <a-input-number
-              v-model:value="recordData.prize_amount"
-              :min="0"
-              :precision="2"
-              style="width: 100%;"
-              :placeholder="trans.selectPrizeType"
-              :disabled="true"
-          />
-        </a-form-item>
-
-        <a-form-item :label="trans.remark" name="remark">
-          <a-textarea
-              v-model:value="recordData.remark"
-              :rows="3"
-              :placeholder="trans.remarkPlaceholder"
-          />
-        </a-form-item>
-      </a-form>
-    </a-modal>
+      <template #footer>
+        <a-space>
+          <a-button @click="handleRecordClose">取消</a-button>
+          <a-button type="primary" @click="submitWinRecord" :loading="recordSubmitting">提交</a-button>
+        </a-space>
+      </template>
+    </a-drawer>
 
     <!-- 发放列表抽屉 -->
     <a-drawer
@@ -577,11 +562,7 @@ export default {
         prize_levels: []
       },
       recordData: {
-        activity_id: null,
-        player_account: '',
-        prize_level_id: null,
-        prize_amount: 0,
-        remark: ''
+        activity_id: null
       },
       formRules: {
         name: [
@@ -722,7 +703,7 @@ export default {
       }
     },
 
-    // 显示录入中奖弹窗
+    // 显示录入中奖抽屉
     async showRecordModal(activity) {
       try {
         // 获取活动详情和奖品等级
@@ -733,19 +714,21 @@ export default {
         });
 
         if (res.code === 200 && res.data) {
-          this.recordPrizeLevels = res.data.prize_levels || [];
+          const prizeLevels = res.data.prize_levels || [];
 
-          if (this.recordPrizeLevels.length === 0) {
+          if (prizeLevels.length === 0) {
             this.$message.warning('该活动尚未配置奖品等级');
             return;
           }
 
+          // 为每个奖品等级初始化券号输入框
+          this.recordPrizeLevels = prizeLevels.map(level => ({
+            ...level,
+            tickets: [{ ticket_no: null }] // 默认一个输入框
+          }));
+
           this.recordData = {
-            activity_id: activity.id,
-            player_account: '',
-            prize_level_id: null,
-            prize_amount: 0,
-            remark: ''
+            activity_id: activity.id
           };
 
           this.recordVisible = true;
@@ -758,37 +741,55 @@ export default {
       }
     },
 
-    // 选择奖品等级后自动填充金额
-    handlePrizeLevelChange(levelId) {
-      const level = this.recordPrizeLevels.find(l => l.id === levelId);
-      if (level) {
-        this.recordData.prize_amount = level.prize_amount;
-      }
+    // 添加券号输入框
+    addTicketInput(prizeLevelIndex) {
+      this.recordPrizeLevels[prizeLevelIndex].tickets.push({ ticket_no: null });
+    },
+
+    // 移除券号输入框
+    removeTicketInput(prizeLevelIndex, ticketIndex) {
+      this.recordPrizeLevels[prizeLevelIndex].tickets.splice(ticketIndex, 1);
     },
 
     // 提交中奖记录
     async submitWinRecord() {
-      try {
-        await this.$refs.recordFormRef.validate();
+      // 收集所有券号
+      const records = [];
+      for (const prizeLevel of this.recordPrizeLevels) {
+        for (const ticket of prizeLevel.tickets) {
+          if (ticket.ticket_no) {
+            records.push({
+              prize_level_id: prizeLevel.id,
+              ticket_no: ticket.ticket_no
+            });
+          }
+        }
+      }
 
-        this.recordSubmitting = true;
+      if (records.length === 0) {
+        this.$message.warning('请至少输入一个券号');
+        return;
+      }
+
+      this.recordSubmitting = true;
+      try {
         const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWin',
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWinByTickets',
           method: 'post',
-          data: this.recordData
+          data: {
+            activity_id: this.recordData.activity_id,
+            records: records
+          }
         });
 
         if (res.code === 200) {
-          this.$message.success('中奖记录录入成功');
+          this.$message.success(`成功录入 ${res.data.success_count} 条中奖记录`);
           this.recordVisible = false;
           this.fetchActivities();
         } else {
           this.$message.error(res.message || res.msg || '录入失败');
         }
       } catch (error) {
-        if (error.errorFields) {
-          return; // 验证失败，不处理
-        }
         this.$message.error('录入失败');
         console.error(error);
       } finally {
@@ -796,16 +797,12 @@ export default {
       }
     },
 
-    // 关闭录入弹窗
+    // 关闭录入抽屉
     handleRecordClose() {
       this.recordData = {
-        activity_id: null,
-        player_account: '',
-        prize_level_id: null,
-        prize_amount: 0,
-        remark: ''
+        activity_id: null
       };
-      this.$refs.recordFormRef?.resetFields();
+      this.recordPrizeLevels = [];
     },
 
     // 显示直播地址弹窗
