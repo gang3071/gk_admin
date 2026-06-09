@@ -31,6 +31,9 @@ return [
         'total_probability' => '概率總和',
         'level' => '等級',
         'time_range' => '活動時間',
+        'player_account' => '玩家賬號',
+        'prize_level' => '中獎等級',
+        'remark' => '備註',
 
         // 中奖记录
         'player_name' => '玩家名稱',
@@ -52,6 +55,18 @@ return [
         'end_time' => '請選擇結束時間',
         'level_rank' => '請選擇等級排名',
         'prize_type' => '請選擇獎品類型',
+        'player_account' => '請輸入玩家賬號/手機號/UUID',
+        'prize_level' => '請選擇中獎等級',
+        'remark' => '選填，可備註中獎詳情',
+        'live_url' => '例如: rtmp://live.example.com/stream/12345',
+    ],
+
+    // 对话框
+    'modal' => [
+        'record_win_title' => '錄入中獎記錄',
+        'live_url_title' => '添加直播地址',
+        'live_url_prompt' => '請輸入直播流地址:',
+        'live_url_required' => '請輸入直播地址',
     ],
 
     // 标题
@@ -142,6 +157,10 @@ return [
         'close' => '關閉活動',
         'export' => '導出記錄',
         'add_prize_level' => '添加獎品等級',
+        'record_win' => '錄入中獎',
+        'add_live_url' => '添加直播地址',
+        'expand' => '展開',
+        'collapse' => '收起',
     ],
 
     // 统计

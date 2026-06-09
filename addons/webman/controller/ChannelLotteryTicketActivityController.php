@@ -95,6 +95,23 @@ class ChannelLotteryTicketActivityController
                 'ongoing' => admin_trans('lottery_ticket.status.ongoing'),
                 'ended' => admin_trans('lottery_ticket.status.ended'),
                 'closed' => admin_trans('lottery_ticket.status.closed'),
+
+                // 新增翻译
+                'recordWin' => admin_trans('lottery_ticket.action.record_win'),
+                'addLiveUrl' => admin_trans('lottery_ticket.action.add_live_url'),
+                'expand' => admin_trans('lottery_ticket.action.expand'),
+                'collapse' => admin_trans('lottery_ticket.action.collapse'),
+                'playerAccount' => admin_trans('lottery_ticket.fields.player_account'),
+                'playerAccountPlaceholder' => admin_trans('lottery_ticket.placeholder.player_account'),
+                'prizeLevel' => admin_trans('lottery_ticket.fields.prize_level'),
+                'prizeLevelPlaceholder' => admin_trans('lottery_ticket.placeholder.prize_level'),
+                'remark' => admin_trans('lottery_ticket.fields.remark'),
+                'remarkPlaceholder' => admin_trans('lottery_ticket.placeholder.remark'),
+                'liveUrlPlaceholder' => admin_trans('lottery_ticket.placeholder.live_url'),
+                'modalRecordWinTitle' => admin_trans('lottery_ticket.modal.record_win_title'),
+                'modalLiveUrlTitle' => admin_trans('lottery_ticket.modal.live_url_title'),
+                'modalLiveUrlPrompt' => admin_trans('lottery_ticket.modal.live_url_prompt'),
+                'modalLiveUrlRequired' => admin_trans('lottery_ticket.modal.live_url_required'),
             ],
         ]);
     }

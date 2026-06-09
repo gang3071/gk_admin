@@ -73,11 +73,11 @@
                   </a-menu-item>
                   <a-menu-item key="record" v-if="activity.status === 1">
                     <trophy-outlined/>
-                    录入中奖
+                    {{ trans.recordWin }}
                   </a-menu-item>
                   <a-menu-item key="live">
                     <video-camera-outlined/>
-                    添加直播地址
+                    {{ trans.addLiveUrl }}
                   </a-menu-item>
                   <a-menu-item key="close" danger v-if="activity.status === 1">
                     <stop-outlined/>
@@ -102,7 +102,7 @@
             <div class="description" v-if="activity.description">
               <div style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
                 <a-typography-paragraph
-                    :ellipsis="{ rows: 3, expandable: true, symbol: '展开' }"
+                    :ellipsis="{ rows: 3, expandable: true, symbol: trans.expand }"
                     :content="activity.description"
                     style="margin-bottom: 0;"
                 />
@@ -426,7 +426,7 @@
     <!-- 录入中奖弹窗 -->
     <a-modal
         v-model:visible="recordVisible"
-        title="录入中奖记录"
+        :title="trans.modalRecordWinTitle"
         width="600px"
         @ok="submitWinRecord"
         @cancel="handleRecordClose"
@@ -438,17 +438,17 @@
           layout="vertical"
           ref="recordFormRef"
       >
-        <a-form-item label="玩家账号" name="player_account">
+        <a-form-item :label="trans.playerAccount" name="player_account">
           <a-input
               v-model:value="recordData.player_account"
-              placeholder="请输入玩家账号/手机号/UUID"
+              :placeholder="trans.playerAccountPlaceholder"
           />
         </a-form-item>
 
-        <a-form-item label="中奖等级" name="prize_level_id">
+        <a-form-item :label="trans.prizeLevel" name="prize_level_id">
           <a-select
               v-model:value="recordData.prize_level_id"
-              placeholder="请选择中奖等级"
+              :placeholder="trans.prizeLevelPlaceholder"
               @change="handlePrizeLevelChange"
           >
             <a-select-option
@@ -461,22 +461,22 @@
           </a-select>
         </a-form-item>
 
-        <a-form-item label="中奖金额" name="prize_amount">
+        <a-form-item :label="trans.prizeAmount" name="prize_amount">
           <a-input-number
               v-model:value="recordData.prize_amount"
               :min="0"
               :precision="2"
               style="width: 100%;"
-              placeholder="选择等级后自动填充"
+              :placeholder="trans.selectPrizeType"
               :disabled="true"
           />
         </a-form-item>
 
-        <a-form-item label="备注" name="remark">
+        <a-form-item :label="trans.remark" name="remark">
           <a-textarea
               v-model:value="recordData.remark"
               :rows="3"
-              placeholder="选填，可备注中奖详情"
+              :placeholder="trans.remarkPlaceholder"
           />
         </a-form-item>
       </a-form>
@@ -542,10 +542,10 @@ export default {
       },
       recordRules: {
         player_account: [
-          {required: true, message: '请输入玩家账号', trigger: 'blur'}
+          {required: true, message: this.trans?.playerAccountPlaceholder || '请输入玩家账号', trigger: 'blur'}
         ],
         prize_level_id: [
-          {required: true, message: '请选择中奖等级', trigger: 'change'}
+          {required: true, message: this.trans?.prizeLevelPlaceholder || '请选择中奖等级', trigger: 'change'}
         ]
       },
       prizeColumns: [
@@ -794,12 +794,12 @@ export default {
     // 显示直播地址弹窗
     showLiveModal(activity) {
       this.$prompt({
-        title: '添加直播地址',
+        title: this.trans.modalLiveUrlTitle,
         content: h => h('div', [
-          h('div', {style: {marginBottom: '8px'}}, '请输入直播流地址:'),
+          h('div', {style: {marginBottom: '8px'}}, this.trans.modalLiveUrlPrompt),
           h('input', {
             ref: 'liveUrlInput',
-            placeholder: '例如: rtmp://live.example.com/stream/12345',
+            placeholder: this.trans.liveUrlPlaceholder,
             style: {
               width: '100%',
               padding: '8px',
@@ -809,14 +809,14 @@ export default {
             value: activity.live_url || ''
           })
         ]),
-        okText: '确定',
-        cancelText: '取消',
+        okText: this.trans.submit,
+        cancelText: this.trans.cancel,
         onOk: async () => {
           const input = document.querySelector('input[placeholder*="rtmp"]');
           const liveUrl = input ? input.value.trim() : '';
 
           if (!liveUrl) {
-            this.$message.error('请输入直播地址');
+            this.$message.error(this.trans.modalLiveUrlRequired);
             return Promise.reject();
           }
 
