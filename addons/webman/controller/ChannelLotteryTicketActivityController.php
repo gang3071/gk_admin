@@ -1093,4 +1093,114 @@ class ChannelLotteryTicketActivityController
             ]
         ]);
     }
+
+    /**
+     * 执行摇球开奖
+     * @return \support\Response
+     */
+    public function performBallDraw()
+    {
+        $activityId = Request::input('activity_id');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity || $activity->department_id != Admin::user()->department_id) {
+            return response()->json([
+                'code' => 403,
+                'message' => admin_trans('common.no_permission')
+            ]);
+        }
+
+        // 执行摇球
+        $result = \addons\webman\service\LotteryBallDrawService::performDraw($activityId);
+
+        if (!$result['success']) {
+            return response()->json([
+                'code' => 400,
+                'message' => $result['message']
+            ]);
+        }
+
+        // 推送中奖通知
+        if (!empty($result['data']['winning_tickets'])) {
+            foreach ($result['data']['winning_tickets'] as $winData) {
+                try {
+                    $record = \addons\webman\model\LotteryTicketRecord::where('ticket_no', $winData['ticket_no'])
+                        ->where('activity_id', $activityId)
+                        ->first();
+
+                    if ($record) {
+                        \addons\webman\service\LotteryTicketPushService::pushWinNotification($record);
+                    }
+                } catch (\Exception $e) {
+                    \support\Log::warning('推送中奖通知失败', [
+                        'ticket_no' => $winData['ticket_no'],
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return response()->json([
+            'code' => 200,
+            'message' => $result['message'],
+            'data' => $result['data']
+        ]);
+    }
+
+    /**
+     * 获取摇球范围（用于前端展示）
+     * @return \support\Response
+     */
+    public function getBallRanges()
+    {
+        $activityId = Request::input('activity_id');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
+        }
+
+        $maxTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
+
+        $ranges = \addons\webman\service\LotteryBallDrawService::getBallRanges($maxTicketNo);
+
+        return response()->json([
+            'code' => 200,
+            'data' => $ranges
+        ]);
+    }
+
+    /**
+     * 获取摇球结果
+     * @return \support\Response
+     */
+    public function getBallResult()
+    {
+        $activityId = Request::input('activity_id');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
+        }
+
+        $ballResult = null;
+        if (!empty($activity->ball_result)) {
+            $ballResult = json_decode($activity->ball_result, true);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'has_drawn' => !empty($ballResult),
+                'ball_result' => $ballResult,
+                'activity_status' => $activity->status,
+            ]
+        ]);
+    }
 }

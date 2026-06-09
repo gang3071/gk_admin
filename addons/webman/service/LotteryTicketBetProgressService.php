@@ -222,7 +222,14 @@ class LotteryTicketBetProgressService
     }
 
     /**
-     * 发放摸奖券
+     * 发放摸奖券（自增序列方式）
+     *
+     * 券号规则：
+     * - 从 000000 开始依次递增
+     * - 第1张券：000000
+     * - 第2张券：000001
+     * - 第15张券：000014
+     * - 最后1张券：999999
      *
      * @param LotteryTicketBetProgress $progress 进度记录
      * @param int $count 发放数量
@@ -234,50 +241,101 @@ class LotteryTicketBetProgressService
             return 0;
         }
 
-        $issued = 0;
-        $firstTicket = null;
+        $activity = $progress->activity;
+        if (!$activity) {
+            return 0;
+        }
 
-        for ($i = 0; $i < $count; $i++) {
-            try {
-                $ticket = LotteryTicket::create([
+        // 使用数据库锁防止并发发券导致券号重复
+        Db::beginTransaction();
+        try {
+            // 锁定活动记录
+            $activity = LotteryTicketActivity::where('id', $activity->id)
+                ->lockForUpdate()
+                ->first();
+
+            // 检查是否还有足够的券号
+            $currentNo = $activity->current_ticket_no;
+            $maxNo = $activity->max_ticket_no;
+
+            if ($currentNo >= $maxNo) {
+                Log::warning('摸奖券已发放完毕', [
+                    'activity_id' => $activity->id,
+                    'current' => $currentNo,
+                    'max' => $maxNo,
+                ]);
+                Db::rollBack();
+                return 0;
+            }
+
+            // 计算实际可发放数量
+            $availableCount = $maxNo - $currentNo;
+            $actualCount = min($count, $availableCount);
+
+            // 批量准备券数据
+            $ticketsData = [];
+            $now = date('Y-m-d H:i:s');
+
+            for ($i = 0; $i < $actualCount; $i++) {
+                $ticketNo = str_pad($currentNo + $i, 6, '0', STR_PAD_LEFT);
+
+                $ticketsData[] = [
                     'activity_id' => $progress->activity_id,
                     'player_id' => $progress->player_id,
                     'department_id' => $progress->department_id,
-                    'ticket_no' => self::generateTicketNo(),
-                    'source' => 'betting', // 打码获得
+                    'ticket_no' => $ticketNo,
+                    'source' => 'betting',
                     'status' => LotteryTicket::STATUS_UNUSED,
-                    'expires_at' => $progress->activity->end_time,
-                ]);
-
-                if ($i === 0) {
-                    $firstTicket = $ticket;
-                }
-
-                $issued++;
-            } catch (\Exception $e) {
-                Log::error('发放摸奖券失败: ' . $e->getMessage());
+                    'expires_at' => $activity->end_time,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
             }
+
+            // 批量插入摸奖券
+            if (!empty($ticketsData)) {
+                LotteryTicket::insert($ticketsData);
+            }
+
+            // 更新活动的当前券号
+            $activity->current_ticket_no = $currentNo + $actualCount;
+            $activity->total_tickets += $actualCount;
+            $activity->save();
+
+            Db::commit();
+
+            // 发送推送通知（事务外执行）
+            if ($actualCount > 0) {
+                try {
+                    $firstTicket = LotteryTicket::where('activity_id', $activity->id)
+                        ->where('player_id', $progress->player_id)
+                        ->where('ticket_no', str_pad($currentNo, 6, '0', STR_PAD_LEFT))
+                        ->first();
+
+                    if ($firstTicket) {
+                        LotteryTicketPushService::pushTicketIssued($firstTicket, $actualCount);
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('推送通知失败', [
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return $actualCount;
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            Log::error('发放摸奖券失败', [
+                'activity_id' => $progress->activity_id,
+                'player_id' => $progress->player_id,
+                'count' => $count,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return 0;
         }
-
-        // 发送推送通知
-        if ($issued > 0 && $firstTicket) {
-            LotteryTicketPushService::pushTicketIssued($firstTicket, $issued);
-        }
-
-        return $issued;
-    }
-
-    /**
-     * 生成券号
-     * 格式：时间戳后6位 + 随机4位数字
-     *
-     * @return string
-     */
-    protected static function generateTicketNo(): string
-    {
-        $timestamp = substr(time(), -6);
-        $random = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
-        return $timestamp . $random;
     }
 
     /**
