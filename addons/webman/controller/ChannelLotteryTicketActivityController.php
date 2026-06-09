@@ -708,4 +708,233 @@ class ChannelLotteryTicketActivityController
             return LotteryTicketActivity::STATUS_ENDED;
         }
     }
+
+    /**
+     * 获取活动所有中奖结果（公开查询）
+     * @return \support\Response
+     */
+    public function getWinners()
+    {
+        $activityId = Request::input('activity_id');
+        $page = Request::input('page', 1);
+        $size = Request::input('size', 50);
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity || $activity->department_id != Admin::user()->department_id) {
+            return response()->json([
+                'code' => 403,
+                'message' => admin_trans('common.no_permission')
+            ]);
+        }
+
+        // 查询所有中奖记录
+        $query = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+            ->orderBy('created_at', 'desc');
+
+        $total = $query->count();
+        $records = $query->forPage($page, $size)->get();
+
+        // 格式化数据
+        $winners = $records->map(function ($record) {
+            return [
+                'ticket_no' => $record->ticket_no,
+                'prize_level' => $record->prize_name,
+                'prize_type' => $record->prize_type,
+                'prize_amount' => $record->prize_amount,
+                'created_at' => $record->created_at,
+            ];
+        });
+
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'total_winners' => $total,
+                'winners' => $winners,
+                'page' => $page,
+                'size' => $size,
+                'total' => $total,
+            ]
+        ]);
+    }
+
+    /**
+     * 获取玩家打码进度（客户端查询）
+     * @return \support\Response
+     */
+    public function getBetProgress()
+    {
+        $activityId = Request::input('activity_id');
+        $playerId = Request::input('player_id');
+
+        if (!$activityId || !$playerId) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
+        }
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
+        }
+
+        // 查询打码进度
+        $progress = LotteryTicketBetProgress::where('activity_id', $activityId)
+            ->where('player_id', $playerId)
+            ->where('status', LotteryTicketBetProgress::STATUS_ACTIVE)
+            ->first();
+
+        if (!$progress) {
+            return response()->json([
+                'code' => 404,
+                'message' => '未找到打码进度记录'
+            ]);
+        }
+
+        // 获取VIP等级名称
+        $vipLevel = VipLevel::find($progress->vip_level_id);
+
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'activity_id' => $progress->activity_id,
+                'activity_name' => $activity->name,
+                'player_id' => $progress->player_id,
+                'vip_level' => $vipLevel->name ?? 'VIP' . $progress->vip_level_id,
+                'bet_amount_required' => $progress->bet_amount_required,
+                'current_bet_amount' => $progress->current_bet_amount,
+                'progress_percent' => $progress->progress_percent,
+                'remaining_bet_amount' => $progress->remaining_bet_amount,
+                'cycles_completed' => $progress->cycles_completed,
+                'total_tickets_issued' => $progress->total_tickets_issued,
+                'ticket_count_per_cycle' => $progress->ticket_count_per_cycle,
+                'status' => $progress->status,
+                'updated_at' => $progress->updated_at,
+            ]
+        ]);
+    }
+
+    /**
+     * 获取玩家的摸奖券列表（客户端查询）
+     * @return \support\Response
+     */
+    public function getMyTickets()
+    {
+        $activityId = Request::input('activity_id');
+        $playerId = Request::input('player_id');
+        $status = Request::input('status'); // unused, used, expired
+
+        if (!$activityId || !$playerId) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
+        }
+
+        $query = LotteryTicket::where('activity_id', $activityId)
+            ->where('player_id', $playerId);
+
+        // 状态筛选
+        if ($status !== null && $status !== '') {
+            $statusMap = [
+                'unused' => LotteryTicket::STATUS_UNUSED,
+                'used' => LotteryTicket::STATUS_USED,
+                'expired' => LotteryTicket::STATUS_EXPIRED,
+            ];
+            if (isset($statusMap[$status])) {
+                $query->where('status', $statusMap[$status]);
+            }
+        }
+
+        $tickets = $query->orderBy('created_at', 'desc')->get();
+
+        // 格式化数据
+        $formattedTickets = $tickets->map(function ($ticket) {
+            return [
+                'id' => $ticket->id,
+                'ticket_no' => $ticket->ticket_no,
+                'status' => $ticket->status,
+                'status_text' => $this->getTicketStatusText($ticket->status),
+                'source' => $ticket->source,
+                'source_text' => $this->getSourceText($ticket->source),
+                'created_at' => $ticket->created_at,
+                'expires_at' => $ticket->expires_at,
+            ];
+        });
+
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'total' => $formattedTickets->count(),
+                'tickets' => $formattedTickets,
+            ]
+        ]);
+    }
+
+    /**
+     * 获取玩家中奖结果（客户端查询）
+     * @return \support\Response
+     */
+    public function getMyResult()
+    {
+        $activityId = Request::input('activity_id');
+        $playerId = Request::input('player_id');
+
+        if (!$activityId || !$playerId) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
+        }
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
+        }
+
+        // 查询玩家的所有券
+        $myTickets = LotteryTicket::where('activity_id', $activityId)
+            ->where('player_id', $playerId)
+            ->get();
+
+        $totalTickets = $myTickets->count();
+
+        // 查询玩家的中奖记录
+        $winRecords = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+            ->where('player_id', $playerId)
+            ->get();
+
+        $hasWon = $winRecords->count() > 0;
+
+        // 格式化中奖详情
+        $myWins = $winRecords->map(function ($record) {
+            return [
+                'ticket_no' => $record->ticket_no,
+                'prize_level' => $record->prize_name,
+                'prize_type' => $record->prize_type,
+                'prize_amount' => $record->prize_amount,
+                'status' => $record->status,
+                'created_at' => $record->created_at,
+            ];
+        });
+
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'activity_id' => $activityId,
+                'activity_name' => $activity->name,
+                'has_won' => $hasWon,
+                'my_tickets_count' => $totalTickets,
+                'winning_tickets_count' => $winRecords->count(),
+                'losing_tickets_count' => $totalTickets - $winRecords->count(),
+                'my_wins' => $myWins,
+            ]
+        ]);
+    }
 }
