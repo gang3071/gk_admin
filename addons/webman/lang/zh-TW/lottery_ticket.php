@@ -200,6 +200,9 @@ return [
         'upload_success' => '上傳成功',
         'live_url_updated' => '直播地址設置成功',
         'record_success' => '中獎記錄錄入成功',
+        'live_started' => '直播已開始',
+        'live_ended' => '直播已結束',
+        'status_updated' => '狀態更新成功',
     ],
 
     // 错误信息
@@ -221,6 +224,8 @@ return [
         'activity_not_ongoing' => '只能在進行中的活動錄入中獎',
         'prize_level_not_found' => '獎品等級不存在',
         'player_not_found' => '玩家不存在',
+        'live_url_required' => '請先設置直播地址',
+        'invalid_status' => '無效的狀態值',
     ],
 
     // 帮助文本

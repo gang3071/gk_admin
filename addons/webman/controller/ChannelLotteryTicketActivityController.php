@@ -937,4 +937,160 @@ class ChannelLotteryTicketActivityController
             ]
         ]);
     }
+
+    /**
+     * 开始直播
+     * @return \support\Response
+     */
+    public function startLive()
+    {
+        $activityId = Request::input('activity_id');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity || $activity->department_id != Admin::user()->department_id) {
+            return response()->json([
+                'code' => 403,
+                'message' => admin_trans('common.no_permission')
+            ]);
+        }
+
+        // 检查直播地址
+        if (empty($activity->live_url)) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.live_url_required')
+            ]);
+        }
+
+        // 更新直播状态
+        $activity->live_status = LotteryTicketActivity::LIVE_STATUS_ONGOING;
+        $activity->save();
+
+        // TODO: 推送直播开始通知
+        // \Webman\Push\Api::trigger('activity_' . $activityId, 'live_start', [
+        //     'live_url' => $activity->live_url,
+        //     'activity_name' => $activity->name,
+        // ]);
+
+        return response()->json([
+            'code' => 200,
+            'message' => admin_trans('lottery_ticket.message.live_started'),
+            'data' => [
+                'live_status' => $activity->live_status,
+                'live_url' => $activity->live_url,
+            ]
+        ]);
+    }
+
+    /**
+     * 结束直播
+     * @return \support\Response
+     */
+    public function endLive()
+    {
+        $activityId = Request::input('activity_id');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity || $activity->department_id != Admin::user()->department_id) {
+            return response()->json([
+                'code' => 403,
+                'message' => admin_trans('common.no_permission')
+            ]);
+        }
+
+        // 更新直播状态
+        $activity->live_status = LotteryTicketActivity::LIVE_STATUS_ENDED;
+        $activity->save();
+
+        // TODO: 推送直播结束通知
+        // \Webman\Push\Api::trigger('activity_' . $activityId, 'live_end', [
+        //     'activity_id' => $activityId,
+        // ]);
+
+        return response()->json([
+            'code' => 200,
+            'message' => admin_trans('lottery_ticket.message.live_ended'),
+            'data' => [
+                'live_status' => $activity->live_status,
+            ]
+        ]);
+    }
+
+    /**
+     * 获取直播信息（客户端查询）
+     * @return \support\Response
+     */
+    public function getLiveInfo()
+    {
+        $activityId = Request::input('activity_id');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            return response()->json([
+                'code' => 404,
+                'message' => admin_trans('lottery_ticket.message.activity_not_found')
+            ]);
+        }
+
+        return response()->json([
+            'code' => 200,
+            'data' => [
+                'activity_id' => $activity->id,
+                'activity_name' => $activity->name,
+                'live_url' => $activity->live_url,
+                'live_status' => $activity->live_status,
+                'live_status_text' => LotteryTicketActivity::getLiveStatusText($activity->live_status),
+                'has_live' => !empty($activity->live_url),
+            ]
+        ]);
+    }
+
+    /**
+     * 更新活动状态（手动控制）
+     * @return \support\Response
+     */
+    public function updateActivityStatus()
+    {
+        $activityId = Request::input('activity_id');
+        $newStatus = Request::input('status');
+
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity || $activity->department_id != Admin::user()->department_id) {
+            return response()->json([
+                'code' => 403,
+                'message' => admin_trans('common.no_permission')
+            ]);
+        }
+
+        // 验证状态值
+        $validStatuses = [
+            LotteryTicketActivity::STATUS_NOT_STARTED,
+            LotteryTicketActivity::STATUS_ONGOING,
+            LotteryTicketActivity::STATUS_ENDED,
+            LotteryTicketActivity::STATUS_CLOSED,
+            LotteryTicketActivity::STATUS_PREHEATING,
+            LotteryTicketActivity::STATUS_BETTING,
+            LotteryTicketActivity::STATUS_DRAWING,
+        ];
+
+        if (!in_array($newStatus, $validStatuses)) {
+            return response()->json([
+                'code' => 400,
+                'message' => admin_trans('lottery_ticket.error.invalid_status')
+            ]);
+        }
+
+        // 记录状态变更
+        $activity->recordStatusChange($newStatus, '管理员手动更新');
+        $activity->save();
+
+        return response()->json([
+            'code' => 200,
+            'message' => admin_trans('lottery_ticket.message.status_updated'),
+            'data' => [
+                'status' => $activity->status,
+                'status_text' => LotteryTicketActivity::getStatusText($activity->status),
+            ]
+        ]);
+    }
 }
