@@ -450,11 +450,12 @@
       <div v-for="(prizeLevel, index) in recordPrizeLevels" :key="prizeLevel.id">
         <a-card size="small" :title="`${prizeLevel.level_name} - ${prizeLevel.prize_amount}元`" style="margin-bottom: 16px;">
           <div v-for="(ticket, ticketIndex) in prizeLevel.tickets" :key="ticketIndex" style="margin-bottom: 8px;">
-            <a-space style="width: 100%;">
+            <a-space style="width: 100%; align-items: center;">
+              <span style="min-width: 80px; color: #666;">输入券号:</span>
               <a-input-number
                   v-model:value="ticket.ticket_no"
                   style="width: 200px;"
-                  placeholder="请输入券号(仅数字)"
+                  placeholder="123456"
                   :controls="false"
                   :precision="0"
               />
@@ -722,10 +723,18 @@ export default {
           }
 
           // 为每个奖品等级初始化券号输入框
-          this.recordPrizeLevels = prizeLevels.map(level => ({
-            ...level,
-            tickets: [{ ticket_no: null }] // 默认一个输入框
-          }));
+          this.recordPrizeLevels = prizeLevels.map(level => {
+            // 根据奖品数量生成输入框，如果数量为0则默认1个
+            const ticketCount = level.prize_count > 0 ? level.prize_count : 1;
+            const tickets = [];
+            for (let i = 0; i < ticketCount; i++) {
+              tickets.push({ ticket_no: null });
+            }
+            return {
+              ...level,
+              tickets: tickets
+            };
+          });
 
           this.recordData = {
             activity_id: activity.id
