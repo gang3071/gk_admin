@@ -205,19 +205,28 @@
         </a-form-item>
 
         <a-form-item label="活动封面图片">
-          <a-input
-              v-model:value="formData.cover_image"
-              placeholder="请输入图片URL或使用图片管理器上传"
-          />
+          <a-upload
+              :before-upload="handleBeforeUpload"
+              :custom-request="handleCoverUpload"
+              :show-upload-list="false"
+              accept="image/jpeg,image/png,image/jpg"
+          >
+            <a-button type="primary">
+              <upload-outlined/>
+              选择图片
+            </a-button>
+          </a-upload>
           <div style="margin-top: 4px; margin-bottom: 8px; color: #999; font-size: 12px;">
-            建议尺寸：750x400px，支持jpg、png格式
+            建议尺寸：750x400px，支持jpg、png格式，文件大小不超过2MB
           </div>
-          <img
-              v-if="formData.cover_image"
-              :src="formData.cover_image"
-              style="max-width: 300px; margin-top: 8px; border: 1px solid #d9d9d9; border-radius: 4px;"
-              alt="封面预览"
-          />
+          <a-spin :spinning="uploading" style="display: block; margin-top: 8px;">
+            <img
+                v-if="formData.cover_image"
+                :src="formData.cover_image"
+                style="max-width: 300px; border: 1px solid #d9d9d9; border-radius: 4px;"
+                alt="封面预览"
+            />
+          </a-spin>
         </a-form-item>
 
         <a-row :gutter="16">
@@ -543,6 +552,7 @@ export default {
       currentActivity: null,
       submitting: false,
       recordSubmitting: false,
+      uploading: false,
       recordPrizeLevels: [],
       ticketList: [],
       ticketLoading: false,
@@ -679,6 +689,51 @@ export default {
         prize_levels: []
       };
       this.formVisible = true;
+    },
+
+    // 上传前验证
+    handleBeforeUpload(file) {
+      const isImage = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg';
+      if (!isImage) {
+        this.$message.error('只能上传 JPG/PNG 格式的图片！');
+        return false;
+      }
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        this.$message.error('图片大小不能超过 2MB！');
+        return false;
+      }
+      return true;
+    },
+
+    // 处理封面图片上传
+    async handleCoverUpload({file}) {
+      this.uploading = true;
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/core/uploadImage',
+          method: 'post',
+          data: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        if (res.code === 200 && res.data && res.data.url) {
+          this.formData.cover_image = res.data.url;
+          this.$message.success('图片上传成功');
+        } else {
+          this.$message.error(res.message || '图片上传失败');
+        }
+      } catch (error) {
+        console.error('上传失败:', error);
+        this.$message.error('图片上传失败');
+      } finally {
+        this.uploading = false;
+      }
     },
 
     // 菜单点击
