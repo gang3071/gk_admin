@@ -17,6 +17,8 @@ return [
         'name' => '活动名称',
         'activity_name' => '活动名称',
         'description' => '活动说明',
+        'cover_image' => '活动封面',
+        'live_url' => '直播地址',
         'start_time' => '开始时间',
         'end_time' => '结束时间',
         'status' => '活动状态',
@@ -165,6 +167,8 @@ return [
         'no_activities' => '暂无活动',
         'no_prize_config' => '尚未配置奖品等级',
         'prize_level_hint' => '最多可配置10个奖品等级,中奖概率总和不能超过100%',
+        'upload_success' => '上传成功',
+        'live_url_updated' => '直播地址设置成功',
     ],
 
     // 错误信息

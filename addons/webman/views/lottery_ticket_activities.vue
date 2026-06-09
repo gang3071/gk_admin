@@ -71,6 +71,10 @@
                     <edit-outlined/>
                     {{ trans.edit }}
                   </a-menu-item>
+                  <a-menu-item key="live">
+                    <video-camera-outlined/>
+                    添加直播地址
+                  </a-menu-item>
                   <a-menu-item key="close" danger v-if="activity.status === 1">
                     <stop-outlined/>
                     {{ trans.closeActivity }}
@@ -81,13 +85,30 @@
           </template>
 
           <div class="activity-content">
+            <!-- 封面图片 -->
+            <div v-if="activity.cover_image" style="margin-bottom: 12px;">
+              <img
+                  :src="activity.cover_image"
+                  style="width: 100%; height: 150px; object-fit: cover; border-radius: 4px;"
+                  alt="活动封面"
+              />
+            </div>
+
+            <!-- 活动描述 -->
             <div class="description" v-if="activity.description">
-              <a-typography-paragraph
-                  :ellipsis="{ rows: 2, expandable: false }"
-                  style="margin-bottom: 12px; color: #666;"
-              >
+              <div v-if="activity.description.length <= 100" style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
                 {{ activity.description }}
-              </a-typography-paragraph>
+              </div>
+              <div v-else style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
+                <span v-if="!activity.showFullDesc">
+                  {{ activity.description.substring(0, 100) }}...
+                  <a @click="toggleDescription(activity)" style="color: #1890ff; cursor: pointer; margin-left: 4px;">展开</a>
+                </span>
+                <span v-else>
+                  {{ activity.description }}
+                  <a @click="toggleDescription(activity)" style="color: #1890ff; cursor: pointer; margin-left: 4px;">收起</a>
+                </span>
+              </div>
             </div>
 
             <div class="time-info">
@@ -128,17 +149,6 @@
                 </a-statistic>
               </a-col>
             </a-row>
-
-            <div style="margin-top: 12px;">
-              <div style="margin-bottom: 4px; font-size: 12px; color: #666;">
-                {{ trans.usageRate }}: {{ getUsageRate(activity) }}%
-              </div>
-              <a-progress
-                  :percent="parseFloat(getUsageRate(activity))"
-                  :status="getProgressStatus(activity)"
-                  :strokeColor="getProgressColor(activity)"
-              />
-            </div>
 
             <a-alert
                 v-if="!activity.has_prize_config"
@@ -608,10 +618,72 @@ export default {
         case 'edit':
           this.editActivity(activity);
           break;
+        case 'live':
+          this.showLiveModal(activity);
+          break;
         case 'close':
           this.closeActivity(activity);
           break;
       }
+    },
+
+    // 展开/收起描述
+    toggleDescription(activity) {
+      this.$set(activity, 'showFullDesc', !activity.showFullDesc);
+    },
+
+    // 显示直播地址弹窗
+    showLiveModal(activity) {
+      this.$prompt({
+        title: '添加直播地址',
+        content: h => h('div', [
+          h('div', {style: {marginBottom: '8px'}}, '请输入直播流地址:'),
+          h('input', {
+            ref: 'liveUrlInput',
+            placeholder: '例如: rtmp://live.example.com/stream/12345',
+            style: {
+              width: '100%',
+              padding: '8px',
+              border: '1px solid #d9d9d9',
+              borderRadius: '4px'
+            },
+            value: activity.live_url || ''
+          })
+        ]),
+        okText: '确定',
+        cancelText: '取消',
+        onOk: async () => {
+          const input = document.querySelector('input[placeholder*="rtmp"]');
+          const liveUrl = input ? input.value.trim() : '';
+
+          if (!liveUrl) {
+            this.$message.error('请输入直播地址');
+            return Promise.reject();
+          }
+
+          try {
+            const res = await this.$request({
+              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl',
+              method: 'post',
+              data: {
+                id: activity.id,
+                live_url: liveUrl
+              }
+            });
+
+            if (res.code === 200) {
+              this.$message.success('直播地址设置成功');
+              this.fetchActivities();
+            } else {
+              this.$message.error(res.message || res.msg || '设置失败');
+              return Promise.reject();
+            }
+          } catch (error) {
+            this.$message.error('设置失败');
+            return Promise.reject(error);
+          }
+        }
+      });
     },
 
     // 查看详情

@@ -516,6 +516,40 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
+     * 更新直播地址
+     * @auth true
+     * @group channel
+     * @return mixed
+     */
+    public function updateLiveUrl()
+    {
+        $id = request()->input('id');
+        $liveUrl = request()->input('live_url', '');
+
+        if (!$id) {
+            return jsonFailResponse(admin_trans('lottery_ticket.error.invalid_params'), [], 400);
+        }
+
+        $activity = LotteryTicketActivity::query()
+            ->where('id', $id)
+            ->where('department_id', Admin::user()->department_id)
+            ->first();
+
+        if (!$activity) {
+            return jsonFailResponse(admin_trans('lottery_ticket.message.activity_not_found'), [], 404);
+        }
+
+        try {
+            $activity->live_url = $liveUrl;
+            $activity->save();
+
+            return jsonSuccessResponse(admin_trans('lottery_ticket.message.live_url_updated'), $activity);
+        } catch (\Exception $e) {
+            return jsonFailResponse($e->getMessage(), [], 500);
+        }
+    }
+
+    /**
      * 上传活动封面图片
      * @auth true
      * @group channel
