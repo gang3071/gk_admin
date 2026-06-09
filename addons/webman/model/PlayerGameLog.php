@@ -114,20 +114,21 @@ class PlayerGameLog extends Model
     protected static function booted()
     {
         static::created(function (PlayerGameLog $playerGameLog) {
-            // ========== 摸奖券打码进度更新（实时触发）==========
-            // 当玩家产生游戏记录时，自动更新打码进度并检查是否需要发券
+            // ========== 摸奖券打码进度更新（异步队列处理）==========
+            // 使用 Redis 队列异步处理，完全不影响游戏主流程性能
             if ($playerGameLog->chip_amount > 0 && $playerGameLog->player_id > 0) {
                 try {
-                    \addons\webman\service\LotteryTicketBetProgressService::updateBetProgress(
-                        $playerGameLog->player_id,
-                        $playerGameLog->chip_amount
-                    );
-                } catch (\Exception $e) {
-                    // 打码进度更新失败不影响游戏主流程
-                    \support\Log::error('摸奖券打码进度更新失败: ' . $e->getMessage(), [
+                    // 发送到 Redis 队列异步处理
+                    \Webman\RedisQueue\Client::send('lottery-bet-progress', [
                         'player_id' => $playerGameLog->player_id,
                         'chip_amount' => $playerGameLog->chip_amount,
-                        'trace' => $e->getTraceAsString()
+                        'created_at' => $playerGameLog->created_at,
+                    ]);
+                } catch (\Exception $e) {
+                    // 队列发送失败记录日志，不影响游戏流程
+                    \support\Log::error('摸奖券队列发送失败: ' . $e->getMessage(), [
+                        'player_id' => $playerGameLog->player_id,
+                        'chip_amount' => $playerGameLog->chip_amount,
                     ]);
                 }
             }

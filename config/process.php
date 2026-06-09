@@ -39,4 +39,11 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 摸奖券打码进度队列消费者（异步处理，不影响游戏性能）
+    'lottery_bet_progress_consumer' => [
+        'handler' => process\LotteryBetProgressConsumer::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];
