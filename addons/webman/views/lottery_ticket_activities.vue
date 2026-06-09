@@ -148,6 +148,20 @@
               </a-col>
             </a-row>
 
+            <!-- 编辑按钮 -->
+            <a-button
+                v-if="activity.status === 0"
+                type="primary"
+                block
+                style="margin-top: 12px;"
+                @click="editActivity(activity)"
+            >
+              <template #icon>
+                <edit-outlined/>
+              </template>
+              {{ trans.edit }}
+            </a-button>
+
             <a-alert
                 v-if="!activity.has_prize_config"
                 :message="trans.noPrizeConfig"
