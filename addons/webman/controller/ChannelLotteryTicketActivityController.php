@@ -486,7 +486,7 @@ class ChannelLotteryTicketActivityController
                 }
 
                 // 创建中奖记录
-                \addons\webman\model\LotteryTicketRecord::create([
+                $record = \addons\webman\model\LotteryTicketRecord::create([
                     'activity_id' => $activityId,
                     'player_id' => $ticket->player_id,
                     'department_id' => $activity->department_id,
@@ -501,6 +501,9 @@ class ChannelLotteryTicketActivityController
                 // 更新摸奖券状态为已使用
                 $ticket->status = LotteryTicket::STATUS_USED;
                 $ticket->save();
+
+                // 发送中奖推送通知
+                \addons\webman\service\LotteryTicketPushService::pushWinNotification($record);
 
                 $successCount++;
             }
@@ -966,11 +969,8 @@ class ChannelLotteryTicketActivityController
         $activity->live_status = LotteryTicketActivity::LIVE_STATUS_ONGOING;
         $activity->save();
 
-        // TODO: 推送直播开始通知
-        // \Webman\Push\Api::trigger('activity_' . $activityId, 'live_start', [
-        //     'live_url' => $activity->live_url,
-        //     'activity_name' => $activity->name,
-        // ]);
+        // 推送直播开始通知
+        \addons\webman\service\LotteryTicketPushService::pushLiveStarted($activity);
 
         return response()->json([
             'code' => 200,

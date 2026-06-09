@@ -167,13 +167,13 @@ class LotteryActivityStatusTransitionTask
      */
     protected function onPreheatingStart(LotteryTicketActivity $activity)
     {
-        // TODO: 发送预热通知
-        // - WebSocket推送给在线玩家
-        // - 创建系统公告
         Log::info('摸奖券活动预热期开始', [
             'activity_id' => $activity->id,
             'activity_name' => $activity->name,
         ]);
+
+        // 发送预热通知
+        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'preheat_start');
     }
 
     /**
@@ -182,15 +182,13 @@ class LotteryActivityStatusTransitionTask
      */
     protected function onBettingStart(LotteryTicketActivity $activity)
     {
-        // 活动正式开始，发送通知
         Log::info('摸奖券活动打码期开始', [
             'activity_id' => $activity->id,
             'activity_name' => $activity->name,
         ]);
 
-        // TODO: 发送活动开始通知
-        // - WebSocket推送
-        // - 短信通知（可选）
+        // 发送活动开始通知
+        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'betting_start');
     }
 
     /**
@@ -207,9 +205,8 @@ class LotteryActivityStatusTransitionTask
         // 停止所有玩家的打码进度（不再发券）
         LotteryTicketBetProgressService::endActivityProgress($activity->id);
 
-        // TODO: 发送开奖通知
-        // - 开启直播推流（如果有）
-        // - WebSocket推送开奖中状态
+        // 发送开奖通知
+        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'drawing_start');
     }
 
     /**
@@ -228,9 +225,7 @@ class LotteryActivityStatusTransitionTask
         // 确保所有打码进度已结束
         LotteryTicketBetProgressService::endActivityProgress($activity->id);
 
-        // TODO: 发送活动结束通知
-        // - 统计数据汇总
-        // - 生成活动报告
-        // - WebSocket推送活动结束
+        // 发送活动结束通知
+        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'ended');
     }
 }

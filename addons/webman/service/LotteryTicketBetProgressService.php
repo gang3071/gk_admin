@@ -235,10 +235,11 @@ class LotteryTicketBetProgressService
         }
 
         $issued = 0;
+        $firstTicket = null;
 
         for ($i = 0; $i < $count; $i++) {
             try {
-                LotteryTicket::create([
+                $ticket = LotteryTicket::create([
                     'activity_id' => $progress->activity_id,
                     'player_id' => $progress->player_id,
                     'department_id' => $progress->department_id,
@@ -247,10 +248,20 @@ class LotteryTicketBetProgressService
                     'status' => LotteryTicket::STATUS_UNUSED,
                     'expires_at' => $progress->activity->end_time,
                 ]);
+
+                if ($i === 0) {
+                    $firstTicket = $ticket;
+                }
+
                 $issued++;
             } catch (\Exception $e) {
                 Log::error('发放摸奖券失败: ' . $e->getMessage());
             }
+        }
+
+        // 发送推送通知
+        if ($issued > 0 && $firstTicket) {
+            LotteryTicketPushService::pushTicketIssued($firstTicket, $issued);
         }
 
         return $issued;
