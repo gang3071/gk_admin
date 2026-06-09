@@ -81,6 +81,17 @@ return [
         'ongoing' => '進行中',
         'ended' => '已結束',
         'closed' => '已關閉',
+        'preheating' => '預熱期',
+        'betting' => '打碼中',
+        'drawing' => '開獎中',
+        'unknown' => '未知狀態',
+    ],
+
+    // 直播状态
+    'live_status' => [
+        'not_started' => '未開播',
+        'ongoing' => '直播中',
+        'ended' => '已結束',
         'unknown' => '未知狀態',
     ],
 

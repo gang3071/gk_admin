@@ -54,4 +54,11 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 摸奖券活动状态自动流转任务（检查时间节点，自动更新活动状态）
+    'lottery_activity_status_transition' => [
+        'handler' => process\LotteryActivityStatusTransitionTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];
