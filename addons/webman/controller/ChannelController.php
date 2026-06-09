@@ -15,7 +15,6 @@ use addons\webman\model\GamePlatform;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use addons\webman\model\VipLevel;
-use addons\webman\service\VipLevelService;
 use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Copy;
@@ -741,59 +740,6 @@ class ChannelController
                         $adminDepartment->path = $adminDepartment->id;
                         $adminDepartment->save();
 
-                        // 如果开启了VIP等级功能，自动创建10个默认VIP等级
-                        if ($channel->vip_level_status == 1) {
-                            $vipResult = VipLevelService::createDefaultLevelsForChannel($adminDepartment->id);
-                            if (!$vipResult['success']) {
-                                // VIP等级创建失败不影响渠道创建，只记录日志
-                                Log::warning("渠道创建成功，但VIP等级创建失败: {$vipResult['message']}", [
-                                    'department_id' => $adminDepartment->id,
-                                    'channel_name' => $channel->name
-                                ]);
-                            } else {
-                                Log::info("渠道创建成功，已自动创建 {$vipResult['count']} 个VIP等级", [
-                                    'department_id' => $adminDepartment->id,
-                                    'channel_name' => $channel->name
-                                ]);
-
-                                // 处理VIP等级启用/禁用
-                                $selectedVipLevels = $form->input('vip_levels', []);
-                                if (!empty($selectedVipLevels)) {
-                                    // 获取所有VIP等级
-                                    $allVipLevels = VipLevel::query()
-                                        ->where('department_id', $adminDepartment->id)
-                                        ->pluck('id')
-                                        ->toArray();
-
-                                    // 启用选中的VIP等级
-                                    VipLevel::query()
-                                        ->where('department_id', $adminDepartment->id)
-                                        ->whereIn('id', $selectedVipLevels)
-                                        ->update(['status' => VipLevel::STATUS_ENABLED]);
-
-                                    // 禁用未选中的VIP等级
-                                    $unselectedLevels = array_diff($allVipLevels, $selectedVipLevels);
-                                    if (!empty($unselectedLevels)) {
-                                        VipLevel::query()
-                                            ->where('department_id', $adminDepartment->id)
-                                            ->whereIn('id', $unselectedLevels)
-                                            ->update(['status' => VipLevel::STATUS_DISABLED]);
-                                    }
-
-                                    Log::info("初始化VIP等级状态", [
-                                        'department_id' => $adminDepartment->id,
-                                        'enabled_levels' => $selectedVipLevels,
-                                        'disabled_levels' => $unselectedLevels,
-                                    ]);
-                                } else {
-                                    // 如果没有选择VIP等级，默认全部启用
-                                    Log::info("VIP等级全部启用（默认）", [
-                                        'department_id' => $adminDepartment->id,
-                                    ]);
-                                }
-                            }
-                        }
-
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();
@@ -912,22 +858,6 @@ class ChannelController
                         // 批量生成关联关系（数据已在事务外准备好）
                         if (!empty($insert)) {
                             ChannelGameWeb::query()->insert($insert);
-                        }
-
-                        // 如果VIP等级功能开启，且该渠道下没有VIP等级，则自动创建默认等级
-                        if ($channel->vip_level_status == 1 && !VipLevelService::hasVipLevels($channel->department_id)) {
-                            $vipResult = VipLevelService::createDefaultLevelsForChannel($channel->department_id);
-                            if (!$vipResult['success']) {
-                                Log::warning("渠道保存成功，但VIP等级创建失败: {$vipResult['message']}", [
-                                    'department_id' => $channel->department_id,
-                                    'channel_name' => $channel->name
-                                ]);
-                            } else {
-                                Log::info("VIP等级功能已开启，自动创建 {$vipResult['count']} 个VIP等级", [
-                                    'department_id' => $channel->department_id,
-                                    'channel_name' => $channel->name
-                                ]);
-                            }
                         }
 
                         // 处理VIP等级启用/禁用（当VIP等级功能开启时）
