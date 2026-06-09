@@ -123,30 +123,16 @@
             </div>
 
             <a-divider style="margin: 12px 0;"/>
-            <a-row :gutter="8">
-              <a-col :span="12">
-                <a-statistic
-                    :title="trans.totalTickets"
-                    :value="activity.total_tickets"
-                    :value-style="{ fontSize: '20px', color: '#1890ff' }"
-                >
-                  <template #prefix>
-                    <file-text-outlined/>
-                  </template>
-                </a-statistic>
-              </a-col>
-              <a-col :span="12">
-                <a-statistic
-                    :title="trans.usedTickets"
-                    :value="activity.used_tickets"
-                    :value-style="{ fontSize: '20px', color: '#52c41a' }"
-                >
-                  <template #prefix>
-                    <check-circle-outlined/>
-                  </template>
-                </a-statistic>
-              </a-col>
-            </a-row>
+            <a-statistic
+                :title="trans.totalTickets"
+                :value="activity.total_tickets"
+                :value-style="{ fontSize: '24px', color: '#1890ff' }"
+                style="text-align: center;"
+            >
+              <template #prefix>
+                <file-text-outlined/>
+              </template>
+            </a-statistic>
 
             <!-- 编辑按钮 -->
             <a-button
