@@ -522,6 +522,24 @@
         </template>
       </a-table>
     </a-drawer>
+
+    <!-- 直播地址设置 Modal -->
+    <a-modal
+        v-model:visible="liveModalVisible"
+        :title="trans.modalLiveUrlTitle"
+        @ok="submitLiveUrl"
+        @cancel="handleLiveModalClose"
+    >
+      <a-form layout="vertical">
+        <a-form-item :label="trans.modalLiveUrlPrompt">
+          <a-input
+              v-model:value="liveUrlInput"
+              :placeholder="trans.liveUrlPlaceholder"
+              allow-clear
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -548,6 +566,8 @@ export default {
       detailVisible: false,
       recordVisible: false,
       ticketListVisible: false,
+      liveModalVisible: false,
+      liveUrlInput: '',
       formMode: 'create',
       currentActivity: null,
       submitting: false,
@@ -871,56 +891,50 @@ export default {
 
     // 显示直播地址弹窗
     showLiveModal(activity) {
-      this.$prompt({
-        title: this.trans.modalLiveUrlTitle,
-        content: h => h('div', [
-          h('div', {style: {marginBottom: '8px'}}, this.trans.modalLiveUrlPrompt),
-          h('input', {
-            ref: 'liveUrlInput',
-            placeholder: this.trans.liveUrlPlaceholder,
-            style: {
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #d9d9d9',
-              borderRadius: '4px'
-            },
-            value: activity.live_url || ''
-          })
-        ]),
-        okText: this.trans.submit,
-        cancelText: this.trans.cancel,
-        onOk: async () => {
-          const input = document.querySelector('input[placeholder*="rtmp"]');
-          const liveUrl = input ? input.value.trim() : '';
+      this.currentActivity = activity;
+      this.liveUrlInput = activity.live_url || '';
+      this.liveModalVisible = true;
+    },
 
-          if (!liveUrl) {
-            this.$message.error(this.trans.modalLiveUrlRequired);
-            return Promise.reject();
+    // 关闭直播地址弹窗
+    handleLiveModalClose() {
+      this.liveModalVisible = false;
+      this.liveUrlInput = '';
+      this.currentActivity = null;
+    },
+
+    // 提交直播地址
+    async submitLiveUrl() {
+      const liveUrl = this.liveUrlInput.trim();
+
+      if (!liveUrl) {
+        this.$message.error(this.trans.modalLiveUrlRequired || '请输入直播地址');
+        return;
+      }
+
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl',
+          method: 'post',
+          data: {
+            id: this.currentActivity.id,
+            live_url: liveUrl
           }
+        });
 
-          try {
-            const res = await this.$request({
-              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl',
-              method: 'post',
-              data: {
-                id: activity.id,
-                live_url: liveUrl
-              }
-            });
-
-            if (res.code === 200) {
-              this.$message.success('直播地址设置成功');
-              this.fetchActivities();
-            } else {
-              this.$message.error(res.message || res.msg || '设置失败');
-              return Promise.reject();
-            }
-          } catch (error) {
-            this.$message.error('设置失败');
-            return Promise.reject(error);
-          }
+        if (res.code === 200) {
+          this.$message.success(this.trans.liveUrlUpdated || '直播地址设置成功');
+          this.liveModalVisible = false;
+          this.liveUrlInput = '';
+          this.currentActivity = null;
+          this.fetchActivities();
+        } else {
+          this.$message.error(res.message || res.msg || '设置失败');
         }
-      });
+      } catch (error) {
+        console.error('设置失败:', error);
+        this.$message.error('设置失败');
+      }
     },
 
     // 查看详情
