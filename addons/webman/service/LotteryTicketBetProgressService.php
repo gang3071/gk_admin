@@ -42,36 +42,58 @@ class LotteryTicketBetProgressService
 
         $createdCount = 0;
 
-        // 为每个VIP等级配置，查找对应的玩家并创建进度记录
-        foreach ($vipConfigs as $config) {
-            // 查找该渠道下该VIP等级的玩家
-            $players = Player::where('department_id', $activity->department_id)
-                ->where('vip_level_id', $config->vip_level_id)
-                ->where('status', Player::STATUS_ENABLE)
-                ->get();
+        // 【P1修复】添加事务保护，确保批量创建的原子性
+        Db::beginTransaction();
+        try {
+            // 为每个VIP等级配置，查找对应的玩家并创建进度记录
+            foreach ($vipConfigs as $config) {
+                // 查找该渠道下该VIP等级的玩家
+                $players = Player::where('department_id', $activity->department_id)
+                    ->where('vip_level_id', $config->vip_level_id)
+                    ->where('status', Player::STATUS_ENABLE)
+                    ->get();
 
-            foreach ($players as $player) {
-                // 检查是否已存在进度记录
-                $exists = LotteryTicketBetProgress::where('activity_id', $activityId)
-                    ->where('player_id', $player->id)
-                    ->exists();
+                foreach ($players as $player) {
+                    // 【P1修复】使用 firstOrCreate 防止并发重复创建
+                    $progress = LotteryTicketBetProgress::firstOrCreate(
+                        [
+                            'activity_id' => $activityId,
+                            'player_id' => $player->id,
+                        ],
+                        [
+                            'department_id' => $activity->department_id,
+                            'vip_level_id' => $config->vip_level_id,
+                            'bet_amount_required' => $config->bet_amount_required,
+                            'ticket_count_per_cycle' => $config->ticket_count,
+                            'current_bet_amount' => 0,
+                            'cycles_completed' => 0,
+                            'total_tickets_issued' => 0,
+                            'status' => LotteryTicketBetProgress::STATUS_ACTIVE,
+                        ]
+                    );
 
-                if (!$exists) {
-                    LotteryTicketBetProgress::create([
-                        'activity_id' => $activityId,
-                        'player_id' => $player->id,
-                        'department_id' => $activity->department_id,
-                        'vip_level_id' => $config->vip_level_id,
-                        'bet_amount_required' => $config->bet_amount_required,
-                        'ticket_count_per_cycle' => $config->ticket_count,
-                        'current_bet_amount' => 0,
-                        'cycles_completed' => 0,
-                        'total_tickets_issued' => 0,
-                        'status' => LotteryTicketBetProgress::STATUS_ACTIVE,
-                    ]);
-                    $createdCount++;
+                    if ($progress->wasRecentlyCreated) {
+                        $createdCount++;
+                    }
                 }
             }
+
+            Db::commit();
+
+            Log::info('初始化打码进度完成', [
+                'activity_id' => $activityId,
+                'created_count' => $createdCount,
+            ]);
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            Log::error('初始化打码进度失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return 0;
         }
 
         return $createdCount;
@@ -97,47 +119,64 @@ class LotteryTicketBetProgressService
             return ['success' => false, 'message' => '玩家不存在'];
         }
 
-        // 查找该玩家参与的所有进行中的活动
+        // 查找该玩家参与的所有进行中的活动（预加载活动关联，避免N+1）
         $query = LotteryTicketBetProgress::where('player_id', $playerId)
-            ->where('status', LotteryTicketBetProgress::STATUS_ACTIVE);
+            ->where('status', LotteryTicketBetProgress::STATUS_ACTIVE)
+            ->with('activity');
 
         if ($activityId) {
             $query->where('activity_id', $activityId);
         }
 
-        $progressRecords = $query->get();
+        // 只获取ID列表，稍后逐个锁定
+        $progressIds = $query->pluck('id')->toArray();
 
-        if ($progressRecords->isEmpty()) {
+        if (empty($progressIds)) {
             // 如果没有进度记录，尝试为玩家创建
             if ($activityId) {
                 self::createProgressForPlayer($activityId, $playerId);
-                $progressRecords = LotteryTicketBetProgress::where('player_id', $playerId)
+                $progressIds = LotteryTicketBetProgress::where('player_id', $playerId)
                     ->where('activity_id', $activityId)
                     ->where('status', LotteryTicketBetProgress::STATUS_ACTIVE)
-                    ->get();
+                    ->pluck('id')
+                    ->toArray();
             }
 
-            if ($progressRecords->isEmpty()) {
+            if (empty($progressIds)) {
                 return ['success' => false, 'message' => '玩家未参与任何进行中的摸奖券活动'];
             }
         }
 
         $results = [];
 
-        foreach ($progressRecords as $progress) {
-            // 检查活动是否仍在进行中（支持两种状态：进行中、打码中）
-            $activity = $progress->activity;
-            if (!$activity || !in_array($activity->status, [
-                LotteryTicketActivity::STATUS_ONGOING,
-                LotteryTicketActivity::STATUS_BETTING,
-            ])) {
-                continue;
-            }
-
-            // 统一事务管理（外层）
+        // 逐个处理进度记录
+        foreach ($progressIds as $progressId) {
+            // 统一事务管理
             Db::beginTransaction();
             try {
-                // 1. 更新打码量
+                // 【P0修复】关键修复：锁定进度记录，防止并发更新丢失
+                $progress = LotteryTicketBetProgress::where('id', $progressId)
+                    ->with('activity')
+                    ->lockForUpdate()
+                    ->first();
+
+                // 检查记录是否存在（可能被其他事务删除）
+                if (!$progress) {
+                    Db::rollBack();
+                    continue;
+                }
+
+                // 检查活动是否仍在进行中（支持两种状态：进行中、打码中）
+                $activity = $progress->activity;
+                if (!$activity || !in_array($activity->status, [
+                    LotteryTicketActivity::STATUS_ONGOING,
+                    LotteryTicketActivity::STATUS_BETTING,
+                ])) {
+                    Db::rollBack();
+                    continue;
+                }
+
+                // 1. 更新打码量（已锁定，并发安全）
                 $progress->current_bet_amount += $chipAmount;
 
                 // 2. 检查并发券（在同一事务内）
@@ -147,7 +186,7 @@ class LotteryTicketBetProgressService
                 if ($progress->canIssueTickets()) {
                     $ticketsToIssue = $progress->getTicketsToIssue();
 
-                    // 发放摸奖券（内部无事务）
+                    // 发放摸奖券（内部锁定活动）
                     $issueResult = self::issueTickets($progress, $ticketsToIssue);
                     $issuedCount = $issueResult['issued_count'];
                     $firstTicketNo = $issueResult['first_ticket_no'];
@@ -161,7 +200,7 @@ class LotteryTicketBetProgressService
                     }
                 }
 
-                // 3. 保存进度
+                // 3. 保存进度（已锁定，并发安全）
                 $progress->save();
 
                 // 统一提交
@@ -197,7 +236,7 @@ class LotteryTicketBetProgressService
                 Db::rollBack();
                 Log::error('更新打码进度失败', [
                     'player_id' => $playerId,
-                    'activity_id' => $progress->activity_id,
+                    'progress_id' => $progressId,
                     'chip_amount' => $chipAmount,
                     'error' => $e->getMessage(),
                     'file' => $e->getFile(),
@@ -245,18 +284,23 @@ class LotteryTicketBetProgressService
             return null;
         }
 
-        return LotteryTicketBetProgress::create([
-            'activity_id' => $activityId,
-            'player_id' => $playerId,
-            'department_id' => $activity->department_id,
-            'vip_level_id' => $player->vip_level_id,
-            'bet_amount_required' => $config->bet_amount_required,
-            'ticket_count_per_cycle' => $config->ticket_count,
-            'current_bet_amount' => 0,
-            'cycles_completed' => 0,
-            'total_tickets_issued' => 0,
-            'status' => LotteryTicketBetProgress::STATUS_ACTIVE,
-        ]);
+        // 【P1修复】使用 firstOrCreate 防止并发重复创建
+        return LotteryTicketBetProgress::firstOrCreate(
+            [
+                'activity_id' => $activityId,
+                'player_id' => $playerId,
+            ],
+            [
+                'department_id' => $activity->department_id,
+                'vip_level_id' => $player->vip_level_id,
+                'bet_amount_required' => $config->bet_amount_required,
+                'ticket_count_per_cycle' => $config->ticket_count,
+                'current_bet_amount' => 0,
+                'cycles_completed' => 0,
+                'total_tickets_issued' => 0,
+                'status' => LotteryTicketBetProgress::STATUS_ACTIVE,
+            ]
+        );
     }
 
     /**
