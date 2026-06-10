@@ -207,8 +207,17 @@ class LotteryTicketBetProgressService
                 Db::commit();
 
                 // 4. 事务外推送（不阻塞事务）
-                if ($issuedCount > 0 && $firstTicketNo) {
-                    try {
+                try {
+                    // 4.1 推送打码进度更新（静默推送，实时更新客户端进度条）
+                    LotteryTicketPushService::pushBetProgressUpdate(
+                        $progress->player_id,
+                        $activity->id,
+                        $progress->progress_percent,
+                        $progress->remaining_bet_amount
+                    );
+
+                    // 4.2 如果发券了，推送发券通知（弹窗通知）
+                    if ($issuedCount > 0 && $firstTicketNo) {
                         // 查询第一张券用于推送
                         $firstTicket = LotteryTicket::where('activity_id', $activity->id)
                             ->where('player_id', $progress->player_id)
@@ -218,18 +227,20 @@ class LotteryTicketBetProgressService
                         if ($firstTicket) {
                             LotteryTicketPushService::pushTicketIssued($firstTicket, $issuedCount);
                         }
-                    } catch (\Exception $e) {
-                        Log::warning('推送通知失败', [
-                            'error' => $e->getMessage(),
-                        ]);
-                    }
 
-                    $results[] = [
-                        'activity_id' => $progress->activity_id,
-                        'activity_name' => $activity->name,
-                        'tickets_issued' => $issuedCount,
-                        'total_tickets' => $progress->total_tickets_issued,
-                    ];
+                        $results[] = [
+                            'activity_id' => $progress->activity_id,
+                            'activity_name' => $activity->name,
+                            'tickets_issued' => $issuedCount,
+                            'total_tickets' => $progress->total_tickets_issued,
+                        ];
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('推送通知失败', [
+                        'player_id' => $progress->player_id,
+                        'activity_id' => $activity->id,
+                        'error' => $e->getMessage(),
+                    ]);
                 }
 
             } catch (\Exception $e) {

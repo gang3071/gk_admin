@@ -124,6 +124,16 @@ class LotteryBallDrawService
                 'winning_count' => $recordsCreated,
             ]);
 
+            // 推送开奖结果（广播给所有渠道用户）
+            try {
+                LotteryTicketPushService::pushDrawResult($activity, $ballResult, $recordsCreated);
+            } catch (\Exception $e) {
+                Log::warning('推送开奖结果失败', [
+                    'activity_id' => $activity->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return [
                 'success' => true,
                 'message' => "开奖成功，共产生 {$recordsCreated} 个中奖券",

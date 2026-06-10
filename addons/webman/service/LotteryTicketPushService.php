@@ -290,41 +290,56 @@ class LotteryTicketPushService
         }
 
         try {
-            // TODO: 调用 gk_api Push API
             // 频道名称格式: player_{player_id}
             $channelName = "player_{$playerId}";
 
-            // 示例实现（需要根据实际 Push API 接口调整）
-            /*
-            $response = \support\Http::post(self::$pushApiUrl . '/api/push', [
-                'channel' => $channelName,
-                'event' => $channel,
-                'data' => array_merge($data, [
-                    'show_notification' => $showNotification,
-                    'timestamp' => time(),
-                ]),
-                'app_key' => self::$appKey,
-                'app_secret' => self::$appSecret,
+            // 调用 gk_api Push API
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 5,
+                'verify' => false,
             ]);
 
-            return $response['code'] === 200;
-            */
-
-            // 临时日志记录（正式环境替换为实际推送）
-            Log::info('摸奖券推送 - 单个玩家', [
-                'player_id' => $playerId,
-                'channel' => $channel,
-                'channel_name' => $channelName,
+            $pushData = array_merge($data, [
                 'show_notification' => $showNotification,
-                'data' => $data,
+                'timestamp' => time(),
             ]);
 
-            return true;
+            $response = $client->post(self::$pushApiUrl . '/api/push', [
+                'json' => [
+                    'channel' => $channelName,
+                    'event' => $channel,
+                    'data' => $pushData,
+                ],
+                'headers' => [
+                    'X-App-Key' => self::$appKey,
+                    'X-App-Secret' => self::$appSecret,
+                    'Content-Type' => 'application/json',
+                ],
+            ]);
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            if ($result['code'] === 200 || $result['code'] === 0) {
+                Log::info('摸奖券推送成功 - 单个玩家', [
+                    'player_id' => $playerId,
+                    'channel' => $channel,
+                    'channel_name' => $channelName,
+                ]);
+                return true;
+            }
+
+            Log::warning('摸奖券推送失败 - 单个玩家', [
+                'player_id' => $playerId,
+                'response' => $result,
+            ]);
+            return false;
 
         } catch (\Exception $e) {
             Log::error('推送给玩家失败', [
                 'player_id' => $playerId,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return false;
         }
@@ -348,41 +363,128 @@ class LotteryTicketPushService
         }
 
         try {
-            // TODO: 调用 gk_api Push API
             // 频道名称格式: department_{department_id}
             $channelName = "department_{$departmentId}";
 
-            // 示例实现（需要根据实际 Push API 接口调整）
-            /*
-            $response = \support\Http::post(self::$pushApiUrl . '/api/push', [
-                'channel' => $channelName,
-                'event' => $channel,
-                'data' => array_merge($data, [
-                    'timestamp' => time(),
-                ]),
-                'app_key' => self::$appKey,
-                'app_secret' => self::$appSecret,
+            // 调用 gk_api Push API
+            $client = new \GuzzleHttp\Client([
+                'timeout' => 5,
+                'verify' => false,
             ]);
 
-            return $response['code'] === 200;
-            */
+            $pushData = array_merge($data, [
+                'timestamp' => time(),
+            ]);
 
-            // 临时日志记录（正式环境替换为实际推送）
-            Log::info('摸奖券推送 - 渠道广播', [
+            $response = $client->post(self::$pushApiUrl . '/api/push', [
+                'json' => [
+                    'channel' => $channelName,
+                    'event' => $channel,
+                    'data' => $pushData,
+                ],
+                'headers' => [
+                    'X-App-Key' => self::$appKey,
+                    'X-App-Secret' => self::$appSecret,
+                    'Content-Type' => 'application/json',
+                ],
+            ]);
+
+            $result = json_decode($response->getBody()->getContents(), true);
+
+            if ($result['code'] === 200 || $result['code'] === 0) {
+                Log::info('摸奖券推送成功 - 渠道广播', [
+                    'department_id' => $departmentId,
+                    'channel' => $channel,
+                    'channel_name' => $channelName,
+                ]);
+                return true;
+            }
+
+            Log::warning('摸奖券推送失败 - 渠道广播', [
                 'department_id' => $departmentId,
-                'channel' => $channel,
-                'channel_name' => $channelName,
-                'data' => $data,
+                'response' => $result,
             ]);
-
-            return true;
+            return false;
 
         } catch (\Exception $e) {
             Log::error('推送给渠道失败', [
                 'department_id' => $departmentId,
                 'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
             return false;
         }
+    }
+
+    /**
+     * 推送活动摇球结果（广播给所有参与玩家）
+     *
+     * @param LotteryTicketActivity $activity 活动对象
+     * @param array $ballResult 摇球结果
+     * @param int $winningCount 中奖数量
+     * @return bool
+     */
+    public static function pushDrawResult(
+        LotteryTicketActivity $activity,
+        array $ballResult,
+        int $winningCount
+    ): bool {
+        try {
+            $message = [
+                'type' => 'draw_result',
+                'title' => '🎉 开奖结果公布',
+                'message' => sprintf(
+                    '活动「%s」开奖完成！中奖券号：%s，共 %d 人中奖！',
+                    $activity->name,
+                    $ballResult['winning_no'],
+                    $winningCount
+                ),
+                'data' => [
+                    'activity_id' => $activity->id,
+                    'activity_name' => $activity->name,
+                    'ball_result' => $ballResult,
+                    'winning_count' => $winningCount,
+                ],
+            ];
+
+            // 广播给所有渠道用户
+            return self::pushToDepartment($activity->department_id, 'draw_result', $message);
+
+        } catch (\Exception $e) {
+            Log::error('摇球结果推送失败', [
+                'activity_id' => $activity->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * 批量推送中奖通知（优化版）
+     *
+     * @param array $winnerRecords 中奖记录数组
+     * @return int 成功推送数量
+     */
+    public static function batchPushWinNotifications(array $winnerRecords): int
+    {
+        $successCount = 0;
+
+        foreach ($winnerRecords as $record) {
+            if (self::pushWinNotification($record)) {
+                $successCount++;
+            }
+
+            // 避免推送过快，稍微延迟
+            usleep(50000); // 50ms
+        }
+
+        Log::info('批量中奖通知推送完成', [
+            'total' => count($winnerRecords),
+            'success' => $successCount,
+            'failed' => count($winnerRecords) - $successCount,
+        ]);
+
+        return $successCount;
     }
 }
