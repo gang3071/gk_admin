@@ -51,6 +51,26 @@ class LotteryBallDrawService
             return ['success' => false, 'message' => '活动未发放任何摸奖券，无法开奖'];
         }
 
+        // 验证实际券数（防止数据不一致）
+        $actualTickets = LotteryTicket::where('activity_id', $activity->id)->count();
+        if ($actualTickets == 0) {
+            Log::error('摇球数据不一致：券记录丢失', [
+                'activity_id' => $activity->id,
+                'current_ticket_no' => $totalTickets,
+                'actual_tickets' => $actualTickets,
+            ]);
+            return ['success' => false, 'message' => '数据异常：活动券记录丢失，请联系管理员'];
+        }
+
+        if ($actualTickets != $totalTickets) {
+            Log::warning('摇球数据不一致：券数不匹配', [
+                'activity_id' => $activity->id,
+                'current_ticket_no' => $totalTickets,
+                'actual_tickets' => $actualTickets,
+                'diff' => abs($actualTickets - $totalTickets),
+            ]);
+        }
+
         // 计算最大券号（已发券数-1，因为从000000开始）
         $maxTicketNo = $totalTickets - 1;
 
@@ -203,16 +223,29 @@ class LotteryBallDrawService
             // 等级6（五等奖）：匹配后1位
 
             $matchDigits = 7 - $prizeLevel->level_rank; // 匹配位数
+
+            // 验证等级配置合法性
             if ($matchDigits <= 0 || $matchDigits > 6) {
-                $matchDigits = 6; // 默认全匹配
+                Log::error('奖品等级配置错误', [
+                    'activity_id' => $activity->id,
+                    'prize_level_id' => $prizeLevel->id,
+                    'level_rank' => $prizeLevel->level_rank,
+                    'match_digits' => $matchDigits,
+                ]);
+                continue; // 跳过错误配置
             }
 
             // 截取中奖号码的后N位
             $matchPattern = substr($winningTicketNo, -$matchDigits);
 
-            // 查找匹配的摸奖券
+            // 查找匹配的摸奖券（排除过期券）
             $matchedTickets = LotteryTicket::where('activity_id', $activity->id)
                 ->where('status', LotteryTicket::STATUS_UNUSED)
+                ->where(function ($query) {
+                    // 排除已过期的券
+                    $query->whereNull('expires_at')
+                          ->orWhere('expires_at', '>', date('Y-m-d H:i:s'));
+                })
                 ->where(Db::raw('RIGHT(ticket_no, ' . $matchDigits . ')'), '=', $matchPattern)
                 ->limit($prizeCount)
                 ->get();

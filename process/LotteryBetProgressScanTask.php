@@ -57,9 +57,11 @@ class LotteryBetProgressScanTask
             // 标记任务开始
             Cache::set(self::CACHE_KEY_TASK_STATUS, 'running', 300);
 
-            // 获取所有进行中的活动
-            $activities = LotteryTicketActivity::where('status', LotteryTicketActivity::STATUS_ONGOING)
-                ->get();
+            // 获取所有进行中的活动（支持两种状态）
+            $activities = LotteryTicketActivity::whereIn('status', [
+                LotteryTicketActivity::STATUS_ONGOING,
+                LotteryTicketActivity::STATUS_BETTING,  // ← 添加打码中状态
+            ])->get();
 
             if ($activities->isEmpty()) {
                 Log::debug('暂无进行中的摸奖券活动');
