@@ -59,8 +59,8 @@ class VipLevelController
                         ->type('primary')
                         ->size('small')
                         ->drawer([$this, 'cashback'], ['vip_level_id' => $data['id']])
-                        ->width('60%')
-                        ->title($data['name'] . ' - ' . admin_trans('vip_level.cashback'))
+                        ->width(500)
+                        ->title($data['name'] . ' - ' . admin_trans('vip_level.cashback') . '（100=100%，0.1=0.1%）')
                 );
             });
             $grid->setForm()->drawer($this->form());
@@ -128,7 +128,7 @@ class VipLevelController
         $existingCashbacks = VipLevelCashback::query()->where('vip_level_id', $vip_level_id)->pluck('cashback_ratio', 'platform_id')->toArray();
 
         return Form::create([], function (Form $form) use ($vipLevel, $platforms, $existingCashbacks) {
-            $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('vip_level.cashback'));
+            $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('vip_level.cashback') . '（100=100%，0.1=0.1%）');
             $form->labelWidth(180);
 
             foreach ($platforms as $platform) {
@@ -136,8 +136,7 @@ class VipLevelController
                     ->min(0)
                     ->max(100)
                     ->step(0.01)
-                    ->value($existingCashbacks[$platform->id] ?? 0)
-                    ->help(admin_trans('vip_level.help.cashback_ratio'));
+                    ->value($existingCashbacks[$platform->id] ?? 0);
             }
 
             $form->saved(function (Form $form) {
