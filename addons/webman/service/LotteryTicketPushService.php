@@ -5,45 +5,28 @@ namespace addons\webman\service;
 use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketRecord;
+use addons\webman\queue\LotteryTicketPushQueue;
 use support\Log;
+use Webman\RedisQueue\Client;
 
 /**
  * 摸奖券推送通知服务
  *
  * 负责向客户端推送摸奖券相关通知
- * 集成 gk_api 的 WebSocket Push 服务
+ * 使用Redis队列异步推送，防止大量消息阻塞
  */
 class LotteryTicketPushService
 {
     /**
-     * Push API 地址
-     * @var string
+     * 队列延迟时间（秒）
+     * 0 = 立即推送
      */
-    protected static $pushApiUrl;
+    const QUEUE_DELAY = 0;
 
     /**
-     * Push App Key
-     * @var string
+     * 推送来源标识
      */
-    protected static $appKey;
-
-    /**
-     * Push App Secret
-     * @var string
-     */
-    protected static $appSecret;
-
-    /**
-     * 初始化配置
-     */
-    protected static function initConfig()
-    {
-        if (self::$pushApiUrl === null) {
-            self::$pushApiUrl = env('PUSH_API_URL', 'http://localhost:3232');
-            self::$appKey = env('PUSH_APP_KEY', '');
-            self::$appSecret = env('PUSH_APP_SECRET', '');
-        }
-    }
+    const PUSH_FROM = 'lottery_system';
 
     /**
      * 推送摸奖券发放通知
@@ -268,75 +251,54 @@ class LotteryTicketPushService
     }
 
     /**
-     * 推送给单个玩家
+     * 推送给单个玩家（使用队列异步推送）
      *
      * @param int $playerId 玩家ID
-     * @param string $channel 频道名称
+     * @param string $eventType 事件类型（用于日志分类）
      * @param array $data 数据
      * @param bool $showNotification 是否显示通知
      * @return bool
      */
     protected static function pushToPlayer(
         int $playerId,
-        string $channel,
+        string $eventType,
         array $data,
         bool $showNotification = true
     ): bool {
-        self::initConfig();
-
-        if (empty(self::$appKey) || empty(self::$appSecret)) {
-            Log::warning('Push服务未配置，跳过推送', ['player_id' => $playerId]);
-            return false;
-        }
-
         try {
-            // 频道名称格式: player_{player_id}
-            $channelName = "player_{$playerId}";
+            // 频道名称格式: player-{player_id}（遵循系统规范）
+            $channelName = "player-{$playerId}";
 
-            // 调用 gk_api Push API
-            $client = new \GuzzleHttp\Client([
-                'timeout' => 5,
-                'verify' => false,
-            ]);
-
-            $pushData = array_merge($data, [
+            // 构造推送内容
+            $content = array_merge($data, [
                 'show_notification' => $showNotification,
                 'timestamp' => time(),
             ]);
 
-            $response = $client->post(self::$pushApiUrl . '/api/push', [
-                'json' => [
-                    'channel' => $channelName,
-                    'event' => $channel,
-                    'data' => $pushData,
+            // 将推送任务加入队列（异步处理，不阻塞主流程）
+            Client::send(
+                LotteryTicketPushQueue::QUEUE_NAME,
+                [
+                    'channels' => $channelName,
+                    'content' => $content,
+                    'from' => self::PUSH_FROM,
                 ],
-                'headers' => [
-                    'X-App-Key' => self::$appKey,
-                    'X-App-Secret' => self::$appSecret,
-                    'Content-Type' => 'application/json',
-                ],
-            ]);
+                self::QUEUE_DELAY
+            );
 
-            $result = json_decode($response->getBody()->getContents(), true);
-
-            if ($result['code'] === 200 || $result['code'] === 0) {
-                Log::info('摸奖券推送成功 - 单个玩家', [
-                    'player_id' => $playerId,
-                    'channel' => $channel,
-                    'channel_name' => $channelName,
-                ]);
-                return true;
-            }
-
-            Log::warning('摸奖券推送失败 - 单个玩家', [
+            Log::debug('摸奖券推送任务已入队 - 单个玩家', [
                 'player_id' => $playerId,
-                'response' => $result,
+                'event_type' => $eventType,
+                'channel' => $channelName,
+                'show_notification' => $showNotification,
             ]);
-            return false;
+
+            return true;
 
         } catch (\Exception $e) {
-            Log::error('推送给玩家失败', [
+            Log::error('推送给玩家失败（入队失败）', [
                 'player_id' => $playerId,
+                'event_type' => $eventType,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -346,69 +308,47 @@ class LotteryTicketPushService
     }
 
     /**
-     * 推送给整个渠道（广播）
+     * 推送给整个渠道（广播，使用队列异步推送）
      *
      * @param int $departmentId 渠道ID
-     * @param string $channel 频道名称
+     * @param string $eventType 事件类型
      * @param array $data 数据
      * @return bool
      */
-    protected static function pushToDepartment(int $departmentId, string $channel, array $data): bool
+    protected static function pushToDepartment(int $departmentId, string $eventType, array $data): bool
     {
-        self::initConfig();
-
-        if (empty(self::$appKey) || empty(self::$appSecret)) {
-            Log::warning('Push服务未配置，跳过推送', ['department_id' => $departmentId]);
-            return false;
-        }
-
         try {
-            // 频道名称格式: department_{department_id}
-            $channelName = "department_{$departmentId}";
+            // 频道名称格式: private-admin_group-channel-{department_id}（遵循系统规范）
+            $channelName = "private-admin_group-channel-{$departmentId}";
 
-            // 调用 gk_api Push API
-            $client = new \GuzzleHttp\Client([
-                'timeout' => 5,
-                'verify' => false,
-            ]);
-
-            $pushData = array_merge($data, [
+            // 构造推送内容
+            $content = array_merge($data, [
                 'timestamp' => time(),
             ]);
 
-            $response = $client->post(self::$pushApiUrl . '/api/push', [
-                'json' => [
-                    'channel' => $channelName,
-                    'event' => $channel,
-                    'data' => $pushData,
+            // 将推送任务加入队列（异步处理，不阻塞主流程）
+            Client::send(
+                LotteryTicketPushQueue::QUEUE_NAME,
+                [
+                    'channels' => $channelName,
+                    'content' => $content,
+                    'from' => self::PUSH_FROM,
                 ],
-                'headers' => [
-                    'X-App-Key' => self::$appKey,
-                    'X-App-Secret' => self::$appSecret,
-                    'Content-Type' => 'application/json',
-                ],
-            ]);
+                self::QUEUE_DELAY
+            );
 
-            $result = json_decode($response->getBody()->getContents(), true);
-
-            if ($result['code'] === 200 || $result['code'] === 0) {
-                Log::info('摸奖券推送成功 - 渠道广播', [
-                    'department_id' => $departmentId,
-                    'channel' => $channel,
-                    'channel_name' => $channelName,
-                ]);
-                return true;
-            }
-
-            Log::warning('摸奖券推送失败 - 渠道广播', [
+            Log::debug('摸奖券推送任务已入队 - 渠道广播', [
                 'department_id' => $departmentId,
-                'response' => $result,
+                'event_type' => $eventType,
+                'channel' => $channelName,
             ]);
-            return false;
+
+            return true;
 
         } catch (\Exception $e) {
-            Log::error('推送给渠道失败', [
+            Log::error('推送给渠道失败（入队失败）', [
                 'department_id' => $departmentId,
+                'event_type' => $eventType,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -461,30 +401,94 @@ class LotteryTicketPushService
     }
 
     /**
-     * 批量推送中奖通知（优化版）
+     * 批量推送中奖通知（使用队列，避免阻塞）
      *
      * @param array $winnerRecords 中奖记录数组
-     * @return int 成功推送数量
+     * @return int 成功入队数量
      */
     public static function batchPushWinNotifications(array $winnerRecords): int
     {
         $successCount = 0;
+        $delay = 0; // 初始延迟0秒
 
         foreach ($winnerRecords as $record) {
-            if (self::pushWinNotification($record)) {
+            // 每条推送入队，使用递增延迟避免瞬时压力
+            if (self::pushWinNotificationWithDelay($record, $delay)) {
                 $successCount++;
+                // 每10条增加1秒延迟，平滑推送
+                $delay = floor($successCount / 10);
             }
-
-            // 避免推送过快，稍微延迟
-            usleep(50000); // 50ms
         }
 
-        Log::info('批量中奖通知推送完成', [
+        Log::info('批量中奖通知已入队', [
             'total' => count($winnerRecords),
             'success' => $successCount,
             'failed' => count($winnerRecords) - $successCount,
+            'max_delay' => $delay . 's',
         ]);
 
         return $successCount;
+    }
+
+    /**
+     * 推送中奖通知（带延迟入队）
+     *
+     * @param LotteryTicketRecord $record 中奖记录
+     * @param int $delay 延迟秒数
+     * @return bool
+     */
+    protected static function pushWinNotificationWithDelay(LotteryTicketRecord $record, int $delay = 0): bool
+    {
+        try {
+            $activity = LotteryTicketActivity::find($record->activity_id);
+            if (!$activity) {
+                return false;
+            }
+
+            $channelName = "player-{$record->player_id}";
+
+            $content = [
+                'type' => 'lottery_win',
+                'title' => '🎉 恭喜中獎！',
+                'message' => sprintf(
+                    '您在活動「%s」中獲得 %s - %s 元！',
+                    $activity->name,
+                    $record->prize_name,
+                    number_format($record->prize_amount, 2)
+                ),
+                'data' => [
+                    'activity_id' => $record->activity_id,
+                    'activity_name' => $activity->name,
+                    'ticket_no' => $record->ticket_no,
+                    'prize_level' => $record->prize_name,
+                    'prize_type' => $record->prize_type,
+                    'prize_amount' => $record->prize_amount,
+                    'record_id' => $record->id,
+                ],
+                'show_notification' => true,
+                'priority' => 'high',
+                'timestamp' => time(),
+            ];
+
+            // 使用延迟入队，平滑推送压力
+            Client::send(
+                LotteryTicketPushQueue::QUEUE_NAME,
+                [
+                    'channels' => $channelName,
+                    'content' => $content,
+                    'from' => self::PUSH_FROM,
+                ],
+                $delay
+            );
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('中奖推送入队失败', [
+                'record_id' => $record->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
     }
 }
