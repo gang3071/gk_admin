@@ -257,14 +257,14 @@ class VipCashbackService
 
     /**
      * 触发VIP升降级检查
+     * handleBet 内部会自行 refresh 玩家数据，无需重复刷新
+     *
      * @param Player $player
      * @param float $betAmount
      */
     protected function triggerVipUpgradeCheck($player, float $betAmount): void
     {
         try {
-            // 重新从数据库加载玩家数据，确保获取最新的 total_bet_amount
-            $player->refresh();
             VipService::handleBet($player, $betAmount);
         } catch (\Throwable $e) {
             $this->log('warning', 'VIP升降级检查失败', [
