@@ -117,6 +117,9 @@ class VipCashbackService
                 try {
                     $player = $players->get($record->player_id);
                     if (!$player) {
+                        // 标记为已处理（vip_level_id=0），避免下次重复查询
+                        $record->vip_level_id = 0;
+                        $record->save();
                         $result['skipped']++;
                         $this->log('debug', '跳过记录：玩家不存在或非线上玩家', [
                             'record_id' => $record->id,
@@ -185,19 +188,26 @@ class VipCashbackService
 
     /**
      * 查询已结算但未反水的游戏记录
+     * 关联 player 表过滤：仅查询线上玩家且存在的记录
+     *
      * @return \Illuminate\Support\Collection
      */
     protected function queryUnsettledRecords()
     {
+        $table = (new PlayGameRecord())->getTable();
+
         $query = PlayGameRecord::query()
-            ->whereNull('vip_level_id')
-            ->where('bet', '>', 0);
+            ->whereNull($table . '.vip_level_id')
+            ->where($table . '.bet', '>', 0)
+            ->join('player', $table . '.player_id', '=', 'player.id')
+            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
+            ->select($table . '.*');
 
         if ($this->sinceDate) {
-            $query->where('created_at', '>=', $this->sinceDate);
+            $query->where($table . '.created_at', '>=', $this->sinceDate);
         }
 
-        return $query->orderBy('id', 'asc')
+        return $query->orderBy($table . '.id', 'asc')
             ->limit(self::BATCH_SIZE)
             ->get();
     }
