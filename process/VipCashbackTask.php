@@ -53,7 +53,7 @@ class VipCashbackTask
 
         $startTime = microtime(true);
 
-        // 动态计算起始日期（昨天00:00:00）
+        // 动态计算起始日期（昨天00:00:00）  todo 后续优化成往前10分钟 用于过滤禁用期间的数据
         $sinceDate = date('Y-m-d 00:00:00', strtotime('-1 day'));
 
         try {

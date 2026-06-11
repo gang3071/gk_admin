@@ -3,6 +3,7 @@
 namespace app\service;
 
 use addons\webman\model\Player;
+use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\VipLevel;
@@ -116,6 +117,9 @@ class VipCashbackService
                 try {
                     $player = $players->get($record->player_id);
                     if (!$player) {
+                        // 标记为已处理（vip_level_id=0），避免下次重复查询
+                        $record->vip_level_id = 0;
+                        $record->save();
                         $result['skipped']++;
                         $this->log('debug', '跳过记录：玩家不存在或非线上玩家', [
                             'record_id' => $record->id,
@@ -148,6 +152,11 @@ class VipCashbackService
                     // 更新游戏记录
                     $this->updateRecordCashback($record, $vipLevelId, $storageData);
 
+                    // 更新玩家反水金额（待领取 + 总反水）
+                    if ($cashbackAmount > 0) {
+                        $this->updatePlayerCashbackAmount($player, $cashbackAmount);
+                    }
+
                     // 触发VIP升降级检查（已包含打码量更新）
                     $this->triggerVipUpgradeCheck($player, $record->bet);
 
@@ -179,19 +188,26 @@ class VipCashbackService
 
     /**
      * 查询已结算但未反水的游戏记录
+     * 关联 player 表过滤：仅查询线上玩家且存在的记录
+     *
      * @return \Illuminate\Support\Collection
      */
     protected function queryUnsettledRecords()
     {
+        $table = (new PlayGameRecord())->getTable();
+
         $query = PlayGameRecord::query()
-            ->whereNull('vip_level_id')
-            ->where('bet', '>', 0);
+            ->whereNull($table . '.vip_level_id')
+            ->where($table . '.bet', '>', 0)
+            ->join('player', $table . '.player_id', '=', 'player.id')
+            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
+            ->select($table . '.*');
 
         if ($this->sinceDate) {
-            $query->where('created_at', '>=', $this->sinceDate);
+            $query->where($table . '.created_at', '>=', $this->sinceDate);
         }
 
-        return $query->orderBy('id', 'asc')
+        return $query->orderBy($table . '.id', 'asc')
             ->limit(self::BATCH_SIZE)
             ->get();
     }
@@ -246,6 +262,32 @@ class VipCashbackService
     }
 
     /**
+     * 更新玩家反水金额（待领取 + 总反水）
+     * 如果 player_extend 不存在则自动创建
+     *
+     * @param Player $player
+     * @param float $cashbackAmount 反水金额
+     */
+    protected function updatePlayerCashbackAmount($player, float $cashbackAmount): void
+    {
+        try {
+            $playerExtend = $player->player_extend;
+            if (!$playerExtend) {
+                $playerExtend = new PlayerExtend();
+                $playerExtend->player_id = $player->id;
+                $playerExtend->save();
+            }
+            $playerExtend->addCashback($cashbackAmount);
+        } catch (\Throwable $e) {
+            $this->log('warning', '更新玩家反水金额失败', [
+                'player_id' => $player->id,
+                'cashback_amount' => $cashbackAmount,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * 增加玩家总打码量
      * @param Player $player
      * @param float $betAmount
@@ -257,14 +299,14 @@ class VipCashbackService
 
     /**
      * 触发VIP升降级检查
+     * handleBet 内部会自行 refresh 玩家数据，无需重复刷新
+     *
      * @param Player $player
      * @param float $betAmount
      */
     protected function triggerVipUpgradeCheck($player, float $betAmount): void
     {
         try {
-            // 重新从数据库加载玩家数据，确保获取最新的 total_bet_amount
-            $player->refresh();
             VipService::handleBet($player, $betAmount);
         } catch (\Throwable $e) {
             $this->log('warning', 'VIP升降级检查失败', [
