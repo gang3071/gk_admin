@@ -71,10 +71,13 @@ class VipService
                 return;
             }
 
-            // 3. 检查升级条件（周期内打码量 >= 升级阈值）
+            // 3. 更新当前保级周期的打码量
+            static::updatePeriodBetAmount($player, $betAmount);
+
+            // 4. 检查升级条件（周期内打码量 >= 升级阈值）
             static::checkUpgrade($player);
 
-            // 4. 检查保级条件（保级周期到期 + 打码量不足 → 降级）
+            // 5. 检查保级条件（保级周期到期 + 打码量不足 → 降级）
             static::checkRetain($player);
         } catch (\Exception $e) {
             static::log('error', 'VIP handleBet failed', [
@@ -84,6 +87,22 @@ class VipService
                 'trace' => $e->getTraceAsString(),
             ]);
         }
+    }
+
+    /**
+     * 更新当前保级周期的打码量
+     * @param Player $player
+     * @param float $betAmount 本次下注金额
+     * @return void
+     */
+    private static function updatePeriodBetAmount(Player $player, float $betAmount): void
+    {
+        PlayerVipPeriod::query()
+            ->where('player_id', $player->id)
+            ->where('vip_level_id', $player->vip_level_id)
+            ->where('period_type', PlayerVipPeriod::PERIOD_TYPE_RETAIN)
+            ->where('status', PlayerVipPeriod::STATUS_ACTIVE)
+            ->increment('period_bet_amount', $betAmount);
     }
 
     /**
@@ -175,12 +194,9 @@ class VipService
             return;
         }
 
-        // 动态计算周期内打码量
-        $periodBetAmount = $period->getPeriodBetAmount($player->total_bet_amount);
-
         // 检查是否满足升级条件
-        if ($periodBetAmount >= $currentLevel->upgrade_bet_amount) {
-            static::doUpgrade($player, $currentLevel, $nextLevel, $period, $periodBetAmount);
+        if ($period->period_bet_amount >= $currentLevel->upgrade_bet_amount) {
+            static::doUpgrade($player, $currentLevel, $nextLevel, $period, $period->period_bet_amount);
         }
     }
 
@@ -271,9 +287,7 @@ class VipService
         }
 
         // 保级周期到期，检查打码量
-        $periodBetAmount = $period->getPeriodBetAmount($player->total_bet_amount);
-
-        if ($periodBetAmount >= $currentLevel->retain_level_bet_amount) {
+        if ($period->period_bet_amount >= $currentLevel->retain_level_bet_amount) {
             // 保级成功，标记为已完成，创建新周期（从当前total重新开始）
             $period->status = PlayerVipPeriod::STATUS_COMPLETED;
             $period->save();
@@ -283,7 +297,7 @@ class VipService
             static::log('info', 'VIP retain success', [
                 'player_id' => $player->id,
                 'level_id' => $currentLevel->id,
-                'period_bet_amount' => $periodBetAmount,
+                'period_bet_amount' => $period->period_bet_amount,
             ]);
         } else {
             // 保级失败，降级
@@ -346,13 +360,14 @@ class VipService
         ?float $startBetAmount = null
     ): PlayerVipPeriod {
         $startBetAmount = $startBetAmount ?? $player->total_bet_amount;
+        $periodBetAmount = max(0, $player->total_bet_amount - $startBetAmount);
 
         return PlayerVipPeriod::query()->create([
             'player_id' => $player->id,
             'vip_level_id' => $level->id,
             'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
             'start_bet_amount' => $startBetAmount,
-            'period_bet_amount' => 0,
+            'period_bet_amount' => $periodBetAmount,
             'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
