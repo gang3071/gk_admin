@@ -3,6 +3,7 @@
 namespace app\service;
 
 use addons\webman\model\Player;
+use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\VipLevel;
@@ -148,6 +149,11 @@ class VipCashbackService
                     // 更新游戏记录
                     $this->updateRecordCashback($record, $vipLevelId, $storageData);
 
+                    // 更新玩家反水金额（待领取 + 总反水）
+                    if ($cashbackAmount > 0) {
+                        $this->updatePlayerCashbackAmount($player, $cashbackAmount);
+                    }
+
                     // 触发VIP升降级检查（已包含打码量更新）
                     $this->triggerVipUpgradeCheck($player, $record->bet);
 
@@ -243,6 +249,32 @@ class VipCashbackService
         $record->cashback_ratio = $storageData['cashback_ratio'];
         $record->cashback_amount = $storageData['cashback_amount'];
         $record->save();
+    }
+
+    /**
+     * 更新玩家反水金额（待领取 + 总反水）
+     * 如果 player_extend 不存在则自动创建
+     *
+     * @param Player $player
+     * @param float $cashbackAmount 反水金额
+     */
+    protected function updatePlayerCashbackAmount($player, float $cashbackAmount): void
+    {
+        try {
+            $playerExtend = $player->player_extend;
+            if (!$playerExtend) {
+                $playerExtend = new PlayerExtend();
+                $playerExtend->player_id = $player->id;
+                $playerExtend->save();
+            }
+            $playerExtend->addCashback($cashbackAmount);
+        } catch (\Throwable $e) {
+            $this->log('warning', '更新玩家反水金额失败', [
+                'player_id' => $player->id,
+                'cashback_amount' => $cashbackAmount,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
