@@ -24,7 +24,11 @@ return [
         'created_at' => '创建时间',
         'updated_at' => '更新时间',
     ],
+    'placeholder' => [
+        'name' => '请输入VIP等级名称，如：VIP1、黄金会员',
+    ],
     'help' => [
+        'name' => '会员等级名称',
         'upgrade_limit_days' => '升级限制时间，单位为天',
         'retain_level_days' => '保级时间，单位为天',
         'retain_level_bet_amount' => '保级所需打码量',

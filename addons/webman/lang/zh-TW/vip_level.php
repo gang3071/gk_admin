@@ -24,7 +24,11 @@ return [
         'created_at' => '創建時間',
         'updated_at' => '更新時間',
     ],
+    'placeholder' => [
+        'name' => '請輸入VIP等級名稱，如：VIP1、黃金會員',
+    ],
     'help' => [
+        'name' => '會員等級名稱',
         'upgrade_limit_days' => '升級限制時間，單位為天',
         'retain_level_days' => '保級時間，單位為天',
         'retain_level_bet_amount' => '保級所需打碼量',

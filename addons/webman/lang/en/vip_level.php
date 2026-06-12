@@ -24,7 +24,11 @@ return [
         'created_at' => 'Created At',
         'updated_at' => 'Updated At',
     ],
+    'placeholder' => [
+        'name' => 'Enter VIP level name, e.g.: VIP1, Gold Member',
+    ],
     'help' => [
+        'name' => 'Member level name',
         'upgrade_limit_days' => 'Upgrade time limit in days',
         'retain_level_days' => 'Level retention period in days',
         'retain_level_bet_amount' => 'Bet amount required to retain level',
