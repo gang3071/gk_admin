@@ -15,8 +15,8 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
+use ExAdmin\ui\support\Request;
 use support\Db;
-use support\Request;
 
 /**
  * 渠道后台-摸奖券活动管理
@@ -40,12 +40,76 @@ class ChannelLotteryTicketActivityController
             ->get(['id', 'name'])
             ->toArray();
 
-        $vipLevelsJson = json_encode($vipLevels);
+        // 准备完整的翻译数据
+        $trans = [
+            // 标题
+            'ex_admin_title' => admin_trans('lottery_ticket.title.main'),
 
-        // 引入 Vue 组件
-        return view('lottery_ticket_activities', [
+            // 操作
+            'createActivity' => admin_trans('lottery_ticket.action.create'),
+            'createFirst' => admin_trans('lottery_ticket.action.create_first'),
+            'edit' => admin_trans('lottery_ticket.action.edit'),
+            'editActivity' => admin_trans('lottery_ticket.action.edit'),
+            'view' => admin_trans('lottery_ticket.action.view'),
+            'viewDetail' => admin_trans('lottery_ticket.action.view_detail'),
+            'prizeConfig' => admin_trans('lottery_ticket.action.prize_config'),
+            'closeActivity' => admin_trans('lottery_ticket.action.close'),
+            'addPrizeLevel' => admin_trans('lottery_ticket.action.add_prize_level'),
+            'recordWin' => admin_trans('lottery_ticket.action.record_win'),
+            'addLiveUrl' => admin_trans('lottery_ticket.action.add_live_url'),
+            'expand' => admin_trans('lottery_ticket.action.expand'),
+            'collapse' => admin_trans('lottery_ticket.action.collapse'),
+            'refresh' => admin_trans('common.refresh'),
+            'save' => admin_trans('common.save'),
+            'cancel' => admin_trans('common.cancel'),
+
+            // 状态
+            'allStatus' => admin_trans('lottery_ticket.status.all'),
+            'notStarted' => admin_trans('lottery_ticket.status.not_started'),
+            'ongoing' => admin_trans('lottery_ticket.status.ongoing'),
+            'ended' => admin_trans('lottery_ticket.status.ended'),
+            'closed' => admin_trans('lottery_ticket.status.closed'),
+
+            // 字段
+            'activityName' => admin_trans('lottery_ticket.fields.activity_name'),
+            'description' => admin_trans('lottery_ticket.fields.description'),
+            'startTime' => admin_trans('lottery_ticket.fields.start_time'),
+            'endTime' => admin_trans('lottery_ticket.fields.end_time'),
+            'status' => admin_trans('lottery_ticket.fields.status'),
+            'totalTickets' => admin_trans('lottery_ticket.fields.total_tickets'),
+            'usedTickets' => admin_trans('lottery_ticket.fields.used_tickets'),
+            'usageRate' => admin_trans('lottery_ticket.fields.usage_rate'),
+            'prizeConfig' => admin_trans('lottery_ticket.fields.prize_config'),
+            'level' => admin_trans('lottery_ticket.fields.level'),
+            'levelRank' => admin_trans('lottery_ticket.prize_level_fields.level_rank'),
+            'levelName' => admin_trans('lottery_ticket.prize_level_fields.level_name'),
+            'prizeAmount' => admin_trans('lottery_ticket.prize_level_fields.prize_amount'),
+            'prizeCount' => admin_trans('lottery_ticket.prize_level_fields.prize_count'),
+
+            // 占位符
+            'activityNamePlaceholder' => admin_trans('lottery_ticket.placeholder.name'),
+            'descriptionPlaceholder' => admin_trans('lottery_ticket.placeholder.description'),
+            'liveUrlPlaceholder' => admin_trans('lottery_ticket.placeholder.live_url'),
+
+            // 模态框
+            'modalRecordWinTitle' => admin_trans('lottery_ticket.modal.record_win_title'),
+            'modalLiveUrlTitle' => admin_trans('lottery_ticket.modal.live_url_title'),
+            'modalLiveUrlPrompt' => admin_trans('lottery_ticket.modal.live_url_prompt'),
+            'modalLiveUrlRequired' => admin_trans('lottery_ticket.modal.live_url_required'),
+
+            // 消息
+            'loading' => admin_trans('common.loading'),
+            'noActivities' => admin_trans('lottery_ticket.message.no_activities'),
+            'noPrizeConfig' => admin_trans('lottery_ticket.message.no_prize_config'),
+            'activityDetail' => admin_trans('lottery_ticket.title.activity_detail'),
+            'liveUrlUpdated' => admin_trans('lottery_ticket.message.live_url_updated'),
+        ];
+
+        // 使用 admin_view 返回 Vue 组件
+        return admin_view(plugin()->webman->getPath() . '/views/lottery_ticket_activities.vue')->attrs([
             'department_id' => $departmentId,
-            'vip_levels' => $vipLevelsJson,
+            'vip_levels' => $vipLevels,
+            'trans' => $trans,
         ]);
     }
 

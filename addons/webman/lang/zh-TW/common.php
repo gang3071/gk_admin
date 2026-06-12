@@ -168,6 +168,23 @@ return [
     'start_time' => '開始時間',
     'end_time' => '結束時間',
     'no_permission' => '沒有權限',
+    'refresh' => '刷新',
+    'save' => '保存',
+    'cancel' => '取消',
+    'loading' => '加載中...',
+    'submit' => '提交',
+    'confirm' => '確認',
+    'delete' => '刪除',
+    'edit' => '編輯',
+    'view' => '查看',
+    'create' => '創建',
+    'update' => '更新',
+    'search' => '搜索',
+    'reset' => '重置',
+    'export' => '導出',
+    'import' => '導入',
+    'close' => '關閉',
+    'back' => '返回',
 
     // 通用錯誤（分組）
     'error' => [
