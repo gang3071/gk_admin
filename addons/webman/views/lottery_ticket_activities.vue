@@ -46,6 +46,8 @@
             hoverable
             class="activity-card"
             :class="getCardClass(activity)"
+            style="cursor: pointer;"
+            @click="viewActivityDetail(activity)"
         >
           <template #title>
             <div class="card-title">
@@ -57,7 +59,7 @@
           </template>
 
           <template #extra>
-            <a-dropdown :trigger="['click']">
+            <a-dropdown :trigger="['click']" @click.stop>
               <a-button type="text" size="small">
                 <ellipsis-outlined/>
               </a-button>
@@ -74,6 +76,10 @@
                   <a-menu-item key="record" v-if="activity.status === 1">
                     <trophy-outlined/>
                     {{ trans.recordWin }}
+                  </a-menu-item>
+                  <a-menu-item v-if="activity.status === 1" key="distribute">
+                    <gift-outlined/>
+                    录入券号发放
                   </a-menu-item>
                   <a-menu-item key="live">
                     <video-camera-outlined/>
@@ -140,7 +146,7 @@
                   v-if="activity.status === 0"
                   type="primary"
                   block
-                  @click="editActivity(activity)"
+                  @click.stop="editActivity(activity)"
               >
                 <template #icon>
                   <edit-outlined/>
@@ -149,9 +155,21 @@
               </a-button>
 
               <a-button
+                  v-if="activity.status === 1"
+                  block
+                  type="primary"
+                  @click.stop="showDistributeForm(activity)"
+              >
+                <template #icon>
+                  <gift-outlined/>
+                </template>
+                录入券号发放
+              </a-button>
+
+              <a-button
                   type="default"
                   block
-                  @click="showTicketList(activity)"
+                  @click.stop="showTicketList(activity)"
               >
                 <template #icon>
                   <unordered-list-outlined/>
@@ -540,6 +558,63 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 录入券号发放抽屉 -->
+    <a-drawer
+        v-model:visible="distributeVisible"
+        :body-style="{ paddingBottom: '80px' }"
+        title="录入券号发放奖励"
+        width="680px"
+    >
+      <a-alert
+          message="请输入中奖券号，系统将根据券号自动识别奖品等级并发放奖励"
+          show-icon
+          style="margin-bottom: 16px;"
+          type="info"
+      />
+
+      <a-form
+          ref="distributeFormRef"
+          :model="distributeForm"
+          layout="vertical"
+      >
+        <a-form-item label="活动名称">
+          <a-input :value="currentActivity?.name" disabled />
+        </a-form-item>
+
+        <a-form-item
+            :rules="[{ required: true, message: '请输入券号' }]"
+            label="中奖券号"
+            name="ticket_no"
+        >
+          <a-input
+              v-model:value="distributeForm.ticket_no"
+              :maxlength="6"
+              placeholder="请输入6位券号"
+              style="width: 100%;"
+          />
+        </a-form-item>
+
+        <a-form-item label="发放备注" name="remark">
+          <a-textarea
+              v-model:value="distributeForm.remark"
+              :maxlength="255"
+              :rows="3"
+              placeholder="选填，可备注发放说明"
+              show-count
+          />
+        </a-form-item>
+      </a-form>
+
+      <template #footer>
+        <a-space>
+          <a-button @click="handleDistributeClose">取消</a-button>
+          <a-button :loading="distributeSubmitting" type="primary" @click="submitDistribute">
+            确认发放
+          </a-button>
+        </a-space>
+      </template>
+    </a-drawer>
   </div>
 </template>
 
@@ -567,15 +642,22 @@ export default {
       recordVisible: false,
       ticketListVisible: false,
       liveModalVisible: false,
+      distributeVisible: false,
       liveUrlInput: '',
       formMode: 'create',
       currentActivity: null,
       submitting: false,
       recordSubmitting: false,
+      distributeSubmitting: false,
       uploading: false,
       recordPrizeLevels: [],
       ticketList: [],
       ticketLoading: false,
+      distributeForm: {
+        activity_id: null,
+        ticket_no: '',
+        remark: ''
+      },
       ticketPagination: {
         current: 1,
         pageSize: 20,
@@ -770,6 +852,9 @@ export default {
         case 'record':
           this.showRecordModal(activity);
           break;
+        case 'distribute':
+          this.showDistributeForm(activity);
+          break;
         case 'live':
           this.showLiveModal(activity);
           break;
@@ -952,6 +1037,74 @@ export default {
         }
       } catch (error) {
         this.$message.error('获取活动详情失败');
+      }
+    },
+
+    // 点击卡片查看详情
+    viewActivityDetail(activity) {
+      this.showDetail(activity);
+    },
+
+    // 显示录入券号发放表单
+    showDistributeForm(activity) {
+      this.currentActivity = activity;
+      this.distributeForm = {
+        activity_id: activity.id,
+        ticket_no: '',
+        remark: ''
+      };
+      this.distributeVisible = true;
+    },
+
+    // 关闭录入券号发放抽屉
+    handleDistributeClose() {
+      this.distributeVisible = false;
+      this.distributeForm = {
+        activity_id: null,
+        ticket_no: '',
+        remark: ''
+      };
+      this.currentActivity = null;
+    },
+
+    // 提交录入券号发放
+    async submitDistribute() {
+      // 验证表单
+      if (!this.distributeForm.ticket_no) {
+        this.$message.error('请输入券号');
+        return;
+      }
+
+      if (this.distributeForm.ticket_no.length !== 6) {
+        this.$message.error('券号必须是6位数字');
+        return;
+      }
+
+      this.distributeSubmitting = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/distributeByTicketNo',
+          method: 'post',
+          data: {
+            activity_id: this.distributeForm.activity_id,
+            ticket_no: this.distributeForm.ticket_no,
+            remark: this.distributeForm.remark
+          }
+        });
+
+        if (res.code === 200) {
+          this.$message.success(res.message || '发放成功');
+          this.distributeVisible = false;
+          this.handleDistributeClose();
+          this.fetchActivities();
+        } else {
+          this.$message.error(res.message || res.msg || '发放失败');
+        }
+      } catch (error) {
+        this.$message.error('发放失败');
+        console.error(error);
+      } finally {
+        this.distributeSubmitting = false;
       }
     },
 

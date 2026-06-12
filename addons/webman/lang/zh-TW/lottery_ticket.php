@@ -22,6 +22,7 @@ return [
         'activity_name' => '活動名稱',
         'description' => '活動說明',
         'cover_image' => '活動封面',
+        'cover_image_upload' => '活動封面圖片',
         'live_url' => '直播地址',
         'start_time' => '開始時間',
         'end_time' => '結束時間',
@@ -39,16 +40,23 @@ return [
         'prize_level' => '中獎等級',
         'remark' => '備註',
         'distribution_remark' => '發放備註',
+        'vip_level' => 'VIP等級',
+        'bet_amount_required' => '所需打碼量',
+        'ticket_count' => '發放券數',
+        'prize_amount' => '獎勵金額',
+        'prize_count' => '獎品數量',
+        'ticket_no_input' => '中獎券號',
 
         // 中奖记录
         'player_name' => '玩家名稱',
         'player_phone' => '玩家手機',
-        'ticket_no' => '摸獎券編號',
+        'ticket_no' => '券號',
         'prize_type' => '獎品類型',
         'prize_name' => '獎品名稱',
-        'prize_amount' => '獎品金額',
         'record_status' => '發放狀態',
         'draw_time' => '抽獎時間',
+        'source' => '來源',
+        'used_at' => '使用時間',
     ],
 
     // 占位符
@@ -63,6 +71,8 @@ return [
         'prize_level' => '請選擇中獎等級',
         'remark' => '選填，可備註中獎詳情',
         'live_url' => '例如: rtmp://live.example.com/stream/12345',
+        'ticket_no' => '請輸入6位券號',
+        'distribute_remark' => '選填，可備註發放說明',
     ],
 
     // 模态框
@@ -72,6 +82,8 @@ return [
         'live_url_prompt' => '請輸入直播流地址:',
         'live_url_required' => '請輸入直播地址',
         'batch_distribute_title' => '批量發放獎勵',
+        'distribute_by_ticket_title' => '錄入券號發放獎勵',
+        'ticket_list_title' => '摸獎券發放列表',
     ],
 
     // 活动状态
@@ -180,6 +192,11 @@ return [
         'distribute' => '發放',
         'batch_distribute' => '批量發放',
         'batch_distribute_selected' => '批量發放選中',
+        'distribute_by_ticket' => '錄入券號發放',
+        'view_ticket_list' => '查看發放列表',
+        'add_ticket' => '添加券號',
+        'select_image' => '選擇圖片',
+        'confirm_distribute' => '確認發放',
     ],
 
     // 统计
@@ -210,6 +227,8 @@ return [
         'no_prize_config' => '尚未配置獎品等級',
         'prize_level_hint' => '最多可配置10個獎品等級,中獎概率總和不能超過100%',
         'upload_success' => '上傳成功',
+        'image_upload_success' => '圖片上傳成功',
+        'image_upload_failed' => '圖片上傳失敗',
         'distribute_success' => '發放成功',
         'distribute_failed' => '發放失敗',
         'batch_complete' => '批量發放完成：成功 {success} 條，失敗 {fail} 條',
@@ -217,10 +236,19 @@ return [
         'export_in_development' => '導出功能開發中',
         'live_url_updated' => '直播地址設置成功',
         'record_success' => '中獎記錄錄入成功',
+        'record_success_count' => '成功錄入 {count} 條中獎記錄',
         'live_started' => '直播已開始',
         'live_ended' => '直播已結束',
         'status_updated' => '狀態更新成功',
         'admin_manual_update' => '管理員手動更新',
+        'fetch_failed' => '獲取活動列表失敗',
+        'fetch_detail_failed' => '獲取活動詳情失敗',
+        'close_activity_failed' => '關閉活動失敗',
+        'min_one_ticket' => '請至少輸入一個券號',
+        'please_input_ticket' => '請輸入券號',
+        'ticket_must_6_digits' => '券號必須是6位數字',
+        'no_prize_level' => '該活動尚未配置獎品等級',
+        'distribute_hint' => '請輸入中獎券號，系統將根據券號自動識別獎品等級並發放獎勵',
     ],
 
     // 错误信息
@@ -271,6 +299,11 @@ return [
     // 帮助文本
     'help' => [
         'cover_image' => '建議尺寸：750x400px，支持jpg、png格式，文件大小不超過2MB',
+        'cover_alt' => '活動封面',
+        'cover_preview' => '封面預覽',
+        'vip_config_hint' => '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量',
+        'prize_config_hint' => '配置獎品等級和獎勵金額(僅現金獎勵)',
+        'input_ticket_no' => '輸入券號:',
     ],
 
     // 详情视图标签
@@ -305,5 +338,27 @@ return [
         'select_activity_help' => '只顯示已開獎待發放的活動',
         'distribution_note' => '發放備註',
         'distribution_note_placeholder' => '請填寫發放備註（選填）',
+        'vip_config_section' => 'VIP等級打碼量配置',
+        'prize_config_section' => '獎品等級配置',
+        'no_vip_data' => '暫無VIP等級數據',
+        'no_vip_config' => '未配置VIP等級',
+    ],
+
+    // 验证消息
+    'validation' => [
+        'name_required' => '請輸入活動名稱',
+        'name_max_length' => '活動名稱不能超過100個字符',
+        'start_time_required' => '請選擇開始時間',
+        'end_time_required' => '請選擇結束時間',
+        'ticket_no_required' => '請輸入券號',
+        'image_format_error' => '只能上傳 JPG/PNG 格式的圖片！',
+        'image_size_error' => '圖片大小不能超過 2MB！',
+    ],
+
+    // 其他文本
+    'ui' => [
+        'total_records' => '共 {total} 條',
+        'yuan' => '元',
+        'upload_failed' => '上傳失敗',
     ],
 ];

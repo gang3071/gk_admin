@@ -1,55 +1,114 @@
 <?php
 
 return [
-    'title' => 'Lottery Ticket Management',
-
-    // Menu
+    // 菜单
     'menu' => [
         'main' => 'Lottery Ticket Management',
-        'dashboard' => 'Active Campaigns',
-        'history' => 'Campaign History',
+        'dashboard' => 'Ongoing Activities',
+        'history' => 'Historical Activities',
         'records' => 'Winning Records',
     ],
 
-    // Fields
+    // 标题
+    'title' => [
+        'main' => 'Lottery Ticket Management',
+        'activity_detail' => '活动詳情',
+    ],
+
+    // 字段
     'fields' => [
         'id' => 'ID',
-        'name' => 'Campaign Name',
-        'activity_name' => 'Campaign Name',
+        'name' => 'Activity Name',
+        'activity_name' => 'Activity Name',
         'description' => 'Description',
+        'cover_image' => 'Activity Cover',
+        'cover_image_upload' => 'Activity Cover Image',
+        'live_url' => 'Live URL',
         'start_time' => 'Start Time',
         'end_time' => 'End Time',
         'status' => 'Status',
         'total_tickets' => 'Total Tickets',
         'used_tickets' => 'Used Tickets',
         'usage_rate' => 'Usage Rate',
-        'prize_config' => 'Prize Configuration',
+        'prize_config' => 'Prize Config',
         'created_at' => 'Created At',
+        'prize_level_config' => 'Prize Level Config',
+        'total_probability' => 'Total Probability',
+        'level' => 'Level',
+        'time_range' => 'Time Range',
+        'player_account' => '玩家賬号',
+        'prize_level' => 'Prize Level',
+        'remark' => '备註',
+        'distribution_remark' => 'Distribution Note',
+        'vip_level' => 'VIP Level',
+        'bet_amount_required' => 'Bet Amount Required',
+        'ticket_count' => 'Ticket Count',
+        'prize_amount' => '奖勵金额',
+        'prize_count' => 'Prize Count',
+        'ticket_no_input' => 'Winning Ticket No',
 
-        // Winning Records
+        // 中奖记录
         'player_name' => 'Player Name',
         'player_phone' => 'Player Phone',
-        'ticket_no' => 'Ticket Number',
+        'ticket_no' => 'Ticket No',
         'prize_type' => 'Prize Type',
         'prize_name' => 'Prize Name',
-        'prize_amount' => 'Prize Amount',
-        'record_status' => 'Grant Status',
-        'remark' => 'Remark',
+        'record_status' => 'Distribution Status',
         'draw_time' => 'Draw Time',
+        'source' => '來源',
+        'used_at' => 'Used At',
     ],
 
-    // Activity Status
+    // 占位符
+    'placeholder' => [
+        'name' => 'Please enter activity name',
+        'description' => 'Please enter description',
+        'start_time' => 'Please select start time',
+        'end_time' => 'Please select end time',
+        'level_rank' => 'Please select level rank',
+        'prize_type' => 'Please select prize type',
+        'player_account' => '请输入玩家賬号/手机号/UUID',
+        'prize_level' => 'Please select prize level',
+        'remark' => '选填，可备註中奖詳情',
+        'live_url' => 'e.g.: rtmp://live.example.com/stream/12345',
+        'ticket_no' => 'Please enter 6-digit ticket number',
+        'distribute_remark' => '选填，可备註发放说明',
+    ],
+
+    // 模态框
+    'modal' => [
+        'record_win_title' => 'Record Winning Entry',
+        'live_url_title' => 'Add Live URL',
+        'live_url_prompt' => 'Please enter live stream URL:',
+        'live_url_required' => 'Please enter live URL',
+        'batch_distribute_title' => '批量发放奖勵',
+        'distribute_by_ticket_title' => '录入券号发放奖勵',
+        'ticket_list_title' => 'Ticket Distribution List',
+    ],
+
+    // 活动状态
     'status' => [
+        'all' => 'All',
         'not_started' => 'Not Started',
         'ongoing' => 'Ongoing',
-        'drawing' => 'Drawing',
-        'drawn' => 'Drawn (Pending Distribution)', // ⭐ New
         'ended' => 'Ended',
-        'closed' => 'Closed',
+        'closed' => '已关閉',
+        'preheating' => '预熱期',
+        'betting' => 'Betting',
+        'drawing' => 'Drawing',
+        'drawn' => 'Drawn Pending Distribution', // ⭐ 新增
         'unknown' => 'Unknown',
     ],
 
-    // Ticket Status
+    // 直播状态
+    'live_status' => [
+        'not_started' => 'Not Started',
+        'ongoing' => 'Live',
+        'ended' => 'Ended',
+        'unknown' => 'Unknown',
+    ],
+
+    // 摸奖券状态
     'ticket_status' => [
         'unused' => 'Unused',
         'used' => 'Used',
@@ -57,182 +116,249 @@ return [
         'unknown' => 'Unknown',
     ],
 
-    // Source
+    // 来源
     'source' => [
-        'recharge' => 'Recharge Bonus',
-        'activity' => 'Campaign Bonus',
-        'manual' => 'Manual Grant',
-        'unknown' => 'Unknown',
+        'recharge' => '充值贈送',
+        'activity' => '活动贈送',
+        'manual' => 'Manual Distribution',
+        'unknown' => '未知來源',
     ],
 
-    // Grant Status
+    // 中奖记录状态
     'record_status' => [
         'pending' => 'Pending',
-        'claimed' => 'Distributed',
-        'expired' => 'Expired',
-        'cancelled' => 'Cancelled',
-        'processing' => 'Processing', // ⭐ New
-        'failed' => 'Failed',
-        'granted' => 'Distributed', // Legacy
+        'claimed' => 'Distributed', // ⭐ 更新
+        'expired' => 'Expired', // ⭐ 新增
+        'cancelled' => 'Cancelled', // ⭐ 新增
+        'processing' => 'Processing', // ⭐ 新增
+        'failed' => '发放失敗',
+        'granted' => 'Distributed', // 兼容舊代码
         'unknown' => 'Unknown',
     ],
 
-    // Prize Type
+    // 奖品类型
     'prize_type' => [
         'cash' => 'Cash',
         'bonus' => 'Bonus',
         'item' => 'Physical Item',
-        'points' => 'Points',
+        'points' => '積分',
         'empty' => 'No Prize',
-        'unknown' => 'Unknown',
+        'unknown' => 'Unknown Type',
     ],
 
-    // Prize Level Names
+    // 中奖等级名称
     'level_name' => [
-        'special' => 'Grand Prize',
-        'first' => '1st Prize',
-        'second' => '2nd Prize',
-        'third' => '3rd Prize',
-        'fourth' => '4th Prize',
-        'fifth' => '5th Prize',
-        'sixth' => '6th Prize',
-        'seventh' => '7th Prize',
-        'eighth' => '8th Prize',
-        'ninth' => '9th Prize',
+        'special' => '特等奖',
+        'first' => 'First Prize',
+        'second' => 'Second Prize',
+        'third' => 'Third Prize',
+        'fourth' => 'Fourth Prize',
+        'fifth' => 'Fifth Prize',
+        'sixth' => 'Sixth Prize',
+        'seventh' => 'Seventh Prize',
+        'eighth' => 'Eighth Prize',
+        'ninth' => 'Ninth Prize',
+        'default' => '等级:rank',
     ],
 
-    // Prize Level Fields
+    // 中奖等级字段
     'prize_level_fields' => [
-        'level_rank' => 'Rank',
+        'level_rank' => 'Level Rank',
         'level_name' => 'Level Name',
         'prize_type' => 'Prize Type',
-        'prize_amount' => 'Amount',
-        'prize_item_name' => 'Item Name',
-        'prize_item_image' => 'Item Image',
-        'prize_count' => 'Quantity',
-        'win_probability' => 'Win Rate (%)',
-        'description' => 'Description',
+        'prize_amount' => 'Prize Amount',
+        'prize_item_name' => '实物名称',
+        'prize_item_image' => '实物图片',
+        'prize_count' => 'Prize Count',
+        'win_probability' => '中奖概率(%)',
+        'description' => 'Prize Description',
     ],
 
-    // Actions
+    // 操作
     'action' => [
-        'create' => 'Create Campaign',
-        'edit' => 'Edit Campaign',
-        'view' => 'View Details',
-        'view_detail' => 'View Details',
-        'close' => 'Close Campaign',
+        'create' => 'Create Activity',
+        'create_first' => 'Create Now',
+        'edit' => '编輯活动',
+        'view' => '查看詳情',
+        'view_detail' => '查看詳情',
+        'prize_config' => 'Prize Config',
+        'close' => '关閉活动',
         'export' => 'Export Records',
-        'grant' => 'Grant Prize',
+        'add_prize_level' => 'Add Prize Level',
+        'record_win' => 'Record Winning',
+        'add_live_url' => 'Add Live URL',
+        'expand' => 'Expand',
+        'collapse' => 'Collapse',
         'distribute' => 'Distribute',
-        'batch_distribute' => 'Batch Distribute',
-        'batch_distribute_selected' => 'Distribute Selected',
+        'batch_distribute' => 'Batch Distribution',
+        'batch_distribute_selected' => 'Batch Distribute Selected',
+        'distribute_by_ticket' => 'Distribute by Ticket',
+        'view_ticket_list' => 'View Distribution List',
+        'add_ticket' => 'Add Ticket',
+        'select_image' => 'Select Image',
+        'confirm_distribute' => 'Confirm Distribution',
     ],
 
-    // Statistics
+    // 统计
     'stats' => [
-        'total_activities' => 'Total Campaigns',
-        'ongoing_activities' => 'Active Campaigns',
-        'total_draws' => 'Total Draws',
+        'total_activities' => 'Total Activities',
+        'ongoing_activities' => 'Ongoing Activities',
+        'total_draws' => '总抽奖次数',
         'total_winners' => 'Total Winners',
-        'total_prize_amount' => 'Total Prize Amount',
-        'pending_count' => 'Pending Records',          // ⭐ New
-        'pending_amount' => 'Pending Amount',          // ⭐ New
-        'claimed_count' => 'Distributed Records',      // ⭐ New
-        'claimed_amount' => 'Distributed Amount',      // ⭐ New
+        'total_prize_amount' => '总奖金金额',
+        'pending_count' => '待发放记录',       // ⭐ 新增
+        'pending_amount' => '待发放金额',      // ⭐ 新增
+        'claimed_count' => '已发放记录',       // ⭐ 新增
+        'claimed_amount' => '已发放金额',      // ⭐ 新增
     ],
 
-    // Messages
+    // 消息
     'message' => [
-        'create_success' => 'Campaign created successfully',
-        'update_success' => 'Campaign updated successfully',
-        'close_success' => 'Campaign closed successfully',
-        'close_confirm' => 'Are you sure you want to close this campaign?',
-        'activity_not_found' => 'Campaign not found',
-        'activity_closed' => 'Campaign has been closed',
-        'time_conflict' => 'Time conflict',
-        'prize_level_saved' => 'Prize level saved successfully',
-        'prize_level_deleted' => 'Prize level deleted successfully',
-        'distribute_success' => 'Distributed successfully',
-        'distribute_failed' => 'Distribution failed',
-        'batch_complete' => 'Batch distribution complete: {success} succeeded, {fail} failed',
-        'batch_distribute_selected' => 'Batch distribute selected records',
-        'export_in_development' => 'Export feature under development',
-        'admin_manual_update' => 'Manually updated by admin',
+        'create_success' => 'Activity created successfully',
+        'update_success' => 'Activity updated successfully',
+        'close_success' => '活动关閉成功',
+        'activity_not_found' => 'Activity not found',
+        'activity_closed' => '活动已关閉',
+        'activity_not_ongoing' => '只能关閉进行中的活动',
+        'time_conflict' => '活动时间衝突',
+        'prize_level_saved' => '奖品等级保存成功',
+        'prize_level_deleted' => '奖品等级刪除成功',
+        'no_activities' => '暫无活动',
+        'no_prize_config' => 'Prize levels not configured yet',
+        'prize_level_hint' => '最多可配置10个奖品等级,中奖概率总和不能超过100%',
+        'upload_success' => '上传成功',
+        'image_upload_success' => 'Image uploaded successfully',
+        'image_upload_failed' => '图片上传失敗',
+        'distribute_success' => 'Distribution successful',
+        'distribute_failed' => '发放失敗',
+        'batch_complete' => '批量发放完成：成功 {success} 条，失敗 {fail} 条',
+        'batch_distribute_selected' => '批量发放选中记录',
+        'export_in_development' => '导出功能开发中',
+        'live_url_updated' => '直播地址设置成功',
+        'record_success' => '中奖记录录入成功',
+        'record_success_count' => 'Successfully recorded {count} winning entries',
+        'live_started' => 'Live started',
+        'live_ended' => 'Live ended',
+        'status_updated' => 'Status updated successfully',
+        'admin_manual_update' => '管理員手动更新',
+        'fetch_failed' => 'Failed to fetch activities',
+        'fetch_detail_failed' => 'Failed to fetch details',
+        'close_activity_failed' => 'Failed to close activity',
+        'min_one_ticket' => 'Please enter at least one ticket number',
+        'please_input_ticket' => 'Please enter ticket number',
+        'ticket_must_6_digits' => '券号必須是6位数字',
+        'no_prize_level' => '該活动尚未配置奖品等级',
+        'distribute_hint' => '请输入中奖券号，系统將根據券号自动识別奖品等级並发放奖勵',
     ],
 
-    // Error Messages
+    // 错误信息
     'error' => [
         'record_not_found' => 'Record not found',
-        // Input validation
-        'invalid_record_id' => 'Invalid parameter: Record ID is invalid',
-        'invalid_activity_id' => 'Invalid parameter: Activity ID is invalid',
-        'invalid_record_ids' => 'Invalid parameter: Record IDs must be an array',
-        'invalid_record_id_value' => 'Invalid parameter: Record ID contains illegal value',
-        'note_too_long' => 'Distribution note cannot exceed 255 characters',
+        // 输入驗證
+        'invalid_record_id' => '參数错誤：记录ID无效',
+        'invalid_activity_id' => '參数错誤：活动ID无效',
+        'invalid_record_ids' => '參数错誤：记录ID必須是数組',
+        'invalid_record_id_value' => '參数错誤：记录ID包含非法值',
+        'note_too_long' => 'Distribution remark cannot exceed 255 characters',
         'no_selection' => 'Please specify activity ID or select records',
-        'no_pending_records' => 'No pending records to distribute',
-        // Business logic validation
-        'invalid_status' => 'Invalid record status, can only distribute pending records',
-        'status_changed' => 'Status has changed',
-        'empty_prize' => 'Empty prize does not need distribution',
+        'no_pending_records' => 'No pending distribution records',
+        // 业务邏輯驗證
+        'invalid_status' => 'Invalid status, can only distribute pending records',
+        'status_changed' => 'Status changed',
+        'empty_prize' => 'No prize, no distribution needed',
         'invalid_amount' => 'Prize amount must be greater than 0',
         'player_not_found' => 'Player not found',
-        'player_disabled' => 'Player is disabled, cannot distribute reward',
+        'player_disabled' => 'Player disabled, cannot distribute',
         'activity_not_found' => 'Activity not found',
-        'activity_invalid_status' => 'Invalid activity status, can only distribute for drawn activities',
-        'amount_exceeded' => 'Distribution amount exceeds total prize amount',
-        'ticket_not_found_or_used' => 'Ticket {ticket_no} not found or already used',
+        'activity_invalid_status' => 'Invalid activity status',
+        'amount_exceeded' => 'Distribution amount exceeds total prize',
+        'ticket_not_found_or_used' => 'Ticket {ticket_no} not found or used',
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',
-        'bet_progress_not_found' => 'Betting progress record not found',
-        // Other
-        'too_many_levels' => 'Maximum {max} prize levels allowed',
-        'no_prize_levels' => 'Please configure at least one prize level',
-        'no_prizes' => 'Prize quantity cannot be zero',
-        'probability_exceed' => 'Total win rate cannot exceed 100%, current: {total}%',
-        'level_rank_exists' => 'This rank already exists',
+        'bet_progress_not_found' => 'Bet progress record not found',
+        // 其他
+        'too_many_levels' => 'Max {max} prize levels allowed',
+        'no_prize_levels' => 'Please set at least one prize level',
+        'no_prizes' => 'Prize count cannot be 0',
+        'probability_exceed' => 'Total probability cannot exceed 100%, current: {total}%',
+        'level_rank_exists' => 'Level rank already exists',
         'invalid_prize_type' => 'Invalid prize type',
+        'name_required' => 'Please enter activity name',
+        'time_required' => 'Please select activity time',
+        'invalid_time' => 'End time must be after start time',
+        'cannot_edit_started' => 'Can only edit activities not started',
+        'invalid_file' => 'Invalid file',
+        'invalid_image_type' => 'Only jpg, png format supported',
+        'file_too_large' => 'File size cannot exceed 2MB',
+        'invalid_params' => 'Invalid parameter',
+        'activity_not_ongoing' => 'Can only record wins for ongoing activities',
+        'prize_level_not_found' => 'Prize level not found',
+        'live_url_required' => 'Please set live URL first',
+        'invalid_status_value' => 'Invalid status value',
     ],
 
-    // Detail View Labels
+    // 帮助文本
+    'help' => [
+        'cover_image' => 'Recommended: 750x400px, jpg/png, max 2MB',
+        'cover_alt' => 'Activity Cover',
+        'cover_preview' => 'Cover Preview',
+        'vip_config_hint' => 'Configure ticket count for each VIP level upon reaching bet amount',
+        'prize_config_hint' => 'Configure prize levels and amounts (cash only)',
+        'input_ticket_no' => 'Enter ticket number:',
+    ],
+
+    // 详情视图标签
     'view' => [
-        'detail_title' => 'Prize Record Details',
-        'basic_info' => 'Basic Information',
-        'prize_info' => 'Prize Information',
-        'distribution_info' => 'Distribution Information',
+        'detail_title' => 'Winning Record Details',
+        'basic_info' => 'Basic Info',
+        'prize_info' => 'Prize Info',
+        'distribution_info' => 'Distribution Info',
         'activity_name' => 'Activity Name',
-        'ticket_no' => 'Ticket No.',
+        'ticket_no' => 'Ticket No',
         'player_name' => 'Player',
         'player_phone' => 'Phone',
         'prize_name' => 'Prize Name',
         'prize_type' => 'Prize Type',
         'prize_amount' => 'Prize Amount',
         'status' => 'Status',
-        'distributed_at' => 'Distributed At',
-        'distributed_by' => 'Distributed By',
+        'distributed_at' => 'Distribution Time',
+        'distributed_by' => 'Distributor',
         'distribution_note' => 'Distribution Note',
         'created_at' => 'Created At',
         'updated_at' => 'Updated At',
     ],
 
-    // Confirm Dialogs
+    // 确认对话框
     'confirm' => [
-        'distribute' => 'Confirm distribution of this prize to player account?',
+        'distribute' => 'Confirm distribute this prize to player account?',
     ],
 
-    // Modal Titles
-    'modal' => [
-        'record_win_title' => 'Record Winning Entry',
-        'live_url_title' => 'Add Live Stream URL',
-        'live_url_prompt' => 'Please enter the live stream URL:',
-        'live_url_required' => 'Please enter the live stream URL',
-        'batch_distribute_title' => 'Batch Distribute Prizes',
-    ],
-
-    // Form Labels
+    // 表单标签
     'form' => [
         'select_activity' => 'Select Activity',
         'select_activity_help' => 'Only showing drawn activities pending distribution',
         'distribution_note' => 'Distribution Note',
-        'distribution_note_placeholder' => 'Please enter distribution note (optional)',
+        'distribution_note_placeholder' => 'Enter distribution note (optional)',
+        'vip_config_section' => 'VIP Bet Amount Config',
+        'prize_config_section' => 'Prize Level Config',
+        'no_vip_data' => 'No VIP data available',
+        'no_vip_config' => 'VIP not configured',
+    ],
+
+    // 验证消息
+    'validation' => [
+        'name_required' => 'Please enter activity name',
+        'name_max_length' => 'Activity name cannot exceed 100 characters',
+        'start_time_required' => 'Please select start time',
+        'end_time_required' => 'Please select end time',
+        'ticket_no_required' => 'Please enter ticket number',
+        'image_format_error' => 'Only JPG/PNG images allowed!',
+        'image_size_error' => 'Image size cannot exceed 2MB!',
+    ],
+
+    // 其他文本
+    'ui' => [
+        'total_records' => 'Total {total} records',
+        'yuan' => 'Yuan',
+        'upload_failed' => 'Upload failed',
     ],
 ];

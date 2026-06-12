@@ -59,9 +59,15 @@ class ChannelLotteryTicketActivityController
             'addLiveUrl' => admin_trans('lottery_ticket.action.add_live_url'),
             'expand' => admin_trans('lottery_ticket.action.expand'),
             'collapse' => admin_trans('lottery_ticket.action.collapse'),
+            'distributeByTicket' => admin_trans('lottery_ticket.action.distribute_by_ticket'),
+            'viewTicketList' => admin_trans('lottery_ticket.action.view_ticket_list'),
+            'addTicket' => admin_trans('lottery_ticket.action.add_ticket'),
+            'selectImage' => admin_trans('lottery_ticket.action.select_image'),
+            'confirmDistribute' => admin_trans('lottery_ticket.action.confirm_distribute'),
             'refresh' => admin_trans('common.refresh'),
             'save' => admin_trans('common.save'),
             'cancel' => admin_trans('common.cancel'),
+            'submit' => admin_trans('common.submit'),
 
             // 状态
             'allStatus' => admin_trans('lottery_ticket.status.all'),
@@ -73,6 +79,7 @@ class ChannelLotteryTicketActivityController
             // 字段
             'activityName' => admin_trans('lottery_ticket.fields.activity_name'),
             'description' => admin_trans('lottery_ticket.fields.description'),
+            'coverImage' => admin_trans('lottery_ticket.fields.cover_image_upload'),
             'startTime' => admin_trans('lottery_ticket.fields.start_time'),
             'endTime' => admin_trans('lottery_ticket.fields.end_time'),
             'status' => admin_trans('lottery_ticket.fields.status'),
@@ -80,29 +87,82 @@ class ChannelLotteryTicketActivityController
             'usedTickets' => admin_trans('lottery_ticket.fields.used_tickets'),
             'usageRate' => admin_trans('lottery_ticket.fields.usage_rate'),
             'prizeConfig' => admin_trans('lottery_ticket.fields.prize_config'),
+            'prizeLevelConfig' => admin_trans('lottery_ticket.fields.prize_level_config'),
             'level' => admin_trans('lottery_ticket.fields.level'),
             'levelRank' => admin_trans('lottery_ticket.prize_level_fields.level_rank'),
             'levelName' => admin_trans('lottery_ticket.prize_level_fields.level_name'),
-            'prizeAmount' => admin_trans('lottery_ticket.prize_level_fields.prize_amount'),
-            'prizeCount' => admin_trans('lottery_ticket.prize_level_fields.prize_count'),
+            'prizeAmount' => admin_trans('lottery_ticket.fields.prize_amount'),
+            'prizeCount' => admin_trans('lottery_ticket.fields.prize_count'),
+            'vipLevel' => admin_trans('lottery_ticket.fields.vip_level'),
+            'betAmountRequired' => admin_trans('lottery_ticket.fields.bet_amount_required'),
+            'ticketCount' => admin_trans('lottery_ticket.fields.ticket_count'),
+            'ticketNo' => admin_trans('lottery_ticket.fields.ticket_no'),
+            'ticketNoInput' => admin_trans('lottery_ticket.fields.ticket_no_input'),
+            'playerName' => admin_trans('lottery_ticket.fields.player_name'),
+            'source' => admin_trans('lottery_ticket.fields.source'),
+            'createdAt' => admin_trans('lottery_ticket.fields.created_at'),
+            'usedAt' => admin_trans('lottery_ticket.fields.used_at'),
+            'distributionRemark' => admin_trans('lottery_ticket.fields.distribution_remark'),
 
             // 占位符
             'activityNamePlaceholder' => admin_trans('lottery_ticket.placeholder.name'),
             'descriptionPlaceholder' => admin_trans('lottery_ticket.placeholder.description'),
             'liveUrlPlaceholder' => admin_trans('lottery_ticket.placeholder.live_url'),
+            'ticketNoPlaceholder' => admin_trans('lottery_ticket.placeholder.ticket_no'),
+            'distributeRemarkPlaceholder' => admin_trans('lottery_ticket.placeholder.distribute_remark'),
 
             // 模态框
             'modalRecordWinTitle' => admin_trans('lottery_ticket.modal.record_win_title'),
             'modalLiveUrlTitle' => admin_trans('lottery_ticket.modal.live_url_title'),
             'modalLiveUrlPrompt' => admin_trans('lottery_ticket.modal.live_url_prompt'),
             'modalLiveUrlRequired' => admin_trans('lottery_ticket.modal.live_url_required'),
+            'modalDistributeTitle' => admin_trans('lottery_ticket.modal.distribute_by_ticket_title'),
+            'modalTicketListTitle' => admin_trans('lottery_ticket.modal.ticket_list_title'),
 
             // 消息
             'loading' => admin_trans('common.loading'),
             'noActivities' => admin_trans('lottery_ticket.message.no_activities'),
             'noPrizeConfig' => admin_trans('lottery_ticket.message.no_prize_config'),
+            'noPrizeLevel' => admin_trans('lottery_ticket.message.no_prize_level'),
             'activityDetail' => admin_trans('lottery_ticket.title.activity_detail'),
             'liveUrlUpdated' => admin_trans('lottery_ticket.message.live_url_updated'),
+            'imageUploadSuccess' => admin_trans('lottery_ticket.message.image_upload_success'),
+            'imageUploadFailed' => admin_trans('lottery_ticket.message.image_upload_failed'),
+            'fetchFailed' => admin_trans('lottery_ticket.message.fetch_failed'),
+            'fetchDetailFailed' => admin_trans('lottery_ticket.message.fetch_detail_failed'),
+            'closeActivityFailed' => admin_trans('lottery_ticket.message.close_activity_failed'),
+            'minOneTicket' => admin_trans('lottery_ticket.message.min_one_ticket'),
+            'recordSuccessCount' => admin_trans('lottery_ticket.message.record_success_count'),
+            'pleaseInputTicket' => admin_trans('lottery_ticket.message.please_input_ticket'),
+            'ticketMust6Digits' => admin_trans('lottery_ticket.message.ticket_must_6_digits'),
+            'distributeHint' => admin_trans('lottery_ticket.message.distribute_hint'),
+
+            // 帮助文本
+            'coverImageHelp' => admin_trans('lottery_ticket.help.cover_image'),
+            'coverAlt' => admin_trans('lottery_ticket.help.cover_alt'),
+            'coverPreview' => admin_trans('lottery_ticket.help.cover_preview'),
+            'vipConfigHint' => admin_trans('lottery_ticket.help.vip_config_hint'),
+            'prizeConfigHint' => admin_trans('lottery_ticket.help.prize_config_hint'),
+            'inputTicketNo' => admin_trans('lottery_ticket.help.input_ticket_no'),
+
+            // 表单
+            'vipConfigSection' => admin_trans('lottery_ticket.form.vip_config_section'),
+            'prizeConfigSection' => admin_trans('lottery_ticket.form.prize_config_section'),
+            'noVipData' => admin_trans('lottery_ticket.form.no_vip_data'),
+            'noVipConfig' => admin_trans('lottery_ticket.form.no_vip_config'),
+
+            // 验证
+            'nameRequired' => admin_trans('lottery_ticket.validation.name_required'),
+            'nameMaxLength' => admin_trans('lottery_ticket.validation.name_max_length'),
+            'startTimeRequired' => admin_trans('lottery_ticket.validation.start_time_required'),
+            'endTimeRequired' => admin_trans('lottery_ticket.validation.end_time_required'),
+            'ticketNoRequired' => admin_trans('lottery_ticket.validation.ticket_no_required'),
+            'imageFormatError' => admin_trans('lottery_ticket.validation.image_format_error'),
+            'imageSizeError' => admin_trans('lottery_ticket.validation.image_size_error'),
+
+            // UI
+            'yuan' => admin_trans('lottery_ticket.ui.yuan'),
+            'uploadFailed' => admin_trans('lottery_ticket.ui.upload_failed'),
         ];
 
         // 使用 admin_view 返回 Vue 组件
@@ -137,6 +197,14 @@ class ChannelLotteryTicketActivityController
         }
 
         $activities = $query->orderBy('created_at', 'desc')->get();
+
+        // 添加 has_prize_config 字段
+        $activities = $activities->map(function ($activity) {
+            $activityArray = $activity->toArray();
+            $activityArray['has_prize_config'] = LotteryTicketPrizeLevel::where('activity_id', $activity->id)
+                ->exists();
+            return $activityArray;
+        });
 
         return Response::success($activities->toArray());
     }
@@ -1107,5 +1175,144 @@ class ChannelLotteryTicketActivityController
             'ball_result' => $ballResult,
             'activity_status' => $activity->status,
         ]);
+    }
+
+    /**
+     * 录入券号发放奖励
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function distributeByTicketNo()
+    {
+        $activityId = Request::input('activity_id');
+        $ticketNo = Request::input('ticket_no');
+        $remark = Request::input('remark', '');
+
+        // 验证参数
+        if (!$activityId || !$ticketNo) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+        }
+
+        // 验证活动
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+        }
+
+        // 检查权限
+        if ($activity->department_id != Admin::user()->department_id) {
+            return message_error(admin_trans('common.no_permission'));
+        }
+
+        // 检查活动状态 - 只能在进行中的活动发放
+        if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
+            return message_error(admin_trans('lottery_ticket.error.activity_not_ongoing'));
+        }
+
+        Db::beginTransaction();
+        try {
+            // 查找券
+            $ticket = LotteryTicket::where('activity_id', $activityId)
+                ->where('ticket_no', $ticketNo)
+                ->first();
+
+            if (!$ticket) {
+                throw new \Exception(admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]));
+            }
+
+            // 检查券状态
+            if ($ticket->status != LotteryTicket::STATUS_UNUSED) {
+                throw new \Exception(admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]));
+            }
+
+            // 获取奖品等级
+            $prizeLevel = LotteryTicketPrizeLevel::find($ticket->prize_level_id);
+            if (!$prizeLevel) {
+                throw new \Exception(admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]));
+            }
+
+            // 获取打码进度
+            $betProgress = LotteryTicketBetProgress::where('ticket_id', $ticket->id)->first();
+            if (!$betProgress) {
+                throw new \Exception(admin_trans('lottery_ticket.error.bet_progress_not_found'));
+            }
+
+            // 获取玩家
+            $player = \addons\webman\model\Player::find($ticket->player_id);
+            if (!$player) {
+                throw new \Exception(admin_trans('lottery_ticket.error.player_not_found'));
+            }
+
+            // 检查玩家状态
+            if ($player->status != 1) {
+                throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
+            }
+
+            // 空奖不需要发放
+            if ($prizeLevel->prize_type == LotteryTicketPrizeLevel::PRIZE_TYPE_EMPTY) {
+                throw new \Exception(admin_trans('lottery_ticket.error.empty_prize'));
+            }
+
+            // 发放奖励（根据奖品类型）
+            if ($prizeLevel->prize_type == LotteryTicketPrizeLevel::PRIZE_TYPE_CASH) {
+                // 现金奖励 - 增加玩家余额
+                $player->money += $prizeLevel->prize_amount;
+                $player->save();
+
+                // 记录资金变动
+                \addons\webman\model\PlayerMoneyLog::create([
+                    'player_id' => $player->id,
+                    'department_id' => $player->department_id,
+                    'type' => \addons\webman\model\PlayerMoneyLog::TYPE_LOTTERY_REWARD,
+                    'money' => $prizeLevel->prize_amount,
+                    'before_money' => $player->money - $prizeLevel->prize_amount,
+                    'after_money' => $player->money,
+                    'remark' => '摸奖券中奖发放：' . $activity->name . ' - ' . $prizeLevel->level_name . ($remark ? '（' . $remark . '）' : ''),
+                    'created_at' => time(),
+                ]);
+            } elseif ($prizeLevel->prize_type == LotteryTicketPrizeLevel::PRIZE_TYPE_BONUS) {
+                // 红利奖励 - 增加玩家红利
+                $player->bonus += $prizeLevel->prize_amount;
+                $player->save();
+
+                // 记录红利变动
+                \addons\webman\model\PlayerBonusLog::create([
+                    'player_id' => $player->id,
+                    'department_id' => $player->department_id,
+                    'type' => \addons\webman\model\PlayerBonusLog::TYPE_LOTTERY_REWARD,
+                    'bonus' => $prizeLevel->prize_amount,
+                    'before_bonus' => $player->bonus - $prizeLevel->prize_amount,
+                    'after_bonus' => $player->bonus,
+                    'remark' => '摸奖券中奖发放：' . $activity->name . ' - ' . $prizeLevel->level_name . ($remark ? '（' . $remark . '）' : ''),
+                    'created_at' => time(),
+                ]);
+            }
+
+            // 更新券状态为已使用
+            $ticket->status = LotteryTicket::STATUS_USED;
+            $ticket->used_at = time();
+            $ticket->save();
+
+            // 更新打码进度状态为已发放
+            $betProgress->prize_distributed = 1;
+            $betProgress->distributed_at = time();
+            $betProgress->distribution_remark = $remark ?: '管理员手动发放';
+            $betProgress->save();
+
+            Db::commit();
+
+            return Response::success([
+                'ticket_no' => $ticketNo,
+                'player_name' => $player->name,
+                'prize_level' => $prizeLevel->level_name,
+                'prize_amount' => $prizeLevel->prize_amount,
+                'prize_type' => $prizeLevel->prize_type,
+            ], admin_trans('lottery_ticket.message.distribute_success'));
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return message_error($e->getMessage());
+        }
     }
 }
