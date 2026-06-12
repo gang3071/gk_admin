@@ -160,12 +160,14 @@ class AgentDepositBonusOrderController
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
-                $actions->add(['addons-webman-controller-AgentDepositBonusOrderController', 'detail'], ['id' => '{id}'])
-                    ->drawer()
-                    ->content(admin_trans('deposit_bonus_order.view_detail'));
+                $actions->prepend(
+                    Button::create(admin_trans('deposit_bonus_order.view_detail'))
+                        ->type('link')
+                        ->drawer([$this, 'detail'], ['id' => $data['id']])
+                );
             })->align('center');
         });
     }

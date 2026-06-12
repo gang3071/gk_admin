@@ -6,7 +6,9 @@ use addons\webman\Admin;
 use addons\webman\model\PlayerBonusTask;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
+use ExAdmin\ui\component\grid\button\Button;
 use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
@@ -205,12 +207,14 @@ class StoreDepositBonusTaskController
             $grid->hideAdd();
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
-                $actions->add(['addons-webman-controller-StoreDepositBonusTaskController', 'detail'], ['id' => '{id}'])
-                    ->drawer()
-                    ->content(admin_trans('deposit_bonus_task.view_detail'));
+                $actions->prepend(
+                    Button::create(admin_trans('deposit_bonus_task.view_detail'))
+                        ->type('link')
+                        ->drawer([$this, 'detail'], ['id' => $data['id']])
+                );
             })->align('center');
         });
     }

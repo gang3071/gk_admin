@@ -1,14 +1,18 @@
 <?php
 
 return [
-    'title' => '摸獎券管理',
-
     // 菜单
     'menu' => [
         'main' => '摸獎券管理',
         'dashboard' => '進行中的活動',
         'history' => '歷史活動記錄',
         'records' => '中獎記錄',
+    ],
+
+    // 标题
+    'title' => [
+        'main' => '摸獎券管理',
+        'activity_detail' => '活動詳情',
     ],
 
     // 字段
@@ -34,6 +38,7 @@ return [
         'player_account' => '玩家賬號',
         'prize_level' => '中獎等級',
         'remark' => '備註',
+        'distribution_remark' => '發放備註',
 
         // 中奖记录
         'player_name' => '玩家名稱',
@@ -43,7 +48,6 @@ return [
         'prize_name' => '獎品名稱',
         'prize_amount' => '獎品金額',
         'record_status' => '發放狀態',
-        'remark' => '備註',
         'draw_time' => '抽獎時間',
     ],
 
@@ -61,17 +65,13 @@ return [
         'live_url' => '例如: rtmp://live.example.com/stream/12345',
     ],
 
-    // 对话框
+    // 模态框
     'modal' => [
         'record_win_title' => '錄入中獎記錄',
         'live_url_title' => '添加直播地址',
         'live_url_prompt' => '請輸入直播流地址:',
         'live_url_required' => '請輸入直播地址',
-    ],
-
-    // 标题
-    'title' => [
-        'activity_detail' => '活動詳情',
+        'batch_distribute_title' => '批量發放獎勵',
     ],
 
     // 活动状态
@@ -264,7 +264,6 @@ return [
         'invalid_params' => '參數錯誤',
         'activity_not_ongoing' => '只能在進行中的活動錄入中獎',
         'prize_level_not_found' => '獎品等級不存在',
-        'player_not_found' => '玩家不存在',
         'live_url_required' => '請先設置直播地址',
         'invalid_status' => '無效的狀態值',
     ],
@@ -298,15 +297,6 @@ return [
     // 确认对话框
     'confirm' => [
         'distribute' => '確認發放此獎品到玩家賬戶？',
-    ],
-
-    // 模态框标题
-    'modal' => [
-        'record_win_title' => '錄入中獎記錄',
-        'live_url_title' => '添加直播地址',
-        'live_url_prompt' => '請輸入直播流地址:',
-        'live_url_required' => '請輸入直播地址',
-        'batch_distribute_title' => '批量發放獎勵',
     ],
 
     // 表单标签

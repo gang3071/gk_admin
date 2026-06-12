@@ -6,11 +6,17 @@ use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\Player;
+use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\button\Button;
+use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\divider\Divider;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\Row;
 use support\Request;
 
 /**
@@ -40,17 +46,17 @@ class ChannelLotteryTicketRecordController
             $stats = self::getRecordStats($departmentId);
 
             // ⭐ 顶部统计卡片
-            $layout = \ExAdmin\ui\component\common\Card::create()->content([
-                \ExAdmin\ui\component\common\Row::create()
+            $layout = Card::create()->content([
+                Row::create()
                     ->column(
-                        \ExAdmin\ui\component\common\Statistic::create()
+                        Statistic::create()
                             ->title(admin_trans('lottery_ticket.stats.pending_count'))
                             ->value($stats['pending_count'])
                             ->valueStyle(['color' => '#ff9800']),
                         6
                     )
                     ->column(
-                        \ExAdmin\ui\component\common\Statistic::create()
+                        Statistic::create()
                             ->title(admin_trans('lottery_ticket.stats.pending_amount'))
                             ->value(number_format($stats['pending_amount'], 2))
                             ->prefix('¥')
@@ -58,14 +64,14 @@ class ChannelLotteryTicketRecordController
                         6
                     )
                     ->column(
-                        \ExAdmin\ui\component\common\Statistic::create()
+                        Statistic::create()
                             ->title(admin_trans('lottery_ticket.stats.claimed_count'))
                             ->value($stats['claimed_count'])
                             ->valueStyle(['color' => '#4caf50']),
                         6
                     )
                     ->column(
-                        \ExAdmin\ui\component\common\Statistic::create()
+                        Statistic::create()
                             ->title(admin_trans('lottery_ticket.stats.claimed_amount'))
                             ->value(number_format($stats['claimed_amount'], 2))
                             ->prefix('¥')
@@ -216,7 +222,7 @@ class ChannelLotteryTicketRecordController
 
             // ⭐ 工具栏按钮
             $grid->tools([
-                \ExAdmin\ui\component\common\Button::create(admin_trans('lottery_ticket.action.batch_distribute'))
+                Button::create(admin_trans('lottery_ticket.action.batch_distribute'))
                     ->modal([$this, 'batchDistributeForm'])
                     ->width('50%')
                     ->title(admin_trans('lottery_ticket.modal.batch_distribute_title'))
@@ -224,7 +230,7 @@ class ChannelLotteryTicketRecordController
                     ->size('small'),
 
                 // ✅ 修复：ajax()方法使用路由数组，不传admin_url()
-                \ExAdmin\ui\component\common\Button::create(admin_trans('lottery_ticket.action.export'))
+                Button::create(admin_trans('lottery_ticket.action.export'))
                     ->ajax([$this, 'exportRecords'])
                     ->type('default')
                     ->size('small')
@@ -615,121 +621,121 @@ class ChannelLotteryTicketRecordController
         }
 
         // 构建详情HTML
-        $html = \ExAdmin\ui\component\common\Card::create()->content([
-            \ExAdmin\ui\component\common\Html::create('<h4>' . admin_trans('lottery_ticket.view.detail_title') . '</h4>'),
-            \ExAdmin\ui\component\common\Divider::create(),
+        $html = Card::create()->content([
+            Html::create('<h4>' . admin_trans('lottery_ticket.view.detail_title') . '</h4>'),
+            Divider::create(),
 
             // 基本信息
-            \ExAdmin\ui\component\common\Row::create()
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.activity_name') . '：</strong>' .
                         ($record->activity->name ?? '-')
                     ),
                     12
                 )
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.ticket_no') . '：</strong>' .
                         $record->ticket_no
                     ),
                     12
                 ),
 
-            \ExAdmin\ui\component\common\Row::create()
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.player_name') . '：</strong>' .
                         ($record->player->name ?? '-')
                     ),
                     12
                 )
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.player_phone') . '：</strong>' .
                         ($record->player->phone ?? '-')
                     ),
                     12
                 ),
 
-            \ExAdmin\ui\component\common\Divider::create(),
+            Divider::create(),
 
             // 奖品信息
-            \ExAdmin\ui\component\common\Html::create('<h4>' . admin_trans('lottery_ticket.view.prize_info') . '</h4>'),
-            \ExAdmin\ui\component\common\Row::create()
+            Html::create('<h4>' . admin_trans('lottery_ticket.view.prize_info') . '</h4>'),
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.prize_name') . '：</strong>' .
                         $record->prize_name
                     ),
                     12
                 )
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.prize_type') . '：</strong>' .
                         $record->getPrizeTypeLabel()
                     ),
                     12
                 ),
 
-            \ExAdmin\ui\component\common\Row::create()
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.prize_amount') . '：</strong>¥' .
                         number_format($record->prize_amount, 2)
                     ),
                     12
                 )
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.status') . '：</strong>' .
                         $record->getStatusLabel()
                     )->style(['color' => $record->status == LotteryTicketRecord::STATUS_CLAIMED ? '#4caf50' : '#ff9800']),
                     12
                 ),
 
-            \ExAdmin\ui\component\common\Divider::create(),
+            Divider::create(),
 
             // 发放信息
-            \ExAdmin\ui\component\common\Html::create('<h4>' . admin_trans('lottery_ticket.view.distribution_info') . '</h4>'),
-            \ExAdmin\ui\component\common\Row::create()
+            Html::create('<h4>' . admin_trans('lottery_ticket.view.distribution_info') . '</h4>'),
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.distributed_at') . '：</strong>' .
                         ($record->distributed_at ?? '-')
                     ),
                     12
                 )
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.distributed_by') . '：</strong>' .
                         ($record->distributedBy->username ?? '-')
                     ),
                     12
                 ),
 
-            \ExAdmin\ui\component\common\Row::create()
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.distribution_note') . '：</strong>' .
                         ($record->distribution_note ?? '-')
                     ),
                     24
                 ),
 
-            \ExAdmin\ui\component\common\Divider::create(),
+            Divider::create(),
 
             // 时间信息
-            \ExAdmin\ui\component\common\Row::create()
+            Row::create()
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.created_at') . '：</strong>' .
                         $record->created_at
                     ),
                     12
                 )
                 ->column(
-                    \ExAdmin\ui\component\common\Html::create(
+                    Html::create(
                         '<strong>' . admin_trans('lottery_ticket.view.updated_at') . '：</strong>' .
                         $record->updated_at
                     ),
@@ -748,7 +754,7 @@ class ChannelLotteryTicketRecordController
      */
     public function batchDistributeForm()
     {
-        return \ExAdmin\ui\component\form\Form::create(new LotteryTicketRecord(), function ($form) {
+        return Form::create(new LotteryTicketRecord(), function ($form) {
             $departmentId = Admin::user()->department_id;
 
             // 活动选择

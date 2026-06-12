@@ -7,11 +7,12 @@ use addons\webman\model\PlayerBonusTask;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\grid\statistic\Statistic;
-use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
@@ -216,12 +217,14 @@ class AgentDepositBonusTaskController
             $grid->hideAdd();
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
-                $actions->add(['addons-webman-controller-AgentDepositBonusTaskController', 'detail'], ['id' => '{id}'])
-                    ->drawer()
-                    ->content(admin_trans('deposit_bonus_task.view_detail'));
+                $actions->prepend(
+                    Button::create(admin_trans('deposit_bonus_task.view_detail'))
+                        ->type('link')
+                        ->drawer([$this, 'detail'], ['id' => $data['id']])
+                );
             })->align('center');
         });
     }
