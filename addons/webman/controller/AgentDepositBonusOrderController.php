@@ -7,10 +7,12 @@ use addons\webman\model\DepositBonusActivity;
 use addons\webman\model\DepositBonusOrder;
 use addons\webman\model\Player;
 use app\service\DepositBonusQrcodeService;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -160,7 +162,7 @@ class AgentDepositBonusOrderController
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->actions(function ($actions, $data) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
                 $actions->prepend(

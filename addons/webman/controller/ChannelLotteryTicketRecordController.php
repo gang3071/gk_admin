@@ -6,16 +6,16 @@ use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\Player;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
-use ExAdmin\ui\component\grid\button\Button;
 use ExAdmin\ui\component\grid\card\Card;
-use ExAdmin\ui\component\grid\divider\Divider;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\Divider;
 use ExAdmin\ui\component\layout\Row;
 use support\Request;
 
@@ -236,9 +236,10 @@ class ChannelLotteryTicketRecordController
                     ->size('small')
             ]);
 
-            // ⭐ 批量操作
-            $grid->batchActions(function ($batch) {
-                $batch->option(admin_trans('lottery_ticket.action.batch_distribute_selected'), [$this, 'batchDistributeSelected']);
+            // ⭐ 批量操作 (通过勾选框选择记录后批量处理)
+            $grid->selection(function ($selection) {
+                $selection->option(admin_trans('lottery_ticket.action.batch_distribute_selected'))
+                    ->ajax([$this, 'batchDistributeSelected']);
             });
 
             $grid->hideTrashed();
@@ -303,7 +304,7 @@ class ChannelLotteryTicketRecordController
             $record->save();
 
             // 5. 转账到玩家账户
-            $player = Player::lockForUpdate()->find($record->player_id);
+            $player = Player::query()->lockForUpdate()->find($record->player_id);
             if (!$player) {
                 throw new \Exception(admin_trans('lottery_ticket.error.player_not_found'));
             }
