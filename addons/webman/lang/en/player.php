@@ -315,4 +315,15 @@ return [
         1 => 'Online',
         2 => 'Offline',
     ],
+
+    // Error Messages
+    'error' => [
+        'wash_amount_must_greater_than_zero' => 'Wash amount must be greater than 0',
+        'wallet_deduct_amount_must_greater_than_zero' => 'Wallet deduction amount must be greater than 0',
+        'currency_config_not_found' => 'Currency configuration not found',
+        'zero_balance_cannot_wash' => 'Current balance is 0, cannot wash',
+        'deduction_failed' => 'Deduction failed',
+        'platform_not_found' => 'Platform not found',
+        'platform_not_in_channel' => 'Platform not in channel scope',
+    ],
 ];

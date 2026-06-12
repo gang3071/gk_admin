@@ -39,4 +39,34 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 摸奖券打码进度队列消费者（异步处理，不影响游戏性能）
+    'lottery_bet_progress_consumer' => [
+        'handler' => process\LotteryBetProgressConsumer::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
+    // 摸奖券过期处理定时任务（每5分钟执行一次）
+    'lottery_ticket_expire' => [
+        'handler' => process\LotteryTicketExpireProcess::class,
+        'reloadable' => true,
+        'count' => 1,  // 只需要1个进程
+        'constructor' => []
+    ],
+
+    // 摸奖券打码进度扫描任务（定时扫描增量游戏记录，批量更新进度）
+    // 用于处理 gk_work 批量插入的游戏记录
+    'lottery_bet_progress_scan' => [
+        'handler' => process\LotteryBetProgressScanTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
+    // 摸奖券活动状态自动流转任务（检查时间节点，自动更新活动状态）
+    'lottery_activity_status_transition' => [
+        'handler' => process\LotteryActivityStatusTransitionTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];

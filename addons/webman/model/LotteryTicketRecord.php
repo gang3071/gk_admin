@@ -35,9 +35,15 @@ class LotteryTicketRecord extends Model
     use HasDateTimeFormatter, DataPermissions;
 
     // 状态常量
-    const STATUS_PENDING = 0;   // 待发放
-    const STATUS_GRANTED = 1;   // 已发放
-    const STATUS_FAILED = 2;    // 发放失败
+    const STATUS_PENDING = 0;      // 待发放 ⭐ 含义变更：开奖后等待管理员发放
+    const STATUS_CLAIMED = 1;      // 已发放 ⭐ 含义变更：管理员已发放
+    const STATUS_EXPIRED = 2;      // 已过期
+    const STATUS_CANCELLED = 3;    // 已取消
+    const STATUS_PROCESSING = 4;   // 发放中 ⭐ 新增
+    const STATUS_FAILED = 5;       // 发放失败 ⭐ 新增
+
+    // 兼容旧常量
+    const STATUS_GRANTED = 1;      // 已发放（兼容旧代码）
 
     // 奖品类型常量
     const PRIZE_TYPE_CASH = 'cash';       // 现金
@@ -64,9 +70,12 @@ class LotteryTicketRecord extends Model
     public static function getStatusText(int $status): string
     {
         $statusMap = [
-            self::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),
-            self::STATUS_GRANTED => admin_trans('lottery_ticket.record_status.granted'),
-            self::STATUS_FAILED => admin_trans('lottery_ticket.record_status.failed'),
+            self::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),      // 待发放
+            self::STATUS_CLAIMED => admin_trans('lottery_ticket.record_status.claimed'),      // 已发放
+            self::STATUS_EXPIRED => admin_trans('lottery_ticket.record_status.expired'),      // 已过期
+            self::STATUS_CANCELLED => admin_trans('lottery_ticket.record_status.cancelled'),  // 已取消
+            self::STATUS_PROCESSING => admin_trans('lottery_ticket.record_status.processing'),// 发放中 ⭐
+            self::STATUS_FAILED => admin_trans('lottery_ticket.record_status.failed'),        // 发放失败
         ];
 
         return $statusMap[$status] ?? admin_trans('lottery_ticket.record_status.unknown');
@@ -114,5 +123,41 @@ class LotteryTicketRecord extends Model
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(LotteryTicket::class, 'ticket_id');
+    }
+
+    /**
+     * 发放操作人
+     * @return BelongsTo
+     */
+    public function distributedBy(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'distributed_by');
+    }
+
+    /**
+     * 修改操作人
+     * @return BelongsTo
+     */
+    public function modifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'modified_by');
+    }
+
+    /**
+     * 获取当前记录的状态文本（实例方法）
+     * @return string
+     */
+    public function getStatusLabel(): string
+    {
+        return self::getStatusText($this->status);
+    }
+
+    /**
+     * 获取当前记录的奖品类型文本（实例方法）
+     * @return string
+     */
+    public function getPrizeTypeLabel(): string
+    {
+        return self::getPrizeTypeText($this->prize_type);
     }
 }

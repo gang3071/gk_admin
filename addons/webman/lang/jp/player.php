@@ -315,4 +315,15 @@ return [
         1 => 'オンライン',
         2 => 'オフライン',
     ],
+
+    // エラーメッセージ
+    'error' => [
+        'wash_amount_must_greater_than_zero' => 'ウォッシュ金額は0より大きい必要があります',
+        'wallet_deduct_amount_must_greater_than_zero' => 'ウォレット控除額は0より大きい必要があります',
+        'currency_config_not_found' => '通貨設定が見つかりません',
+        'zero_balance_cannot_wash' => '現在の残高は0、ウォッシュできません',
+        'deduction_failed' => '控除失敗',
+        'platform_not_found' => 'プラットフォームが見つかりません',
+        'platform_not_in_channel' => 'プラットフォームはチャネル範囲内にありません',
+    ],
 ];

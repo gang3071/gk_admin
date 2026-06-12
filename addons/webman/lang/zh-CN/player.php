@@ -316,4 +316,15 @@ return [
         1 => '线上',
         2 => '线下',
     ],
+
+    // 错误信息
+    'error' => [
+        'wash_amount_must_greater_than_zero' => '洗分金额必须大于0',
+        'wallet_deduct_amount_must_greater_than_zero' => '钱包扣除金额必须大于0',
+        'currency_config_not_found' => '币种配置不存在',
+        'zero_balance_cannot_wash' => '当前余额为0，无法洗分',
+        'deduction_failed' => '扣款失败',
+        'platform_not_found' => '平台不存在',
+        'platform_not_in_channel' => '平台不在渠道范围内',
+    ],
 ];

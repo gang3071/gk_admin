@@ -1,14 +1,18 @@
 <?php
 
 return [
-    'title' => '摸奖券管理',
-
     // 菜单
     'menu' => [
         'main' => '摸奖券管理',
         'dashboard' => '进行中的活动',
         'history' => '历史活动记录',
         'records' => '中奖记录',
+    ],
+
+    // 标题
+    'title' => [
+        'main' => '摸奖券管理',
+        'activity_detail' => '活动详情',
     ],
 
     // 字段
@@ -34,6 +38,7 @@ return [
         'player_account' => '玩家账号',
         'prize_level' => '中奖等级',
         'remark' => '备注',
+        'distribution_remark' => '发放备注',
 
         // 中奖记录
         'player_name' => '玩家名称',
@@ -43,7 +48,6 @@ return [
         'prize_name' => '奖品名称',
         'prize_amount' => '奖品金额',
         'record_status' => '发放状态',
-        'remark' => '备注',
         'draw_time' => '抽奖时间',
     ],
 
@@ -61,17 +65,13 @@ return [
         'live_url' => '例如: rtmp://live.example.com/stream/12345',
     ],
 
-    // 对话框
+    // 模态框
     'modal' => [
         'record_win_title' => '录入中奖记录',
         'live_url_title' => '添加直播地址',
         'live_url_prompt' => '请输入直播流地址:',
         'live_url_required' => '请输入直播地址',
-    ],
-
-    // 标题
-    'title' => [
-        'activity_detail' => '活动详情',
+        'batch_distribute_title' => '批量发放奖励',
     ],
 
     // 活动状态
@@ -79,6 +79,8 @@ return [
         'all' => '全部',
         'not_started' => '未开始',
         'ongoing' => '进行中',
+        'drawing' => '开奖中',
+        'drawn' => '已开奖待发放', // ⭐ 新增
         'ended' => '已结束',
         'closed' => '已关闭',
         'unknown' => '未知状态',
@@ -103,8 +105,12 @@ return [
     // 中奖记录状态
     'record_status' => [
         'pending' => '待发放',
-        'granted' => '已发放',
+        'claimed' => '已发放',
+        'expired' => '已过期',
+        'cancelled' => '已取消',
+        'processing' => '发放中', // ⭐ 新增
         'failed' => '发放失败',
+        'granted' => '已发放', // 兼容旧代码
         'unknown' => '未知状态',
     ],
 
@@ -161,6 +167,9 @@ return [
         'add_live_url' => '添加直播地址',
         'expand' => '展开',
         'collapse' => '收起',
+        'distribute' => '发放',
+        'batch_distribute' => '批量发放',
+        'batch_distribute_selected' => '批量发放选中',
     ],
 
     // 统计
@@ -170,6 +179,10 @@ return [
         'total_draws' => '总抽奖次数',
         'total_winners' => '总中奖人数',
         'total_prize_amount' => '总奖金金额',
+        'pending_count' => '待发放记录',       // ⭐ 新增
+        'pending_amount' => '待发放金额',      // ⭐ 新增
+        'claimed_count' => '已发放记录',       // ⭐ 新增
+        'claimed_amount' => '已发放金额',      // ⭐ 新增
     ],
 
     // 消息
@@ -189,10 +202,39 @@ return [
         'upload_success' => '上传成功',
         'live_url_updated' => '直播地址设置成功',
         'record_success' => '中奖记录录入成功',
+        'distribute_success' => '发放成功',
+        'distribute_failed' => '发放失败',
+        'batch_complete' => '批量发放完成：成功 {success} 条，失败 {fail} 条',
+        'batch_distribute_selected' => '批量发放选中记录',
+        'export_in_development' => '导出功能开发中',
+        'admin_manual_update' => '管理员手动更新',
     ],
 
     // 错误信息
     'error' => [
+        'record_not_found' => '记录不存在',
+        // 输入验证
+        'invalid_record_id' => '参数错误：记录ID无效',
+        'invalid_activity_id' => '参数错误：活动ID无效',
+        'invalid_record_ids' => '参数错误：记录ID必须是数组',
+        'invalid_record_id_value' => '参数错误：记录ID包含非法值',
+        'note_too_long' => '发放备注不能超过255个字符',
+        'no_selection' => '请指定活动ID或选择记录',
+        'no_pending_records' => '没有待发放的记录',
+        // 业务逻辑验证
+        'invalid_status' => '记录状态不正确，只能发放待发放的记录',
+        'status_changed' => '状态已变更',
+        'empty_prize' => '空奖无需发放',
+        'invalid_amount' => '奖品金额必须大于0',
+        'player_not_found' => '玩家不存在',
+        'player_disabled' => '玩家已被禁用，无法发放奖励',
+        'activity_not_found' => '活动不存在',
+        'activity_invalid_status' => '活动状态错误，只能发放已开奖待发放的活动奖励',
+        'amount_exceeded' => '发放金额超出总奖金额度',
+        'ticket_not_found_or_used' => '券号 {ticket_no} 不存在或已使用',
+        'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',
+        'bet_progress_not_found' => '未找到打码进度记录',
+        // 其他
         'too_many_levels' => '最多只能设置 {max} 个奖品等级',
         'no_prize_levels' => '请至少设置一个奖品等级',
         'no_prizes' => '奖品数量不能为0',
@@ -209,6 +251,39 @@ return [
         'invalid_params' => '参数错误',
         'activity_not_ongoing' => '只能在进行中的活动录入中奖',
         'prize_level_not_found' => '奖品等级不存在',
-        'player_not_found' => '玩家不存在',
+    ],
+
+    // 详情视图标签
+    'view' => [
+        'detail_title' => '中奖记录详情',
+        'basic_info' => '基本信息',
+        'prize_info' => '奖品信息',
+        'distribution_info' => '发放信息',
+        'activity_name' => '活动名称',
+        'ticket_no' => '券号',
+        'player_name' => '玩家',
+        'player_phone' => '手机号',
+        'prize_name' => '奖品名称',
+        'prize_type' => '奖品类型',
+        'prize_amount' => '奖品金额',
+        'status' => '状态',
+        'distributed_at' => '发放时间',
+        'distributed_by' => '发放人',
+        'distribution_note' => '发放备注',
+        'created_at' => '创建时间',
+        'updated_at' => '更新时间',
+    ],
+
+    // 确认对话框
+    'confirm' => [
+        'distribute' => '确认发放此奖品到玩家账户？',
+    ],
+
+    // 表单标签
+    'form' => [
+        'select_activity' => '选择活动',
+        'select_activity_help' => '只显示已开奖待发放的活动',
+        'distribution_note' => '发放备注',
+        'distribution_note_placeholder' => '请填写发放备注（选填）',
     ],
 ];

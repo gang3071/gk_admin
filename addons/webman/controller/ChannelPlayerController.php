@@ -1316,7 +1316,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -1506,7 +1506,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -2458,7 +2458,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -2587,7 +2587,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -4831,7 +4831,7 @@ class ChannelPlayerController
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable_switch', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
 
@@ -4907,7 +4907,7 @@ class ChannelPlayerController
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
 
@@ -5260,8 +5260,8 @@ class ChannelPlayerController
                     $rechargeDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
                     $rechargeDeliveryRecord->source = 'artificial_recharge';
                     $rechargeDeliveryRecord->amount = $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_before = $deviceWallet->money - $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_after = $deviceWallet->money;
+                    $rechargeDeliveryRecord->amount_before = $beforeGameAmount;  // ✅ 使用上方已获取的充值前余额
+                    $rechargeDeliveryRecord->amount_after = $afterGameAmount;   // ✅ 使用 WalletService::add() 返回值
                     $rechargeDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                     $rechargeDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                     $rechargeDeliveryRecord->save();
@@ -5392,11 +5392,11 @@ class ChannelPlayerController
 
         // 验证洗分金额
         if ($washAmount <= 0) {
-            return message_error('洗分金额必须大于0');
+            return message_error(admin_trans('player.error.wash_amount_must_greater_than_zero'));
         }
 
         if ($deductAmount <= 0) {
-            return message_error('钱包扣除金额必须大于0');
+            return message_error(admin_trans('player.error.wallet_deduct_amount_must_greater_than_zero'));
         }
 
         /** @var Player $player */
@@ -5415,7 +5415,7 @@ class ChannelPlayerController
             ->first();
 
         if (!$currency) {
-            return message_error('币种配置不存在');
+            return message_error(admin_trans('player.error.currency_config_not_found'));
         }
 
         // ✅ 重新检查爆机状态和余额（表单提交前余额可能已变化）
@@ -5424,7 +5424,7 @@ class ChannelPlayerController
 
         // 如果余额为0，不允许洗分
         if ($previousAmount <= 0) {
-            return message_error('当前余额为0，无法洗分');
+            return message_error(admin_trans('player.error.zero_balance_cannot_wash'));
         }
 
         // ✅ 根据最新余额和爆机状态重新计算洗分金额
@@ -5462,7 +5462,7 @@ class ChannelPlayerController
                 'deduct_amount' => $deductAmount,
                 'error' => $e->getMessage(),
             ]);
-            return message_error('扣款失败：' . $e->getMessage());
+            return message_error(admin_trans('player.error.deduction_failed') . ': ' . $e->getMessage());
         }
 
         // ✅ 创建业务记录（提现记录、金流明细等）
@@ -5844,13 +5844,13 @@ class ChannelPlayerController
             // 验证平台是否存在
             $platform = GamePlatform::query()->find($platform_id);
             if (empty($platform)) {
-                return message_error('平台不存在');
+                return message_error(admin_trans('player.error.platform_not_found'));
             }
 
             // 获取渠道允许的游戏平台
             $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
             if (empty($channelGamePlatformIds) || !in_array($platform_id, $channelGamePlatformIds)) {
-                return message_error('平台不在渠道范围内');
+                return message_error(admin_trans('player.error.platform_not_in_channel'));
             }
 
             // 查询当前是否已禁用（game_id=0）
@@ -5897,7 +5897,7 @@ class ChannelPlayerController
             }
         } catch (Exception $e) {
             Log::error('toggle_platform_disable_switch', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
 }

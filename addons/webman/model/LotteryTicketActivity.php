@@ -42,6 +42,15 @@ class LotteryTicketActivity extends Model
     const STATUS_ONGOING = 1;     // 进行中
     const STATUS_ENDED = 2;       // 已结束
     const STATUS_CLOSED = 3;      // 已关闭
+    const STATUS_PREHEATING = 4;  // 预热期
+    const STATUS_BETTING = 5;     // 打码中
+    const STATUS_DRAWING = 6;     // 开奖中
+    const STATUS_DRAWN = 7;       // 已开奖待发放 ⭐ 新增
+
+    // 直播状态常量
+    const LIVE_STATUS_NOT_STARTED = 0; // 未开播
+    const LIVE_STATUS_ONGOING = 1;      // 直播中
+    const LIVE_STATUS_ENDED = 2;        // 已结束
 
     protected $table = 'lottery_ticket_activity';
 
@@ -69,9 +78,84 @@ class LotteryTicketActivity extends Model
             self::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
             self::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
             self::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
+            self::STATUS_PREHEATING => admin_trans('lottery_ticket.status.preheating'),
+            self::STATUS_BETTING => admin_trans('lottery_ticket.status.betting'),
+            self::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),
+            self::STATUS_DRAWN => admin_trans('lottery_ticket.status.drawn'), // 已开奖待发放 ⭐
         ];
 
         return $statusMap[$status] ?? admin_trans('lottery_ticket.status.unknown');
+    }
+
+    /**
+     * 获取直播状态文本
+     * @param int $status
+     * @return string
+     */
+    public static function getLiveStatusText(int $status): string
+    {
+        $statusMap = [
+            self::LIVE_STATUS_NOT_STARTED => admin_trans('lottery_ticket.live_status.not_started'),
+            self::LIVE_STATUS_ONGOING => admin_trans('lottery_ticket.live_status.ongoing'),
+            self::LIVE_STATUS_ENDED => admin_trans('lottery_ticket.live_status.ended'),
+        ];
+
+        return $statusMap[$status] ?? admin_trans('lottery_ticket.live_status.unknown');
+    }
+
+    /**
+     * 记录状态变更历史
+     * @param int $newStatus
+     * @param string $reason
+     * @return void
+     */
+    public function recordStatusChange(int $newStatus, string $reason = ''): void
+    {
+        $history = $this->status_history ? json_decode($this->status_history, true) : [];
+
+        $history[] = [
+            'from_status' => $this->status,
+            'to_status' => $newStatus,
+            'reason' => $reason,
+            'changed_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $this->status_history = json_encode($history, JSON_UNESCAPED_UNICODE);
+        $this->status = $newStatus;
+    }
+
+    /**
+     * 判断是否可以开始打码
+     * @return bool
+     */
+    public function canStartBetting(): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        return $this->status === self::STATUS_PREHEATING
+            && $now >= $this->start_time;
+    }
+
+    /**
+     * 判断是否可以开奖
+     * @return bool
+     */
+    public function canStartDrawing(): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        return in_array($this->status, [self::STATUS_BETTING, self::STATUS_ONGOING])
+            && $this->draw_time
+            && $now >= $this->draw_time;
+    }
+
+    /**
+     * 判断是否应该结束
+     * @return bool
+     */
+    public function shouldEnd(): bool
+    {
+        $now = date('Y-m-d H:i:s');
+        return $this->status === self::STATUS_DRAWING
+            && $now >= $this->end_time;
     }
 
     /**
