@@ -24,7 +24,11 @@ return [
         'created_at' => '作成日時',
         'updated_at' => '更新日時',
     ],
+    'placeholder' => [
+        'name' => 'VIPレベル名を入力してください（例：VIP1、ゴールド会員）',
+    ],
     'help' => [
+        'name' => '会員レベル名',
         'upgrade_limit_days' => 'アップグレード制限時間（日数）',
         'retain_level_days' => 'レベル維持期間（日数）',
         'retain_level_bet_amount' => 'レベル維持に必要なベット金額',

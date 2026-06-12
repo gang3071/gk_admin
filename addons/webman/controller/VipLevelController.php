@@ -85,7 +85,13 @@ class VipLevelController
             // 隐藏字段：自动设置当前渠道department_id
             $form->hidden('department_id')->default(Admin::user()->department_id);
 
-            $form->text('name', admin_trans('vip_level.fields.name'))->required()->maxlength(50);
+            $form->text('name', admin_trans('vip_level.fields.name'))
+                ->required()
+                ->maxlength(50)
+                ->placeholder(admin_trans('vip_level.placeholder.name'))
+                ->prefix(Icon::create('CrownOutlined'))
+                ->style(['width' => '120px'])
+                ->help(admin_trans('vip_level.help.name'));
             $form->number('upgrade_limit_days', admin_trans('vip_level.fields.upgrade_limit_days'))
                 ->min(0)
                 ->help(admin_trans('vip_level.help.upgrade_limit_days'));
