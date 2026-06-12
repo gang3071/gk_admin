@@ -265,7 +265,7 @@ return [
         'activity_not_ongoing' => '只能在進行中的活動錄入中獎',
         'prize_level_not_found' => '獎品等級不存在',
         'live_url_required' => '請先設置直播地址',
-        'invalid_status' => '無效的狀態值',
+        'invalid_status_value' => '無效的狀態值',
     ],
 
     // 帮助文本

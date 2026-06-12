@@ -4,9 +4,9 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayerBonusTask;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
-use ExAdmin\ui\component\grid\button\Button;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;

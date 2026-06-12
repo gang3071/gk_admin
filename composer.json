@@ -38,7 +38,8 @@
     "yzh52521/webman-lock": "^1.0",
     "webman-tech/laravel-http-client": "^1.1",
     "tencentcloud/tencentcloud-sdk-php": "^3.0",
-    "workerman/crontab": "^1.0"
+    "workerman/crontab": "^1.0",
+    "ext-redis": "*"
   },
   "autoload": {
     "psr-4": {

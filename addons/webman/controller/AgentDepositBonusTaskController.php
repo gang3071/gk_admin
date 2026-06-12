@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayerBonusTask;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\grid\avatar\Avatar;
