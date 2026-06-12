@@ -208,17 +208,13 @@ class LotteryTicketBetProgressService
 
                 // 4. 事务外推送（不阻塞事务）
                 try {
-                    // 4.1 推送打码进度更新（静默推送，实时更新客户端进度条）
-                    LotteryTicketPushService::pushBetProgressUpdate(
-                        $progress->player_id,
-                        $activity->id,
-                        $progress->progress_percent,
-                        $progress->remaining_bet_amount
-                    );
+                    $shouldPushProgress = false;
 
-                    // 4.2 如果发券了，推送发券通知（弹窗通知）
+                    // ✅ 达标发券时必须推送进度
                     if ($issuedCount > 0 && $firstTicketNo) {
-                        // 查询第一张券用于推送
+                        $shouldPushProgress = true;
+
+                        // 查询第一张券用于推送发券通知（弹窗通知）
                         $firstTicket = LotteryTicket::where('activity_id', $activity->id)
                             ->where('player_id', $progress->player_id)
                             ->where('ticket_no', $firstTicketNo)
@@ -235,6 +231,31 @@ class LotteryTicketBetProgressService
                             'total_tickets' => $progress->total_tickets_issued,
                         ];
                     }
+                    // ✅ 或者进度变化超过5%
+                    else {
+                        $oldPercent = 0;
+                        if ($progress->bet_amount_required > 0) {
+                            $oldAmount = $progress->current_bet_amount - $chipAmount;
+                            $oldPercent = floor(($oldAmount / $progress->bet_amount_required) * 100);
+                        }
+                        $newPercent = floor($progress->progress_percent);
+
+                        // 进度变化 ≥ 5% 时才推送
+                        if (abs($newPercent - $oldPercent) >= 5) {
+                            $shouldPushProgress = true;
+                        }
+                    }
+
+                    // 推送打码进度更新（静默推送，只在必要时推送）
+                    if ($shouldPushProgress) {
+                        LotteryTicketPushService::pushBetProgressUpdate(
+                            $progress->player_id,
+                            $activity->id,
+                            $progress->progress_percent,
+                            $progress->remaining_bet_amount
+                        );
+                    }
+
                 } catch (\Exception $e) {
                     Log::warning('推送通知失败', [
                         'player_id' => $progress->player_id,
@@ -382,7 +403,7 @@ class LotteryTicketBetProgressService
                 'ticket_no' => $ticketNo,
                 'source' => 'betting',
                 'status' => LotteryTicket::STATUS_UNUSED,
-                'expires_at' => $activity->end_time,
+                'expired_at' => $activity->end_time,  // ✅ 修正字段名
                 'created_at' => $now,
                 'updated_at' => $now,
             ];

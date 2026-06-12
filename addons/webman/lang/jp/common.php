@@ -165,4 +165,10 @@ return [
     'start_time' => '開始時間',
     'end_time' => '終了時間',
     'no_permission' => '権限がありません',
+
+    // 共通エラー（グループ化）
+    'error' => [
+        'busy_retry' => 'システムビジー、後でもう一度お試しください',
+        'operation_failed' => '操作失敗',
+    ],
 ];

@@ -165,4 +165,10 @@ return [
     'start_time' => '开始时间',
     'end_time' => '结束时间',
     'no_permission' => '没有权限',
+
+    // 通用错误（分组）
+    'error' => [
+        'busy_retry' => '操作繁忙，请稍后重试',
+        'operation_failed' => '操作失败',
+    ],
 ];

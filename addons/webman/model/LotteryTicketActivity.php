@@ -42,9 +42,10 @@ class LotteryTicketActivity extends Model
     const STATUS_ONGOING = 1;     // 进行中
     const STATUS_ENDED = 2;       // 已结束
     const STATUS_CLOSED = 3;      // 已关闭
-    const STATUS_PREHEATING = 4;  // 预热期（新增）
-    const STATUS_BETTING = 5;     // 打码中（新增）
-    const STATUS_DRAWING = 6;     // 开奖中（新增）
+    const STATUS_PREHEATING = 4;  // 预热期
+    const STATUS_BETTING = 5;     // 打码中
+    const STATUS_DRAWING = 6;     // 开奖中
+    const STATUS_DRAWN = 7;       // 已开奖待发放 ⭐ 新增
 
     // 直播状态常量
     const LIVE_STATUS_NOT_STARTED = 0; // 未开播
@@ -80,6 +81,7 @@ class LotteryTicketActivity extends Model
             self::STATUS_PREHEATING => admin_trans('lottery_ticket.status.preheating'),
             self::STATUS_BETTING => admin_trans('lottery_ticket.status.betting'),
             self::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),
+            self::STATUS_DRAWN => admin_trans('lottery_ticket.status.drawn'), // 已开奖待发放 ⭐
         ];
 
         return $statusMap[$status] ?? admin_trans('lottery_ticket.status.unknown');

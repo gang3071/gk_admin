@@ -1932,7 +1932,7 @@ return [
                 'title' => '历史活动记录',
             ],
 
-            // 中奖记录
+            // 中奖记录管理
             [
                 'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
                 'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController-',
@@ -1942,15 +1942,57 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/index',
                 'title' => '中奖记录',
             ],
+            // 查看详情
             [
-                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\grantPrize',
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\view',
                 'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
-                'action' => 'grantPrize',
+                'action' => 'view',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/view',
+                'title' => '查看详情',
+            ],
+            // 单个发放 ⭐ 核心
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\distribute',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'action' => 'distribute',
                 'method' => 'post',
                 'group' => 'channel',
-                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/grantPrize',
-                'title' => '发放奖品',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/distribute',
+                'title' => '发放奖励',
             ],
+            // 批量发放 ⭐ 核心
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\batchDistribute',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'action' => 'batchDistribute',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/batchDistribute',
+                'title' => '批量发放',
+            ],
+            // 批量发放表单
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\batchDistributeForm',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'action' => 'batchDistributeForm',
+                'method' => 'get',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/batchDistributeForm',
+                'title' => '批量发放表单',
+            ],
+            // 批量发放选中
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\batchDistributeSelected',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
+                'action' => 'batchDistributeSelected',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/batchDistributeSelected',
+                'title' => '批量发放选中',
+            ],
+            // 导出
             [
                 'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\exportRecords',
                 'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',

@@ -165,4 +165,10 @@ return [
     'start_time' => 'Start Time',
     'end_time' => 'End Time',
     'no_permission' => 'No Permission',
+
+    // Common Errors (grouped)
+    'error' => [
+        'busy_retry' => 'System busy, please try again later',
+        'operation_failed' => 'Operation failed',
+    ],
 ];

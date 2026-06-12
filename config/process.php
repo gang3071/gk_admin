@@ -47,6 +47,14 @@ return [
         'constructor' => []
     ],
 
+    // 摸奖券过期处理定时任务（每5分钟执行一次）
+    'lottery_ticket_expire' => [
+        'handler' => process\LotteryTicketExpireProcess::class,
+        'reloadable' => true,
+        'count' => 1,  // 只需要1个进程
+        'constructor' => []
+    ],
+
     // 摸奖券打码进度扫描任务（定时扫描增量游戏记录，批量更新进度）
     // 用于处理 gk_work 批量插入的游戏记录
     'lottery_bet_progress_scan' => [

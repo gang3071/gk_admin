@@ -9,11 +9,12 @@ use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketVipConfig;
 use addons\webman\model\VipLevel;
-use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\button\Button;
 use ExAdmin\ui\component\grid\grid\Actions;
-use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\response\Msg;
+use ExAdmin\ui\response\Response;
 use support\Db;
 use support\Request;
 
@@ -50,7 +51,7 @@ class ChannelLotteryTicketActivityController
 
     /**
      * 获取活动列表（API 接口）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getActivities()
     {
@@ -73,15 +74,12 @@ class ChannelLotteryTicketActivityController
 
         $activities = $query->orderBy('created_at', 'desc')->get();
 
-        return response()->json([
-            'code' => 200,
-            'data' => $activities->toArray()
-        ]);
+        return Response::success($activities->toArray());
     }
 
     /**
      * 获取活动详情
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getActivityDetail()
     {
@@ -89,29 +87,20 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs'])->find($id);
 
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         // 检查权限
         if ($activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
-        return response()->json([
-            'code' => 200,
-            'data' => $activity->toArray()
-        ]);
+        return Response::success($activity->toArray());
     }
 
     /**
      * 创建/编辑活动
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function saveActivity()
     {
@@ -213,18 +202,11 @@ class ChannelLotteryTicketActivityController
 
             Db::commit();
 
-            return response()->json([
-                'code' => 200,
-                'message' => admin_trans('lottery_ticket.message.create_success'),
-                'data' => $activity->toArray()
-            ]);
+            return Response::success($activity->toArray());
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return response()->json([
-                'code' => 500,
-                'message' => $e->getMessage()
-            ]);
+            return message_error($e->getMessage());
         }
     }
 
@@ -284,10 +266,15 @@ class ChannelLotteryTicketActivityController
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
-                $actions->button(admin_trans('lottery_ticket.action.view'))
-                    ->modal([$this, 'prizeConfig'], ['id' => $data['id']])
-                    ->type('link')
-                    ->size('small');
+                // ✅ 正确用法：使用 prepend() 添加 Button
+                $actions->prepend(
+                    Button::create(admin_trans('lottery_ticket.action.view'))
+                        ->type('link')
+                        ->size('small')
+                        ->modal([$this, 'prizeConfig'], ['id' => $data['id']])
+                        ->width('80%')
+                        ->title(admin_trans('lottery_ticket.action.prize_config'))
+                );
 
                 $actions->hideEdit();
                 $actions->hideDel();
@@ -295,7 +282,7 @@ class ChannelLotteryTicketActivityController
 
             // 禁用新增和批量删除
             $grid->hideAdd();
-            $grid->hideBatchDel();
+            $grid->hideDeleteSelection();
         });
     }
 
@@ -319,16 +306,20 @@ class ChannelLotteryTicketActivityController
             $grid->column('level_name', admin_trans('lottery_ticket.prize_level_fields.level_name'));
             $grid->column('prize_amount', admin_trans('lottery_ticket.prize_level_fields.prize_amount'));
             $grid->column('prize_count', admin_trans('lottery_ticket.prize_level_fields.prize_count'));
+
+            // 禁用所有操作
             $grid->hideAdd();
-            $grid->hideBatchDel();
-            $grid->hideEdit();
-            $grid->hideDel();
+            $grid->hideDeleteSelection();
+            $grid->hideDelete();
+            $grid->actions(function ($actions) {
+                $actions->hideEdit();
+            });
         });
     }
 
     /**
      * 关闭活动
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function closeActivity()
     {
@@ -336,26 +327,17 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         // 检查权限
         if ($activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 只能关闭进行中的活动
         if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.message.activity_not_ongoing')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_ongoing'));
         }
 
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
@@ -364,15 +346,12 @@ class ChannelLotteryTicketActivityController
         // 结束所有打码进度记录
         \addons\webman\service\LotteryTicketBetProgressService::endActivityProgress($activity->id);
 
-        return response()->json([
-            'code' => 200,
-            'message' => admin_trans('lottery_ticket.message.close_success')
-        ]);
+        return message_success(admin_trans('lottery_ticket.message.close_success'));
     }
 
     /**
      * 获取摸奖券发放列表
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getTicketList()
     {
@@ -382,10 +361,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         $query = LotteryTicket::where('activity_id', $activityId)
@@ -410,20 +386,17 @@ class ChannelLotteryTicketActivityController
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'list' => $formattedList,
-                'total' => $total,
-                'page' => $page,
-                'size' => $size,
-            ]
+        return Response::success([
+            'list' => $formattedList,
+            'total' => $total,
+            'page' => $page,
+            'size' => $size,
         ]);
     }
 
     /**
      * 录入中奖（按券号批量录入）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function recordWinByTickets()
     {
@@ -432,26 +405,17 @@ class ChannelLotteryTicketActivityController
         $records = $data['records'] ?? [];
 
         if (!$activityId || empty($records)) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_params')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 只能在进行中的活动录入中奖
         if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.activity_not_ongoing')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.activity_not_ongoing'));
         }
 
         $successCount = 0;
@@ -474,14 +438,14 @@ class ChannelLotteryTicketActivityController
                     ->first();
 
                 if (!$ticket) {
-                    $errors[] = "券号 {$ticketNo} 不存在或已使用";
+                    $errors[] = admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]);
                     continue;
                 }
 
                 // 查找奖品等级
                 $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
                 if (!$prizeLevel) {
-                    $errors[] = "券号 {$ticketNo} 的奖品等级不存在";
+                    $errors[] = admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]);
                     continue;
                 }
 
@@ -510,28 +474,21 @@ class ChannelLotteryTicketActivityController
 
             Db::commit();
 
-            return response()->json([
-                'code' => 200,
-                'message' => "成功录入 {$successCount} 条中奖记录",
-                'data' => [
-                    'success_count' => $successCount,
-                    'error_count' => count($errors),
-                    'errors' => $errors
-                ]
+            return Response::success([
+                'success_count' => $successCount,
+                'error_count' => count($errors),
+                'errors' => $errors
             ]);
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return response()->json([
-                'code' => 500,
-                'message' => $e->getMessage()
-            ]);
+            return message_error($e->getMessage());
         }
     }
 
     /**
      * 录入中奖（旧方法，按玩家录入，保留兼容）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function recordWin()
     {
@@ -542,18 +499,12 @@ class ChannelLotteryTicketActivityController
         $remark = $data['remark'] ?? '';
 
         if (!$activityId || !$playerAccount || !$prizeLevelId) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_params')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 查找玩家
@@ -566,19 +517,13 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$player) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.error.player_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.player_not_found'));
         }
 
         // 查找奖品等级
         $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
         if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.error.prize_level_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.prize_level_not_found'));
         }
 
         Db::beginTransaction();
@@ -599,24 +544,17 @@ class ChannelLotteryTicketActivityController
 
             Db::commit();
 
-            return response()->json([
-                'code' => 200,
-                'message' => admin_trans('lottery_ticket.message.record_success'),
-                'data' => $record->toArray()
-            ]);
+            return Response::success($record->toArray());
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return response()->json([
-                'code' => 500,
-                'message' => $e->getMessage()
-            ]);
+            return message_error($e->getMessage());
         }
     }
 
     /**
      * 更新直播地址
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function updateLiveUrl()
     {
@@ -625,34 +563,25 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($id);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         $activity->live_url = $liveUrl;
         $activity->save();
 
-        return response()->json([
-            'code' => 200,
-            'message' => admin_trans('lottery_ticket.message.live_url_updated')
-        ]);
+        return message_success(admin_trans('lottery_ticket.message.live_url_updated'));
     }
 
     /**
      * 上传封面图片
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function uploadCover()
     {
         // TODO: 图片上传逻辑
         // 使用 ExAdmin 的图片上传功能
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'url' => 'https://example.com/image.jpg'
-            ]
+        return Response::success([
+            'url' => 'https://example.com/image.jpg'
         ]);
     }
 
@@ -714,7 +643,7 @@ class ChannelLotteryTicketActivityController
 
     /**
      * 获取活动所有中奖结果（公开查询）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getWinners()
     {
@@ -724,10 +653,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 查询所有中奖记录
@@ -748,21 +674,18 @@ class ChannelLotteryTicketActivityController
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'total_winners' => $total,
-                'winners' => $winners,
-                'page' => $page,
-                'size' => $size,
-                'total' => $total,
-            ]
+        return Response::success([
+            'total_winners' => $total,
+            'winners' => $winners,
+            'page' => $page,
+            'size' => $size,
+            'total' => $total,
         ]);
     }
 
     /**
      * 获取玩家打码进度（客户端查询）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getBetProgress()
     {
@@ -770,18 +693,12 @@ class ChannelLotteryTicketActivityController
         $playerId = Request::input('player_id');
 
         if (!$activityId || !$playerId) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_params')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         // 查询打码进度
@@ -791,38 +708,32 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$progress) {
-            return response()->json([
-                'code' => 404,
-                'message' => '未找到打码进度记录'
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.bet_progress_not_found'));
         }
 
         // 获取VIP等级名称
         $vipLevel = VipLevel::find($progress->vip_level_id);
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'activity_id' => $progress->activity_id,
-                'activity_name' => $activity->name,
-                'player_id' => $progress->player_id,
-                'vip_level' => $vipLevel->name ?? 'VIP' . $progress->vip_level_id,
-                'bet_amount_required' => $progress->bet_amount_required,
-                'current_bet_amount' => $progress->current_bet_amount,
-                'progress_percent' => $progress->progress_percent,
-                'remaining_bet_amount' => $progress->remaining_bet_amount,
-                'cycles_completed' => $progress->cycles_completed,
-                'total_tickets_issued' => $progress->total_tickets_issued,
-                'ticket_count_per_cycle' => $progress->ticket_count_per_cycle,
-                'status' => $progress->status,
-                'updated_at' => $progress->updated_at,
-            ]
+        return Response::success([
+            'activity_id' => $progress->activity_id,
+            'activity_name' => $activity->name,
+            'player_id' => $progress->player_id,
+            'vip_level' => $vipLevel->name ?? 'VIP' . $progress->vip_level_id,
+            'bet_amount_required' => $progress->bet_amount_required,
+            'current_bet_amount' => $progress->current_bet_amount,
+            'progress_percent' => $progress->progress_percent,
+            'remaining_bet_amount' => $progress->remaining_bet_amount,
+            'cycles_completed' => $progress->cycles_completed,
+            'total_tickets_issued' => $progress->total_tickets_issued,
+            'ticket_count_per_cycle' => $progress->ticket_count_per_cycle,
+            'status' => $progress->status,
+            'updated_at' => $progress->updated_at,
         ]);
     }
 
     /**
      * 获取玩家的摸奖券列表（客户端查询）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getMyTickets()
     {
@@ -831,10 +742,7 @@ class ChannelLotteryTicketActivityController
         $status = Request::input('status'); // unused, used, expired
 
         if (!$activityId || !$playerId) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_params')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
         $query = LotteryTicket::where('activity_id', $activityId)
@@ -864,22 +772,19 @@ class ChannelLotteryTicketActivityController
                 'source' => $ticket->source,
                 'source_text' => $this->getSourceText($ticket->source),
                 'created_at' => $ticket->created_at,
-                'expires_at' => $ticket->expires_at,
+                'expired_at' => $ticket->expired_at,  // ✅ 修正字段名
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'total' => $formattedTickets->count(),
-                'tickets' => $formattedTickets,
-            ]
+        return Response::success([
+            'total' => $formattedTickets->count(),
+            'tickets' => $formattedTickets,
         ]);
     }
 
     /**
      * 获取玩家中奖结果（客户端查询）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getMyResult()
     {
@@ -887,18 +792,12 @@ class ChannelLotteryTicketActivityController
         $playerId = Request::input('player_id');
 
         if (!$activityId || !$playerId) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_params')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         // 查询玩家的所有券
@@ -927,23 +826,20 @@ class ChannelLotteryTicketActivityController
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'activity_id' => $activityId,
-                'activity_name' => $activity->name,
-                'has_won' => $hasWon,
-                'my_tickets_count' => $totalTickets,
-                'winning_tickets_count' => $winRecords->count(),
-                'losing_tickets_count' => $totalTickets - $winRecords->count(),
-                'my_wins' => $myWins,
-            ]
+        return Response::success([
+            'activity_id' => $activityId,
+            'activity_name' => $activity->name,
+            'has_won' => $hasWon,
+            'my_tickets_count' => $totalTickets,
+            'winning_tickets_count' => $winRecords->count(),
+            'losing_tickets_count' => $totalTickets - $winRecords->count(),
+            'my_wins' => $myWins,
         ]);
     }
 
     /**
      * 开始直播
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function startLive()
     {
@@ -951,18 +847,12 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 检查直播地址
         if (empty($activity->live_url)) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.live_url_required')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.live_url_required'));
         }
 
         // 更新直播状态
@@ -972,19 +862,15 @@ class ChannelLotteryTicketActivityController
         // 推送直播开始通知
         \addons\webman\service\LotteryTicketPushService::pushLiveStarted($activity);
 
-        return response()->json([
-            'code' => 200,
-            'message' => admin_trans('lottery_ticket.message.live_started'),
-            'data' => [
-                'live_status' => $activity->live_status,
-                'live_url' => $activity->live_url,
-            ]
+        return Response::success([
+            'live_status' => $activity->live_status,
+            'live_url' => $activity->live_url,
         ]);
     }
 
     /**
      * 结束直播
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function endLive()
     {
@@ -992,10 +878,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 更新直播状态
@@ -1007,18 +890,14 @@ class ChannelLotteryTicketActivityController
         //     'activity_id' => $activityId,
         // ]);
 
-        return response()->json([
-            'code' => 200,
-            'message' => admin_trans('lottery_ticket.message.live_ended'),
-            'data' => [
-                'live_status' => $activity->live_status,
-            ]
+        return Response::success([
+            'live_status' => $activity->live_status,
         ]);
     }
 
     /**
      * 获取直播信息（客户端查询）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getLiveInfo()
     {
@@ -1026,28 +905,22 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'activity_id' => $activity->id,
-                'activity_name' => $activity->name,
-                'live_url' => $activity->live_url,
-                'live_status' => $activity->live_status,
-                'live_status_text' => LotteryTicketActivity::getLiveStatusText($activity->live_status),
-                'has_live' => !empty($activity->live_url),
-            ]
+        return Response::success([
+            'activity_id' => $activity->id,
+            'activity_name' => $activity->name,
+            'live_url' => $activity->live_url,
+            'live_status' => $activity->live_status,
+            'live_status_text' => LotteryTicketActivity::getLiveStatusText($activity->live_status),
+            'has_live' => !empty($activity->live_url),
         ]);
     }
 
     /**
      * 更新活动状态（手动控制）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function updateActivityStatus()
     {
@@ -1056,10 +929,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 验证状态值
@@ -1074,29 +944,22 @@ class ChannelLotteryTicketActivityController
         ];
 
         if (!in_array($newStatus, $validStatuses)) {
-            return response()->json([
-                'code' => 400,
-                'message' => admin_trans('lottery_ticket.error.invalid_status')
-            ]);
+            return message_error(admin_trans('lottery_ticket.error.invalid_status'));
         }
 
         // 记录状态变更
-        $activity->recordStatusChange($newStatus, '管理员手动更新');
+        $activity->recordStatusChange($newStatus, admin_trans('lottery_ticket.message.admin_manual_update'));
         $activity->save();
 
-        return response()->json([
-            'code' => 200,
-            'message' => admin_trans('lottery_ticket.message.status_updated'),
-            'data' => [
-                'status' => $activity->status,
-                'status_text' => LotteryTicketActivity::getStatusText($activity->status),
-            ]
+        return Response::success([
+            'status' => $activity->status,
+            'status_text' => LotteryTicketActivity::getStatusText($activity->status),
         ]);
     }
 
     /**
      * 执行摇球开奖
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function performBallDraw()
     {
@@ -1104,20 +967,14 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return response()->json([
-                'code' => 403,
-                'message' => admin_trans('common.no_permission')
-            ]);
+            return message_error(admin_trans('common.no_permission'));
         }
 
         // 执行摇球
         $result = \addons\webman\service\LotteryBallDrawService::performDraw($activityId);
 
         if (!$result['success']) {
-            return response()->json([
-                'code' => 400,
-                'message' => $result['message']
-            ]);
+            return message_error($result['message']);
         }
 
         // 推送中奖通知
@@ -1140,16 +997,12 @@ class ChannelLotteryTicketActivityController
             }
         }
 
-        return response()->json([
-            'code' => 200,
-            'message' => $result['message'],
-            'data' => $result['data']
-        ]);
+        return Response::success($result['data']);
     }
 
     /**
      * 获取摇球范围（用于前端展示）
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getBallRanges()
     {
@@ -1157,25 +1010,19 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         $maxTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
 
         $ranges = \addons\webman\service\LotteryBallDrawService::getBallRanges($maxTicketNo);
 
-        return response()->json([
-            'code' => 200,
-            'data' => $ranges
-        ]);
+        return Response::success($ranges);
     }
 
     /**
      * 获取摇球结果
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getBallResult()
     {
@@ -1183,10 +1030,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         $ballResult = null;
@@ -1194,13 +1038,10 @@ class ChannelLotteryTicketActivityController
             $ballResult = json_decode($activity->ball_result, true);
         }
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'has_drawn' => !empty($ballResult),
-                'ball_result' => $ballResult,
-                'activity_status' => $activity->status,
-            ]
+        return Response::success([
+            'has_drawn' => !empty($ballResult),
+            'ball_result' => $ballResult,
+            'activity_status' => $activity->status,
         ]);
     }
 }

@@ -168,4 +168,10 @@ return [
     'start_time' => '開始時間',
     'end_time' => '結束時間',
     'no_permission' => '沒有權限',
+
+    // 通用錯誤（分組）
+    'error' => [
+        'busy_retry' => '操作繁忙，請稍後重試',
+        'operation_failed' => '操作失敗',
+    ],
 ];

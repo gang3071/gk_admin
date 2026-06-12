@@ -2,8 +2,8 @@
 
 namespace addons\webman\queue;
 
-use Webman\Push\Api;
 use support\Log;
+use Webman\Push\Api;
 
 /**
  * 摸奖券推送队列消费者
@@ -24,45 +24,49 @@ class LotteryTicketPushQueue
      *
      * @param array $data 推送数据
      * @return void
+     * @throws \Exception 推送失败时抛出异常触发队列重试
      */
     public function consume($data)
     {
-        try {
-            $channels = $data['channels'] ?? '';
-            $content = $data['content'] ?? [];
-            $from = $data['from'] ?? 'lottery_system';
+        $channels = $data['channels'] ?? '';
+        $content = $data['content'] ?? [];
+        $from = $data['from'] ?? 'lottery_system';
 
-            if (empty($channels) || empty($content)) {
-                Log::warning('摸奖券推送队列：参数缺失', [
-                    'data' => $data,
-                ]);
-                return;
-            }
-
-            // 调用系统的 sendSocketMessage 函数
-            $result = $this->sendSocketMessage($channels, $content, $from);
-
-            if ($result) {
-                Log::info('摸奖券推送成功', [
-                    'channels' => $channels,
-                    'type' => $content['type'] ?? 'unknown',
-                    'from' => $from,
-                ]);
-            } else {
-                Log::error('摸奖券推送失败', [
-                    'channels' => $channels,
-                    'content' => $content,
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('摸奖券推送队列消费异常', [
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine(),
-                'data' => $data ?? null,
+        // 数据格式错误，不重试（正常返回，队列删除此消息）
+        if (empty($channels) || empty($content)) {
+            Log::warning('摸奖券推送队列：参数缺失', [
+                'data' => $data,
             ]);
+            return;
         }
+
+        // 调用系统的 sendSocketMessage 函数
+        $result = $this->sendSocketMessage($channels, $content, $from);
+
+        // ✅ 推送失败时抛出异常，触发队列重试机制
+        if (!$result) {
+            throw new \Exception('推送失败，触发队列重试机制');
+        }
+
+        // 推送成功，记录简洁日志
+        Log::info('摸奖券推送成功', [
+            'type' => $content['type'] ?? 'unknown',
+            'player_id' => $this->extractPlayerId($channels),
+        ]);
+    }
+
+    /**
+     * 从频道名称提取玩家ID（用于日志）
+     *
+     * @param string $channels 频道名称
+     * @return int|null
+     */
+    protected function extractPlayerId(string $channels): ?int
+    {
+        if (preg_match('/player-(\d+)/', $channels, $matches)) {
+            return (int)$matches[1];
+        }
+        return null;
     }
 
     /**

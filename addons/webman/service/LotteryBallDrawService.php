@@ -6,8 +6,10 @@ use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
+use support\Cache;
 use support\Db;
 use support\Log;
+use support\Redis;
 
 /**
  * 摸奖券摇球开奖服务
@@ -23,27 +25,55 @@ use support\Log;
 class LotteryBallDrawService
 {
     /**
-     * 执行摇球开奖
+     * 执行摇球开奖（带并发控制）
      *
      * @param int $activityId 活动ID
      * @return array 开奖结果
      */
     public static function performDraw(int $activityId): array
     {
-        $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity) {
-            return ['success' => false, 'message' => '活动不存在'];
+        // ✅ 获取分布式锁（10秒超时）
+        $lockKey = "lottery_draw_lock:{$activityId}";
+        $lock = Cache::lock($lockKey, 10);
+
+        if (!$lock->get()) {
+            return ['success' => false, 'message' => '开奖正在进行中，请勿重复操作'];
         }
 
-        // 检查活动状态
-        if ($activity->status != LotteryTicketActivity::STATUS_DRAWING) {
-            return ['success' => false, 'message' => '活动状态不正确，只有开奖中的活动才能摇球'];
-        }
+        try {
+            // 使用悲观锁重新查询活动（防止并发问题）
+            $activity = LotteryTicketActivity::lockForUpdate()->find($activityId);
+            if (!$activity) {
+                return ['success' => false, 'message' => '活动不存在'];
+            }
 
-        // 检查是否已开奖
-        if (!empty($activity->ball_result)) {
-            return ['success' => false, 'message' => '活动已完成开奖，不能重复开奖'];
+            // 检查活动状态
+            if ($activity->status != LotteryTicketActivity::STATUS_DRAWING) {
+                return ['success' => false, 'message' => '活动状态不正确，只有开奖中的活动才能摇球'];
+            }
+
+            // 检查是否已开奖
+            if (!empty($activity->ball_result)) {
+                return ['success' => false, 'message' => '活动已完成开奖，不能重复开奖'];
+            }
+
+            // 继续原有开奖逻辑...
+            return self::executeDrawing($activity);
+
+        } finally {
+            // 确保释放锁
+            $lock->release();
         }
+    }
+
+    /**
+     * 执行开奖逻辑（从原performDraw中分离）
+     *
+     * @param LotteryTicketActivity $activity
+     * @return array
+     */
+    private static function executeDrawing(LotteryTicketActivity $activity): array
+    {
 
         // 检查是否有发放的券
         $totalTickets = $activity->current_ticket_no;
@@ -80,15 +110,23 @@ class LotteryBallDrawService
         // 根据摇球结果匹配中奖券号
         $winningTickets = self::matchWinningTickets($activity, $ballResult);
 
-        // 保存开奖结果
+        // 保存开奖结果（不自动发放奖励）⭐
         Db::beginTransaction();
         try {
             // 保存摇球结果
             $activity->ball_result = json_encode($ballResult, JSON_UNESCAPED_UNICODE);
+
+            // ⭐ 更新活动状态为已开奖待发放
+            $activity->status = LotteryTicketActivity::STATUS_DRAWN;
+            $activity->draw_completed_at = date('Y-m-d H:i:s');
+
             $activity->save();
 
-            // 创建中奖记录
+            // 创建中奖记录（status=PENDING 待发放）
             $recordsCreated = 0;
+            $totalPrizeAmount = 0; // ⭐ 统计总奖金
+            $winningTicketIds = []; // 收集中奖券ID
+
             foreach ($winningTickets as $winData) {
                 LotteryTicketRecord::create([
                     'activity_id' => $activity->id,
@@ -99,55 +137,70 @@ class LotteryBallDrawService
                     'prize_type' => $winData['prize_type'],
                     'prize_name' => $winData['prize_name'],
                     'prize_amount' => $winData['prize_amount'],
-                    'status' => LotteryTicketRecord::STATUS_PENDING,
+                    'status' => LotteryTicketRecord::STATUS_PENDING, // ⭐ 待发放，不自动转账
                 ]);
 
-                // 更新摸奖券状态
-                LotteryTicket::where('id', $winData['ticket_id'])
-                    ->update(['status' => LotteryTicket::STATUS_USED]);
+                // 收集中奖券ID
+                $winningTicketIds[] = $winData['ticket_id'];
+
+                // ⭐ 累计总奖金
+                $totalPrizeAmount += $winData['prize_amount'];
 
                 $recordsCreated++;
             }
 
-            // 更新活动已使用券数
-            $activity->used_tickets = $activity->used_tickets + $recordsCreated;
+            // ⭐ 更新中奖券状态为USED(1) - 中奖券也是已使用状态
+            if (!empty($winningTicketIds)) {
+                LotteryTicket::whereIn('id', $winningTicketIds)
+                    ->update(['status' => LotteryTicket::STATUS_USED]);  // ✅ 使用 STATUS_USED
+            }
+
+            // ⭐ 更新未中奖券状态为USED(1)
+            LotteryTicket::where('activity_id', $activity->id)
+                ->where('status', LotteryTicket::STATUS_UNUSED)  // ✅ 使用正确的常量
+                ->whereNotIn('id', $winningTicketIds)
+                ->update(['status' => LotteryTicket::STATUS_USED]);
+
+            // ⭐ 更新活动总奖金金额
+            $activity->total_prize_amount = $totalPrizeAmount;
+            $activity->distributed_prize_amount = 0; // 已发放金额初始为0
             $activity->save();
 
             Db::commit();
 
-            Log::info('摸奖券摇球开奖完成', [
+            // ❌ 不再清除缓存、不推送通知（发放时才推送）
+
+            Log::info('[摸奖券] 开奖完成，等待管理员发放', [
                 'activity_id' => $activity->id,
                 'activity_name' => $activity->name,
                 'total_tickets' => $totalTickets,
                 'max_ticket_no' => $maxTicketNo,
                 'ball_result' => $ballResult,
                 'winning_count' => $recordsCreated,
+                'total_prize_amount' => $totalPrizeAmount,
+                'status' => 'DRAWN (待发放)',
             ]);
 
-            // 推送开奖结果（广播给所有渠道用户）
-            try {
-                LotteryTicketPushService::pushDrawResult($activity, $ballResult, $recordsCreated);
-            } catch (\Exception $e) {
-                Log::warning('推送开奖结果失败', [
-                    'activity_id' => $activity->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            // ❌ 不推送开奖结果（发放时才推送中奖通知）
+            // 旧代码已移除：
+            // LotteryTicketPushService::pushDrawResult($activity, $ballResult, $recordsCreated);
 
             return [
                 'success' => true,
-                'message' => "开奖成功，共产生 {$recordsCreated} 个中奖券",
+                'message' => "开奖成功，共产生 {$recordsCreated} 个中奖记录（待发放），总奖金 ¥" . number_format($totalPrizeAmount, 2), // ⭐ 更新提示
                 'data' => [
                     'ball_result' => $ballResult,
                     'winning_count' => $recordsCreated,
+                    'total_prize_amount' => $totalPrizeAmount, // ⭐ 新增
                     'winning_tickets' => $winningTickets,
+                    'status' => LotteryTicketActivity::STATUS_DRAWN, // ⭐ 新增
                 ],
             ];
 
         } catch (\Exception $e) {
             Db::rollBack();
             Log::error('摇球开奖失败', [
-                'activity_id' => $activityId,
+                'activity_id' => $activity->id, // ⭐ 修复：使用$activity->id
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -215,6 +268,7 @@ class LotteryBallDrawService
         }
 
         $winningData = [];
+        $usedTicketIds = []; // ✅ 记录已中奖的券ID，防止重复中奖
 
         // 从高等奖开始匹配
         foreach ($prizeLevels as $prizeLevel) {
@@ -248,17 +302,22 @@ class LotteryBallDrawService
             // 截取中奖号码的后N位
             $matchPattern = substr($winningTicketNo, -$matchDigits);
 
-            // 查找匹配的摸奖券（排除过期券）
-            $matchedTickets = LotteryTicket::where('activity_id', $activity->id)
+            // ✅ 查找匹配的摸奖券（排除过期券和已中奖券）
+            $query = LotteryTicket::where('activity_id', $activity->id)
                 ->where('status', LotteryTicket::STATUS_UNUSED)
                 ->where(function ($query) {
                     // 排除已过期的券
-                    $query->whereNull('expires_at')
-                          ->orWhere('expires_at', '>', date('Y-m-d H:i:s'));
+                    $query->whereNull('expired_at')
+                          ->orWhere('expired_at', '>', date('Y-m-d H:i:s'));
                 })
-                ->where(Db::raw('RIGHT(ticket_no, ' . $matchDigits . ')'), '=', $matchPattern)
-                ->limit($prizeCount)
-                ->get();
+                ->where(Db::raw('RIGHT(ticket_no, ' . $matchDigits . ')'), '=', $matchPattern);
+
+            // ✅ 关键：排除已中奖的券
+            if (!empty($usedTicketIds)) {
+                $query->whereNotIn('id', $usedTicketIds);
+            }
+
+            $matchedTickets = $query->limit($prizeCount)->get();
 
             foreach ($matchedTickets as $ticket) {
                 $winningData[] = [
@@ -269,9 +328,22 @@ class LotteryBallDrawService
                     'prize_name' => $prizeLevel->level_name,
                     'prize_amount' => $prizeLevel->prize_amount,
                     'match_digits' => $matchDigits,
+                    'level_rank' => $prizeLevel->level_rank, // ✅ 记录等级排名
                 ];
+
+                // ✅ 记录已使用的券ID
+                $usedTicketIds[] = $ticket->id;
             }
         }
+
+        // ✅ 日志记录匹配统计
+        Log::info('[摸奖券] 中奖匹配完成', [
+            'activity_id' => $activity->id,
+            'winning_no' => $winningTicketNo,
+            'total_winners' => count($winningData),
+            'unique_tickets' => count($usedTicketIds),
+            'prize_levels_count' => $prizeLevels->count()
+        ]);
 
         return $winningData;
     }
@@ -295,5 +367,38 @@ class LotteryBallDrawService
             'ball6' => ['min' => 0, 'max' => (int)$maxDigits[0]], // 十万位
             'max_ticket_no' => str_pad($maxTicketNo, 6, '0', STR_PAD_LEFT),
         ];
+    }
+
+    /**
+     * 清除中奖玩家的有效奖券缓存
+     * @param array $playerIds 中奖玩家ID列表
+     */
+    private static function clearWinningPlayerCache(array $playerIds)
+    {
+        if (empty($playerIds)) {
+            return;
+        }
+
+        $clearedCount = 0;
+
+        try {
+            foreach ($playerIds as $playerId) {
+                $cacheKey = "player:{$playerId}:valid_ticket_count";
+
+                if (Redis::del($cacheKey)) {
+                    $clearedCount++;
+                }
+            }
+
+            Log::info('[摸奖券] 开奖后清除玩家缓存', [
+                'winning_players' => count($playerIds),
+                'cleared_count' => $clearedCount
+            ]);
+
+        } catch (\Exception $e) {
+            Log::warning('[摸奖券] 缓存清除失败', [
+                'error' => $e->getMessage()
+            ]);
+        }
     }
 }

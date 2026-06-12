@@ -7,8 +7,9 @@ use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\model\LotteryTicketRecord;
-use addons\webman\model\Player;
 use addons\webman\model\PlayerGameLog;
+use ExAdmin\ui\response\Msg;
+use ExAdmin\ui\response\Response;
 use support\Db;
 use support\Request;
 
@@ -22,7 +23,7 @@ class ChannelLotteryTicketStatisticsController
      * 获取活动详细统计数据
      * @auth true
      * @group channel
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getActivityStats()
     {
@@ -34,10 +35,7 @@ class ChannelLotteryTicketStatisticsController
             ->first();
 
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         // 核心统计数据
@@ -79,36 +77,42 @@ class ChannelLotteryTicketStatisticsController
             // 发券统计
             'tickets_by_source' => $this->getTicketsBySource($activityId),
             'tickets_by_vip' => $this->getTicketsByVipLevel($activityId),
+        ];
 
-            // 中奖统计
-            'winning_count' => $this->getWinningCount($activityId),
-            'winning_players' => $this->getWinningPlayers($activityId),
-            'total_prize_amount' => $this->getTotalPrizeAmount($activityId),
-            'claimed_prize_amount' => $this->getClaimedPrizeAmount($activityId),
+        // ✅ 使用合并查询获取中奖统计（4次查询 → 1次查询）
+        $winningStats = $this->getWinningStats($activityId);
+
+        $stats = array_merge($stats, [
+            // 中奖统计（使用合并查询结果）
+            'winning_count' => $winningStats['winning_count'],
+            'winning_players' => $winningStats['winning_players'],
+            'total_prize_amount' => $winningStats['total_prize_amount'],
+            'granted_prize_amount' => $winningStats['granted_prize_amount'],
             'prize_by_level' => $this->getPrizeByLevel($activityId),
 
             // 摇球结果
             'ball_result' => !empty($activity->ball_result) ? json_decode($activity->ball_result, true) : null,
             'has_drawn' => !empty($activity->ball_result),
-        ];
-
-        return response()->json([
-            'code' => 200,
-            'data' => $stats
         ]);
+
+        return Response::success($stats);
     }
 
     /**
      * 获取打码实时排行榜
      * @auth true
      * @group channel
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getBetRanking()
     {
         $activityId = Request::input('activity_id');
         $type = Request::input('type', 'today'); // today, all
         $limit = Request::input('limit', 10);
+
+        // ✅ 限制范围 1-100，防止DOS攻击
+        $limit = min(max(1, (int)$limit), 100);
+
         $departmentId = Admin::user()->department_id;
 
         $activity = LotteryTicketActivity::where('id', $activityId)
@@ -116,10 +120,7 @@ class ChannelLotteryTicketStatisticsController
             ->first();
 
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         $query = LotteryTicketBetProgress::where('activity_id', $activityId)
@@ -148,13 +149,10 @@ class ChannelLotteryTicketStatisticsController
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'type' => $type,
-                'rankings' => $formattedRankings,
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]
+        return Response::success([
+            'type' => $type,
+            'rankings' => $formattedRankings,
+            'updated_at' => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -162,12 +160,16 @@ class ChannelLotteryTicketStatisticsController
      * 获取最近发券记录
      * @auth true
      * @group channel
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getRecentTickets()
     {
         $activityId = Request::input('activity_id');
         $limit = Request::input('limit', 20);
+
+        // ✅ 限制范围 1-100，防止DOS攻击
+        $limit = min(max(1, (int)$limit), 100);
+
         $departmentId = Admin::user()->department_id;
 
         $activity = LotteryTicketActivity::where('id', $activityId)
@@ -175,10 +177,7 @@ class ChannelLotteryTicketStatisticsController
             ->first();
 
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         $tickets = LotteryTicket::where('activity_id', $activityId)
@@ -201,12 +200,9 @@ class ChannelLotteryTicketStatisticsController
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'tickets' => $formattedTickets,
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]
+        return Response::success([
+            'tickets' => $formattedTickets,
+            'updated_at' => date('Y-m-d H:i:s'),
         ]);
     }
 
@@ -214,7 +210,7 @@ class ChannelLotteryTicketStatisticsController
      * 获取打码趋势数据（按小时）
      * @auth true
      * @group channel
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getBetTrend()
     {
@@ -227,24 +223,34 @@ class ChannelLotteryTicketStatisticsController
             ->first();
 
         if (!$activity) {
-            return response()->json([
-                'code' => 404,
-                'message' => admin_trans('lottery_ticket.message.activity_not_found')
-            ]);
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
-        // 按小时统计打码量
-        $trend = PlayerGameLog::where('department_id', $departmentId)
-            ->whereDate('created_at', $date)
-            ->whereBetween('created_at', [$activity->start_time, $activity->end_time])
-            ->select(
-                Db::raw('HOUR(created_at) as hour'),
-                Db::raw('SUM(chip_amount) as total_bet'),
-                Db::raw('COUNT(*) as bet_count')
-            )
-            ->groupBy('hour')
-            ->orderBy('hour')
-            ->get();
+        // ✅ 优化查询：只使用 whereBetween，可以使用索引
+        // 计算查询时间范围：取日期范围和活动时间范围的交集
+        $startDate = $date . ' 00:00:00';
+        $endDate = $date . ' 23:59:59';
+
+        // 取交集：查询时间范围必须在活动时间范围内
+        $queryStart = max($startDate, $activity->start_time);
+        $queryEnd = min($endDate, $activity->end_time);
+
+        // 如果查询范围无效（活动不在这一天），返回空数据
+        if ($queryStart > $queryEnd) {
+            $trend = collect();
+        } else {
+            // 按小时统计打码量
+            $trend = PlayerGameLog::where('department_id', $departmentId)
+                ->whereBetween('created_at', [$queryStart, $queryEnd])
+                ->select(
+                    Db::raw('HOUR(created_at) as hour'),
+                    Db::raw('SUM(chip_amount) as total_bet'),
+                    Db::raw('COUNT(*) as bet_count')
+                )
+                ->groupBy('hour')
+                ->orderBy('hour')
+                ->get();
+        }
 
         // 填充24小时数据
         $hourlyData = array_fill(0, 24, [
@@ -268,12 +274,9 @@ class ChannelLotteryTicketStatisticsController
             ];
         }
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'date' => $date,
-                'trend' => $formattedTrend,
-            ]
+        return Response::success([
+            'date' => $date,
+            'trend' => $formattedTrend,
         ]);
     }
 
@@ -281,7 +284,7 @@ class ChannelLotteryTicketStatisticsController
      * 获取仪表板数据（活动概览）
      * @auth true
      * @group channel
-     * @return \support\Response
+     * @return Msg|Response
      */
     public function getDashboard()
     {
@@ -305,10 +308,24 @@ class ChannelLotteryTicketStatisticsController
             ->orderBy('start_time', 'desc')
             ->get(['id', 'name', 'status', 'start_time', 'end_time', 'total_tickets', 'used_tickets']);
 
-        $formattedActivities = $ongoingActivities->map(function ($activity) {
-            $totalPlayers = $this->getTotalPlayers($activity->id);
-            $winningCount = $this->getWinningCount($activity->id);
+        // ✅ 批量获取活动统计（避免N+1查询）
+        $activityIds = $ongoingActivities->pluck('id')->toArray();
 
+        // 玩家数统计
+        $playerCounts = LotteryTicketBetProgress::whereIn('activity_id', $activityIds)
+            ->select('activity_id', Db::raw('COUNT(*) as count'))
+            ->groupBy('activity_id')
+            ->pluck('count', 'activity_id')
+            ->toArray();
+
+        // 中奖数统计
+        $winningCounts = LotteryTicketRecord::whereIn('activity_id', $activityIds)
+            ->select('activity_id', Db::raw('COUNT(*) as count'))
+            ->groupBy('activity_id')
+            ->pluck('count', 'activity_id')
+            ->toArray();
+
+        $formattedActivities = $ongoingActivities->map(function ($activity) use ($playerCounts, $winningCounts) {
             return [
                 'id' => $activity->id,
                 'name' => $activity->name,
@@ -317,27 +334,24 @@ class ChannelLotteryTicketStatisticsController
                 'status_color' => $this->getStatusColor($activity->status),
                 'start_time' => $activity->start_time,
                 'end_time' => $activity->end_time,
-                'total_players' => $totalPlayers,
+                'total_players' => $playerCounts[$activity->id] ?? 0,
                 'total_tickets' => $activity->total_tickets,
                 'used_tickets' => $activity->used_tickets,
-                'winning_count' => $winningCount,
+                'winning_count' => $winningCounts[$activity->id] ?? 0,
             ];
         });
 
-        return response()->json([
-            'code' => 200,
-            'data' => [
-                'status_counts' => [
-                    'not_started' => $statusCounts[LotteryTicketActivity::STATUS_NOT_STARTED] ?? 0,
-                    'preheating' => $statusCounts[LotteryTicketActivity::STATUS_PREHEATING] ?? 0,
-                    'betting' => $statusCounts[LotteryTicketActivity::STATUS_BETTING] ?? 0,
-                    'ongoing' => $statusCounts[LotteryTicketActivity::STATUS_ONGOING] ?? 0,
-                    'drawing' => $statusCounts[LotteryTicketActivity::STATUS_DRAWING] ?? 0,
-                    'ended' => $statusCounts[LotteryTicketActivity::STATUS_ENDED] ?? 0,
-                    'closed' => $statusCounts[LotteryTicketActivity::STATUS_CLOSED] ?? 0,
-                ],
-                'ongoing_activities' => $formattedActivities,
-            ]
+        return Response::success([
+            'status_counts' => [
+                'not_started' => $statusCounts[LotteryTicketActivity::STATUS_NOT_STARTED] ?? 0,
+                'preheating' => $statusCounts[LotteryTicketActivity::STATUS_PREHEATING] ?? 0,
+                'betting' => $statusCounts[LotteryTicketActivity::STATUS_BETTING] ?? 0,
+                'ongoing' => $statusCounts[LotteryTicketActivity::STATUS_ONGOING] ?? 0,
+                'drawing' => $statusCounts[LotteryTicketActivity::STATUS_DRAWING] ?? 0,
+                'ended' => $statusCounts[LotteryTicketActivity::STATUS_ENDED] ?? 0,
+                'closed' => $statusCounts[LotteryTicketActivity::STATUS_CLOSED] ?? 0,
+            ],
+            'ongoing_activities' => $formattedActivities,
         ]);
     }
 
@@ -485,7 +499,33 @@ class ChannelLotteryTicketStatisticsController
     }
 
     /**
-     * 获取中奖数量
+     * ✅ 获取中奖统计（一次查询）
+     * 替代原来的4个单独查询方法
+     *
+     * @param int $activityId 活动ID
+     * @return array
+     */
+    protected function getWinningStats(int $activityId): array
+    {
+        $stats = LotteryTicketRecord::where('activity_id', $activityId)
+            ->selectRaw('
+                COUNT(*) as winning_count,
+                COUNT(DISTINCT player_id) as winning_players,
+                SUM(prize_amount) as total_prize_amount,
+                SUM(CASE WHEN status = ? THEN prize_amount ELSE 0 END) as granted_prize_amount
+            ', [LotteryTicketRecord::STATUS_GRANTED])
+            ->first();
+
+        return [
+            'winning_count' => $stats->winning_count ?? 0,
+            'winning_players' => $stats->winning_players ?? 0,
+            'total_prize_amount' => $stats->total_prize_amount ?? 0,
+            'granted_prize_amount' => $stats->granted_prize_amount ?? 0,
+        ];
+    }
+
+    /**
+     * 获取中奖数量（兼容旧方法）
      */
     protected function getWinningCount(int $activityId): int
     {
@@ -493,7 +533,7 @@ class ChannelLotteryTicketStatisticsController
     }
 
     /**
-     * 获取中奖人数
+     * 获取中奖人数（兼容旧方法）
      */
     protected function getWinningPlayers(int $activityId): int
     {
@@ -503,7 +543,7 @@ class ChannelLotteryTicketStatisticsController
     }
 
     /**
-     * 获取总奖金
+     * 获取总奖金（兼容旧方法）
      */
     protected function getTotalPrizeAmount(int $activityId): float
     {
@@ -512,12 +552,12 @@ class ChannelLotteryTicketStatisticsController
     }
 
     /**
-     * 获取已发放奖金
+     * 获取已发放奖金（兼容旧方法）
      */
-    protected function getClaimedPrizeAmount(int $activityId): float
+    protected function getGrantedPrizeAmount(int $activityId): float
     {
         return LotteryTicketRecord::where('activity_id', $activityId)
-            ->where('status', LotteryTicketRecord::STATUS_CLAIMED)
+            ->where('status', LotteryTicketRecord::STATUS_GRANTED)
             ->sum('prize_amount') ?? 0;
     }
 
