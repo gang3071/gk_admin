@@ -193,6 +193,7 @@ return [
         'batch_distribute' => '批量發放',
         'batch_distribute_selected' => '批量發放選中',
         'distribute_by_ticket' => '錄入券號發放',
+        'distribute_all_pending' => '發放獎勵',  // ⭐ 新增:批量發放所有待發放記錄
         'view_ticket_list' => '查看發放列表',
         'add_ticket' => '添加券號',
         'select_image' => '選擇圖片',
@@ -330,6 +331,7 @@ return [
     // 确认对话框
     'confirm' => [
         'distribute' => '確認發放此獎品到玩家賬戶？',
+        'distribute_all_pending' => '確認發放該活動所有已錄入但未發放的獎勵？\n此操作將批量發放所有待發放記錄,請謹慎操作。',  // ⭐ 新增
     ],
 
     // 表单标签

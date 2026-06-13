@@ -79,7 +79,7 @@
                   </a-menu-item>
                   <a-menu-item v-if="activity.status === 1" key="distribute">
                     <gift-outlined/>
-                    录入券号发放
+                    {{ trans.distribute_all_pending || '发放奖励' }}
                   </a-menu-item>
                   <a-menu-item key="live">
                     <video-camera-outlined/>
@@ -163,7 +163,7 @@
                 <template #icon>
                   <gift-outlined/>
                 </template>
-                录入券号发放
+                {{ trans.distribute_all_pending || '发放奖励' }}
               </a-button>
 
               <a-button
@@ -559,62 +559,6 @@
       </a-form>
     </a-modal>
 
-    <!-- 录入券号发放抽屉 -->
-    <a-drawer
-        v-model:visible="distributeVisible"
-        :body-style="{ paddingBottom: '80px' }"
-        title="录入券号发放奖励"
-        width="680px"
-    >
-      <a-alert
-          message="请输入中奖券号，系统将根据券号自动识别奖品等级并发放奖励"
-          show-icon
-          style="margin-bottom: 16px;"
-          type="info"
-      />
-
-      <a-form
-          ref="distributeFormRef"
-          :model="distributeForm"
-          layout="vertical"
-      >
-        <a-form-item label="活动名称">
-          <a-input :value="currentActivity?.name" disabled />
-        </a-form-item>
-
-        <a-form-item
-            :rules="[{ required: true, message: '请输入券号' }]"
-            label="中奖券号"
-            name="ticket_no"
-        >
-          <a-input
-              v-model:value="distributeForm.ticket_no"
-              :maxlength="6"
-              placeholder="请输入6位券号"
-              style="width: 100%;"
-          />
-        </a-form-item>
-
-        <a-form-item label="发放备注" name="remark">
-          <a-textarea
-              v-model:value="distributeForm.remark"
-              :maxlength="255"
-              :rows="3"
-              placeholder="选填，可备注发放说明"
-              show-count
-          />
-        </a-form-item>
-      </a-form>
-
-      <template #footer>
-        <a-space>
-          <a-button @click="handleDistributeClose">取消</a-button>
-          <a-button :loading="distributeSubmitting" type="primary" @click="submitDistribute">
-            确认发放
-          </a-button>
-        </a-space>
-      </template>
-    </a-drawer>
   </div>
 </template>
 
@@ -642,22 +586,15 @@ export default {
       recordVisible: false,
       ticketListVisible: false,
       liveModalVisible: false,
-      distributeVisible: false,
       liveUrlInput: '',
       formMode: 'create',
       currentActivity: null,
       submitting: false,
       recordSubmitting: false,
-      distributeSubmitting: false,
       uploading: false,
       recordPrizeLevels: [],
       ticketList: [],
       ticketLoading: false,
-      distributeForm: {
-        activity_id: null,
-        ticket_no: '',
-        remark: ''
-      },
       ticketPagination: {
         current: 1,
         pageSize: 20,
@@ -1045,67 +982,47 @@ export default {
       this.showDetail(activity);
     },
 
-    // 显示录入券号发放表单
+    // ⭐ 批量发放该活动所有已录入未发放的奖励
     showDistributeForm(activity) {
-      this.currentActivity = activity;
-      this.distributeForm = {
-        activity_id: activity.id,
-        ticket_no: '',
-        remark: ''
-      };
-      this.distributeVisible = true;
-    },
+      this.$confirm({
+        title: this.trans.distributeAllPending || '发放奖励',
+        content: this.trans.confirm?.distributeAllPending || '确认发放该活动所有已录入但未发放的奖励？\n此操作将批量发放所有待发放记录,请谨慎操作。',
+        okText: this.trans.confirmDistribute || '确认发放',
+        cancelText: this.trans.cancel || '取消',
+        onOk: async () => {
+          try {
+            const loading = this.$message.loading('正在批量发放奖励...', 0);
+            const res = await this.$request({
+              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/batchDistributeActivity',
+              method: 'post',
+              data: {
+                activity_id: activity.id
+              }
+            });
 
-    // 关闭录入券号发放抽屉
-    handleDistributeClose() {
-      this.distributeVisible = false;
-      this.distributeForm = {
-        activity_id: null,
-        ticket_no: '',
-        remark: ''
-      };
-      this.currentActivity = null;
-    },
+            loading();
 
-    // 提交录入券号发放
-    async submitDistribute() {
-      // 验证表单
-      if (!this.distributeForm.ticket_no) {
-        this.$message.error('请输入券号');
-        return;
-      }
-
-      if (this.distributeForm.ticket_no.length !== 6) {
-        this.$message.error('券号必须是6位数字');
-        return;
-      }
-
-      this.distributeSubmitting = true;
-      try {
-        const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/distributeByTicketNo',
-          method: 'post',
-          data: {
-            activity_id: this.distributeForm.activity_id,
-            ticket_no: this.distributeForm.ticket_no,
-            remark: this.distributeForm.remark
+            if (res.code === 200) {
+              // 显示详细结果
+              if (res.data && res.data.fail_count > 0) {
+                this.$warning({
+                  title: '批量发放完成',
+                  content: res.data.message || res.message,
+                  okText: '知道了'
+                });
+              } else {
+                this.$message.success(res.message || '批量发放成功');
+              }
+              this.fetchActivities();
+            } else {
+              this.$message.error(res.message || res.msg || '批量发放失败');
+            }
+          } catch (error) {
+            this.$message.error('批量发放失败');
+            console.error(error);
           }
-        });
-
-        if (res.code === 200) {
-          this.$message.success(res.message || '发放成功');
-          this.distributeVisible = false;
-          this.handleDistributeClose();
-          this.fetchActivities();
-        } else {
-          this.$message.error(res.message || res.msg || '发放失败');
         }
-      } catch (error) {
-        this.$message.error('发放失败');
-        console.error(error);
-      } finally {
-        this.distributeSubmitting = false;
-      }
+      });
     },
 
     // 编辑活动

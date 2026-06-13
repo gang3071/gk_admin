@@ -193,6 +193,7 @@ return [
         'batch_distribute' => 'Batch Distribution',
         'batch_distribute_selected' => 'Batch Distribute Selected',
         'distribute_by_ticket' => 'Distribute by Ticket',
+        'distribute_all_pending' => 'Distribute Rewards',  // ⭐ Added: Batch distribute all pending records
         'view_ticket_list' => 'View Distribution List',
         'add_ticket' => 'Add Ticket',
         'select_image' => 'Select Image',
@@ -330,6 +331,7 @@ return [
     // 确认对话框
     'confirm' => [
         'distribute' => 'Confirm distribute this prize to player account?',
+        'distribute_all_pending' => 'Confirm to distribute all pending rewards for this activity?\nThis will batch distribute all pending records. Please proceed with caution.',  // ⭐ Added
     ],
 
     // 表单标签

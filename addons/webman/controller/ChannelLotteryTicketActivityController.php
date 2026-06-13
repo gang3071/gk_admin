@@ -60,6 +60,7 @@ class ChannelLotteryTicketActivityController
             'expand' => admin_trans('lottery_ticket.action.expand'),
             'collapse' => admin_trans('lottery_ticket.action.collapse'),
             'distributeByTicket' => admin_trans('lottery_ticket.action.distribute_by_ticket'),
+            'distributeAllPending' => admin_trans('lottery_ticket.action.distribute_all_pending'),
             'viewTicketList' => admin_trans('lottery_ticket.action.view_ticket_list'),
             'addTicket' => admin_trans('lottery_ticket.action.add_ticket'),
             'selectImage' => admin_trans('lottery_ticket.action.select_image'),
@@ -163,6 +164,12 @@ class ChannelLotteryTicketActivityController
             // UI
             'yuan' => admin_trans('lottery_ticket.ui.yuan'),
             'uploadFailed' => admin_trans('lottery_ticket.ui.upload_failed'),
+
+            // 确认对话框
+            'confirm' => [
+                'distribute' => admin_trans('lottery_ticket.confirm.distribute'),
+                'distributeAllPending' => admin_trans('lottery_ticket.confirm.distribute_all_pending'),
+            ],
         ];
 
         // 使用 admin_view 返回 Vue 组件
@@ -1175,6 +1182,255 @@ class ChannelLotteryTicketActivityController
             'ball_result' => $ballResult,
             'activity_status' => $activity->status,
         ]);
+    }
+
+    /**
+     * 批量发放该活动所有已录入未发放的奖励
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function batchDistributeActivity()
+    {
+        $activityId = Request::input('activity_id');
+        $adminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
+
+        // ⭐ 1. 参数验证
+        if (!$activityId || !is_numeric($activityId)) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+        }
+
+        Db::beginTransaction();
+        try {
+            // ⭐ 2. 验证活动并锁定
+            $activity = LotteryTicketActivity::where('id', $activityId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$activity) {
+                throw new \Exception(admin_trans('lottery_ticket.message.activity_not_found'));
+            }
+
+            // ⭐ 3. 检查权限
+            if ($activity->department_id != $departmentId) {
+                throw new \Exception(admin_trans('common.no_permission'));
+            }
+
+            // ⭐ 4. 检查活动状态 - 只能在"已开奖待发放"或"进行中"状态发放
+            $validStatuses = [
+                LotteryTicketActivity::STATUS_DRAWN,    // 已开奖待发放
+                LotteryTicketActivity::STATUS_ONGOING,  // 进行中(兼容)
+            ];
+
+            if (!in_array($activity->status, $validStatuses)) {
+                throw new \Exception(admin_trans('lottery_ticket.error.activity_invalid_status'));
+            }
+
+            // ⭐ 5. 查询该活动所有待发放的中奖记录
+            $pendingRecords = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+                ->where('department_id', $departmentId)
+                ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
+                ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+                ->where('prize_amount', '>', 0)
+                ->get();
+
+            if ($pendingRecords->isEmpty()) {
+                throw new \Exception(admin_trans('lottery_ticket.error.no_pending_records'));
+            }
+
+            $successCount = 0;
+            $failCount = 0;
+            $failReasons = [];
+
+            // ⭐ 6. 逐条发放
+            foreach ($pendingRecords as $record) {
+                try {
+                    // 锁定记录
+                    $lockedRecord = \addons\webman\model\LotteryTicketRecord::where('id', $record->id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    // 再次检查状态
+                    if (!$lockedRecord || $lockedRecord->status !== \addons\webman\model\LotteryTicketRecord::STATUS_PENDING) {
+                        throw new \Exception(admin_trans('lottery_ticket.error.status_changed'));
+                    }
+
+                    // 更新状态为发放中
+                    $lockedRecord->status = \addons\webman\model\LotteryTicketRecord::STATUS_PROCESSING;
+                    $lockedRecord->save();
+
+                    // 获取玩家并锁定
+                    $player = \addons\webman\model\Player::where('id', $lockedRecord->player_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$player) {
+                        throw new \Exception(admin_trans('lottery_ticket.error.player_not_found'));
+                    }
+
+                    // 检查玩家状态
+                    if (isset($player->status) && $player->status != \addons\webman\model\Player::STATUS_ENABLE) {
+                        throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
+                    }
+
+                    // 检查是否超额发放
+                    $newDistributedAmount = $activity->distributed_prize_amount + $lockedRecord->prize_amount;
+                    if ($newDistributedAmount > $activity->total_prize_amount) {
+                        throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
+                    }
+
+                    // 发放奖励
+                    $oldBalance = $player->money ?? 0;
+
+                    if ($lockedRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH) {
+                        // 现金奖励
+                        $player->money = ($player->money ?? 0) + $lockedRecord->prize_amount;
+                        $player->save();
+
+                        // 记录资金变动
+                        if (class_exists('\addons\webman\model\PlayerMoneyLog')) {
+                            \addons\webman\model\PlayerMoneyLog::create([
+                                'player_id' => $player->id,
+                                'department_id' => $player->department_id,
+                                'type' => \addons\webman\model\PlayerMoneyLog::TYPE_LOTTERY_REWARD ?? 'lottery_reward',
+                                'money' => $lockedRecord->prize_amount,
+                                'before_money' => $oldBalance,
+                                'after_money' => $player->money,
+                                'remark' => '摸奖券中奖批量发放：' . $activity->name . ' - ' . $lockedRecord->prize_name,
+                                'created_at' => time(),
+                            ]);
+                        }
+
+                    } elseif ($lockedRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_BONUS) {
+                        // 红利奖励
+                        $oldBonus = $player->bonus ?? 0;
+                        $player->bonus = ($player->bonus ?? 0) + $lockedRecord->prize_amount;
+                        $player->save();
+
+                        // 记录红利变动
+                        if (class_exists('\addons\webman\model\PlayerBonusLog')) {
+                            \addons\webman\model\PlayerBonusLog::create([
+                                'player_id' => $player->id,
+                                'department_id' => $player->department_id,
+                                'type' => \addons\webman\model\PlayerBonusLog::TYPE_LOTTERY_REWARD ?? 'lottery_reward',
+                                'bonus' => $lockedRecord->prize_amount,
+                                'before_bonus' => $oldBonus,
+                                'after_bonus' => $player->bonus,
+                                'remark' => '摸奖券中奖批量发放：' . $activity->name . ' - ' . $lockedRecord->prize_name,
+                                'created_at' => time(),
+                            ]);
+                        }
+                    }
+
+                    // 更新中奖记录状态为已发放
+                    $lockedRecord->status = \addons\webman\model\LotteryTicketRecord::STATUS_CLAIMED;
+                    $lockedRecord->distributed_by = $adminId;
+                    $lockedRecord->distributed_at = date('Y-m-d H:i:s');
+                    $lockedRecord->distribution_note = '批量发放活动奖励';
+                    $lockedRecord->save();
+
+                    // 更新活动已发放金额
+                    $activity->distributed_prize_amount = $newDistributedAmount;
+                    $activity->save();
+
+                    // 如果存在摸奖券,更新券状态为已使用
+                    if ($lockedRecord->ticket_id > 0) {
+                        $ticket = LotteryTicket::find($lockedRecord->ticket_id);
+                        if ($ticket && $ticket->status == LotteryTicket::STATUS_UNUSED) {
+                            $ticket->status = LotteryTicket::STATUS_USED;
+                            $ticket->used_at = time();
+                            $ticket->save();
+                        }
+                    }
+
+                    $successCount++;
+
+                    // 推送中奖通知(事务外,失败不影响发放)
+                    try {
+                        if (class_exists('\addons\webman\service\LotteryTicketPushService')) {
+                            \addons\webman\service\LotteryTicketPushService::pushPrizeDistributed(
+                                $player->id,
+                                $activity,
+                                $lockedRecord->ticket_no,
+                                $lockedRecord->prize_name,
+                                $lockedRecord->prize_amount
+                            );
+                        }
+                    } catch (\Exception $e) {
+                        \support\Log::warning('[摸奖券] 推送中奖通知失败', [
+                            'record_id' => $lockedRecord->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+
+                } catch (\Exception $e) {
+                    $failCount++;
+                    $failReasons[] = '券号 ' . $record->ticket_no . ': ' . $e->getMessage();
+
+                    // 如果记录状态是发放中,标记为失败
+                    if (isset($lockedRecord) && $lockedRecord->status === \addons\webman\model\LotteryTicketRecord::STATUS_PROCESSING) {
+                        try {
+                            $lockedRecord->status = \addons\webman\model\LotteryTicketRecord::STATUS_FAILED;
+                            $lockedRecord->distribution_note = '批量发放失败: ' . $e->getMessage();
+                            $lockedRecord->save();
+                        } catch (\Exception $e2) {
+                            // 忽略
+                        }
+                    }
+
+                    \support\Log::error('[摸奖券] 批量发放单条记录失败', [
+                        'record_id' => $record->id,
+                        'ticket_no' => $record->ticket_no,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            Db::commit();
+
+            // ⭐ 7. 记录操作日志
+            \support\Log::info('[摸奖券] 批量发放活动奖励完成', [
+                'activity_id' => $activityId,
+                'activity_name' => $activity->name,
+                'total' => $pendingRecords->count(),
+                'success' => $successCount,
+                'fail' => $failCount,
+                'admin_id' => $adminId
+            ]);
+
+            // ⭐ 8. 返回结果
+            $message = admin_trans('lottery_ticket.message.batch_complete', null, [
+                'success' => $successCount,
+                'fail' => $failCount
+            ]);
+
+            if ($failCount > 0 && $successCount > 0) {
+                return \ExAdmin\ui\response\Response::success([
+                    'message' => $message,
+                    'fail_reasons' => $failReasons,
+                    'success_count' => $successCount,
+                    'fail_count' => $failCount
+                ]);
+            } elseif ($failCount > 0 && $successCount === 0) {
+                return message_error($message . ' ' . implode('; ', $failReasons));
+            }
+
+            return message_success($message);
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+
+            \support\Log::error('[摸奖券] 批量发放活动奖励失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return message_error($e->getMessage());
+        }
     }
 
     /**

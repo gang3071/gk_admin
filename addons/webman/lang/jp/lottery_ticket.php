@@ -193,6 +193,7 @@ return [
         'batch_distribute' => '一括配布',
         'batch_distribute_selected' => '選択を一括配布',
         'distribute_by_ticket' => 'チケットで配布',
+        'distribute_all_pending' => '賞品を配布',  // ⭐ 新規追加: すべての未配布記録を一括配布
         'view_ticket_list' => '配布リストを表示',
         'add_ticket' => 'チケットを追加',
         'select_image' => '画像を選択',
@@ -330,6 +331,7 @@ return [
     // 确认对话框
     'confirm' => [
         'distribute' => 'この賞品をプレイヤーアカウントに配布しますか？',
+        'distribute_all_pending' => 'このアクティビティの記録済み未配布の賞品をすべて配布しますか？\nこの操作によりすべての未配布記録が一括配布されます。慎重に操作してください。',  // ⭐ 新規追加
     ],
 
     // 表单标签

@@ -193,6 +193,7 @@ return [
         'batch_distribute' => '批量发放',
         'batch_distribute_selected' => '批量发放选中',
         'distribute_by_ticket' => '录入券号发放',
+        'distribute_all_pending' => '发放奖励',  // ⭐ 新增:批量发放所有待发放记录
         'view_ticket_list' => '查看发放列表',
         'add_ticket' => '添加券号',
         'select_image' => '选择图片',
@@ -330,6 +331,7 @@ return [
     // 确认对话框
     'confirm' => [
         'distribute' => '确认发放此奖品到玩家賬戶？',
+        'distribute_all_pending' => '确认发放该活动所有已录入但未发放的奖励？\n此操作将批量发放所有待发放记录,请谨慎操作。',  // ⭐ 新增
     ],
 
     // 表单标签
