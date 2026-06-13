@@ -82,7 +82,7 @@ return [
         'live_url_prompt' => '请输入直播流地址:',
         'live_url_required' => '请输入直播地址',
         'batch_distribute_title' => '批量发放奖勵',
-        'distribute_by_ticket_title' => '录入券号发放奖勵',
+        'distribute_by_ticket_title' => '发放奖勵',
         'ticket_list_title' => '摸奖券发放列表',
     ],
 

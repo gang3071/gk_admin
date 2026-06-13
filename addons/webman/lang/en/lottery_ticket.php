@@ -82,7 +82,7 @@ return [
         'live_url_prompt' => 'Please enter live stream URL:',
         'live_url_required' => 'Please enter live URL',
         'batch_distribute_title' => '批量发放奖勵',
-        'distribute_by_ticket_title' => '录入券号发放奖勵',
+        'distribute_by_ticket_title' => '发放奖勵',
         'ticket_list_title' => 'Ticket Distribution List',
     ],
 
