@@ -30,7 +30,8 @@ return [
         'total_tickets' => 'Total Tickets',
         'used_tickets' => 'Used Tickets',
         'usage_rate' => 'Usage Rate',
-        'pending_count' => 'Pending',  // ⭐ Added
+        'pending_count' => 'Pending',
+        'max_ticket_no' => 'Max Ticket No',  // ⭐ Added: Maximum ball number for lottery draw
         'prize_config' => 'Prize Config',
         'created_at' => 'Created At',
         'prize_level_config' => 'Prize Level Config',
@@ -248,9 +249,10 @@ return [
         'close_activity_failed' => 'Failed to close activity',
         'min_one_ticket' => 'Please enter at least one ticket number',
         'please_input_ticket' => 'Please enter ticket number',
-        'ticket_must_6_digits' => '券号必須是6位数字',
-        'no_prize_level' => '該活动尚未配置奖品等级',
-        'distribute_hint' => '请输入中奖券号，系统將根據券号自动识別奖品等级並发放奖勵',
+        'ticket_must_6_digits' => 'Ticket number must be 6 digits',
+        'ticket_format_error' => 'Invalid ticket number format, must contain only digits and not exceed 6 characters',
+        'no_prize_level' => 'Prize levels not configured for this activity',
+        'distribute_hint' => 'Please enter winning ticket number, the system will automatically identify the prize level and distribute rewards',
     ],
 
     // 错误信息
@@ -276,6 +278,7 @@ return [
         'amount_exceeded' => 'Distribution amount exceeds total prize',
         'ticket_not_found_or_used' => 'Ticket {ticket_no} not found or used',
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',
+        'invalid_ticket_format' => 'Invalid format for ticket {ticket_no}, must contain only digits and not exceed 6 characters',
         'bet_progress_not_found' => 'Bet progress record not found',
         // 其他
         'too_many_levels' => 'Max {max} prize levels allowed',

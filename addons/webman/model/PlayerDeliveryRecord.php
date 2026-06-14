@@ -4,7 +4,6 @@ namespace addons\webman\model;
 
 use addons\webman\traits\DataPermissions;
 use DateTimeInterface;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Webman\Event\Event;
@@ -41,7 +40,7 @@ use Webman\Event\Event;
  */
 class PlayerDeliveryRecord extends Model
 {
-    use HasFactory, DataPermissions;
+    use DataPermissions;
 
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];

@@ -30,7 +30,8 @@ return [
         'total_tickets' => 'チケット総数',
         'used_tickets' => '使用済チケット数',
         'usage_rate' => '使用率',
-        'pending_count' => '未配布',  // ⭐ 新規追加
+        'pending_count' => '未配布',
+        'max_ticket_no' => '最大チケット番号',  // ⭐ 新規追加：抽選時のボール最大番号
         'prize_config' => '賞品設定',
         'created_at' => '作成日時',
         'prize_level_config' => '賞品レベル設定',
@@ -249,6 +250,7 @@ return [
         'min_one_ticket' => '少なくとも1つのチケット番号を入力してください',
         'please_input_ticket' => 'チケット番号を入力してください',
         'ticket_must_6_digits' => 'チケット番号は6桁の数字である必要があります',
+        'ticket_format_error' => 'チケット番号の形式が正しくありません。数字のみで6文字以内にしてください',
         'no_prize_level' => 'このアクティビティはまだ賞品レベルが設定されていません',
         'distribute_hint' => '当選チケット番号を入力してください、システムは番号に基づいて賞品レベルを自動識別し配布します',
     ],
@@ -276,6 +278,7 @@ return [
         'amount_exceeded' => '配布金額が総賞金額を超えています',
         'ticket_not_found_or_used' => 'チケット {ticket_no} が存在しないか使用済みです',
         'prize_level_not_found_for_ticket' => 'チケット {ticket_no} の賞品レベルが存在しません',
+        'invalid_ticket_format' => 'チケット {ticket_no} の形式が正しくありません。数字のみで6文字以内にしてください',
         'bet_progress_not_found' => 'ベット進捗記録が見つかりません',
         // 其他
         'too_many_levels' => '最大 {max} 個の賞品レベルまで設定可能',

@@ -30,7 +30,8 @@ return [
         'total_tickets' => '總發放數量',
         'used_tickets' => '已使用數量',
         'usage_rate' => '使用率',
-        'pending_count' => '待發放',  // ⭐ 新增
+        'pending_count' => '待發放',
+        'max_ticket_no' => '最大券號',  // ⭐ 新增：抽獎時放球的最大號碼
         'prize_config' => '獎品配置',
         'created_at' => '創建時間',
         'prize_level_config' => '獎品等級配置',
@@ -249,6 +250,7 @@ return [
         'min_one_ticket' => '請至少輸入一個券號',
         'please_input_ticket' => '請輸入券號',
         'ticket_must_6_digits' => '券號必須是6位數字',
+        'ticket_format_error' => '券號格式錯誤，只能包含數字且不超過6位',
         'no_prize_level' => '該活動尚未配置獎品等級',
         'distribute_hint' => '請輸入中獎券號，系統將根據券號自動識別獎品等級並發放獎勵',
     ],
@@ -276,6 +278,7 @@ return [
         'amount_exceeded' => '發放金額超出總獎金額度',
         'ticket_not_found_or_used' => '券號 {ticket_no} 不存在或已使用',
         'prize_level_not_found_for_ticket' => '券號 {ticket_no} 的獎品等級不存在',
+        'invalid_ticket_format' => '券號 {ticket_no} 格式錯誤，只能包含數字且不超過6位',
         'bet_progress_not_found' => '未找到打碼進度記錄',
         // 其他
         'too_many_levels' => '最多只能設置 {max} 個獎品等級',

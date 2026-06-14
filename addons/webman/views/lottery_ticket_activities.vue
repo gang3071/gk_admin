@@ -132,11 +132,11 @@
 
             <!-- 统计信息 -->
             <a-row :gutter="12">
-              <a-col :span="12">
+              <a-col :span="8">
                 <a-statistic
                     :title="trans.totalTickets || '总发放数量'"
                     :value="activity.total_tickets"
-                    :value-style="{ fontSize: '20px', color: '#1890ff' }"
+                    :value-style="{ fontSize: '18px', color: '#1890ff' }"
                     style="text-align: center;"
                 >
                   <template #prefix>
@@ -144,11 +144,23 @@
                   </template>
                 </a-statistic>
               </a-col>
-              <a-col :span="12">
+              <a-col :span="8">
+                <a-statistic
+                    :title="trans.maxTicketNo || '最大券号'"
+                    :value="activity.max_ticket_no || '000000'"
+                    :value-style="{ fontSize: '18px', color: '#52c41a', fontFamily: 'monospace' }"
+                    style="text-align: center;"
+                >
+                  <template #prefix>
+                    <number-outlined/>
+                  </template>
+                </a-statistic>
+              </a-col>
+              <a-col :span="8">
                 <a-statistic
                     :title="trans.pendingCount || '待发放'"
                     :value="activity.pending_count || 0"
-                    :value-style="{ fontSize: '20px', color: activity.pending_count > 0 ? '#ff9800' : '#999' }"
+                    :value-style="{ fontSize: '18px', color: activity.pending_count > 0 ? '#ff9800' : '#999' }"
                     style="text-align: center;"
                 >
                   <template #prefix>
@@ -443,6 +455,14 @@
           <a-descriptions-item :label="trans.usedTickets">
             {{ currentActivity.used_tickets }}
           </a-descriptions-item>
+          <a-descriptions-item :label="trans.maxTicketNo">
+            <a-tag color="green" style="font-family: monospace; font-size: 16px;">
+              {{ currentActivity.max_ticket_no || '000000' }}
+            </a-tag>
+            <span style="margin-left: 8px; color: #999; font-size: 12px;">
+              (抽奖时放球的最大号码)
+            </span>
+          </a-descriptions-item>
           <a-descriptions-item :label="trans.usageRate">
             {{ getUsageRate(currentActivity) }}%
           </a-descriptions-item>
@@ -503,12 +523,12 @@
           <div v-for="(ticket, ticketIndex) in prizeLevel.tickets" :key="ticketIndex" style="margin-bottom: 8px;">
             <a-space style="width: 100%; align-items: center;">
               <span style="min-width: 80px; color: #666;">输入券号:</span>
-              <a-input-number
+              <a-input
                   v-model:value="ticket.ticket_no"
                   style="width: 200px;"
-                  placeholder="123456"
-                  :controls="false"
-                  :precision="0"
+                  placeholder="输入数字，如: 12 或 000012"
+                  @blur="formatTicketNo(ticket)"
+                  @keyup.enter="formatTicketNo(ticket)"
               />
               <a-button
                   type="text"
@@ -881,16 +901,50 @@ export default {
       this.recordPrizeLevels[prizeLevelIndex].tickets.splice(ticketIndex, 1);
     },
 
+    // 格式化券号：前端验证并自动补0
+    formatTicketNo(ticket) {
+      if (!ticket.ticket_no) {
+        return;
+      }
+
+      // 去除首尾空格
+      let value = String(ticket.ticket_no).trim();
+
+      // 验证：只能包含数字
+      if (!/^\d+$/.test(value)) {
+        this.$message.error('券号只能包含数字，请重新输入');
+        ticket.ticket_no = '';
+        return;
+      }
+
+      // 验证：不能超过6位
+      if (value.length > 6) {
+        this.$message.error('券号不能超过6位数字');
+        ticket.ticket_no = '';
+        return;
+      }
+
+      // 自动补0到6位
+      ticket.ticket_no = value.padStart(6, '0');
+    },
+
     // 提交中奖记录
     async submitWinRecord() {
-      // 收集所有券号
+      // 收集所有券号并验证
       const records = [];
       for (const prizeLevel of this.recordPrizeLevels) {
         for (const ticket of prizeLevel.tickets) {
           if (ticket.ticket_no) {
+            // 二次验证：确保券号格式正确
+            const ticketNo = String(ticket.ticket_no).trim();
+            if (!/^\d{1,6}$/.test(ticketNo)) {
+              this.$message.error(`券号 "${ticket.ticket_no}" 格式错误，请检查`);
+              return;
+            }
+
             records.push({
               prize_level_id: prizeLevel.id,
-              ticket_no: ticket.ticket_no
+              ticket_no: ticketNo.padStart(6, '0')  // 确保补0到6位
             });
           }
         }
@@ -929,6 +983,7 @@ export default {
 
     // 关闭录入抽屉
     handleRecordClose() {
+      this.recordVisible = false;  // ✅ 关闭抽屉
       this.recordData = {
         activity_id: null
       };

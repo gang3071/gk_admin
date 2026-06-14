@@ -86,7 +86,8 @@ class ChannelLotteryTicketActivityController
             'totalTickets' => admin_trans('lottery_ticket.fields.total_tickets'),
             'usedTickets' => admin_trans('lottery_ticket.fields.used_tickets'),
             'usageRate' => admin_trans('lottery_ticket.fields.usage_rate'),
-            'pendingCount' => admin_trans('lottery_ticket.fields.pending_count'),  // ⭐ 新增
+            'pendingCount' => admin_trans('lottery_ticket.fields.pending_count'),
+            'maxTicketNo' => admin_trans('lottery_ticket.fields.max_ticket_no'),  // ⭐ 新增
             'prizeConfig' => admin_trans('lottery_ticket.fields.prize_config'),
             'prizeLevelConfig' => admin_trans('lottery_ticket.fields.prize_level_config'),
             'level' => admin_trans('lottery_ticket.fields.level'),
@@ -205,7 +206,7 @@ class ChannelLotteryTicketActivityController
 
         $activities = $query->orderBy('created_at', 'desc')->get();
 
-        // 添加 has_prize_config 和 pending_count 字段
+        // 添加 has_prize_config、pending_count 和 max_ticket_no 字段
         $activities = $activities->map(function ($activity) {
             $activityArray = $activity->toArray();
             $activityArray['has_prize_config'] = LotteryTicketPrizeLevel::where('activity_id', $activity->id)
@@ -217,6 +218,11 @@ class ChannelLotteryTicketActivityController
                 ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
                 ->where('prize_amount', '>', 0)
                 ->count();
+
+            // ⭐ 计算最大券号（当前已发放的最后一张券号）
+            // current_ticket_no 表示下一张券从哪里开始，所以最大券号是 current_ticket_no - 1
+            $maxTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
+            $activityArray['max_ticket_no'] = str_pad($maxTicketNo, 6, '0', STR_PAD_LEFT);
 
             return $activityArray;
         });
@@ -440,15 +446,19 @@ class ChannelLotteryTicketActivityController
     public function prizeConfig()
     {
         $id = Request::input('id');
-        $activity = LotteryTicketActivity::with('prizeLevels')->find($id);
+        $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
             return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
-        // TODO: 返回奖品配置展示界面
-        return Grid::create($activity->prizeLevels, function (Grid $grid) use ($activity) {
+        // ✅ 修复：使用模型类而不是集合
+        return Grid::create(new LotteryTicketPrizeLevel(), function (Grid $grid) use ($activity) {
             $grid->title($activity->name . ' - ' . admin_trans('lottery_ticket.fields.prize_config'));
+
+            // ✅ 添加活动ID筛选
+            $grid->model()->where('activity_id', $activity->id)->orderBy('level_rank', 'asc');
+
             $grid->column('level_rank', admin_trans('lottery_ticket.prize_level_fields.level_rank'));
             $grid->column('level_name', admin_trans('lottery_ticket.prize_level_fields.level_name'));
             $grid->column('prize_amount', admin_trans('lottery_ticket.prize_level_fields.prize_amount'));
@@ -513,7 +523,7 @@ class ChannelLotteryTicketActivityController
 
         $query = LotteryTicket::where('activity_id', $activityId)
             ->with(['player:id,name,uuid,phone'])
-            ->orderBy('created_at', 'desc');
+            ->orderBy('ticket_no', 'desc');  // ✅ 修改：按券号降序，最大的排在前面
 
         $total = $query->count();
         $list = $query->forPage($page, $size)->get();
@@ -575,6 +585,15 @@ class ChannelLotteryTicketActivityController
                 $ticketNo = $record['ticket_no'] ?? null;
 
                 if (!$prizeLevelId || !$ticketNo) {
+                    continue;
+                }
+
+                // 去除首尾空格
+                $ticketNo = trim($ticketNo);
+
+                // 验证券号：必须是纯数字且1-6位
+                if (!preg_match('/^\d{1,6}$/', $ticketNo)) {
+                    $errors[] = admin_trans('lottery_ticket.error.invalid_ticket_format', null, ['ticket_no' => $record['ticket_no'] ?? '']);
                     continue;
                 }
 
@@ -1466,9 +1485,12 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
-        // 券号格式验证：必须是6位数字
-        if (!preg_match('/^\d{6}$/', $ticketNo)) {
-            return message_error(admin_trans('lottery_ticket.message.ticket_must_6_digits'));
+        // 去除首尾空格
+        $ticketNo = trim($ticketNo);
+
+        // 券号格式验证：必须是纯数字且1-6位
+        if (!preg_match('/^\d{1,6}$/', $ticketNo)) {
+            return message_error(admin_trans('lottery_ticket.message.ticket_format_error'));
         }
 
         if (strlen($remark) > 255) {
