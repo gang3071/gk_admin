@@ -414,6 +414,57 @@ return [
         ]
     ],
 
+    // ========== 摸奖券管理 ==========
+    [
+        'id' => 'addons\webman\controller\AgentLotteryTicketActivityController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'agent',
+        'title' => '摸奖券管理',
+        'children' => [
+            // 摸奖券活动列表
+            [
+                'id' => 'addons\webman\controller\AgentLotteryTicketActivityController\index',
+                'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketActivityController/index',
+                'title' => '摸奖券活动',
+            ],
+            // 查看奖品配置
+            [
+                'id' => 'addons\webman\controller\AgentLotteryTicketActivityController\prizeConfig',
+                'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController\index',
+                'action' => 'prizeConfig',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketActivityController/prizeConfig',
+                'title' => '查看奖品配置',
+            ],
+            // 摸奖券列表
+            [
+                'id' => 'addons\webman\controller\AgentLotteryTicketController\index',
+                'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketController/index',
+                'title' => '摸奖券列表',
+            ],
+            // 中奖记录列表
+            [
+                'id' => 'addons\webman\controller\AgentLotteryTicketRecordController\index',
+                'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketRecordController/index',
+                'title' => '中奖记录',
+            ],
+        ]
+    ],
+
     // ========== 个人中心 ==========
     [
         'id' => 'addons\webman\controller\AdminController\updatePassword',

@@ -496,7 +496,27 @@ return [
                 'group' => 'store',
                 'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/index',
                 'title' => '记录列表',
-            ]
+            ],
+            // 查看设备明细
+            [
+                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\deviceDetails',
+                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+                'action' => 'deviceDetails',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/deviceDetails',
+                'title' => '查看设备明细',
+            ],
+            // 导出交班记录
+            [
+                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\export',
+                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+                'action' => 'export',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/export',
+                'title' => '导出交班记录',
+            ],
         ]
     ],
 

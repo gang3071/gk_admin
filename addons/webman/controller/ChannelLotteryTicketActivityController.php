@@ -508,6 +508,8 @@ class ChannelLotteryTicketActivityController
 
     /**
      * 获取摸奖券发放列表
+     * @auth true
+     * @group channel
      * @return Msg|Response
      */
     public function getTicketList()
@@ -553,6 +555,8 @@ class ChannelLotteryTicketActivityController
 
     /**
      * 录入中奖（按券号批量录入）
+     * @auth true
+     * @group channel
      * @return Msg|Response
      */
     public function recordWinByTickets()

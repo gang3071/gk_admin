@@ -1920,6 +1920,36 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/saveActivity',
                 'title' => '保存活动',
             ],
+            // ⭐ 新增：券号分发列表
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\getTicketList',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'getTicketList',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getTicketList',
+                'title' => '获取券号分发列表',
+            ],
+            // ⭐ 新增：按券号录入中奖记录
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\recordWinByTickets',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'recordWinByTickets',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWinByTickets',
+                'title' => '录入中奖记录',
+            ],
+            // ⭐ 新增：按券号发放奖励
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\distributeByTicketNo',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'distributeByTicketNo',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/distributeByTicketNo',
+                'title' => '按券号发放奖励',
+            ],
 
             // 历史活动记录
             [

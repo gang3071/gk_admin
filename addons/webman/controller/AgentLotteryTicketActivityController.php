@@ -1,0 +1,221 @@
+<?php
+
+namespace addons\webman\controller;
+
+use addons\webman\Admin;
+use addons\webman\model\LotteryTicketActivity;
+use addons\webman\model\LotteryTicketPrizeLevel;
+use addons\webman\model\LotteryTicketRecord;
+use ExAdmin\ui\component\grid\grid\Actions;
+use ExAdmin\ui\component\grid\grid\Filter;
+use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\support\Request;
+
+/**
+ * 代理后台-摸奖券活动管理
+ * @group agent
+ */
+class AgentLotteryTicketActivityController
+{
+    /**
+     * 摸奖券活动列表
+     * @auth true
+     * @group agent
+     * @return Grid
+     */
+    public function index(): Grid
+    {
+        return Grid::create(new LotteryTicketActivity(), function (Grid $grid) {
+            // 获取当前代理管理员信息
+            $admin = Admin::user();
+            $departmentId = $admin->department_id;
+
+            // 数据权限过滤：只显示当前代理的活动
+            $grid->model()->where('department_id', $departmentId);
+
+            $grid->title(admin_trans('lottery_ticket.title.main'));
+            $grid->bordered(true);
+            $grid->autoHeight();
+
+            // 获取筛选条件
+            $requestFilter = Request::input('ex_admin_filter', []);
+
+            // 筛选条件
+            if (!empty($requestFilter['activity_name'])) {
+                $grid->model()->where('activity_name', 'like', '%' . $requestFilter['activity_name'] . '%');
+            }
+            if (isset($requestFilter['status']) && $requestFilter['status'] !== '') {
+                $grid->model()->where('status', $requestFilter['status']);
+            }
+            if (!empty($requestFilter['start_time'])) {
+                $grid->model()->where('start_time', '>=', $requestFilter['start_time']);
+            }
+            if (!empty($requestFilter['end_time'])) {
+                $grid->model()->where('end_time', '<=', $requestFilter['end_time']);
+            }
+
+            // 排序
+            $grid->model()->orderBy('created_at', 'desc');
+
+            // 列定义
+            $grid->column('id', admin_trans('lottery_ticket.fields.id'))
+                ->width(80)->align('center')->fixed(true);
+
+            $grid->column('activity_name', admin_trans('lottery_ticket.fields.activity_name'))
+                ->width(200)->align('left')->fixed(true);
+
+            $grid->column('start_time', admin_trans('lottery_ticket.fields.start_time'))
+                ->width(160)->align('center');
+
+            $grid->column('end_time', admin_trans('lottery_ticket.fields.end_time'))
+                ->width(160)->align('center');
+
+            $grid->column('status', admin_trans('lottery_ticket.fields.status'))
+                ->width(100)->align('center')
+                ->display(function ($val) {
+                    $statusMap = [
+                        LotteryTicketActivity::STATUS_NOT_STARTED => ['text' => admin_trans('lottery_ticket.status.not_started'), 'color' => 'default'],
+                        LotteryTicketActivity::STATUS_ONGOING => ['text' => admin_trans('lottery_ticket.status.ongoing'), 'color' => 'processing'],
+                        LotteryTicketActivity::STATUS_ENDED => ['text' => admin_trans('lottery_ticket.status.ended'), 'color' => 'success'],
+                        LotteryTicketActivity::STATUS_CLOSED => ['text' => admin_trans('lottery_ticket.status.closed'), 'color' => 'error'],
+                    ];
+                    $config = $statusMap[$val] ?? ['text' => $val, 'color' => 'default'];
+                    return Tag::create($config['text'])->color($config['color']);
+                });
+
+            $grid->column('total_tickets', admin_trans('lottery_ticket.fields.total_tickets'))
+                ->width(100)->align('center')
+                ->display(function ($val) {
+                    return number_format($val);
+                });
+
+            $grid->column('used_tickets', admin_trans('lottery_ticket.fields.used_tickets'))
+                ->width(100)->align('center')
+                ->display(function ($val) {
+                    return number_format($val);
+                });
+
+            $grid->column('usage_rate', admin_trans('lottery_ticket.fields.usage_rate'))
+                ->width(100)->align('center')
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    if ($data->total_tickets == 0) {
+                        return '0%';
+                    }
+                    $rate = ($data->used_tickets / $data->total_tickets) * 100;
+                    return number_format($rate, 2) . '%';
+                });
+
+            $grid->column('pending_count', admin_trans('lottery_ticket.fields.pending_count'))
+                ->width(100)->align('center')
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    // 统计待发放的中奖记录数量
+                    $count = LotteryTicketRecord::where('activity_id', $data->id)
+                        ->where('status', LotteryTicketRecord::STATUS_PENDING)
+                        ->count();
+                    return $count > 0 ? Tag::create($count)->color('warning') : $count;
+                });
+
+            $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))
+                ->width(160)->align('center');
+
+            // 筛选器
+            $grid->filter(function (Filter $filter) {
+                $filter->like()->text('activity_name')
+                    ->placeholder(admin_trans('lottery_ticket.fields.activity_name'));
+
+                $filter->eq()->select('status')
+                    ->placeholder(admin_trans('lottery_ticket.fields.status'))
+                    ->options([
+                        LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
+                        LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                        LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
+                        LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
+                    ]);
+
+                $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.filter.time_range'))
+                    ->placeholder([
+                        admin_trans('lottery_ticket.fields.start_time'),
+                        admin_trans('lottery_ticket.fields.end_time')
+                    ]);
+            });
+
+            // 操作栏
+            $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
+                // 查看奖品配置
+                $actions->button(admin_trans('lottery_ticket.action.prize_config'))
+                    ->type('link')
+                    ->size('small')
+                    ->modal([$this, 'prizeConfig'], ['activity_id' => $data->id])
+                    ->width('80%');
+            });
+        });
+    }
+
+    /**
+     * 查看奖品配置
+     * @auth true
+     * @group agent
+     * @param int $activity_id
+     * @return Grid
+     */
+    public function prizeConfig(int $activity_id): Grid
+    {
+        // 验证活动是否属于当前代理
+        $admin = Admin::user();
+        $activity = LotteryTicketActivity::where('id', $activity_id)
+            ->where('department_id', $admin->department_id)
+            ->first();
+
+        if (!$activity) {
+            abort(403, admin_trans('common.no_permission'));
+        }
+
+        return Grid::create(new LotteryTicketPrizeLevel(), function (Grid $grid) use ($activity) {
+            $grid->model()->where('activity_id', $activity->id)
+                ->orderBy('level_rank', 'asc');
+
+            $grid->title(admin_trans('lottery_ticket.fields.prize_level_config'));
+            $grid->bordered(true);
+            $grid->autoHeight();
+            $grid->hideCreateButton();
+            $grid->hideActions();
+            $grid->hideBatchActions();
+
+            // 列定义
+            $grid->column('level_rank', admin_trans('lottery_ticket.prize_level_fields.level_rank'))
+                ->width(100)->align('center');
+
+            $grid->column('level_name', admin_trans('lottery_ticket.prize_level_fields.level_name'))
+                ->width(150)->align('center');
+
+            $grid->column('prize_amount', admin_trans('lottery_ticket.fields.prize_amount'))
+                ->width(120)->align('center')
+                ->display(function ($val) {
+                    return number_format($val, 2);
+                });
+
+            $grid->column('prize_count', admin_trans('lottery_ticket.fields.prize_count'))
+                ->width(100)->align('center');
+
+            $grid->column('won_count', admin_trans('lottery_ticket.prize_level_fields.won_count'))
+                ->width(100)->align('center')
+                ->display(function ($val) {
+                    return $val > 0 ? Tag::create($val)->color('success') : $val;
+                });
+
+            $grid->column('remaining_count', admin_trans('lottery_ticket.prize_level_fields.remaining_count'))
+                ->width(120)->align('center')
+                ->display(function ($val, LotteryTicketPrizeLevel $data) {
+                    $remaining = $data->prize_count - $data->won_count;
+                    if ($remaining <= 0) {
+                        return Tag::create('0')->color('error');
+                    } elseif ($remaining <= 3) {
+                        return Tag::create($remaining)->color('warning');
+                    } else {
+                        return Tag::create($remaining)->color('success');
+                    }
+                });
+        });
+    }
+}
