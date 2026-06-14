@@ -9,7 +9,6 @@ return [
     'auto_shift_close_hint' => '如需手動交班，請先到「自動交班配置」中關閉自動交班功能。',
     'goto_auto_shift_config' => '前往自動交班配置',
     'manual_shift_disabled' => '手動交班已停用',
-    'shift_failed' => '交班失敗：',
     'shift_time' => '交班時間',
     'shift_time_help' => '交班時間不能超過當前時間, 無法選擇過去5天內的時間, 不能選擇上次交班時間的範圍',
     'start_time' => '開始時間',
@@ -23,7 +22,6 @@ return [
     'machine_put_point' => '機台投鈔點數',
     'total_income' => '總收入',
     'total_outcome' => '總支出',
-    'lottery_amount' => '彩金',
     'total_profit' => '總利潤',
 
     // 錯誤訊息
@@ -121,6 +119,8 @@ return [
         'total_in' => '總收入',
         'total_out' => '總支出',
         'lottery_amount' => '彩金金額',
+        'activity_bonus_amount' => '活動獎勵',
+        'lottery_ticket_reward_amount' => '摸獎券獎勵',
         'total_profit' => '總利潤',
         'execution_duration' => '執行耗時',
         'error_message' => '錯誤訊息',
@@ -136,6 +136,8 @@ return [
         'total_in_detail' => '總收入（送分）',
         'total_out_detail' => '總支出（取分）',
         'lottery_amount_detail' => '彩金發放',
+        'activity_bonus_amount_detail' => '活動獎勵金額',
+        'lottery_ticket_reward_amount_detail' => '摸獎券中獎獎勵',
         'total_profit_detail' => '總利潤',
         'execute_time_detail' => '執行時間',
         'execution_duration_detail' => '執行耗時',

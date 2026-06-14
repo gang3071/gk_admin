@@ -3535,6 +3535,7 @@ class PlayerController
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
                         PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK,
                         PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // ⭐ 摸奖券奖励
                         PlayerDeliveryRecord::TYPE_REGISTER_PRESENT,
                         PlayerDeliveryRecord::TYPE_PROFIT,
                         PlayerDeliveryRecord::TYPE_LOTTERY,

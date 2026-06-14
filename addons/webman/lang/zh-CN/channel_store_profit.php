@@ -15,6 +15,7 @@ return [
         'withdraw_amount' => '累计洗分',
         'machine_put_point' => '投钞',
         'lottery_amount' => '彩金',
+        'activity_total' => '活动奖励',
         'subtotal' => '小计',
         'agent_commission' => '代理抽成比例',
         'agent_profit' => '代理分润',

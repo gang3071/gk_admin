@@ -30,6 +30,7 @@ return [
         'total_tickets' => 'チケット総数',
         'used_tickets' => '使用済チケット数',
         'usage_rate' => '使用率',
+        'pending_count' => '未配布',  // ⭐ 新規追加
         'prize_config' => '賞品設定',
         'created_at' => '作成日時',
         'prize_level_config' => '賞品レベル設定',

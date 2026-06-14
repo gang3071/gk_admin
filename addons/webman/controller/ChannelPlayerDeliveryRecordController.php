@@ -382,6 +382,9 @@ class ChannelPlayerDeliveryRecordController
                         case PlayerDeliveryRecord::TYPE_REFUND:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND))->color('#a0d911');
                             break;
+                        case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');
+                            break;
                         default:
                             $tag = '';
                     }
@@ -528,6 +531,7 @@ class ChannelPlayerDeliveryRecordController
                         PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RE_SETTLEMENT),
                         PlayerDeliveryRecord::TYPE_PREPAY => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY),
                         PlayerDeliveryRecord::TYPE_REFUND => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND),
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD),
                     ])->when([
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT

@@ -52,7 +52,6 @@ class ChannelLotteryTicketActivityController
             'editActivity' => admin_trans('lottery_ticket.action.edit'),
             'view' => admin_trans('lottery_ticket.action.view'),
             'viewDetail' => admin_trans('lottery_ticket.action.view_detail'),
-            'prizeConfig' => admin_trans('lottery_ticket.action.prize_config'),
             'closeActivity' => admin_trans('lottery_ticket.action.close'),
             'addPrizeLevel' => admin_trans('lottery_ticket.action.add_prize_level'),
             'recordWin' => admin_trans('lottery_ticket.action.record_win'),
@@ -87,6 +86,7 @@ class ChannelLotteryTicketActivityController
             'totalTickets' => admin_trans('lottery_ticket.fields.total_tickets'),
             'usedTickets' => admin_trans('lottery_ticket.fields.used_tickets'),
             'usageRate' => admin_trans('lottery_ticket.fields.usage_rate'),
+            'pendingCount' => admin_trans('lottery_ticket.fields.pending_count'),  // ⭐ 新增
             'prizeConfig' => admin_trans('lottery_ticket.fields.prize_config'),
             'prizeLevelConfig' => admin_trans('lottery_ticket.fields.prize_level_config'),
             'level' => admin_trans('lottery_ticket.fields.level'),
@@ -205,11 +205,19 @@ class ChannelLotteryTicketActivityController
 
         $activities = $query->orderBy('created_at', 'desc')->get();
 
-        // 添加 has_prize_config 字段
+        // 添加 has_prize_config 和 pending_count 字段
         $activities = $activities->map(function ($activity) {
             $activityArray = $activity->toArray();
             $activityArray['has_prize_config'] = LotteryTicketPrizeLevel::where('activity_id', $activity->id)
                 ->exists();
+
+            // ⭐ 统计待发放记录数量
+            $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+                ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
+                ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+                ->where('prize_amount', '>', 0)
+                ->count();
+
             return $activityArray;
         });
 
@@ -1281,46 +1289,48 @@ class ChannelLotteryTicketActivityController
                     }
 
                     // 发放奖励
-                    $oldBalance = $player->money ?? 0;
-
                     if ($lockedRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH) {
-                        // 现金奖励
-                        $player->money = ($player->money ?? 0) + $lockedRecord->prize_amount;
-                        $player->save();
+                        // ✅ 步骤 1: 从 Redis 读取当前余额（唯一可信源）
+                        $oldBalance = \addons\webman\service\WalletService::getBalance($player->id);
 
-                        // 记录资金变动
-                        if (class_exists('\addons\webman\model\PlayerMoneyLog')) {
-                            \addons\webman\model\PlayerMoneyLog::create([
-                                'player_id' => $player->id,
-                                'department_id' => $player->department_id,
-                                'type' => \addons\webman\model\PlayerMoneyLog::TYPE_LOTTERY_REWARD ?? 'lottery_reward',
-                                'money' => $lockedRecord->prize_amount,
-                                'before_money' => $oldBalance,
-                                'after_money' => $player->money,
-                                'remark' => '摸奖券中奖批量发放：' . $activity->name . ' - ' . $lockedRecord->prize_name,
-                                'created_at' => time(),
-                            ]);
-                        }
+                        // ✅ 步骤 2: 使用 WalletService 原子性增加余额（自动同步数据库）
+                        $newBalance = \addons\webman\service\WalletService::atomicIncrement($player->id, $lockedRecord->prize_amount);
+
+                        // ⭐ 记录金流明细 (PlayerDeliveryRecord)
+                        $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                        $playerDeliveryRecord->player_id = $player->id;
+                        $playerDeliveryRecord->department_id = $player->department_id;
+                        $playerDeliveryRecord->target = $lockedRecord->getTable(); // lottery_ticket_record
+                        $playerDeliveryRecord->target_id = $lockedRecord->id;
+                        $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD; // ⭐ 摸奖券奖励 (支出)
+                        $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                        $playerDeliveryRecord->amount = $lockedRecord->prize_amount;
+                        $playerDeliveryRecord->amount_before = $oldBalance;
+                        $playerDeliveryRecord->amount_after = $newBalance;
+                        $playerDeliveryRecord->tradeno = $lockedRecord->ticket_no; // 使用券号作为交易号
+                        $playerDeliveryRecord->remark = '摸奖券中奖发放：' . $activity->name . ' - ' . $lockedRecord->prize_name;
+                        $playerDeliveryRecord->save();
 
                     } elseif ($lockedRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_BONUS) {
-                        // 红利奖励
+                        // 红利奖励 - 增加玩家红利
                         $oldBonus = $player->bonus ?? 0;
                         $player->bonus = ($player->bonus ?? 0) + $lockedRecord->prize_amount;
                         $player->save();
 
-                        // 记录红利变动
-                        if (class_exists('\addons\webman\model\PlayerBonusLog')) {
-                            \addons\webman\model\PlayerBonusLog::create([
-                                'player_id' => $player->id,
-                                'department_id' => $player->department_id,
-                                'type' => \addons\webman\model\PlayerBonusLog::TYPE_LOTTERY_REWARD ?? 'lottery_reward',
-                                'bonus' => $lockedRecord->prize_amount,
-                                'before_bonus' => $oldBonus,
-                                'after_bonus' => $player->bonus,
-                                'remark' => '摸奖券中奖批量发放：' . $activity->name . ' - ' . $lockedRecord->prize_name,
-                                'created_at' => time(),
-                            ]);
-                        }
+                        // ⭐ 记录金流明细 (PlayerDeliveryRecord) - 红利也使用相同类型
+                        $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                        $playerDeliveryRecord->player_id = $player->id;
+                        $playerDeliveryRecord->department_id = $player->department_id;
+                        $playerDeliveryRecord->target = $lockedRecord->getTable(); // lottery_ticket_record
+                        $playerDeliveryRecord->target_id = $lockedRecord->id;
+                        $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD; // ⭐ 摸奖券奖励 (支出)
+                        $playerDeliveryRecord->source = 'lottery_ticket_reward_bonus';
+                        $playerDeliveryRecord->amount = $lockedRecord->prize_amount;
+                        $playerDeliveryRecord->amount_before = $oldBonus;
+                        $playerDeliveryRecord->amount_after = $player->bonus;
+                        $playerDeliveryRecord->tradeno = $lockedRecord->ticket_no;
+                        $playerDeliveryRecord->remark = '摸奖券红利发放：' . $activity->name . ' - ' . $lockedRecord->prize_name;
+                        $playerDeliveryRecord->save();
                     }
 
                     // 更新中奖记录状态为已发放
@@ -1548,26 +1558,27 @@ class ChannelLotteryTicketActivityController
             }
 
             // ⭐ 13. 发放奖励（根据奖品类型）
-            $oldBalance = $player->money ?? 0;
-
             if ($winRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH) {
-                // 现金奖励 - 增加玩家余额
-                $player->money = ($player->money ?? 0) + $winRecord->prize_amount;
-                $player->save();
+                // ✅ 步骤 1: 从 Redis 读取当前余额（唯一可信源）
+                $oldBalance = \addons\webman\service\WalletService::getBalance($player->id);
 
-                // 记录资金变动
-                if (class_exists('\addons\webman\model\PlayerMoneyLog')) {
-                    \addons\webman\model\PlayerMoneyLog::create([
-                        'player_id' => $player->id,
-                        'department_id' => $player->department_id,
-                        'type' => \addons\webman\model\PlayerMoneyLog::TYPE_LOTTERY_REWARD ?? 'lottery_reward',
-                        'money' => $winRecord->prize_amount,
-                        'before_money' => $oldBalance,
-                        'after_money' => $player->money,
-                        'remark' => '摸奖券中奖发放：' . $activity->name . ' - ' . $winRecord->prize_name . ($remark ? '（' . $remark . '）' : ''),
-                        'created_at' => time(),
-                    ]);
-                }
+                // ✅ 步骤 2: 使用 WalletService 原子性增加余额（自动同步数据库）
+                $newBalance = \addons\webman\service\WalletService::atomicIncrement($player->id, $winRecord->prize_amount);
+
+                // ⭐ 记录金流明细 (PlayerDeliveryRecord)
+                $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                $playerDeliveryRecord->player_id = $player->id;
+                $playerDeliveryRecord->department_id = $player->department_id;
+                $playerDeliveryRecord->target = $winRecord->getTable(); // lottery_ticket_record
+                $playerDeliveryRecord->target_id = $winRecord->id;
+                $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD; // ⭐ 摸奖券奖励 (支出)
+                $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                $playerDeliveryRecord->amount = $winRecord->prize_amount;
+                $playerDeliveryRecord->amount_before = $oldBalance;
+                $playerDeliveryRecord->amount_after = $newBalance;
+                $playerDeliveryRecord->tradeno = $winRecord->ticket_no;
+                $playerDeliveryRecord->remark = '摸奖券中奖发放：' . $activity->name . ' - ' . $winRecord->prize_name . ($remark ? '（' . $remark . '）' : '');
+                $playerDeliveryRecord->save();
 
             } elseif ($winRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_BONUS) {
                 // 红利奖励 - 增加玩家红利
@@ -1575,19 +1586,20 @@ class ChannelLotteryTicketActivityController
                 $player->bonus = ($player->bonus ?? 0) + $winRecord->prize_amount;
                 $player->save();
 
-                // 记录红利变动
-                if (class_exists('\addons\webman\model\PlayerBonusLog')) {
-                    \addons\webman\model\PlayerBonusLog::create([
-                        'player_id' => $player->id,
-                        'department_id' => $player->department_id,
-                        'type' => \addons\webman\model\PlayerBonusLog::TYPE_LOTTERY_REWARD ?? 'lottery_reward',
-                        'bonus' => $winRecord->prize_amount,
-                        'before_bonus' => $oldBonus,
-                        'after_bonus' => $player->bonus,
-                        'remark' => '摸奖券中奖发放：' . $activity->name . ' - ' . $winRecord->prize_name . ($remark ? '（' . $remark . '）' : ''),
-                        'created_at' => time(),
-                    ]);
-                }
+                // ⭐ 记录金流明细 (PlayerDeliveryRecord)
+                $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                $playerDeliveryRecord->player_id = $player->id;
+                $playerDeliveryRecord->department_id = $player->department_id;
+                $playerDeliveryRecord->target = $winRecord->getTable(); // lottery_ticket_record
+                $playerDeliveryRecord->target_id = $winRecord->id;
+                $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD; // ⭐ 摸奖券奖励 (支出)
+                $playerDeliveryRecord->source = 'lottery_ticket_reward_bonus';
+                $playerDeliveryRecord->amount = $winRecord->prize_amount;
+                $playerDeliveryRecord->amount_before = $oldBonus;
+                $playerDeliveryRecord->amount_after = $player->bonus;
+                $playerDeliveryRecord->tradeno = $winRecord->ticket_no;
+                $playerDeliveryRecord->remark = '摸奖券红利发放：' . $activity->name . ' - ' . $winRecord->prize_name . ($remark ? '（' . $remark . '）' : '');
+                $playerDeliveryRecord->save();
             }
 
             // ⭐ 14. 更新中奖记录状态为已发放

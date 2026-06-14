@@ -1262,7 +1262,10 @@ class ChannelPlayerPromoterController
                 $db = PromoterProfitRecord::whereRaw('promoter_player_id = ' . $id . ' and status = ' . PromoterProfitRecord::STATUS_UNCOMPLETED)
                     ->select('date');
                 $grid->model()
-                    ->where('type', PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS)
+                    ->whereIn('type', [
+                        PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // ⭐ 摸奖券奖励
+                    ])
                     ->whereIn('player_id', function ($query) use ($id) {
                         $query->select('player_id')
                             ->from('promoter_profit_record')
@@ -1273,7 +1276,10 @@ class ChannelPlayerPromoterController
                     ->orderBy('id', 'desc');
             } else {
                 $grid->model()
-                    ->where('type', PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS)
+                    ->whereIn('type', [
+                        PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // ⭐ 摸奖券奖励
+                    ])
                     ->where('player_id', $id)
                     ->whereDate('updated_at', $date)
                     ->orderBy('id', 'desc');
@@ -1640,6 +1646,7 @@ class ChannelPlayerPromoterController
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
                         return Tag::create(trans($val, [], 'message', $lang))->color('red');
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
                         return Tag::create(trans($val, [], 'message', $lang))->color('blue');
                     default:
                         return '';

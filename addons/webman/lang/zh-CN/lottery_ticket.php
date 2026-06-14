@@ -30,6 +30,7 @@ return [
         'total_tickets' => '总发放数量',
         'used_tickets' => '已使用数量',
         'usage_rate' => '使用率',
+        'pending_count' => '待发放',  // ⭐ 新增
         'prize_config' => '奖品配置',
         'created_at' => '创建时间',
         'prize_level_config' => '奖品等级配置',

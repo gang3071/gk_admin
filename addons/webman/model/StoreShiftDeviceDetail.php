@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $modified_add_amount 后台加点
  * @property float $modified_deduct_amount 后台扣点
  * @property float $lottery_amount 彩金发放
+ * @property float $activity_bonus_amount 活动奖励金额
+ * @property float $lottery_ticket_reward_amount 摸奖券中奖奖励金额
  * @property float $total_in 总收入
  * @property float $total_out 总支出
  * @property float $profit 利润
@@ -57,6 +59,8 @@ class StoreShiftDeviceDetail extends Model
         'modified_add_amount',
         'modified_deduct_amount',
         'lottery_amount',
+        'activity_bonus_amount',
+        'lottery_ticket_reward_amount',
         'total_in',
         'total_out',
         'profit',
@@ -69,6 +73,8 @@ class StoreShiftDeviceDetail extends Model
         'modified_add_amount' => 'float',
         'modified_deduct_amount' => 'float',
         'lottery_amount' => 'float',
+        'activity_bonus_amount' => 'float',
+        'lottery_ticket_reward_amount' => 'float',
         'total_in' => 'float',
         'total_out' => 'float',
         'profit' => 'float',

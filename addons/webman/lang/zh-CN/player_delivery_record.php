@@ -54,6 +54,7 @@ return [
         PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => '重新结算',
         PlayerDeliveryRecord::TYPE_PREPAY => '预扣金额',
         PlayerDeliveryRecord::TYPE_REFUND => '退款',
+        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '摸奖券中奖奖励',
     ],
     'detail' => '详情',
     'chart' => '图表',

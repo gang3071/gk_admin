@@ -77,9 +77,9 @@
                     <trophy-outlined/>
                     {{ trans.recordWin }}
                   </a-menu-item>
-                  <a-menu-item v-if="activity.status === 1" key="distribute">
+                  <a-menu-item v-if="activity.status === 1 && activity.pending_count > 0" key="distribute">
                     <gift-outlined/>
-                    {{ trans.distribute_all_pending || '发放奖励' }}
+                    {{ trans.distributeAllPending || '发放奖励' }} ({{ activity.pending_count }})
                   </a-menu-item>
                   <a-menu-item key="live">
                     <video-camera-outlined/>
@@ -129,16 +129,34 @@
             </div>
 
             <a-divider style="margin: 12px 0;"/>
-            <a-statistic
-                :title="trans.totalTickets"
-                :value="activity.total_tickets"
-                :value-style="{ fontSize: '24px', color: '#1890ff' }"
-                style="text-align: center;"
-            >
-              <template #prefix>
-                <file-text-outlined/>
-              </template>
-            </a-statistic>
+
+            <!-- 统计信息 -->
+            <a-row :gutter="12">
+              <a-col :span="12">
+                <a-statistic
+                    :title="trans.totalTickets || '总发放数量'"
+                    :value="activity.total_tickets"
+                    :value-style="{ fontSize: '20px', color: '#1890ff' }"
+                    style="text-align: center;"
+                >
+                  <template #prefix>
+                    <file-text-outlined/>
+                  </template>
+                </a-statistic>
+              </a-col>
+              <a-col :span="12">
+                <a-statistic
+                    :title="trans.pendingCount || '待发放'"
+                    :value="activity.pending_count || 0"
+                    :value-style="{ fontSize: '20px', color: activity.pending_count > 0 ? '#ff9800' : '#999' }"
+                    style="text-align: center;"
+                >
+                  <template #prefix>
+                    <gift-outlined/>
+                  </template>
+                </a-statistic>
+              </a-col>
+            </a-row>
 
             <!-- 操作按钮 -->
             <a-space direction="vertical" style="width: 100%; margin-top: 12px;">
@@ -158,12 +176,18 @@
                   v-if="activity.status === 1"
                   block
                   type="primary"
+                  :disabled="!activity.pending_count || activity.pending_count === 0"
                   @click.stop="showDistributeForm(activity)"
               >
                 <template #icon>
                   <gift-outlined/>
                 </template>
-                {{ trans.distribute_all_pending || '发放奖励' }}
+                {{ trans.distributeAllPending || '发放奖励' }}
+                <a-badge
+                    v-if="activity.pending_count > 0"
+                    :count="activity.pending_count"
+                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
+                />
               </a-button>
 
               <a-button

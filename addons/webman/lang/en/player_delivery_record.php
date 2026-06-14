@@ -54,6 +54,7 @@ return [
         PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => 'Re-settlement',
         PlayerDeliveryRecord::TYPE_PREPAY => 'Prepay Deduction',
         PlayerDeliveryRecord::TYPE_REFUND => 'Refund',
+        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => 'Lottery Ticket Reward',
     ],
     'detail' => 'details',
     'chart' => 'chart',

@@ -13,6 +13,7 @@ return [
         'withdraw_amount' => 'Total Wash Score',
         'machine_put_point' => 'Cash In',
         'lottery_amount' => 'Lottery',
+        'activity_total' => 'Activity Rewards',
         'subtotal' => 'Subtotal',
         'agent_commission' => 'Agent Commission %',
         'agent_profit' => 'Agent Profit',

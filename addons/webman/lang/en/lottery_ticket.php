@@ -30,6 +30,7 @@ return [
         'total_tickets' => 'Total Tickets',
         'used_tickets' => 'Used Tickets',
         'usage_rate' => 'Usage Rate',
+        'pending_count' => 'Pending',  // ⭐ Added
         'prize_config' => 'Prize Config',
         'created_at' => 'Created At',
         'prize_level_config' => 'Prize Level Config',

@@ -85,6 +85,7 @@ class AgentStoreProfitReportController
                     'withdraw_amount' => 0,
                     'machine_put_point' => 0,
                     'lottery_amount' => 0,
+                    'activity_total' => 0,
                     'subtotal' => 0,
                     'agent_profit' => 0,
                     'channel_profit' => 0,
@@ -111,7 +112,8 @@ class AgentStoreProfitReportController
             $deliveryData = $deliveryQuery->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")->first();
 
             // 查询拉彩数据
@@ -139,13 +141,17 @@ class AgentStoreProfitReportController
             $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
             $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
+            $activityTotal = floatval($deliveryData->activity_total ?? 0);
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
-            // 计算小计 = 开分 - (洗分 + 彩金)
-            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
-            // 注意：洗分（recharge_amount）已经包含了彩金，所以不需要再加彩金
+            // 计算小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-            $subtotal = bcsub($totalIn, $withdrawAmount, 2);
+            $totalOut = bcadd(
+                bcadd($withdrawAmount, $lotteryAmount, 2),
+                $activityTotal,
+                2
+            );
+            $subtotal = bcsub($totalIn, $totalOut, 2);
 
             // 计算代理分润：小计 * 代理抽成比例
             $agentCommission = floatval($store->agent_commission ?? 0);
@@ -166,6 +172,7 @@ class AgentStoreProfitReportController
                 'withdraw_amount' => $withdrawAmount,
                 'machine_put_point' => $machinePutPoint,
                 'lottery_amount' => $lotteryAmount,
+                'activity_total' => $activityTotal,
                 'subtotal' => $subtotal,
                 'agent_profit' => $agentProfit,
                 'channel_profit' => $channelProfit,
@@ -178,6 +185,7 @@ class AgentStoreProfitReportController
             'total_withdraw' => '0',
             'total_machine_put' => '0',
             'total_lottery' => '0',
+            'total_activity' => '0',
             'total_subtotal' => '0',
             'total_agent_profit' => '0',
             'total_channel_profit' => '0',
@@ -188,6 +196,7 @@ class AgentStoreProfitReportController
             $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], strval($item['withdraw_amount']), 2);
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($item['machine_put_point']), 2);
             $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($item['lottery_amount']), 2);
+            $totalStats['total_activity'] = bcadd($totalStats['total_activity'] ?? 0, strval($item['activity_total']), 2);
             $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
             $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
@@ -389,6 +398,10 @@ class AgentStoreProfitReportController
             })->width(120)->align('center');
 
             $grid->column('lottery_amount', admin_trans('agent_store_profit.fields.lottery_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            $grid->column('activity_total', admin_trans('agent_store_profit.fields.activity_total'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 

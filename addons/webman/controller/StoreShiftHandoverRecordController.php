@@ -61,6 +61,8 @@ class StoreShiftHandoverRecordController
             $grid->column('total_in', admin_trans('shift_handover.record.total_in'))->width(100)->align('center');
             $grid->column('total_out', admin_trans('shift_handover.record.total_out'))->width(100)->align('center');
             $grid->column('lottery_amount', admin_trans('shift_handover.lottery_amount'))->width(100)->align('center');
+            $grid->column('activity_bonus_amount', admin_trans('shift_handover.activity_bonus_amount'))->width(100)->align('center');
+            $grid->column('lottery_ticket_reward_amount', admin_trans('shift_handover.lottery_ticket_reward_amount'))->width(120)->align('center');
             $grid->column('total_profit_amount', admin_trans('shift_handover.record.total_profit'))->width(100)->align('center')
                 ->display(function ($value) {
                     $color = $value >= 0 ? '#3f8600' : '#cf1322';

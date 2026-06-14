@@ -1683,6 +1683,7 @@ class ChannelAgentController
                         }
                         break;
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
                         return Tag::create(admin_trans('message.source.' . $val))->color('blue');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
@@ -1739,6 +1740,9 @@ class ChannelAgentController
                             break;
                         case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS))->color('#CC6600');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');
                             break;
                         case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT))->color('#CC6600');
