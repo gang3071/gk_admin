@@ -52,23 +52,20 @@ class ChannelPlayerLotteryRecordController
             /** @var \addons\webman\model\AdminUser $admin */
             $admin = Admin::user();
 
+            // 预加载关联数据
+            $grid->model()->with(['player']);
+
             // 添加数据权限过滤：只显示相关玩家的彩金记录
             if ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
                 // 店家：只显示其下级玩家的彩金记录
-                $grid->model()->whereExists(function($query) use ($admin) {
-                    $query->selectRaw(1)
-                        ->from('player')
-                        ->whereColumn('player.id', 'player_lottery_record.player_id')
-                        ->where('player.store_admin_id', $admin->id);
+                $grid->model()->whereHas('player', function($query) use ($admin) {
+                    $query->where('store_admin_id', $admin->id);
                 });
             } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
                 // 代理：显示其下级店家的所有玩家的彩金记录
                 $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
-                $grid->model()->whereExists(function($query) use ($storeIds) {
-                    $query->selectRaw(1)
-                        ->from('player')
-                        ->whereColumn('player.id', 'player_lottery_record.player_id')
-                        ->whereIn('player.store_admin_id', $storeIds);
+                $grid->model()->whereHas('player', function($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds);
                 });
             } else {
                 // 其他类型账号不显示任何记录

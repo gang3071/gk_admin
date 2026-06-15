@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -29,14 +30,12 @@ class AgentLotteryTicketController
             $admin = Admin::user();
             $departmentId = $admin->department_id;
 
+            // 预加载关联数据
+            $grid->model()->with(['player', 'activity']);
+
             // ⭐ 数据权限过滤：只显示当前代理下玩家获取的摸奖券
-            // 使用 EXISTS 子查询，避免 IN 数组过大导致性能问题
-            // 注意：代理用 agent_admin_id 字段，不是 department_id
-            $grid->model()->whereExists(function ($query) use ($admin) {
-                $query->selectRaw(1)
-                    ->from('player')
-                    ->whereColumn('player.id', 'lottery_ticket.player_id')
-                    ->where('player.agent_admin_id', $admin->id);  // ✅ 使用 agent_admin_id
+            $grid->model()->whereHas('player', function ($query) use ($admin) {
+                $query->where('agent_admin_id', $admin->id);
             });
 
             $grid->title(admin_trans('lottery_ticket.title.ticket_list'));
@@ -178,10 +177,14 @@ class AgentLotteryTicketController
                     ]);
             });
 
-            // 隐藏操作列和批量操作
-            $grid->hideActions();
-            $grid->hideBatchActions();
-            $grid->hideCreateButton();
+            // 代理后台只读
+            $grid->hideDelete();
+            $grid->hideSelection();
+
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
         });
     }
 }

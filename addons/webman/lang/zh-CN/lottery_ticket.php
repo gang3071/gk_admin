@@ -32,6 +32,7 @@ return [
         'usage_rate' => '使用率',
         'pending_count' => '待发放',
         'max_ticket_no' => '最大券号',  // ⭐ 新增：抽奖时放球的最大号码
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => '奖品配置',
         'created_at' => '创建时间',
         'prize_level_config' => '奖品等级配置',
@@ -185,6 +186,7 @@ return [
         'edit' => '编輯活动',
         'view' => '查看詳情',
         'view_detail' => '查看詳情',
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => '奖品配置',
         'close' => '关閉活动',
         'export' => '导出记录',

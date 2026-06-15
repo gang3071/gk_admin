@@ -138,12 +138,12 @@ class AgentLotteryTicketActivityController
                     ]);
             });
 
-            // 操作栏 - 代理后台只能查看，不能删除/编辑活动
-            $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
-                // 清空默认操作（删除默认的编辑/删除按钮）
-                $actions->clear();
+            // 代理后台只读：隐藏删除和选择
+            $grid->hideDelete();
+            $grid->hideSelection();
 
-                // 只保留"查看奖品配置"按钮
+            // 操作栏 - 只显示查看按钮
+            $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
                 $actions->prepend(
                     Button::create(admin_trans('lottery_ticket.action.prize_config'))
                         ->type('link')
@@ -151,11 +151,10 @@ class AgentLotteryTicketActivityController
                         ->modal([$this, 'prizeConfig'], ['activity_id' => $data->id])
                         ->width('80%')
                 );
-            });
 
-            // 隐藏批量操作和创建按钮（代理后台只读）
-            $grid->hideBatchActions();
-            $grid->hideCreateButton();
+                $actions->hideEdit();
+                $actions->hideDel();
+            });
         });
     }
 
@@ -185,9 +184,15 @@ class AgentLotteryTicketActivityController
             $grid->title(admin_trans('lottery_ticket.fields.prize_level_config'));
             $grid->bordered(true);
             $grid->autoHeight();
-            $grid->hideCreateButton();
-            $grid->hideActions();
-            $grid->hideBatchActions();
+
+            // 代理后台只读
+            $grid->hideDelete();
+            $grid->hideSelection();
+
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
 
             // 列定义
             $grid->column('level_rank', admin_trans('lottery_ticket.prize_level_fields.level_rank'))

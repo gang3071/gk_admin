@@ -32,6 +32,7 @@ return [
         'usage_rate' => 'Usage Rate',
         'pending_count' => 'Pending',
         'max_ticket_no' => 'Max Ticket No',  // ⭐ Added: Maximum ball number for lottery draw
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => 'Prize Config',
         'created_at' => 'Created At',
         'prize_level_config' => 'Prize Level Config',
@@ -185,6 +186,7 @@ return [
         'edit' => '编輯活动',
         'view' => '查看詳情',
         'view_detail' => '查看詳情',
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => 'Prize Config',
         'close' => '关閉活动',
         'export' => 'Export Records',

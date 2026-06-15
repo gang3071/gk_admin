@@ -185,6 +185,7 @@ return [
         'edit' => '編輯活動',
         'view' => '查看詳情',
         'view_detail' => '查看詳情',
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => '獎品配置',
         'close' => '關閉活動',
         'export' => '導出記錄',

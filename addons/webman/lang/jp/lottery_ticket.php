@@ -32,6 +32,7 @@ return [
         'usage_rate' => '使用率',
         'pending_count' => '未配布',
         'max_ticket_no' => '最大チケット番号',  // ⭐ 新規追加：抽選時のボール最大番号
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => '賞品設定',
         'created_at' => '作成日時',
         'prize_level_config' => '賞品レベル設定',
@@ -185,6 +186,7 @@ return [
         'edit' => 'アクティビティ編集',
         'view' => '詳細を表示',
         'view_detail' => '詳細を表示',
+        'operation' => '操作',  // ⭐ 新增
         'prize_config' => '賞品設定',
         'close' => 'アクティビティをクローズ',
         'export' => '記録をエクスポート',
