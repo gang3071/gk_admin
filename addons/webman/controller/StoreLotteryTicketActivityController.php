@@ -177,25 +177,31 @@ class StoreLotteryTicketActivityController
             throw new \Exception(admin_trans('common.no_permission'));
         }
 
-        return Grid::create(new LotteryTicketPrizeLevel(), function (Grid $grid) use ($activity) {
-            $grid->model()->where('activity_id', $activity->id)
-                ->orderBy('level_rank', 'asc');
+        // 创建一个虚拟数据集：活动信息 + 奖品列表
+        $detailData = [
+            // 第一行：活动基本信息
+            (object)[
+                'id' => 0,
+                'is_header' => true,
+                'activity_name' => $activity->name,
+                'activity_status' => $activity->status,
+                'start_time' => $activity->start_time,
+                'end_time' => $activity->end_time,
+            ]
+        ];
 
-            // 活动详情标题
-            $statusText = match($activity->status) {
-                LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
-                LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
-                LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
-                LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
-                default => $activity->status
-            };
+        // 添加奖品等级数据
+        $prizeLevels = LotteryTicketPrizeLevel::where('activity_id', $activity->id)
+            ->orderBy('level_rank', 'asc')
+            ->get();
 
-            $grid->title(
-                admin_trans('lottery_ticket.title.activity_detail') . ' - ' . $activity->name .
-                ' (' . $statusText . ')' .
-                ' | ' . admin_trans('lottery_ticket.fields.start_time') . ': ' . $activity->start_time .
-                ' | ' . admin_trans('lottery_ticket.fields.end_time') . ': ' . $activity->end_time
-            );
+        foreach ($prizeLevels as $level) {
+            $level->is_header = false;
+            $detailData[] = $level;
+        }
+
+        return Grid::create($detailData, function (Grid $grid) use ($activity) {
+            $grid->title(admin_trans('lottery_ticket.title.activity_detail'));
             $grid->bordered(true);
             $grid->autoHeight();
 
@@ -208,38 +214,32 @@ class StoreLotteryTicketActivityController
                 $actions->hideEdit();
             });
 
-            // 列定义
-            $grid->column('level_rank', admin_trans('lottery_ticket.prize_level_fields.level_rank'))
-                ->width(100)->align('center');
+            // 使用单列显示所有信息
+            $grid->column('content', admin_trans('lottery_ticket.fields.activity_name'))
+                ->width(800)
+                ->display(function ($val, $data) {
+                    if (!empty($data->is_header)) {
+                        // 活动基本信息行
+                        $statusMap = [
+                            LotteryTicketActivity::STATUS_NOT_STARTED => ['text' => admin_trans('lottery_ticket.status.not_started'), 'color' => 'default'],
+                            LotteryTicketActivity::STATUS_ONGOING => ['text' => admin_trans('lottery_ticket.status.ongoing'), 'color' => 'processing'],
+                            LotteryTicketActivity::STATUS_ENDED => ['text' => admin_trans('lottery_ticket.status.ended'), 'color' => 'success'],
+                            LotteryTicketActivity::STATUS_CLOSED => ['text' => admin_trans('lottery_ticket.status.closed'), 'color' => 'error'],
+                        ];
+                        $statusConfig = $statusMap[$data->activity_status] ?? ['text' => $data->activity_status, 'color' => 'default'];
 
-            $grid->column('level_name', admin_trans('lottery_ticket.prize_level_fields.level_name'))
-                ->width(150)->align('center');
-
-            $grid->column('prize_amount', admin_trans('lottery_ticket.fields.prize_amount'))
-                ->width(120)->align('center')
-                ->display(function ($val) {
-                    return number_format($val, 2);
-                });
-
-            $grid->column('prize_count', admin_trans('lottery_ticket.fields.prize_count'))
-                ->width(100)->align('center');
-
-            $grid->column('won_count', admin_trans('lottery_ticket.prize_level_fields.won_count'))
-                ->width(100)->align('center')
-                ->display(function ($val) {
-                    return $val > 0 ? Tag::create($val)->color('success') : $val;
-                });
-
-            $grid->column('remaining_count', admin_trans('lottery_ticket.prize_level_fields.remaining_count'))
-                ->width(120)->align('center')
-                ->display(function ($val, LotteryTicketPrizeLevel $data) {
-                    $remaining = $data->prize_count - $data->won_count;
-                    if ($remaining <= 0) {
-                        return Tag::create('0')->color('error');
-                    } elseif ($remaining <= 3) {
-                        return Tag::create($remaining)->color('warning');
+                        return admin_trans('lottery_ticket.fields.activity_name') . '：' . $data->activity_name . ' | ' .
+                               admin_trans('lottery_ticket.fields.status') . '：' . $statusConfig['text'] . ' | ' .
+                               admin_trans('lottery_ticket.fields.start_time') . '：' . $data->start_time . ' | ' .
+                               admin_trans('lottery_ticket.fields.end_time') . '：' . $data->end_time;
                     } else {
-                        return Tag::create($remaining)->color('success');
+                        // 奖品等级行
+                        $remaining = $data->prize_count - $data->won_count;
+                        return $data->level_name . ' - ' .
+                               admin_trans('lottery_ticket.fields.prize_amount') . '：' . number_format($data->prize_amount, 2) . ' | ' .
+                               admin_trans('lottery_ticket.fields.prize_count') . '：' . $data->prize_count . ' | ' .
+                               admin_trans('lottery_ticket.prize_level_fields.won_count') . '：' . $data->won_count . ' | ' .
+                               admin_trans('lottery_ticket.prize_level_fields.remaining_count') . '：' . $remaining;
                     }
                 });
         });
