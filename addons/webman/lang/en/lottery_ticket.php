@@ -169,10 +169,12 @@ return [
         'level_name' => 'Level Name',
         'prize_type' => 'Prize Type',
         'prize_amount' => 'Prize Amount',
-        'prize_item_name' => '实物名称',
-        'prize_item_image' => '实物图片',
+        'prize_item_name' => 'Item Name',
+        'prize_item_image' => 'Item Image',
         'prize_count' => 'Prize Count',
-        'win_probability' => '中奖概率(%)',
+        'won_count' => 'Won Count',  // ⭐ Added
+        'remaining_count' => 'Remaining',  // ⭐ Added
+        'win_probability' => 'Win Probability (%)',
         'description' => 'Prize Description',
     ],
 
@@ -348,6 +350,13 @@ return [
         'prize_config_section' => 'Prize Level Config',
         'no_vip_data' => 'No VIP data available',
         'no_vip_config' => 'VIP not configured',
+    ],
+
+    // Filter ⭐ Added
+    'filter' => [
+        'time_range' => 'Time Range',
+        'create_time_range' => 'Create Time Range',
+        'activity_time_range' => 'Activity Time Range',
     ],
 
     // 验证消息

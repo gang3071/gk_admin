@@ -32,7 +32,7 @@ class AgentLotteryTicketActivityController
             $admin = Admin::user();
             $departmentId = $admin->department_id;
 
-            // 数据权限过滤：只显示当前代理的活动
+            // 数据权限过滤：只显示当前代理所属渠道的活动（代理查看整个渠道的活动）
             $grid->model()->where('department_id', $departmentId);
 
             $grid->title(admin_trans('lottery_ticket.title.main'));
@@ -85,36 +85,33 @@ class AgentLotteryTicketActivityController
                     return Tag::create($config['text'])->color($config['color']);
                 });
 
-            $grid->column('total_tickets', admin_trans('lottery_ticket.fields.total_tickets'))
-                ->width(100)->align('center')
-                ->display(function ($val) {
-                    return number_format($val);
-                });
-
-            $grid->column('used_tickets', admin_trans('lottery_ticket.fields.used_tickets'))
-                ->width(100)->align('center')
-                ->display(function ($val) {
-                    return number_format($val);
-                });
-
-            $grid->column('usage_rate', admin_trans('lottery_ticket.fields.usage_rate'))
-                ->width(100)->align('center')
+            // ⭐ 最大券号 - 方便店家抽奖时知道放多少球的号码
+            $grid->column('max_ticket_no', admin_trans('lottery_ticket.fields.max_ticket_no'))
+                ->width(120)->align('center')
                 ->display(function ($val, LotteryTicketActivity $data) {
-                    if ($data->total_tickets == 0) {
-                        return '0%';
+                    // 查询当前活动的最大券号（从 lottery_ticket 表中查询）
+                    $maxTicket = \addons\webman\model\LotteryTicket::where('activity_id', $data->id)
+                        ->orderBy('ticket_no', 'desc')
+                        ->value('ticket_no');
+
+                    if ($maxTicket) {
+                        return Tag::create($maxTicket)->color('blue');
+                    } else {
+                        return Tag::create('000000')->color('default');
                     }
-                    $rate = ($data->used_tickets / $data->total_tickets) * 100;
-                    return number_format($rate, 2) . '%';
                 });
 
+            // ⭐ 待发放奖励数 - 统计有实际奖金的待发放中奖记录
             $grid->column('pending_count', admin_trans('lottery_ticket.fields.pending_count'))
                 ->width(100)->align('center')
                 ->display(function ($val, LotteryTicketActivity $data) {
-                    // 统计待发放的中奖记录数量
+                    // 只统计有奖金的待发放记录（排除未中奖和0元奖）
                     $count = LotteryTicketRecord::where('activity_id', $data->id)
                         ->where('status', LotteryTicketRecord::STATUS_PENDING)
+                        ->where('prize_type', '!=', LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+                        ->where('prize_amount', '>', 0)
                         ->count();
-                    return $count > 0 ? Tag::create($count)->color('warning') : $count;
+                    return $count > 0 ? Tag::create($count)->color('warning') : Tag::create('0')->color('success');
                 });
 
             $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))
@@ -141,7 +138,7 @@ class AgentLotteryTicketActivityController
                     ]);
             });
 
-            // 操作栏
+            // 操作栏 - 代理后台只能查看，不能删除/编辑活动
             $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
                 // 查看奖品配置
                 $actions->prepend(
@@ -152,6 +149,10 @@ class AgentLotteryTicketActivityController
                         ->width('80%')
                 );
             });
+
+            // 隐藏批量操作和创建按钮（代理后台只查看）
+            $grid->hideBatchActions();
+            $grid->hideCreateButton();
         });
     }
 

@@ -172,6 +172,8 @@ return [
         'prize_item_name' => '實物名稱',
         'prize_item_image' => '實物圖片',
         'prize_count' => '獎品數量',
+        'won_count' => '已中獎數',  // ⭐ 新增
+        'remaining_count' => '剩餘數量',  // ⭐ 新增
         'win_probability' => '中獎概率(%)',
         'description' => '獎品描述',
     ],
@@ -348,6 +350,13 @@ return [
         'prize_config_section' => '獎品等級配置',
         'no_vip_data' => '暫無VIP等級數據',
         'no_vip_config' => '未配置VIP等級',
+    ],
+
+    // 筛选器 ⭐ 新增
+    'filter' => [
+        'time_range' => '時間範圍',
+        'create_time_range' => '創建時間範圍',
+        'activity_time_range' => '活動時間範圍',
     ],
 
     // 验证消息
