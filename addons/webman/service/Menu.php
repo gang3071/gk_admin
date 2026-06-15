@@ -33,7 +33,13 @@ class Menu extends MenuAbstract
         $departmentId = Admin::user()->department_id;
         /** @var Channel $channel */
         $channel = null;
+
+        // 获取渠道信息（渠道用户和代理用户都需要检查所属渠道的功能开关）
         if (Admin::user()->type == AdminDepartment::TYPE_CHANNEL) {
+            // 渠道用户：直接获取当前渠道
+            $channel = Channel::where('department_id', $departmentId)->first();
+        } elseif (Admin::user()->type == AdminDepartment::TYPE_AGENT) {
+            // 代理用户：获取所属渠道（代理的 department_id 就是渠道的 department_id）
             $channel = Channel::where('department_id', $departmentId)->first();
         }
 

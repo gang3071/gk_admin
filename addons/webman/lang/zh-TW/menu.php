@@ -284,5 +284,6 @@ return [
         'agent_lottery_ticket_activity_list' => '摸獎券活動',
         'agent_lottery_ticket_list' => '摸獎券列表',
         'agent_lottery_ticket_record_list' => '中獎記錄',
+        'agent_lottery_ticket_win_record_list' => '中獎記錄',  // 旧菜单名（兼容）
     ]
 ];

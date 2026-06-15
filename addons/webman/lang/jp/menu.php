@@ -285,5 +285,6 @@ return [
         'agent_lottery_ticket_activity_list' => '抽選券キャンペーン',
         'agent_lottery_ticket_list' => '抽選券リスト',
         'agent_lottery_ticket_record_list' => '当選記録',
+        'agent_lottery_ticket_win_record_list' => '当選記録',  // 旧メニュー名（互換性）
     ]
 ];

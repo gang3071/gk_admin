@@ -285,5 +285,6 @@ return [
         'agent_lottery_ticket_activity_list' => 'Lottery Activities',
         'agent_lottery_ticket_list' => 'Lottery Tickets',
         'agent_lottery_ticket_record_list' => 'Winning Records',
+        'agent_lottery_ticket_win_record_list' => 'Winning Records',  // Old menu name (compatibility)
     ]
 ];

@@ -99,17 +99,30 @@ class MenuConstant
      * 控制字段：channel.lottery_ticket_enabled
      *
      * ⚠️ 注意：菜单ID需要在admin_menu表中创建后才能生效
-     * 当前假设菜单name为：
+     *
+     * 渠道后台菜单:
      * - lottery_ticket_manage (父菜单)
      * - lottery_ticket_dashboard (进行中的活动)
      * - lottery_ticket_history (历史活动记录)
      * - lottery_ticket_records (中奖记录)
+     *
+     * 代理后台菜单:
+     * - agent_lottery_ticket_management (父菜单)
+     * - agent_lottery_ticket_activity_list (摸奖券活动)
+     * - agent_lottery_ticket_list (摸奖券列表)
+     * - agent_lottery_ticket_record_list (中奖记录)
      */
     const LOTTERY_TICKET_MENUS = [
-        'lottery_ticket_manage',         // 摸奖券管理（父菜单）
-        'lottery_ticket_dashboard',      // 进行中的活动
-        'lottery_ticket_history',        // 历史活动记录
-        'lottery_ticket_records',        // 中奖记录
+        // 渠道后台
+        'lottery_ticket_manage',                // 摸奖券管理（父菜单）
+        'lottery_ticket_dashboard',             // 进行中的活动
+        'lottery_ticket_history',               // 历史活动记录
+        'lottery_ticket_records',               // 中奖记录
+        // 代理后台
+        'agent_lottery_ticket_management',      // 摸奖券管理（父菜单）
+        'agent_lottery_ticket_activity_list',   // 摸奖券活动
+        'agent_lottery_ticket_list',            // 摸奖券列表
+        'agent_lottery_ticket_record_list',     // 中奖记录
     ];
 
     /**
