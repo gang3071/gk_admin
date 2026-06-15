@@ -44,7 +44,7 @@ class AgentLotteryTicketActivityController
 
             // 筛选条件
             if (!empty($requestFilter['activity_name'])) {
-                $grid->model()->where('activity_name', 'like', '%' . $requestFilter['activity_name'] . '%');
+                $grid->model()->where('name', 'like', '%' . $requestFilter['activity_name'] . '%');
             }
             if (isset($requestFilter['status']) && $requestFilter['status'] !== '') {
                 $grid->model()->where('status', $requestFilter['status']);
@@ -63,7 +63,7 @@ class AgentLotteryTicketActivityController
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))
                 ->width(80)->align('center')->fixed(true);
 
-            $grid->column('activity_name', admin_trans('lottery_ticket.fields.activity_name'))
+            $grid->column('name', admin_trans('lottery_ticket.fields.activity_name'))
                 ->width(200)->align('left')->fixed(true);
 
             $grid->column('start_time', admin_trans('lottery_ticket.fields.start_time'))

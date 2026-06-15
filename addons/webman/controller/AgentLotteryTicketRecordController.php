@@ -29,8 +29,15 @@ class AgentLotteryTicketRecordController
             $admin = Admin::user();
             $departmentId = $admin->department_id;
 
-            // 数据权限过滤：直接过滤 department_id
-            $grid->model()->where('department_id', $departmentId);
+            // ⭐ 数据权限过滤：只显示当前代理下玩家的中奖记录
+            // 使用 EXISTS 子查询，避免 IN 数组过大导致性能问题
+            // 注意：代理用 agent_admin_id 字段，不是 department_id
+            $grid->model()->whereExists(function ($query) use ($admin) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'lottery_ticket_record.player_id')
+                    ->where('player.agent_admin_id', $admin->id);  // ✅ 使用 agent_admin_id
+            });
 
             $grid->title(admin_trans('lottery_ticket.title.record_list'));
             $grid->bordered(true);
@@ -79,7 +86,7 @@ class AgentLotteryTicketRecordController
             $grid->column('ticket_no', admin_trans('lottery_ticket.fields.ticket_no'))
                 ->width(150)->align('center')->fixed(true);
 
-            $grid->column('activity.activity_name', admin_trans('lottery_ticket.fields.activity_name'))
+            $grid->column('activity.name', admin_trans('lottery_ticket.fields.activity_name'))
                 ->width(200)->align('left');
 
             $grid->column('player.uuid', admin_trans('player.fields.device_uuid'))
@@ -143,8 +150,8 @@ class AgentLotteryTicketRecordController
                 // 活动选择
                 $activities = LotteryTicketActivity::where('department_id', $departmentId)
                     ->orderBy('created_at', 'desc')
-                    ->get(['id', 'activity_name'])
-                    ->pluck('activity_name', 'id')
+                    ->get(['id', 'name'])
+                    ->pluck('name', 'id')
                     ->toArray();
 
                 $filter->eq()->select('activity_id')
