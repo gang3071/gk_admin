@@ -4,15 +4,13 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
+use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
 use ExAdmin\ui\component\common\Button;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\layout\card\Card;
-use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -161,18 +159,17 @@ class StoreLotteryTicketActivityController
     }
 
     /**
-     * 查看活动详情
+     * 查看活动详情（奖品配置）
      * @auth true
      * @group store
      * @param int $activity_id
-     * @return Card
+     * @return Grid
      */
-    public function detail(int $activity_id): Card
+    public function detail(int $activity_id): Grid
     {
         // 验证活动是否属于当前店家
         $admin = Admin::user();
-        $activity = LotteryTicketActivity::with(['prizeLevels'])
-            ->where('id', $activity_id)
+        $activity = LotteryTicketActivity::where('id', $activity_id)
             ->where('department_id', $admin->department_id)
             ->first();
 
@@ -180,83 +177,57 @@ class StoreLotteryTicketActivityController
             throw new \Exception(admin_trans('common.no_permission'));
         }
 
-        return Card::create([
-            // 活动基本信息
-            Html::create(admin_trans('lottery_ticket.title.activity_detail'))->tag('h3')
-                ->style(['marginBottom' => '20px']),
+        return Grid::create(new LotteryTicketPrizeLevel(), function (Grid $grid) use ($activity) {
+            $grid->model()->where('activity_id', $activity->id)
+                ->orderBy('level_rank', 'asc');
 
-            Row::create()->column([
-                Html::create(admin_trans('lottery_ticket.fields.name') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                Html::create($activity->name),
-            ])->style(['marginBottom' => '12px']),
+            $grid->title(admin_trans('lottery_ticket.fields.prize_level_config') . ' - ' . $activity->name);
+            $grid->bordered(true);
+            $grid->autoHeight();
 
-            Row::create()->column([
-                Html::create(admin_trans('lottery_ticket.fields.status') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                Tag::create($activity->status == LotteryTicketActivity::STATUS_ONGOING
-                    ? admin_trans('lottery_ticket.status.ongoing')
-                    : admin_trans('lottery_ticket.status.ended')
-                )->color($activity->status == LotteryTicketActivity::STATUS_ONGOING ? 'processing' : 'default'),
-            ])->style(['marginBottom' => '12px']),
+            // 店家后台只读
+            $grid->hideDelete();
+            $grid->hideSelection();
 
-            Row::create()->column([
-                Html::create(admin_trans('lottery_ticket.fields.start_time') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                Html::create($activity->start_time),
-            ])->style(['marginBottom' => '12px']),
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
 
-            Row::create()->column([
-                Html::create(admin_trans('lottery_ticket.fields.end_time') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
-                Html::create($activity->end_time),
-            ])->style(['marginBottom' => '20px']),
+            // 列定义
+            $grid->column('level_rank', admin_trans('lottery_ticket.prize_level_fields.level_rank'))
+                ->width(100)->align('center');
 
-            // 奖品等级配置
-            Html::create(admin_trans('lottery_ticket.fields.prize_level_config'))->tag('h4')
-                ->style(['marginBottom' => '16px']),
+            $grid->column('level_name', admin_trans('lottery_ticket.prize_level_fields.level_name'))
+                ->width(150)->align('center');
 
-            $this->renderPrizeLevels($activity->prizeLevels),
-        ])->bodyStyle(['padding' => '24px']);
-    }
+            $grid->column('prize_amount', admin_trans('lottery_ticket.fields.prize_amount'))
+                ->width(120)->align('center')
+                ->display(function ($val) {
+                    return number_format($val, 2);
+                });
 
-    /**
-     * 渲染奖品等级列表
-     * @param $prizeLevels
-     * @return Html
-     */
-    private function renderPrizeLevels($prizeLevels): Html
-    {
-        if ($prizeLevels->isEmpty()) {
-            return Html::create(admin_trans('lottery_ticket.message.no_prize_config'))
-                ->style(['color' => '#999', 'textAlign' => 'center', 'padding' => '20px']);
-        }
+            $grid->column('prize_count', admin_trans('lottery_ticket.fields.prize_count'))
+                ->width(100)->align('center');
 
-        $rows = [];
-        foreach ($prizeLevels as $level) {
-            $remaining = $level->prize_count - $level->won_count;
-            $rows[] = Row::create()->column([
-                Html::create()->content([
-                    Html::create($level->level_name)->style([
-                        'fontWeight' => 'bold',
-                        'fontSize' => '14px',
-                        'marginBottom' => '8px'
-                    ]),
-                    Html::create(admin_trans('lottery_ticket.fields.prize_amount') . '：' . number_format($level->prize_amount, 2))
-                        ->style(['marginBottom' => '4px', 'color' => '#666']),
-                    Html::create(admin_trans('lottery_ticket.fields.prize_count') . '：' . $level->prize_count)
-                        ->style(['marginBottom' => '4px', 'color' => '#666']),
-                    Html::create(admin_trans('lottery_ticket.prize_level_fields.won_count') . '：' . $level->won_count)
-                        ->style(['marginBottom' => '4px', 'color' => '#666']),
-                    Html::create(admin_trans('lottery_ticket.prize_level_fields.remaining_count') . '：')
-                        ->style(['display' => 'inline', 'color' => '#666']),
-                    Tag::create($remaining)->color($remaining > 0 ? 'success' : 'error'),
-                ]),
-            ])->style([
-                'border' => '1px solid #e8e8e8',
-                'padding' => '16px',
-                'marginBottom' => '12px',
-                'borderRadius' => '4px',
-                'backgroundColor' => '#fafafa'
-            ]);
-        }
+            $grid->column('won_count', admin_trans('lottery_ticket.prize_level_fields.won_count'))
+                ->width(100)->align('center')
+                ->display(function ($val) {
+                    return $val > 0 ? Tag::create($val)->color('success') : $val;
+                });
 
-        return Html::create()->content($rows);
+            $grid->column('remaining_count', admin_trans('lottery_ticket.prize_level_fields.remaining_count'))
+                ->width(120)->align('center')
+                ->display(function ($val, LotteryTicketPrizeLevel $data) {
+                    $remaining = $data->prize_count - $data->won_count;
+                    if ($remaining <= 0) {
+                        return Tag::create('0')->color('error');
+                    } elseif ($remaining <= 3) {
+                        return Tag::create($remaining)->color('warning');
+                    } else {
+                        return Tag::create($remaining)->color('success');
+                    }
+                });
+        });
     }
 }

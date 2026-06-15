@@ -285,5 +285,10 @@ return [
         'agent_lottery_ticket_list' => '摸獎券列表',
         'agent_lottery_ticket_record_list' => '中獎記錄',
         'agent_lottery_ticket_win_record_list' => '中獎記錄',  // 旧菜单名（兼容）
+        //店家后台摸奖券管理
+        'store_lottery_ticket_management' => '摸獎券管理',
+        'store_lottery_ticket_activity_list' => '摸獎券活動',
+        'store_lottery_ticket_list' => '摸獎券列表',
+        'store_lottery_ticket_record_list' => '中獎記錄',
     ]
 ];

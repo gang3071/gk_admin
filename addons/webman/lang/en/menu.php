@@ -286,5 +286,10 @@ return [
         'agent_lottery_ticket_list' => 'Lottery Tickets',
         'agent_lottery_ticket_record_list' => 'Winning Records',
         'agent_lottery_ticket_win_record_list' => 'Winning Records',  // Old menu name (compatibility)
+        //Store Lottery Ticket Management
+        'store_lottery_ticket_management' => 'Lottery Ticket Management',
+        'store_lottery_ticket_activity_list' => 'Lottery Activities',
+        'store_lottery_ticket_list' => 'Lottery Tickets',
+        'store_lottery_ticket_record_list' => 'Winning Records',
     ]
 ];
