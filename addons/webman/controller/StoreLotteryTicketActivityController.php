@@ -181,7 +181,21 @@ class StoreLotteryTicketActivityController
             $grid->model()->where('activity_id', $activity->id)
                 ->orderBy('level_rank', 'asc');
 
-            $grid->title(admin_trans('lottery_ticket.fields.prize_level_config') . ' - ' . $activity->name);
+            // 活动详情标题
+            $statusText = match($activity->status) {
+                LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
+                LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
+                LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
+                default => $activity->status
+            };
+
+            $grid->title(
+                admin_trans('lottery_ticket.title.activity_detail') . ' - ' . $activity->name .
+                ' (' . $statusText . ')' .
+                ' | ' . admin_trans('lottery_ticket.fields.start_time') . ': ' . $activity->start_time .
+                ' | ' . admin_trans('lottery_ticket.fields.end_time') . ': ' . $activity->end_time
+            );
             $grid->bordered(true);
             $grid->autoHeight();
 

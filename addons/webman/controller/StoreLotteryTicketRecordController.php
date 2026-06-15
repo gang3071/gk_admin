@@ -117,7 +117,7 @@ class StoreLotteryTicketRecordController
                 ->display(function ($val) {
                     $statusMap = [
                         LotteryTicketRecord::STATUS_PENDING => ['text' => admin_trans('lottery_ticket.record_status.pending'), 'color' => 'warning'],
-                        LotteryTicketRecord::STATUS_COMPLETED => ['text' => admin_trans('lottery_ticket.record_status.completed'), 'color' => 'success'],
+                        LotteryTicketRecord::STATUS_CLAIMED => ['text' => admin_trans('lottery_ticket.record_status.claimed'), 'color' => 'success'],
                         LotteryTicketRecord::STATUS_CANCELLED => ['text' => admin_trans('lottery_ticket.record_status.cancelled'), 'color' => 'error'],
                     ];
                     $config = $statusMap[$val] ?? ['text' => $val, 'color' => 'default'];
@@ -156,7 +156,7 @@ class StoreLotteryTicketRecordController
                     ->placeholder(admin_trans('lottery_ticket.fields.status'))
                     ->options([
                         LotteryTicketRecord::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),
-                        LotteryTicketRecord::STATUS_COMPLETED => admin_trans('lottery_ticket.record_status.completed'),
+                        LotteryTicketRecord::STATUS_CLAIMED => admin_trans('lottery_ticket.record_status.claimed'),
                         LotteryTicketRecord::STATUS_CANCELLED => admin_trans('lottery_ticket.record_status.cancelled'),
                     ]);
             });
