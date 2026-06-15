@@ -291,5 +291,15 @@ return [
         'store_lottery_ticket_activity_list' => '摸奖券活动',
         'store_lottery_ticket_list' => '摸奖券列表',
         'store_lottery_ticket_record_list' => '中奖记录',
+    ],
+    'help' => [
+        'controlled_menu' => '此菜单受功能开关控制，名称不可修改',
+        'name_readonly' => '菜单名称由迁移文件管理，不可通过界面修改',
+        'use_migration' => '（请使用迁移文件创建菜单）',
+        'create_by_migration' => '菜单必须通过迁移文件创建，不能通过界面直接添加',
+    ],
+    'error' => [
+        'create_disabled' => '禁止通过界面创建菜单，请使用迁移文件（Phinx）创建',
+        'name_readonly' => '菜单名称为只读，不可修改',
     ]
 ];

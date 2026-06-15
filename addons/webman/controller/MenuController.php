@@ -89,6 +89,9 @@ class MenuController
             // ✅ 只允许编辑，禁用创建和删除
             $grid->setForm()->modal($this->form());
 
+            // ❌ 禁用创建功能（菜单应通过迁移文件创建）
+            $grid->hideCreateButton();
+
             // ❌ 禁用删除功能（隐藏操作列中的删除按钮）
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();  // 隐藏每行的删除按钮
@@ -99,9 +102,6 @@ class MenuController
 
             // ❌ 禁用回收站功能
             $grid->hideTrashed();
-
-            // ❌ 设置空工具栏（禁用创建按钮和其他工具按钮）
-            $grid->tools([]);
 
             $grid->updated(function (){
                 return message_success(admin_trans('grid.update_success'))->refreshMenu();
@@ -120,16 +120,26 @@ class MenuController
         return Form::create(new $this->model,function (Form $form) use($pid){
             $form->title(admin_trans('menu.title'));
 
-            // ⚠️ 编辑时禁用name字段修改
+            // ⚠️ name字段完全不可编辑（所有菜单都应通过迁移文件管理）
             if ($form->isEdit()) {
                 $menuName = $form->input('name');
                 $isControlled = MenuConstant::isControlledMenu($menuName);
 
-                $form->desc('name', admin_trans('menu.fields.name'))
-                    ->value($menuName . ($isControlled ? ' 🔒 (受功能开关控制)' : ''))
-                    ->help($isControlled ? admin_trans('menu.help.controlled_menu') : '');
+                // ✅ 只读显示name，使用hidden字段保存原始值
+                $form->desc('name_display', admin_trans('menu.fields.name'))
+                    ->value($menuName)
+                    ->help($isControlled ? '🔒 ' . admin_trans('menu.help.controlled_menu') : admin_trans('menu.help.name_readonly'));
+
+                // 隐藏字段保存原始name值
+                $form->hidden('name')->default($menuName);
             } else {
-                $form->text('name', admin_trans('menu.fields.name'))->required();
+                // 新增菜单时也应该只读，提示通过迁移文件创建
+                $form->desc('name_display', admin_trans('menu.fields.name'))
+                    ->value(admin_trans('menu.help.use_migration'))
+                    ->help(admin_trans('menu.help.create_by_migration'));
+
+                // 隐藏字段，新增时不保存name（或保存空值，取决于业务逻辑）
+                $form->hidden('name')->default('');
             }
             $form->radio('type', admin_trans('menu.fields.type'))
                 ->default(AdminDepartment::TYPE_DEPARTMENT)
@@ -176,6 +186,25 @@ class MenuController
                 ->required();
             $form->number('sort', admin_trans('menu.fields.sort'))
                 ->default($this->model::where('pid', $pid)->max('sort') + 1);
+
+            // ✅ 保存前验证（所有菜单通过迁移文件管理）
+            $form->saving(function (Form $form) {
+                if (!$form->isEdit()) {
+                    // 新增时：禁止通过界面创建菜单，返回错误
+                    return message_error(admin_trans('menu.error.create_disabled'));
+                }
+
+                // 编辑时：检查name是否被修改（通过hidden字段提交的是原始值）
+                $submittedName = $form->input('name');
+                $menuId = $form->input('id');
+                $menu = $this->model::find($menuId);
+
+                if ($menu && $submittedName !== $menu->name) {
+                    // name被修改了，拒绝保存
+                    return message_error(admin_trans('menu.error.name_readonly'));
+                }
+            });
+
             $form->saved(function(){
                 return message_success(admin_trans('form.save_success'))->refreshMenu();
             });

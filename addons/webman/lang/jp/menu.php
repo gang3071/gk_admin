@@ -291,5 +291,15 @@ return [
         'store_lottery_ticket_activity_list' => '抽選券キャンペーン',
         'store_lottery_ticket_list' => '抽選券リスト',
         'store_lottery_ticket_record_list' => '当選記録',
+    ],
+    'help' => [
+        'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',
+        'name_readonly' => 'メニュー名はマイグレーションファイルで管理されており、UIから変更できません',
+        'use_migration' => '（マイグレーションファイルを使用してメニューを作成してください）',
+        'create_by_migration' => 'メニューはマイグレーションファイルで作成する必要があり、UIから直接追加できません',
+    ],
+    'error' => [
+        'create_disabled' => 'UIからのメニュー作成は無効です。マイグレーションファイル（Phinx）を使用してください',
+        'name_readonly' => 'メニュー名は読み取り専用です。変更することはできません',
     ]
 ];

@@ -291,5 +291,15 @@ return [
         'store_lottery_ticket_activity_list' => 'Lottery Activities',
         'store_lottery_ticket_list' => 'Lottery Tickets',
         'store_lottery_ticket_record_list' => 'Winning Records',
+    ],
+    'help' => [
+        'controlled_menu' => 'This menu is controlled by feature toggle, name cannot be modified',
+        'name_readonly' => 'Menu name is managed by migration files, cannot be modified through UI',
+        'use_migration' => '(Please use migration files to create menus)',
+        'create_by_migration' => 'Menus must be created through migration files, not through UI',
+    ],
+    'error' => [
+        'create_disabled' => 'Creating menus through UI is disabled, please use migration files (Phinx)',
+        'name_readonly' => 'Menu name is read-only and cannot be modified',
     ]
 ];

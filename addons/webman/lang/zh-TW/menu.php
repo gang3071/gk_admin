@@ -290,5 +290,15 @@ return [
         'store_lottery_ticket_activity_list' => '摸獎券活動',
         'store_lottery_ticket_list' => '摸獎券列表',
         'store_lottery_ticket_record_list' => '中獎記錄',
+    ],
+    'help' => [
+        'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',
+        'name_readonly' => '菜單名稱由遷移文件管理，不可通過界面修改',
+        'use_migration' => '（請使用遷移文件創建菜單）',
+        'create_by_migration' => '菜單必須通過遷移文件創建，不能通過界面直接添加',
+    ],
+    'error' => [
+        'create_disabled' => '禁止通過界面創建菜單，請使用遷移文件（Phinx）創建',
+        'name_readonly' => '菜單名稱為只讀，不可修改',
     ]
 ];

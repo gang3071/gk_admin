@@ -165,7 +165,7 @@ class StoreLotteryTicketActivityController
     public function getActivityDetail()
     {
         $id = Request::input('id');
-        $activity = LotteryTicketActivity::with(['prizeLevels'])->find($id);
+        $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs'])->find($id);
 
         if (!$activity) {
             return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
