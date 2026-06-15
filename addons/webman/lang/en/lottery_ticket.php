@@ -60,6 +60,7 @@ return [
         'draw_time' => 'Draw Time',
         'source' => '來源',
         'used_at' => 'Used At',
+        'expired_at' => 'Expired At',
     ],
 
     // 占位符

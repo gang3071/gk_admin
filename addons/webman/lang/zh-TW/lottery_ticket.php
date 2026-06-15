@@ -59,6 +59,7 @@ return [
         'draw_time' => '抽獎時間',
         'source' => '來源',
         'used_at' => '使用時間',
+        'expired_at' => '過期時間',
     ],
 
     // 占位符

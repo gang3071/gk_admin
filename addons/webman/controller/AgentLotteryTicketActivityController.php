@@ -145,7 +145,7 @@ class AgentLotteryTicketActivityController
             // 操作栏 - 只显示查看按钮
             $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
                 $actions->prepend(
-                    Button::create(admin_trans('lottery_ticket.action.prize_config'))
+                    Button::create(admin_trans('lottery_ticket.action.view_detail'))
                         ->type('link')
                         ->size('small')
                         ->modal([$this, 'prizeConfig'], ['activity_id' => $data->id])
