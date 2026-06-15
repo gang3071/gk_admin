@@ -167,6 +167,13 @@ return [
         'default' => '等级:rank',
     ],
 
+    // 中奖记录字段 ⭐ Added
+    'record_fields' => [
+        'prize_type' => 'Prize Type',
+        'prize_level_name' => 'Prize Level',
+        'draw_time' => 'Draw Time',
+    ],
+
     // 中奖等级字段
     'prize_level_fields' => [
         'level_rank' => 'Level Rank',

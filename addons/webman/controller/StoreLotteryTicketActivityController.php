@@ -4,7 +4,6 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
-use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -148,8 +147,7 @@ class StoreLotteryTicketActivityController
                     Button::create(admin_trans('lottery_ticket.action.view_detail'))
                         ->type('link')
                         ->size('small')
-                        ->modal([$this, 'detail'], ['activity_id' => $data->id])
-                        ->width('90%')
+                        ->drawer([$this, 'getActivityDetail'], ['id' => $data->id])
                 );
 
                 $actions->hideEdit();
@@ -159,89 +157,25 @@ class StoreLotteryTicketActivityController
     }
 
     /**
-     * 查看活动详情（奖品配置）
+     * 获取活动详情（API接口）
      * @auth true
      * @group store
-     * @param int $activity_id
-     * @return Grid
+     * @return mixed
      */
-    public function detail(int $activity_id): Grid
+    public function getActivityDetail()
     {
-        // 验证活动是否属于当前店家
-        $admin = Admin::user();
-        $activity = LotteryTicketActivity::where('id', $activity_id)
-            ->where('department_id', $admin->department_id)
-            ->first();
+        $id = Request::input('id');
+        $activity = LotteryTicketActivity::with(['prizeLevels'])->find($id);
 
         if (!$activity) {
-            throw new \Exception(admin_trans('common.no_permission'));
+            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
-        // 创建一个虚拟数据集：活动信息 + 奖品列表
-        $detailData = [
-            // 第一行：活动基本信息
-            (object)[
-                'id' => 0,
-                'is_header' => true,
-                'activity_name' => $activity->name,
-                'activity_status' => $activity->status,
-                'start_time' => $activity->start_time,
-                'end_time' => $activity->end_time,
-            ]
-        ];
-
-        // 添加奖品等级数据
-        $prizeLevels = LotteryTicketPrizeLevel::where('activity_id', $activity->id)
-            ->orderBy('level_rank', 'asc')
-            ->get();
-
-        foreach ($prizeLevels as $level) {
-            $level->is_header = false;
-            $detailData[] = $level;
+        // 检查权限
+        if ($activity->department_id != Admin::user()->department_id) {
+            return message_error(admin_trans('common.no_permission'));
         }
 
-        return Grid::create($detailData, function (Grid $grid) use ($activity) {
-            $grid->title(admin_trans('lottery_ticket.title.activity_detail'));
-            $grid->bordered(true);
-            $grid->autoHeight();
-
-            // 店家后台只读
-            $grid->hideDelete();
-            $grid->hideSelection();
-
-            $grid->actions(function (Actions $actions) {
-                $actions->hideDel();
-                $actions->hideEdit();
-            });
-
-            // 使用单列显示所有信息
-            $grid->column('content', admin_trans('lottery_ticket.fields.activity_name'))
-                ->width(800)
-                ->display(function ($val, $data) {
-                    if (!empty($data->is_header)) {
-                        // 活动基本信息行
-                        $statusMap = [
-                            LotteryTicketActivity::STATUS_NOT_STARTED => ['text' => admin_trans('lottery_ticket.status.not_started'), 'color' => 'default'],
-                            LotteryTicketActivity::STATUS_ONGOING => ['text' => admin_trans('lottery_ticket.status.ongoing'), 'color' => 'processing'],
-                            LotteryTicketActivity::STATUS_ENDED => ['text' => admin_trans('lottery_ticket.status.ended'), 'color' => 'success'],
-                            LotteryTicketActivity::STATUS_CLOSED => ['text' => admin_trans('lottery_ticket.status.closed'), 'color' => 'error'],
-                        ];
-                        $statusConfig = $statusMap[$data->activity_status] ?? ['text' => $data->activity_status, 'color' => 'default'];
-
-                        return admin_trans('lottery_ticket.fields.activity_name') . '：' . $data->activity_name . ' | ' .
-                               admin_trans('lottery_ticket.fields.status') . '：' . $statusConfig['text'] . ' | ' .
-                               admin_trans('lottery_ticket.fields.start_time') . '：' . $data->start_time . ' | ' .
-                               admin_trans('lottery_ticket.fields.end_time') . '：' . $data->end_time;
-                    } else {
-                        // 奖品等级行
-                        $remaining = $data->prize_count - $data->won_count;
-                        return $data->level_name . ' - ' .
-                               admin_trans('lottery_ticket.fields.prize_amount') . '：' . number_format($data->prize_amount, 2) . ' | ' .
-                               admin_trans('lottery_ticket.fields.prize_count') . '：' . $data->prize_count . ' | ' .
-                               admin_trans('lottery_ticket.prize_level_fields.won_count') . '：' . $data->won_count . ' | ' .
-                               admin_trans('lottery_ticket.prize_level_fields.remaining_count') . '：' . $remaining;
-                    }
-                });
-        });
+        return \ExAdmin\ui\response\Response::success($activity->toArray());
     }
 }
