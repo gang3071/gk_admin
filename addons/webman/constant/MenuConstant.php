@@ -111,6 +111,12 @@ class MenuConstant
      * - agent_lottery_ticket_activity_list (摸奖券活动)
      * - agent_lottery_ticket_list (摸奖券列表)
      * - agent_lottery_ticket_record_list (中奖记录)
+     *
+     * 店家后台菜单:
+     * - store_lottery_ticket_management (父菜单)
+     * - store_lottery_ticket_activity_list (摸奖券活动)
+     * - store_lottery_ticket_list (摸奖券列表)
+     * - store_lottery_ticket_record_list (中奖记录)
      */
     const LOTTERY_TICKET_MENUS = [
         // 渠道后台
@@ -123,6 +129,11 @@ class MenuConstant
         'agent_lottery_ticket_activity_list',   // 摸奖券活动
         'agent_lottery_ticket_list',            // 摸奖券列表
         'agent_lottery_ticket_record_list',     // 中奖记录
+        // 店家后台
+        'store_lottery_ticket_management',      // 摸奖券管理（父菜单）
+        'store_lottery_ticket_activity_list',   // 摸奖券活动
+        'store_lottery_ticket_list',            // 摸奖券列表
+        'store_lottery_ticket_record_list',     // 中奖记录
     ];
 
     /**
