@@ -280,5 +280,10 @@ return [
         'lottery_ticket_dashboard' => '実施中のキャンペーン',
         'lottery_ticket_history' => 'キャンペーン履歴',
         'lottery_ticket_records' => '当選記録',
+        //代理店バックエンド抽選券管理
+        'agent_lottery_ticket_management' => '抽選券管理',
+        'agent_lottery_ticket_activity_list' => '抽選券キャンペーン',
+        'agent_lottery_ticket_list' => '抽選券リスト',
+        'agent_lottery_ticket_record_list' => '当選記録',
     ]
 ];

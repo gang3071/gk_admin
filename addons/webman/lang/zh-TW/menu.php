@@ -279,5 +279,10 @@ return [
         'lottery_ticket_dashboard' => '進行中的活動',
         'lottery_ticket_history' => '歷史活動記錄',
         'lottery_ticket_records' => '中獎記錄',
+        //代理后台摸奖券管理
+        'agent_lottery_ticket_management' => '摸獎券管理',
+        'agent_lottery_ticket_activity_list' => '摸獎券活動',
+        'agent_lottery_ticket_list' => '摸獎券列表',
+        'agent_lottery_ticket_record_list' => '中獎記錄',
     ]
 ];

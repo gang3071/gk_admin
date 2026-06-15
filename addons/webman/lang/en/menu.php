@@ -280,5 +280,10 @@ return [
         'lottery_ticket_dashboard' => 'Active Campaigns',
         'lottery_ticket_history' => 'Campaign History',
         'lottery_ticket_records' => 'Winning Records',
+        //Agent Backend Lottery Ticket Management
+        'agent_lottery_ticket_management' => 'Lottery Ticket Management',
+        'agent_lottery_ticket_activity_list' => 'Lottery Activities',
+        'agent_lottery_ticket_list' => 'Lottery Tickets',
+        'agent_lottery_ticket_record_list' => 'Winning Records',
     ]
 ];
