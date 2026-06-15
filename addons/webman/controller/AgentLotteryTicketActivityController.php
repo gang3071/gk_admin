@@ -140,7 +140,10 @@ class AgentLotteryTicketActivityController
 
             // 操作栏 - 代理后台只能查看，不能删除/编辑活动
             $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
-                // 查看奖品配置
+                // 清空默认操作（删除默认的编辑/删除按钮）
+                $actions->clear();
+
+                // 只保留"查看奖品配置"按钮
                 $actions->prepend(
                     Button::create(admin_trans('lottery_ticket.action.prize_config'))
                         ->type('link')
@@ -150,7 +153,7 @@ class AgentLotteryTicketActivityController
                 );
             });
 
-            // 隐藏批量操作和创建按钮（代理后台只查看）
+            // 隐藏批量操作和创建按钮（代理后台只读）
             $grid->hideBatchActions();
             $grid->hideCreateButton();
         });
