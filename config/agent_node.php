@@ -432,7 +432,17 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketActivityController/index',
                 'title' => '摸奖券活动',
             ],
-            // 查看奖品配置
+            // 查看活动详情
+            [
+                'id' => 'addons\webman\controller\AgentLotteryTicketActivityController\detail',
+                'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController\index',
+                'action' => 'detail',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketActivityController/detail',
+                'title' => '查看活动详情',
+            ],
+            // 查看奖品配置（已废弃）
             [
                 'id' => 'addons\webman\controller\AgentLotteryTicketActivityController\prizeConfig',
                 'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController\index',

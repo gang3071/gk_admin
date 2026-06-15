@@ -7,10 +7,13 @@ use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
 use ExAdmin\ui\component\common\Button;
+use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\card\Card;
+use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -148,8 +151,8 @@ class AgentLotteryTicketActivityController
                     Button::create(admin_trans('lottery_ticket.action.view_detail'))
                         ->type('link')
                         ->size('small')
-                        ->modal([$this, 'prizeConfig'], ['activity_id' => $data->id])
-                        ->width('80%')
+                        ->modal([$this, 'detail'], ['activity_id' => $data->id])
+                        ->width('90%')
                 );
 
                 $actions->hideEdit();
@@ -159,7 +162,107 @@ class AgentLotteryTicketActivityController
     }
 
     /**
-     * 查看奖品配置
+     * 查看活动详情
+     * @auth true
+     * @group agent
+     * @param int $activity_id
+     * @return Card
+     */
+    public function detail(int $activity_id): Card
+    {
+        // 验证活动是否属于当前代理
+        $admin = Admin::user();
+        $activity = LotteryTicketActivity::with(['prizeLevels'])
+            ->where('id', $activity_id)
+            ->where('department_id', $admin->department_id)
+            ->first();
+
+        if (!$activity) {
+            throw new \Exception(admin_trans('common.no_permission'));
+        }
+
+        return Card::create([
+            // 活动基本信息
+            Html::create(admin_trans('lottery_ticket.title.activity_detail'))->tag('h3')
+                ->style(['marginBottom' => '20px']),
+
+            Row::create()->column([
+                Html::create(admin_trans('lottery_ticket.fields.name') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                Html::create($activity->name),
+            ])->style(['marginBottom' => '12px']),
+
+            Row::create()->column([
+                Html::create(admin_trans('lottery_ticket.fields.status') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                Tag::create($activity->status == LotteryTicketActivity::STATUS_ONGOING
+                    ? admin_trans('lottery_ticket.status.ongoing')
+                    : admin_trans('lottery_ticket.status.ended')
+                )->color($activity->status == LotteryTicketActivity::STATUS_ONGOING ? 'processing' : 'default'),
+            ])->style(['marginBottom' => '12px']),
+
+            Row::create()->column([
+                Html::create(admin_trans('lottery_ticket.fields.start_time') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                Html::create($activity->start_time),
+            ])->style(['marginBottom' => '12px']),
+
+            Row::create()->column([
+                Html::create(admin_trans('lottery_ticket.fields.end_time') . '：')->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                Html::create($activity->end_time),
+            ])->style(['marginBottom' => '20px']),
+
+            // 奖品等级配置
+            Html::create(admin_trans('lottery_ticket.fields.prize_level_config'))->tag('h4')
+                ->style(['marginBottom' => '16px']),
+
+            $this->renderPrizeLevels($activity->prizeLevels),
+        ])->bodyStyle(['padding' => '24px']);
+    }
+
+    /**
+     * 渲染奖品等级列表
+     * @param $prizeLevels
+     * @return Html
+     */
+    private function renderPrizeLevels($prizeLevels): Html
+    {
+        if ($prizeLevels->isEmpty()) {
+            return Html::create(admin_trans('lottery_ticket.message.no_prize_config'))
+                ->style(['color' => '#999', 'textAlign' => 'center', 'padding' => '20px']);
+        }
+
+        $rows = [];
+        foreach ($prizeLevels as $level) {
+            $remaining = $level->prize_count - $level->won_count;
+            $rows[] = Row::create()->column([
+                Html::create()->content([
+                    Html::create($level->level_name)->style([
+                        'fontWeight' => 'bold',
+                        'fontSize' => '14px',
+                        'marginBottom' => '8px'
+                    ]),
+                    Html::create(admin_trans('lottery_ticket.fields.prize_amount') . '：' . number_format($level->prize_amount, 2))
+                        ->style(['marginBottom' => '4px', 'color' => '#666']),
+                    Html::create(admin_trans('lottery_ticket.fields.prize_count') . '：' . $level->prize_count)
+                        ->style(['marginBottom' => '4px', 'color' => '#666']),
+                    Html::create(admin_trans('lottery_ticket.prize_level_fields.won_count') . '：' . $level->won_count)
+                        ->style(['marginBottom' => '4px', 'color' => '#666']),
+                    Html::create(admin_trans('lottery_ticket.prize_level_fields.remaining_count') . '：')
+                        ->style(['display' => 'inline', 'color' => '#666']),
+                    Tag::create($remaining)->color($remaining > 0 ? 'success' : 'error'),
+                ]),
+            ])->style([
+                'border' => '1px solid #e8e8e8',
+                'padding' => '16px',
+                'marginBottom' => '12px',
+                'borderRadius' => '4px',
+                'backgroundColor' => '#fafafa'
+            ]);
+        }
+
+        return Html::create()->content($rows);
+    }
+
+    /**
+     * 查看奖品配置（已废弃，保留向后兼容）
      * @auth true
      * @group agent
      * @param int $activity_id

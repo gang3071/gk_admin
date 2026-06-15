@@ -13,6 +13,8 @@ return [
     'title' => [
         'main' => '摸獎券管理',
         'activity_detail' => '活動詳情',
+        'ticket_list' => '摸獎券列表',
+        'record_list' => '中獎記錄',
     ],
 
     // 字段
