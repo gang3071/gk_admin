@@ -6,6 +6,7 @@ use addons\webman\Admin;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -143,11 +144,13 @@ class AgentLotteryTicketActivityController
             // 操作栏
             $grid->actions(function (Actions $actions, LotteryTicketActivity $data) {
                 // 查看奖品配置
-                $actions->button(admin_trans('lottery_ticket.action.prize_config'))
-                    ->type('link')
-                    ->size('small')
-                    ->modal([$this, 'prizeConfig'], ['activity_id' => $data->id])
-                    ->width('80%');
+                $actions->prepend(
+                    Button::create(admin_trans('lottery_ticket.action.prize_config'))
+                        ->type('link')
+                        ->size('small')
+                        ->modal([$this, 'prizeConfig'], ['activity_id' => $data->id])
+                        ->width('80%')
+                );
             });
         });
     }
@@ -168,7 +171,7 @@ class AgentLotteryTicketActivityController
             ->first();
 
         if (!$activity) {
-            abort(403, admin_trans('common.no_permission'));
+            throw new \Exception(admin_trans('common.no_permission'));
         }
 
         return Grid::create(new LotteryTicketPrizeLevel(), function (Grid $grid) use ($activity) {
