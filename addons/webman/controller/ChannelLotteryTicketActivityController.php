@@ -963,19 +963,6 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
-     * 上传封面图片
-     * @return Msg|Response
-     */
-    public function uploadCover()
-    {
-        // TODO: 图片上传逻辑
-        // 使用 ExAdmin 的图片上传功能
-        return Response::success([
-            'url' => 'https://example.com/image.jpg'
-        ]);
-    }
-
-    /**
      * 开始开奖（手动触发）
      * @auth true
      * @group channel
