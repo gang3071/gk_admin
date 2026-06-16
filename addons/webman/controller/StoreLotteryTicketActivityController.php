@@ -148,7 +148,8 @@ class StoreLotteryTicketActivityController
                     Button::create(admin_trans('lottery_ticket.action.view_detail'))
                         ->type('link')
                         ->size('small')
-                        ->drawer(['addons-webman-controller-StoreLotteryTicketActivityController', 'getActivityDetail'], ['id' => $data->id])
+                        ->modal(['addons-webman-controller-StoreLotteryTicketActivityController', 'getActivityDetail'], ['id' => $data->id])
+                        ->width('800px')
                 );
 
                 $actions->hideEdit();
