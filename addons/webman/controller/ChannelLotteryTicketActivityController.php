@@ -262,7 +262,7 @@ class ChannelLotteryTicketActivityController
      */
     public function saveActivity()
     {
-        $data = Request::all();
+        $data = Request::input();
         $departmentId = Admin::user()->department_id;
 
         Db::beginTransaction();
@@ -680,7 +680,7 @@ class ChannelLotteryTicketActivityController
      */
     public function recordWinByTickets()
     {
-        $data = Request::all();
+        $data = Request::input();
         $activityId = $data['activity_id'] ?? null;
         $records = $data['records'] ?? [];
 
@@ -800,7 +800,7 @@ class ChannelLotteryTicketActivityController
      */
     public function recordWin()
     {
-        $data = Request::all();
+        $data = Request::input();
         $activityId = $data['activity_id'] ?? null;
         $playerAccount = $data['player_account'] ?? null;
         $prizeLevelId = $data['prize_level_id'] ?? null;
