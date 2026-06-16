@@ -257,6 +257,56 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
+     * 上传活动封面图片
+     * @auth true
+     * @return \support\Response
+     */
+    public function uploadCover()
+    {
+        try {
+            $file = Request::file('file');
+
+            if (!$file) {
+                return Response::fail(admin_trans('lottery_ticket.error.invalid_file'));
+            }
+
+            // 验证文件类型
+            $extension = strtolower($file->getUploadExtension());
+            $allowedTypes = ['jpg', 'jpeg', 'png'];
+
+            if (!in_array($extension, $allowedTypes)) {
+                return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
+            }
+
+            // 验证文件大小 (2MB)
+            if ($file->getSize() > 2 * 1024 * 1024) {
+                return Response::fail(admin_trans('lottery_ticket.error.file_too_large'));
+            }
+
+            // 生成文件名
+            $filename = 'lottery_' . date('YmdHis') . '_' . uniqid() . '.' . $extension;
+            $uploadPath = 'lottery_tickets';
+
+            // 保存文件
+            $savePath = public_path() . '/uploads/' . $uploadPath;
+            if (!is_dir($savePath)) {
+                mkdir($savePath, 0755, true);
+            }
+
+            $file->move($savePath . '/' . $filename);
+
+            // 返回URL
+            $url = '/uploads/' . $uploadPath . '/' . $filename;
+
+            return Response::success(['url' => $url]);
+
+        } catch (\Exception $e) {
+            Log::error('Upload cover image failed: ' . $e->getMessage());
+            return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
+        }
+    }
+
+    /**
      * 创建/编辑活动
      * @return Msg|Response
      */

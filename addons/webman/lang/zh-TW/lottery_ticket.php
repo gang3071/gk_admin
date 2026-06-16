@@ -322,6 +322,7 @@ return [
         'invalid_file' => '無效的文件',
         'invalid_image_type' => '只支持 jpg、png 格式圖片',
         'file_too_large' => '文件大小不能超過2MB',
+        'upload_failed' => '上傳失敗，請重試',
         'invalid_params' => '參數錯誤',
         'activity_not_ongoing' => '只能在進行中的活動錄入中獎',
         'prize_level_not_found' => '獎品等級不存在',

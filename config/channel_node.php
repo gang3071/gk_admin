@@ -1912,6 +1912,15 @@ return [
                 'title' => '获取活动详情',
             ],
             [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\uploadCover',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'uploadCover',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
+                'title' => '上传封面图片',
+            ],
+            [
                 'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\saveActivity',
                 'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
                 'action' => 'saveActivity',

@@ -323,6 +323,7 @@ return [
         'invalid_file' => '无效的文件',
         'invalid_image_type' => '只支持 jpg、png 格式图片',
         'file_too_large' => '文件大小不能超过2MB',
+        'upload_failed' => '上传失败，请重试',
         'invalid_params' => '參数错誤',
         'activity_not_ongoing' => '只能在进行中的活动录入中奖',
         'prize_level_not_found' => '奖品等级不存在',

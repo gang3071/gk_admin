@@ -323,6 +323,7 @@ return [
         'invalid_file' => '無効なファイル',
         'invalid_image_type' => 'jpg、png形式のみ対応',
         'file_too_large' => 'ファイルサイズは2MBを超えることはできません',
+        'upload_failed' => 'アップロード失敗、再試行してください',
         'invalid_params' => 'パラメータエラー',
         'activity_not_ongoing' => '進行中のアクティビティのみ当選記録可能',
         'prize_level_not_found' => '賞品レベルが存在しません',

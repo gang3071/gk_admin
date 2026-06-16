@@ -991,7 +991,7 @@ export default {
 
       try {
         const res = await this.$request({
-          url: 'ex-admin/core/uploadImage',
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
           method: 'post',
           data: formData,
           headers: {

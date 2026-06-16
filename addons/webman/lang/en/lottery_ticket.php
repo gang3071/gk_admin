@@ -323,6 +323,7 @@ return [
         'invalid_file' => 'Invalid file',
         'invalid_image_type' => 'Only jpg, png format supported',
         'file_too_large' => 'File size cannot exceed 2MB',
+        'upload_failed' => 'Upload failed, please try again',
         'invalid_params' => 'Invalid parameter',
         'activity_not_ongoing' => 'Can only record wins for ongoing activities',
         'prize_level_not_found' => 'Prize level not found',
