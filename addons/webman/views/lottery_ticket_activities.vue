@@ -65,26 +65,49 @@
               </a-button>
               <template #overlay>
                 <a-menu @click="(e) => handleMenuClick(e, activity)">
+                  <!-- 查看详情（所有状态） -->
                   <a-menu-item key="view">
                     <eye-outlined/>
                     {{ trans.viewDetail }}
                   </a-menu-item>
+
+                  <!-- 编辑（未开始） -->
                   <a-menu-item key="edit" v-if="activity.status === 0">
                     <edit-outlined/>
                     {{ trans.edit }}
                   </a-menu-item>
-                  <a-menu-item key="record" v-if="activity.status === 1">
+
+                  <!-- ⭐ 开始开奖（进行中） -->
+                  <a-menu-item key="startDrawing" v-if="activity.status === 1">
+                    <play-circle-outlined/>
+                    开始开奖
+                  </a-menu-item>
+
+                  <!-- ⭐ 录入中奖（进行中或开奖中） -->
+                  <a-menu-item key="record" v-if="activity.status === 1 || activity.status === 6">
                     <trophy-outlined/>
                     {{ trans.recordWin }}
                   </a-menu-item>
-                  <a-menu-item v-if="activity.status === 1 && activity.pending_count > 0" key="distribute">
+
+                  <!-- ⭐ 发放奖励（进行中/开奖中/已结束，且有待发放） -->
+                  <a-menu-item v-if="(activity.status === 1 || activity.status === 6 || activity.status === 2) && activity.pending_count > 0" key="distribute">
                     <gift-outlined/>
                     {{ trans.distributeAllPending || '发放奖励' }} ({{ activity.pending_count }})
                   </a-menu-item>
+
+                  <!-- ⭐ 停止开奖（开奖中） -->
+                  <a-menu-item key="stopDrawing" v-if="activity.status === 6">
+                    <check-circle-outlined/>
+                    停止开奖
+                  </a-menu-item>
+
+                  <!-- 添加直播地址（所有状态） -->
                   <a-menu-item key="live">
                     <video-camera-outlined/>
                     {{ trans.addLiveUrl }}
                   </a-menu-item>
+
+                  <!-- 关闭活动（进行中） -->
                   <a-menu-item key="close" danger v-if="activity.status === 1">
                     <stop-outlined/>
                     {{ trans.closeActivity }}
@@ -172,6 +195,7 @@
 
             <!-- 操作按钮 -->
             <a-space direction="vertical" style="width: 100%; margin-top: 12px;">
+              <!-- 未开始：编辑按钮 -->
               <a-button
                   v-if="activity.status === 0"
                   type="primary"
@@ -184,11 +208,11 @@
                 {{ trans.edit }}
               </a-button>
 
+              <!-- 进行中：发放奖励按钮 -->
               <a-button
-                  v-if="activity.status === 1"
+                  v-if="activity.status === 1 && activity.pending_count > 0"
                   block
                   type="primary"
-                  :disabled="!activity.pending_count || activity.pending_count === 0"
                   @click.stop="showDistributeForm(activity)"
               >
                 <template #icon>
@@ -196,12 +220,46 @@
                 </template>
                 {{ trans.distributeAllPending || '发放奖励' }}
                 <a-badge
-                    v-if="activity.pending_count > 0"
                     :count="activity.pending_count"
                     :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
                 />
               </a-button>
 
+              <!-- ⭐ 开奖中：发放奖励按钮 -->
+              <a-button
+                  v-if="activity.status === 6 && activity.pending_count > 0"
+                  block
+                  type="primary"
+                  @click.stop="showDistributeForm(activity)"
+              >
+                <template #icon>
+                  <gift-outlined/>
+                </template>
+                {{ trans.distributeAllPending || '发放奖励' }}
+                <a-badge
+                    :count="activity.pending_count"
+                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
+                />
+              </a-button>
+
+              <!-- ⭐ 已结束：发放奖励按钮 -->
+              <a-button
+                  v-if="activity.status === 2 && activity.pending_count > 0"
+                  block
+                  type="primary"
+                  @click.stop="showDistributeForm(activity)"
+              >
+                <template #icon>
+                  <gift-outlined/>
+                </template>
+                {{ trans.distributeAllPending || '发放奖励' }}
+                <a-badge
+                    :count="activity.pending_count"
+                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
+                />
+              </a-button>
+
+              <!-- 查看发放列表（所有状态） -->
               <a-button
                   type="default"
                   block
@@ -631,6 +689,7 @@ export default {
       ticketListVisible: false,
       liveModalVisible: false,
       liveUrlInput: '',
+      liveModalMode: 'update', // 'update' 或 'startDrawing'
       formMode: 'create',
       currentActivity: null,
       submitting: false,
@@ -830,11 +889,17 @@ export default {
         case 'edit':
           this.editActivity(activity);
           break;
+        case 'startDrawing':
+          this.startDrawing(activity);
+          break;
         case 'record':
           this.showRecordModal(activity);
           break;
         case 'distribute':
           this.showDistributeForm(activity);
+          break;
+        case 'stopDrawing':
+          this.stopDrawing(activity);
           break;
         case 'live':
           this.showLiveModal(activity);
@@ -994,6 +1059,7 @@ export default {
     showLiveModal(activity) {
       this.currentActivity = activity;
       this.liveUrlInput = activity.live_url || '';
+      this.liveModalMode = 'update';
       this.liveModalVisible = true;
     },
 
@@ -1013,9 +1079,26 @@ export default {
         return;
       }
 
+      if (liveUrl.length > 500) {
+        this.$message.error('直播地址不能超过500个字符');
+        return;
+      }
+
       try {
+        let url, successMsg;
+
+        if (this.liveModalMode === 'startDrawing') {
+          // ⭐ 开始开奖模式
+          url = 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/startDrawing';
+          successMsg = '开奖已开始';
+        } else {
+          // 普通更新直播地址模式
+          url = 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl';
+          successMsg = this.trans.liveUrlUpdated || '直播地址设置成功';
+        }
+
         const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl',
+          url: url,
           method: 'post',
           data: {
             id: this.currentActivity.id,
@@ -1024,17 +1107,18 @@ export default {
         });
 
         if (res.code === 200) {
-          this.$message.success(this.trans.liveUrlUpdated || '直播地址设置成功');
+          this.$message.success(successMsg);
           this.liveModalVisible = false;
           this.liveUrlInput = '';
+          this.liveModalMode = 'update';
           this.currentActivity = null;
           this.fetchActivities();
         } else {
-          this.$message.error(res.message || res.msg || '设置失败');
+          this.$message.error(res.message || res.msg || '操作失败');
         }
       } catch (error) {
-        console.error('设置失败:', error);
-        this.$message.error('设置失败');
+        console.error('操作失败:', error);
+        this.$message.error('操作失败');
       }
     },
 
@@ -1156,6 +1240,43 @@ export default {
             }
           } catch (error) {
             this.$message.error('关闭活动失败');
+          }
+        }
+      });
+    },
+
+    // ⭐ 开始开奖（手动触发）
+    startDrawing(activity) {
+      // 设置为开奖模式，并弹出直播地址输入框
+      this.currentActivity = activity;
+      this.liveUrlInput = activity.live_url || '';
+      this.liveModalMode = 'startDrawing';
+      this.liveModalVisible = true;
+    },
+
+    // ⭐ 停止开奖（手动触发）
+    stopDrawing(activity) {
+      this.$confirm({
+        title: '确认停止开奖？',
+        content: '停止后活动将进入已结束状态，可继续发放奖励',
+        okText: '确认停止',
+        cancelText: '取消',
+        onOk: async () => {
+          try {
+            const res = await this.$request({
+              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/stopDrawing',
+              method: 'post',
+              data: {id: activity.id}
+            });
+
+            if (res.code === 200) {
+              this.$message.success('开奖已停止');
+              this.fetchActivities();
+            } else {
+              this.$message.error(res.message || res.msg || '停止开奖失败');
+            }
+          } catch (error) {
+            this.$message.error('停止开奖失败');
           }
         }
       });
