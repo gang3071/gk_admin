@@ -226,10 +226,10 @@ class AgentLotteryTicketActivityController
                             $html .= '</tr>';
                         }
                         $html .= '</table>';
-                        return Html::create()->content($html);
+                        return Html::create($html);
                     });
             }
-        });
+        })->bordered()->layout('vertical');
     }
 
     /**
