@@ -166,7 +166,7 @@ class AgentLotteryTicketActivityController
      */
     public function getActivityDetail(int $id): Detail
     {
-        $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs'])->find($id);
+        $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs.vipLevel'])->find($id);
 
         if (!$activity) {
             throw new \Exception(admin_trans('lottery_ticket.message.activity_not_found'));
@@ -192,37 +192,29 @@ class AgentLotteryTicketActivityController
                     return $statusMap[$val] ?? $val;
                 });
 
-            // 奖品等级列表 - 逐个显示
+            // 奖品等级列表 - 简洁显示
             if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
-                foreach ($activity->prizeLevels as $index => $level) {
-                    $remaining = $level->prize_count - $level->won_count;
-
-                    // 颜色标识
-                    if ($remaining <= 0) {
-                        $remainingText = '0 (已发完)';
-                        $remainingColor = 'red';
-                    } elseif ($remaining <= 3) {
-                        $remainingText = $remaining . ' (即将发完)';
-                        $remainingColor = 'orange';
-                    } else {
-                        $remainingText = $remaining;
-                        $remainingColor = 'green';
-                    }
-
-                    $prizeInfo = sprintf(
-                        '%s - ¥%s | 总数:%d | 已中:%d | 剩余:%s',
-                        $level->level_name,
-                        number_format($level->prize_amount, 2),
-                        $level->prize_count,
-                        $level->won_count,
-                        $remainingText
-                    );
-
-                    $detail->item('prize_level_' . ($index + 1), admin_trans('lottery_ticket.prize_level_fields.level_name') . ' ' . ($index + 1))
-                        ->display(function () use ($prizeInfo, $remainingColor) {
-                            return Tag::create($prizeInfo)->color($remainingColor);
-                        });
+                $prizeLevelsText = [];
+                foreach ($activity->prizeLevels as $level) {
+                    $prizeLevelsText[] = $level->level_name . ': ¥' . number_format($level->prize_amount, 2);
                 }
+                $detail->item('prize_levels', admin_trans('lottery_ticket.fields.prize_level_config'))
+                    ->display(function () use ($prizeLevelsText) {
+                        return implode(' | ', $prizeLevelsText);
+                    });
+            }
+
+            // VIP打码量配置 - 简洁显示
+            if ($activity->vipConfigs && count($activity->vipConfigs) > 0) {
+                $vipConfigsText = [];
+                foreach ($activity->vipConfigs as $config) {
+                    $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
+                    $vipConfigsText[] = $vipName . ': 打码¥' . number_format($config->bet_amount_required, 2) . ' 送' . $config->ticket_count . '张券';
+                }
+                $detail->item('vip_configs', admin_trans('lottery_ticket.fields.vip_level'))
+                    ->display(function () use ($vipConfigsText) {
+                        return implode(' | ', $vipConfigsText);
+                    });
             }
         })->bordered()->layout('vertical');
     }
