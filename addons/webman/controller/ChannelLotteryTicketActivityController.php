@@ -278,33 +278,48 @@ class ChannelLotteryTicketActivityController
                 return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
             }
 
+            // 获取MIME类型
+            $mimeType = $file->getMimeType();
+            $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
+            if (!in_array($mimeType, $allowedMimes)) {
+                return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
+            }
+
             // 验证文件大小 (2MB)
             if ($file->getSize() > 2 * 1024 * 1024) {
                 return Response::fail(admin_trans('lottery_ticket.error.file_too_large'));
             }
 
-            // 生成文件路径
-            $filename = 'lottery_' . date('YmdHis') . '_' . uniqid() . '.' . $extension;
-            $path = 'lottery_tickets/' . $filename;
+            // 生成唯一文件名
+            $filename = time() . '_' . uniqid() . '.' . $extension;
+            $cloudPath = 'lottery_tickets/' . date('Ymd') . '/' . $filename;
 
-            // 使用Google OSS上传
-            $disk = \addons\webman\filesystem\Filesystem::disk('google_oss');
+            // 使用 Google Cloud Storage
+            $storage = \addons\webman\filesystem\Filesystem::disk('google_oss');
 
-            // 读取文件内容并上传
-            $content = file_get_contents($file->getPathname());
-            $uploaded = $disk->put($path, $content);
+            // 读取文件内容
+            $fileContent = file_get_contents($file->getPathname());
 
-            if (!$uploaded) {
-                throw new \Exception('Failed to upload to Google OSS');
+            // 上传到 GCS（参考 gk_api 实现）
+            $result = $storage->put($cloudPath, $fileContent, [
+                'metadata' => [
+                    'contentType' => $mimeType,
+                    'cacheControl' => 'public, max-age=31536000', // 缓存1年
+                ]
+            ]);
+
+            if ($result) {
+                // 获取公开访问 URL
+                $url = $storage->url($cloudPath);
+                Log::info('活动封面上传成功: ' . $url);
+                return Response::success(['url' => $url]);
+            } else {
+                Log::error('活动封面上传失败，存储返回 false');
+                return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
             }
 
-            // 获取URL
-            $url = $disk->url($path);
-
-            return Response::success(['url' => $url]);
-
         } catch (\Exception $e) {
-            Log::error('Upload cover image failed: ' . $e->getMessage());
+            Log::error('活动封面上传异常: ' . $e->getMessage());
             return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
         }
     }
