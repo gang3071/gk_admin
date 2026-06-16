@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => 'Machine information',
         'channel_machine_report' => 'Machine report',
         'channel_up_and_down_report' => 'Up and down report',
+        'channel_machine_list' => 'Machine List',
         'machine_strategy_list' => 'Machine Strategy',
         'machine_producer' => 'Manufacturer list',
         //Front-end configuration
@@ -196,6 +197,7 @@ return [
         'agent_profit_statistics' => 'Profit Statistics',
         'agent_profit_records' => 'Profit Records',
         'agent_settlement_records' => 'Settlement Records',
+        'agent_store_profit_report' => 'Store Profit Report',
         //Store Device Management
         'store_player' => 'Device Management',
         'store_player_list' => 'Device List',

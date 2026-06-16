@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => 'マシン情報',
         'channel_machine_report' => 'マシンレポート',
         'channel_up_and_down_report' => 'アップアンドダウンレポート',
+        'channel_machine_list' => 'マシンリスト',
         'machine_strategy_list' => 'マシン戦略',
         'machine_Producer' => 'メーカーリスト',
         // フロントエンドの設定
@@ -197,6 +198,7 @@ return [
         'agent_profit_statistics' => '利益統計',
         'agent_profit_records' => '利益記録',
         'agent_settlement_records' => '決済記録',
+        'agent_store_profit_report' => '店舗利益レポート',
         //店舗デバイス管理
         'store_player' => 'デバイス管理',
         'store_player_list' => 'デバイスリスト',

@@ -434,12 +434,12 @@ return [
             ],
             // 查看活动详情
             [
-                'id' => 'addons\webman\controller\AgentLotteryTicketActivityController\detail',
+                'id' => 'addons\webman\controller\AgentLotteryTicketActivityController\getActivityDetail',
                 'pid' => 'addons\webman\controller\AgentLotteryTicketActivityController\index',
-                'action' => 'detail',
+                'action' => 'getActivityDetail',
                 'method' => 'get',
                 'group' => 'agent',
-                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketActivityController/detail',
+                'url' => 'ex-admin/addons-webman-controller-AgentLotteryTicketActivityController/getActivityDetail',
                 'title' => '查看活动详情',
             ],
             // 查看奖品配置（已废弃）

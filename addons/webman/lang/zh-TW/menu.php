@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => '機台資訊',
         'channel_machine_report' => '機台報表',
         'channel_up_and_down_report' => '上下分報表',
+        'channel_machine_list' => '機台列表',
         'machine_strategy_list' => '機台攻略',
         'machine_producer' => '廠家清單',
 //前端配寘
@@ -196,6 +197,7 @@ return [
         'agent_profit_statistics' => '分潤統計',
         'agent_profit_records' => '分潤記錄',
         'agent_settlement_records' => '結算記錄',
+        'agent_store_profit_report' => '店家分潤報表',
         //店機後台設備管理
         'store_player' => '設備管理',
         'store_player_list' => '設備列表',

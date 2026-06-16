@@ -334,12 +334,12 @@ return [
             ],
             // 查看活动详情
             [
-                'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\detail',
+                'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\getActivityDetail',
                 'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
-                'action' => 'detail',
+                'action' => 'getActivityDetail',
                 'method' => 'get',
                 'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/detail',
+                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/getActivityDetail',
                 'title' => '查看活动详情',
             ],
             // 摸奖券列表

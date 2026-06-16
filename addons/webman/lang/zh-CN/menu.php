@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => '机台资讯',
         'channel_machine_report' => '机台报表',
         'channel_up_and_down_report' => '上下分报表',
+        'channel_machine_list' => '机台列表',
         'machine_strategy_list' => '机台攻略',
         'machine_producer' => '厂家列表',
         //前端配置
@@ -197,6 +198,7 @@ return [
         'agent_profit_statistics' => '分润统计',
         'agent_profit_records' => '分润记录',
         'agent_settlement_records' => '结算记录',
+        'agent_store_profit_report' => '店家分润报表',
         //店机后台设备管理
         'store_player' => '设备管理',
         'store_player_list' => '设备列表',
