@@ -582,21 +582,9 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
-        $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
-        }
-
-        // ⭐ 核心业务：线下摇球后录入中奖券号
-        // 允许在 ONGOING（活动进行中）或 DRAWING（开奖中）状态录入
-        // 不允许在 ENDED（已结束）或 CLOSED（已关闭）状态录入
-        $allowedStatuses = [
-            LotteryTicketActivity::STATUS_ONGOING,
-            LotteryTicketActivity::STATUS_DRAWING,
-        ];
-
-        if (!in_array($activity->status, $allowedStatuses)) {
-            return message_error(admin_trans('lottery_ticket.error.cannot_record_win_in_current_status'));
+        // ⭐ 验证ID参数
+        if (!is_numeric($activityId)) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
         }
 
         $successCount = 0;
@@ -604,6 +592,29 @@ class ChannelLotteryTicketActivityController
 
         Db::beginTransaction();
         try {
+            // ⭐ 使用悲观锁防止并发问题
+            $activity = LotteryTicketActivity::where('id', $activityId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$activity || $activity->department_id != Admin::user()->department_id) {
+                Db::rollBack();
+                return message_error(admin_trans('common.no_permission'));
+            }
+
+            // ⭐ 核心业务：线下摇球后录入中奖券号
+            // 允许在 ONGOING（活动进行中）或 DRAWING（开奖中）状态录入
+            // 不允许在 ENDED（已结束）或 CLOSED（已关闭）状态录入
+            $allowedStatuses = [
+                LotteryTicketActivity::STATUS_ONGOING,
+                LotteryTicketActivity::STATUS_DRAWING,
+            ];
+
+            if (!in_array($activity->status, $allowedStatuses)) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.cannot_record_win_in_current_status'));
+            }
+
             foreach ($records as $record) {
                 $prizeLevelId = $record['prize_level_id'] ?? null;
                 $ticketNo = $record['ticket_no'] ?? null;
@@ -787,6 +798,11 @@ class ChannelLotteryTicketActivityController
         $id = Request::input('id');
         $liveUrl = Request::input('live_url');
 
+        // ⭐ 验证ID参数
+        if (!$id || !is_numeric($id)) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+        }
+
         // 验证直播地址
         if (empty($liveUrl)) {
             return message_error(admin_trans('lottery_ticket.error.live_url_required'));
@@ -858,6 +874,11 @@ class ChannelLotteryTicketActivityController
     public function stopDrawing()
     {
         $id = Request::input('id');
+
+        // ⭐ 验证ID参数
+        if (!$id || !is_numeric($id)) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+        }
 
         Db::beginTransaction();
         try {
