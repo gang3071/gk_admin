@@ -193,40 +193,39 @@ class StoreLotteryTicketActivityController
 
             // 奖品等级列表 - 使用Tag美化显示
             if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
-                $detail->item('prize_levels', admin_trans('lottery_ticket.fields.prize_level_config'))
-                    ->display(function () use ($activity) {
-                        $tags = [];
-                        foreach ($activity->prizeLevels as $level) {
-                            $remaining = $level->prize_count - $level->won_count;
+                $prizeLevels = $activity->prizeLevels->sortBy('level_rank');
+                foreach ($prizeLevels as $index => $level) {
+                    $remaining = $level->prize_count - $level->won_count;
 
-                            // 根据剩余数量设置颜色
-                            if ($remaining <= 0) {
-                                $color = 'red';
-                            } elseif ($remaining <= 3) {
-                                $color = 'orange';
-                            } else {
-                                $color = 'blue';
-                            }
+                    // 根据剩余数量设置颜色
+                    if ($remaining <= 0) {
+                        $color = 'red';
+                    } elseif ($remaining <= 3) {
+                        $color = 'orange';
+                    } else {
+                        $color = 'blue';
+                    }
 
-                            $text = $level->level_name . ' ¥' . number_format($level->prize_amount, 2) . ' (剩' . $remaining . ')';
-                            $tags[] = Tag::create($text)->color($color);
-                        }
-                        return $tags;
-                    });
+                    $detail->item('prize_level_' . $level->id, $level->level_name)
+                        ->display(function () use ($level, $color, $remaining) {
+                            $text = '奖金 ¥' . number_format($level->prize_amount, 2) . ' | 剩余 ' . $remaining . '/' . $level->prize_count;
+                            return Tag::create($text)->color($color);
+                        });
+                }
             }
 
             // VIP打码量配置 - 使用Tag美化显示
             if ($activity->vipConfigs && count($activity->vipConfigs) > 0) {
-                $detail->item('vip_configs', admin_trans('lottery_ticket.fields.vip_level'))
-                    ->display(function () use ($activity) {
-                        $tags = [];
-                        foreach ($activity->vipConfigs as $config) {
-                            $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
-                            $text = $vipName . ' 打码¥' . number_format($config->bet_amount_required, 2) . ' → ' . $config->ticket_count . '张券';
-                            $tags[] = Tag::create($text)->color('green');
-                        }
-                        return $tags;
-                    });
+                $vipConfigs = $activity->vipConfigs->sortBy('vip_level_id');
+                foreach ($vipConfigs as $index => $config) {
+                    $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
+
+                    $detail->item('vip_config_' . $config->id, $vipName)
+                        ->display(function () use ($config) {
+                            $text = '打码 ¥' . number_format($config->bet_amount_required, 2) . ' → 获得 ' . $config->ticket_count . ' 张摸奖券';
+                            return Tag::create($text)->color('green');
+                        });
+                }
             }
         })->bordered()->layout('vertical');
     }
