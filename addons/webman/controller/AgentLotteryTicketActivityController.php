@@ -7,6 +7,7 @@ use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
 use ExAdmin\ui\component\common\Button;
+use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -195,26 +196,37 @@ class AgentLotteryTicketActivityController
             // 奖品等级列表
             if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
                 $detail->item('prize_levels', admin_trans('lottery_ticket.fields.prize_level_config'))
-                    ->display(function () use ($activity) {
-                        $html = '<table style="width:100%; border-collapse: collapse;">';
-                        $html .= '<tr style="border-bottom: 1px solid #f0f0f0;">';
-                        $html .= '<th style="padding: 8px; text-align: left;">' . admin_trans('lottery_ticket.prize_level_fields.level_name') . '</th>';
-                        $html .= '<th style="padding: 8px; text-align: center;">' . admin_trans('lottery_ticket.fields.prize_amount') . '</th>';
-                        $html .= '<th style="padding: 8px; text-align: center;">' . admin_trans('lottery_ticket.fields.prize_count') . '</th>';
-                        $html .= '<th style="padding: 8px; text-align: center;">' . admin_trans('lottery_ticket.prize_level_fields.won_count') . '</th>';
+                    ->display(function ($val, LotteryTicketActivity $data) {
+                        $html = '<table style="width:100%;border-collapse:collapse;border:1px solid #ddd;">';
+                        $html .= '<tr style="background:#f5f5f5;">';
+                        $html .= '<th style="border:1px solid #ddd;padding:8px;">' . admin_trans('lottery_ticket.prize_level_fields.level_name') . '</th>';
+                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:right;">' . admin_trans('lottery_ticket.fields.prize_amount') . '</th>';
+                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:center;">' . admin_trans('lottery_ticket.fields.prize_count') . '</th>';
+                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:center;">' . admin_trans('lottery_ticket.prize_level_fields.won_count') . '</th>';
+                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:center;">' . admin_trans('lottery_ticket.prize_level_fields.remaining_count') . '</th>';
                         $html .= '</tr>';
+                        foreach ($data->prizeLevels as $level) {
+                            $remaining = $level->prize_count - $level->won_count;
+                            $html .= '<tr>';
+                            $html .= '<td style="border:1px solid #ddd;padding:8px;">' . htmlspecialchars($level->level_name) . '</td>';
+                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:right;">¥' . number_format($level->prize_amount, 2) . '</td>';
+                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:center;">' . $level->prize_count . '</td>';
+                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:center;">' . $level->won_count . '</td>';
 
-                        foreach ($activity->prizeLevels as $level) {
-                            $html .= '<tr style="border-bottom: 1px solid #f0f0f0;">';
-                            $html .= '<td style="padding: 8px;">' . htmlspecialchars($level->level_name) . '</td>';
-                            $html .= '<td style="padding: 8px; text-align: center;">' . number_format($level->prize_amount, 2) . '</td>';
-                            $html .= '<td style="padding: 8px; text-align: center;">' . $level->prize_count . '</td>';
-                            $html .= '<td style="padding: 8px; text-align: center;">' . $level->won_count . '</td>';
+                            // 剩余数量 - 带颜色标识
+                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:center;">';
+                            if ($remaining <= 0) {
+                                $html .= '<span style="color:#ff4d4f;font-weight:bold;">0</span>';
+                            } elseif ($remaining <= 3) {
+                                $html .= '<span style="color:#faad14;font-weight:bold;">' . $remaining . '</span>';
+                            } else {
+                                $html .= '<span style="color:#52c41a;font-weight:bold;">' . $remaining . '</span>';
+                            }
+                            $html .= '</td>';
                             $html .= '</tr>';
                         }
-
                         $html .= '</table>';
-                        return $html;
+                        return Html::create()->content($html);
                     });
             }
         });
