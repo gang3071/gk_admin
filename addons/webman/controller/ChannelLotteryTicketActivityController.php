@@ -352,7 +352,6 @@ class ChannelLotteryTicketActivityController
                     'activity_id' => $activity->id,
                     'level_rank' => $level['level_rank'],
                     'level_name' => $level['level_name'],
-                    'prize_type' => 'cash', // 固定为现金
                     'prize_amount' => $level['prize_amount'],
                     'prize_count' => $level['prize_count'] ?? 0,
                 ]);
@@ -581,7 +580,7 @@ class ChannelLotteryTicketActivityController
                 $newLevel->activity_id = $newActivity->id;
                 $newLevel->level_rank = $level->level_rank;
                 $newLevel->level_name = $level->level_name;
-                $newLevel->prize_type = $level->prize_type;
+                // prize_type字段已删除，prize_level表只支持现金奖励
                 $newLevel->prize_name = $level->prize_name;
                 $newLevel->prize_amount = $level->prize_amount;
                 $newLevel->prize_count = $level->prize_count;
@@ -764,7 +763,7 @@ class ChannelLotteryTicketActivityController
                     'department_id' => $activity->department_id,
                     'ticket_id' => $ticket->id,
                     'ticket_no' => $ticketNo,
-                    'prize_type' => $prizeLevel->prize_type,
+                    'prize_type' => \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH, // 固定为现金
                     'prize_name' => $prizeLevel->level_name,
                     'prize_amount' => $prizeLevel->prize_amount,
                     'status' => \addons\webman\model\LotteryTicketRecord::STATUS_PENDING,
@@ -843,7 +842,7 @@ class ChannelLotteryTicketActivityController
                 'department_id' => $activity->department_id,
                 'ticket_id' => 0,
                 'ticket_no' => '',
-                'prize_type' => $prizeLevel->prize_type,
+                'prize_type' => \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH, // 固定为现金
                 'prize_name' => $prizeLevel->level_name,
                 'prize_amount' => $prizeLevel->prize_amount,
                 'status' => \addons\webman\model\LotteryTicketRecord::STATUS_PENDING,

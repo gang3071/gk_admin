@@ -8,20 +8,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Class LotteryTicketPrizeLevel
+ * 摸奖券奖品等级配置模型（仅支持现金奖励）
  *
  * @property int $id 主键ID
  * @property int $activity_id 活动ID
  * @property int $level_rank 等级排名(1-10)
  * @property string $level_name 等级名称
- * @property string $prize_type 奖品类型
- * @property float $prize_amount 奖品金额
- * @property string $prize_item_name 实物奖品名称
- * @property string $prize_item_image 实物奖品图片
+ * @property float $prize_amount 奖品金额（现金）
  * @property int $prize_count 奖品数量
- * @property float $win_probability 中奖概率
+ * @property float $win_probability 中奖概率（废弃字段，保留兼容）
  * @property int $sort_order 排序
  * @property int $status 状态
- * @property string $description 奖品描述
+ * @property string $description 奖品描述（废弃字段，保留兼容）
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
  *
@@ -33,7 +31,7 @@ class LotteryTicketPrizeLevel extends Model
 {
     use HasDateTimeFormatter;
 
-    // 奖品类型常量
+    // 奖品类型常量（废弃 - prize_type字段已删除，保留常量供LotteryTicketRecord使用）
     const PRIZE_TYPE_CASH = 'cash';       // 现金
     const PRIZE_TYPE_BONUS = 'bonus';     // 红利
     const PRIZE_TYPE_ITEM = 'item';       // 实物
@@ -139,17 +137,14 @@ class LotteryTicketPrizeLevel extends Model
     }
 
     /**
-     * 获取奖品展示名称
+     * 获取奖品展示名称（废弃 - prize_type字段已删除）
+     * @deprecated 2026-06-17 保留方法体防止旧代码调用报错，但不再使用
      * @return string
      */
     public function getPrizeDisplayNameAttribute(): string
     {
-        if ($this->prize_type === self::PRIZE_TYPE_ITEM) {
-            return $this->prize_item_name ?? $this->level_name;
-        }
-
-        $typeText = self::getPrizeTypeText($this->prize_type);
-        return "{$typeText} {$this->prize_amount}";
+        // prize_level表已不支持实物/积分等奖品类型，固定返回现金格式
+        return admin_trans('lottery_ticket.prize_type.cash') . ' ' . $this->prize_amount;
     }
 
     /**
