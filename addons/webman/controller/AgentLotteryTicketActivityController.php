@@ -7,7 +7,6 @@ use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
 use ExAdmin\ui\component\common\Button;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -150,7 +149,7 @@ class AgentLotteryTicketActivityController
                     Button::create(admin_trans('lottery_ticket.action.view_detail'))
                         ->type('link')
                         ->size('small')
-                        ->drawer([$this, 'getActivityDetail'], ['id' => $data->id])
+                        ->drawer(['addons-webman-controller-AgentLotteryTicketActivityController', 'getActivityDetail'], ['id' => $data->id])
                 );
 
                 $actions->hideEdit();
@@ -193,41 +192,37 @@ class AgentLotteryTicketActivityController
                     return $statusMap[$val] ?? $val;
                 });
 
-            // 奖品等级列表
+            // 奖品等级列表 - 逐个显示
             if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
-                $detail->item('prize_levels', admin_trans('lottery_ticket.fields.prize_level_config'))
-                    ->display(function ($val, LotteryTicketActivity $data) {
-                        $html = '<table style="width:100%;border-collapse:collapse;border:1px solid #ddd;">';
-                        $html .= '<tr style="background:#f5f5f5;">';
-                        $html .= '<th style="border:1px solid #ddd;padding:8px;">' . admin_trans('lottery_ticket.prize_level_fields.level_name') . '</th>';
-                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:right;">' . admin_trans('lottery_ticket.fields.prize_amount') . '</th>';
-                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:center;">' . admin_trans('lottery_ticket.fields.prize_count') . '</th>';
-                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:center;">' . admin_trans('lottery_ticket.prize_level_fields.won_count') . '</th>';
-                        $html .= '<th style="border:1px solid #ddd;padding:8px;text-align:center;">' . admin_trans('lottery_ticket.prize_level_fields.remaining_count') . '</th>';
-                        $html .= '</tr>';
-                        foreach ($data->prizeLevels as $level) {
-                            $remaining = $level->prize_count - $level->won_count;
-                            $html .= '<tr>';
-                            $html .= '<td style="border:1px solid #ddd;padding:8px;">' . htmlspecialchars($level->level_name) . '</td>';
-                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:right;">¥' . number_format($level->prize_amount, 2) . '</td>';
-                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:center;">' . $level->prize_count . '</td>';
-                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:center;">' . $level->won_count . '</td>';
+                foreach ($activity->prizeLevels as $index => $level) {
+                    $remaining = $level->prize_count - $level->won_count;
 
-                            // 剩余数量 - 带颜色标识
-                            $html .= '<td style="border:1px solid #ddd;padding:8px;text-align:center;">';
-                            if ($remaining <= 0) {
-                                $html .= '<span style="color:#ff4d4f;font-weight:bold;">0</span>';
-                            } elseif ($remaining <= 3) {
-                                $html .= '<span style="color:#faad14;font-weight:bold;">' . $remaining . '</span>';
-                            } else {
-                                $html .= '<span style="color:#52c41a;font-weight:bold;">' . $remaining . '</span>';
-                            }
-                            $html .= '</td>';
-                            $html .= '</tr>';
-                        }
-                        $html .= '</table>';
-                        return Html::create()->content($html);
-                    });
+                    // 颜色标识
+                    if ($remaining <= 0) {
+                        $remainingText = '0 (已发完)';
+                        $remainingColor = 'red';
+                    } elseif ($remaining <= 3) {
+                        $remainingText = $remaining . ' (即将发完)';
+                        $remainingColor = 'orange';
+                    } else {
+                        $remainingText = $remaining;
+                        $remainingColor = 'green';
+                    }
+
+                    $prizeInfo = sprintf(
+                        '%s - ¥%s | 总数:%d | 已中:%d | 剩余:%s',
+                        $level->level_name,
+                        number_format($level->prize_amount, 2),
+                        $level->prize_count,
+                        $level->won_count,
+                        $remainingText
+                    );
+
+                    $detail->item('prize_level_' . ($index + 1), admin_trans('lottery_ticket.prize_level_fields.level_name') . ' ' . ($index + 1))
+                        ->display(function () use ($prizeInfo, $remainingColor) {
+                            return Tag::create($prizeInfo)->color($remainingColor);
+                        });
+                }
             }
         })->bordered()->layout('vertical');
     }
