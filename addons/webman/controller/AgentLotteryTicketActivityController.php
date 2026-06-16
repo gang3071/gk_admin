@@ -7,6 +7,7 @@ use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketRecord;
 use ExAdmin\ui\component\common\Button;
+use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -158,26 +159,65 @@ class AgentLotteryTicketActivityController
     }
 
     /**
-     * 获取活动详情（API接口）
+     * 获取活动详情（抽屉显示）
      * @auth true
      * @group agent
-     * @return mixed
+     * @return Detail
      */
-    public function getActivityDetail()
+    public function getActivityDetail(int $id): Detail
     {
-        $id = Request::input('id');
         $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs'])->find($id);
 
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            throw new \Exception(admin_trans('lottery_ticket.message.activity_not_found'));
         }
 
         // 检查权限
         if ($activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            throw new \Exception(admin_trans('common.no_permission'));
         }
 
-        return \ExAdmin\ui\response\Response::success($activity->toArray());
+        return Detail::create($activity, function (Detail $detail) use ($activity) {
+            $detail->item('name', admin_trans('lottery_ticket.fields.activity_name'));
+            $detail->item('start_time', admin_trans('lottery_ticket.fields.start_time'));
+            $detail->item('end_time', admin_trans('lottery_ticket.fields.end_time'));
+            $detail->item('status', admin_trans('lottery_ticket.fields.status'))
+                ->display(function ($val) use ($activity) {
+                    $statusMap = [
+                        LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
+                        LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                        LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
+                        LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
+                    ];
+                    return $statusMap[$val] ?? $val;
+                });
+
+            // 奖品等级列表
+            if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
+                $detail->item('prize_levels', admin_trans('lottery_ticket.fields.prize_level_config'))
+                    ->display(function () use ($activity) {
+                        $html = '<table style="width:100%; border-collapse: collapse;">';
+                        $html .= '<tr style="border-bottom: 1px solid #f0f0f0;">';
+                        $html .= '<th style="padding: 8px; text-align: left;">' . admin_trans('lottery_ticket.prize_level_fields.level_name') . '</th>';
+                        $html .= '<th style="padding: 8px; text-align: center;">' . admin_trans('lottery_ticket.fields.prize_amount') . '</th>';
+                        $html .= '<th style="padding: 8px; text-align: center;">' . admin_trans('lottery_ticket.fields.prize_count') . '</th>';
+                        $html .= '<th style="padding: 8px; text-align: center;">' . admin_trans('lottery_ticket.prize_level_fields.won_count') . '</th>';
+                        $html .= '</tr>';
+
+                        foreach ($activity->prizeLevels as $level) {
+                            $html .= '<tr style="border-bottom: 1px solid #f0f0f0;">';
+                            $html .= '<td style="padding: 8px;">' . htmlspecialchars($level->level_name) . '</td>';
+                            $html .= '<td style="padding: 8px; text-align: center;">' . number_format($level->prize_amount, 2) . '</td>';
+                            $html .= '<td style="padding: 8px; text-align: center;">' . $level->prize_count . '</td>';
+                            $html .= '<td style="padding: 8px; text-align: center;">' . $level->won_count . '</td>';
+                            $html .= '</tr>';
+                        }
+
+                        $html .= '</table>';
+                        return $html;
+                    });
+            }
+        });
     }
 
     /**
