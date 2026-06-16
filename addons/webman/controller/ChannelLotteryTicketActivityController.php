@@ -271,7 +271,7 @@ class ChannelLotteryTicketActivityController
             }
 
             // 验证文件类型
-            $extension = strtolower($file->getUploadExtension());
+            $extension = strtolower($file->getClientOriginalExtension());
             $allowedTypes = ['jpg', 'jpeg', 'png'];
 
             if (!in_array($extension, $allowedTypes)) {
@@ -291,7 +291,7 @@ class ChannelLotteryTicketActivityController
             $disk = \addons\webman\filesystem\Filesystem::disk('google_oss');
 
             // 读取文件内容并上传
-            $content = file_get_contents($file->getRealPath());
+            $content = file_get_contents($file->getPathname());
             $uploaded = $disk->put($path, $content);
 
             if (!$uploaded) {
