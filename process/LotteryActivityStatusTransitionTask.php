@@ -15,11 +15,16 @@ use Workerman\Worker;
  * 执行频率: 每分钟一次
  * 处理逻辑: 检查活动时间节点，自动更新状态
  *
- * 状态流转规则:
- * 1. 预热期开始 → STATUS_PREHEATING (preheat_start_time 到达)
- * 2. 活动开始 → STATUS_BETTING (start_time 到达)
- * 3. 开奖时间 → STATUS_DRAWING (draw_time 到达)
- * 4. 活动结束 → STATUS_ENDED (end_time 到达)
+ * 状态流转规则（简化版）:
+ * 1. 活动开始 → STATUS_ONGOING (start_time 到达，自动)
+ * 2. 进入开奖 → STATUS_DRAWING (管理员手动点击"开奖"按钮)
+ * 3. 活动结束 → STATUS_ENDED (管理员手动点击"停止开奖"按钮)
+ *
+ * 注意：
+ * - end_time 到达后仅停止发券，不自动改变状态
+ * - 开奖和结束都需要管理员手动触发
+ * - 预热期、打码中、已开奖待发放等状态已废弃
+ * - draw_time 字段已删除
  */
 class LotteryActivityStatusTransitionTask
 {
@@ -42,11 +47,9 @@ class LotteryActivityStatusTransitionTask
             $now = date('Y-m-d H:i:s');
             $transitionCount = 0;
 
-            // 获取所有未结束的活动
+            // 获取所有未结束的活动（简化：只检查核心状态）
             $activities = LotteryTicketActivity::whereIn('status', [
                 LotteryTicketActivity::STATUS_NOT_STARTED,
-                LotteryTicketActivity::STATUS_PREHEATING,
-                LotteryTicketActivity::STATUS_BETTING,
                 LotteryTicketActivity::STATUS_ONGOING,
                 LotteryTicketActivity::STATUS_DRAWING,
             ])->get();
@@ -99,27 +102,28 @@ class LotteryActivityStatusTransitionTask
             return $activity->status;
         }
 
-        // 1. 检查是否应该结束
-        if ($now >= $activity->end_time) {
-            return LotteryTicketActivity::STATUS_ENDED;
-        }
-
-        // 2. 检查是否应该进入开奖中
-        if ($activity->draw_time && $now >= $activity->draw_time) {
+        // ⚠️ 特殊处理：开奖中和已结束状态不自动流转（由管理员手动控制）
+        if ($activity->status === LotteryTicketActivity::STATUS_DRAWING) {
+            // 开奖中状态保持不变，等待管理员手动"停止开奖"
             return LotteryTicketActivity::STATUS_DRAWING;
         }
 
-        // 3. 检查是否应该进入打码中
-        if ($now >= $activity->start_time) {
-            return LotteryTicketActivity::STATUS_BETTING;
+        if ($activity->status === LotteryTicketActivity::STATUS_ENDED) {
+            // 已结束状态不再流转
+            return LotteryTicketActivity::STATUS_ENDED;
         }
 
-        // 4. 检查是否应该进入预热期
-        if ($activity->preheat_start_time && $now >= $activity->preheat_start_time) {
-            return LotteryTicketActivity::STATUS_PREHEATING;
+        // 1. 检查是否应该进入进行中
+        if ($now >= $activity->start_time && $now < $activity->end_time) {
+            return LotteryTicketActivity::STATUS_ONGOING;
         }
 
-        // 5. 默认保持未开始状态
+        // 2. 超过结束时间但仍在进行中状态 → 保持进行中（等待管理员手动开奖）
+        if ($activity->status === LotteryTicketActivity::STATUS_ONGOING && $now >= $activity->end_time) {
+            return LotteryTicketActivity::STATUS_ONGOING;
+        }
+
+        // 3. 默认保持未开始状态
         return LotteryTicketActivity::STATUS_NOT_STARTED;
     }
 
@@ -137,16 +141,11 @@ class LotteryActivityStatusTransitionTask
         $activity->recordStatusChange($newStatus, '系统自动流转');
         $activity->save();
 
-        // 根据状态变化执行特定操作
+        // 根据状态变化执行特定操作（简化后只有3种情况）
         switch ($newStatus) {
-            case LotteryTicketActivity::STATUS_PREHEATING:
-                // 预热期开始，可以发送推送通知
-                $this->onPreheatingStart($activity);
-                break;
-
-            case LotteryTicketActivity::STATUS_BETTING:
-                // 打码期开始，初始化玩家打码进度
-                $this->onBettingStart($activity);
+            case LotteryTicketActivity::STATUS_ONGOING:
+                // 活动开始（进行中），初始化玩家打码进度
+                $this->onActivityStart($activity);
                 break;
 
             case LotteryTicketActivity::STATUS_DRAWING:
@@ -162,33 +161,18 @@ class LotteryActivityStatusTransitionTask
     }
 
     /**
-     * 预热期开始
+     * 活动开始（进行中）
      * @param LotteryTicketActivity $activity
      */
-    protected function onPreheatingStart(LotteryTicketActivity $activity)
+    protected function onActivityStart(LotteryTicketActivity $activity)
     {
-        Log::info('摸奖券活动预热期开始', [
-            'activity_id' => $activity->id,
-            'activity_name' => $activity->name,
-        ]);
-
-        // 发送预热通知
-        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'preheat_start');
-    }
-
-    /**
-     * 打码期开始
-     * @param LotteryTicketActivity $activity
-     */
-    protected function onBettingStart(LotteryTicketActivity $activity)
-    {
-        Log::info('摸奖券活动打码期开始', [
+        Log::info('摸奖券活动开始', [
             'activity_id' => $activity->id,
             'activity_name' => $activity->name,
         ]);
 
         // 发送活动开始通知
-        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'betting_start');
+        \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'activity_start');
     }
 
     /**

@@ -162,11 +162,7 @@ class LotteryTicketPushService
     {
         try {
             $messages = [
-                'preheat_start' => [
-                    'title' => '摸獎券活動預熱中',
-                    'message' => sprintf('活動「%s」即將開始，快來參加吧！', $activity->name),
-                ],
-                'betting_start' => [
+                'activity_start' => [  // ⚠️ 修正：betting_start → activity_start
                     'title' => '摸獎券活動開始',
                     'message' => sprintf('活動「%s」正式開始，快來參與打碼領券！', $activity->name),
                 ],

@@ -59,7 +59,7 @@ return [
         'prize_type' => 'Prize Type',
         'prize_name' => 'Prize Name',
         'record_status' => 'Distribution Status',
-        'draw_time' => 'Draw Time',
+        'created_time_range' => 'Created Time Range',
         'source' => '來源',
         'used_at' => 'Used At',
         'expired_at' => 'Expired At',
@@ -171,7 +171,7 @@ return [
     'record_fields' => [
         'prize_type' => 'Prize Type',
         'prize_level_name' => 'Prize Level',
-        'draw_time' => 'Draw Time',
+        'created_at' => 'Created At',
     ],
 
     // 中奖等级字段
@@ -267,11 +267,18 @@ return [
         'ticket_format_error' => 'Invalid ticket number format, must contain only digits and not exceed 6 characters',
         'no_prize_level' => 'Prize levels not configured for this activity',
         'distribute_hint' => 'Please enter winning ticket number, the system will automatically identify the prize level and distribute rewards',
+        'drawing_started' => 'Drawing started, entered drawing phase',
+        'activity_ended' => 'Activity ended',
     ],
 
     // 错误信息
     'error' => [
         'record_not_found' => 'Record not found',
+        'live_url_required' => 'Please enter live stream URL',
+        'live_url_too_long' => 'Live stream URL too long (max 500 characters)',
+        'cannot_start_drawing' => 'Cannot start drawing in current status (only ongoing activities can start drawing)',
+        'cannot_stop_drawing' => 'Cannot stop drawing in current status (only drawing activities can be ended)',
+        'cannot_record_win_in_current_status' => 'Cannot record winners in current status (only allowed during ongoing or drawing status)',
         // 输入驗證
         'invalid_record_id' => '參数错誤：记录ID无效',
         'invalid_activity_id' => '參数错誤：活动ID无效',

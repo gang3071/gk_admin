@@ -59,7 +59,7 @@ return [
         'prize_type' => '賞品タイプ',
         'prize_name' => '賞品名',
         'record_status' => '配布ステータス',
-        'draw_time' => '抽選時間',
+        'created_time_range' => '作成時間範囲',
         'source' => '来源',
         'used_at' => '使用日時',
         'expired_at' => '期限日時',
@@ -171,7 +171,7 @@ return [
     'record_fields' => [
         'prize_type' => '賞品タイプ',
         'prize_level_name' => '賞品レベル',
-        'draw_time' => '抽選時間',
+        'created_at' => '作成日時',
     ],
 
     // 中奖等级字段
@@ -267,11 +267,18 @@ return [
         'ticket_format_error' => 'チケット番号の形式が正しくありません。数字のみで6文字以内にしてください',
         'no_prize_level' => 'このアクティビティはまだ賞品レベルが設定されていません',
         'distribute_hint' => '当選チケット番号を入力してください、システムは番号に基づいて賞品レベルを自動識別し配布します',
+        'drawing_started' => '抽選開始、抽選段階に入りました',
+        'activity_ended' => 'アクティビティが終了しました',
     ],
 
     // 错误信息
     'error' => [
         'record_not_found' => '記録が存在しません',
+        'live_url_required' => 'ライブURLを入力してください',
+        'live_url_too_long' => 'ライブURLが長すぎます（最大500文字）',
+        'cannot_start_drawing' => '現在のステータスでは抽選を開始できません（進行中のアクティビティのみ開始可能）',
+        'cannot_stop_drawing' => '現在のステータスでは抽選を停止できません（抽選中のアクティビティのみ終了可能）',
+        'cannot_record_win_in_current_status' => '現在のステータスでは当選を記録できません（進行中または抽選中のステータスのみ記録可能）',
         // 输入驗證
         'invalid_record_id' => 'パラメータエラー：記録IDが無効',
         'invalid_activity_id' => 'パラメータエラー：アクティビティIDが無効',

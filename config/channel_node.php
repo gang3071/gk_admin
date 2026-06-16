@@ -1950,6 +1950,36 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/distributeByTicketNo',
                 'title' => '按券号发放奖励',
             ],
+            // ⭐ 新增：批量发放活动奖励（唯一需要独立权限的方法，因为有 @auth true）
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\batchDistributeActivity',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'batchDistributeActivity',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/batchDistributeActivity',
+                'title' => '批量发放活动奖励',
+            ],
+            // ⭐ 新增：手动开始开奖
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\startDrawing',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'startDrawing',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/startDrawing',
+                'title' => '开始开奖',
+            ],
+            // ⭐ 新增：手动停止开奖
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\stopDrawing',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'stopDrawing',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/stopDrawing',
+                'title' => '停止开奖',
+            ],
 
             // 历史活动记录
             [

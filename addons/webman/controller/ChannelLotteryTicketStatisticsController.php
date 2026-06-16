@@ -47,9 +47,7 @@ class ChannelLotteryTicketStatisticsController
             'status_text' => LotteryTicketActivity::getStatusText($activity->status),
 
             // 时间信息
-            'preheat_start_time' => $activity->preheat_start_time,
             'start_time' => $activity->start_time,
-            'draw_time' => $activity->draw_time,
             'end_time' => $activity->end_time,
             'time_progress' => $this->calculateTimeProgress($activity),
 
@@ -297,11 +295,9 @@ class ChannelLotteryTicketStatisticsController
             ->pluck('count', 'status')
             ->toArray();
 
-        // 进行中的活动简要信息
+        // 进行中的活动简要信息（简化后只有2个进行中状态）
         $ongoingActivities = LotteryTicketActivity::where('department_id', $departmentId)
             ->whereIn('status', [
-                LotteryTicketActivity::STATUS_PREHEATING,
-                LotteryTicketActivity::STATUS_BETTING,
                 LotteryTicketActivity::STATUS_ONGOING,
                 LotteryTicketActivity::STATUS_DRAWING,
             ])
@@ -344,8 +340,6 @@ class ChannelLotteryTicketStatisticsController
         return Response::success([
             'status_counts' => [
                 'not_started' => $statusCounts[LotteryTicketActivity::STATUS_NOT_STARTED] ?? 0,
-                'preheating' => $statusCounts[LotteryTicketActivity::STATUS_PREHEATING] ?? 0,
-                'betting' => $statusCounts[LotteryTicketActivity::STATUS_BETTING] ?? 0,
                 'ongoing' => $statusCounts[LotteryTicketActivity::STATUS_ONGOING] ?? 0,
                 'drawing' => $statusCounts[LotteryTicketActivity::STATUS_DRAWING] ?? 0,
                 'ended' => $statusCounts[LotteryTicketActivity::STATUS_ENDED] ?? 0,
@@ -613,8 +607,6 @@ class ChannelLotteryTicketStatisticsController
     {
         $colors = [
             LotteryTicketActivity::STATUS_NOT_STARTED => 'blue',
-            LotteryTicketActivity::STATUS_PREHEATING => 'purple',
-            LotteryTicketActivity::STATUS_BETTING => 'green',
             LotteryTicketActivity::STATUS_ONGOING => 'green',
             LotteryTicketActivity::STATUS_DRAWING => 'yellow',
             LotteryTicketActivity::STATUS_ENDED => 'orange',

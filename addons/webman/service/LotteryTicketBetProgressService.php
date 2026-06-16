@@ -166,13 +166,28 @@ class LotteryTicketBetProgressService
                     continue;
                 }
 
-                // 检查活动是否仍在进行中（支持两种状态：进行中、打码中）
+                // 检查活动是否仍在进行中
                 $activity = $progress->activity;
-                if (!$activity || !in_array($activity->status, [
-                    LotteryTicketActivity::STATUS_ONGOING,
-                    LotteryTicketActivity::STATUS_BETTING,
-                ])) {
+                if (!$activity || $activity->status !== LotteryTicketActivity::STATUS_ONGOING) {
                     Db::rollBack();
+                    continue;
+                }
+
+                // ⚠️ 检查是否超过结束时间（超过则停止发券）
+                $now = date('Y-m-d H:i:s');
+                if ($now >= $activity->end_time) {
+                    // 超过结束时间，不再发券，但仍记录打码量
+                    $progress->current_bet_amount += $chipAmount;
+                    $progress->save();
+                    Db::commit();
+
+                    Log::info('活动已超过结束时间，停止发券但记录打码', [
+                        'activity_id' => $activity->id,
+                        'player_id' => $playerId,
+                        'chip_amount' => $chipAmount,
+                        'end_time' => $activity->end_time,
+                    ]);
+
                     continue;
                 }
 
@@ -294,11 +309,14 @@ class LotteryTicketBetProgressService
     protected static function createProgressForPlayer(int $activityId, int $playerId): ?LotteryTicketBetProgress
     {
         $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity || !in_array($activity->status, [
-            LotteryTicketActivity::STATUS_ONGOING,
-            LotteryTicketActivity::STATUS_BETTING,
-        ])) {
+        if (!$activity || $activity->status !== LotteryTicketActivity::STATUS_ONGOING) {
             return null;
+        }
+
+        // ⚠️ 检查是否超过结束时间
+        $now = date('Y-m-d H:i:s');
+        if ($now >= $activity->end_time) {
+            return null;  // 超过结束时间，不创建新进度
         }
 
         $player = Player::find($playerId);

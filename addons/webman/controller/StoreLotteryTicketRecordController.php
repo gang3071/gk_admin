@@ -124,7 +124,7 @@ class StoreLotteryTicketRecordController
                     return Tag::create($config['text'])->color($config['color']);
                 });
 
-            $grid->column('draw_time', admin_trans('lottery_ticket.record_fields.draw_time'))
+            $grid->column('created_at', admin_trans('lottery_ticket.record_fields.created_at'))
                 ->width(160)->align('center');
 
             $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))

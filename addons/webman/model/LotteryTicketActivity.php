@@ -37,15 +37,12 @@ class LotteryTicketActivity extends Model
 {
     use HasDateTimeFormatter, SoftDeletes, DataPermissions;
 
-    // 状态常量
+    // 状态常量（简化设计：5个核心状态）
     const STATUS_NOT_STARTED = 0; // 未开始
-    const STATUS_ONGOING = 1;     // 进行中
-    const STATUS_ENDED = 2;       // 已结束
-    const STATUS_CLOSED = 3;      // 已关闭
-    const STATUS_PREHEATING = 4;  // 预热期
-    const STATUS_BETTING = 5;     // 打码中
-    const STATUS_DRAWING = 6;     // 开奖中
-    const STATUS_DRAWN = 7;       // 已开奖待发放 ⭐ 新增
+    const STATUS_ONGOING = 1;     // 进行中（玩家打码获券阶段）
+    const STATUS_ENDED = 2;       // 已结束（摇球后进入此状态，店家可继续发放奖励）
+    const STATUS_CLOSED = 3;      // 已关闭（手动关闭，异常终止）
+    const STATUS_DRAWING = 6;     // 开奖中（管理员摇球阶段）
 
     // 直播状态常量
     const LIVE_STATUS_NOT_STARTED = 0; // 未开播
@@ -78,10 +75,7 @@ class LotteryTicketActivity extends Model
             self::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
             self::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
             self::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
-            self::STATUS_PREHEATING => admin_trans('lottery_ticket.status.preheating'),
-            self::STATUS_BETTING => admin_trans('lottery_ticket.status.betting'),
             self::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),
-            self::STATUS_DRAWN => admin_trans('lottery_ticket.status.drawn'), // 已开奖待发放 ⭐
         ];
 
         return $statusMap[$status] ?? admin_trans('lottery_ticket.status.unknown');
@@ -141,21 +135,19 @@ class LotteryTicketActivity extends Model
      */
     public function canStartDrawing(): bool
     {
-        $now = date('Y-m-d H:i:s');
-        return in_array($this->status, [self::STATUS_BETTING, self::STATUS_ONGOING])
-            && $this->draw_time
-            && $now >= $this->draw_time;
+        // 只有进行中的活动可以开奖（不再依赖draw_time字段）
+        return $this->status === self::STATUS_ONGOING;
     }
 
     /**
-     * 判断是否应该结束
+     * 判断是否可以停止开奖（管理员手动触发）
      * @return bool
      */
-    public function shouldEnd(): bool
+    public function canStopDrawing(): bool
     {
-        $now = date('Y-m-d H:i:s');
-        return $this->status === self::STATUS_DRAWING
-            && $now >= $this->end_time;
+        // ⭐ 线下摸奖流程：管理员线下摇球后可随时停止开奖
+        // 只检查状态为 DRAWING，不检查 ball_result（线下摇球无此字段）
+        return $this->status === self::STATUS_DRAWING;
     }
 
     /**

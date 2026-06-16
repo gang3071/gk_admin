@@ -141,7 +141,7 @@ class ChannelLotteryTicketRecordController
                     ->color($colors[$val] ?? 'default');
             });
 
-            $grid->column('created_at', admin_trans('lottery_ticket.fields.draw_time'))->width(160);
+            $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))->width(160);
 
             // 筛选
             $grid->filter(function (Filter $filter) use ($departmentId, $playerTable) {
@@ -184,7 +184,7 @@ class ChannelLotteryTicketRecordController
                     ]);
 
                 // 时间范围筛选
-                $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.fields.draw_time'))
+                $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.fields.created_time_range'))
                     ->placeholder([
                         admin_trans('common.start_time'),
                         admin_trans('common.end_time')
@@ -334,9 +334,9 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
             }
 
-            // 7.1 检查活动状态（只有已开奖待发放状态才能发放）⭐
-            if ($activity->status !== LotteryTicketActivity::STATUS_DRAWN) {
-                throw new \Exception(admin_trans('lottery_ticket.error.activity_invalid_status'));
+            // 7.1 检查活动是否已开奖（必须先摇球才能发放奖励）⭐
+            if (empty($activity->ball_result)) {
+                throw new \Exception('活动还未开奖，请先进行摇球开奖');
             }
 
             // 7.2 检查是否超额发放 ⭐
@@ -511,9 +511,9 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
                 }
 
-                // 检查活动状态 ⭐
-                if ($activity->status !== LotteryTicketActivity::STATUS_DRAWN) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.activity_invalid_status'));
+                // 检查活动是否已开奖 ⭐
+                if (empty($activity->ball_result)) {
+                    throw new \Exception('活动还未开奖，请先进行摇球开奖');
                 }
 
                 // 检查是否超额发放 ⭐
@@ -758,9 +758,9 @@ class ChannelLotteryTicketRecordController
         return Form::create(new LotteryTicketRecord(), function ($form) {
             $departmentId = Admin::user()->department_id;
 
-            // 活动选择
+            // 活动选择（显示已结束的活动，这些活动已经开奖）
             $activities = LotteryTicketActivity::where('department_id', $departmentId)
-                ->where('status', LotteryTicketActivity::STATUS_DRAWN)
+                ->where('status', LotteryTicketActivity::STATUS_ENDED)
                 ->orderBy('created_at', 'desc')
                 ->pluck('name', 'id')
                 ->toArray();

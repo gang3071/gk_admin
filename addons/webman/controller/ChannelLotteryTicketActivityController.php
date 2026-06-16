@@ -554,7 +554,18 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
-     * 录入中奖（按券号批量录入）
+     * 录入中奖（按券号批量录入）⭐ 核心方法
+     *
+     * 业务说明：
+     * 线下物理摇球后，管理员根据摇球结果录入中奖券号
+     * 例如：摇出 [6,5,4,3,2,1] → 中奖券号为 654321
+     *
+     * 流程：
+     * 1. 线下摇球（实体球机现场直播）
+     * 2. 管理员在此录入中奖券号和对应奖品等级
+     * 3. 系统自动创建中奖记录
+     * 4. 系统自动推送中奖通知给玩家
+     *
      * @auth true
      * @group channel
      * @return Msg|Response
@@ -574,9 +585,16 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('common.no_permission'));
         }
 
-        // 只能在进行中的活动录入中奖
-        if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return message_error(admin_trans('lottery_ticket.error.activity_not_ongoing'));
+        // ⭐ 核心业务：线下摇球后录入中奖券号
+        // 允许在 ONGOING（活动进行中）或 DRAWING（开奖中）状态录入
+        // 不允许在 ENDED（已结束）或 CLOSED（已关闭）状态录入
+        $allowedStatuses = [
+            LotteryTicketActivity::STATUS_ONGOING,
+            LotteryTicketActivity::STATUS_DRAWING,
+        ];
+
+        if (!in_array($activity->status, $allowedStatuses)) {
+            return message_error(admin_trans('lottery_ticket.error.cannot_record_win_in_current_status'));
         }
 
         $successCount = 0;
@@ -601,10 +619,11 @@ class ChannelLotteryTicketActivityController
                     continue;
                 }
 
-                // 查找摸奖券
+                // 查找摸奖券（使用悲观锁防止并发重复录入）
                 $ticket = LotteryTicket::where('ticket_no', $ticketNo)
                     ->where('activity_id', $activityId)
                     ->where('status', LotteryTicket::STATUS_UNUSED)
+                    ->lockForUpdate()
                     ->first();
 
                 if (!$ticket) {
@@ -753,6 +772,137 @@ class ChannelLotteryTicketActivityController
         return Response::success([
             'url' => 'https://example.com/image.jpg'
         ]);
+    }
+
+    /**
+     * 开始开奖（手动触发）
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function startDrawing()
+    {
+        $id = Request::input('id');
+        $liveUrl = Request::input('live_url');
+
+        // 验证直播地址
+        if (empty($liveUrl)) {
+            return message_error(admin_trans('lottery_ticket.error.live_url_required'));
+        }
+
+        if (strlen($liveUrl) > 500) {
+            return message_error(admin_trans('lottery_ticket.error.live_url_too_long'));
+        }
+
+        Db::beginTransaction();
+        try {
+            // 使用悲观锁防止并发问题
+            $activity = LotteryTicketActivity::where('id', $id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$activity || $activity->department_id != Admin::user()->department_id) {
+                Db::rollBack();
+                return message_error(admin_trans('common.no_permission'));
+            }
+
+            // 检查是否可以开奖
+            if (!$activity->canStartDrawing()) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.cannot_start_drawing'));
+            }
+
+            // 更新状态和直播地址
+            $activity->status = LotteryTicketActivity::STATUS_DRAWING;
+            $activity->live_url = $liveUrl;
+            $activity->recordStatusChange(LotteryTicketActivity::STATUS_DRAWING, '管理员手动开奖');
+            $activity->save();
+
+            // 停止所有玩家的打码进度（不再发券）
+            \addons\webman\service\LotteryTicketBetProgressService::endActivityProgress($id);
+
+            // 推送开奖通知
+            \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'drawing_start');
+
+            Db::commit();
+
+            Log::info('摸奖券活动手动开奖', [
+                'activity_id' => $activity->id,
+                'activity_name' => $activity->name,
+                'live_url' => $liveUrl,
+                'admin_id' => Admin::user()->id,
+            ]);
+
+            return message_success(admin_trans('lottery_ticket.message.drawing_started'));
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            Log::error('摸奖券活动开奖失败', [
+                'activity_id' => $id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return message_error($e->getMessage());
+        }
+    }
+
+    /**
+     * 停止开奖（手动触发）
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function stopDrawing()
+    {
+        $id = Request::input('id');
+
+        Db::beginTransaction();
+        try {
+            // 使用悲观锁防止并发问题
+            $activity = LotteryTicketActivity::where('id', $id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$activity || $activity->department_id != Admin::user()->department_id) {
+                Db::rollBack();
+                return message_error(admin_trans('common.no_permission'));
+            }
+
+            // 检查是否可以停止开奖
+            if (!$activity->canStopDrawing()) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.cannot_stop_drawing'));
+            }
+            // 更新状态
+            $activity->status = LotteryTicketActivity::STATUS_ENDED;
+            $activity->draw_completed_at = date('Y-m-d H:i:s');
+            $activity->recordStatusChange(LotteryTicketActivity::STATUS_ENDED, '管理员手动结束');
+            $activity->save();
+
+            // 推送活动结束通知
+            \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'ended');
+
+            Db::commit();
+
+            Log::info('摸奖券活动手动结束', [
+                'activity_id' => $activity->id,
+                'activity_name' => $activity->name,
+                'admin_id' => Admin::user()->id,
+            ]);
+
+            return message_success(admin_trans('lottery_ticket.message.activity_ended'));
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            Log::error('摸奖券活动结束失败', [
+                'activity_id' => $id,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return message_error($e->getMessage());
+        }
     }
 
     /**
@@ -1102,14 +1252,12 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('common.no_permission'));
         }
 
-        // 验证状态值
+        // 验证状态值（仅允许核心状态）
         $validStatuses = [
             LotteryTicketActivity::STATUS_NOT_STARTED,
             LotteryTicketActivity::STATUS_ONGOING,
             LotteryTicketActivity::STATUS_ENDED,
             LotteryTicketActivity::STATUS_CLOSED,
-            LotteryTicketActivity::STATUS_PREHEATING,
-            LotteryTicketActivity::STATUS_BETTING,
             LotteryTicketActivity::STATUS_DRAWING,
         ];
 
@@ -1128,70 +1276,10 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
-     * 执行摇球开奖
-     * @return Msg|Response
-     */
-    public function performBallDraw()
-    {
-        $activityId = Request::input('activity_id');
-
-        $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
-        }
-
-        // 执行摇球
-        $result = \addons\webman\service\LotteryBallDrawService::performDraw($activityId);
-
-        if (!$result['success']) {
-            return message_error($result['message']);
-        }
-
-        // 推送中奖通知
-        if (!empty($result['data']['winning_tickets'])) {
-            foreach ($result['data']['winning_tickets'] as $winData) {
-                try {
-                    $record = \addons\webman\model\LotteryTicketRecord::where('ticket_no', $winData['ticket_no'])
-                        ->where('activity_id', $activityId)
-                        ->first();
-
-                    if ($record) {
-                        \addons\webman\service\LotteryTicketPushService::pushWinNotification($record);
-                    }
-                } catch (\Exception $e) {
-                    \support\Log::warning('推送中奖通知失败', [
-                        'ticket_no' => $winData['ticket_no'],
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-        }
-
-        return Response::success($result['data']);
-    }
-
-    /**
-     * 获取摇球范围（用于前端展示）
-     * @return Msg|Response
-     */
-    public function getBallRanges()
-    {
-        $activityId = Request::input('activity_id');
-
-        $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
-        }
-
-        $maxTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
-
-        $ranges = \addons\webman\service\LotteryBallDrawService::getBallRanges($maxTicketNo);
-
-        return Response::success($ranges);
-    }
-
-    /**
-     * 获取摇球结果
+     * 获取摇球结果（查询已保存的ball_result）
+     *
+     * 说明：此方法用于查询线下摇球后录入的结果
+     *
      * @return Msg|Response
      */
     public function getBallResult()
@@ -1248,14 +1336,14 @@ class ChannelLotteryTicketActivityController
                 throw new \Exception(admin_trans('common.no_permission'));
             }
 
-            // ⭐ 4. 检查活动状态 - 只能在"已开奖待发放"或"进行中"状态发放
-            $validStatuses = [
-                LotteryTicketActivity::STATUS_DRAWN,    // 已开奖待发放
-                LotteryTicketActivity::STATUS_ONGOING,  // 进行中(兼容)
+            // ⭐ 4. 检查活动状态（线下摸奖流程：必须在 DRAWING 或 ENDED 状态才能发放）
+            $allowedStatuses = [
+                LotteryTicketActivity::STATUS_DRAWING,
+                LotteryTicketActivity::STATUS_ENDED,
             ];
 
-            if (!in_array($activity->status, $validStatuses)) {
-                throw new \Exception(admin_trans('lottery_ticket.error.activity_invalid_status'));
+            if (!in_array($activity->status, $allowedStatuses)) {
+                throw new \Exception('只能在开奖中或已结束状态发放奖励');
             }
 
             // ⭐ 5. 查询该活动所有待发放的中奖记录
@@ -1517,14 +1605,14 @@ class ChannelLotteryTicketActivityController
                 throw new \Exception(admin_trans('common.no_permission'));
             }
 
-            // ⭐ 4. 检查活动状态 - 只能在"已开奖待发放"或"进行中"状态发放
-            $validStatuses = [
-                LotteryTicketActivity::STATUS_DRAWN,    // 已开奖待发放
-                LotteryTicketActivity::STATUS_ONGOING,  // 进行中（兼容）
+            // ⭐ 4. 检查活动状态（线下摸奖流程：必须在 DRAWING 或 ENDED 状态才能发放）
+            $allowedStatuses = [
+                LotteryTicketActivity::STATUS_DRAWING,
+                LotteryTicketActivity::STATUS_ENDED,
             ];
 
-            if (!in_array($activity->status, $validStatuses)) {
-                throw new \Exception(admin_trans('lottery_ticket.error.activity_invalid_status'));
+            if (!in_array($activity->status, $allowedStatuses)) {
+                throw new \Exception('只能在开奖中或已结束状态发放奖励');
             }
 
             // ⭐ 5. 查找已录入的中奖记录（根据券号）

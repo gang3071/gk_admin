@@ -59,7 +59,7 @@ return [
         'prize_type' => '奖品类型',
         'prize_name' => '奖品名称',
         'record_status' => '发放状态',
-        'draw_time' => '抽奖时间',
+        'created_time_range' => '创建时间范围',
         'source' => '來源',
         'used_at' => '使用时间',
         'expired_at' => '过期时间',
@@ -171,7 +171,7 @@ return [
     'record_fields' => [
         'prize_type' => '奖品类型',
         'prize_level_name' => '奖品等级',
-        'draw_time' => '抽奖时间',
+        'created_at' => '创建时间',
     ],
 
     // 中奖等级字段
@@ -267,11 +267,18 @@ return [
         'ticket_format_error' => '券号格式错误，只能包含数字且不超过6位',
         'no_prize_level' => '該活动尚未配置奖品等级',
         'distribute_hint' => '请输入中奖券号，系统將根據券号自动识別奖品等级並发放奖勵',
+        'drawing_started' => '开奖已开始，进入开奖阶段',
+        'activity_ended' => '活动已结束',
     ],
 
     // 错误信息
     'error' => [
         'record_not_found' => '记录不存在',
+        'live_url_required' => '请填写直播地址',
+        'live_url_too_long' => '直播地址过长（最多500字符）',
+        'cannot_start_drawing' => '当前状态无法开始开奖（只有进行中的活动可以开奖）',
+        'cannot_stop_drawing' => '当前状态无法停止开奖（只有开奖中的活动可以结束）',
+        'cannot_record_win_in_current_status' => '当前状态无法录入中奖（只能在进行中或开奖中状态录入）',
         // 输入驗證
         'invalid_record_id' => '參数错誤：记录ID无效',
         'invalid_activity_id' => '參数错誤：活动ID无效',
