@@ -192,28 +192,41 @@ class AgentLotteryTicketActivityController
                     return $statusMap[$val] ?? $val;
                 });
 
-            // 奖品等级列表 - 简洁显示
+            // 奖品等级列表 - 使用Tag美化显示
             if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
-                $prizeLevelsText = [];
-                foreach ($activity->prizeLevels as $level) {
-                    $prizeLevelsText[] = $level->level_name . ': ¥' . number_format($level->prize_amount, 2);
-                }
                 $detail->item('prize_levels', admin_trans('lottery_ticket.fields.prize_level_config'))
-                    ->display(function () use ($prizeLevelsText) {
-                        return implode(' | ', $prizeLevelsText);
+                    ->display(function () use ($activity) {
+                        $tags = [];
+                        foreach ($activity->prizeLevels as $level) {
+                            $remaining = $level->prize_count - $level->won_count;
+
+                            // 根据剩余数量设置颜色
+                            if ($remaining <= 0) {
+                                $color = 'red';
+                            } elseif ($remaining <= 3) {
+                                $color = 'orange';
+                            } else {
+                                $color = 'blue';
+                            }
+
+                            $text = $level->level_name . ' ¥' . number_format($level->prize_amount, 2) . ' (剩' . $remaining . ')';
+                            $tags[] = Tag::create($text)->color($color);
+                        }
+                        return $tags;
                     });
             }
 
-            // VIP打码量配置 - 简洁显示
+            // VIP打码量配置 - 使用Tag美化显示
             if ($activity->vipConfigs && count($activity->vipConfigs) > 0) {
-                $vipConfigsText = [];
-                foreach ($activity->vipConfigs as $config) {
-                    $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
-                    $vipConfigsText[] = $vipName . ': 打码¥' . number_format($config->bet_amount_required, 2) . ' 送' . $config->ticket_count . '张券';
-                }
                 $detail->item('vip_configs', admin_trans('lottery_ticket.fields.vip_level'))
-                    ->display(function () use ($vipConfigsText) {
-                        return implode(' | ', $vipConfigsText);
+                    ->display(function () use ($activity) {
+                        $tags = [];
+                        foreach ($activity->vipConfigs as $config) {
+                            $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
+                            $text = $vipName . ' 打码¥' . number_format($config->bet_amount_required, 2) . ' → ' . $config->ticket_count . '张券';
+                            $tags[] = Tag::create($text)->color('green');
+                        }
+                        return $tags;
                     });
             }
         })->bordered()->layout('vertical');
