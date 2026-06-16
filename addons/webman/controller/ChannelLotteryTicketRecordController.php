@@ -334,9 +334,13 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
             }
 
-            // 7.1 检查活动是否已开奖（必须先摇球才能发放奖励）⭐
-            if (empty($activity->ball_result)) {
-                throw new \Exception('活动还未开奖，请先进行摇球开奖');
+            // 7.1 检查活动状态（线下摇球，只需检查状态）⭐
+            $allowedStatuses = [
+                LotteryTicketActivity::STATUS_DRAWING,
+                LotteryTicketActivity::STATUS_ENDED,
+            ];
+            if (!in_array($activity->status, $allowedStatuses)) {
+                throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
             }
 
             // 7.2 检查是否超额发放 ⭐
@@ -511,9 +515,13 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
                 }
 
-                // 检查活动是否已开奖 ⭐
-                if (empty($activity->ball_result)) {
-                    throw new \Exception('活动还未开奖，请先进行摇球开奖');
+                // 检查活动状态（线下摇球，只需检查状态）⭐
+                $allowedStatuses = [
+                    LotteryTicketActivity::STATUS_DRAWING,
+                    LotteryTicketActivity::STATUS_ENDED,
+                ];
+                if (!in_array($activity->status, $allowedStatuses)) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
                 }
 
                 // 检查是否超额发放 ⭐

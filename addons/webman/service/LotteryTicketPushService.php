@@ -395,47 +395,11 @@ class LotteryTicketPushService
     }
 
     /**
-     * 推送活动摇球结果（广播给所有参与玩家）
+     * ⭐ 废弃方法：pushDrawResult已删除
      *
-     * @param LotteryTicketActivity $activity 活动对象
-     * @param array $ballResult 摇球结果
-     * @param int $winningCount 中奖数量
-     * @return bool
+     * 原因：系统不再使用自动摇球功能，没有ball_result数据
+     * 替代方案：线下摇球后，通过recordWinByTickets录入中奖券号，推送通知已在该方法中处理
      */
-    public static function pushDrawResult(
-        LotteryTicketActivity $activity,
-        array $ballResult,
-        int $winningCount
-    ): bool {
-        try {
-            $message = [
-                'type' => 'draw_result',
-                'title' => '🎉 开奖结果公布',
-                'message' => sprintf(
-                    '活动「%s」开奖完成！中奖券号：%s，共 %d 人中奖！',
-                    $activity->name,
-                    $ballResult['winning_no'],
-                    $winningCount
-                ),
-                'data' => [
-                    'activity_id' => $activity->id,
-                    'activity_name' => $activity->name,
-                    'ball_result' => $ballResult,
-                    'winning_count' => $winningCount,
-                ],
-            ];
-
-            // 广播给所有渠道用户
-            return self::pushToDepartment($activity->department_id, 'draw_result', $message);
-
-        } catch (\Exception $e) {
-            Log::error('摇球结果推送失败', [
-                'activity_id' => $activity->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
 
     /**
      * 批量推送中奖通知（使用队列，避免阻塞）

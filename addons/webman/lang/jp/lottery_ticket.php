@@ -298,6 +298,7 @@ return [
         'player_disabled' => 'プレイヤーは無効化されています',
         'activity_not_found' => 'アクティビティが存在しません',
         'activity_invalid_status' => 'アクティビティステータスエラー',
+        'activity_not_in_drawing_status' => 'アクティビティステータスエラー、抽選中または終了ステータスでのみ配布可能',
         'amount_exceeded' => '配布金額が総賞金額を超えています',
         'ticket_not_found_or_used' => 'チケット {ticket_no} が存在しないか使用済みです',
         'prize_level_not_found_for_ticket' => 'チケット {ticket_no} の賞品レベルが存在しません',

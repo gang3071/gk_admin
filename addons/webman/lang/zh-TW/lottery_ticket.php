@@ -297,6 +297,7 @@ return [
         'player_disabled' => '玩家已被禁用，無法發放獎勵',
         'activity_not_found' => '活動不存在',
         'activity_invalid_status' => '活動狀態錯誤，只能發放已開獎待發放的活動獎勵',
+        'activity_not_in_drawing_status' => '活動狀態錯誤，只能在開獎中或已結束狀態發放獎勵',
         'amount_exceeded' => '發放金額超出總獎金額度',
         'ticket_not_found_or_used' => '券號 {ticket_no} 不存在或已使用',
         'prize_level_not_found_for_ticket' => '券號 {ticket_no} 的獎品等級不存在',

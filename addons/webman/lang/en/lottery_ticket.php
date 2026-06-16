@@ -298,6 +298,7 @@ return [
         'player_disabled' => 'Player disabled, cannot distribute',
         'activity_not_found' => 'Activity not found',
         'activity_invalid_status' => 'Invalid activity status',
+        'activity_not_in_drawing_status' => 'Invalid activity status, can only distribute in DRAWING or ENDED status',
         'amount_exceeded' => 'Distribution amount exceeds total prize',
         'ticket_not_found_or_used' => 'Ticket {ticket_no} not found or used',
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',

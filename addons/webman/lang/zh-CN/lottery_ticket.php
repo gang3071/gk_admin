@@ -298,6 +298,7 @@ return [
         'player_disabled' => '玩家已被禁用，无法发放奖勵',
         'activity_not_found' => '活动不存在',
         'activity_invalid_status' => '活动状态错誤，只能发放已开奖待发放的活动奖勵',
+        'activity_not_in_drawing_status' => '活动状态错误，只能在开奖中或已结束状态发放奖励',
         'amount_exceeded' => '发放金额超出总奖金额度',
         'ticket_not_found_or_used' => '券号 {ticket_no} 不存在或已使用',
         'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',

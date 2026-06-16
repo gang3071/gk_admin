@@ -88,9 +88,11 @@ class ChannelLotteryTicketStatisticsController
             'granted_prize_amount' => $winningStats['granted_prize_amount'],
             'prize_by_level' => $this->getPrizeByLevel($activityId),
 
-            // 摇球结果
-            'ball_result' => !empty($activity->ball_result) ? json_decode($activity->ball_result, true) : null,
-            'has_drawn' => !empty($activity->ball_result),
+            // 开奖状态（线下摇球，无ball_result字段）
+            'has_drawn' => in_array($activity->status, [
+                LotteryTicketActivity::STATUS_DRAWING,
+                LotteryTicketActivity::STATUS_ENDED,
+            ]),
         ]);
 
         return Response::success($stats);

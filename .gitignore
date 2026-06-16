@@ -135,3 +135,10 @@ windows_*.php
 create_master_*.php
 phinx.php
 QUICK_DEPLOY.txt
+
+# ==========================================
+# 翻译工具临时文件（不要提交）
+# ==========================================
+TRANSLATION_PATCH.txt
+translate_*.sed
+FIELD_CLEANUP_*.md

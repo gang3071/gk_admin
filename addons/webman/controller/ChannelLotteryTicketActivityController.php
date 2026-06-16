@@ -1299,32 +1299,13 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
-     * 获取摇球结果（查询已保存的ball_result）
+     * ⭐ 废弃方法：getBallResult已删除
      *
-     * 说明：此方法用于查询线下摇球后录入的结果
-     *
-     * @return Msg|Response
+     * 原因：系统不再使用ball_result字段（自动摇球功能已移除）
+     * 替代方案：通过activity.status判断是否已开奖
+     *   - STATUS_DRAWING(6) = 开奖中（线下摇球中）
+     *   - STATUS_ENDED(2) = 已结束（开奖完成）
      */
-    public function getBallResult()
-    {
-        $activityId = Request::input('activity_id');
-
-        $activity = LotteryTicketActivity::find($activityId);
-        if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
-        }
-
-        $ballResult = null;
-        if (!empty($activity->ball_result)) {
-            $ballResult = json_decode($activity->ball_result, true);
-        }
-
-        return Response::success([
-            'has_drawn' => !empty($ballResult),
-            'ball_result' => $ballResult,
-            'activity_status' => $activity->status,
-        ]);
-    }
 
     /**
      * 批量发放该活动所有已录入未发放的奖励
