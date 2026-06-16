@@ -17,6 +17,7 @@ use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
 use support\Db;
+use support\Log;
 
 /**
  * 渠道后台-摸奖券活动管理
