@@ -1377,9 +1377,10 @@ export default {
         0: this.trans.notStarted,
         1: this.trans.ongoing,
         2: this.trans.ended,
-        3: this.trans.closed
+        3: this.trans.closed,
+        6: this.trans.drawing  // ⭐ 修复：开奖中状态
       };
-      return texts[status] || '未知';
+      return texts[status] || this.trans.statusUnknown || '未知狀態';
     },
 
     getUsageRate(activity) {

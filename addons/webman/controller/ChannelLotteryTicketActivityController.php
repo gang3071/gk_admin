@@ -76,8 +76,10 @@ class ChannelLotteryTicketActivityController
             'allStatus' => admin_trans('lottery_ticket.status.all'),
             'notStarted' => admin_trans('lottery_ticket.status.not_started'),
             'ongoing' => admin_trans('lottery_ticket.status.ongoing'),
+            'drawing' => admin_trans('lottery_ticket.status.drawing'),  // ⭐ 新增：开奖中状态
             'ended' => admin_trans('lottery_ticket.status.ended'),
             'closed' => admin_trans('lottery_ticket.status.closed'),
+            'statusUnknown' => admin_trans('lottery_ticket.status.unknown'),  // ⭐ 新增：未知状态
 
             // 字段
             'activityName' => admin_trans('lottery_ticket.fields.activity_name'),
