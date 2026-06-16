@@ -512,6 +512,109 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
+     * 获取历史活动列表（用于复制创建）⭐ 新增
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function getHistoryActivities()
+    {
+        $departmentId = Admin::user()->department_id;
+
+        // 获取已结束的活动（最近20个）
+        $activities = LotteryTicketActivity::where('department_id', $departmentId)
+            ->whereIn('status', [
+                LotteryTicketActivity::STATUS_ENDED,
+                LotteryTicketActivity::STATUS_CLOSED
+            ])
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get(['id', 'name', 'description', 'cover_image', 'created_at', 'status']);
+
+        return Response::success([
+            'activities' => $activities->toArray()
+        ]);
+    }
+
+    /**
+     * 复制活动创建新活动 ⭐ 新增
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function copyActivity()
+    {
+        $sourceId = Request::input('source_id');
+
+        if (!$sourceId || !is_numeric($sourceId)) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+        }
+
+        $departmentId = Admin::user()->department_id;
+
+        Db::beginTransaction();
+        try {
+            // 1. 查找源活动
+            $sourceActivity = LotteryTicketActivity::where('id', $sourceId)
+                ->where('department_id', $departmentId)
+                ->first();
+
+            if (!$sourceActivity) {
+                throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
+            }
+
+            // 2. 复制活动基本信息
+            $newActivity = new LotteryTicketActivity();
+            $newActivity->department_id = $departmentId;
+            $newActivity->name = $sourceActivity->name . ' (副本)';
+            $newActivity->description = $sourceActivity->description;
+            $newActivity->cover_image = $sourceActivity->cover_image;
+            $newActivity->status = LotteryTicketActivity::STATUS_NOT_STARTED;
+            $newActivity->current_ticket_no = 1; // 重置券号
+            // 不复制时间，让用户设置
+            $newActivity->save();
+
+            // 3. 复制奖品等级配置
+            $prizeLevels = LotteryTicketPrizeLevel::where('activity_id', $sourceId)->get();
+            foreach ($prizeLevels as $level) {
+                $newLevel = new LotteryTicketPrizeLevel();
+                $newLevel->activity_id = $newActivity->id;
+                $newLevel->level_rank = $level->level_rank;
+                $newLevel->level_name = $level->level_name;
+                $newLevel->prize_type = $level->prize_type;
+                $newLevel->prize_name = $level->prize_name;
+                $newLevel->prize_amount = $level->prize_amount;
+                $newLevel->prize_count = $level->prize_count;
+                $newLevel->win_probability = $level->win_probability;
+                $newLevel->description = $level->description;
+                $newLevel->save();
+            }
+
+            // 4. 复制VIP打码配置
+            $vipConfigs = LotteryTicketVipConfig::where('activity_id', $sourceId)->get();
+            foreach ($vipConfigs as $config) {
+                $newConfig = new LotteryTicketVipConfig();
+                $newConfig->activity_id = $newActivity->id;
+                $newConfig->vip_level_id = $config->vip_level_id;
+                $newConfig->bet_amount_required = $config->bet_amount_required;
+                $newConfig->ticket_count = $config->ticket_count;
+                $newConfig->save();
+            }
+
+            Db::commit();
+
+            return Response::success([
+                'activity_id' => $newActivity->id,
+                'activity' => $newActivity->toArray()
+            ]);
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return message_error($e->getMessage());
+        }
+    }
+
+    /**
      * 获取摸奖券发放列表
      * @auth true
      * @group channel

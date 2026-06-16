@@ -3,12 +3,28 @@
     <!-- 顶部操作栏 -->
     <div class="header-actions">
       <a-space>
-        <a-button type="primary" @click="showCreateForm" :loading="loading">
-          <template #icon>
-            <plus-outlined/>
+        <!-- ⭐ 创建活动下拉菜单 -->
+        <a-dropdown :trigger="['click']">
+          <a-button type="primary" :loading="loading">
+            <template #icon>
+              <plus-outlined/>
+            </template>
+            {{ trans.createActivity }}
+            <down-outlined style="margin-left: 4px; font-size: 10px;"/>
+          </a-button>
+          <template #overlay>
+            <a-menu @click="handleCreateMenuClick">
+              <a-menu-item key="new">
+                <plus-outlined/>
+                从零创建
+              </a-menu-item>
+              <a-menu-item key="copy">
+                <copy-outlined/>
+                从历史活动创建
+              </a-menu-item>
+            </a-menu>
           </template>
-          {{ trans.createActivity }}
-        </a-button>
+        </a-dropdown>
         <a-button @click="fetchActivities" :loading="loading">
           <template #icon>
             <reload-outlined/>
@@ -287,6 +303,55 @@
         </a-card>
       </a-col>
     </a-row>
+
+    <!-- ⭐ 选择历史活动模态框 -->
+    <a-modal
+        v-model:visible="historyModalVisible"
+        title="选择历史活动"
+        width="800px"
+        :footer="null"
+    >
+      <a-spin :spinning="historyLoading">
+        <a-list
+            :data-source="historyActivities"
+            :grid="{ gutter: 16, column: 2 }"
+        >
+          <template #renderItem="{ item }">
+            <a-list-item>
+              <a-card
+                  hoverable
+                  @click="selectHistoryActivity(item)"
+                  style="cursor: pointer;"
+              >
+                <!-- 封面图 -->
+                <div v-if="item.cover_image" style="margin-bottom: 12px;">
+                  <img
+                      :src="item.cover_image"
+                      style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;"
+                      alt="活动封面"
+                  />
+                </div>
+                <a-card-meta>
+                  <template #title>
+                    <a-tooltip :title="item.name">
+                      <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {{ item.name }}
+                      </div>
+                    </a-tooltip>
+                  </template>
+                  <template #description>
+                    <div style="font-size: 12px; color: #999;">
+                      {{ item.created_at }}
+                    </div>
+                  </template>
+                </a-card-meta>
+              </a-card>
+            </a-list-item>
+          </template>
+        </a-list>
+        <a-empty v-if="!historyLoading && historyActivities.length === 0" description="暂无历史活动"/>
+      </a-spin>
+    </a-modal>
 
     <!-- 创建/编辑活动抽屉 -->
     <a-drawer
@@ -691,6 +756,9 @@ export default {
       liveUrlInput: '',
       liveModalMode: 'update', // 'update' 或 'startDrawing'
       formMode: 'create',
+      historyModalVisible: false,  // ⭐ 历史活动选择Modal
+      historyActivities: [],        // ⭐ 历史活动列表
+      historyLoading: false,        // ⭐ 历史活动加载状态
       currentActivity: null,
       submitting: false,
       recordSubmitting: false,
@@ -807,6 +875,73 @@ export default {
     // 状态筛选变化
     handleStatusChange() {
       this.fetchActivities();
+    },
+
+    // ⭐ 处理创建菜单点击
+    handleCreateMenuClick({key}) {
+      if (key === 'new') {
+        // 从零创建
+        this.showCreateForm();
+      } else if (key === 'copy') {
+        // 从历史活动创建
+        this.showHistoryActivityModal();
+      }
+    },
+
+    // ⭐ 显示历史活动选择Modal
+    async showHistoryActivityModal() {
+      this.historyModalVisible = true;
+      this.historyLoading = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getHistoryActivities',
+          method: 'post'
+        });
+        if (res.code === 200) {
+          this.historyActivities = res.data.activities || [];
+        } else {
+          this.$message.error(res.message || '获取历史活动失败');
+        }
+      } catch (error) {
+        this.$message.error('获取历史活动失败');
+        console.error(error);
+      } finally {
+        this.historyLoading = false;
+      }
+    },
+
+    // ⭐ 选择历史活动
+    async selectHistoryActivity(activity) {
+      this.historyModalVisible = false;
+      this.formMode = 'create';
+
+      // 获取活动详情（包含奖品配置和VIP配置）
+      const detail = await this.getActivityDetail(activity.id);
+
+      if (!detail) {
+        this.$message.error('获取活动详情失败');
+        return;
+      }
+
+      // 填充表单数据
+      this.formData = {
+        name: activity.name + ' (副本)',
+        description: activity.description || '',
+        cover_image: activity.cover_image || '',
+        start_time: null,  // 不复制时间，让用户设置
+        end_time: null,
+        vip_configs: detail.vip_configs || this.vip_levels.map(vipLevel => ({
+          vip_level_id: vipLevel.id,
+          vip_level_name: vipLevel.name,
+          bet_amount_required: 0,
+          ticket_count: 1
+        })),
+        prize_levels: detail.prize_levels || []
+      };
+
+      // 显示创建表单
+      this.formVisible = true;
+      this.$message.success('已加载历史活动数据，请设置活动时间并提交');
     },
 
     // 显示创建表单
@@ -1188,33 +1323,47 @@ export default {
       });
     },
 
-    // 编辑活动
-    async editActivity(activity) {
+    // ⭐ 获取活动详情（通用方法）
+    async getActivityDetail(activityId) {
       try {
         const res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getActivityDetail',
           method: 'post',
-          data: {id: activity.id}
+          data: {id: activityId}
         });
 
         if (res.code === 200) {
-          const data = res.data;
-          this.formMode = 'edit';
-          this.formData = {
-            id: data.id,
-            name: data.name,
-            description: data.description,
-            cover_image: data.cover_image || '',
-            start_time: this.$dayjs(data.start_time),
-            end_time: this.$dayjs(data.end_time),
-            vip_configs: data.vip_configs || [],
-            prize_levels: data.prize_levels || []
-          };
-          this.formVisible = true;
+          return res.data;
+        } else {
+          this.$message.error(res.message || '获取活动详情失败');
+          return null;
         }
       } catch (error) {
-        this.$message.error('获取活动详情失败');
+        console.error('获取活动详情失败:', error);
+        return null;
       }
+    },
+
+    // 编辑活动
+    async editActivity(activity) {
+      const data = await this.getActivityDetail(activity.id);
+      if (!data) {
+        this.$message.error('获取活动详情失败');
+        return;
+      }
+
+      this.formMode = 'edit';
+      this.formData = {
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        cover_image: data.cover_image || '',
+        start_time: this.$dayjs(data.start_time),
+        end_time: this.$dayjs(data.end_time),
+        vip_configs: data.vip_configs || [],
+        prize_levels: data.prize_levels || []
+      };
+      this.formVisible = true;
     },
 
     // 关闭活动
