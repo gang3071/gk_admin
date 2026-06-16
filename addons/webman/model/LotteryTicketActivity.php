@@ -135,8 +135,10 @@ class LotteryTicketActivity extends Model
      */
     public function canStartDrawing(): bool
     {
-        // 只有进行中的活动可以开奖（不再依赖draw_time字段）
-        return $this->status === self::STATUS_ONGOING;
+        // ⚠️ 重要业务规则：只有已结束的活动才能开奖
+        // 进行中的活动禁止开奖，必须等待活动自然结束后才能开奖
+        // 状态流转：ONGOING → 到达end_time → 自动变为ENDED → 管理员手动开奖 → DRAWING
+        return $this->status === self::STATUS_ENDED;
     }
 
     /**

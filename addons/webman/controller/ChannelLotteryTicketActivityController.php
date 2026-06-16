@@ -276,8 +276,38 @@ class ChannelLotteryTicketActivityController
                 throw new \Exception(admin_trans('lottery_ticket.error.time_required'));
             }
 
-            if (strtotime($data['end_time']) <= strtotime($data['start_time'])) {
-                throw new \Exception(admin_trans('lottery_ticket.error.invalid_time'));
+            // 验证时间格式
+            $startTime = strtotime($data['start_time']);
+            $endTime = strtotime($data['end_time']);
+
+            if ($startTime === false || $endTime === false) {
+                throw new \Exception(admin_trans('lottery_ticket.error.invalid_time_format'));
+            }
+
+            // 验证结束时间必须晚于开始时间
+            if ($endTime <= $startTime) {
+                throw new \Exception(admin_trans('lottery_ticket.error.end_before_start'));
+            }
+
+            // 验证开始时间不能是过去的时间（创建新活动时）
+            if (empty($data['id'])) {
+                $now = time();
+                if ($startTime < $now - 300) { // 允许5分钟误差
+                    throw new \Exception(admin_trans('lottery_ticket.error.start_time_in_past'));
+                }
+            }
+
+            // 验证活动时长（至少1小时，最多30天）
+            $duration = $endTime - $startTime;
+            $minDuration = 3600; // 1小时
+            $maxDuration = 30 * 24 * 3600; // 30天
+
+            if ($duration < $minDuration) {
+                throw new \Exception(admin_trans('lottery_ticket.error.duration_too_short', null, ['min' => '1小时']));
+            }
+
+            if ($duration > $maxDuration) {
+                throw new \Exception(admin_trans('lottery_ticket.error.duration_too_long', null, ['max' => '30天']));
             }
 
             // 验证奖品等级
