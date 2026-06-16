@@ -192,42 +192,33 @@ class AgentLotteryTicketActivityController
                     return $statusMap[$val] ?? $val;
                 });
 
-            // 奖品等级列表 - 使用Tag美化显示
-            if ($activity->prizeLevels && count($activity->prizeLevels) > 0) {
-                $prizeLevels = $activity->prizeLevels->sortBy('level_rank');
-                foreach ($prizeLevels as $index => $level) {
-                    $remaining = $level->prize_count - $level->won_count;
-
-                    // 根据剩余数量设置颜色
-                    if ($remaining <= 0) {
-                        $color = 'red';
-                    } elseif ($remaining <= 3) {
-                        $color = 'orange';
-                    } else {
-                        $color = 'blue';
+            // 奖品等级配置
+            $detail->item('prize_config', admin_trans('lottery_ticket.fields.prize_level_config'))
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    if (!$data->prizeLevels || count($data->prizeLevels) == 0) {
+                        return '-';
                     }
+                    $lines = [];
+                    foreach ($data->prizeLevels->sortBy('level_rank') as $level) {
+                        $remaining = $level->prize_count - $level->won_count;
+                        $lines[] = $level->level_name . '：¥' . number_format($level->prize_amount, 2) . '（剩余' . $remaining . '/' . $level->prize_count . '）';
+                    }
+                    return implode("\n", $lines);
+                });
 
-                    $detail->item('prize_level_' . $level->id, $level->level_name)
-                        ->display(function () use ($level, $color, $remaining) {
-                            $text = '奖金 ¥' . number_format($level->prize_amount, 2) . ' | 剩余 ' . $remaining . '/' . $level->prize_count;
-                            return Tag::create($text)->color($color);
-                        });
-                }
-            }
-
-            // VIP打码量配置 - 使用Tag美化显示
-            if ($activity->vipConfigs && count($activity->vipConfigs) > 0) {
-                $vipConfigs = $activity->vipConfigs->sortBy('vip_level_id');
-                foreach ($vipConfigs as $index => $config) {
-                    $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
-
-                    $detail->item('vip_config_' . $config->id, $vipName)
-                        ->display(function () use ($config) {
-                            $text = '打码 ¥' . number_format($config->bet_amount_required, 2) . ' → 获得 ' . $config->ticket_count . ' 张摸奖券';
-                            return Tag::create($text)->color('green');
-                        });
-                }
-            }
+            // VIP打码配置
+            $detail->item('vip_bet_config', admin_trans('lottery_ticket.fields.vip_level'))
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    if (!$data->vipConfigs || count($data->vipConfigs) == 0) {
+                        return '-';
+                    }
+                    $lines = [];
+                    foreach ($data->vipConfigs->sortBy('vip_level_id') as $config) {
+                        $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
+                        $lines[] = $vipName . '：打码¥' . number_format($config->bet_amount_required, 2) . ' 获得' . $config->ticket_count . '张券';
+                    }
+                    return implode("\n", $lines);
+                });
         })->bordered()->layout('vertical');
     }
 
