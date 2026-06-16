@@ -202,6 +202,8 @@ return [
         'export' => '导出记录',
         'add_prize_level' => '添加奖品等级',
         'record_win' => '录入中奖',
+        'start_drawing' => '开始开奖',
+        'stop_drawing' => '停止开奖',
         'add_live_url' => '添加直播地址',
         'expand' => '展开',
         'collapse' => '收起',

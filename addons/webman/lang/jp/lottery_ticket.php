@@ -202,6 +202,8 @@ return [
         'export' => '記録をエクスポート',
         'add_prize_level' => '賞品レベルを追加',
         'record_win' => '当選を記録',
+        'start_drawing' => '抽選を開始',
+        'stop_drawing' => '抽選を停止',
         'add_live_url' => 'ライブURLを追加',
         'expand' => '展開',
         'collapse' => '折りたたむ',

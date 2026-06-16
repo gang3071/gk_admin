@@ -202,6 +202,8 @@ return [
         'export' => 'Export Records',
         'add_prize_level' => 'Add Prize Level',
         'record_win' => 'Record Winning',
+        'start_drawing' => 'Start Drawing',
+        'stop_drawing' => 'Stop Drawing',
         'add_live_url' => 'Add Live URL',
         'expand' => 'Expand',
         'collapse' => 'Collapse',

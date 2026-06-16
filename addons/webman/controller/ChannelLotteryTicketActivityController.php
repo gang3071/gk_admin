@@ -55,6 +55,8 @@ class ChannelLotteryTicketActivityController
             'closeActivity' => admin_trans('lottery_ticket.action.close'),
             'addPrizeLevel' => admin_trans('lottery_ticket.action.add_prize_level'),
             'recordWin' => admin_trans('lottery_ticket.action.record_win'),
+            'startDrawing' => admin_trans('lottery_ticket.action.start_drawing'),
+            'stopDrawing' => admin_trans('lottery_ticket.action.stop_drawing'),
             'addLiveUrl' => admin_trans('lottery_ticket.action.add_live_url'),
             'expand' => admin_trans('lottery_ticket.action.expand'),
             'collapse' => admin_trans('lottery_ticket.action.collapse'),

@@ -80,7 +80,7 @@
                   <!-- ⭐ 开始开奖（进行中） -->
                   <a-menu-item key="startDrawing" v-if="activity.status === 1">
                     <play-circle-outlined/>
-                    开始开奖
+                    {{ trans.startDrawing }}
                   </a-menu-item>
 
                   <!-- ⭐ 录入中奖（进行中或开奖中） -->
@@ -98,7 +98,7 @@
                   <!-- ⭐ 停止开奖（开奖中） -->
                   <a-menu-item key="stopDrawing" v-if="activity.status === 6">
                     <check-circle-outlined/>
-                    停止开奖
+                    {{ trans.stopDrawing }}
                   </a-menu-item>
 
                   <!-- 添加直播地址（所有状态） -->

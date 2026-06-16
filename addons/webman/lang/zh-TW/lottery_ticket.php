@@ -201,6 +201,8 @@ return [
         'export' => '導出記錄',
         'add_prize_level' => '添加獎品等級',
         'record_win' => '錄入中獎',
+        'start_drawing' => '開始開獎',
+        'stop_drawing' => '停止開獎',
         'add_live_url' => '添加直播地址',
         'expand' => '展開',
         'collapse' => '收起',
