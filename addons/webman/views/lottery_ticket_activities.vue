@@ -720,122 +720,14 @@
         :title="trans.modalLiveUrlTitle"
         @ok="submitLiveUrl"
         @cancel="handleLiveModalClose"
-        width="700px"
     >
       <a-form layout="vertical">
-        <!-- 一键生成直播地址 -->
-        <a-alert
-            message="💡 提示：可以使用腾讯云配置一键生成直播地址"
-            type="info"
-            show-icon
-            style="margin-bottom: 16px;"
-        />
-
-        <a-form-item label="快速生成">
-          <a-space direction="vertical" style="width: 100%;">
-            <a-input-group compact style="display: flex;">
-              <a-select
-                  v-model:value="selectedTencentConfig"
-                  :loading="tencentConfigsLoading"
-                  placeholder="选择腾讯云配置"
-                  style="flex: 1;"
-                  @focus="loadTencentConfigs"
-              >
-                <a-select-option
-                    v-for="config in tencentConfigs"
-                    :key="config.id"
-                    :value="config.id"
-                >
-                  {{ config.title || '配置 #' + config.id }} ({{ config.pull_domain }})
-                </a-select-option>
-              </a-select>
-              <a-button
-                  :disabled="!selectedTencentConfig"
-                  :loading="generatingAddress"
-                  type="primary"
-                  @click="generateLiveAddress"
-              >
-                一键生成
-              </a-button>
-            </a-input-group>
-
-            <!-- 流名称输入 -->
-            <a-input
-                v-model:value="streamName"
-                allow-clear
-                placeholder="流名称（如：mojiangjuan）"
-            >
-              <template #prefix>
-                <span style="color: #999;">流名称：</span>
-              </template>
-            </a-input>
-
-            <!-- 有效期选择 -->
-            <a-input-number
-                v-model:value="expireDays"
-                :max="365"
-                :min="1"
-                placeholder="有效天数（默认30天）"
-                style="width: 100%;"
-            >
-              <template #addonBefore>
-                有效期：
-              </template>
-              <template #addonAfter>
-                天
-              </template>
-            </a-input-number>
-          </a-space>
-        </a-form-item>
-
-        <a-divider>或手动输入</a-divider>
-
-        <!-- 手动输入直播地址 -->
         <a-form-item :label="trans.modalLiveUrlPrompt">
-          <a-textarea
+          <a-input
               v-model:value="liveUrlInput"
               :placeholder="trans.liveUrlPlaceholder"
-              :rows="3"
               allow-clear
           />
-          <div v-if="generatedUrls" style="margin-top: 8px;">
-            <a-space direction="vertical" style="width: 100%;">
-              <a-alert
-                  message="生成成功！请选择合适的协议："
-                  type="success"
-                  show-icon
-              />
-              <a-radio-group v-model:value="selectedProtocol">
-                <a-space direction="vertical">
-                  <a-radio value="flv">
-                    <a-tag color="blue">FLV</a-tag>
-                    低延迟（2-5秒）⭐ 推荐后台使用
-                  </a-radio>
-                  <a-radio value="hls">
-                    <a-tag color="green">HLS</a-tag>
-                    高兼容（10-30秒）- 推荐移动端
-                  </a-radio>
-                  <a-radio value="webrtc">
-                    <a-tag color="red">WebRTC</a-tag>
-                    超低延迟（<1秒）- 费用较高
-                  </a-radio>
-                </a-space>
-              </a-radio-group>
-              <a-descriptions :column="1" bordered size="small">
-                <a-descriptions-item label="过期时间">
-                  {{ generatedUrls.expire_time }}
-                </a-descriptions-item>
-                <a-descriptions-item label="推流地址（OBS）">
-                  <a-typography-paragraph
-                      :copyable="{ text: generatedUrls.rtmp }"
-                      style="margin: 0;"
-                  >
-                    {{ generatedUrls.rtmp }}
-                  </a-typography-paragraph>
-                </a-descriptions-item>
-              </a-descriptions>
-            </a-space>
-          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -944,15 +836,6 @@ export default {
       liveModalMode: 'update', // 'update' 或 'startDrawing'
       livePreviewVisible: false, // ⭐ 直播预览Modal
       livePreviewUrl: '', // ⭐ 当前预览的直播地址
-      // ⭐ 直播地址生成相关
-      tencentConfigs: [], // 腾讯云配置列表
-      tencentConfigsLoading: false,
-      selectedTencentConfig: null, // 选中的配置ID
-      streamName: 'mojiangjuan', // 流名称
-      expireDays: 30, // 有效天数
-      generatingAddress: false,
-      generatedUrls: null, // 生成的地址
-      selectedProtocol: 'flv', // 默认选中FLV
       formMode: 'create',
       historyModalVisible: false,  // ⭐ 历史活动选择Modal
       historyActivities: [],        // ⭐ 历史活动列表
@@ -1404,9 +1287,6 @@ export default {
       this.liveModalVisible = false;
       this.liveUrlInput = '';
       this.currentActivity = null;
-      // ⭐ 清空生成的地址数据
-      this.generatedUrls = null;
-      this.selectedProtocol = 'flv';
     },
 
     // ⭐ 预览直播
@@ -1456,87 +1336,6 @@ export default {
       return `/lottery-live-player.html?url=${encodeURIComponent(this.livePreviewUrl)}`;
     },
 
-    // ⭐ 加载腾讯云配置列表
-    async loadTencentConfigs() {
-      if (this.tencentConfigs.length > 0) return; // 已加载
-
-      try {
-        this.tencentConfigsLoading = true;
-        const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-MachineTencentPlayController/index',
-          method: 'get'
-        });
-
-        if (res.code === 200 && res.data && res.data.data) {
-          this.tencentConfigs = res.data.data;
-          // 默认选中第一个
-          if (this.tencentConfigs.length > 0) {
-            this.selectedTencentConfig = this.tencentConfigs[0].id;
-          }
-        }
-      } catch (error) {
-        console.error('加载腾讯云配置失败:', error);
-        this.$message.error('加载腾讯云配置失败');
-      } finally {
-        this.tencentConfigsLoading = false;
-      }
-    },
-
-    // ⭐ 一键生成直播地址
-    async generateLiveAddress() {
-      if (!this.selectedTencentConfig) {
-        this.$message.warning('请先选择腾讯云配置');
-        return;
-      }
-
-      if (!this.streamName || this.streamName.trim() === '') {
-        this.$message.warning('请输入流名称');
-        return;
-      }
-
-      try {
-        this.generatingAddress = true;
-        const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/generateLiveUrls',
-          method: 'post',
-          data: {
-            config_id: this.selectedTencentConfig,
-            stream_name: this.streamName.trim(),
-            expire_days: this.expireDays || 30
-          }
-        });
-
-        if (res.code === 0 || res.code === 200) {
-          this.generatedUrls = res.data;
-          this.$message.success('直播地址生成成功！');
-
-          // 默认选中FLV地址
-          this.selectedProtocol = 'flv';
-          this.selectGeneratedUrl();
-        } else {
-          this.$message.error(res.message || res.msg || '生成失败');
-        }
-      } catch (error) {
-        console.error('生成直播地址失败:', error);
-        this.$message.error('生成直播地址失败');
-      } finally {
-        this.generatingAddress = false;
-      }
-    },
-
-    // ⭐ 选择生成的地址
-    selectGeneratedUrl() {
-      if (!this.generatedUrls) return;
-
-      const urlMap = {
-        'flv': this.generatedUrls.flv,
-        'hls': this.generatedUrls.hls,
-        'webrtc': this.generatedUrls.webrtc
-      };
-
-      this.liveUrlInput = urlMap[this.selectedProtocol] || this.generatedUrls.flv;
-    },
-
     // 提交直播地址
     async submitLiveUrl() {
       const liveUrl = this.liveUrlInput.trim();
@@ -1579,7 +1378,6 @@ export default {
           this.liveUrlInput = '';
           this.liveModalMode = 'update';
           this.currentActivity = null;
-          this.generatedUrls = null; // ⭐ 清空生成的地址
           this.fetchActivities();
         } else {
           this.$message.error(res.message || res.msg || '操作失败');
