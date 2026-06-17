@@ -279,10 +279,8 @@
             type: 'application/x-mpegURL'
           }];
         } else if (currentProtocol === 'webrtc') {
-          playerConfig.sources = [{
-            src: liveUrl,
-            type: 'application/x-webrtc'
-          }];
+          // ⚠️ WebRTC 可能不需要 sources，直接用 webrtc 字段
+          playerConfig.webrtc = liveUrl;
         } else {
           showError('不支持的播放協議\n\n請使用 FLV、HLS 或 WebRTC 格式');
           return;

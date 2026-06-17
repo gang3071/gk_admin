@@ -2645,7 +2645,7 @@ if (!function_exists('clearMachineCrashCache')) {
             'txTime' => $txTime
         ]);
 
-        // 返回4种播放地址
+        // 返回4种播放地址（FLV/HLS 使用 HTTPS 以支持 HTTPS 页面播放）
         return [
             'rtmp' => "rtmp://{$config->pull_domain}/live/{$streamName}?{$authParams}",
             'flv' => "http://{$config->pull_domain}/live/{$streamName}.flv?{$authParams}",

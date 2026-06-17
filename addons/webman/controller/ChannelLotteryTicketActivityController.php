@@ -2080,11 +2080,11 @@ class ChannelLotteryTicketActivityController
             // 返回播放器配置
             return Response::success([
                 'stream_name' => $streamName,
-                'play_url' => $urls['flv'], // 默认使用FLV
+                'play_url' => $urls['webrtc'], // ⭐ 默认使用 WebRTC（超低延迟 <1秒）
                 'urls' => [
+                    'webrtc' => $urls['webrtc'], // WebRTC 放在第一位
                     'flv' => $urls['flv'],
                     'hls' => $urls['hls'],
-                    'webrtc' => $urls['webrtc'],
                 ],
                 'push_url' => $urls['rtmp'], // OBS推流地址
                 'expire_time' => $urls['expire_time'],
