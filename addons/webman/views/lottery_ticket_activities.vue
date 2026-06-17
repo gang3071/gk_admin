@@ -726,9 +726,9 @@
         <!-- 一键生成直播地址 -->
         <a-alert
             message="💡 提示：可以使用腾讯云配置一键生成直播地址"
+            type="info"
             show-icon
             style="margin-bottom: 16px;"
-            type="info"
         />
 
         <a-form-item label="快速生成">
@@ -802,8 +802,8 @@
             <a-space direction="vertical" style="width: 100%;">
               <a-alert
                   message="生成成功！请选择合适的协议："
-                  show-icon
                   type="success"
+                  show-icon
               />
               <a-radio-group v-model:value="selectedProtocol" @change="selectGeneratedUrl">
                 <a-space direction="vertical">
