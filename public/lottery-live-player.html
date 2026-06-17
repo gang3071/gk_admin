@@ -542,12 +542,17 @@
         const isHttps = window.location.protocol === 'https:';
         const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
+        // 环境检查
         if (!isHttps && !isLocalhost) {
           addLog('error', '❌ WebRTC 需要 HTTPS 環境（或 localhost）');
           addLog('warning', `當前協議: ${window.location.protocol}, 主機: ${window.location.hostname}`);
           showError('⚠️ WebRTC 播放需要 HTTPS\n\n當前頁面使用 HTTP 協議，WebRTC 無法播放。\n\n解決方案：\n1. 使用 HTTPS 訪問此頁面\n2. 或使用 FLV/HLS 協議播放');
           return;
         }
+
+        // ⚠️ 重要提示：TCPlayer v5 不完全支持 webrtc:// 协议
+        addLog('warning', '⚠️ 重要提示：TCPlayer v5 對 WebRTC 的支持有限');
+        addLog('warning', '⚠️ 如果播放失敗，請改用 FLV 格式（延遲僅 2-5 秒）');
       }
 
       try {
@@ -583,23 +588,47 @@
         }
 
         // 根据协议添加对应的地址配置
-        // TCPlayer v5 使用 sources 数组
         if (currentProtocol === 'flv') {
+          // HTTP-FLV 格式
           playerConfig.sources = [{
             src: liveUrl,
             type: 'video/x-flv'
           }];
           addLog('info', '📹 使用 HTTP-FLV 格式', { type: 'video/x-flv' });
+
         } else if (currentProtocol === 'hls') {
+          // HLS 格式
           playerConfig.sources = [{
             src: liveUrl,
             type: 'application/x-mpegURL'
           }];
           addLog('info', '📹 使用 HLS 格式', { type: 'application/x-mpegURL' });
+
         } else if (currentProtocol === 'webrtc') {
-          // ⚠️ WebRTC 可能不需要 sources，直接用 webrtc 字段
-          playerConfig.webrtc = liveUrl;
-          addLog('info', '📹 使用 WebRTC 格式', { webrtc: liveUrl.substring(0, 80) });
+          // ⚠️ WebRTC 格式（腾讯云快直播 LEB）
+          addLog('warning', '⚠️ TCPlayer v5 可能不直接支持 webrtc:// 協議');
+          addLog('info', '💡 建議使用 FLV 格式代替（延遲僅 2-5 秒）');
+
+          // 尝试将 webrtc:// 转换为 https:// 播放
+          // 腾讯云 WebRTC 快直播地址格式：webrtc://domain/live/stream?...
+          // 对应的 HTTPS 播放地址：https://domain/live/stream.flv?... (使用 FLV)
+          const flvUrl = liveUrl.replace('webrtc://', 'http://') + '';
+
+          addLog('warning', '🔄 嘗試將 WebRTC 轉換為 HTTP-FLV 播放');
+          addLog('info', '原始 WebRTC: ' + liveUrl.substring(0, 60) + '...');
+          addLog('info', '轉換為 FLV: ' + flvUrl.substring(0, 60) + '...');
+
+          // 方案 1：尝试使用原始 webrtc:// URL（可能不工作）
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'application/vnd.apple.mpegurl'
+          }];
+
+          addLog('error', '❌ WebRTC 播放可能失敗');
+          addLog('info', '💡 解決方案：');
+          addLog('info', '1. 在活動管理後台將直播地址改為 FLV 格式');
+          addLog('info', '2. 或聯繫管理員配置 WebRTC 專用播放器');
+
         } else {
           addLog('error', '❌ 不支持的播放協議: ' + currentProtocol);
           showError('不支持的播放協議\n\n請使用 FLV、HLS 或 WebRTC 格式');
@@ -747,8 +776,25 @@
                 logMsg = 'Error Code 3: MEDIA_ERR_DECODE - 解碼失敗';
                 break;
               case 4:
-                errorMsg = '媒體源不支持\n\n請檢查直播源格式';
+                errorMsg = '媒體源不支持\n\n';
+                if (currentProtocol === 'webrtc') {
+                  errorMsg += '⚠️ TCPlayer v5 不完全支持 WebRTC 播放\n\n';
+                  errorMsg += '💡 建議解決方案：\n';
+                  errorMsg += '1. 將直播地址改為 FLV 格式（推薦）\n';
+                  errorMsg += '   • 延遲：2-5 秒（接近 WebRTC）\n';
+                  errorMsg += '   • 兼容性：✅ 優秀\n';
+                  errorMsg += '   • HTTP/HTTPS：✅ 都支持\n\n';
+                  errorMsg += '2. 或使用 HLS 格式（高兼容性）\n';
+                  errorMsg += '   • 延遲：10-30 秒\n';
+                  errorMsg += '   • 兼容性：✅ 最佳\n\n';
+                  errorMsg += '請在活動管理後台修改直播地址格式';
+                } else {
+                  errorMsg += '請檢查直播源格式';
+                }
                 logMsg = 'Error Code 4: MEDIA_ERR_SRC_NOT_SUPPORTED - 媒體源不支持';
+                if (currentProtocol === 'webrtc') {
+                  logMsg += ' (WebRTC 不支持，建議改用 FLV)';
+                }
                 break;
               case 55:
                 errorMsg = '❌ License 錯誤 (Error 55)\n\n';
