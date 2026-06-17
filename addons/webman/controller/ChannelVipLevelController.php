@@ -51,8 +51,7 @@ class ChannelVipLevelController
             $grid->hideAdd();
             $grid->hideDelete();
 
-            // 始终显示导入按钮（方便测试）
-            // 如果已有VIP等级，在按钮文字上显示数量
+            // 导入VIP等级按钮（始终显示）
             if ($vipCount === 0) {
                 $buttonText = admin_trans('vip_level.import_template');
                 $confirmText = admin_trans('vip_level.import_confirm');
@@ -73,6 +72,33 @@ class ChannelVipLevelController
                 );
 
             $grid->tools($importButton);
+
+            // 同步玩家VIP等级按钮（只在有VIP等级且有未同步玩家时显示）
+            if ($vipCount > 0) {
+                // 检查是否有需要同步的玩家（vip_level_id为NULL或0的玩家）
+                $playerModel = plugin()->webman->config('database.player_model');
+                $playersNeedSyncCount = $playerModel::query()
+                    ->where('department_id', $departmentId)
+                    ->where(function ($query) {
+                        $query->whereNull('vip_level_id')
+                              ->orWhere('vip_level_id', 0);
+                    })
+                    ->count();
+
+                if ($playersNeedSyncCount > 0) {
+                    $syncButton = Button::create(admin_trans('vip_level.sync_players'))
+                        ->icon(Icon::create('SyncOutlined'))
+                        ->type('default')
+                        ->confirm(
+                            admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
+                            [$this, 'syncPlayers'],
+                            [],
+                            'POST'
+                        );
+
+                    $grid->tools($syncButton);
+                }
+            }
 
             $grid->model()
                 ->where('department_id', $departmentId)
@@ -271,6 +297,57 @@ class ChannelVipLevelController
             ]);
 
             return jsonFailResponse(admin_trans('vip_level.import_failed') . $e->getMessage(), [], 500);
+        }
+    }
+
+    /**
+     * 同步玩家VIP等级
+     * @auth true
+     * @return mixed
+     */
+    public function syncPlayers()
+    {
+        try {
+            $departmentId = Admin::user()->department_id;
+
+            Log::info('Start syncing players VIP level', [
+                'department_id' => $departmentId,
+                'admin_id' => Admin::id(),
+            ]);
+
+            // 调用服务同步玩家VIP等级
+            $result = VipLevelService::syncPlayersVipLevel($departmentId);
+
+            if ($result['success']) {
+                Log::info('Channel admin synced players VIP level successfully', [
+                    'department_id' => $departmentId,
+                    'admin_id' => Admin::id(),
+                    'updated' => $result['updated'],
+                    'skipped' => $result['skipped']
+                ]);
+
+                return jsonSuccessResponse($result['message'], [
+                    'updated' => $result['updated'],
+                    'skipped' => $result['skipped']
+                ]);
+            } else {
+                Log::error('Players VIP level sync failed', [
+                    'department_id' => $departmentId,
+                    'error' => $result['message']
+                ]);
+
+                return jsonFailResponse($result['message'], [], 500);
+            }
+        } catch (\Throwable $e) {
+            Log::error('Players VIP level sync exception', [
+                'department_id' => $departmentId ?? 0,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return jsonFailResponse(admin_trans('vip_level.sync_failed') . $e->getMessage(), [], 500);
         }
     }
 }

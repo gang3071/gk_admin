@@ -2146,4 +2146,13 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/importTemplate',
         'title' => '一键导入模板',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelVipLevelController\syncPlayers',
+        'pid' => 'addons\webman\controller\ChannelVipLevelController\index',
+        'action' => 'syncPlayers',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/syncPlayers',
+        'title' => '同步玩家等级',
+    ],
 ];

@@ -10,6 +10,9 @@ return [
     'already_exists_count' => '(已有{count}個)',
     'import_confirm_override' => '繼續導入將覆蓋現有數據，是否繼續？',
     'import_failed' => '導入失敗：',
+    'sync_players' => '同步玩家等級',
+    'sync_players_confirm' => '發現 {count} 個存量玩家未設置VIP等級，將為他們分配最低等級（VIP1）。確定要同步嗎？',
+    'sync_failed' => '同步失敗：',
     'fields' => [
         'id' => 'ID',
         'name' => '等級名稱',

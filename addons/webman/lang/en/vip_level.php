@@ -10,6 +10,9 @@ return [
     'already_exists_count' => '({count} existing)',
     'import_confirm_override' => 'Continuing will override existing data, are you sure?',
     'import_failed' => 'Import failed: ',
+    'sync_players' => 'Sync Players Level',
+    'sync_players_confirm' => 'Found {count} existing player(s) without VIP level. They will be assigned the lowest level (VIP1). Are you sure?',
+    'sync_failed' => 'Sync failed: ',
     'fields' => [
         'id' => 'ID',
         'name' => 'Level Name',

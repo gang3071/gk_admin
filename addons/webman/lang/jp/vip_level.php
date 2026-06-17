@@ -10,6 +10,9 @@ return [
     'already_exists_count' => '({count}個既存)',
     'import_confirm_override' => '続行すると既存データが上書きされますが、よろしいですか？',
     'import_failed' => 'インポート失敗：',
+    'sync_players' => 'プレイヤーレベルを同期',
+    'sync_players_confirm' => 'VIPレベルが設定されていない既存プレイヤーが{count}人見つかりました。最低レベル（VIP1）を割り当てます。よろしいですか？',
+    'sync_failed' => '同期失敗：',
     'fields' => [
         'id' => 'ID',
         'name' => 'レベル名',
