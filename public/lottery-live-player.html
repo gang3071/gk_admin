@@ -267,12 +267,22 @@
         }
 
         // 根据协议添加对应的地址配置
+        // TCPlayer v5 使用 sources 数组
         if (currentProtocol === 'flv') {
-          playerConfig.flv = liveUrl;
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'video/x-flv'
+          }];
         } else if (currentProtocol === 'hls') {
-          playerConfig.m3u8 = liveUrl;
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'application/x-mpegURL'
+          }];
         } else if (currentProtocol === 'webrtc') {
-          playerConfig.webrtc = liveUrl;
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'application/x-webrtc'
+          }];
         } else {
           showError('不支持的播放協議\n\n請使用 FLV、HLS 或 WebRTC 格式');
           return;
