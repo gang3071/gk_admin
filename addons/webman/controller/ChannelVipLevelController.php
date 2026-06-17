@@ -64,26 +64,29 @@ class ChannelVipLevelController
             $grid->hideAdd();
             $grid->hideDelete();
 
-            // 工具栏按钮
-            $toolButtons = [];
+            // 工具栏按钮 - 必须一次性传入所有按钮
+            $buttons = [];
 
-            // 导入VIP等级按钮（始终显示）
-            $importText = $vipCount === 0
-                ? admin_trans('vip_level.import_template')
-                : admin_trans('vip_level.import_template') . ' ' . admin_trans('vip_level.already_exists_count', null, ['count' => $vipCount]);
-
-            $confirmText = $vipCount === 0
-                ? admin_trans('vip_level.import_confirm')
-                : admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]);
-
-            $toolButtons[] = Button::create($importText)
+            // 导入按钮（始终显示）
+            $buttons[] = Button::create(
+                $vipCount === 0
+                    ? admin_trans('vip_level.import_template')
+                    : admin_trans('vip_level.import_template') . ' ' . admin_trans('vip_level.already_exists_count', null, ['count' => $vipCount])
+            )
                 ->icon(Icon::create('DownloadOutlined'))
                 ->type($vipCount === 0 ? 'primary' : 'default')
-                ->confirm($confirmText, [$this, 'importTemplate'], [], 'POST');
+                ->confirm(
+                    $vipCount === 0
+                        ? admin_trans('vip_level.import_confirm')
+                        : admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]),
+                    [$this, 'importTemplate'],
+                    [],
+                    'POST'
+                );
 
-            // 同步玩家VIP等级按钮（只在有VIP等级且有未同步玩家时显示）
+            // 同步按钮（条件显示）
             if ($vipCount > 0 && $playersNeedSyncCount > 0) {
-                $toolButtons[] = Button::create(admin_trans('vip_level.sync_players'))
+                $buttons[] = Button::create(admin_trans('vip_level.sync_players'))
                     ->icon(Icon::create('SyncOutlined'))
                     ->type('default')
                     ->confirm(
@@ -94,7 +97,7 @@ class ChannelVipLevelController
                     );
             }
 
-            $grid->tools($toolButtons);
+            $grid->tools($buttons);
 
             $grid->model()
                 ->where('department_id', $departmentId)
