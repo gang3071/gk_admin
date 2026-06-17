@@ -253,6 +253,9 @@ return [
         'batch_distribute_selected' => '批量發放選中記錄',
         'export_in_development' => '導出功能開發中',
         'live_url_updated' => '直播地址設置成功',
+        'live_url_generated' => '直播地址生成成功',
+        'player_config_loaded' => '播放器配置加載成功',
+        'player_config_loaded_with_region' => '播放器配置加載成功（使用{region}域名）',
         'record_success' => '中獎記錄錄入成功',
         'record_success_count' => '成功錄入 {count} 條中獎記錄',
         'live_started' => '直播已開始',
@@ -270,6 +273,9 @@ return [
         'distribute_hint' => '請輸入中獎券號，系統將根據券號自動識別獎品等級並發放獎勵',
         'drawing_started' => '開獎已開始，進入開獎階段',
         'activity_ended' => '活動已結束',
+        'select_tencent_config' => '請選擇騰訊雲配置',
+        'stream_name_required' => '流名稱不能為空',
+        'tencent_config_not_found' => '騰訊雲配置不存在',
     ],
 
     // 错误信息

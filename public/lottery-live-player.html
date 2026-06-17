@@ -507,18 +507,20 @@
 
     // 初始化播放器
     function initPlayer() {
-      addLog('info', '========== 開始初始化播放器 ==========');
+      if (debugMode) addLog('info', '========== 開始初始化播放器 ==========');
 
       liveUrl = getUrlParam('url');
       const licenseUrl = getUrlParam('licenseUrl') || getUrlParam('license');
       const licenseKey = getUrlParam('licenseKey');
 
-      addLog('info', '📋 解析 URL 參數', {
-        url: liveUrl,
-        licenseUrl: licenseUrl,
-        licenseKey: licenseKey ? '已提供' : '未提供',
-        fullUrl: window.location.href
-      });
+      if (debugMode) {
+        addLog('info', '📋 解析 URL 參數', {
+          url: liveUrl,
+          licenseUrl: licenseUrl,
+          licenseKey: licenseKey ? '已提供' : '未提供',
+          fullUrl: window.location.href
+        });
+      }
 
       if (!liveUrl) {
         addLog('error', '❌ 未提供直播地址');
@@ -530,13 +532,15 @@
       const protocolDesc = getProtocolDescription(currentProtocol);
       document.getElementById('protocol-text').textContent = protocolDesc;
 
-      addLog('success', `✅ 檢測到協議類型: ${currentProtocol} (${protocolDesc})`);
-      addLog('info', `🎬 準備播放: ${liveUrl.substring(0, 80)}...`);
+      if (debugMode) {
+        addLog('success', `✅ 檢測到協議類型: ${currentProtocol} (${protocolDesc})`);
+        addLog('info', `🎬 準備播放: ${liveUrl.substring(0, 80)}...`);
+      }
 
       // RTMP协议不支持
       if (currentProtocol === 'rtmp') {
-        addLog('error', '❌ RTMP 協議不支持瀏覽器播放');
-        showError('⚠️ RTMP 協議不支持瀏覽器播放\n\n現代瀏覽器已不支持 RTMP 協議。\n\n請使用 FLV、HLS 或 WebRTC 格式。\n\n💡 建議：優先使用 FLV 格式（低延遲 2-5秒）');
+        addLog('error', 'RTMP 協議不支持瀏覽器播放');
+        showError('⚠️ RTMP 協議不支持瀏覽器播放\n\n現代瀏覽器已不支持 RTMP 協議。\n\n請使用 FLV、HLS 或 WebRTC 格式。');
         return;
       }
 
@@ -548,18 +552,14 @@
         // 环境检查
         if (!isHttps && !isLocalhost) {
           addLog('error', '❌ WebRTC 需要 HTTPS 環境（或 localhost）');
-          addLog('warning', `當前協議: ${window.location.protocol}, 主機: ${window.location.hostname}`);
+          if (debugMode) addLog('warning', `當前協議: ${window.location.protocol}, 主機: ${window.location.hostname}`);
           showError('⚠️ WebRTC 播放需要 HTTPS\n\n當前頁面使用 HTTP 協議，WebRTC 無法播放。\n\n解決方案：\n1. 使用 HTTPS 訪問此頁面\n2. 或使用 FLV/HLS 協議播放');
           return;
         }
-
-        // ⚠️ 重要提示：TCPlayer v5 不完全支持 webrtc:// 协议
-        addLog('warning', '⚠️ 重要提示：TCPlayer v5 對 WebRTC 的支持有限');
-        addLog('warning', '⚠️ 如果播放失敗，請改用 FLV 格式（延遲僅 2-5 秒）');
       }
 
       try {
-        addLog('info', '⚙️ 構建播放器配置...');
+        if (debugMode) addLog('info', '⚙️ 構建播放器配置...');
 
         // TCPlayer v5配置（根据协议类型）
         let playerConfig = {
@@ -582,49 +582,41 @@
           playerConfig.licenceKey = licenseKey;
           playerConfig.licenseUrl = licenseUrl;   // 美式拼写（兼容）
           playerConfig.licenseKey = licenseKey;
-          addLog('success', '✅ License 已配置');
+          if (debugMode) addLog('success', 'License 已配置');
         } else {
-          addLog('warning', '⚠️ License 未提供，可能會出現 Error 55', {
-            licenseUrl: licenseUrl ? '✅ 已提供' : '❌ 未提供',
-            licenseKey: licenseKey ? '✅ 已提供' : '❌ 未提供'
+          addLog('warning', 'License 未提供，可能會出現錯誤', {
+            licenseUrl: licenseUrl ? '有' : '無',
+            licenseKey: licenseKey ? '有' : '無'
           });
         }
 
         // 根据协议添加对应的地址配置
         if (currentProtocol === 'flv') {
-          // HTTP-FLV 格式
           playerConfig.sources = [{
             src: liveUrl,
             type: 'video/x-flv'
           }];
-          addLog('info', '📹 使用 HTTP-FLV 格式', { type: 'video/x-flv' });
+          if (debugMode) addLog('info', '使用 HTTP-FLV 格式');
 
         } else if (currentProtocol === 'hls') {
-          // HLS 格式
           playerConfig.sources = [{
             src: liveUrl,
             type: 'application/x-mpegURL'
           }];
-          addLog('info', '📹 使用 HLS 格式', { type: 'application/x-mpegURL' });
+          if (debugMode) addLog('info', '使用 HLS 格式');
 
         } else if (currentProtocol === 'webrtc') {
-          // ✅ WebRTC 格式（腾讯云快直播 LEB）
-          addLog('info', '🚀 使用 WebRTC 快直播（超低延遲 <1秒）');
-
-          // 腾讯云 WebRTC 快直播配置
-          // 关键：直接使用 webrtc:// URL 作为 src
+          // WebRTC 快直播配置
           playerConfig.sources = [{
-            src: liveUrl,  // webrtc://domain/live/stream?txSecret=xxx&txTime=xxx
+            src: liveUrl,
             type: 'application/x-mpegURL'
           }];
 
-          // WebRTC 优化配置
           playerConfig.autoplay = true;
           playerConfig.preload = 'auto';
-          playerConfig.playbackRates = [1]; // WebRTC 不支持倍速
+          playerConfig.playbackRates = [1];
           playerConfig.controls = true;
 
-          // HLS.js 配置（用于 WebRTC）
           playerConfig.html5 = {
             hls: {
               overrideNative: true,
@@ -632,34 +624,33 @@
             }
           };
 
-          addLog('success', '✅ WebRTC 配置已應用');
-          addLog('info', '📹 播放地址: ' + liveUrl.substring(0, 80) + '...');
-          addLog('info', '💡 提示：確保推流端已開始推流');
-          addLog('warning', '⚠️ WebRTC 播放需要較好的網絡環境');
+          if (debugMode) addLog('success', 'WebRTC 配置已應用');
 
         } else {
-          addLog('error', '❌ 不支持的播放協議: ' + currentProtocol);
+          addLog('error', '不支持的播放協議: ' + currentProtocol);
           showError('不支持的播放協議\n\n請使用 FLV、HLS 或 WebRTC 格式');
           return;
         }
 
-        addLog('info', '📝 播放器配置詳情', playerConfig);
+        if (debugMode) addLog('info', '播放器配置詳情', playerConfig);
 
         // 检查容器是否存在
         const container = document.getElementById('player-container-id');
         if (!container) {
-          addLog('error', '❌ 播放器容器未找到 (#player-container-id)');
+          addLog('error', '播放器容器未找到');
           showError('播放器容器未找到');
           return;
         }
-        addLog('success', '✅ 播放器容器已找到');
+        if (debugMode) addLog('success', '播放器容器已找到');
 
-        // 创建播放器实例（TCPlayer v5 需要 new 关键字）
-        addLog('info', '🎬 正在創建播放器實例...');
+        // 创建播放器实例
+        if (debugMode) addLog('info', '正在創建播放器實例...');
         player = new TCPlayer('player-container-id', playerConfig);
 
-        addLog('success', '✅ 播放器實例創建成功');
-        addLog('info', `📊 初始狀態 - readyState: ${player.readyState()}, networkState: ${player.networkState()}`);
+        if (debugMode) {
+          addLog('success', '播放器實例創建成功');
+          addLog('info', `初始狀態 - readyState: ${player.readyState()}, networkState: ${player.networkState()}`);
+        }
 
         // 定期更新调试面板
         setInterval(() => {
@@ -691,73 +682,74 @@
 
         // 监听播放器事件
         player.on('loadstart', function() {
-          addLog('info', '📡 loadstart - 開始加載媒體');
+          if (debugMode) addLog('info', 'loadstart - 開始加載媒體');
         });
 
         player.on('loadedmetadata', function() {
-          addLog('success', '✅ loadedmetadata - 元數據加載完成');
-          const videoEl = document.querySelector('video');
-          if (videoEl) {
-            addLog('info', `📊 視頻信息 - 尺寸: ${videoEl.videoWidth}x${videoEl.videoHeight}`);
+          if (debugMode) {
+            addLog('success', 'loadedmetadata - 元數據加載完成');
+            const videoEl = document.querySelector('video');
+            if (videoEl) {
+              addLog('info', `視頻尺寸: ${videoEl.videoWidth}x${videoEl.videoHeight}`);
+            }
           }
           hideLoading();
           showInfoBar('直播中', true);
         });
 
         player.on('canplay', function() {
-          addLog('success', '✅ canplay - 可以開始播放');
+          if (debugMode) addLog('success', 'canplay - 可以開始播放');
           hideLoading();
         });
 
         player.on('playing', function() {
-          addLog('success', '▶️ playing - 正在播放中');
+          if (debugMode) addLog('success', 'playing - 正在播放中');
           hideLoading();
           showInfoBar('直播中', true);
         });
 
         player.on('waiting', function() {
-          addLog('warning', '⏳ waiting - 緩衝中...');
+          if (debugMode) addLog('warning', 'waiting - 緩衝中');
           showInfoBar('緩衝中...', true);
         });
 
         player.on('pause', function() {
-          addLog('info', '⏸ pause - 已暫停');
+          if (debugMode) addLog('info', 'pause - 已暫停');
           showInfoBar('已暫停', false);
         });
 
         player.on('ended', function() {
-          addLog('info', '⏹ ended - 播放結束');
+          if (debugMode) addLog('info', 'ended - 播放結束');
           showInfoBar('直播已結束', false);
         });
 
         player.on('progress', function() {
-          // 下载进度事件频繁，只在调试模式下记录
+          // 下载进度事件频繁，仅在调试模式记录
           if (debugMode && eventLogs.length < 5) {
-            addLog('info', '📥 progress - 下載數據中');
+            addLog('info', 'progress - 下載數據中');
           }
         });
 
         player.on('stalled', function() {
-          addLog('warning', '⚠️ stalled - 網絡停滯');
+          if (debugMode) addLog('warning', 'stalled - 網絡停滯');
         });
 
         player.on('suspend', function() {
-          addLog('warning', '⏸️ suspend - 加載掛起');
+          if (debugMode) addLog('warning', 'suspend - 加載掛起');
         });
 
         player.on('abort', function() {
-          addLog('error', '❌ abort - 加載中止');
+          addLog('error', 'abort - 加載中止');
         });
 
         player.on('emptied', function() {
-          addLog('warning', '⚠️ emptied - 媒體為空');
+          if (debugMode) addLog('warning', 'emptied - 媒體為空');
         });
 
         player.on('error', function(error) {
-          addLog('error', '❌ 播放器錯誤事件觸發', {
+          addLog('error', '播放器錯誤', {
             code: error?.code,
-            message: error?.message,
-            fullError: error
+            message: error?.message
           });
 
           let errorMsg = '播放錯誤\n\n';
