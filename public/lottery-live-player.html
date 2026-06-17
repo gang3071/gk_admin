@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>摸獎券直播</title>
+  <!-- TCPlayer v5.1.0 CSS -->
+  <link href="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/tcplayer.min.css" rel="stylesheet"/>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden;
+    }
+    .player-container {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    #player-wrapper {
+      width: 100%;
+      max-width: 100%;
+      height: 100vh;
+      position: relative;
+      background: #000;
+    }
+    #player-container-id {
+      width: 100%;
+      height: 100%;
+    }
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 20px;
+      font-size: 16px;
+    }
+    .error-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #fff;
+      padding: 40px;
+      z-index: 999;
+      background: rgba(0,0,0,0.9);
+      border-radius: 8px;
+      max-width: 500px;
+    }
+    .error-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+    .error-title {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .error-message {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 20px;
+      white-space: pre-line;
+      line-height: 1.6;
+    }
+    .retry-btn {
+      padding: 10px 30px;
+      background: #1890ff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .retry-btn:hover {
+      background: #40a9ff;
+    }
+    .info-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 12px;
+      z-index: 100;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+    .status-live {
+      background: #52c41a;
+    }
+    .status-error {
+      background: #ff4d4f;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="player-container">
+    <div id="player-wrapper">
+      <!-- 加载中遮罩 -->
+      <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在連接直播...</div>
+      </div>
+
+      <!-- 错误提示 -->
+      <div class="error-container" id="error-container" style="display: none;">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">直播連接失敗</div>
+        <div class="error-message" id="error-message"></div>
+        <button class="retry-btn" onclick="retryConnect()">重試</button>
+      </div>
+
+      <!-- TCPlayer容器 -->
+      <video id="player-container-id" playsinline preload="auto" webkit-playsinline></video>
+    </div>
+
+    <!-- 信息栏 -->
+    <div class="info-bar" id="info-bar" style="display: none;">
+      <span class="status-indicator status-live" id="status-indicator"></span>
+      <span id="status-text">直播中</span>
+      <span style="margin-left: 20px;">協議：<span id="protocol-text">-</span></span>
+      <span style="margin-left: 20px;">版本：TCPlayer v5.1.0</span>
+    </div>
+  </div>
+
+  <!-- TCPlayer v5.1.0 脚本 -->
+  <script src="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/tcplayer.v5.1.0.min.js"></script>
+
+  <script>
+    let player = null;
+    let liveUrl = '';
+    let currentProtocol = '';
+
+    // 获取URL参数
+    function getUrlParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // 检测协议类型
+    function detectProtocol(url) {
+      if (!url) return 'unknown';
+      const lowerUrl = url.toLowerCase();
+
+      if (lowerUrl.startsWith('webrtc://')) return 'webrtc';
+      if (lowerUrl.startsWith('rtmp://') || lowerUrl.startsWith('rtmps://')) return 'rtmp';
+      if (lowerUrl.includes('.m3u8')) return 'hls';
+      if (lowerUrl.includes('.flv')) return 'flv';
+
+      return 'unknown';
+    }
+
+    // 获取协议描述
+    function getProtocolDescription(protocol) {
+      const descriptions = {
+        'webrtc': 'WebRTC（超低延遲 <1秒）',
+        'flv': 'HTTP-FLV（低延遲 2-5秒）',
+        'hls': 'HLS（高兼容性 10-30秒）',
+        'rtmp': 'RTMP（僅推流用）',
+        'unknown': '未知協議'
+      };
+      return descriptions[protocol] || protocol.toUpperCase();
+    }
+
+    // 初始化播放器
+    function initPlayer() {
+      liveUrl = getUrlParam('url');
+
+      if (!liveUrl) {
+        showError('未提供直播地址\n\n請在活動管理中配置直播地址');
+        return;
+      }
+
+      currentProtocol = detectProtocol(liveUrl);
+      const protocolDesc = getProtocolDescription(currentProtocol);
+      document.getElementById('protocol-text').textContent = protocolDesc;
+
+      console.log('準備播放:', liveUrl);
+      console.log('協議類型:', currentProtocol);
+
+      // RTMP协议不支持
+      if (currentProtocol === 'rtmp') {
+        showError('⚠️ RTMP 協議不支持瀏覽器播放\n\n現代瀏覽器已不支持 RTMP 協議。\n\n請使用 FLV、HLS 或 WebRTC 格式。\n\n💡 建議：優先使用 FLV 格式（低延遲 2-5秒）');
+        return;
+      }
+
+      try {
+        // TCPlayer v5配置（根据协议类型）
+        let playerConfig = {
+          autoplay: true,
+          live: true,
+          width: '100%',
+          height: '100%',
+          controlBar: {
+            progressControl: false,
+            playToggle: true,
+            volumePanel: true,
+            fullscreenToggle: true
+          },
+          language: 'zh-TW'
+        };
+
+        // 根据协议添加对应的地址配置
+        if (currentProtocol === 'flv') {
+          playerConfig.flv = liveUrl;
+        } else if (currentProtocol === 'hls') {
+          playerConfig.m3u8 = liveUrl;
+        } else if (currentProtocol === 'webrtc') {
+          playerConfig.webrtc = liveUrl;
+        } else {
+          showError('不支持的播放協議\n\n請使用 FLV、HLS 或 WebRTC 格式');
+          return;
+        }
+
+        console.log('TCPlayer配置:', playerConfig);
+
+        // 创建播放器实例
+        player = TCPlayer('player-container-id', playerConfig);
+
+        // 监听播放器事件
+        player.on('loadstart', function() {
+          console.log('開始加載');
+        });
+
+        player.on('loadedmetadata', function() {
+          console.log('✅ 元數據加載完成');
+          hideLoading();
+          showInfoBar('直播中', true);
+        });
+
+        player.on('canplay', function() {
+          console.log('✅ 可以播放');
+          hideLoading();
+        });
+
+        player.on('playing', function() {
+          console.log('✅ 播放中');
+          hideLoading();
+          showInfoBar('直播中', true);
+        });
+
+        player.on('waiting', function() {
+          console.log('⏳ 緩衝中');
+          showInfoBar('緩衝中...', true);
+        });
+
+        player.on('pause', function() {
+          console.log('⏸ 暫停');
+          showInfoBar('已暫停', false);
+        });
+
+        player.on('ended', function() {
+          console.log('⏹ 播放結束');
+          showInfoBar('直播已結束', false);
+        });
+
+        player.on('error', function(error) {
+          console.error('❌ 播放錯誤:', error);
+
+          let errorMsg = '播放錯誤\n\n';
+
+          // 根据错误类型提供详细提示
+          if (error && error.code) {
+            switch(error.code) {
+              case 1:
+                errorMsg = '媒體加載中止\n\n可能是網絡問題或用戶操作';
+                break;
+              case 2:
+                errorMsg = '網絡錯誤：無法加載直播流\n\n';
+                errorMsg += '可能原因：\n';
+                errorMsg += '1. 直播尚未開始（最常見）\n';
+                errorMsg += '2. 網絡連接問題\n';
+                errorMsg += '3. 直播地址已過期（txTime）\n\n';
+                errorMsg += '💡 請確認 OBS 已開始推流';
+                break;
+              case 3:
+                errorMsg = '解碼錯誤\n\n視頻格式可能不支持';
+                break;
+              case 4:
+                errorMsg = '媒體源不支持\n\n請檢查直播源格式';
+                break;
+              default:
+                errorMsg += '錯誤代碼：' + error.code;
+                if (error.message) {
+                  errorMsg += '\n錯誤信息：' + error.message;
+                }
+            }
+          } else if (error && error.message) {
+            errorMsg = error.message;
+          }
+
+          showError(errorMsg);
+        });
+
+        // 3秒后如果还在加载，显示提示
+        setTimeout(() => {
+          if (document.getElementById('loading-overlay').style.display !== 'none') {
+            document.querySelector('.loading-text').innerHTML = '連接時間較長，請稍候...<br><small style="color: #999; font-size: 12px;">請確認直播流已開始推送</small>';
+          }
+        }, 3000);
+
+      } catch (error) {
+        console.error('播放器初始化失敗:', error);
+        showError('播放器初始化失敗：' + error.message);
+      }
+    }
+
+    // 显示错误
+    function showError(message) {
+      hideLoading();
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-container').style.display = 'block';
+      showInfoBar('連接失敗', false);
+      document.getElementById('status-indicator').className = 'status-indicator status-error';
+    }
+
+    // 隐藏加载
+    function hideLoading() {
+      document.getElementById('loading-overlay').style.display = 'none';
+    }
+
+    // 显示信息栏
+    function showInfoBar(statusText, isLive) {
+      document.getElementById('info-bar').style.display = 'block';
+      document.getElementById('status-text').textContent = statusText;
+
+      const indicator = document.getElementById('status-indicator');
+      indicator.className = 'status-indicator ' + (isLive ? 'status-live' : 'status-error');
+    }
+
+    // 重试连接
+    function retryConnect() {
+      document.getElementById('error-container').style.display = 'none';
+      document.getElementById('loading-overlay').style.display = 'flex';
+
+      if (player) {
+        player.dispose();
+        player = null;
+      }
+
+      setTimeout(initPlayer, 500);
+    }
+
+    // 页面加载时初始化
+    window.addEventListener('load', initPlayer);
+
+    // 页面卸载时销毁播放器
+    window.addEventListener('beforeunload', () => {
+      if (player) {
+        player.dispose();
+      }
+    });
+  </script>
+</body>
+</html>
