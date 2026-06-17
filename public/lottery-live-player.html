@@ -209,6 +209,13 @@
     // 初始化播放器
     function initPlayer() {
       liveUrl = getUrlParam('url');
+      const licenseUrl = getUrlParam('licenseUrl') || getUrlParam('license');
+      const licenseKey = getUrlParam('licenseKey');
+
+      console.log('🔍 [调试] 所有URL参数:', window.location.search);
+      console.log('🔍 [调试] 直播地址:', liveUrl);
+      console.log('🔍 [调试] License URL:', licenseUrl);
+      console.log('🔍 [调试] License Key:', licenseKey);
 
       if (!liveUrl) {
         showError('未提供直播地址\n\n請在活動管理中配置直播地址');
@@ -244,6 +251,21 @@
           language: 'zh-TW'
         };
 
+        // 🔑 添加 License 配置（如果有）
+        if (licenseUrl && licenseKey) {
+          playerConfig.licenceUrl = licenseUrl;   // 英式拼写（官方推荐）
+          playerConfig.licenceKey = licenseKey;
+          playerConfig.licenseUrl = licenseUrl;   // 美式拼写（兼容）
+          playerConfig.licenseKey = licenseKey;
+          console.log('✅ [调试] License 已配置');
+        } else {
+          console.warn('⚠️ [调试] License 未提供，可能会报错 Error 55');
+          console.warn('⚠️ [调试] 缺少参数:', {
+            licenseUrl: licenseUrl ? '有' : '❌ 无',
+            licenseKey: licenseKey ? '有' : '❌ 无'
+          });
+        }
+
         // 根据协议添加对应的地址配置
         if (currentProtocol === 'flv') {
           playerConfig.flv = liveUrl;
@@ -256,10 +278,12 @@
           return;
         }
 
-        console.log('TCPlayer配置:', playerConfig);
+        console.log('📝 [调试] 最终播放器配置:', JSON.stringify(playerConfig, null, 2));
 
         // 创建播放器实例
         player = TCPlayer('player-container-id', playerConfig);
+
+        console.log('✅ [调试] 播放器实例已创建');
 
         // 监听播放器事件
         player.on('loadstart', function() {
@@ -299,7 +323,9 @@
         });
 
         player.on('error', function(error) {
-          console.error('❌ 播放錯誤:', error);
+          console.error('❌ [调试] 播放錯誤完整信息:', error);
+          console.error('❌ [调试] 错误代码:', error?.code);
+          console.error('❌ [调试] 错误信息:', error?.message);
 
           let errorMsg = '播放錯誤\n\n';
 
@@ -322,6 +348,14 @@
                 break;
               case 4:
                 errorMsg = '媒體源不支持\n\n請檢查直播源格式';
+                break;
+              case 55:
+                errorMsg = '❌ License 錯誤 (Error 55)\n\n';
+                errorMsg += '錯誤原因：SDK 未正確獲取 License URL\n\n';
+                errorMsg += '調試信息：\n';
+                errorMsg += '• License URL: ' + (getUrlParam('licenseUrl') || getUrlParam('license') || '❌ 未提供') + '\n';
+                errorMsg += '• License Key: ' + (getUrlParam('licenseKey') ? '✅ 已提供' : '❌ 未提供') + '\n\n';
+                errorMsg += '💡 請檢查活動管理中的播放器配置';
                 break;
               default:
                 errorMsg += '錯誤代碼：' + error.code;
