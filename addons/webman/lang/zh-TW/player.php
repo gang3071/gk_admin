@@ -34,6 +34,7 @@ return [
         'email' => '郵箱',
         'line' => 'line',
         'department_id' => '通路',
+        'vip_level' => 'VIP等級',
         'status' => '帳號狀態',
         'status_withdraw' => '取款功能',
         'status_transfer' => '轉點功能',

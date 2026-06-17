@@ -38,6 +38,7 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAutoShiftConfig;
+use addons\webman\model\VipLevel;
 use addons\webman\model\StoreSetting;
 use addons\webman\service\ImportService;
 use addons\webman\service\WalletService;
@@ -196,6 +197,12 @@ class ChannelPlayerController
             'player_register_record.ip',
             'player_register_record.country_name',
             'player_register_record.city_name',
+            // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
+            Db::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
+            // 打码量相关字段
+            'player.total_bet_amount',
+            Db::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
+            'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -217,6 +224,25 @@ class ChannelPlayerController
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
+            // VIP等级关联
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
+            // LEFT JOIN 渠道最低VIP等级（通过子查询预计算，使用原始SQL避免绑定参数问题）
+            ->leftJoin(
+                Db::raw('(SELECT department_id, MIN(sort) as min_sort FROM vip_level WHERE status = ' . VipLevel::STATUS_ENABLED . ' GROUP BY department_id) as channel_min_vip'),
+                'player.department_id', '=', 'channel_min_vip.department_id'
+            )
+            ->leftJoin('vip_level as channel_min_vip_level', function ($join) {
+                $join->on('channel_min_vip.department_id', '=', 'channel_min_vip_level.department_id')
+                    ->on('channel_min_vip.min_sort', '=', 'channel_min_vip_level.sort');
+            })
+            // LEFT JOIN 下一等级（通过子查询获取当前等级的下一个等级）
+            ->leftJoin(
+                Db::raw('(SELECT vl.department_id, vl.sort, vl.upgrade_bet_amount FROM vip_level vl WHERE vl.status = ' . VipLevel::STATUS_ENABLED . ') as next_vip_level'),
+                function ($join) {
+                    $join->on('player.department_id', '=', 'next_vip_level.department_id')
+                        ->whereRaw('next_vip_level.sort = (SELECT MIN(vl2.sort) FROM vip_level vl2 WHERE vl2.department_id = player.department_id AND vl2.sort > COALESCE(vip_level.sort, channel_min_vip_level.sort) AND vl2.status = ' . VipLevel::STATUS_ENABLED . ')');
+                }
+            )
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -406,6 +432,61 @@ class ChannelPlayerController
                     return Tag::create(admin_trans('player.fields.player_source_online'))->color('blue');
                 }
             })->ellipsis(true)->align('center');
+
+            // VIP等级列：优先显示玩家自己的等级，没有则显示渠道最低等级
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) {
+                    $levelName = $value;
+                    if (empty($levelName) && !empty($data['vip_level_id'])) {
+                        $levelName = '-';
+                    }
+                    if (empty($levelName)) {
+                        return '-';
+                    }
+
+                    // 计算打码进度
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = floatval($data['next_upgrade_bet_amount'] ?? 0);
+
+                    // 计算进度百分比
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet > 0) {
+                        // 进度 = (当前打码量 - 当前等级要求) / (下一等级要求 - 当前等级要求) * 100
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif ($nextUpgradeBet == 0 && $currentUpgradeBet > 0) {
+                        // 已是最高等级
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    // 构建显示内容
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    // 添加进度条（如果不是最高等级）
+                    if ($nextUpgradeBet > 0) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                })
+                ->align('center')->width(180);
 
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (

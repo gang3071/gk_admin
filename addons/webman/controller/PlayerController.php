@@ -38,6 +38,7 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWashRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\model\VipLevel;
 use addons\webman\model\PromoterProfitGameRecord;
 use addons\webman\model\PromoterProfitRecord;
 use addons\webman\model\SystemSetting;
@@ -173,6 +174,7 @@ class PlayerController
         $quickSearch = Request::input('quickSearch', '');
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
+
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select([
                 'player.*',
@@ -198,6 +200,8 @@ class PlayerController
                 'national_level.name as level_name',
                 'level_list.level as level',
                 'national_promoter.level as level_sort',
+                // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
+                DB::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
             ])
             ->when(!empty($id), function ($query) use ($id) {
                 $query->where('player.recommend_id', $id);
@@ -209,6 +213,16 @@ class PlayerController
             ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
             ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
+            // LEFT JOIN 渠道最低VIP等级（通过子查询预计算，使用原始SQL避免绑定参数问题）
+            ->leftJoin(
+                DB::raw('(SELECT department_id, MIN(sort) as min_sort FROM vip_level WHERE status = ' . VipLevel::STATUS_ENABLED . ' GROUP BY department_id) as channel_min_vip'),
+                'player.department_id', '=', 'channel_min_vip.department_id'
+            )
+            ->leftJoin('vip_level as channel_min_vip_level', function ($join) {
+                $join->on('channel_min_vip.department_id', '=', 'channel_min_vip_level.department_id')
+                    ->on('channel_min_vip.min_sort', '=', 'channel_min_vip_level.sort');
+            })
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
                     ->Join(DB::raw('( SELECT player_id, max( id ) AS id FROM player_login_record GROUP BY player_id) AS t'),
@@ -289,9 +303,9 @@ class PlayerController
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
             }
         }
-        $totalNum = clone $query;
-        $total = $totalNum->get()->count();
-        $list = $query->forPage($page, $size)
+        // ✅ 优化：直接使用 count() 而不是 get()->count()，避免加载所有数据到内存
+        $total = $query->count();
+        $list = (clone $query)->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
                     $query->orderBy($exAdminSortField, $exAdminSortBy);
@@ -393,6 +407,22 @@ class PlayerController
             })->sortable();
 
             $grid->column('channel_name', admin_trans('player.fields.department_id'))->width('150px')->align('center');
+
+            // VIP等级列：优先显示玩家自己的等级，没有则显示渠道最低等级
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) {
+                    // 优先使用 vip_level_name，如果没有则尝试从 vip_level 关系获取
+                    $levelName = $value;
+                    if (empty($levelName) && !empty($data['vip_level_id'])) {
+                        // 如果有 vip_level_id 但没有 name，说明 JOIN 没有匹配到
+                        $levelName = '-';
+                    }
+                    if (empty($levelName)) {
+                        return '-';
+                    }
+                    return Tag::create($levelName)->color('purple');
+                })
+                ->align('center');
             $grid->column('pending_amount',
                 admin_trans('national_promoter.fields.pending_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('settlement_amount',

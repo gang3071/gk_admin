@@ -35,6 +35,7 @@ return [
         'email' => '邮箱',
         'line' => 'line',
         'department_id' => '渠道',
+        'vip_level' => 'VIP等级',
         'status' => '账号状态',
         'status_withdraw' => '取款功能',
         'status_transfer' => '转点功能',

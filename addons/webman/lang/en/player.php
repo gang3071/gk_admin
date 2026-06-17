@@ -35,6 +35,7 @@ return [
         'email' => 'email',
         'line' => 'line',
         'department_id' => 'channel',
+        'vip_level' => 'VIP Level',
         'status' => 'Account status',
         'status_withdraw' => 'Wash Score function',
         'status_transfer' => 'Transfer function',

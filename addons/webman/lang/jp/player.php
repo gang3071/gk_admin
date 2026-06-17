@@ -34,6 +34,7 @@ return [
         'email' => '電子メール',
         'line' => '行',
         'department_id' => 'チャンネル',
+        'vip_level' => 'VIPレベル',
         'status' => 'アカウントステータス',
         'status_withdraw' => '洗分関数',
         'status_transfer' => '転送関数',
