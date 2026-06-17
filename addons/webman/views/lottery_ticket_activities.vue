@@ -117,10 +117,16 @@
                     {{ trans.stopDrawing }}
                   </a-menu-item>
 
-                  <!-- 添加直播地址（所有状态） -->
+                  <!-- 添加/编辑直播地址（所有状态） -->
                   <a-menu-item key="live">
                     <video-camera-outlined/>
-                    {{ trans.addLiveUrl }}
+                    {{ activity.live_url ? '编辑直播地址' : trans.addLiveUrl }}
+                  </a-menu-item>
+
+                  <!-- 预览直播（仅当有直播地址时） -->
+                  <a-menu-item key="previewLive" v-if="activity.live_url">
+                    <play-circle-outlined/>
+                    预览直播
                   </a-menu-item>
 
                   <!-- 关闭活动（进行中） -->
@@ -726,6 +732,79 @@
       </a-form>
     </a-modal>
 
+    <!-- ⭐ 直播预览 Modal -->
+    <a-modal
+        v-model:visible="livePreviewVisible"
+        :title="'直播预览 - ' + (currentActivity?.name || '摸奖券活动')"
+        width="90%"
+        :footer="null"
+        @cancel="closeLivePreview"
+        :bodyStyle="{ padding: '0', background: '#000' }"
+        :destroyOnClose="true"
+    >
+      <div v-if="livePreviewUrl" style="position: relative; background: #000;">
+        <!-- 直播播放器iframe -->
+        <iframe
+            :src="'/live-player.html?url=' + encodeURIComponent(livePreviewUrl)"
+            style="width: 100%; height: 70vh; border: none; display: block;"
+            frameborder="0"
+            allowfullscreen
+        ></iframe>
+
+        <!-- 直播信息栏 -->
+        <div style="padding: 16px; background: #1f1f1f; color: #fff;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 16px; font-weight: bold; margin-bottom: 8px;">
+                {{ currentActivity?.name }}
+              </div>
+              <div style="font-size: 12px; color: #999;">
+                直播地址：{{ livePreviewUrl }}
+              </div>
+            </div>
+            <div>
+              <a-button
+                  type="primary"
+                  size="small"
+                  @click="copyLiveUrl"
+                  style="margin-right: 8px;"
+              >
+                <template #icon>
+                  <copy-outlined/>
+                </template>
+                复制地址
+              </a-button>
+              <a-button
+                  size="small"
+                  @click="openInNewTab"
+              >
+                <template #icon>
+                  <link-outlined/>
+                </template>
+                新窗口打开
+              </a-button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 协议提示 -->
+        <div v-if="livePreviewUrl.startsWith('rtmp://')" style="padding: 12px; background: #fff3cd; border-top: 1px solid #ffc107;">
+          <div style="display: flex; align-items: flex-start; color: #856404;">
+            <warning-outlined style="font-size: 18px; margin-right: 8px; margin-top: 2px;"/>
+            <div>
+              <div style="font-weight: bold; margin-bottom: 4px;">RTMP 协议播放提示</div>
+              <div style="font-size: 12px; line-height: 1.6;">
+                RTMP协议在现代浏览器中可能无法播放（需要Flash支持）。<br/>
+                建议联系腾讯云客服获取 <strong>HLS播放地址（.m3u8格式）</strong> 或 <strong>HTTP-FLV格式</strong>，以获得更好的兼容性。<br/>
+                <a href="https://cloud.tencent.com/document/product/267/32733" target="_blank" style="color: #1890ff;">查看腾讯云直播播放文档 →</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <a-empty v-else description="未获取到直播地址" />
+    </a-modal>
+
   </div>
 </template>
 
@@ -755,6 +834,8 @@ export default {
       liveModalVisible: false,
       liveUrlInput: '',
       liveModalMode: 'update', // 'update' 或 'startDrawing'
+      livePreviewVisible: false, // ⭐ 直播预览Modal
+      livePreviewUrl: '', // ⭐ 当前预览的直播地址
       formMode: 'create',
       historyModalVisible: false,  // ⭐ 历史活动选择Modal
       historyActivities: [],        // ⭐ 历史活动列表
@@ -1039,6 +1120,9 @@ export default {
         case 'live':
           this.showLiveModal(activity);
           break;
+        case 'previewLive':
+          this.previewLive(activity);
+          break;
         case 'close':
           this.closeActivity(activity);
           break;
@@ -1203,6 +1287,48 @@ export default {
       this.liveModalVisible = false;
       this.liveUrlInput = '';
       this.currentActivity = null;
+    },
+
+    // ⭐ 预览直播
+    previewLive(activity) {
+      if (!activity.live_url) {
+        this.$message.warning('该活动尚未设置直播地址');
+        return;
+      }
+
+      this.currentActivity = activity;
+      this.livePreviewUrl = activity.live_url;
+      this.livePreviewVisible = true;
+    },
+
+    // ⭐ 关闭直播预览
+    closeLivePreview() {
+      this.livePreviewVisible = false;
+      this.livePreviewUrl = '';
+      this.currentActivity = null;
+    },
+
+    // ⭐ 复制直播地址
+    async copyLiveUrl() {
+      try {
+        await navigator.clipboard.writeText(this.livePreviewUrl);
+        this.$message.success('直播地址已复制到剪贴板');
+      } catch (err) {
+        // 兼容旧浏览器
+        const input = document.createElement('input');
+        input.value = this.livePreviewUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        this.$message.success('直播地址已复制到剪贴板');
+      }
+    },
+
+    // ⭐ 在新窗口打开直播
+    openInNewTab() {
+      const url = `/live-player.html?url=${encodeURIComponent(this.livePreviewUrl)}`;
+      window.open(url, '_blank', 'width=1280,height=720');
     },
 
     // 提交直播地址
