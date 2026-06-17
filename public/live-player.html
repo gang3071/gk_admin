@@ -170,12 +170,49 @@
       if (!url) return 'unknown';
 
       const lowerUrl = url.toLowerCase();
-      if (lowerUrl.startsWith('rtmp://')) return 'rtmp';
+
+      // WebRTC协议（最低延迟）
+      if (lowerUrl.startsWith('webrtc://')) return 'webrtc';
+
+      // RTMP协议（Flash时代）
+      if (lowerUrl.startsWith('rtmp://') || lowerUrl.startsWith('rtmps://')) return 'rtmp';
+
+      // HLS协议（兼容性最好）
       if (lowerUrl.includes('.m3u8')) return 'hls';
+
+      // FLV协议（低延迟）
       if (lowerUrl.includes('.flv')) return 'flv';
+
+      // 通用HTTP/HTTPS
       if (lowerUrl.startsWith('http://') || lowerUrl.startsWith('https://')) return 'http';
 
       return 'unknown';
+    }
+
+    // 获取协议优先级（数字越小优先级越高）
+    function getProtocolPriority(protocol) {
+      const priorities = {
+        'webrtc': 1,  // WebRTC：延迟最低（<1秒）
+        'flv': 2,     // FLV：延迟较低（2-5秒）
+        'hls': 3,     // HLS：兼容性最好（10-30秒）
+        'rtmp': 4,    // RTMP：基本不可用
+        'http': 5,    // HTTP：通用视频
+        'unknown': 99
+      };
+      return priorities[protocol] || 99;
+    }
+
+    // 获取协议描述
+    function getProtocolDescription(protocol) {
+      const descriptions = {
+        'webrtc': 'WebRTC（超低延遲 <1秒）',
+        'flv': 'HTTP-FLV（低延遲 2-5秒）',
+        'hls': 'HLS（高兼容性 10-30秒）',
+        'rtmp': 'RTMP（不推薦）',
+        'http': 'HTTP（通用格式）',
+        'unknown': '未知協議'
+      };
+      return descriptions[protocol] || protocol.toUpperCase();
     }
 
     // 初始化播放器
@@ -188,17 +225,34 @@
       }
 
       const protocol = detectProtocol(liveUrl);
-      document.getElementById('protocol-text').textContent = protocol.toUpperCase();
+      const protocolDesc = getProtocolDescription(protocol);
+      document.getElementById('protocol-text').textContent = protocolDesc;
 
-      // ⚠️ RTMP协议预警
-      if (protocol === 'rtmp') {
+      // 协议特殊提示
+      if (protocol === 'webrtc') {
+        console.log('✅ 檢測到 WebRTC 協議，延遲最低（<1秒）');
+
+        setTimeout(() => {
+          const loadingText = document.querySelector('.loading-text');
+          if (loadingText && document.getElementById('loading-overlay').style.display !== 'none') {
+            loadingText.innerHTML = '🚀 WebRTC 超低延遲直播<br>正在連接...<br><small style="color: #52c41a;">延遲 < 1秒</small>';
+          }
+        }, 1000);
+
+      } else if (protocol === 'flv') {
+        console.log('✅ 檢測到 FLV 協議，低延遲（2-5秒）');
+
+      } else if (protocol === 'hls') {
+        console.log('✅ 檢測到 HLS 協議，兼容性最佳（10-30秒延遲）');
+
+      } else if (protocol === 'rtmp') {
         console.warn('⚠️ 檢測到 RTMP 協議，該協議在瀏覽器中可能無法播放');
 
         // 显示警告（但仍尝试播放）
         setTimeout(() => {
           const loadingText = document.querySelector('.loading-text');
           if (loadingText && document.getElementById('loading-overlay').style.display !== 'none') {
-            loadingText.innerHTML = '⚠️ RTMP協議兼容性差<br>正在嘗試連接...<br><small style="color: #999;">建議使用HLS格式（.m3u8）</small>';
+            loadingText.innerHTML = '⚠️ RTMP協議兼容性差<br>正在嘗試連接...<br><small style="color: #999;">建議使用 WebRTC 或 HLS 格式</small>';
           }
         }, 2000);
       }
@@ -224,11 +278,12 @@
             durationDisplay: false,
             fullscreenToggle: true
           },
-          // 根据协议配置播放源
-          ...(protocol === 'rtmp' && { rtmp: liveUrl }),
-          ...(protocol === 'flv' && { flv: liveUrl }),
-          ...(protocol === 'hls' && { m3u8: liveUrl }),
-          ...(protocol === 'http' && { mp4: liveUrl })
+          // 根据协议配置播放源（按优先级）
+          ...(protocol === 'webrtc' && { webrtc: liveUrl }),  // WebRTC最优
+          ...(protocol === 'flv' && { flv: liveUrl }),        // FLV次优
+          ...(protocol === 'hls' && { m3u8: liveUrl }),       // HLS兼容性好
+          ...(protocol === 'rtmp' && { rtmp: liveUrl }),      // RTMP不推荐
+          ...(protocol === 'http' && { mp4: liveUrl })        // 通用格式
         };
 
         // 如果没有匹配的协议，尝试自动检测
