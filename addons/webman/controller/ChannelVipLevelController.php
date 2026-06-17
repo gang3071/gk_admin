@@ -63,7 +63,10 @@ class ChannelVipLevelController
             $grid->hideAdd();
             $grid->hideDelete();
 
-            // 导入VIP等级按钮（始终显示，方便重新导入）
+            // 工具栏按钮
+            $tools = [];
+
+            // 导入VIP等级按钮（始终显示）
             if ($vipCount === 0) {
                 $buttonText = admin_trans('vip_level.import_template');
                 $confirmText = admin_trans('vip_level.import_confirm');
@@ -74,7 +77,7 @@ class ChannelVipLevelController
                 $buttonType = 'default';
             }
 
-            $importButton = Button::create($buttonText)
+            $tools[] = Button::create($buttonText)
                 ->icon(Icon::create('DownloadOutlined'))
                 ->type($buttonType)
                 ->confirm(
@@ -84,11 +87,9 @@ class ChannelVipLevelController
                     'POST'
                 );
 
-            $grid->tools($importButton);
-
             // 同步玩家VIP等级按钮（只在有VIP等级且有未同步玩家时显示）
             if ($vipCount > 0 && $playersNeedSyncCount > 0) {
-                $syncButton = Button::create(admin_trans('vip_level.sync_players'))
+                $tools[] = Button::create(admin_trans('vip_level.sync_players'))
                     ->icon(Icon::create('SyncOutlined'))
                     ->type('default')
                     ->confirm(
@@ -97,9 +98,10 @@ class ChannelVipLevelController
                         [],
                         'POST'
                     );
-
-                $grid->tools($syncButton);
             }
+
+            // 一次性添加所有按钮
+            $grid->tools($tools);
 
             $grid->model()
                 ->where('department_id', $departmentId)
