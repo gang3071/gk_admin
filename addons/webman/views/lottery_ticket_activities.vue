@@ -743,9 +743,23 @@
         :destroyOnClose="true"
     >
       <div v-if="livePreviewUrl" style="position: relative; background: #000;">
+        <!-- 播放器选择提示（仅开发环境） -->
+        <div style="position: absolute; top: 10px; right: 10px; z-index: 10000;">
+          <a-select
+              v-model:value="playerType"
+              size="small"
+              style="width: 180px;"
+              @change="switchPlayer"
+          >
+            <a-select-option value="flvjs">flv.js播放器</a-select-option>
+            <a-select-option value="tcplayer">TCPlayer v5</a-select-option>
+          </a-select>
+        </div>
+
         <!-- 直播播放器iframe -->
         <iframe
-            :src="'/live-player.html?url=' + encodeURIComponent(livePreviewUrl)"
+            :key="playerType"
+            :src="getPlayerUrl()"
             style="width: 100%; height: 70vh; border: none; display: block;"
             frameborder="0"
             allowfullscreen
@@ -836,6 +850,7 @@ export default {
       liveModalMode: 'update', // 'update' 或 'startDrawing'
       livePreviewVisible: false, // ⭐ 直播预览Modal
       livePreviewUrl: '', // ⭐ 当前预览的直播地址
+      playerType: 'flvjs', // ⭐ 播放器类型（flvjs或tcplayer）
       formMode: 'create',
       historyModalVisible: false,  // ⭐ 历史活动选择Modal
       historyActivities: [],        // ⭐ 历史活动列表
@@ -1327,8 +1342,21 @@ export default {
 
     // ⭐ 在新窗口打开直播
     openInNewTab() {
-      const url = `/live-player.html?url=${encodeURIComponent(this.livePreviewUrl)}`;
+      const url = this.getPlayerUrl();
       window.open(url, '_blank', 'width=1280,height=720');
+    },
+
+    // ⭐ 获取播放器URL
+    getPlayerUrl() {
+      const playerFile = this.playerType === 'tcplayer'
+        ? '/live-player-tcplayer.html'
+        : '/live-player.html';
+      return `${playerFile}?url=${encodeURIComponent(this.livePreviewUrl)}`;
+    },
+
+    // ⭐ 切换播放器
+    switchPlayer() {
+      this.$message.info('已切換到 ' + (this.playerType === 'tcplayer' ? 'TCPlayer v5' : 'flv.js播放器'));
     },
 
     // 提交直播地址
