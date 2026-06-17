@@ -94,4 +94,28 @@ return [
         'error' => '错误',
         'clear' => '清空日志',
     ],
+
+    // 出票记录
+    'record' => [
+        'title' => '出票记录',
+        'order_id' => '订单号',
+        'store_name' => '店名',
+        'machine_no' => '台号',
+        'score' => '分数/金额',
+        'ticket_type' => '票据类型',
+        'type_recharge' => '开分',
+        'type_withdraw' => '洗分',
+        'qr_code' => '二维码信息',
+        'qr_code_no' => '二维码编号',
+        'status' => '状态',
+        'status_disabled' => '禁用',
+        'status_normal' => '正常',
+        'status_printed' => '已打印',
+        'status_used' => '已使用',
+        'status_unknown' => '未知',
+        'print_count' => '打印次数',
+        'last_print_time' => '最后打印时间',
+        'remark' => '备注',
+        'created_at' => '创建时间',
+    ],
 ];

@@ -94,4 +94,28 @@ return [
         'error' => '錯誤',
         'clear' => '清空日誌',
     ],
+
+    // 出票記錄
+    'record' => [
+        'title' => '出票記錄',
+        'order_id' => '訂單號',
+        'store_name' => '店名',
+        'machine_no' => '台號',
+        'score' => '分數/金額',
+        'ticket_type' => '票據類型',
+        'type_recharge' => '開分',
+        'type_withdraw' => '洗分',
+        'qr_code' => '二維碼信息',
+        'qr_code_no' => '二維碼編號',
+        'status' => '狀態',
+        'status_disabled' => '禁用',
+        'status_normal' => '正常',
+        'status_printed' => '已列印',
+        'status_used' => '已使用',
+        'status_unknown' => '未知',
+        'print_count' => '列印次數',
+        'last_print_time' => '最後列印時間',
+        'remark' => '備註',
+        'created_at' => '創建時間',
+    ],
 ];

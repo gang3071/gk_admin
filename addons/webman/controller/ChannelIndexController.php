@@ -2309,11 +2309,6 @@ class ChannelIndexController
                             ->modal([$this, 'shiftHandover'])
                             ->type('primary')
                             ->size('default'),
-                        Button::create(admin_trans('ticket_machine.title'))
-                            ->modal([$this, 'ticketMachineControl'])
-                            ->type('primary')
-                            ->size('default')
-                            ->style(['marginLeft' => '10px']),
                         Html::div()->content([
                             Icon::create('calendar')->style(['marginRight' => '6px', 'fontSize' => '14px', 'color' => '#606266']),
                             Html::create(admin_trans('shift_handover.start_time') . ': ')->style([
@@ -3169,6 +3164,9 @@ class ChannelIndexController
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
+            'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
+            'store_admin_id' => $store->id ?? 0,
+            'department_id' => $store->department_id ?? 0,
         ]);
     }
 
@@ -3225,6 +3223,57 @@ class ChannelIndexController
         }
 
         return json($result);
+    }
+
+    /**
+     * 保存出票记录
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function saveTicketRecord(): Response
+    {
+        try {
+            $storeName = request()->input('store_name', '');
+            $machineNo = (int) request()->input('machine_no', 0);
+            $score = (float) request()->input('score', 0);
+            $qrCode = request()->input('qr_code', '');
+            $ticketType = (int) request()->input('ticket_type', 1);
+            $storeAdminId = (int) request()->input('store_admin_id', 0);
+            $departmentId = (int) request()->input('department_id', 0);
+
+            if (empty($qrCode)) {
+                return json(['code' => 400, 'message' => 'QR码内容不能为空']);
+            }
+
+            $orderId = \addons\webman\model\TicketRecord::generateOrderId();
+            $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
+
+            $record = \addons\webman\model\TicketRecord::create([
+                'order_id'       => $orderId,
+                'department_id'  => $departmentId,
+                'store_admin_id' => $storeAdminId,
+                'store_name'     => $storeName,
+                'machine_no'     => $machineNo,
+                'score'          => $score,
+                'qr_code'        => $qrCode,
+                'qr_code_no'     => $qrCodeNo,
+                'ticket_type'    => $ticketType,
+                'status'         => \addons\webman\model\TicketRecord::STATUS_NORMAL,
+            ]);
+
+            return json([
+                'code'    => 200,
+                'message' => '保存成功',
+                'data'    => [
+                    'id'         => $record->id,
+                    'order_id'   => $orderId,
+                    'qr_code_no' => $qrCodeNo,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
+        }
     }
 
     /**

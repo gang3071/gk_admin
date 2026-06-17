@@ -280,5 +280,8 @@ return [
         'lottery_ticket_dashboard' => '実施中のキャンペーン',
         'lottery_ticket_history' => 'キャンペーン履歴',
         'lottery_ticket_records' => '当選記録',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票記録',
     ]
 ];

@@ -275,7 +275,8 @@ class TicketMachineService
      */
     private function parseFrame(string $data): ?array
     {
-        if (strlen($data) < 10) {
+        // 帧结构: 帧头(2) + cmdType(1) + cmd(1) + dataLen(1) + 数据域(N) + XOR(1) + SUM(1) + 帧尾(2) = 9 + N
+        if (strlen($data) < 9) {
             return null;
         }
 
@@ -288,12 +289,12 @@ class TicketMachineService
         // 从帧头开始处理
         $data = substr($data, $startPos);
 
-        if (strlen($data) < 7) {
+        if (strlen($data) < 9) {
             return null;
         }
 
         $dataLen = ord($data[4]);
-        $frameLen = 10 + $dataLen;
+        $frameLen = 9 + $dataLen;
 
         if (strlen($data) < $frameLen) {
             return null;

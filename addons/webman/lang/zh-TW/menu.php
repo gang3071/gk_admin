@@ -279,5 +279,8 @@ return [
         'lottery_ticket_dashboard' => '進行中的活動',
         'lottery_ticket_history' => '歷史活動記錄',
         'lottery_ticket_records' => '中獎記錄',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票記錄',
     ]
 ];

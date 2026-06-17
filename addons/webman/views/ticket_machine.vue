@@ -1,5 +1,6 @@
 <template>
-  <div style="padding: 16px;">
+  <div style="padding: 16px; display: flex; justify-content: center;">
+    <div style="width: 100%; max-width: 800px;">
     <!-- 连接配置 -->
     <a-card title="连接配置" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #409EFF'}">
       <a-row :gutter="16">
@@ -110,6 +111,17 @@
       <a-col :span="12">
         <a-card title="QR码打印" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
           <div style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 4px;">票据类型</div>
+            <a-select v-model:value="ticketType" style="width: 100%;">
+              <a-select-option :value="1">开分</a-select-option>
+              <a-select-option :value="2">洗分</a-select-option>
+            </a-select>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 4px;">分数/金额</div>
+            <a-input-number v-model:value="ticketScore" :min="0" placeholder="分数/金额" style="width: 100%;" />
+          </div>
+          <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 4px;">QR码内容</div>
             <a-input v-model:value="qrCode" placeholder="QR码内容" />
           </div>
@@ -117,19 +129,6 @@
         </a-card>
       </a-col>
     </a-row>
-
-    <!-- HEX指令 -->
-    <a-card title="HEX指令" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #E6A23C'}">
-      <a-row :gutter="16">
-        <a-col :span="20">
-          <div style="color: #909399; font-size: 12px; margin-bottom: 4px;">空格分隔的HEX字符串，例如: FA EA 01 01 00 XX XX FB EB</div>
-          <a-input v-model:value="hexCommand" placeholder="FA EA 01 01 00 XX XX FB EB" />
-        </a-col>
-        <a-col :span="4">
-          <a-button type="primary" @click="sendHex" style="width: 100%; margin-top: 22px;" :disabled="!isConnected">发送HEX</a-button>
-        </a-col>
-      </a-row>
-    </a-card>
 
     <!-- 通信日志 -->
     <a-card size="small" :headStyle="{borderBottom: '2px solid #909399'}">
@@ -145,6 +144,7 @@
         </div>
       </div>
     </a-card>
+    </div>
   </div>
 </template>
 
@@ -153,6 +153,9 @@ export default {
   props: {
     default_baud_rate: String,
     default_store_name: String,
+    save_ticket_url: String,
+    store_admin_id: Number,
+    department_id: Number,
   },
   data() {
     return {
@@ -176,6 +179,8 @@ export default {
         number: 0,
       },
       qrCode: '',
+      ticketType: 1,
+      ticketScore: 0,
       hexCommand: '',
       logs: [],
       receiveBuffer: [],
@@ -220,11 +225,12 @@ export default {
 
     // 解析响应帧
     parseFrame(buffer) {
+      // 帧结构: 帧头(2) + cmdType(1) + cmd(1) + dataLen(1) + 数据域(N) + XOR(1) + SUM(1) + 帧尾(2) = 9 + N
       for (let i = 0; i < buffer.length - 1; i++) {
         if (buffer[i] === 0xFA && buffer[i + 1] === 0xEA) {
-          if (buffer.length < i + 7) return null;
+          if (buffer.length < i + 9) return null; // 最小帧长度: 2+1+1+1+0+1+1+2 = 9
           const dataLen = buffer[i + 4];
-          const frameLen = 10 + dataLen;
+          const frameLen = 9 + dataLen;
           if (buffer.length < i + frameLen) return null;
           if (buffer[i + frameLen - 2] === 0xFB && buffer[i + frameLen - 1] === 0xEB) {
             return {
@@ -546,9 +552,50 @@ export default {
     // 发送QR码
     async sendQrCode() {
       if (!this.qrCode) { this.addLog('error', '请输入QR码内容'); return; }
-      const data = Array.from(this.qrCode).map(c => c.charCodeAt(0));
-      const r = await this.sendCommand(0x01, 0x08, data);
-      this.addLog(r ? 'success' : 'error', r ? 'QR码已发送并打印' : '发送失败');
+
+      // TODO: 测试模式 - 跳过实际出票，只保存数据
+      const TEST_MODE = true;
+
+      if (TEST_MODE) {
+        this.addLog('warn', '[测试模式] 跳过实际出票');
+      } else {
+        // 发送到出票机
+        const data = Array.from(this.qrCode).map(c => c.charCodeAt(0));
+        const r = await this.sendCommand(0x01, 0x08, data);
+
+        if (!r) {
+          this.addLog('error', 'QR码发送失败');
+          return;
+        }
+        this.addLog('success', 'QR码已发送并打印');
+      }
+
+      // 保存到数据库
+      if (this.save_ticket_url) {
+        try {
+          const saveRes = await this.$request({
+            url: this.save_ticket_url,
+            method: 'post',
+            data: {
+              store_name: this.config.storeName,
+              machine_no: this.config.machineNo,
+              score: this.ticketScore,
+              qr_code: this.qrCode,
+              ticket_type: this.ticketType,
+              store_admin_id: this.store_admin_id,
+              department_id: this.department_id,
+            },
+          });
+
+          if (saveRes.code === 200) {
+            this.addLog('success', '票据记录已保存: ' + (saveRes.data?.order_id || ''));
+          } else {
+            this.addLog('warn', '票据记录保存失败: ' + (saveRes.message || ''));
+          }
+        } catch (e) {
+          this.addLog('warn', '票据记录保存异常: ' + (e.message || ''));
+        }
+      }
     },
 
     // 发送HEX

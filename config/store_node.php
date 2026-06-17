@@ -599,4 +599,35 @@ return [
             ],
         ]
     ],
+
+    // ========== 出票记录 ==========
+    [
+        'id' => 'addons\webman\controller\StoreTicketRecordController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '出票记录',
+        'children' => [
+            // 记录列表
+            [
+                'id' => 'addons\webman\controller\StoreTicketRecordController\index',
+                'pid' => 'addons\webman\controller\StoreTicketRecordController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/index',
+                'title' => '记录列表',
+            ],
+            // 记录详情
+            [
+                'id' => 'addons\webman\controller\StoreTicketRecordController\detail',
+                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+                'action' => 'detail',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/detail',
+                'title' => '记录详情',
+            ],
+        ]
+    ],
 ];
