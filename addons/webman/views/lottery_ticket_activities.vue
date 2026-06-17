@@ -805,7 +805,7 @@
                   type="success"
                   show-icon
               />
-              <a-radio-group v-model:value="selectedProtocol" @change="selectGeneratedUrl">
+              <a-radio-group v-model:value="selectedProtocol">
                 <a-space direction="vertical">
                   <a-radio value="flv">
                     <a-tag color="blue">FLV</a-tag>
