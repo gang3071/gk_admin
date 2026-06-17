@@ -2034,13 +2034,13 @@ class ChannelLotteryTicketActivityController
             $expireDays = Request::input('expire_days', 30);
 
             if (empty($configId)) {
-                return message_error('请选择腾讯云配置');
+                return message_error(admin_trans('lottery_ticket.message.select_tencent_config'));
             }
 
             // 调用辅助函数生成地址
             $urls = generateLotteryLiveUrls($configId, $streamName, $expireDays);
 
-            return Response::success($urls, '直播地址生成成功');
+            return Response::success($urls, admin_trans('lottery_ticket.message.live_url_generated'));
 
         } catch (\Exception $e) {
             \support\Log::error('[摸奖券] 生成直播地址失败', [
@@ -2061,9 +2061,10 @@ class ChannelLotteryTicketActivityController
     {
         try {
             $streamName = Request::input('stream_name');
+            $expireDays = Request::input('expire_days', 30); // ✅ 允许前端指定有效期，默认 30 天
 
             if (empty($streamName)) {
-                return message_error('流名称不能为空');
+                return message_error(admin_trans('lottery_ticket.message.stream_name_required'));
             }
 
             // 获取腾讯云配置（包含license信息）
@@ -2071,23 +2072,28 @@ class ChannelLotteryTicketActivityController
             $config = \addons\webman\model\MachineTencentPlay::query()->find(1);
 
             if (!$config) {
-                return message_error('腾讯云配置不存在');
+                return message_error(admin_trans('lottery_ticket.message.tencent_config_not_found'));
             }
 
-            // 生成播放地址
-            $urls = generateLotteryLiveUrls(1, $streamName, 1);
+            // 生成播放地址（支持自定义有效期，默认 30 天）
+            $urls = generateLotteryLiveUrls(1, $streamName, $expireDays);
 
             // 返回播放器配置
             return Response::success([
                 'stream_name' => $streamName,
-                'play_url' => $urls['flv'], // 默认使用FLV
+                'play_url' => $urls['webrtc'], // ⭐ 使用 WebRTC（超低延迟 <1秒）
                 'urls' => [
+                    'webrtc' => $urls['webrtc'], // ✅ WebRTC 放在第一位
                     'flv' => $urls['flv'],
                     'hls' => $urls['hls'],
-                    'webrtc' => $urls['webrtc'],
                 ],
                 'push_url' => $urls['rtmp'], // OBS推流地址
                 'expire_time' => $urls['expire_time'],
+                'expire_timestamp' => $urls['expire_timestamp'],
+                'region' => $urls['region'], // CN（大陆）或 Global（全球）
+                'pull_domain' => $urls['pull_domain'], // 实际使用的播放域名
+                'tx_time' => $urls['tx_time'], // 用于调试
+                'tx_secret' => $urls['tx_secret'], // 用于调试
                 'player_config' => [
                     'autoplay' => true,
                     'live' => true,
@@ -2099,7 +2105,9 @@ class ChannelLotteryTicketActivityController
                     'licenseKey' => $config->license_key,
                     'license' => $config->license, // 简写（兼容）
                 ],
-            ], '获取播放器配置成功');
+            ], admin_trans('lottery_ticket.message.player_config_loaded_with_region', null, [
+                'region' => $urls['region']
+            ]));
 
         } catch (\Exception $e) {
             \support\Log::error('[摸奖券] 获取播放器配置失败', [

@@ -849,6 +849,7 @@ export default {
       liveModalMode: 'update', // 'update' 或 'startDrawing'
       livePreviewVisible: false, // ⭐ 直播预览Modal
       livePreviewUrl: '', // ⭐ 当前预览的直播地址
+      livePlayerConfig: null, // ⭐ 播放器配置（包含 License 信息）
       formMode: 'create',
       historyModalVisible: false,  // ⭐ 历史活动选择Modal
       historyActivities: [],        // ⭐ 历史活动列表
@@ -934,8 +935,6 @@ export default {
     }
   },
   mounted() {
-    console.log('Component mounted, department_id:', this.department_id);
-    console.log('VIP levels:', this.vip_levels);
     this.fetchActivities();
   },
   methods: {
@@ -951,10 +950,8 @@ export default {
           }
         });
 
-        console.log('API Response:', res);
         if (res.code === 200) {
           this.activities = res.data;
-          console.log('Activities loaded:', this.activities.length, this.activities);
         } else {
           this.$message.error(res.message || res.msg || '获取活动列表失败');
         }
@@ -1327,7 +1324,9 @@ export default {
           // 使用返回的播放地址
           this.currentActivity = activity;
           this.livePreviewUrl = res.data.play_url; // FLV地址
+          this.livePlayerConfig = res.data.player_config; // ⭐ 保存播放器配置（包含 License）
           this.livePreviewVisible = true;
+
         } else {
           this.$message.error(res.message || '生成直播地址失败');
         }
@@ -1341,6 +1340,7 @@ export default {
     closeLivePreview() {
       this.livePreviewVisible = false;
       this.livePreviewUrl = '';
+      this.livePlayerConfig = null; // ⭐ 清空播放器配置
       this.currentActivity = null;
     },
 
@@ -1369,7 +1369,25 @@ export default {
 
     // ⭐ 获取直播播放器URL（使用TCPlayer v5）
     getLivePlayerUrl() {
-      return `/lottery-live-player.html?url=${encodeURIComponent(this.livePreviewUrl)}`;
+      let url = `/lottery-live-player.html?url=${encodeURIComponent(this.livePreviewUrl)}`;
+
+      // ⭐ 添加 License 参数（如果有）
+      if (this.livePlayerConfig) {
+        const config = this.livePlayerConfig;
+
+        // 支持多种字段名（licenceUrl, licenseUrl, license）
+        const licenseUrl = config.licenceUrl || config.licenseUrl || config.license;
+        const licenseKey = config.licenceKey || config.licenseKey;
+
+        if (licenseUrl) {
+          url += `&licenseUrl=${encodeURIComponent(licenseUrl)}`;
+        }
+        if (licenseKey) {
+          url += `&licenseKey=${encodeURIComponent(licenseKey)}`;
+        }
+      }
+
+      return url;
     },
 
     // 提交直播流名称

@@ -254,6 +254,9 @@ return [
         'batch_distribute_selected' => '批量发放选中记录',
         'export_in_development' => '导出功能开发中',
         'live_url_updated' => '直播地址设置成功',
+        'live_url_generated' => '直播地址生成成功',
+        'player_config_loaded' => '播放器配置加载成功',
+        'player_config_loaded_with_region' => '播放器配置加载成功（使用{region}域名）',
         'record_success' => '中奖记录录入成功',
         'record_success_count' => '成功录入 {count} 条中奖记录',
         'live_started' => '直播已开始',
@@ -271,6 +274,9 @@ return [
         'distribute_hint' => '请输入中奖券号，系统將根據券号自动识別奖品等级並发放奖勵',
         'drawing_started' => '开奖已开始，进入开奖阶段',
         'activity_ended' => '活动已结束',
+        'select_tencent_config' => '请选择腾讯云配置',
+        'stream_name_required' => '流名称不能为空',
+        'tencent_config_not_found' => '腾讯云配置不存在',
     ],
 
     // 错误信息

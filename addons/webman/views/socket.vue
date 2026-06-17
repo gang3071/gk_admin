@@ -232,8 +232,6 @@ export default {
         // 订阅群组频道
         this.groupChannelName = `private-admin_group-${this.type}-${this.department_id}`;
         pushManager.subscribe(this.groupChannelName, this.handleGroupMessage, this);
-
-        console.log('[Socket] WebSocket initialized successfully');
       } catch (error) {
         console.error('[Socket] Init WebSocket failed:', error);
       }
@@ -275,7 +273,6 @@ export default {
             break;
         }
       } catch (e) {
-        console.warn('[Socket] Parse admin message failed:', e);
       }
     },
 
@@ -365,7 +362,6 @@ export default {
             break;
         }
       } catch (e) {
-        console.warn('[Socket] Parse group message failed:', e);
       }
     },
     openNotification(title, router, description = '', params) {
