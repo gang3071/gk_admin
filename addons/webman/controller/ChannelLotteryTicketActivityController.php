@@ -224,10 +224,13 @@ class ChannelLotteryTicketActivityController
                 ->where('prize_amount', '>', 0)
                 ->count();
 
-            // ⭐ 计算最大券号（当前已发放的最后一张券号）
-            // current_ticket_no 表示下一张券从哪里开始，所以最大券号是 current_ticket_no - 1
-            $maxTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
-            $activityArray['max_ticket_no'] = str_pad($maxTicketNo, 6, '0', STR_PAD_LEFT);
+            // ⭐ 最大券号（抽奖时放球的最大号码，从数据库字段读取）
+            // max_ticket_no 默认 1000000，表示支持券号 000000~999999
+            $activityArray['max_ticket_no'] = $activity->max_ticket_no ?? 1000000;
+
+            // ⭐ 当前已发放的最后一张券号（用于显示发券进度）
+            $currentTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
+            $activityArray['current_ticket_no'] = $currentTicketNo;
 
             return $activityArray;
         });
@@ -253,7 +256,25 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('common.no_permission'));
         }
 
-        return Response::success($activity->toArray());
+        $activityArray = $activity->toArray();
+
+        // 添加额外的统计字段
+        // ⭐ 最大券号（抽奖时放球的最大号码，从数据库字段读取）
+        // max_ticket_no 默认 1000000，表示支持券号 000000~999999
+        $activityArray['max_ticket_no'] = $activity->max_ticket_no ?? 1000000;
+
+        // ⭐ 当前已发放的最后一张券号（用于显示发券进度）
+        $currentTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
+        $activityArray['current_ticket_no'] = $currentTicketNo;
+
+        // ⭐ 统计待发放记录数量
+        $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+            ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
+            ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+            ->where('prize_amount', '>', 0)
+            ->count();
+
+        return Response::success($activityArray);
     }
 
     /**
