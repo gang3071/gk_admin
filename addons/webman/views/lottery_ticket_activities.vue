@@ -952,7 +952,7 @@ export default {
       expireDays: 30, // 有效天数
       generatingAddress: false,
       generatedUrls: null, // 生成的地址
-      selectedProtocol: 'flv' // 默认选中FLV
+      selectedProtocol: 'flv', // 默认选中FLV
       formMode: 'create',
       historyModalVisible: false,  // ⭐ 历史活动选择Modal
       historyActivities: [],        // ⭐ 历史活动列表
