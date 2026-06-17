@@ -47,6 +47,13 @@ class ChannelVipLevelController
                 ->where('department_id', $departmentId)
                 ->count();
 
+            // 调试信息
+            Log::info('VIP等级按钮显示调试', [
+                'department_id' => $departmentId,
+                'vip_count' => $vipCount,
+                'admin_user_id' => Admin::id(),
+            ]);
+
             // 隐藏添加按钮和清空数据按钮
             $grid->hideAdd();
             $grid->hideDelete();
@@ -85,6 +92,12 @@ class ChannelVipLevelController
                               ->orWhere('vip_level_id', 0);
                     })
                     ->count();
+
+                // 调试信息
+                Log::info('同步玩家等级按钮调试', [
+                    'department_id' => $departmentId,
+                    'players_need_sync_count' => $playersNeedSyncCount,
+                ]);
 
                 if ($playersNeedSyncCount > 0) {
                     $syncButton = Button::create(admin_trans('vip_level.sync_players'))
