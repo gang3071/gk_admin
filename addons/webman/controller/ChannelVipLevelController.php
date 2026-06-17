@@ -65,15 +65,35 @@ class ChannelVipLevelController
             $grid->hideDelete();
 
             // 工具栏按钮
-            $grid->tools([
-                Button::create(admin_trans('vip_level.import_template'))
+            $toolButtons = [
+                // 导入VIP等级按钮（始终显示）
+                Button::create(
+                    $vipCount === 0
+                        ? admin_trans('vip_level.import_template')
+                        : admin_trans('vip_level.import_template') . ' ' . admin_trans('vip_level.already_exists_count', null, ['count' => $vipCount])
+                )
                     ->icon(Icon::create('DownloadOutlined'))
-                    ->type('primary'),
+                    ->type($vipCount === 0 ? 'primary' : 'default')
+                    ->confirm(
+                        $vipCount === 0
+                            ? admin_trans('vip_level.import_confirm')
+                            : admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]),
+                        [$this, 'importTemplate']
+                    ),
+            ];
 
-                Button::create(admin_trans('vip_level.sync_players'))
+            // 同步玩家VIP等级按钮（条件显示）
+            if ($vipCount > 0 && $playersNeedSyncCount > 0) {
+                $toolButtons[] = Button::create(admin_trans('vip_level.sync_players'))
                     ->icon(Icon::create('SyncOutlined'))
-                    ->type('default'),
-            ]);
+                    ->type('default')
+                    ->confirm(
+                        admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
+                        [$this, 'syncPlayers']
+                    );
+            }
+
+            $grid->tools($toolButtons);
 
             $grid->model()
                 ->where('department_id', $departmentId)
