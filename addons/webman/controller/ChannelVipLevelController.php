@@ -35,10 +35,6 @@ class ChannelVipLevelController
     public function index(): Grid
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
-            $grid->title(admin_trans('vip_level.title'));
-            $grid->autoHeight();
-            $grid->bordered(true);
-
             // 只显示当前渠道的VIP等级
             $departmentId = Admin::user()->department_id;
 
@@ -47,12 +43,21 @@ class ChannelVipLevelController
                 ->where('department_id', $departmentId)
                 ->count();
 
-            // 调试信息
-            Log::info('VIP等级按钮显示调试', [
-                'department_id' => $departmentId,
-                'vip_count' => $vipCount,
-                'admin_user_id' => Admin::id(),
-            ]);
+            // 检查需要同步的玩家数量
+            $playerModel = plugin()->webman->config('database.player_model');
+            $playersNeedSyncCount = $playerModel::query()
+                ->where('department_id', $departmentId)
+                ->where(function ($query) {
+                    $query->whereNull('vip_level_id')
+                          ->orWhere('vip_level_id', 0);
+                })
+                ->count();
+
+            // 在标题中显示调试信息
+            $debugInfo = " (VIP等级: {$vipCount}个, 未同步玩家: {$playersNeedSyncCount}人)";
+            $grid->title(admin_trans('vip_level.title') . $debugInfo);
+            $grid->autoHeight();
+            $grid->bordered(true);
 
             // 隐藏添加按钮和清空数据按钮
             $grid->hideAdd();
@@ -82,36 +87,18 @@ class ChannelVipLevelController
             $grid->tools($importButton);
 
             // 同步玩家VIP等级按钮（只在有VIP等级且有未同步玩家时显示）
-            if ($vipCount > 0) {
-                // 检查是否有需要同步的玩家（vip_level_id为NULL或0的玩家）
-                $playerModel = plugin()->webman->config('database.player_model');
-                $playersNeedSyncCount = $playerModel::query()
-                    ->where('department_id', $departmentId)
-                    ->where(function ($query) {
-                        $query->whereNull('vip_level_id')
-                              ->orWhere('vip_level_id', 0);
-                    })
-                    ->count();
+            if ($vipCount > 0 && $playersNeedSyncCount > 0) {
+                $syncButton = Button::create(admin_trans('vip_level.sync_players'))
+                    ->icon(Icon::create('SyncOutlined'))
+                    ->type('default')
+                    ->confirm(
+                        admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
+                        [$this, 'syncPlayers'],
+                        [],
+                        'POST'
+                    );
 
-                // 调试信息
-                Log::info('同步玩家等级按钮调试', [
-                    'department_id' => $departmentId,
-                    'players_need_sync_count' => $playersNeedSyncCount,
-                ]);
-
-                if ($playersNeedSyncCount > 0) {
-                    $syncButton = Button::create(admin_trans('vip_level.sync_players'))
-                        ->icon(Icon::create('SyncOutlined'))
-                        ->type('default')
-                        ->confirm(
-                            admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
-                            [$this, 'syncPlayers'],
-                            [],
-                            'POST'
-                        );
-
-                    $grid->tools($syncButton);
-                }
+                $grid->tools($syncButton);
             }
 
             $grid->model()
