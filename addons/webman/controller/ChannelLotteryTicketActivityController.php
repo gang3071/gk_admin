@@ -2021,4 +2021,35 @@ class ChannelLotteryTicketActivityController
             return message_error($e->getMessage());
         }
     }
+
+    /**
+     * 生成直播地址（基于machine_tencent_play配置）
+     * @auth true
+     */
+    public function generateLiveUrls()
+    {
+        try {
+            $configId = Request::input('config_id');
+            $streamName = Request::input('stream_name', 'mojiangjuan');
+            $expireDays = Request::input('expire_days', 30);
+
+            if (empty($configId)) {
+                return message_error('请选择腾讯云配置');
+            }
+
+            // 调用辅助函数生成地址
+            $urls = generateLotteryLiveUrls($configId, $streamName, $expireDays);
+
+            return Response::success($urls, '直播地址生成成功');
+
+        } catch (\Exception $e) {
+            \support\Log::error('[摸奖券] 生成直播地址失败', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return message_error($e->getMessage());
+        }
+    }
 }

@@ -2609,4 +2609,51 @@ if (!function_exists('clearMachineCrashCache')) {
     {
         return \addons\webman\service\WalletService::getBalance($playerId, $platformId);
     }
+
+    /**
+     * 生成摸奖券直播地址（复用 machine_tencent_play 配置）
+     *
+     * @param int $configId machine_tencent_play.id
+     * @param string $streamName 流名称（如：mojiangjuan）
+     * @param int $expireDays 有效天数（默认30天）
+     * @return array 返回4种播放地址：RTMP、FLV、HLS、WebRTC
+     * @throws \Exception
+     */
+    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30): array
+    {
+        /** @var \addons\webman\model\MachineTencentPlay $config */
+        $config = \addons\webman\model\MachineTencentPlay::query()->find($configId);
+
+        if (!$config) {
+            throw new \Exception('腾讯云配置不存在');
+        }
+
+        if (empty($config->pull_domain) || empty($config->pull_key)) {
+            throw new \Exception('拉流域名或密钥未配置');
+        }
+
+        // 计算过期时间（十六进制时间戳）
+        $expireTimestamp = time() + ($expireDays * 24 * 60 * 60);
+        $txTime = strtoupper(base_convert($expireTimestamp, 10, 16));
+
+        // 生成防盗链签名：MD5(key + StreamName + txTime)
+        $txSecret = md5($config->pull_key . $streamName . $txTime);
+
+        // 构建鉴权参数
+        $authParams = http_build_query([
+            'txSecret' => $txSecret,
+            'txTime' => $txTime
+        ]);
+
+        // 返回4种播放地址
+        return [
+            'rtmp' => "rtmp://{$config->pull_domain}/live/{$streamName}?{$authParams}",
+            'flv' => "http://{$config->pull_domain}/live/{$streamName}.flv?{$authParams}",
+            'hls' => "http://{$config->pull_domain}/live/{$streamName}.m3u8?{$authParams}",
+            'webrtc' => "webrtc://{$config->pull_domain}/live/{$streamName}?{$authParams}",
+            'expire_time' => date('Y-m-d H:i:s', $expireTimestamp),
+            'tx_time' => $txTime,
+            'tx_secret' => $txSecret,
+        ];
+    }
 }
