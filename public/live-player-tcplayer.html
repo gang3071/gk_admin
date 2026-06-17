@@ -242,40 +242,80 @@
       }
 
       try {
-        // TCPlayer v5配置
-        const playerConfig = {
-          // 播放源配置
-          sources: [{
-            src: liveUrl
-          }],
+        // TCPlayer v5配置（根据协议类型）
+        let playerConfig = {};
 
-          // 基础配置
-          autoplay: true,      // 自动播放
-          preload: 'auto',     // 预加载
-          playbackRates: [0.5, 1, 1.25, 1.5, 2],  // 倍速选项
-          controlBar: {
-            progressControl: false,  // 直播不需要进度条
-            playToggle: true,
-            volumePanel: true,
-            currentTimeDisplay: false,
-            timeDivider: false,
-            durationDisplay: false,
-            remainingTimeDisplay: false,
-            fullscreenToggle: true
-          },
-
-          // 直播配置
-          live: true,
-
-          // 其他配置
-          width: '100%',
-          height: '100%',
-          fluid: false,
-          aspectRatio: '16:9',
-
-          // 语言
-          language: 'zh-TW'
-        };
+        if (currentProtocol === 'flv') {
+          // FLV播放配置
+          playerConfig = {
+            flv: liveUrl,  // FLV地址
+            autoplay: true,
+            live: true,
+            width: '100%',
+            height: '100%',
+            controlBar: {
+              progressControl: false,
+              playToggle: true,
+              volumePanel: true,
+              fullscreenToggle: true
+            },
+            language: 'zh-TW'
+          };
+        } else if (currentProtocol === 'hls') {
+          // HLS播放配置
+          playerConfig = {
+            m3u8: liveUrl,  // HLS地址
+            autoplay: true,
+            live: true,
+            width: '100%',
+            height: '100%',
+            controlBar: {
+              progressControl: false,
+              playToggle: true,
+              volumePanel: true,
+              fullscreenToggle: true
+            },
+            language: 'zh-TW'
+          };
+        } else if (currentProtocol === 'webrtc') {
+          // WebRTC播放配置
+          playerConfig = {
+            webrtc: liveUrl,  // WebRTC地址
+            autoplay: true,
+            live: true,
+            width: '100%',
+            height: '100%',
+            controlBar: {
+              progressControl: false,
+              playToggle: true,
+              volumePanel: true,
+              fullscreenToggle: true
+            },
+            language: 'zh-TW'
+          };
+        } else if (currentProtocol === 'rtmp') {
+          // RTMP不支持
+          showError('⚠️ RTMP 協議不支持\n\n現代瀏覽器已不支持 RTMP 協議。\n\n請使用 FLV 或 HLS 格式。');
+          return;
+        } else {
+          // 其他格式使用sources
+          playerConfig = {
+            sources: [{
+              src: liveUrl,
+              type: 'video/mp4'
+            }],
+            autoplay: true,
+            width: '100%',
+            height: '100%',
+            controlBar: {
+              progressControl: true,
+              playToggle: true,
+              volumePanel: true,
+              fullscreenToggle: true
+            },
+            language: 'zh-TW'
+          };
+        }
 
         console.log('TCPlayer配置:', playerConfig);
 
