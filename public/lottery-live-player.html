@@ -293,42 +293,82 @@
         player = new TCPlayer('player-container-id', playerConfig);
 
         console.log('✅ [调试] 播放器实例已创建:', player);
+        console.log('🔍 [调试] 播放器就绪状态:', player.readyState());
+        console.log('🔍 [调试] 播放器网络状态:', player.networkState());
+
+        // 10秒后检查播放器状态
+        setTimeout(() => {
+          console.log('⏰ [10秒后] 播放器就绪状态:', player.readyState());
+          console.log('⏰ [10秒后] 播放器网络状态:', player.networkState());
+          console.log('⏰ [10秒后] 是否暂停:', player.paused());
+          console.log('⏰ [10秒后] 当前时间:', player.currentTime());
+          console.log('⏰ [10秒后] 是否出错:', player.error());
+
+          const videoEl = document.querySelector('video');
+          if (videoEl) {
+            console.log('⏰ [10秒后] video.src:', videoEl.src);
+            console.log('⏰ [10秒后] video.currentSrc:', videoEl.currentSrc);
+            console.log('⏰ [10秒后] video.readyState:', videoEl.readyState);
+            console.log('⏰ [10秒后] video.networkState:', videoEl.networkState);
+            console.log('⏰ [10秒后] video.error:', videoEl.error);
+          }
+        }, 10000);
 
         // 监听播放器事件
         player.on('loadstart', function() {
-          console.log('開始加載');
+          console.log('✅ [事件] loadstart - 開始加載');
         });
 
         player.on('loadedmetadata', function() {
-          console.log('✅ 元數據加載完成');
+          console.log('✅ [事件] loadedmetadata - 元數據加載完成');
           hideLoading();
           showInfoBar('直播中', true);
         });
 
         player.on('canplay', function() {
-          console.log('✅ 可以播放');
+          console.log('✅ [事件] canplay - 可以播放');
           hideLoading();
         });
 
         player.on('playing', function() {
-          console.log('✅ 播放中');
+          console.log('✅ [事件] playing - 播放中');
           hideLoading();
           showInfoBar('直播中', true);
         });
 
         player.on('waiting', function() {
-          console.log('⏳ 緩衝中');
+          console.log('⏳ [事件] waiting - 緩衝中');
           showInfoBar('緩衝中...', true);
         });
 
         player.on('pause', function() {
-          console.log('⏸ 暫停');
+          console.log('⏸ [事件] pause - 暫停');
           showInfoBar('已暫停', false);
         });
 
         player.on('ended', function() {
-          console.log('⏹ 播放結束');
+          console.log('⏹ [事件] ended - 播放結束');
           showInfoBar('直播已結束', false);
+        });
+
+        player.on('progress', function() {
+          console.log('📥 [事件] progress - 下载中');
+        });
+
+        player.on('stalled', function() {
+          console.log('⚠️ [事件] stalled - 网络停滞');
+        });
+
+        player.on('suspend', function() {
+          console.log('⏸️ [事件] suspend - 加载挂起');
+        });
+
+        player.on('abort', function() {
+          console.log('❌ [事件] abort - 加载中止');
+        });
+
+        player.on('emptied', function() {
+          console.log('⚠️ [事件] emptied - 媒体为空');
         });
 
         player.on('error', function(error) {
