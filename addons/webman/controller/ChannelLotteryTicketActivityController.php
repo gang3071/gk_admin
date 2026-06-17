@@ -2052,4 +2052,59 @@ class ChannelLotteryTicketActivityController
             return message_error($e->getMessage());
         }
     }
+
+    /**
+     * 获取直播播放器配置（用于预览页面）
+     * @auth true
+     */
+    public function getLivePlayerConfig()
+    {
+        try {
+            $streamName = Request::input('stream_name');
+
+            if (empty($streamName)) {
+                return message_error('流名称不能为空');
+            }
+
+            // 获取腾讯云配置（包含license信息）
+            /** @var \addons\webman\model\MachineTencentPlay $config */
+            $config = \addons\webman\model\MachineTencentPlay::query()->find(1);
+
+            if (!$config) {
+                return message_error('腾讯云配置不存在');
+            }
+
+            // 生成播放地址
+            $urls = generateLotteryLiveUrls(1, $streamName, 1);
+
+            // 返回播放器配置
+            return Response::success([
+                'stream_name' => $streamName,
+                'play_url' => $urls['flv'], // 默认使用FLV
+                'urls' => [
+                    'flv' => $urls['flv'],
+                    'hls' => $urls['hls'],
+                    'webrtc' => $urls['webrtc'],
+                ],
+                'push_url' => $urls['rtmp'], // OBS推流地址
+                'expire_time' => $urls['expire_time'],
+                'player_config' => [
+                    'autoplay' => true,
+                    'live' => true,
+                    'language' => 'zh-TW',
+                    'license' => $config->license, // TCPlayer许可证URL
+                    'licenseKey' => $config->license_key, // TCPlayer许可证KEY
+                ],
+            ], '获取播放器配置成功');
+
+        } catch (\Exception $e) {
+            \support\Log::error('[摸奖券] 获取播放器配置失败', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+
+            return message_error($e->getMessage());
+        }
+    }
 }

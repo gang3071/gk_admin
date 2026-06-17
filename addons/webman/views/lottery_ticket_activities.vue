@@ -714,20 +714,33 @@
       </a-table>
     </a-drawer>
 
-    <!-- 直播地址设置 Modal -->
+    <!-- 直播流名称设置 Modal -->
     <a-modal
         v-model:visible="liveModalVisible"
-        :title="trans.modalLiveUrlTitle"
+        title="设置直播流名称"
         @ok="submitLiveUrl"
         @cancel="handleLiveModalClose"
     >
       <a-form layout="vertical">
-        <a-form-item :label="trans.modalLiveUrlPrompt">
+        <a-alert
+            message="💡 只需填写流名称，系统会自动生成腾讯云直播地址"
+            show-icon
+            style="margin-bottom: 16px;"
+            type="info"
+        />
+        <a-form-item label="直播流名称">
           <a-input
               v-model:value="liveUrlInput"
-              :placeholder="trans.liveUrlPlaceholder"
+              placeholder="例如：mojiangjuan"
               allow-clear
-          />
+          >
+            <template #prefix>
+              <video-camera-outlined style="color: #999;"/>
+            </template>
+          </a-input>
+          <div style="margin-top: 8px; color: #999; font-size: 12px;">
+            建议使用英文、数字、下划线，此名称需与OBS推流配置一致
+          </div>
         </a-form-item>
       </a-form>
     </a-modal>
@@ -1290,15 +1303,38 @@ export default {
     },
 
     // ⭐ 预览直播
-    previewLive(activity) {
+    async previewLive(activity) {
       if (!activity.live_url) {
-        this.$message.warning('该活动尚未设置直播地址');
+        this.$message.warning('该活动尚未设置直播流名称');
         return;
       }
 
-      this.currentActivity = activity;
-      this.livePreviewUrl = activity.live_url;
-      this.livePreviewVisible = true;
+      // live_url存储的是流名称，通过API获取播放器配置
+      try {
+        const loading = this.$message.loading('正在生成直播地址...', 0);
+
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getLivePlayerConfig',
+          method: 'post',
+          data: {
+            stream_name: activity.live_url // 流名称
+          }
+        });
+
+        loading();
+
+        if (res.code === 0 || res.code === 200) {
+          // 使用返回的播放地址
+          this.currentActivity = activity;
+          this.livePreviewUrl = res.data.play_url; // FLV地址
+          this.livePreviewVisible = true;
+        } else {
+          this.$message.error(res.message || '生成直播地址失败');
+        }
+      } catch (error) {
+        console.error('生成直播地址失败:', error);
+        this.$message.error('生成直播地址失败');
+      }
     },
 
     // ⭐ 关闭直播预览
@@ -1336,17 +1372,23 @@ export default {
       return `/lottery-live-player.html?url=${encodeURIComponent(this.livePreviewUrl)}`;
     },
 
-    // 提交直播地址
+    // 提交直播流名称
     async submitLiveUrl() {
-      const liveUrl = this.liveUrlInput.trim();
+      const streamName = this.liveUrlInput.trim();
 
-      if (!liveUrl) {
-        this.$message.error(this.trans.modalLiveUrlRequired || '请输入直播地址');
+      if (!streamName) {
+        this.$message.error('请输入直播流名称');
         return;
       }
 
-      if (liveUrl.length > 500) {
-        this.$message.error('直播地址不能超过500个字符');
+      // 验证流名称格式（只允许英文、数字、下划线）
+      if (!/^[a-zA-Z0-9_]+$/.test(streamName)) {
+        this.$message.error('流名称只能包含英文、数字和下划线');
+        return;
+      }
+
+      if (streamName.length > 50) {
+        this.$message.error('流名称不能超过50个字符');
         return;
       }
 
@@ -1368,7 +1410,7 @@ export default {
           method: 'post',
           data: {
             id: this.currentActivity.id,
-            live_url: liveUrl
+            live_url: streamName // 存储流名称，不是完整URL
           }
         });
 
