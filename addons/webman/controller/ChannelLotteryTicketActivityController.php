@@ -2092,8 +2092,12 @@ class ChannelLotteryTicketActivityController
                     'autoplay' => true,
                     'live' => true,
                     'language' => 'zh-TW',
-                    'license' => $config->license, // TCPlayer许可证URL
-                    'licenseKey' => $config->license_key, // TCPlayer许可证KEY
+                    // 腾讯云播放器 License 配置（提供多种字段名兼容不同版本）
+                    'licenceUrl' => $config->license, // 英式拼写（官方推荐）
+                    'licenceKey' => $config->license_key,
+                    'licenseUrl' => $config->license, // 美式拼写（兼容）
+                    'licenseKey' => $config->license_key,
+                    'license' => $config->license, // 简写（兼容）
                 ],
             ], '获取播放器配置成功');
 
