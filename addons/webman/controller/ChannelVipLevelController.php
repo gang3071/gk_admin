@@ -64,38 +64,16 @@ class ChannelVipLevelController
             $grid->hideAdd();
             $grid->hideDelete();
 
-            // 工具栏按钮 - 必须一次性传入所有按钮
-            $buttons = [];
+            // 工具栏按钮
+            $grid->tools([
+                Button::create(admin_trans('vip_level.import_template'))
+                    ->icon(Icon::create('DownloadOutlined'))
+                    ->type('primary'),
 
-            // 导入按钮（始终显示）
-            $buttons[] = Button::create(
-                $vipCount === 0
-                    ? admin_trans('vip_level.import_template')
-                    : admin_trans('vip_level.import_template') . ' ' . admin_trans('vip_level.already_exists_count', null, ['count' => $vipCount])
-            )
-                ->icon(Icon::create('DownloadOutlined'))
-                ->type($vipCount === 0 ? 'primary' : 'default')
-                ->confirm(
-                    $vipCount === 0
-                        ? admin_trans('vip_level.import_confirm')
-                        : admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]),
-                    [$this, 'importTemplate'],
-                    [],
-                    'POST'
-                );
-
-            // 同步按钮（强制显示用于测试）
-            $buttons[] = Button::create(admin_trans('vip_level.sync_players') . " (测试)")
-                ->icon(Icon::create('SyncOutlined'))
-                ->type('default')
-                ->confirm(
-                    admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
-                    [$this, 'syncPlayers'],
-                    [],
-                    'POST'
-                );
-
-            $grid->tools($buttons);
+                Button::create(admin_trans('vip_level.sync_players'))
+                    ->icon(Icon::create('SyncOutlined'))
+                    ->type('default'),
+            ]);
 
             $grid->model()
                 ->where('department_id', $departmentId)
