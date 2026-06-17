@@ -2616,10 +2616,11 @@ if (!function_exists('clearMachineCrashCache')) {
      * @param int $configId machine_tencent_play.id
      * @param string $streamName 流名称（如：mojiangjuan）
      * @param int $expireDays 有效天数（默认30天）
+     * @param bool $useCnDomain 是否使用大陆域名（默认true，优先使用大陆加速域名）
      * @return array 返回4种播放地址：RTMP、FLV、HLS、WebRTC
      * @throws \Exception
      */
-    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30): array
+    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30, bool $useCnDomain = true): array
     {
         /** @var \addons\webman\model\MachineTencentPlay $config */
         $config = \addons\webman\model\MachineTencentPlay::query()->find($configId);
@@ -2628,7 +2629,16 @@ if (!function_exists('clearMachineCrashCache')) {
             throw new \Exception('腾讯云配置不存在');
         }
 
-        if (empty($config->pull_domain) || empty($config->pull_key)) {
+        // ✅ 优先使用大陆地区的播放域名和Key（大陆用户访问速度更快）
+        if ($useCnDomain && !empty($config->pull_domain_cn) && !empty($config->pull_key_cn)) {
+            $pullDomain = $config->pull_domain_cn;
+            $pullKey = $config->pull_key_cn;
+            $region = 'CN'; // 大陆
+        } elseif (!empty($config->pull_domain) && !empty($config->pull_key)) {
+            $pullDomain = $config->pull_domain;
+            $pullKey = $config->pull_key;
+            $region = 'Global'; // 全球/海外
+        } else {
             throw new \Exception('拉流域名或密钥未配置');
         }
 
@@ -2637,7 +2647,7 @@ if (!function_exists('clearMachineCrashCache')) {
         $txTime = strtoupper(base_convert($expireTimestamp, 10, 16));
 
         // 生成防盗链签名：MD5(key + StreamName + txTime)
-        $txSecret = md5($config->pull_key . $streamName . $txTime);
+        $txSecret = md5($pullKey . $streamName . $txTime);
 
         // 构建鉴权参数
         $authParams = http_build_query([
@@ -2645,15 +2655,18 @@ if (!function_exists('clearMachineCrashCache')) {
             'txTime' => $txTime
         ]);
 
-        // 返回4种播放地址（FLV/HLS 使用 HTTPS 以支持 HTTPS 页面播放）
+        // 返回4种播放地址（FLV/HLS 使用 HTTP，兼容性更好）
         return [
-            'rtmp' => "rtmp://{$config->pull_domain}/live/{$streamName}?{$authParams}",
-            'flv' => "http://{$config->pull_domain}/live/{$streamName}.flv?{$authParams}",
-            'hls' => "http://{$config->pull_domain}/live/{$streamName}.m3u8?{$authParams}",
-            'webrtc' => "webrtc://{$config->pull_domain}/live/{$streamName}?{$authParams}",
+            'rtmp' => "rtmp://{$pullDomain}/live/{$streamName}?{$authParams}",
+            'flv' => "http://{$pullDomain}/live/{$streamName}.flv?{$authParams}",
+            'hls' => "http://{$pullDomain}/live/{$streamName}.m3u8?{$authParams}",
+            'webrtc' => "webrtc://{$pullDomain}/live/{$streamName}?{$authParams}",
             'expire_time' => date('Y-m-d H:i:s', $expireTimestamp),
+            'expire_timestamp' => $expireTimestamp,
             'tx_time' => $txTime,
             'tx_secret' => $txSecret,
+            'region' => $region, // 标识使用的区域
+            'pull_domain' => $pullDomain, // 实际使用的域名
         ];
     }
 }

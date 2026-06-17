@@ -2061,6 +2061,7 @@ class ChannelLotteryTicketActivityController
     {
         try {
             $streamName = Request::input('stream_name');
+            $expireDays = Request::input('expire_days', 30); // ✅ 允许前端指定有效期，默认 30 天
 
             if (empty($streamName)) {
                 return message_error('流名称不能为空');
@@ -2074,20 +2075,25 @@ class ChannelLotteryTicketActivityController
                 return message_error('腾讯云配置不存在');
             }
 
-            // 生成播放地址
-            $urls = generateLotteryLiveUrls(1, $streamName, 1);
+            // 生成播放地址（支持自定义有效期，默认 30 天）
+            $urls = generateLotteryLiveUrls(1, $streamName, $expireDays);
 
             // 返回播放器配置
             return Response::success([
                 'stream_name' => $streamName,
-                'play_url' => $urls['webrtc'], // ⭐ 默认使用 WebRTC（超低延迟 <1秒）
+                'play_url' => $urls['flv'], // ⭐ 改为默认使用 FLV（延迟 2-5秒，兼容性好，TCPlayer 完美支持）
                 'urls' => [
-                    'webrtc' => $urls['webrtc'], // WebRTC 放在第一位
-                    'flv' => $urls['flv'],
+                    'flv' => $urls['flv'], // ✅ FLV 放在第一位（推荐）
                     'hls' => $urls['hls'],
+                    'webrtc' => $urls['webrtc'], // ⚠️ WebRTC 需要特殊配置
                 ],
                 'push_url' => $urls['rtmp'], // OBS推流地址
                 'expire_time' => $urls['expire_time'],
+                'expire_timestamp' => $urls['expire_timestamp'],
+                'region' => $urls['region'], // CN（大陆）或 Global（全球）
+                'pull_domain' => $urls['pull_domain'], // 实际使用的播放域名
+                'tx_time' => $urls['tx_time'], // 用于调试
+                'tx_secret' => $urls['tx_secret'], // 用于调试
                 'player_config' => [
                     'autoplay' => true,
                     'live' => true,
@@ -2099,7 +2105,7 @@ class ChannelLotteryTicketActivityController
                     'licenseKey' => $config->license_key,
                     'license' => $config->license, // 简写（兼容）
                 ],
-            ], '获取播放器配置成功');
+            ], '获取播放器配置成功（使用' . $urls['region'] . '域名）');
 
         } catch (\Exception $e) {
             \support\Log::error('[摸奖券] 获取播放器配置失败', [
