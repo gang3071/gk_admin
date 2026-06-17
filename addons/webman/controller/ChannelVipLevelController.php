@@ -51,19 +51,20 @@ class ChannelVipLevelController
             $grid->hideAdd();
             $grid->hideDelete();
 
-            // 导入VIP等级按钮（始终显示）
+            // 导入VIP等级按钮（始终显示，方便重新导入）
             if ($vipCount === 0) {
                 $buttonText = admin_trans('vip_level.import_template');
                 $confirmText = admin_trans('vip_level.import_confirm');
+                $buttonType = 'primary';
             } else {
                 $buttonText = admin_trans('vip_level.import_template') . ' ' . admin_trans('vip_level.already_exists_count', null, ['count' => $vipCount]);
-                $confirmText = admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]) . '\n\n' .
-                               admin_trans('vip_level.import_confirm_override');
+                $confirmText = admin_trans('vip_level.import_error_exists', null, ['count' => $vipCount]);
+                $buttonType = 'default';
             }
 
             $importButton = Button::create($buttonText)
                 ->icon(Icon::create('DownloadOutlined'))
-                ->type($vipCount === 0 ? 'primary' : 'default')
+                ->type($buttonType)
                 ->confirm(
                     $confirmText,
                     [$this, 'importTemplate'],
