@@ -154,8 +154,8 @@
         <button class="retry-btn" onclick="retryConnect()">重試</button>
       </div>
 
-      <!-- TCPlayer容器 -->
-      <video id="player-container-id" playsinline preload="auto" webkit-playsinline></video>
+      <!-- TCPlayer容器（v5 版本需要 div，会自动创建 video 标签） -->
+      <div id="player-container-id"></div>
     </div>
 
     <!-- 信息栏 -->
@@ -280,10 +280,19 @@
 
         console.log('📝 [调试] 最终播放器配置:', JSON.stringify(playerConfig, null, 2));
 
-        // 创建播放器实例
-        player = TCPlayer('player-container-id', playerConfig);
+        // 检查容器是否存在
+        const container = document.getElementById('player-container-id');
+        console.log('🔍 [调试] 容器元素:', container);
 
-        console.log('✅ [调试] 播放器实例已创建');
+        if (!container) {
+          showError('播放器容器未找到');
+          return;
+        }
+
+        // 创建播放器实例（TCPlayer v5 需要 new 关键字）
+        player = new TCPlayer('player-container-id', playerConfig);
+
+        console.log('✅ [调试] 播放器实例已创建:', player);
 
         // 监听播放器事件
         player.on('loadstart', function() {
