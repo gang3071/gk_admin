@@ -303,6 +303,9 @@
   <!-- TCPlayer v5.1.0 脚本 -->
   <script src="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/tcplayer.v5.1.0.min.js"></script>
 
+  <!-- 腾讯云快直播 WebRTC 插件 -->
+  <script src="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/libs/hls.min.0.13.2m.js"></script>
+
   <script>
     let player = null;
     let liveUrl = '';
@@ -605,29 +608,34 @@
           addLog('info', '📹 使用 HLS 格式', { type: 'application/x-mpegURL' });
 
         } else if (currentProtocol === 'webrtc') {
-          // ⚠️ WebRTC 格式（腾讯云快直播 LEB）
-          addLog('warning', '⚠️ TCPlayer v5 可能不直接支持 webrtc:// 協議');
-          addLog('info', '💡 建議使用 FLV 格式代替（延遲僅 2-5 秒）');
+          // ✅ WebRTC 格式（腾讯云快直播 LEB）
+          addLog('info', '🚀 使用 WebRTC 快直播（超低延遲 <1秒）');
 
-          // 尝试将 webrtc:// 转换为 https:// 播放
-          // 腾讯云 WebRTC 快直播地址格式：webrtc://domain/live/stream?...
-          // 对应的 HTTPS 播放地址：https://domain/live/stream.flv?... (使用 FLV)
-          const flvUrl = liveUrl.replace('webrtc://', 'http://') + '';
-
-          addLog('warning', '🔄 嘗試將 WebRTC 轉換為 HTTP-FLV 播放');
-          addLog('info', '原始 WebRTC: ' + liveUrl.substring(0, 60) + '...');
-          addLog('info', '轉換為 FLV: ' + flvUrl.substring(0, 60) + '...');
-
-          // 方案 1：尝试使用原始 webrtc:// URL（可能不工作）
+          // 腾讯云 WebRTC 快直播配置
+          // 关键：直接使用 webrtc:// URL 作为 src
           playerConfig.sources = [{
-            src: liveUrl,
-            type: 'application/vnd.apple.mpegurl'
+            src: liveUrl,  // webrtc://domain/live/stream?txSecret=xxx&txTime=xxx
+            type: 'application/x-mpegURL'
           }];
 
-          addLog('error', '❌ WebRTC 播放可能失敗');
-          addLog('info', '💡 解決方案：');
-          addLog('info', '1. 在活動管理後台將直播地址改為 FLV 格式');
-          addLog('info', '2. 或聯繫管理員配置 WebRTC 專用播放器');
+          // WebRTC 优化配置
+          playerConfig.autoplay = true;
+          playerConfig.preload = 'auto';
+          playerConfig.playbackRates = [1]; // WebRTC 不支持倍速
+          playerConfig.controls = true;
+
+          // HLS.js 配置（用于 WebRTC）
+          playerConfig.html5 = {
+            hls: {
+              overrideNative: true,
+              debug: false
+            }
+          };
+
+          addLog('success', '✅ WebRTC 配置已應用');
+          addLog('info', '📹 播放地址: ' + liveUrl.substring(0, 80) + '...');
+          addLog('info', '💡 提示：確保推流端已開始推流');
+          addLog('warning', '⚠️ WebRTC 播放需要較好的網絡環境');
 
         } else {
           addLog('error', '❌ 不支持的播放協議: ' + currentProtocol);

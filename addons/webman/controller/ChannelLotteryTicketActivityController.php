@@ -2081,11 +2081,11 @@ class ChannelLotteryTicketActivityController
             // 返回播放器配置
             return Response::success([
                 'stream_name' => $streamName,
-                'play_url' => $urls['flv'], // ⭐ 改为默认使用 FLV（延迟 2-5秒，兼容性好，TCPlayer 完美支持）
+                'play_url' => $urls['webrtc'], // ⭐ 使用 WebRTC（超低延迟 <1秒）
                 'urls' => [
-                    'flv' => $urls['flv'], // ✅ FLV 放在第一位（推荐）
+                    'webrtc' => $urls['webrtc'], // ✅ WebRTC 放在第一位
+                    'flv' => $urls['flv'],
                     'hls' => $urls['hls'],
-                    'webrtc' => $urls['webrtc'], // ⚠️ WebRTC 需要特殊配置
                 ],
                 'push_url' => $urls['rtmp'], // OBS推流地址
                 'expire_time' => $urls['expire_time'],
