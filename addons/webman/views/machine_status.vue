@@ -70,7 +70,6 @@ export default {
         this.channelName = `private-admin_group-admin-1-${this.id}`;
         pushManager.subscribe(this.channelName, this.handleMessage, this);
 
-        console.log('[MachineStatus] WebSocket initialized successfully');
       } catch (error) {
         console.error('[MachineStatus] Init WebSocket failed:', error);
       }
@@ -83,7 +82,6 @@ export default {
           this.isOnline = content.machine_status === 'online';
         }
       } catch (e) {
-        console.warn('[MachineStatus] Parse message failed:', e);
       }
     }
   }

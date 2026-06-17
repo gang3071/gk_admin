@@ -240,7 +240,6 @@ export default {
     };
   },
   created() {
-    console.log('[在线玩家] created钩子执行', {
       wsUrl: this.wsUrl,
       appKey: this.appKey,
       hasScript: typeof this.$script
@@ -271,8 +270,6 @@ export default {
   methods: {
     // 加载实体机台玩家
     async loadMachinePlayers() {
-      console.log('[在线玩家] 开始加载实体机台玩家');
-      console.log('[在线玩家] this.$request 是否存在:', typeof this.$request);
 
       if (!this.$request) {
         console.error('[在线玩家] $request 方法不存在！');
@@ -285,12 +282,9 @@ export default {
           url: '/ex-admin/addons-webman-controller-OnlinePlayerLotteryController/getMachinePlayers',
           method: 'get'
         });
-        console.log('[在线玩家] API响应:', res);
         if (res.code === 200) {
           this.machinePlayers = res.data;
           this.lastMachineUpdateTime = new Date().toLocaleTimeString();
-          console.log('[在线玩家] 实体机台玩家加载成功，数量:', this.machinePlayers.length);
-          console.log('[在线玩家] 玩家数据:', this.machinePlayers);
         } else {
           console.error('[在线玩家] API返回错误:', res);
         }
@@ -303,19 +297,15 @@ export default {
 
     // 加载电子游戏玩家
     async loadGamePlayers() {
-      console.log('[在线玩家] 开始加载电子游戏玩家');
       this.gameLoading = true;
       try {
         const res = await this.$request({
           url: '/ex-admin/addons-webman-controller-OnlinePlayerLotteryController/getGamePlayers',
           method: 'get'
         });
-        console.log('[在线玩家] API响应:', res);
         if (res.code === 200) {
           this.gamePlayers = res.data;
           this.lastGameUpdateTime = new Date().toLocaleTimeString();
-          console.log('[在线玩家] 电子游戏玩家加载成功，数量:', this.gamePlayers.length);
-          console.log('[在线玩家] 玩家数据:', this.gamePlayers);
         } else {
           console.error('[在线玩家] API返回错误:', res);
         }
@@ -428,7 +418,6 @@ export default {
           return;
         }
 
-        console.log('[在线玩家] 开始连接WebSocket', {
           wsUrl: this.wsUrl,
           appKey: this.appKey
         });
@@ -439,14 +428,11 @@ export default {
         // 订阅实体机台频道
         this.machineChannelName = 'group-online-players-machine';
         pushManager.subscribe(this.machineChannelName, this.handleMachineMessage, this);
-        console.log('[在线玩家] 订阅实体机台频道成功');
 
         // 订阅电子游戏频道
         this.gameChannelName = 'group-online-players-game';
         pushManager.subscribe(this.gameChannelName, this.handleGameMessage, this);
-        console.log('[在线玩家] 订阅电子游戏频道成功');
 
-        console.log('[在线玩家] WebSocket连接初始化成功');
       } catch (error) {
         console.error('[在线玩家] Init WebSocket failed:', error);
       }
@@ -455,23 +441,17 @@ export default {
     // 处理实体机台消息
     handleMachineMessage(data) {
       try {
-        console.log('[在线玩家] 收到实体机台消息:', data);
         const content = JSON.parse(data.content);
-        console.log('[在线玩家] 解析后的消息内容:', content);
 
         if (content.msg_type === 'online_players_update' && content.type === 'machine') {
-          console.log('[在线玩家] 更新实体机台玩家列表，数量:', content.players.length);
           // 智能更新：只更新变化的玩家，避免列表跳动
           this.$nextTick(() => {
             this.updateMachinePlayersList(content.players);
             this.lastMachineUpdateTime = new Date().toLocaleTimeString();
-            console.log('[在线玩家] 实体机台玩家列表已更新:', this.machinePlayers.length);
           });
         } else if (content.msg_type === 'player_betting' && content.type === 'machine') {
-          console.log('[在线玩家] 玩家押注事件:', content.player);
           this.handlePlayerBetting(content, 'machine');
         } else if (content.msg_type === 'players_offline' && content.type === 'machine') {
-          console.log('[在线玩家] 玩家离线事件:', content.player_ids);
           this.handlePlayersOffline(content.player_ids, 'machine');
         }
       } catch (e) {
@@ -482,23 +462,17 @@ export default {
     // 处理电子游戏消息
     handleGameMessage(data) {
       try {
-        console.log('[在线玩家] 收到电子游戏消息:', data);
         const content = JSON.parse(data.content);
-        console.log('[在线玩家] 解析后的消息内容:', content);
 
         if (content.msg_type === 'online_players_update' && content.type === 'game') {
-          console.log('[在线玩家] 更新电子游戏玩家列表，数量:', content.players.length);
           // 智能更新：只更新变化的玩家，避免列表跳动
           this.$nextTick(() => {
             this.updateGamePlayersList(content.players);
             this.lastGameUpdateTime = new Date().toLocaleTimeString();
-            console.log('[在线玩家] 电子游戏玩家列表已更新:', this.gamePlayers.length);
           });
         } else if (content.msg_type === 'player_betting' && content.type === 'game') {
-          console.log('[在线玩家] 玩家押注事件:', content.player);
           this.handlePlayerBetting(content, 'game');
         } else if (content.msg_type === 'players_offline' && content.type === 'game') {
-          console.log('[在线玩家] 玩家离线事件:', content.player_ids);
           this.handlePlayersOffline(content.player_ids, 'game');
         }
       } catch (e) {
@@ -521,7 +495,6 @@ export default {
 
     // 处理玩家押注事件 - 如果不在列表中就添加
     handlePlayerBetting(content, type) {
-      console.log('[在线玩家] 玩家押注事件', { player: content.player, type });
 
       if (!content.player) {
         console.error('[在线玩家] 消息中缺少玩家数据');
@@ -533,11 +506,9 @@ export default {
 
       if (existingIndex >= 0) {
         // 玩家已存在，更新数据
-        console.log('[在线玩家] 更新现有玩家:', content.player.id);
         playerList[existingIndex] = content.player;
       } else {
         // 玩家不存在，添加到列表
-        console.log('[在线玩家] 添加新玩家:', content.player.id);
         playerList.unshift(content.player); // 添加到列表开头
       }
 
@@ -555,17 +526,14 @@ export default {
 
     // 处理玩家离线事件 - 从列表中移除
     handlePlayersOffline(playerIds, type) {
-      console.log('[在线玩家] 玩家离线事件', { player_ids: playerIds, type });
 
       this.$nextTick(() => {
         if (type === 'machine') {
           this.machinePlayers = this.machinePlayers.filter(p => !playerIds.includes(p.id));
           this.lastMachineUpdateTime = new Date().toLocaleTimeString();
-          console.log('[在线玩家] 实体机台玩家离线已处理，剩余:', this.machinePlayers.length);
         } else {
           this.gamePlayers = this.gamePlayers.filter(p => !playerIds.includes(p.id));
           this.lastGameUpdateTime = new Date().toLocaleTimeString();
-          console.log('[在线玩家] 电子游戏玩家离线已处理，剩余:', this.gamePlayers.length);
         }
       });
     },
@@ -619,7 +587,6 @@ export default {
       }
 
       if (beforeMachineCount !== this.machinePlayers.length) {
-        console.log('[在线玩家] 自动清理实体机台离线玩家', {
           before: beforeMachineCount,
           after: this.machinePlayers.length,
           removed: beforeMachineCount - this.machinePlayers.length
@@ -640,7 +607,6 @@ export default {
       }
 
       if (beforeGameCount !== this.gamePlayers.length) {
-        console.log('[在线玩家] 自动清理电子游戏离线玩家', {
           before: beforeGameCount,
           after: this.gamePlayers.length,
           removed: beforeGameCount - this.gamePlayers.length

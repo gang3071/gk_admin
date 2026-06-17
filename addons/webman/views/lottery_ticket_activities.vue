@@ -935,8 +935,6 @@ export default {
     }
   },
   mounted() {
-    console.log('Component mounted, department_id:', this.department_id);
-    console.log('VIP levels:', this.vip_levels);
     this.fetchActivities();
   },
   methods: {
@@ -952,10 +950,8 @@ export default {
           }
         });
 
-        console.log('API Response:', res);
         if (res.code === 200) {
           this.activities = res.data;
-          console.log('Activities loaded:', this.activities.length, this.activities);
         } else {
           this.$message.error(res.message || res.msg || '获取活动列表失败');
         }
@@ -1331,7 +1327,6 @@ export default {
           this.livePlayerConfig = res.data.player_config; // ⭐ 保存播放器配置（包含 License）
           this.livePreviewVisible = true;
 
-          console.log('🔍 [Vue调试] 播放器配置:', this.livePlayerConfig);
         } else {
           this.$message.error(res.message || '生成直播地址失败');
         }
@@ -1390,10 +1385,6 @@ export default {
         if (licenseKey) {
           url += `&licenseKey=${encodeURIComponent(licenseKey)}`;
         }
-
-        console.log('🔍 [Vue调试] 生成播放器URL:', url);
-        console.log('🔍 [Vue调试] License URL:', licenseUrl);
-        console.log('🔍 [Vue调试] License Key:', licenseKey);
       }
 
       return url;

@@ -264,11 +264,11 @@
     </div>
   </div>
 
-  <!-- 调试面板切换按钮 -->
-  <button class="debug-toggle" id="debug-toggle" onclick="toggleDebugPanel()">🐛 調試</button>
+  <!-- 调试面板切换按钮（已禁用）-->
+  <!-- <button class="debug-toggle" id="debug-toggle" onclick="toggleDebugPanel()">🐛 調試</button> -->
 
-  <!-- 调试面板 -->
-  <div class="debug-panel" id="debug-panel">
+  <!-- 调试面板（已禁用）-->
+  <!-- <div class="debug-panel" id="debug-panel">
     <div class="debug-header">
       <div class="debug-title">🔍 調試面板</div>
       <button class="debug-close" onclick="toggleDebugPanel()">✕</button>
@@ -298,7 +298,7 @@
       <div class="debug-section-title">📝 事件日誌 (最近10條)</div>
       <div id="debug-event-logs"></div>
     </div>
-  </div>
+  </div> -->
 
   <!-- TCPlayer v5.1.0 脚本 -->
   <script src="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/tcplayer.v5.1.0.min.js"></script>
@@ -336,15 +336,15 @@
         eventLogs = eventLogs.slice(0, 50);  // 保留最近50条
       }
 
-      // 控制台输出
-      const emoji = {
-        'info': 'ℹ️',
-        'success': '✅',
-        'warning': '⚠️',
-        'error': '❌'
-      }[type] || '📝';
+      // 控制台输出已禁用
+      // const emoji = {
+      //   'info': 'ℹ️',
+      //   'success': '✅',
+      //   'warning': '⚠️',
+      //   'error': '❌'
+      // }[type] || '📝';
 
-      console.log(`${emoji} [${timestamp}] ${message}`, data || '');
+      // console.log(`${emoji} [${timestamp}] ${message}`, data || '');
 
       // 更新调试面板
       updateDebugPanel();
@@ -879,14 +879,11 @@
 
     // 页面加载时初始化
     window.addEventListener('load', () => {
-      addLog('info', '🚀 頁面加載完成，開始初始化');
-
-      // 检查是否有 debug 参数，自动打开调试面板
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('debug') === '1' || urlParams.get('debug') === 'true') {
-        toggleDebugPanel();
-        addLog('info', '🐛 調試模式已自動啟用 (URL 參數 debug=1)');
-      }
+      // 调试功能已禁用
+      // const urlParams = new URLSearchParams(window.location.search);
+      // if (urlParams.get('debug') === '1' || urlParams.get('debug') === 'true') {
+      //   toggleDebugPanel();
+      // }
 
       initPlayer();
     });
@@ -894,17 +891,16 @@
     // 页面卸载时销毁播放器
     window.addEventListener('beforeunload', () => {
       if (player) {
-        addLog('info', '🚪 頁面卸載，銷毀播放器');
         player.dispose();
       }
     });
 
-    // 键盘快捷键：按 D 键切换调试面板
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'd' || e.key === 'D') {
-        toggleDebugPanel();
-      }
-    });
+    // 键盘快捷键已禁用
+    // window.addEventListener('keydown', (e) => {
+    //   if (e.key === 'd' || e.key === 'D') {
+    //     toggleDebugPanel();
+    //   }
+    // });
   </script>
 </body>
 </html>
