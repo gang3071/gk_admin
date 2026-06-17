@@ -190,12 +190,29 @@
       const protocol = detectProtocol(liveUrl);
       document.getElementById('protocol-text').textContent = protocol.toUpperCase();
 
+      // ⚠️ RTMP协议预警
+      if (protocol === 'rtmp') {
+        console.warn('⚠️ 檢測到 RTMP 協議，該協議在瀏覽器中可能無法播放');
+
+        // 显示警告（但仍尝试播放）
+        setTimeout(() => {
+          const loadingText = document.querySelector('.loading-text');
+          if (loadingText && document.getElementById('loading-overlay').style.display !== 'none') {
+            loadingText.innerHTML = '⚠️ RTMP協議兼容性差<br>正在嘗試連接...<br><small style="color: #999;">建議使用HLS格式（.m3u8）</small>';
+          }
+        }, 2000);
+      }
+
       try {
+        // 计算播放器高度（16:9比例）
+        const playerWidth = document.getElementById('player-wrapper').offsetWidth;
+        const playerHeight = Math.round(playerWidth * 9 / 16);
+
         const playerConfig = {
           autoplay: true,
           preload: 'auto',
           width: '100%',
-          height: 'auto',
+          height: playerHeight + 'px',  // 使用计算后的具体高度
           live: true,
           controls: 'default',
           controlBar: {
@@ -253,9 +270,18 @@
             errorMsg = err.message;
           }
 
-          // 常见错误提示优化
+          // RTMP协议特殊处理
           if (liveUrl.startsWith('rtmp://')) {
-            errorMsg += '\n\nRTMP協議需要Flash支持，建議使用HLS或FLV格式。\n請聯繫直播服務商獲取HLS播放地址（.m3u8）。';
+            errorMsg = '⚠️ RTMP 協議播放失敗\n\n';
+            errorMsg += '現代瀏覽器已不支持 RTMP 協議（需要 Flash 插件）。\n\n';
+            errorMsg += '📋 解決方案：\n';
+            errorMsg += '1. 聯繫騰訊雲客服獲取 HLS 播放地址（.m3u8 格式）\n';
+            errorMsg += '2. 或使用 HTTP-FLV 格式（.flv 格式）\n\n';
+            errorMsg += '💡 地址轉換參考：\n';
+            errorMsg += 'RTMP: rtmp://domain.com/live/stream\n';
+            errorMsg += '  ↓ 轉換為\n';
+            errorMsg += 'HLS:  http://domain.com/live/stream.m3u8\n';
+            errorMsg += 'FLV:  http://domain.com/live/stream.flv';
           }
 
           showError(errorMsg);
@@ -320,6 +346,23 @@
       if (player) {
         player.dispose();
       }
+    });
+
+    // 窗口大小变化时调整播放器尺寸
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+
+      // 防抖：500ms后执行
+      resizeTimer = setTimeout(() => {
+        if (player) {
+          const playerWidth = document.getElementById('player-wrapper').offsetWidth;
+          const playerHeight = Math.round(playerWidth * 9 / 16);
+          player.dimension('100%', playerHeight + 'px');
+        }
+      }, 500);
     });
   </script>
 </body>
