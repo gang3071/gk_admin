@@ -84,18 +84,16 @@ class ChannelVipLevelController
                     'POST'
                 );
 
-            // 同步按钮（条件显示）
-            if ($vipCount > 0 && $playersNeedSyncCount > 0) {
-                $buttons[] = Button::create(admin_trans('vip_level.sync_players'))
-                    ->icon(Icon::create('SyncOutlined'))
-                    ->type('default')
-                    ->confirm(
-                        admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
-                        [$this, 'syncPlayers'],
-                        [],
-                        'POST'
-                    );
-            }
+            // 同步按钮（强制显示用于测试）
+            $buttons[] = Button::create(admin_trans('vip_level.sync_players') . " (测试)")
+                ->icon(Icon::create('SyncOutlined'))
+                ->type('default')
+                ->confirm(
+                    admin_trans('vip_level.sync_players_confirm', null, ['count' => $playersNeedSyncCount]),
+                    [$this, 'syncPlayers'],
+                    [],
+                    'POST'
+                );
 
             $grid->tools($buttons);
 
