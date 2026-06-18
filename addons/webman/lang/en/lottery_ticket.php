@@ -54,6 +54,7 @@ return [
 
         // 中奖记录
         'player_name' => 'Player Name',
+        'player_uuid' => 'Player UUID',  // ⭐ Added
         'player_phone' => 'Player Phone',
         'ticket_no' => 'Ticket No',
         'prize_type' => 'Prize Type',
@@ -63,6 +64,10 @@ return [
         'source' => '來源',
         'used_at' => 'Used At',
         'expired_at' => 'Expired At',
+
+        // Statistics fields
+        'total_winners' => 'Total Winners',        // ⭐ History list page
+        'total_prize_amount' => 'Total Prize Amount',  // ⭐ History list page
     ],
 
     // 占位符

@@ -87,6 +87,7 @@ class ChannelLotteryTicketRecordController
                     'lottery_ticket_record.*',
                     $playerTable . '.name as player_name',
                     $playerTable . '.phone as player_phone',
+                    $playerTable . '.uuid as player_uuid',  // ⭐ 添加玩家UUID
                     'lottery_ticket_activity.name as activity_name'
                 ])
                 ->leftJoin($playerTable, 'lottery_ticket_record.player_id', '=', $playerTable . '.id')
@@ -100,6 +101,10 @@ class ChannelLotteryTicketRecordController
             $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(180);
 
             $grid->column('player_name', admin_trans('lottery_ticket.fields.player_name'))->width(120);
+
+            // ⭐ 玩家UUID列
+            $grid->column('player_uuid', admin_trans('lottery_ticket.fields.player_uuid'))
+                ->width(150)->copyable();
 
             $grid->column('player_phone', admin_trans('lottery_ticket.fields.player_phone'))->width(130);
 
@@ -158,6 +163,10 @@ class ChannelLotteryTicketRecordController
                 // 玩家名称筛选
                 $filter->like()->text($playerTable . '.name')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_name'));
+
+                // ⭐ 玩家UUID筛选
+                $filter->like()->text($playerTable . '.uuid')
+                    ->placeholder(admin_trans('lottery_ticket.fields.player_uuid'));
 
                 // 玩家手机筛选
                 $filter->like()->text($playerTable . '.phone')

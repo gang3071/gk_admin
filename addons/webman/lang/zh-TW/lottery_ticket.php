@@ -53,6 +53,7 @@ return [
 
         // 中奖记录
         'player_name' => '玩家名稱',
+        'player_uuid' => '玩家UUID',  // ⭐ 新增
         'player_phone' => '玩家手機',
         'ticket_no' => '券號',
         'prize_type' => '獎品類型',
@@ -62,6 +63,10 @@ return [
         'source' => '來源',
         'used_at' => '使用時間',
         'expired_at' => '過期時間',
+
+        // 统计字段
+        'total_winners' => '中獎總數量',      // ⭐ 历史记录页面
+        'total_prize_amount' => '中獎總金額',  // ⭐ 历史记录页面
     ],
 
     // 占位符
