@@ -10,6 +10,7 @@ use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\VipLevel;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -39,6 +40,14 @@ class StorePlayerController
         $admin = Admin::user();
         $storeAdminId = $admin->id;
         $departmentId = $admin->department_id;
+
+        // 预加载渠道的 VIP 等级列表
+        $channelVipLevels = VipLevel::query()
+            ->where('department_id', $departmentId)
+            ->where('status', VipLevel::STATUS_ENABLED)
+            ->orderBy('sort', 'asc')
+            ->get(['id', 'name', 'sort', 'upgrade_bet_amount'])
+            ->keyBy('sort');
 
         // 调试信息（显示查询条件）
         if (request()->input('debug') == 1) {
@@ -79,6 +88,10 @@ class StorePlayerController
             if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
                 $query->where('player.id', $requestFilter['player_id']);
             }
+            // VIP等级筛选
+            if (isset($requestFilter['vip_level_id']) && $requestFilter['vip_level_id'] !== '') {
+                $query->where('player.vip_level_id', $requestFilter['vip_level_id']);
+            }
             if (isset($requestFilter['status'])) {
                 $query->where('player.status', $requestFilter['status']);
             }
@@ -104,8 +117,14 @@ class StorePlayerController
                 'player.*',
                 'player_extend.recharge_amount',
                 'player_extend.withdraw_amount',
-                'player_extend.machine_put_point'
+                'player_extend.machine_put_point',
+                // VIP等级字段
+                'vip_level.name as vip_level_name',
+                'vip_level.sort as vip_level_sort',
+                'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
             ])
+            // VIP等级关联
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
             ->orderBy('player.id', 'asc')
             ->get()
             ->toArray();
@@ -257,7 +276,7 @@ class StorePlayerController
             })
             ->all();
 
-        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter) {
+        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -316,6 +335,63 @@ class StorePlayerController
                     default => Tag::create('-')->color('default'),
                 };
             })->width(90)->align('center');
+
+            // VIP等级列
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) use ($channelVipLevels) {
+                    $levelName = $value;
+                    if (empty($levelName)) {
+                        $minLevel = $channelVipLevels->first();
+                        $levelName = $minLevel ? $minLevel->name : '-';
+                    }
+                    if ($levelName === '-') {
+                        return '-';
+                    }
+
+                    $currentSort = $data['vip_level_sort'] ?? 0;
+                    if ($currentSort == 0) {
+                        $minLevel = $channelVipLevels->first();
+                        $currentSort = $minLevel ? $minLevel->sort : 0;
+                    }
+                    $nextLevel = $channelVipLevels->where('sort', '>', $currentSort)->first();
+
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = $nextLevel ? floatval($nextLevel->upgrade_bet_amount) : 0;
+
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet >= 0) {
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif (!$nextLevel) {
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    if ($nextLevel) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                })
+                ->width(180)->align('center');
 
             $grid->column('wallet_money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function ($value) {
                 return Html::create(number_format(floatval($value), 2))->style([
@@ -480,12 +556,24 @@ class StorePlayerController
                 ]);
             })->width(150)->align('center');
 
-            $grid->filter(function (Filter $filter) use ($playerOptions) {
+            // VIP等级选项
+            $vipLevelOptions = ['' => admin_trans('public_msg.all')];
+            foreach ($channelVipLevels as $level) {
+                $vipLevelOptions[$level->id] = $level->name;
+            }
+
+            $grid->filter(function (Filter $filter) use ($playerOptions, $vipLevelOptions) {
                 // 设备下拉选择
                 $filter->eq()->select('player_id')
                     ->placeholder(admin_trans('player.filter.select_device'))
                     ->options(['' => admin_trans('public_msg.all')] + $playerOptions)
                     ->style(['width' => '300px']);
+
+                // VIP等级筛选
+                $filter->eq()->select('vip_level_id')
+                    ->placeholder(admin_trans('player.fields.vip_level'))
+                    ->options($vipLevelOptions)
+                    ->style(['width' => '150px']);
 
                 // 统计时间范围筛选（影响累计数据）
                 $filter->form()->hidden('stats_start_time');
