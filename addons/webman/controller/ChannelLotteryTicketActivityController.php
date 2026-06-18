@@ -386,14 +386,16 @@ class ChannelLotteryTicketActivityController
                 }
             }
 
-            // 验证活动时长（至少1小时，最多30天）
+            // 验证活动时长（测试阶段无最小时长限制，最多30天）
             $duration = $endTime - $startTime;
-            $minDuration = 3600; // 1小时
+            // ⚠️ 测试阶段：已移除最小1小时限制
+            // $minDuration = 3600; // 1小时
             $maxDuration = 30 * 24 * 3600; // 30天
 
-            if ($duration < $minDuration) {
-                throw new \Exception(admin_trans('lottery_ticket.error.duration_too_short', null, ['min' => '1小时']));
-            }
+            // ⚠️ 测试阶段：已禁用最小时长检查
+            // if ($duration < $minDuration) {
+            //     throw new \Exception(admin_trans('lottery_ticket.error.duration_too_short', null, ['min' => '1小时']));
+            // }
 
             if ($duration > $maxDuration) {
                 throw new \Exception(admin_trans('lottery_ticket.error.duration_too_long', null, ['max' => '30天']));

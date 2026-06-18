@@ -56,9 +56,15 @@ class LotteryTicketPushQueue implements Consumer
         // 调用系统的 sendSocketMessage 函数
         $result = $this->sendSocketMessage($channels, $content, $from);
 
-        // ✅ 推送失败时抛出异常，触发队列重试机制
+        // ✅ 推送失败时记录日志，但不抛异常（避免无限重试）
         if (!$result) {
-            throw new \Exception('推送失败，触发队列重试机制');
+            Log::warning('摸奖券推送失败（Push API 不可用）', [
+                'channels' => $channels,
+                'type' => $content['type'] ?? 'unknown',
+                'player_id' => $this->extractPlayerId($channels),
+            ]);
+            // 不抛出异常，让队列继续消费下一条
+            return;
         }
 
         // 推送成功，记录简洁日志
