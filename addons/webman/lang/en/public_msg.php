@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'all' => 'All',
     'date_start' => 'Start date',
     'date_end' => 'End date',
     'created_at_start' => 'Start time',

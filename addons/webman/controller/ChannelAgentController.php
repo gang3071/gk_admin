@@ -19,6 +19,7 @@ use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWalletTransfer;
+use addons\webman\model\VipLevel;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -229,6 +230,14 @@ class ChannelAgentController
         /** @var AdminUser $admin */
         $admin = Admin::user();
 
+        // 预加载渠道的 VIP 等级列表
+        $channelVipLevels = VipLevel::query()
+            ->where('department_id', $admin->department_id)
+            ->where('status', VipLevel::STATUS_ENABLED)
+            ->orderBy('sort', 'asc')
+            ->get(['id', 'name', 'sort', 'upgrade_bet_amount'])
+            ->keyBy('sort');
+
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $requestFilter = Request::input('ex_admin_filter', []);
@@ -243,12 +252,18 @@ class ChannelAgentController
                 'player_extend.machine_put_point',
                 'player_promoter.name as promoter_name',
                 'store_admin.username as store_admin_username',
-                'store_admin.nickname as store_admin_nickname'
+                'store_admin.nickname as store_admin_nickname',
+                // VIP等级字段
+                'vip_level.name as vip_level_name',
+                'vip_level.sort as vip_level_sort',
+                'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
             ])
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player_promoter', 'player.recommend_id', '=', 'player_promoter.player_id')
             ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
+            // VIP等级关联
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
             ->where('player.type', Player::TYPE_PLAYER)
             ->where('player.is_promoter', 0);
 
@@ -277,6 +292,10 @@ class ChannelAgentController
             // 设备ID筛选
             if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
                 $query->where('player.id', $requestFilter['player_id']);
+            }
+            // VIP等级筛选
+            if (isset($requestFilter['vip_level_id']) && $requestFilter['vip_level_id'] !== '') {
+                $query->where('player.vip_level_id', $requestFilter['vip_level_id']);
             }
             if (!empty($requestFilter['created_at_start'])) {
                 $query->where('player.created_at', '>=', $requestFilter['created_at_start']);
@@ -326,19 +345,25 @@ class ChannelAgentController
             unset($item);
         }
 
+        // ✅ 优化：批量查询彩金（避免 N+1 查询问题）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+
+            // 一次性查询所有玩家的彩金总额
+            $lotteryAmounts = PlayerLotteryRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                ->select('player_id', Db::raw('COALESCE(SUM(amount), 0) as total_amount'))
+                ->groupBy('player_id')
+                ->pluck('total_amount', 'player_id')
+                ->toArray();
+        }
+
         // 计算每个设备的彩金和小计
         foreach ($list as &$item) {
-            // 查询该设备的累计彩金
-            $lotteryAmount = PlayerLotteryRecord::query()
-                ->where('player_id', $item['id'])
-                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                ->sum('amount') ?? 0;
-
-            $item['lottery_amount'] = $lotteryAmount;
+            $item['lottery_amount'] = $lotteryAmounts[$item['id']] ?? 0;
 
             // 计算小计 = 开分 - (洗分 + 彩金)
-            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
-            // 注意：洗分（recharge_amount）已经包含了彩金，所以不需要再加彩金
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
 
@@ -385,7 +410,7 @@ class ChannelAgentController
             })
             ->toArray();
 
-        return Grid::create($list, function (Grid $grid) use ($admin, $total, $list, $playerOptions) {
+        return Grid::create($list, function (Grid $grid) use ($admin, $total, $list, $playerOptions, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -398,6 +423,63 @@ class ChannelAgentController
                 ]);
             })->width('100px')->ellipsis(true)->fixed(true)->align('center');
             $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center');
+
+            // VIP等级列
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) use ($channelVipLevels) {
+                    $levelName = $value;
+                    if (empty($levelName)) {
+                        $minLevel = $channelVipLevels->first();
+                        $levelName = $minLevel ? $minLevel->name : '-';
+                    }
+                    if ($levelName === '-') {
+                        return '-';
+                    }
+
+                    $currentSort = $data['vip_level_sort'] ?? 0;
+                    if ($currentSort == 0) {
+                        $minLevel = $channelVipLevels->first();
+                        $currentSort = $minLevel ? $minLevel->sort : 0;
+                    }
+                    $nextLevel = $channelVipLevels->where('sort', '>', $currentSort)->first();
+
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = $nextLevel ? floatval($nextLevel->upgrade_bet_amount) : 0;
+
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet >= 0) {
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif (!$nextLevel) {
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    if ($nextLevel) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                })
+                ->align('center')->width(180);
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
                 $val
@@ -465,7 +547,13 @@ class ChannelAgentController
                 };
             })->ellipsis(true)->align('center');
             $grid->column('created_at', admin_trans('player.fields.created_at'))->ellipsis(true)->align('center');
-            $grid->filter(function (Filter $filter) use ($admin, $playerOptions) {
+            // VIP等级选项
+            $vipLevelOptions = ['' => admin_trans('public_msg.all')];
+            foreach ($channelVipLevels as $level) {
+                $vipLevelOptions[$level->id] = $level->name;
+            }
+
+            $grid->filter(function (Filter $filter) use ($admin, $playerOptions, $vipLevelOptions) {
                 // 设备下拉选择
                 $filter->eq()->select('player_id')
                     ->placeholder(admin_trans('player.filter.select_device'))
@@ -475,6 +563,12 @@ class ChannelAgentController
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+
+                // VIP等级筛选
+                $filter->eq()->select('vip_level_id')
+                    ->placeholder(admin_trans('player.fields.vip_level'))
+                    ->options($vipLevelOptions);
+
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
