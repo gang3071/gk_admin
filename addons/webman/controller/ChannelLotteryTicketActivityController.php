@@ -10,6 +10,7 @@ use addons\webman\model\LotteryTicketPrizeLevel;
 use addons\webman\model\LotteryTicketVipConfig;
 use addons\webman\model\VipLevel;
 use ExAdmin\ui\component\common\Button;
+use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
