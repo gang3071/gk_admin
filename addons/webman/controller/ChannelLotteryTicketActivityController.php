@@ -876,14 +876,40 @@ class ChannelLotteryTicketActivityController
         $page = Request::input('page', 1);
         $size = Request::input('size', 20);
 
+        // ⭐ 筛选参数
+        $ticketNo = Request::input('ticket_no');       // 券号筛选
+        $playerUuid = Request::input('player_uuid');   // 玩家UUID筛选
+        $startTime = Request::input('start_time');     // 开始时间
+        $endTime = Request::input('end_time');         // 结束时间
+
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
             return message_error(admin_trans('common.no_permission'));
         }
 
         $query = LotteryTicket::where('activity_id', $activityId)
-            ->with(['player:id,name,uuid,phone'])
-            ->orderBy('ticket_no', 'desc');  // ✅ 修改：按券号降序，最大的排在前面
+            ->with(['player:id,name,uuid,phone']);
+
+        // ⭐ 筛选条件
+        if (!empty($ticketNo)) {
+            $query->where('ticket_no', 'like', '%' . $ticketNo . '%');
+        }
+
+        if (!empty($playerUuid)) {
+            $query->whereHas('player', function ($q) use ($playerUuid) {
+                $q->where('uuid', 'like', '%' . $playerUuid . '%');
+            });
+        }
+
+        if (!empty($startTime)) {
+            $query->where('created_at', '>=', $startTime);
+        }
+
+        if (!empty($endTime)) {
+            $query->where('created_at', '<=', $endTime);
+        }
+
+        $query->orderBy('ticket_no', 'desc');  // 按券号降序，最大的排在前面
 
         $total = $query->count();
         $list = $query->forPage($page, $size)->get();

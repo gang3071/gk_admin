@@ -689,9 +689,54 @@
     <a-drawer
         v-model:visible="ticketListVisible"
         title="摸奖券发放列表"
-        width="680px"
+        width="900px"
         :body-style="{ padding: '16px' }"
     >
+      <!-- ⭐ 筛选表单 -->
+      <a-form layout="inline" style="margin-bottom: 16px;">
+        <a-form-item label="券号">
+          <a-input
+              v-model:value="ticketFilter.ticket_no"
+              placeholder="输入券号"
+              allow-clear
+              style="width: 150px;"
+          />
+        </a-form-item>
+        <a-form-item label="玩家UUID">
+          <a-input
+              v-model:value="ticketFilter.player_uuid"
+              placeholder="输入玩家UUID"
+              allow-clear
+              style="width: 180px;"
+          />
+        </a-form-item>
+        <a-form-item label="发放时间">
+          <a-range-picker
+              v-model:value="ticketFilter.time_range"
+              show-time
+              format="YYYY-MM-DD HH:mm:ss"
+              style="width: 360px;"
+          />
+        </a-form-item>
+        <a-form-item>
+          <a-space>
+            <a-button type="primary" @click="handleTicketSearch">
+              <template #icon>
+                <search-outlined/>
+              </template>
+              搜索
+            </a-button>
+            <a-button @click="handleTicketReset">
+              <template #icon>
+                <reload-outlined/>
+              </template>
+              重置
+            </a-button>
+          </a-space>
+        </a-form-item>
+      </a-form>
+
+      <!-- 表格 -->
       <a-table
           :columns="ticketColumns"
           :data-source="ticketList"
@@ -699,9 +744,12 @@
           :pagination="ticketPagination"
           @change="handleTicketTableChange"
           size="small"
-          :scroll="{ x: 680 }"
+          :scroll="{ x: 900 }"
       >
         <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'player_uuid'">
+            <a-typography-text copyable>{{ record.player_uuid }}</a-typography-text>
+          </template>
           <template v-if="column.key === 'status'">
             <a-tag :color="getTicketStatusColor(record.status)">
               {{ getTicketStatusText(record.status) }}
@@ -909,13 +957,19 @@ export default {
         {title: '所需打码量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
         {title: '发放券数', key: 'ticket_count', dataIndex: 'ticket_count'},
       ],
+      ticketFilter: {
+        ticket_no: '',
+        player_uuid: '',
+        time_range: null,
+      },
       ticketColumns: [
-        {title: '券号', key: 'ticket_no', dataIndex: 'ticket_no', width: 160, ellipsis: true},
+        {title: '券号', key: 'ticket_no', dataIndex: 'ticket_no', width: 120, ellipsis: true},
         {title: '玩家', key: 'player_name', dataIndex: 'player_name', width: 100},
-        {title: '来源', key: 'source', dataIndex: 'source', width: 90},
+        {title: '玩家UUID', key: 'player_uuid', dataIndex: 'player_uuid', width: 150}, // ⭐ 新增
+        {title: '来源', key: 'source', dataIndex: 'source', width: 100},
         {title: '状态', key: 'status', dataIndex: 'status', width: 90},
-        {title: '发放时间', key: 'created_at', dataIndex: 'created_at', width: 150},
-        {title: '使用时间', key: 'used_at', dataIndex: 'used_at', width: 150},
+        {title: '发放时间', key: 'created_at', dataIndex: 'created_at', width: 160},
+        {title: '使用时间', key: 'used_at', dataIndex: 'used_at', width: 160},
       ],
       levelNames: [
         '', '特等奖', '一等奖', '二等奖', '三等奖', '四等奖',
@@ -1780,6 +1834,14 @@ export default {
       this.currentActivity = activity;
       this.ticketListVisible = true;
       this.ticketPagination.current = 1;
+
+      // ⭐ 重置筛选条件
+      this.ticketFilter = {
+        ticket_no: '',
+        player_uuid: '',
+        time_range: null,
+      };
+
       await this.fetchTicketList(activity.id);
     },
 
@@ -1787,14 +1849,25 @@ export default {
     async fetchTicketList(activityId, page = 1) {
       this.ticketLoading = true;
       try {
+        // ⭐ 准备筛选参数
+        const requestData = {
+          activity_id: activityId,
+          page: page,
+          size: this.ticketPagination.pageSize,
+          ticket_no: this.ticketFilter.ticket_no || undefined,
+          player_uuid: this.ticketFilter.player_uuid || undefined,
+        };
+
+        // ⭐ 时间范围参数
+        if (this.ticketFilter.time_range && this.ticketFilter.time_range.length === 2) {
+          requestData.start_time = this.ticketFilter.time_range[0].format('YYYY-MM-DD HH:mm:ss');
+          requestData.end_time = this.ticketFilter.time_range[1].format('YYYY-MM-DD HH:mm:ss');
+        }
+
         const res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getTicketList',
           method: 'post',
-          data: {
-            activity_id: activityId,
-            page: page,
-            size: this.ticketPagination.pageSize
-          }
+          data: requestData
         });
 
         if (res.code === 200) {
@@ -1810,6 +1883,23 @@ export default {
       } finally {
         this.ticketLoading = false;
       }
+    },
+
+    // ⭐ 搜索按钮点击
+    handleTicketSearch() {
+      this.ticketPagination.current = 1;
+      this.fetchTicketList(this.currentActivity.id, 1);
+    },
+
+    // ⭐ 重置按钮点击
+    handleTicketReset() {
+      this.ticketFilter = {
+        ticket_no: '',
+        player_uuid: '',
+        time_range: null,
+      };
+      this.ticketPagination.current = 1;
+      this.fetchTicketList(this.currentActivity.id, 1);
     },
 
     // 表格分页变化
