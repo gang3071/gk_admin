@@ -26,10 +26,10 @@ return [
         'constructor' => []
     ],
 
-    // 内存监控进程（每分钟监控一次，自动分析内存泄漏）
-    'memory_monitor' => [
-        'handler' => process\MemoryMonitor::class,
-        'reloadable' => true,
-        'constructor' => []
-    ],
+    // ✅ 内存监控进程已禁用（问题已解决，不再需要监控）
+    // 'memory_monitor' => [
+    //     'handler' => process\MemoryMonitor::class,
+    //     'reloadable' => true,
+    //     'constructor' => []
+    // ],
 ];
