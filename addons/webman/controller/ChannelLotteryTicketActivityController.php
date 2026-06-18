@@ -587,7 +587,7 @@ class ChannelLotteryTicketActivityController
                 });
 
             // ⭐ 筛选器
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function ($filter) {
                 $filter->like()->text('name')
                     ->placeholder(admin_trans('lottery_ticket.fields.activity_name'));
 
