@@ -33,7 +33,7 @@ return [
         'used_tickets' => '使用済チケット数',
         'usage_rate' => '使用率',
         'pending_count' => '未配布',
-        'max_ticket_no' => '最大チケット番号',  // ⭐ 新規追加：抽選時のボール最大番号
+        'max_ticket_no' => '発行済最大チケット番号',  // ⭐ 現在発行済の最大チケット番号（例：000123）
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => '賞品設定',
         'created_at' => '作成日時',
