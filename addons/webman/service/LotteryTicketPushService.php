@@ -239,6 +239,38 @@ class LotteryTicketPushService
     }
 
     /**
+     * 推送直播结束通知
+     *
+     * @param LotteryTicketActivity $activity 活动对象
+     * @return bool
+     */
+    public static function pushLiveEnded(LotteryTicketActivity $activity): bool
+    {
+        try {
+            $message = [
+                'type' => 'live_ended',
+                'title' => '直播已結束',
+                'message' => sprintf('活動「%s」直播已結束，感謝觀看！', $activity->name),
+                'data' => [
+                    'activity_id' => $activity->id,
+                    'activity_name' => $activity->name,
+                    'live_status' => $activity->live_status,
+                ],
+            ];
+
+            // 广播给所有渠道用户
+            return self::pushToDepartment($activity->department_id, 'live', $message);
+
+        } catch (\Exception $e) {
+            Log::error('直播结束推送失败', [
+                'activity_id' => $activity->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * 推送打码进度更新通知
      *
      * @param int $playerId 玩家ID

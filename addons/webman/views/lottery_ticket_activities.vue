@@ -70,6 +70,15 @@
               <a-tag :color="getStatusColor(activity.status)">
                 {{ getStatusText(activity.status) }}
               </a-tag>
+              <!-- ⭐ 直播状态标签 -->
+              <a-tag v-if="activity.live_url && activity.live_status === 1" color="red" style="margin-left: 8px;">
+                <play-circle-outlined style="margin-right: 4px;"/>
+                直播中
+              </a-tag>
+              <a-tag v-else-if="activity.live_url && activity.live_status === 0" color="blue" style="margin-left: 8px;">
+                <video-camera-outlined style="margin-right: 4px;"/>
+                未开播
+              </a-tag>
               <span class="activity-name">{{ activity.name }}</span>
             </div>
           </template>
@@ -127,6 +136,18 @@
                   <a-menu-item key="previewLive" v-if="activity.live_url">
                     <play-circle-outlined/>
                     预览直播
+                  </a-menu-item>
+
+                  <!-- ⭐ 开始直播（仅当有直播地址且未开播时） -->
+                  <a-menu-item v-if="activity.live_url && activity.live_status === 0" key="startLive">
+                    <play-circle-outlined style="color: #52c41a;"/>
+                    开始直播
+                  </a-menu-item>
+
+                  <!-- ⭐ 结束直播（仅当直播中时） -->
+                  <a-menu-item v-if="activity.live_status === 1" key="endLive">
+                    <stop-outlined style="color: #ff4d4f;"/>
+                    结束直播
                   </a-menu-item>
 
                   <!-- 关闭活动（进行中） -->
@@ -1189,6 +1210,12 @@ export default {
         case 'previewLive':
           this.previewLive(activity);
           break;
+        case 'startLive':
+          this.startLiveStream(activity);
+          break;
+        case 'endLive':
+          this.endLiveStream(activity);
+          break;
         case 'close':
           this.closeActivity(activity);
           break;
@@ -1398,6 +1425,63 @@ export default {
       this.livePreviewUrl = '';
       this.livePlayerConfig = null; // ⭐ 清空播放器配置
       this.currentActivity = null;
+    },
+
+    // ⭐ 开始直播
+    async startLiveStream(activity) {
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/startLive',
+          method: 'post',
+          data: {
+            activity_id: activity.id
+          }
+        });
+
+        if (res.code === 200) {
+          this.$message.success(res.data.message || '直播已开始，已通知所有玩家');
+          this.fetchActivities(); // 刷新活动列表
+        } else {
+          this.$message.error(res.message || res.msg || '开始直播失败');
+        }
+      } catch (error) {
+        console.error('开始直播失败:', error);
+        this.$message.error('开始直播失败');
+      }
+    },
+
+    // ⭐ 结束直播
+    async endLiveStream(activity) {
+      this.$confirm({
+        title: '结束直播',
+        content: '确认结束直播吗？结束后玩家将无法继续观看。',
+        okText: '确认结束',
+        cancelText: '取消',
+        onOk: async () => {
+          try {
+            const loading = this.$message.loading('正在结束直播...', 0);
+            const res = await this.$request({
+              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/endLive',
+              method: 'post',
+              data: {
+                activity_id: activity.id
+              }
+            });
+
+            loading();
+
+            if (res.code === 200) {
+              this.$message.success(res.data.message || '直播已结束');
+              this.fetchActivities(); // 刷新活动列表
+            } else {
+              this.$message.error(res.message || res.msg || '结束直播失败');
+            }
+          } catch (error) {
+            console.error('结束直播失败:', error);
+            this.$message.error('结束直播失败');
+          }
+        }
+      });
     },
 
     // ⭐ 复制直播地址

@@ -1571,6 +1571,15 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('lottery_ticket.error.live_url_required'));
         }
 
+        // ✅ 验证直播状态
+        if ($activity->live_status === LotteryTicketActivity::LIVE_STATUS_ONGOING) {
+            return message_error(admin_trans('lottery_ticket.error.live_already_started'));
+        }
+
+        if ($activity->live_status === LotteryTicketActivity::LIVE_STATUS_ENDED) {
+            return message_error(admin_trans('lottery_ticket.error.live_already_ended'));
+        }
+
         // 更新直播状态
         $activity->live_status = LotteryTicketActivity::LIVE_STATUS_ONGOING;
         $activity->save();
@@ -1581,6 +1590,7 @@ class ChannelLotteryTicketActivityController
         return Response::success([
             'live_status' => $activity->live_status,
             'live_url' => $activity->live_url,
+            'message' => admin_trans('lottery_ticket.message.live_started'),
         ]);
     }
 
@@ -1597,17 +1607,21 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('common.no_permission'));
         }
 
+        // ✅ 验证直播状态
+        if ($activity->live_status !== LotteryTicketActivity::LIVE_STATUS_ONGOING) {
+            return message_error(admin_trans('lottery_ticket.error.live_not_started'));
+        }
+
         // 更新直播状态
         $activity->live_status = LotteryTicketActivity::LIVE_STATUS_ENDED;
         $activity->save();
 
-        // TODO: 推送直播结束通知
-        // \Webman\Push\Api::trigger('activity_' . $activityId, 'live_end', [
-        //     'activity_id' => $activityId,
-        // ]);
+        // ✅ 推送直播结束通知
+        \addons\webman\service\LotteryTicketPushService::pushLiveEnded($activity);
 
         return Response::success([
             'live_status' => $activity->live_status,
+            'message' => admin_trans('lottery_ticket.message.live_ended'),
         ]);
     }
 
