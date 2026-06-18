@@ -79,6 +79,8 @@ class AgentLotteryTicketActivityController
                     $statusMap = [
                         LotteryTicketActivity::STATUS_NOT_STARTED => ['text' => admin_trans('lottery_ticket.status.not_started'), 'color' => 'default'],
                         LotteryTicketActivity::STATUS_ONGOING => ['text' => admin_trans('lottery_ticket.status.ongoing'), 'color' => 'processing'],
+                        LotteryTicketActivity::STATUS_PENDING_DRAW => ['text' => admin_trans('lottery_ticket.status.pending_draw'), 'color' => 'warning'],  // ⭐ 新增
+                        LotteryTicketActivity::STATUS_DRAWING => ['text' => admin_trans('lottery_ticket.status.drawing'), 'color' => 'purple'],  // ⭐ 新增
                         LotteryTicketActivity::STATUS_ENDED => ['text' => admin_trans('lottery_ticket.status.ended'), 'color' => 'success'],
                         LotteryTicketActivity::STATUS_CLOSED => ['text' => admin_trans('lottery_ticket.status.closed'), 'color' => 'error'],
                     ];
@@ -128,6 +130,8 @@ class AgentLotteryTicketActivityController
                     ->options([
                         LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
                         LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                        LotteryTicketActivity::STATUS_PENDING_DRAW => admin_trans('lottery_ticket.status.pending_draw'),  // ⭐ 新增
+                        LotteryTicketActivity::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),  // ⭐ 新增
                         LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
                         LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
                     ]);
@@ -187,6 +191,8 @@ class AgentLotteryTicketActivityController
                     $statusMap = [
                         LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
                         LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                        LotteryTicketActivity::STATUS_PENDING_DRAW => admin_trans('lottery_ticket.status.pending_draw'),  // ⭐ 新增
+                        LotteryTicketActivity::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),  // ⭐ 新增
                         LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
                         LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
                     ];

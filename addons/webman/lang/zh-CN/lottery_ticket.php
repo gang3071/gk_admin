@@ -97,12 +97,13 @@ return [
         'all' => '全部',
         'not_started' => '未开始',
         'ongoing' => '进行中',
+        'pending_draw' => '待开奖',      // ⭐ 新增：活动结束，等待开奖
+        'drawing' => '开奖中',
         'ended' => '已结束',
         'closed' => '已关閉',
-        'preheating' => '预熱期',
-        'betting' => '打码中',
-        'drawing' => '开奖中',
-        'drawn' => '已开奖待发放', // ⭐ 新增
+        'preheating' => '预熱期',        // 已废弃
+        'betting' => '打码中',           // 已废弃
+        'drawn' => '已开奖待发放',       // 已废弃
         'unknown' => '未知状态',
     ],
 

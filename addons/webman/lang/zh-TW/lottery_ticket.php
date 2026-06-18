@@ -96,12 +96,13 @@ return [
         'all' => '全部',
         'not_started' => '未開始',
         'ongoing' => '進行中',
+        'pending_draw' => '待開獎',      // ⭐ 新增：活動結束，等待開奖
+        'drawing' => '開獎中',
         'ended' => '已結束',
         'closed' => '已關閉',
-        'preheating' => '預熱期',
-        'betting' => '打碼中',
-        'drawing' => '開獎中',
-        'drawn' => '已開獎待發放', // ⭐ 新增
+        'preheating' => '預熱期',        // 已廢棄
+        'betting' => '打碼中',           // 已廢棄
+        'drawn' => '已開獎待發放',       // 已廢棄
         'unknown' => '未知狀態',
     ],
 

@@ -97,12 +97,13 @@ return [
         'all' => 'All',
         'not_started' => 'Not Started',
         'ongoing' => 'Ongoing',
-        'ended' => 'Ended',
-        'closed' => '已关閉',
-        'preheating' => '预熱期',
-        'betting' => 'Betting',
+        'pending_draw' => 'Pending Draw',    // ⭐ New: Activity ended, waiting for draw
         'drawing' => 'Drawing',
-        'drawn' => 'Drawn Pending Distribution', // ⭐ 新增
+        'ended' => 'Ended',
+        'closed' => 'Closed',
+        'preheating' => 'Preheating',        // Deprecated
+        'betting' => 'Betting',              // Deprecated
+        'drawn' => 'Drawn Pending Distribution', // Deprecated
         'unknown' => 'Unknown',
     ],
 

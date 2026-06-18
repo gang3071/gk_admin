@@ -297,10 +297,11 @@ class ChannelLotteryTicketStatisticsController
             ->pluck('count', 'status')
             ->toArray();
 
-        // 进行中的活动简要信息（简化后只有2个进行中状态）
+        // 进行中的活动简要信息（3个活跃状态）
         $ongoingActivities = LotteryTicketActivity::where('department_id', $departmentId)
             ->whereIn('status', [
                 LotteryTicketActivity::STATUS_ONGOING,
+                LotteryTicketActivity::STATUS_PENDING_DRAW,  // ⭐ 新增：待开奖也属于活跃状态
                 LotteryTicketActivity::STATUS_DRAWING,
             ])
             ->orderBy('start_time', 'desc')

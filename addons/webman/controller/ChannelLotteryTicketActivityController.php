@@ -76,6 +76,7 @@ class ChannelLotteryTicketActivityController
             'allStatus' => admin_trans('lottery_ticket.status.all'),
             'notStarted' => admin_trans('lottery_ticket.status.not_started'),
             'ongoing' => admin_trans('lottery_ticket.status.ongoing'),
+            'pendingDraw' => admin_trans('lottery_ticket.status.pending_draw'),  // ⭐ 新增：待开奖状态
             'drawing' => admin_trans('lottery_ticket.status.drawing'),  // ⭐ 新增：开奖中状态
             'ended' => admin_trans('lottery_ticket.status.ended'),
             'closed' => admin_trans('lottery_ticket.status.closed'),
@@ -193,13 +194,18 @@ class ChannelLotteryTicketActivityController
     public function getActivities()
     {
         $departmentId = Admin::user()->department_id;
-        $status = Request::input('status', 'all'); // all, ongoing, ended
+        $status = Request::input('status', 'all');
 
         $query = LotteryTicketActivity::where('department_id', $departmentId);
 
-        // 状态筛选
-        if ($status !== 'all') {
-            if ($status === 'ongoing') {
+        // 状态筛选（支持数字状态值和字符串值）
+        if ($status !== 'all' && $status !== null) {
+            // 数字状态值（来自Vue组件）
+            if (is_numeric($status)) {
+                $query->where('status', (int)$status);
+            }
+            // 字符串值（向后兼容）
+            elseif ($status === 'ongoing') {
                 $query->where('status', LotteryTicketActivity::STATUS_ONGOING);
             } elseif ($status === 'ended') {
                 $query->whereIn('status', [
@@ -518,12 +524,16 @@ class ChannelLotteryTicketActivityController
                 $colors = [
                     LotteryTicketActivity::STATUS_NOT_STARTED => 'blue',
                     LotteryTicketActivity::STATUS_ONGOING => 'green',
-                    LotteryTicketActivity::STATUS_ENDED => 'orange',
+                    LotteryTicketActivity::STATUS_PENDING_DRAW => 'orange',  // ⭐ 新增
+                    LotteryTicketActivity::STATUS_DRAWING => 'purple',       // ⭐ 新增
+                    LotteryTicketActivity::STATUS_ENDED => 'default',
                     LotteryTicketActivity::STATUS_CLOSED => 'red',
                 ];
                 $labels = [
                     LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
                     LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                    LotteryTicketActivity::STATUS_PENDING_DRAW => admin_trans('lottery_ticket.status.pending_draw'),  // ⭐ 新增
+                    LotteryTicketActivity::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),  // ⭐ 新增
                     LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
                     LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
                 ];
@@ -829,10 +839,14 @@ class ChannelLotteryTicketActivityController
             }
 
             // ⭐ 核心业务：线下摇球后录入中奖券号
-            // 允许在 ONGOING（活动进行中）或 DRAWING（开奖中）状态录入
+            // 允许在以下状态录入：
+            // - ONGOING（活动进行中）- 可提前录入
+            // - PENDING_DRAW（待开奖）- 活动结束等待开奖
+            // - DRAWING（开奖中）- 正在开奖
             // 不允许在 ENDED（已结束）或 CLOSED（已关闭）状态录入
             $allowedStatuses = [
                 LotteryTicketActivity::STATUS_ONGOING,
+                LotteryTicketActivity::STATUS_PENDING_DRAW,
                 LotteryTicketActivity::STATUS_DRAWING,
             ];
 

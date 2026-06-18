@@ -93,20 +93,20 @@
                     {{ trans.edit }}
                   </a-menu-item>
 
-                  <!-- ⭐ 开始开奖（进行中） -->
-                  <a-menu-item key="startDrawing" v-if="activity.status === 1">
+                  <!-- ⭐ 开始开奖（待开奖状态） -->
+                  <a-menu-item v-if="activity.status === 5" key="startDrawing">
                     <play-circle-outlined/>
-                    {{ trans.startDrawing }}
+                    {{ trans.startDrawing || '开始开奖' }}
                   </a-menu-item>
 
-                  <!-- ⭐ 录入中奖（进行中或开奖中） -->
-                  <a-menu-item key="record" v-if="activity.status === 1 || activity.status === 6">
+                  <!-- ⭐ 录入中奖（进行中/待开奖/开奖中） -->
+                  <a-menu-item v-if="activity.status === 1 || activity.status === 5 || activity.status === 6" key="record">
                     <trophy-outlined/>
                     {{ trans.recordWin }}
                   </a-menu-item>
 
-                  <!-- ⭐ 发放奖励（进行中/开奖中/已结束，且有待发放） -->
-                  <a-menu-item v-if="(activity.status === 1 || activity.status === 6 || activity.status === 2) && activity.pending_count > 0" key="distribute">
+                  <!-- ⭐ 发放奖励（进行中/待开奖/开奖中/已结束，且有待发放） -->
+                  <a-menu-item v-if="(activity.status === 1 || activity.status === 5 || activity.status === 6 || activity.status === 2) && activity.pending_count > 0" key="distribute">
                     <gift-outlined/>
                     {{ trans.distributeAllPending || '发放奖励' }} ({{ activity.pending_count }})
                   </a-menu-item>
@@ -114,7 +114,7 @@
                   <!-- ⭐ 停止开奖（开奖中） -->
                   <a-menu-item key="stopDrawing" v-if="activity.status === 6">
                     <check-circle-outlined/>
-                    {{ trans.stopDrawing }}
+                    {{ trans.stopDrawing || '停止开奖' }}
                   </a-menu-item>
 
                   <!-- 添加/编辑直播地址（所有状态） -->
@@ -929,6 +929,8 @@ export default {
         {label: this.trans.allStatus, value: 'all'},
         {label: this.trans.notStarted, value: 0},
         {label: this.trans.ongoing, value: 1},
+        {label: this.trans.pendingDraw, value: 5},  // ⭐ 新增：待开奖
+        {label: this.trans.drawing, value: 6},      // ⭐ 新增：开奖中
         {label: this.trans.ended, value: 2},
         {label: this.trans.closed, value: 3},
       ];
@@ -1701,14 +1703,23 @@ export default {
     // 工具方法
     getCardClass(activity) {
       const classes = [];
-      if (activity.status === 1) classes.push('card-ongoing');
       if (activity.status === 0) classes.push('card-not-started');
+      if (activity.status === 1) classes.push('card-ongoing');
+      if (activity.status === 5) classes.push('card-pending-draw');  // ⭐ 新增：待开奖样式
+      if (activity.status === 6) classes.push('card-drawing');       // ⭐ 新增：开奖中样式
       if (activity.status === 2 || activity.status === 3) classes.push('card-ended');
       return classes.join(' ');
     },
 
     getStatusColor(status) {
-      const colors = {0: 'blue', 1: 'green', 2: 'default', 3: 'red'};
+      const colors = {
+        0: 'blue',      // 未开始
+        1: 'green',     // 进行中
+        5: 'orange',    // 待开奖 ⭐ 新增
+        6: 'purple',    // 开奖中
+        2: 'default',   // 已结束
+        3: 'red'        // 已关闭
+      };
       return colors[status] || 'default';
     },
 
@@ -1716,9 +1727,10 @@ export default {
       const texts = {
         0: this.trans.notStarted,
         1: this.trans.ongoing,
+        5: this.trans.pendingDraw,  // ⭐ 新增：待开奖状态
+        6: this.trans.drawing,      // ⭐ 修复：开奖中状态
         2: this.trans.ended,
-        3: this.trans.closed,
-        6: this.trans.drawing  // ⭐ 修复：开奖中状态
+        3: this.trans.closed
       };
       return texts[status] || this.trans.statusUnknown || '未知狀態';
     },
@@ -1870,12 +1882,22 @@ export default {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
+.card-not-started {
+  border-left: 4px solid #1890ff;
+}
+
 .card-ongoing {
   border-left: 4px solid #52c41a;
 }
 
-.card-not-started {
-  border-left: 4px solid #1890ff;
+.card-pending-draw {
+  border-left: 4px solid #fa8c16; /* ⭐ 新增：待开奖 - 橙色 */
+  background: linear-gradient(to right, #fff7e6 0%, #ffffff 10%);
+}
+
+.card-drawing {
+  border-left: 4px solid #722ed1; /* ⭐ 新增：开奖中 - 紫色 */
+  background: linear-gradient(to right, #f9f0ff 0%, #ffffff 10%);
 }
 
 .card-ended {
