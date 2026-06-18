@@ -87,7 +87,7 @@ class StoreLotteryTicketActivityController
                     return Tag::create($config['text'])->color($config['color']);
                 });
 
-            // ⭐ 最大券号 - 方便店家抽奖时知道放多少球的号码
+            // ⭐ 已发最大券号 - 当前已发放的最大券号（如：000123）
             $grid->column('max_ticket_no', admin_trans('lottery_ticket.fields.max_ticket_no'))
                 ->width(120)->align('center')
                 ->display(function ($val, LotteryTicketActivity $data) {
@@ -97,6 +97,7 @@ class StoreLotteryTicketActivityController
                         ->value('ticket_no');
 
                     if ($maxTicket) {
+                        // ✅ 保留6位格式显示（如：000123）
                         return Tag::create($maxTicket)->color('blue');
                     } else {
                         return Tag::create('000000')->color('default');

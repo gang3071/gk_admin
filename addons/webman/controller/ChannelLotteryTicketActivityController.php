@@ -198,6 +198,10 @@ class ChannelLotteryTicketActivityController
 
         $query = LotteryTicketActivity::where('department_id', $departmentId);
 
+        // ✅ 只显示30天内的活动（created_at 在最近30天内）
+        $thirtyDaysAgo = date('Y-m-d H:i:s', strtotime('-30 days'));
+        $query->where('created_at', '>=', $thirtyDaysAgo);
+
         // 状态筛选（支持数字状态值和字符串值）
         if ($status !== 'all' && $status !== null) {
             // 数字状态值（来自Vue组件）
@@ -217,26 +221,48 @@ class ChannelLotteryTicketActivityController
 
         $activities = $query->orderBy('created_at', 'desc')->get();
 
-        // 添加 has_prize_config、pending_count 和 max_ticket_no 字段
-        $activities = $activities->map(function ($activity) {
+        // ✅ 批量查询优化（避免N+1）
+        $activityIds = $activities->pluck('id')->toArray();
+
+        // 批量查询：是否有奖品配置
+        $hasPrizeConfig = LotteryTicketPrizeLevel::whereIn('activity_id', $activityIds)
+            ->select('activity_id')
+            ->distinct()
+            ->pluck('activity_id')
+            ->toArray();
+
+        // 批量查询：待发放数量
+        $pendingCounts = \addons\webman\model\LotteryTicketRecord::query()
+            ->whereIn('activity_id', $activityIds)
+            ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
+            ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+            ->where('prize_amount', '>', 0)
+            ->select('activity_id', Db::raw('COUNT(*) as count'))
+            ->groupBy('activity_id')
+            ->pluck('count', 'activity_id')
+            ->toArray();
+
+        // 批量查询：最大券号（保留6位格式，如：000123）
+        // ✅ 先查出数值最大的券号，然后补0
+        $maxTicketData = \addons\webman\model\LotteryTicket::query()
+            ->whereIn('activity_id', $activityIds)
+            ->select('activity_id', Db::raw('MAX(CAST(ticket_no AS UNSIGNED)) as max_no'))
+            ->groupBy('activity_id')
+            ->get();
+
+        $maxTicketNos = [];
+        foreach ($maxTicketData as $item) {
+            // 将数字转换为6位字符串格式
+            $maxTicketNos[$item->activity_id] = str_pad($item->max_no, 6, '0', STR_PAD_LEFT);
+        }
+
+        // 添加字段
+        $activities = $activities->map(function ($activity) use ($hasPrizeConfig, $pendingCounts, $maxTicketNos) {
             $activityArray = $activity->toArray();
-            $activityArray['has_prize_config'] = LotteryTicketPrizeLevel::where('activity_id', $activity->id)
-                ->exists();
 
-            // ⭐ 统计待发放记录数量
-            $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
-                ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
-                ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
-                ->where('prize_amount', '>', 0)
-                ->count();
-
-            // ⭐ 最大券号（抽奖时放球的最大号码，从数据库字段读取）
-            // max_ticket_no 默认 1000000，表示支持券号 000000~999999
-            $activityArray['max_ticket_no'] = $activity->max_ticket_no ?? 1000000;
-
-            // ⭐ 当前已发放的最后一张券号（用于显示发券进度）
-            $currentTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
-            $activityArray['current_ticket_no'] = $currentTicketNo;
+            $activityArray['has_prize_config'] = in_array($activity->id, $hasPrizeConfig);
+            $activityArray['pending_count'] = $pendingCounts[$activity->id] ?? 0;
+            $activityArray['max_ticket_no'] = $maxTicketNos[$activity->id] ?? '000000';
 
             return $activityArray;
         });
@@ -265,13 +291,11 @@ class ChannelLotteryTicketActivityController
         $activityArray = $activity->toArray();
 
         // 添加额外的统计字段
-        // ⭐ 最大券号（抽奖时放球的最大号码，从数据库字段读取）
-        // max_ticket_no 默认 1000000，表示支持券号 000000~999999
-        $activityArray['max_ticket_no'] = $activity->max_ticket_no ?? 1000000;
-
-        // ⭐ 当前已发放的最后一张券号（用于显示发券进度）
-        $currentTicketNo = $activity->current_ticket_no > 0 ? $activity->current_ticket_no - 1 : 0;
-        $activityArray['current_ticket_no'] = $currentTicketNo;
+        // ✅ 已发最大券号 - 查询实际最大券号（保留6位格式）
+        $maxNo = \addons\webman\model\LotteryTicket::where('activity_id', $activity->id)
+            ->selectRaw('MAX(CAST(ticket_no AS UNSIGNED)) as max_no')
+            ->value('max_no');
+        $activityArray['max_ticket_no'] = $maxNo ? str_pad($maxNo, 6, '0', STR_PAD_LEFT) : '000000';
 
         // ⭐ 统计待发放记录数量
         $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
@@ -542,26 +566,47 @@ class ChannelLotteryTicketActivityController
                     ->color($colors[$val] ?? 'default');
             });
 
-            $grid->column('total_tickets', admin_trans('lottery_ticket.fields.total_tickets'))->width(120);
-            $grid->column('used_tickets', admin_trans('lottery_ticket.fields.used_tickets'))->width(120);
-            $grid->column('usage_rate', admin_trans('lottery_ticket.fields.usage_rate'))->width(120)->display(function ($val, $data) {
-                if ($data['total_tickets'] > 0) {
-                    $rate = round(($data['used_tickets'] / $data['total_tickets']) * 100, 2);
-                    return $rate . '%';
-                }
-                return '0%';
+            // ⭐ 中奖总数量
+            $grid->column('total_winners', admin_trans('lottery_ticket.fields.total_winners'))
+                ->width(120)->align('center')
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    $count = \addons\webman\model\LotteryTicketRecord::where('activity_id', $data->id)
+                        ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+                        ->count();
+                    return $count > 0 ? Tag::create($count)->color('blue') : '0';
+                });
+
+            // ⭐ 中奖总金额
+            $grid->column('total_prize_amount', admin_trans('lottery_ticket.fields.total_prize_amount'))
+                ->width(120)->align('center')
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    $amount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $data->id)
+                        ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+                        ->sum('prize_amount');
+                    return '¥' . number_format($amount, 2);
+                });
+
+            // ⭐ 筛选器
+            $grid->filter(function (Filter $filter) {
+                $filter->like()->text('name')
+                    ->placeholder(admin_trans('lottery_ticket.fields.activity_name'));
+
+                $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.filter.time_range'))
+                    ->placeholder([
+                        admin_trans('lottery_ticket.fields.start_time'),
+                        admin_trans('lottery_ticket.fields.end_time')
+                    ]);
             });
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
-                // ✅ 正确用法：使用 prepend() 添加 Button
+                // ✅ 查看详情 - 使用新的详情展示方法
                 $actions->prepend(
-                    Button::create(admin_trans('lottery_ticket.action.view'))
+                    Button::create(admin_trans('lottery_ticket.action.view_detail'))
                         ->type('link')
                         ->size('small')
-                        ->modal([$this, 'prizeConfig'], ['id' => $data['id']])
-                        ->width('80%')
-                        ->title(admin_trans('lottery_ticket.action.prize_config'))
+                        ->modal([$this, 'showActivityDetail'], ['id' => $data['id']])
+                        ->width('800px')
                 );
 
                 $actions->hideEdit();
@@ -607,6 +652,80 @@ class ChannelLotteryTicketActivityController
                 $actions->hideEdit();
             });
         });
+    }
+
+    /**
+     * 显示活动详情（用于历史记录等Grid的Modal展示）
+     * @auth true
+     * @group channel
+     * @return Detail
+     */
+    public function showActivityDetail(): Detail
+    {
+        $id = Request::input('id');
+        $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs.vipLevel'])->find($id);
+
+        if (!$activity) {
+            throw new \Exception(admin_trans('lottery_ticket.message.activity_not_found'));
+        }
+
+        // 检查权限
+        if ($activity->department_id != Admin::user()->department_id) {
+            throw new \Exception(admin_trans('common.no_permission'));
+        }
+
+        return Detail::create($activity, function (Detail $detail) use ($activity) {
+            $detail->item('name', admin_trans('lottery_ticket.fields.activity_name'));
+            $detail->item('start_time', admin_trans('lottery_ticket.fields.start_time'));
+            $detail->item('end_time', admin_trans('lottery_ticket.fields.end_time'));
+
+            // ⭐ 状态显示
+            $detail->item('status', admin_trans('lottery_ticket.fields.status'))
+                ->display(function ($val) {
+                    return LotteryTicketActivity::getStatusText($val);
+                });
+
+            // ⭐ 已发最大券号（查询实际值）
+            $detail->item('max_ticket_no', admin_trans('lottery_ticket.fields.max_ticket_no'))
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    $maxNo = \addons\webman\model\LotteryTicket::where('activity_id', $data->id)
+                        ->selectRaw('MAX(CAST(ticket_no AS UNSIGNED)) as max_no')
+                        ->value('max_no');
+                    return $maxNo ? str_pad($maxNo, 6, '0', STR_PAD_LEFT) : '000000';
+                });
+
+            // 券号统计
+            $detail->item('total_tickets', admin_trans('lottery_ticket.fields.total_tickets'));
+            $detail->item('used_tickets', admin_trans('lottery_ticket.fields.used_tickets'));
+
+            // 奖品等级配置
+            $detail->item('prize_config', admin_trans('lottery_ticket.fields.prize_level_config'))
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    if (!$data->prizeLevels || count($data->prizeLevels) == 0) {
+                        return '-';
+                    }
+                    $lines = [];
+                    foreach ($data->prizeLevels->sortBy('level_rank') as $level) {
+                        $remaining = $level->prize_count - $level->won_count;
+                        $lines[] = $level->level_name . '：¥' . number_format($level->prize_amount, 2) . '（剩余' . $remaining . '/' . $level->prize_count . '）';
+                    }
+                    return implode("\n", $lines);
+                });
+
+            // VIP打码配置
+            $detail->item('vip_bet_config', admin_trans('lottery_ticket.fields.vip_level'))
+                ->display(function ($val, LotteryTicketActivity $data) {
+                    if (!$data->vipConfigs || count($data->vipConfigs) == 0) {
+                        return '-';
+                    }
+                    $lines = [];
+                    foreach ($data->vipConfigs->sortBy('vip_level_id') as $config) {
+                        $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
+                        $lines[] = $vipName . '：打码¥' . number_format($config->bet_amount_required, 2) . ' 获得' . $config->ticket_count . '张券';
+                    }
+                    return implode("\n", $lines);
+                });
+        })->bordered()->layout('vertical');
     }
 
     /**

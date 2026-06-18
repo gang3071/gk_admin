@@ -63,8 +63,13 @@ class ChannelLotteryTicketStatisticsController
             'ticket_usage_rate' => $activity->total_tickets > 0
                 ? round(($activity->used_tickets / $activity->total_tickets) * 100, 2)
                 : 0,
-            'current_ticket_no' => $activity->current_ticket_no,
-            'max_ticket_no' => $activity->current_ticket_no > 0 ? str_pad($activity->current_ticket_no - 1, 6, '0', STR_PAD_LEFT) : '000000',
+            // ✅ 查询实际最大券号（保留6位格式，如：000123）
+            'max_ticket_no' => (function() use ($activityId) {
+                $maxNo = \addons\webman\model\LotteryTicket::where('activity_id', $activityId)
+                    ->selectRaw('MAX(CAST(ticket_no AS UNSIGNED)) as max_no')
+                    ->value('max_no');
+                return $maxNo ? str_pad($maxNo, 6, '0', STR_PAD_LEFT) : '000000';
+            })(),
 
             // 打码统计
             'total_bet_amount' => $this->getTotalBetAmount($activityId),

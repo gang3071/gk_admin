@@ -33,7 +33,7 @@ return [
         'used_tickets' => '已使用数量',
         'usage_rate' => '使用率',
         'pending_count' => '待发放',
-        'max_ticket_no' => '最大券号',  // ⭐ 新增：抽奖时放球的最大号码
+        'max_ticket_no' => '已发最大券号',  // ⭐ 当前已发放的最大券号（如：000123）
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => '奖品配置',
         'created_at' => '创建时间',

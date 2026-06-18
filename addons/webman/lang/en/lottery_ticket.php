@@ -33,7 +33,7 @@ return [
         'used_tickets' => 'Used Tickets',
         'usage_rate' => 'Usage Rate',
         'pending_count' => 'Pending',
-        'max_ticket_no' => 'Max Ticket No',  // ⭐ Added: Maximum ball number for lottery draw
+        'max_ticket_no' => 'Max Issued Ticket',  // ⭐ Current maximum issued ticket number (e.g.: 000123)
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => 'Prize Config',
         'created_at' => 'Created At',
