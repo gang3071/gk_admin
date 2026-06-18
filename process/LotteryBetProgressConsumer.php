@@ -3,6 +3,7 @@
 namespace process;
 
 use addons\webman\service\LotteryTicketBetProgressService;
+use addons\webman\service\LotteryTicketPushService;
 use support\Log;
 use Webman\RedisQueue\Consumer;
 
@@ -58,12 +59,17 @@ class LotteryBetProgressConsumer implements Consumer
                         'total_tickets' => $activityResult['total_tickets'],
                     ]);
 
-                    // TODO: 推送通知给玩家
-                    // \Webman\Push\Api::trigger('player_' . $playerId, 'lottery_ticket_issued', [
-                    //     'activity_name' => $activityResult['activity_name'],
-                    //     'tickets_count' => $activityResult['tickets_issued'],
-                    //     'total_tickets' => $activityResult['total_tickets'],
-                    // ]);
+                    // ✅ 推送通知给玩家（批量发放时传入发放数量）
+                    if (!empty($activityResult['tickets']) && is_array($activityResult['tickets'])) {
+                        // 获取第一张券用于推送（批量发放时可能有多张）
+                        $firstTicket = reset($activityResult['tickets']);
+                        if ($firstTicket) {
+                            LotteryTicketPushService::pushTicketIssued(
+                                $firstTicket,
+                                $activityResult['tickets_issued']
+                            );
+                        }
+                    }
                 }
             }
 

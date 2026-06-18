@@ -348,35 +348,62 @@ class LotteryTicketPushService
      * @param int $departmentId 渠道ID
      * @param string $eventType 事件类型
      * @param array $data 数据
+     * @param string $target 推送目标 ('both' = 同时推送玩家和管理员, 'player' = 仅客户端玩家, 'admin' = 仅后台管理员)
      * @return bool
      */
-    protected static function pushToDepartment(int $departmentId, string $eventType, array $data): bool
-    {
+    protected static function pushToDepartment(
+        int $departmentId,
+        string $eventType,
+        array $data,
+        string $target = 'both'
+    ): bool {
         try {
-            // 频道名称格式: private-admin_group-channel-{department_id}（遵循系统规范）
-            $channelName = "private-admin_group-channel-{$departmentId}";
+            // ✅ 根据目标选择频道名称（支持同时推送多个频道）
+            $channels = [];
+
+            if ($target === 'both' || $target === 'player') {
+                // 客户端玩家频道: player-channel-{department_id}
+                $channels[] = "player-channel-{$departmentId}";
+            }
+
+            if ($target === 'both' || $target === 'admin') {
+                // 后台管理员频道: private-admin_group-channel-{department_id}
+                $channels[] = "private-admin_group-channel-{$departmentId}";
+            }
+
+            if (empty($channels)) {
+                Log::warning('推送目标无效', ['target' => $target]);
+                return false;
+            }
 
             // 构造推送内容
             $content = array_merge($data, [
                 'timestamp' => time(),
             ]);
 
-            // 将推送任务加入队列（异步处理，不阻塞主流程）
-            Client::send(
-                LotteryTicketPushQueue::QUEUE_NAME,
-                [
-                    'channels' => $channelName,
-                    'content' => $content,
-                    'from' => self::PUSH_FROM,
-                ],
-                self::QUEUE_DELAY
-            );
+            // ✅ 支持多频道推送：将每个频道分别入队
+            $successCount = 0;
+            foreach ($channels as $channelName) {
+                Client::send(
+                    LotteryTicketPushQueue::QUEUE_NAME,
+                    [
+                        'channels' => $channelName,
+                        'content' => $content,
+                        'from' => self::PUSH_FROM,
+                    ],
+                    self::QUEUE_DELAY
+                );
+                $successCount++;
+            }
 
             // ✅ 成功入队，无需记录详细日志
             if (config('app.debug')) {
                 Log::debug('广播入队', [
                     'dept' => $departmentId,
                     'type' => $eventType,
+                    'target' => $target,
+                    'channels' => $channels,
+                    'count' => $successCount,
                 ]);
             }
 
@@ -386,6 +413,7 @@ class LotteryTicketPushService
             Log::error('推送给渠道失败（入队失败）', [
                 'department_id' => $departmentId,
                 'event_type' => $eventType,
+                'target' => $target,
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
@@ -393,13 +421,6 @@ class LotteryTicketPushService
             return false;
         }
     }
-
-    /**
-     * ⭐ 废弃方法：pushDrawResult已删除
-     *
-     * 原因：系统不再使用自动摇球功能，没有ball_result数据
-     * 替代方案：线下摇球后，通过recordWinByTickets录入中奖券号，推送通知已在该方法中处理
-     */
 
     /**
      * 批量推送中奖通知（使用队列，避免阻塞）
