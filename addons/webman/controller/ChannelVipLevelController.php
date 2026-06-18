@@ -138,7 +138,9 @@ class ChannelVipLevelController
     {
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('vip_level.title'));
-            $form->labelWidth(180);
+
+            // 垂直布局：标题在上，输入框在下
+            $form->layout('vertical');
 
             // 隐藏字段：自动设置当前渠道department_id
             $form->hidden('department_id')->default(Admin::user()->department_id);
@@ -148,31 +150,36 @@ class ChannelVipLevelController
                 ->maxlength(50)
                 ->placeholder(admin_trans('vip_level.placeholder.name'))
                 ->prefix(Icon::create('CrownOutlined'))
-                ->style(['width' => '120px'])
                 ->help(admin_trans('vip_level.help.name'));
-            $form->number('retain_level_days', admin_trans('vip_level.fields.retain_level_days'))
-                ->min(0)
-                ->help(admin_trans('vip_level.help.retain_level_days'));
-            $form->number('retain_level_bet_amount', admin_trans('vip_level.fields.retain_level_bet_amount'))
-                ->min(0)
-                ->step(0.01)
-                ->help(admin_trans('vip_level.help.retain_level_bet_amount'));
-            $form->number('upgrade_bet_amount', admin_trans('vip_level.fields.upgrade_bet_amount'))
-                ->min(0)
-                ->step(0.01)
-                ->help(admin_trans('vip_level.help.upgrade_bet_amount'));
-            $form->number('min_claim_amount', admin_trans('vip_level.fields.min_claim_amount'))
-                ->min(0)
-                ->step(0.01)
-                ->help(admin_trans('vip_level.help.min_claim_amount'));
-            $form->number('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))
-                ->min(0)
-                ->step(0.01)
-                ->help(admin_trans('vip_level.help.birthday_bonus'));
+
             $form->number('sort', admin_trans('vip_level.fields.sort'))
                 ->min(0)
                 ->default(0)
                 ->help(admin_trans('vip_level.help.sort'));
+
+            $form->number('retain_level_days', admin_trans('vip_level.fields.retain_level_days'))
+                ->min(0)
+                ->help(admin_trans('vip_level.help.retain_level_days'));
+
+            $form->number('retain_level_bet_amount', admin_trans('vip_level.fields.retain_level_bet_amount'))
+                ->min(0)
+                ->step(0.01)
+                ->help(admin_trans('vip_level.help.retain_level_bet_amount'));
+
+            $form->number('upgrade_bet_amount', admin_trans('vip_level.fields.upgrade_bet_amount'))
+                ->min(0)
+                ->step(0.01)
+                ->help(admin_trans('vip_level.help.upgrade_bet_amount'));
+
+            $form->number('min_claim_amount', admin_trans('vip_level.fields.min_claim_amount'))
+                ->min(0)
+                ->step(0.01)
+                ->help(admin_trans('vip_level.help.min_claim_amount'));
+
+            $form->number('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))
+                ->min(0)
+                ->step(0.01)
+                ->help(admin_trans('vip_level.help.birthday_bonus'));
         });
     }
 
