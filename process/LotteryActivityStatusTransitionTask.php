@@ -31,7 +31,7 @@ class LotteryActivityStatusTransitionTask
     public function onWorkerStart(Worker $worker)
     {
         // 每分钟执行一次（错开扫描任务）
-        new Crontab('43 * * * * *', function () {
+        new Crontab('0 */1 * * * *', function () {
             $this->checkAndTransitionStatus();
         });
 
