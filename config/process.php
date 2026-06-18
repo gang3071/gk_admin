@@ -40,12 +40,10 @@ return [
         'constructor' => []
     ],
 
-    // 摸奖券打码进度队列消费者（异步处理，不影响游戏性能）
-    'lottery_bet_progress_consumer' => [
-        'handler' => process\LotteryBetProgressConsumer::class,
-        'reloadable' => true,
-        'constructor' => []
-    ],
+    // ✅ 摸奖券队列消费者已迁移到标准 redis-queue 插件
+    // 配置位置：config/plugin/webman/redis-queue/process.php
+    // 消费者目录：app/queue/redis/
+    // 队列列表：lottery-bet-progress, lottery-ticket-push
 
     // 摸奖券过期处理定时任务（每5分钟执行一次）
     'lottery_ticket_expire' => [

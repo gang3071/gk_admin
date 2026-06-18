@@ -1,14 +1,20 @@
 <?php
+/**
+ * Redis 队列消费者进程配置
+ *
+ * 消费者目录：app/queue/redis/
+ *
+ * 队列列表：
+ * - lottery-bet-progress (打码进度更新)
+ * - lottery-ticket-push (推送通知)
+ */
 return [
-    // 已禁用，项目使用 ex-admin 的消费者进程
-    /*
     'consumer'  => [
         'handler'     => Webman\RedisQueue\Process\Consumer::class,
-        'count'       => 8, // 可以设置多进程同时消费
+        'count'       => 3, // 3个消费者进程（处理2个队列）
         'constructor' => [
             // 消费者类目录
             'consumer_dir' => app_path() . '/queue/redis'
         ]
     ]
-    */
 ];

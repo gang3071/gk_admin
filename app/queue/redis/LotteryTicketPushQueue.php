@@ -1,9 +1,10 @@
 <?php
 
-namespace addons\webman\queue;
+namespace app\queue\redis;
 
 use support\Log;
 use Webman\Push\Api;
+use Webman\RedisQueue\Consumer;
 
 /**
  * 摸奖券推送队列消费者
@@ -12,12 +13,24 @@ use Webman\Push\Api;
  * 消费模式: 异步消费
  * 并发数: 5（防止推送过载）
  */
-class LotteryTicketPushQueue
+class LotteryTicketPushQueue implements Consumer
 {
     /**
      * 队列名称
      */
     const QUEUE_NAME = 'lottery-ticket-push';
+
+    /**
+     * 队列名称（Consumer 接口要求）
+     * @var string
+     */
+    public $queue = 'lottery-ticket-push';
+
+    /**
+     * 连接名称（Consumer 接口要求）
+     * @var string
+     */
+    public $connection = 'default';
 
     /**
      * 消费队列消息
@@ -56,20 +69,6 @@ class LotteryTicketPushQueue
     }
 
     /**
-     * 从频道名称提取玩家ID（用于日志）
-     *
-     * @param string $channels 频道名称
-     * @return int|null
-     */
-    protected function extractPlayerId(string $channels): ?int
-    {
-        if (preg_match('/player-(\d+)/', $channels, $matches)) {
-            return (int)$matches[1];
-        }
-        return null;
-    }
-
-    /**
      * 发送Socket消息（复制系统函数逻辑）
      *
      * @param string|array $channels 频道名称
@@ -99,5 +98,19 @@ class LotteryTicketPushQueue
             ]);
             return false;
         }
+    }
+
+    /**
+     * 从频道名称提取玩家ID（用于日志）
+     *
+     * @param string $channels 频道名称
+     * @return int|null
+     */
+    protected function extractPlayerId(string $channels): ?int
+    {
+        if (preg_match('/player-(\d+)/', $channels, $matches)) {
+            return (int)$matches[1];
+        }
+        return null;
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace process;
+namespace app\queue\redis;
 
 use addons\webman\service\LotteryTicketBetProgressService;
 use addons\webman\service\LotteryTicketPushService;
