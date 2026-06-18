@@ -183,6 +183,14 @@ class ChannelPlayerController
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
 
+        // 预加载渠道的 VIP 等级列表（用于筛选和显示）
+        $channelVipLevels = VipLevel::query()
+            ->where('department_id', Admin::user()->department_id)
+            ->where('status', VipLevel::STATUS_ENABLED)
+            ->orderBy('sort', 'asc')
+            ->get(['id', 'name', 'sort', 'upgrade_bet_amount'])
+            ->keyBy('sort');
+
         // 构建基础查询字段（不包含余额和爆机状态，从 Redis 获取）
         $selectFields = [
             'player.*',
@@ -340,7 +348,7 @@ class ChannelPlayerController
             })
             ->toArray();
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel, $playerOptions) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel, $playerOptions, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -596,7 +604,13 @@ class ChannelPlayerController
                 admin_trans('player.fields.status_offline_open'))->switch()->ellipsis(true)->align('center');
             $grid->column('status_baccarat',
                 admin_trans('player.fields.status_baccarat'))->switch()->ellipsis(true)->align('center');
-            $grid->filter(function (Filter $filter) use ($channel, $playerOptions) {
+            // 获取渠道 VIP 等级选项
+            $vipLevelOptions = ['' => admin_trans('public_msg.all')];
+            foreach ($channelVipLevels as $level) {
+                $vipLevelOptions[$level->id] = $level->name;
+            }
+
+            $grid->filter(function (Filter $filter) use ($channel, $playerOptions, $vipLevelOptions) {
                 // 设备下拉选择
                 $filter->eq()->select('player_id')
                     ->placeholder(admin_trans('player.filter.select_device'))
@@ -609,6 +623,11 @@ class ChannelPlayerController
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
+
+                // VIP等级筛选
+                $filter->eq()->select('vip_level_id')
+                    ->placeholder(admin_trans('player.fields.vip_level'))
+                    ->options($vipLevelOptions);
 
                 // 线下渠道：代理和店家筛选
                 if ($channel && $channel->is_offline == 1) {
@@ -682,19 +701,12 @@ class ChannelPlayerController
                 $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
                 $dropdown = $actions->dropdown();
-                $actions->prepend(Button::create(admin_trans('offline_channel.electronic_game_disabled'))
-                    ->drawer([$this, 'playerGameList'], ['player_id' => $data['id']])
-                    ->type('primary'));
-                $actions->prepend(Button::create('百家禁用')
-                    ->drawer([$this, 'playerPlatformList'], ['player_id' => $data['id']])
-                    ->type('primary'));
-                $actions->prepend(Button::create(admin_trans('channel_agent.open_score'))
-                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px'));
-                $actions->prepend(Button::create('游戏账号')
-                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
-                    ->type('default')
-                    ->size('small')
-                    ->width('90%'));
+
+                // 电子游戏禁用
+                $dropdown->prepend(admin_trans('offline_channel.electronic_game_disabled'), 'fas fa-gamepad')
+                    ->modal([$this, 'playerGameList'], ['player_id' => $data['id']])
+                    ->width('80%');
+
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
                     $dropdown->prepend($data['is_coin'] == 0 ? admin_trans('player.set_coin') : admin_trans('player.cancel_coin'),
@@ -707,6 +719,15 @@ class ChannelPlayerController
                     $dropdown->prepend(admin_trans('player.set_promoter'), 'fas fa-key')
                         ->modal([$this, 'setPromoter'], ['id' => $data['id']])->width('25%');
                 }
+
+                // 开分
+                $dropdown->append(admin_trans('channel_agent.open_score'), 'fas fa-coins')
+                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px');
+
+                // 游戏账号
+                $dropdown->append('游戏账号', 'fas fa-user-circle')
+                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
+                    ->width('90%');
 
                 if ($channel->wallet_action_status == 1) {
                     $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
@@ -734,6 +755,11 @@ class ChannelPlayerController
                         'money' => $data['money'] ?? 0,
                         'is_crashed' => $data['is_crashed'] ?? 0,
                     ])->width('600px');
+
+                // 百家禁用
+                $dropdown->append('百家禁用', 'fas fa-ban')
+                    ->modal([$this, 'playerPlatformList'], ['player_id' => $data['id']])
+                    ->width('80%');
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -807,6 +833,11 @@ class ChannelPlayerController
         // 设备ID筛选
         if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
             $query->where('player.id', $requestFilter['player_id']);
+        }
+
+        // VIP等级筛选
+        if (isset($requestFilter['vip_level_id']) && $requestFilter['vip_level_id'] !== '') {
+            $query->where('player.vip_level_id', $requestFilter['vip_level_id']);
         }
 
         // 线下渠道：按 player_type 筛选

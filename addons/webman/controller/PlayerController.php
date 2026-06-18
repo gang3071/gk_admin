@@ -202,6 +202,10 @@ class PlayerController
                 'national_promoter.level as level_sort',
                 // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
                 DB::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
+                // 打码量相关字段
+                'player.total_bet_amount',
+                DB::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
+                'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
             ])
             ->when(!empty($id), function ($query) use ($id) {
                 $query->where('player.recommend_id', $id);
@@ -223,6 +227,14 @@ class PlayerController
                 $join->on('channel_min_vip.department_id', '=', 'channel_min_vip_level.department_id')
                     ->on('channel_min_vip.min_sort', '=', 'channel_min_vip_level.sort');
             })
+            // LEFT JOIN 下一等级（通过子查询获取当前等级的下一个等级）
+            ->leftJoin(
+                DB::raw('(SELECT vl.department_id, vl.sort, vl.upgrade_bet_amount FROM vip_level vl WHERE vl.status = ' . VipLevel::STATUS_ENABLED . ') as next_vip_level'),
+                function ($join) {
+                    $join->on('player.department_id', '=', 'next_vip_level.department_id')
+                        ->whereRaw('next_vip_level.sort = (SELECT MIN(vl2.sort) FROM vip_level vl2 WHERE vl2.department_id = player.department_id AND vl2.sort > COALESCE(vip_level.sort, channel_min_vip_level.sort) AND vl2.status = ' . VipLevel::STATUS_ENABLED . ')');
+                }
+            )
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
                     ->Join(DB::raw('( SELECT player_id, max( id ) AS id FROM player_login_record GROUP BY player_id) AS t'),
@@ -411,18 +423,57 @@ class PlayerController
             // VIP等级列：优先显示玩家自己的等级，没有则显示渠道最低等级
             $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
                 ->display(function ($value, $data) {
-                    // 优先使用 vip_level_name，如果没有则尝试从 vip_level 关系获取
                     $levelName = $value;
                     if (empty($levelName) && !empty($data['vip_level_id'])) {
-                        // 如果有 vip_level_id 但没有 name，说明 JOIN 没有匹配到
                         $levelName = '-';
                     }
                     if (empty($levelName)) {
                         return '-';
                     }
-                    return Tag::create($levelName)->color('purple');
+
+                    // 计算打码进度
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = floatval($data['next_upgrade_bet_amount'] ?? 0);
+
+                    // 计算进度百分比
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet > 0) {
+                        // 进度 = (当前打码量 - 当前等级要求) / (下一等级要求 - 当前等级要求) * 100
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif ($nextUpgradeBet == 0 && $currentUpgradeBet > 0) {
+                        // 已是最高等级
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    // 构建显示内容
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    // 添加进度条（如果不是最高等级）
+                    if ($nextUpgradeBet > 0) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
                 })
-                ->align('center');
+                ->align('center')->width(180);
             $grid->column('pending_amount',
                 admin_trans('national_promoter.fields.pending_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('settlement_amount',
