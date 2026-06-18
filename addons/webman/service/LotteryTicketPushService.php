@@ -214,6 +214,29 @@ class LotteryTicketPushService
     public static function pushLiveStarted(LotteryTicketActivity $activity): bool
     {
         try {
+            // ✅ 生成完整的直播播放地址（供客户端直接使用）
+            $playUrls = null;
+            if (!empty($activity->live_url)) {
+                try {
+                    // 使用固定配置ID=1，生成30天有效期的播放地址
+                    $urls = generateLotteryLiveUrls(1, $activity->live_url, 30);
+                    $playUrls = [
+                        'webrtc' => $urls['webrtc'], // 推荐：超低延迟 <1秒
+                        'flv' => $urls['flv'],       // 备选：HTTP-FLV
+                        'hls' => $urls['hls'],       // 备选：HLS（兼容性好）
+                        'expire_time' => $urls['expire_time'],
+                        'region' => $urls['region'], // CN（大陆）或 Global（全球）
+                    ];
+                } catch (\Exception $e) {
+                    // 生成播放地址失败时记录日志，但不影响推送
+                    Log::warning('生成直播播放地址失败，推送将只包含流名称', [
+                        'activity_id' => $activity->id,
+                        'stream_name' => $activity->live_url,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
             $message = [
                 'type' => 'live_started',
                 'title' => '直播開始',
@@ -221,7 +244,8 @@ class LotteryTicketPushService
                 'data' => [
                     'activity_id' => $activity->id,
                     'activity_name' => $activity->name,
-                    'live_url' => $activity->live_url,
+                    'stream_name' => $activity->live_url, // ⭐ 流名称（用于备用）
+                    'play_urls' => $playUrls,             // ⭐ 完整播放地址（客户端可直接使用）
                     'live_status' => $activity->live_status,
                 ],
             ];
