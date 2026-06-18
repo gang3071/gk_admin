@@ -770,14 +770,14 @@ class ChannelLotteryTicketActivityController
     {
         $departmentId = Admin::user()->department_id;
 
-        // 获取已结束的活动（最近20个）
+        // 获取已结束的活动（最近10个）
         $activities = LotteryTicketActivity::where('department_id', $departmentId)
             ->whereIn('status', [
                 LotteryTicketActivity::STATUS_ENDED,
                 LotteryTicketActivity::STATUS_CLOSED
             ])
             ->orderBy('created_at', 'desc')
-            ->limit(20)
+            ->limit(10)  // ✅ 改为10条
             ->get(['id', 'name', 'description', 'cover_image', 'created_at', 'status']);
 
         return Response::success([
