@@ -102,7 +102,7 @@ return [
         'preheating' => 'プレヒート期',
         'betting' => 'ベット中',
         'drawing' => '抽選中',
-        'drawn' => '抽選完了、配布待ち', // ⭐ 新增
+        'pending_draw' => '抽選待ち',          // ⭐ 新増：活動終了、抽選待機中
         'unknown' => '不明',
     ],
 

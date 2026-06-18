@@ -37,12 +37,13 @@ class LotteryTicketActivity extends Model
 {
     use HasDateTimeFormatter, SoftDeletes, DataPermissions;
 
-    // 状态常量（简化设计：5个核心状态）
-    const STATUS_NOT_STARTED = 0; // 未开始
-    const STATUS_ONGOING = 1;     // 进行中（玩家打码获券阶段）
-    const STATUS_ENDED = 2;       // 已结束（摇球后进入此状态，店家可继续发放奖励）
-    const STATUS_CLOSED = 3;      // 已关闭（手动关闭，异常终止）
-    const STATUS_DRAWING = 6;     // 开奖中（管理员摇球阶段）
+    // 状态常量（6个核心状态）
+    const STATUS_NOT_STARTED = 0;      // 未开始
+    const STATUS_ONGOING = 1;          // 进行中（玩家打码获券阶段）
+    const STATUS_ENDED = 2;            // 已结束（完全结束，所有流程完成）
+    const STATUS_CLOSED = 3;           // 已关闭（手动关闭，异常终止）
+    const STATUS_PENDING_DRAW = 5;     // 待开奖（end_time 到达，等待管理员开奖）
+    const STATUS_DRAWING = 6;          // 开奖中（管理员摇球阶段）
 
     // 直播状态常量
     const LIVE_STATUS_NOT_STARTED = 0; // 未开播
@@ -73,9 +74,10 @@ class LotteryTicketActivity extends Model
         $statusMap = [
             self::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
             self::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+            self::STATUS_PENDING_DRAW => admin_trans('lottery_ticket.status.pending_draw'),
+            self::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),
             self::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
             self::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
-            self::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),
         ];
 
         return $statusMap[$status] ?? admin_trans('lottery_ticket.status.unknown');
@@ -119,26 +121,17 @@ class LotteryTicketActivity extends Model
     }
 
     /**
-     * 判断是否可以开始打码
-     * @return bool
-     */
-    public function canStartBetting(): bool
-    {
-        $now = date('Y-m-d H:i:s');
-        return $this->status === self::STATUS_PREHEATING
-            && $now >= $this->start_time;
-    }
-
-    /**
      * 判断是否可以开奖
      * @return bool
      */
     public function canStartDrawing(): bool
     {
-        // ⚠️ 重要业务规则：只有已结束的活动才能开奖
-        // 进行中的活动禁止开奖，必须等待活动自然结束后才能开奖
-        // 状态流转：ONGOING → 到达end_time → 自动变为ENDED → 管理员手动开奖 → DRAWING
-        return $this->status === self::STATUS_ENDED;
+        // ✅ 更新业务规则：只有待开奖状态才能开奖
+        // 新状态流转：ONGOING → 到达end_time → 自动变为PENDING_DRAW → 管理员手动开奖 → DRAWING
+        //
+        // 旧逻辑（已废弃）：STATUS_ENDED 才能开奖
+        // 新逻辑：STATUS_PENDING_DRAW 才能开奖
+        return $this->status === self::STATUS_PENDING_DRAW;
     }
 
     /**

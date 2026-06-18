@@ -57,12 +57,14 @@ class LotteryTicketIssueService
             throw new \Exception('活动不存在');
         }
 
-        // 检查活动状态
+        // ✅ 检查活动状态：只有进行中才能发券
+        // 新状态流程：ONGOING → PENDING_DRAW → DRAWING → ENDED
+        // 待开奖(PENDING_DRAW)后不再发券（打码进度已结束）
         if ($activity->status !== LotteryTicketActivity::STATUS_ONGOING) {
             throw new \Exception('活动未进行中，无法发券');
         }
 
-        // 检查活动是否已结束
+        // ✅ 双重检查：防止活动时间结束但状态未更新的边缘情况
         if (strtotime($activity->end_time) < time()) {
             throw new \Exception('活动已结束，无法发券');
         }
