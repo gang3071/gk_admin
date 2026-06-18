@@ -9,13 +9,7 @@ return [
         ]
     ],
 
-    // 摸奖券推送队列消费者（专用进程，避免阻塞其他任务）
-    'lottery_push_consumer' => [
-        'handler'     => Webman\RedisQueue\Process\Consumer::class,
-        'count'       => 3, // 3个并发进程，平衡推送速度和资源占用
-        'constructor' => [
-            // 摸奖券队列消费者目录
-            'consumer_dir' => base_path() . '/addons/webman/queue'
-        ]
-    ]
+    // ✅ 摸奖券队列消费者已迁移到 webman/redis-queue 插件
+    // 配置位置：config/plugin/webman/redis-queue/process.php
+    // 消费者目录：app/queue/redis/
 ];

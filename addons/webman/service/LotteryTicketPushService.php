@@ -5,7 +5,7 @@ namespace addons\webman\service;
 use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketRecord;
-use addons\webman\queue\LotteryTicketPushQueue;
+use app\queue\redis\LotteryTicketPushQueue;
 use support\Log;
 use Webman\RedisQueue\Client;
 
