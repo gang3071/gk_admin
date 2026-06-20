@@ -5507,7 +5507,7 @@ class ChannelPlayerController
                 $player->push();
             }
 
-            // 写入金流明细（记录实际扣除金额）
+            // 写入金流明细（只记录实际提现金额，不包含爆机没收部分）
             $deliveryRecord = new PlayerDeliveryRecord();
             $deliveryRecord->player_id = $playerId;
             $deliveryRecord->department_id = $player->department_id;
@@ -5516,14 +5516,14 @@ class ChannelPlayerController
             $deliveryRecord->type = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
             $deliveryRecord->withdraw_status = $withdrawRecord->status;
             $deliveryRecord->source = 'channel_withdrawal';
-            $deliveryRecord->amount = $deductAmount; // 记录实际扣除金额
+            $deliveryRecord->amount = $washAmount; // ✅ 只记录实际提现金额（不包含爆机没收部分）
             $deliveryRecord->amount_before = $previousAmount;
             $deliveryRecord->amount_after = $newBalance;
             $deliveryRecord->tradeno = $withdrawRecord->tradeno;
 
-            // 计算备注信息
+            // 計算備註資訊
             if ($deductAmount > $washAmount) {
-                $confiscatedAmount = bcsub($deductAmount, $washAmount, 2); // 没收金额
+                $confiscatedAmount = bcsub($deductAmount, $washAmount, 2); // 沒收金額
                 $deliveryRecord->remark = "渠道後台洗分（爆機清零，提現金額：{$washAmount}，沒收金額：{$confiscatedAmount}）";
             } else {
                 $deliveryRecord->remark = '渠道後台洗分';
