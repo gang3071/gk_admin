@@ -8,6 +8,7 @@ use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\model\LotteryTicketVipConfig;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerGameLog;
+use addons\webman\model\PlayGameRecord;
 use support\Db;
 use support\Log;
 
@@ -301,12 +302,13 @@ class LotteryTicketBetProgressService
 
     /**
      * 为玩家创建进度记录
+     * ⭐ 改为 public，供 LotteryBetProgressScanTask 调用
      *
      * @param int $activityId 活动ID
      * @param int $playerId 玩家ID
      * @return LotteryTicketBetProgress|null
      */
-    protected static function createProgressForPlayer(int $activityId, int $playerId): ?LotteryTicketBetProgress
+    public static function createProgressForPlayer(int $activityId, int $playerId): ?LotteryTicketBetProgress
     {
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->status !== LotteryTicketActivity::STATUS_ONGOING) {
@@ -445,6 +447,7 @@ class LotteryTicketBetProgressService
 
     /**
      * 统计玩家在活动期间的总打码量
+     * ⭐ 包含机台游戏和电子游戏的打码量
      * 用于数据校准或初始化
      *
      * @param int $activityId 活动ID
@@ -458,12 +461,28 @@ class LotteryTicketBetProgressService
             return 0;
         }
 
-        // 统计活动期间的打码量
-        return PlayerGameLog::where('player_id', $playerId)
+        // 1. 统计机台游戏打码量
+        $machineChip = PlayerGameLog::query()
+            ->where('player_id', $playerId)
             ->where('department_id', $activity->department_id)
             ->where('created_at', '>=', $activity->start_time)
             ->where('created_at', '<=', $activity->end_time)
             ->sum('chip_amount') ?? 0;
+
+        // 2. 统计电子游戏打码量（未结算 + 已结算，不包括已取消）
+        $onlineBet = PlayGameRecord::query()
+            ->where('player_id', $playerId)
+            ->where('department_id', $activity->department_id)
+            ->where('created_at', '>=', $activity->start_time)
+            ->where('created_at', '<=', $activity->end_time)
+            ->whereIn('settlement_status', [
+                PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED,  // 0: 未结算
+                PlayGameRecord::SETTLEMENT_STATUS_SETTLED,    // 1: 已结算
+            ])
+            ->sum('bet') ?? 0;
+
+        // 3. 返回总打码量
+        return floatval($machineChip) + floatval($onlineBet);
     }
 
     /**
@@ -474,7 +493,7 @@ class LotteryTicketBetProgressService
      */
     public static function endActivityProgress(int $activityId): int
     {
-        return LotteryTicketBetProgress::where('activity_id', $activityId)
+        return LotteryTicketBetProgress::query()->where('activity_id', $activityId)
             ->where('status', LotteryTicketBetProgress::STATUS_ACTIVE)
             ->update(['status' => LotteryTicketBetProgress::STATUS_ENDED]);
     }
