@@ -592,6 +592,17 @@ class ChannelLotteryTicketActivityController
                 $filter->like()->text('name')
                     ->placeholder(admin_trans('lottery_ticket.fields.activity_name'));
 
+                $filter->eq()->select('status')
+                    ->placeholder(admin_trans('lottery_ticket.fields.status'))
+                    ->options([
+                        LotteryTicketActivity::STATUS_NOT_STARTED => admin_trans('lottery_ticket.status.not_started'),
+                        LotteryTicketActivity::STATUS_ONGOING => admin_trans('lottery_ticket.status.ongoing'),
+                        LotteryTicketActivity::STATUS_PENDING_DRAW => admin_trans('lottery_ticket.status.pending_draw'),
+                        LotteryTicketActivity::STATUS_DRAWING => admin_trans('lottery_ticket.status.drawing'),
+                        LotteryTicketActivity::STATUS_ENDED => admin_trans('lottery_ticket.status.ended'),
+                        LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
+                    ]);
+
                 $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.filter.time_range'))
                     ->placeholder([
                         admin_trans('lottery_ticket.fields.start_time'),

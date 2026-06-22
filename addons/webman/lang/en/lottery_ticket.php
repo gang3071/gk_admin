@@ -143,7 +143,7 @@ return [
         'expired' => 'Expired', // ⭐ 新增
         'cancelled' => 'Cancelled', // ⭐ 新增
         'processing' => 'Processing', // ⭐ 新增
-        'failed' => '发放失敗',
+        'failed' => 'Distribution Failed',
         'granted' => 'Distributed', // 兼容舊代码
         'unknown' => 'Unknown',
     ],
@@ -342,7 +342,6 @@ return [
         'invalid_params' => 'Invalid parameter',
         'activity_not_ongoing' => 'Can only record wins for ongoing activities',
         'prize_level_not_found' => 'Prize level not found',
-        'live_url_required' => 'Please set live URL first',
         'invalid_status_value' => 'Invalid status value',
     ],
 
