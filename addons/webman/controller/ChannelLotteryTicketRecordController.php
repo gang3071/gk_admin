@@ -230,6 +230,15 @@ class ChannelLotteryTicketRecordController
 
                 $actions->hideEdit();
             });
+
+            // ⭐ 工具栏按钮
+            $grid->tools([
+                Button::create(admin_trans('lottery_ticket.action.batch_distribute'))
+                    ->modal([$this, 'batchDistributeForm'])
+                    ->width('50%')
+                    ->title(admin_trans('lottery_ticket.modal.batch_distribute_title'))
+                    ->size('small'),
+            ]);
             $grid->hideTrashed();
         });
     }
