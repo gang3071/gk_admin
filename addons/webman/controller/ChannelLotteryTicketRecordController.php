@@ -155,15 +155,15 @@ class ChannelLotteryTicketRecordController
                     ->options($activities);
 
                 // 玩家名称筛选（使用关系）
-                $filter->like()->text('player->name')
+                $filter->like()->text('player.name')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_name'));
 
                 // 玩家UUID筛选（使用关系）
-                $filter->like()->text('player->uuid')
+                $filter->like()->text('player.uuid')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_uuid'));
 
                 // 玩家手机筛选（使用关系）
-                $filter->like()->text('player->phone')
+                $filter->like()->text('player.phone')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_phone'));
 
                 // 券号筛选
@@ -182,7 +182,7 @@ class ChannelLotteryTicketRecordController
                     ]);
 
                 // 发放状态筛选
-                $filter->eq()->select('status')
+                $filter->eq()->select('lottery_ticket_record.status')
                     ->placeholder(admin_trans('lottery_ticket.fields.record_status'))
                     ->options([
                         LotteryTicketRecord::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),
@@ -190,8 +190,8 @@ class ChannelLotteryTicketRecordController
                         LotteryTicketRecord::STATUS_FAILED => admin_trans('lottery_ticket.record_status.failed'),
                     ]);
 
-                // 时间范围筛选
-                $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.fields.created_time_range'))
+                // 中奖时间范围筛选
+                $filter->between()->dateTimeRange('created_at')
                     ->placeholder([
                         admin_trans('common.start_time'),
                         admin_trans('common.end_time')
