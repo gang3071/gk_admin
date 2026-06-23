@@ -627,7 +627,7 @@ class ChannelLotteryTicketRecordController
      */
     public function view(Request $request)
     {
-        $id = $request->input('id');
+        $id = $request->get('id');
         $record = LotteryTicketRecord::with(['activity', 'player', 'distributedBy', 'modifiedBy'])->find($id);
 
         if (!$record) {
