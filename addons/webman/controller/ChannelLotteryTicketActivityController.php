@@ -257,13 +257,23 @@ class ChannelLotteryTicketActivityController
             $maxTicketNos[$item->activity_id] = str_pad($item->max_no, 6, '0', STR_PAD_LEFT);
         }
 
+        // ⭐ 批量查询：实际发券数（从数据库统计）
+        $actualTicketCounts = \addons\webman\model\LotteryTicket::query()
+            ->whereIn('activity_id', $activityIds)
+            ->select('activity_id', Db::raw('COUNT(*) as count'))
+            ->groupBy('activity_id')
+            ->pluck('count', 'activity_id')
+            ->toArray();
+
         // 添加字段
-        $activities = $activities->map(function ($activity) use ($hasPrizeConfig, $pendingCounts, $maxTicketNos) {
+        $activities = $activities->map(function ($activity) use ($hasPrizeConfig, $pendingCounts, $maxTicketNos, $actualTicketCounts) {
             $activityArray = $activity->toArray();
 
             $activityArray['has_prize_config'] = in_array($activity->id, $hasPrizeConfig);
             $activityArray['pending_count'] = $pendingCounts[$activity->id] ?? 0;
             $activityArray['max_ticket_no'] = $maxTicketNos[$activity->id] ?? '000000';
+            // ⭐ 修复：返回实际发券数（从数据库统计，而不是使用可能不准确的 total_tickets 字段）
+            $activityArray['total_tickets'] = $actualTicketCounts[$activity->id] ?? 0;
 
             return $activityArray;
         });

@@ -98,7 +98,8 @@ class ChannelLotteryTicketRecordController
             // 列定义
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
 
-            $grid->column('name', admin_trans('lottery_ticket.fields.name'))->width(180);
+            // ⭐ 修复：显示活动名称（来自JOIN的 activity_name）
+            $grid->column('activity_name', admin_trans('lottery_ticket.fields.activity_name'))->width(180);
 
             $grid->column('player_name', admin_trans('lottery_ticket.fields.player_name'))->width(120);
 
