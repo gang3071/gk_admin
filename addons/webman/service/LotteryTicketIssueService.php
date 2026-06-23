@@ -101,10 +101,7 @@ class LotteryTicketIssueService
                             'ticket_no' => $ticketNo,
                             'status' => LotteryTicket::STATUS_UNUSED,  // ✅ 使用正确的常量
                             'source' => $source,
-                            'issued_at' => date('Y-m-d H:i:s'),
                             'expired_at' => $activity->end_time,
-                            'prize_level' => null,
-                            'prize_amount' => 0,
                         ]);
 
                         break;  // 成功，跳出重试循环
@@ -233,6 +230,125 @@ class LotteryTicketIssueService
                 'player_id' => $playerId,
                 'error' => $e->getMessage()
             ]);
+        }
+    }
+
+    /**
+     * 批量发放奖券（性能优化版）
+     * ⭐ 预分配Redis序列号，批量插入数据库
+     *
+     * @param int $activityId 活动ID
+     * @param int $playerId 玩家ID
+     * @param int $count 发放数量
+     * @param string $source 来源
+     * @return array 发放的奖券列表
+     * @throws \Exception
+     */
+    public function issueTicketsBatch(int $activityId, int $playerId, int $count, string $source = LotteryTicket::SOURCE_BETTING): array
+    {
+        if ($count <= 0) {
+            throw new \Exception('发放数量必须大于0');
+        }
+
+        // 检查活动剩余容量
+        $remaining = $this->getRemainingCapacity($activityId);
+        if ($remaining <= 0) {
+            throw new \Exception('活动奖券编号已用尽，无法发放');
+        }
+
+        $actualCount = min($count, $remaining);
+
+        // 获取活动信息
+        $activity = LotteryTicketActivity::find($activityId);
+        if (!$activity) {
+            throw new \Exception('活动不存在');
+        }
+
+        if ($activity->status !== LotteryTicketActivity::STATUS_ONGOING) {
+            throw new \Exception('活动未进行中，无法发券');
+        }
+
+        // ⭐ 预分配Redis序列号（批量，原子操作）
+        $key = "lottery_activity:{$activityId}:ticket_sequence";
+        $baseSequence = Redis::incrby($key, $actualCount);  // 一次性分配多个序列号
+        $startSequence = $baseSequence - $actualCount + 1;
+
+        // 检查是否超过上限
+        if ($baseSequence > 999999) {
+            // 回退Redis计数
+            Redis::decrby($key, $actualCount);
+            throw new \Exception('活动奖券编号已用尽（超过100万张）');
+        }
+
+        try {
+            Db::beginTransaction();
+
+            // 批量准备券数据
+            $ticketsData = [];
+            $now = date('Y-m-d H:i:s');
+
+            for ($i = 0; $i < $actualCount; $i++) {
+                $sequence = $startSequence + $i;
+                $ticketNo = str_pad($sequence, 6, '0', STR_PAD_LEFT);
+
+                $ticketsData[] = [
+                    'activity_id' => $activityId,
+                    'player_id' => $playerId,
+                    'department_id' => $activity->department_id,
+                    'ticket_no' => $ticketNo,
+                    'status' => LotteryTicket::STATUS_UNUSED,
+                    'source' => $source,
+                    'expired_at' => $activity->end_time,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+
+            // 批量插入（失败会抛出异常）
+            LotteryTicket::insert($ticketsData);
+
+            Db::commit();
+
+            // 查询插入的奖券（用于返回模型对象）
+            $tickets = LotteryTicket::query()
+                ->where('activity_id', $activityId)
+                ->where('player_id', $playerId)
+                ->whereBetween('ticket_no', [
+                    str_pad($startSequence, 6, '0', STR_PAD_LEFT),
+                    str_pad($baseSequence, 6, '0', STR_PAD_LEFT)
+                ])
+                ->orderBy('ticket_no')
+                ->get()
+                ->toArray();
+
+            Log::info('[摸奖券] 批量发放成功', [
+                'activity_id' => $activityId,
+                'player_id' => $playerId,
+                'count' => $actualCount,
+                'sequence_range' => "{$startSequence}-{$baseSequence}",
+                'source' => $source
+            ]);
+
+            // 清除玩家有效奖券缓存
+            $this->clearPlayerTicketCache($playerId);
+
+            return $tickets;
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+
+            // 回退Redis序列号（避免序列号浪费）
+            Redis::decrby($key, $actualCount);
+
+            Log::error('[摸奖券] 批量发放失败，已回退Redis序列号', [
+                'activity_id' => $activityId,
+                'player_id' => $playerId,
+                'count' => $actualCount,
+                'sequence_range' => "{$startSequence}-{$baseSequence}",
+                'error' => $e->getMessage()
+            ]);
+
+            throw $e;
         }
     }
 

@@ -458,6 +458,8 @@ class LotteryBetProgressScanTask
             return 0;
         }
 
+        $issueService = new \addons\webman\service\LotteryTicketIssueService();
+
         // 逐个处理达标玩家（发券需要锁定，无法完全批量）
         foreach ($readyPlayers as $progress) {
             try {
@@ -468,17 +470,42 @@ class LotteryBetProgressScanTask
                 if ($cyclesToIssue > 0) {
                     $ticketsToIssue = $cyclesToIssue * $progress->ticket_count_per_cycle;
 
-                    // 调用服务类发券（内部有事务和锁）
-                    $result = LotteryTicketBetProgressService::updateBetProgress(
-                        $progress->player_id,
-                        0, // 打码量已经累加，这里传0只触发发券检查
-                        $activityId
-                    );
+                    // ⭐ 修复：直接调用发券服务，不再调用 updateBetProgress(0)
+                    Db::beginTransaction();
+                    try {
+                        // 批量发券
+                        $tickets = $issueService->issueTicketsBatch(
+                            $activityId,
+                            $progress->player_id,
+                            $ticketsToIssue,
+                            \addons\webman\model\LotteryTicket::SOURCE_BETTING
+                        );
 
-                    if (isset($result['results'])) {
-                        foreach ($result['results'] as $activityResult) {
-                            $totalIssued += $activityResult['tickets_issued'] ?? 0;
-                        }
+                        $issuedCount = count($tickets);
+
+                        // 更新进度记录
+                        Db::update("
+                            UPDATE lottery_ticket_bet_progress
+                            SET cycles_completed = ?,
+                                total_tickets_issued = total_tickets_issued + ?,
+                                last_issued_at = NOW(),
+                                updated_at = NOW()
+                            WHERE id = ?
+                        ", [$newCycles, $issuedCount, $progress->id]);
+
+                        Db::commit();
+
+                        $totalIssued += $issuedCount;
+
+                        Log::info('后台任务发券成功', [
+                            'activity_id' => $activityId,
+                            'player_id' => $progress->player_id,
+                            'tickets_issued' => $issuedCount,
+                        ]);
+
+                    } catch (\Exception $e) {
+                        Db::rollBack();
+                        throw $e;
                     }
                 }
             } catch (\Exception $e) {

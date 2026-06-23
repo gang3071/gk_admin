@@ -202,17 +202,34 @@ class LotteryTicketBetProgressService
                 if ($progress->canIssueTickets()) {
                     $ticketsToIssue = $progress->getTicketsToIssue();
 
-                    // 发放摸奖券（内部锁定活动）
-                    $issueResult = self::issueTickets($progress, $ticketsToIssue);
-                    $issuedCount = $issueResult['issued_count'];
-                    $firstTicketNo = $issueResult['first_ticket_no'];
+                    // ⭐ 改用统一的批量发券服务（使用Redis序列号）
+                    $issueService = new LotteryTicketIssueService();
+                    try {
+                        $tickets = $issueService->issueTicketsBatch(
+                            $progress->activity_id,
+                            $progress->player_id,
+                            $ticketsToIssue,
+                            LotteryTicket::SOURCE_BETTING
+                        );
 
-                    // 更新周期数和发券数
-                    if ($issuedCount > 0) {
-                        $newCycles = floor($progress->current_bet_amount / $progress->bet_amount_required);
-                        $progress->cycles_completed = $newCycles;
-                        $progress->total_tickets_issued += $issuedCount;
-                        $progress->last_issued_at = date('Y-m-d H:i:s');
+                        $issuedCount = count($tickets);
+                        $firstTicketNo = $tickets[0]['ticket_no'] ?? null;
+
+                        // 更新周期数和发券数
+                        if ($issuedCount > 0) {
+                            $newCycles = floor($progress->current_bet_amount / $progress->bet_amount_required);
+                            $progress->cycles_completed = $newCycles;
+                            $progress->total_tickets_issued += $issuedCount;
+                            $progress->last_issued_at = date('Y-m-d H:i:s');
+                        }
+                    } catch (\Exception $e) {
+                        Log::error('批量发券失败', [
+                            'progress_id' => $progress->id,
+                            'player_id' => $progress->player_id,
+                            'tickets_to_issue' => $ticketsToIssue,
+                            'error' => $e->getMessage(),
+                        ]);
+                        // 发券失败不影响打码量累加，继续执行
                     }
                 }
 
@@ -356,93 +373,39 @@ class LotteryTicketBetProgressService
     }
 
     /**
-     * 发放摸奖券（自增序列方式）
+     * 发放摸奖券（已废弃，保留用于向后兼容）
+     * ⚠️ 此方法已废弃，请使用 LotteryTicketIssueService::issueTicketsBatch()
      *
-     * 券号规则：
-     * - 从 000000 开始依次递增
-     * - 第1张券：000000
-     * - 第2张券：000001
-     * - 第15张券：000014
-     * - 最后1张券：999999
-     *
-     * 重要：本方法不开启事务，由调用方统一管理事务
-     *
+     * @deprecated 使用 LotteryTicketIssueService::issueTicketsBatch() 替代
      * @param LotteryTicketBetProgress $progress 进度记录
      * @param int $count 发放数量
      * @return array ['issued_count' => int, 'first_ticket_no' => string|null]
      */
     protected static function issueTickets(LotteryTicketBetProgress $progress, int $count): array
     {
-        if ($count <= 0) {
-            return ['issued_count' => 0, 'first_ticket_no' => null];
-        }
+        // 调用新的统一服务
+        $issueService = new LotteryTicketIssueService();
+        try {
+            $tickets = $issueService->issueTicketsBatch(
+                $progress->activity_id,
+                $progress->player_id,
+                $count,
+                LotteryTicket::SOURCE_BETTING
+            );
 
-        $activity = $progress->activity;
-        if (!$activity) {
-            return ['issued_count' => 0, 'first_ticket_no' => null];
-        }
-
-        // 锁定活动记录（在外层事务内）
-        $activity = LotteryTicketActivity::where('id', $activity->id)
-            ->lockForUpdate()
-            ->first();
-
-        // 检查是否还有足够的券号
-        $currentNo = $activity->current_ticket_no;
-        $maxNo = $activity->max_ticket_no;
-
-        if ($currentNo >= $maxNo) {
-            Log::warning('摸奖券已发放完毕', [
-                'activity_id' => $activity->id,
-                'current' => $currentNo,
-                'max' => $maxNo,
-            ]);
-            return ['issued_count' => 0, 'first_ticket_no' => null];
-        }
-
-        // 计算实际可发放数量
-        $availableCount = $maxNo - $currentNo;
-        $actualCount = min($count, $availableCount);
-
-        // 批量准备券数据
-        $ticketsData = [];
-        $now = date('Y-m-d H:i:s');
-        $firstTicketNo = null;
-
-        for ($i = 0; $i < $actualCount; $i++) {
-            $ticketNo = str_pad($currentNo + $i, 6, '0', STR_PAD_LEFT);
-
-            if ($i === 0) {
-                $firstTicketNo = $ticketNo;
-            }
-
-            $ticketsData[] = [
-                'activity_id' => $progress->activity_id,
-                'player_id' => $progress->player_id,
-                'department_id' => $progress->department_id,
-                'ticket_no' => $ticketNo,
-                'source' => 'betting',
-                'status' => LotteryTicket::STATUS_UNUSED,
-                'expired_at' => $activity->end_time,  // ✅ 修正字段名
-                'created_at' => $now,
-                'updated_at' => $now,
+            return [
+                'issued_count' => count($tickets),
+                'first_ticket_no' => $tickets[0]['ticket_no'] ?? null,
             ];
+        } catch (\Exception $e) {
+            Log::error('发券失败（兼容方法）', [
+                'progress_id' => $progress->id,
+                'count' => $count,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['issued_count' => 0, 'first_ticket_no' => null];
         }
-
-        // 批量插入摸奖券
-        if (!empty($ticketsData)) {
-            LotteryTicket::insert($ticketsData);
-        }
-
-        // 更新活动的当前券号
-        $activity->current_ticket_no = $currentNo + $actualCount;
-        $activity->total_tickets += $actualCount;
-        $activity->save();
-
-        return [
-            'issued_count' => $actualCount,
-            'first_ticket_no' => $firstTicketNo,
-        ];
     }
 
     /**

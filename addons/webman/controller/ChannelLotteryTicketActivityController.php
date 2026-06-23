@@ -462,6 +462,20 @@ class ChannelLotteryTicketActivityController
                     'start_time' => $data['start_time'],
                     'end_time' => $data['end_time'],
                 ]);
+
+                // ⭐ 防御性初始化：如果 Redis key 不存在，则初始化
+                // 这是为了修复老活动（修复代码前创建的）
+                $redisKey = "lottery_activity:{$activity->id}:ticket_sequence";
+                if (!\support\Redis::exists($redisKey)) {
+                    // 统计实际已发券数
+                    $actualCount = \addons\webman\model\LotteryTicket::where('activity_id', $activity->id)->count();
+                    \support\Redis::set($redisKey, $actualCount);
+
+                    Log::info('[摸奖券] 编辑活动时发现Redis未初始化，已自动修复', [
+                        'activity_id' => $activity->id,
+                        'actual_ticket_count' => $actualCount,
+                    ]);
+                }
             } else {
                 // 创建
                 $activity = LotteryTicketActivity::create([
@@ -472,6 +486,14 @@ class ChannelLotteryTicketActivityController
                     'start_time' => $data['start_time'],
                     'end_time' => $data['end_time'],
                     'status' => $this->getActivityStatus($data['start_time'], $data['end_time']),
+                ]);
+
+                // ⭐ 初始化 Redis 序列号
+                \support\Redis::set("lottery_activity:{$activity->id}:ticket_sequence", 0);
+
+                Log::info('[摸奖券] 创建活动，初始化Redis序列号', [
+                    'activity_id' => $activity->id,
+                    'activity_name' => $activity->name,
                 ]);
             }
 
@@ -769,6 +791,15 @@ class ChannelLotteryTicketActivityController
         // 结束所有打码进度记录
         \addons\webman\service\LotteryTicketBetProgressService::endActivityProgress($activity->id);
 
+        // ⭐ 删除 Redis 序列号（活动已关闭，不再需要）
+        $redisKey = "lottery_activity:{$activity->id}:ticket_sequence";
+        \support\Redis::del($redisKey);
+
+        Log::info('[摸奖券] 活动关闭，已删除Redis序列号', [
+            'activity_id' => $activity->id,
+            'redis_key' => $redisKey,
+        ]);
+
         return message_success(admin_trans('lottery_ticket.message.close_success'));
     }
 
@@ -834,6 +865,14 @@ class ChannelLotteryTicketActivityController
             $newActivity->current_ticket_no = 1; // 重置券号
             // 不复制时间，让用户设置
             $newActivity->save();
+
+            // ⭐ 初始化 Redis 序列号
+            \support\Redis::set("lottery_activity:{$newActivity->id}:ticket_sequence", 0);
+
+            Log::info('[摸奖券] 复制活动，初始化Redis序列号', [
+                'source_activity_id' => $sourceId,
+                'new_activity_id' => $newActivity->id,
+            ]);
 
             // 3. 复制奖品等级配置
             $prizeLevels = LotteryTicketPrizeLevel::where('activity_id', $sourceId)->get();
@@ -1286,6 +1325,15 @@ class ChannelLotteryTicketActivityController
             $activity->draw_completed_at = date('Y-m-d H:i:s');
             $activity->recordStatusChange(LotteryTicketActivity::STATUS_ENDED, '管理员手动结束');
             $activity->save();
+
+            // ⭐ 删除 Redis 序列号（活动已结束，不再需要）
+            $redisKey = "lottery_activity:{$activity->id}:ticket_sequence";
+            \support\Redis::del($redisKey);
+
+            Log::info('[摸奖券] 活动结束，已删除Redis序列号', [
+                'activity_id' => $activity->id,
+                'redis_key' => $redisKey,
+            ]);
 
             // 推送活动结束通知
             \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'ended');

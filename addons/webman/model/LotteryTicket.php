@@ -38,6 +38,7 @@ class LotteryTicket extends Model
     const STATUS_EXPIRED = 2;   // 已过期
 
     // 来源常量
+    const SOURCE_BETTING = 'betting';    // 打码获得
     const SOURCE_RECHARGE = 'recharge';  // 充值赠送
     const SOURCE_ACTIVITY = 'activity';  // 活动赠送
     const SOURCE_MANUAL = 'manual';      // 手动发放
@@ -85,6 +86,7 @@ class LotteryTicket extends Model
     public static function getSourceText(string $source): string
     {
         $sourceMap = [
+            self::SOURCE_BETTING => admin_trans('lottery_ticket.source.betting'),
             self::SOURCE_RECHARGE => admin_trans('lottery_ticket.source.recharge'),
             self::SOURCE_ACTIVITY => admin_trans('lottery_ticket.source.activity'),
             self::SOURCE_MANUAL => admin_trans('lottery_ticket.source.manual'),
