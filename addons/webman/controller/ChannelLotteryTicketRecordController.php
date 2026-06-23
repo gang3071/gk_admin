@@ -215,17 +215,6 @@ class ChannelLotteryTicketRecordController
                     );
                 }
 
-                // 查看详情
-                // ✅ 正确用法：使用 prepend() 添加 Button
-                $actions->prepend(
-                    Button::create(admin_trans('lottery_ticket.action.view_detail'))
-                        ->type('link')
-                        ->size('small')
-                        ->modal([$this, 'view'], ['id' => $data['id']])
-                        ->width('70%')
-                        ->title(admin_trans('lottery_ticket.view.detail_title'))
-                );
-
                 $actions->hideEdit();
                 $actions->hideDel();
             });
@@ -618,69 +607,6 @@ class ChannelLotteryTicketRecordController
         ];
     }
 
-    /**
-     * 查看详情
-     * @auth true
-     * @group channel
-     * @param Request $request
-     * @return mixed
-     */
-    public function view(Request $request)
-    {
-        $id = $request->get('id');
-        $record = LotteryTicketRecord::with(['activity', 'player', 'distributedBy', 'modifiedBy'])->find($id);
-
-        if (!$record) {
-            return message_error(admin_trans('lottery_ticket.error.record_not_found'));
-        }
-
-        // 权限检查
-        if ($record->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
-        }
-
-        // 构建详情HTML
-        $htmlContent = '<div style="padding: 20px;">';
-
-        // 基本信息
-        $htmlContent .= '<h4>' . admin_trans('lottery_ticket.view.detail_title') . '</h4>';
-        $htmlContent .= '<div style="margin-bottom: 20px;">';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.activity_name') . '：</strong>' . htmlspecialchars($record->activity->name ?? '-') . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.ticket_no') . '：</strong>' . htmlspecialchars($record->ticket_no) . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.player_name') . '：</strong>' . htmlspecialchars($record->player->name ?? '-') . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.player_phone') . '：</strong>' . htmlspecialchars($record->player->phone ?? '-') . '</p>';
-        $htmlContent .= '</div>';
-
-        // 奖品信息
-        $htmlContent .= '<h4>' . admin_trans('lottery_ticket.view.prize_info') . '</h4>';
-        $htmlContent .= '<div style="margin-bottom: 20px;">';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.prize_name') . '：</strong>' . htmlspecialchars($record->prize_name) . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.prize_type') . '：</strong>' . htmlspecialchars($record->getPrizeTypeLabel()) . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.prize_amount') . '：</strong>¥' . number_format($record->prize_amount, 2) . '</p>';
-        $statusColor = $record->status == LotteryTicketRecord::STATUS_CLAIMED ? '#4caf50' : '#ff9800';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.status') . '：</strong><span style="color:' . $statusColor . ';">' . htmlspecialchars($record->getStatusLabel()) . '</span></p>';
-        $htmlContent .= '</div>';
-
-        // 派奖信息
-        $htmlContent .= '<h4>' . admin_trans('lottery_ticket.view.distribution_info') . '</h4>';
-        $htmlContent .= '<div style="margin-bottom: 20px;">';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.distributed_at') . '：</strong>' . htmlspecialchars($record->distributed_at ?? '-') . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.distributed_by') . '：</strong>' . htmlspecialchars($record->distributedBy->username ?? '-') . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.distribution_note') . '：</strong>' . htmlspecialchars($record->distribution_note ?? '-') . '</p>';
-        $htmlContent .= '</div>';
-
-        // 时间信息
-        $htmlContent .= '<h4>' . admin_trans('lottery_ticket.view.time_info') . '</h4>';
-        $htmlContent .= '<div style="margin-bottom: 20px;">';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.created_at') . '：</strong>' . $record->created_at . '</p>';
-        $htmlContent .= '<p><strong>' . admin_trans('lottery_ticket.view.updated_at') . '：</strong>' . $record->updated_at . '</p>';
-        $htmlContent .= '</div>';
-
-        $htmlContent .= '</div>';
-
-        // 直接返回Html组件
-        return Html::create()->content($htmlContent);
-    }
 
     /**
      * 批量发放表单

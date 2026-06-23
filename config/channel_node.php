@@ -2011,16 +2011,6 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/index',
                 'title' => '中奖记录',
             ],
-            // 查看详情
-            [
-                'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\view',
-                'pid' => 'addons\webman\controller\ChannelLotteryTicketRecordController\index',
-                'action' => 'view',
-                'method' => 'get',
-                'group' => 'channel',
-                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/view',
-                'title' => '查看详情',
-            ],
             // 单个发放 ⭐ 核心
             [
                 'id' => 'addons\webman\controller\ChannelLotteryTicketRecordController\distribute',
