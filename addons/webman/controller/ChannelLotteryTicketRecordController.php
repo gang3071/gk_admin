@@ -154,6 +154,18 @@ class ChannelLotteryTicketRecordController
                     ->placeholder(admin_trans('lottery_ticket.fields.name'))
                     ->options($activities);
 
+                // 玩家名称筛选（使用关系）
+                $filter->like()->text('player->name')
+                    ->placeholder(admin_trans('lottery_ticket.fields.player_name'));
+
+                // 玩家UUID筛选（使用关系）
+                $filter->like()->text('player->uuid')
+                    ->placeholder(admin_trans('lottery_ticket.fields.player_uuid'));
+
+                // 玩家手机筛选（使用关系）
+                $filter->like()->text('player->phone')
+                    ->placeholder(admin_trans('lottery_ticket.fields.player_phone'));
+
                 // 券号筛选
                 $filter->like()->text('ticket_no')
                     ->placeholder(admin_trans('lottery_ticket.fields.ticket_no'));
