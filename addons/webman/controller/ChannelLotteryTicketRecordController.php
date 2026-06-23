@@ -84,10 +84,23 @@ class ChannelLotteryTicketRecordController
 
             $grid->model()
                 ->select([
-                    'lottery_ticket_record.*',
+                    'lottery_ticket_record.id',
+                    'lottery_ticket_record.activity_id',
+                    'lottery_ticket_record.player_id',
+                    'lottery_ticket_record.department_id',
+                    'lottery_ticket_record.ticket_no',
+                    'lottery_ticket_record.prize_type',
+                    'lottery_ticket_record.prize_name',
+                    'lottery_ticket_record.prize_amount',
+                    'lottery_ticket_record.status',  // ⭐ 明确指定主表的status
+                    'lottery_ticket_record.distributed_at',
+                    'lottery_ticket_record.distributed_by',
+                    'lottery_ticket_record.distribution_note',
+                    'lottery_ticket_record.created_at',
+                    'lottery_ticket_record.updated_at',
                     $playerTable . '.name as player_name',
                     $playerTable . '.phone as player_phone',
-                    $playerTable . '.uuid as player_uuid',  // ⭐ 添加玩家UUID
+                    $playerTable . '.uuid as player_uuid',
                     'lottery_ticket_activity.name as activity_name'
                 ])
                 ->leftJoin($playerTable, 'lottery_ticket_record.player_id', '=', $playerTable . '.id')
