@@ -657,17 +657,4 @@ class ChannelLotteryTicketRecordController
 
         return $this->batchDistribute($request);
     }
-
-    /**
-     * 导出记录
-     * @auth true
-     * @group channel
-     * @param Request $request
-     * @return mixed
-     */
-    public function exportRecords(Request $request)
-    {
-        // TODO: 实现导出功能
-        return message_success(admin_trans('lottery_ticket.message.export_in_development'));
-    }
 }
