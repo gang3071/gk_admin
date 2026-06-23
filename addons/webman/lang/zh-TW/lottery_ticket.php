@@ -29,11 +29,11 @@ return [
         'start_time' => '開始時間',
         'end_time' => '結束時間',
         'status' => '活動狀態',
-        'total_tickets' => '總發放數量',
+        'total_tickets' => '總派獎數量',
         'used_tickets' => '已使用數量',
         'usage_rate' => '使用率',
-        'pending_count' => '待發放',
-        'max_ticket_no' => '已發最大券號',  // ⭐ 當前已發放的最大券號（如：000123）
+        'pending_count' => '待派獎',
+        'max_ticket_no' => '已發最大券號',  // ⭐ 當前已派獎的最大券號（如：000123）
         'prize_config' => '獎品配置',
         'created_at' => '創建時間',
         'prize_level_config' => '獎品等級配置',
@@ -43,10 +43,10 @@ return [
         'player_account' => '玩家賬號',
         'prize_level' => '中獎等級',
         'remark' => '備註',
-        'distribution_remark' => '發放備註',
+        'distribution_remark' => '派獎備註',
         'vip_level' => 'VIP等級',
         'bet_amount_required' => '所需打碼量',
-        'ticket_count' => '發放券數',
+        'ticket_count' => '派獎券數',
         'prize_amount' => '獎勵金額',
         'prize_count' => '獎品數量',
         'ticket_no_input' => '中獎券號',
@@ -58,7 +58,7 @@ return [
         'ticket_no' => '券號',
         'prize_type' => '獎品類型',
         'prize_name' => '獎品名稱',
-        'record_status' => '發放狀態',
+        'record_status' => '派獎狀態',
         'created_time_range' => '創建時間範圍',
         'source' => '來源',
         'used_at' => '使用時間',
@@ -82,7 +82,7 @@ return [
         'remark' => '選填，可備註中獎詳情',
         'live_url' => '例如: rtmp://live.example.com/stream/12345',
         'ticket_no' => '請輸入6位券號',
-        'distribute_remark' => '選填，可備註發放說明',
+        'distribute_remark' => '選填，可備註派獎說明',
     ],
 
     // 模态框
@@ -91,9 +91,9 @@ return [
         'live_url_title' => '添加直播地址',
         'live_url_prompt' => '請輸入直播流地址:',
         'live_url_required' => '請輸入直播地址',
-        'batch_distribute_title' => '批量發放獎勵',
-        'distribute_by_ticket_title' => '錄入券號發放獎勵',
-        'ticket_list_title' => '摸獎券發放列表',
+        'batch_distribute_title' => '批量派獎獎勵',
+        'distribute_by_ticket_title' => '錄入券號派獎獎勵',
+        'ticket_list_title' => '摸獎券派獎列表',
     ],
 
     // 活动状态
@@ -107,7 +107,7 @@ return [
         'closed' => '已關閉',
         'preheating' => '預熱期',        // 已廢棄
         'betting' => '打碼中',           // 已廢棄
-        'drawn' => '已開獎待發放',       // 已廢棄
+        'drawn' => '已開獎待派獎',       // 已廢棄
         'unknown' => '未知狀態',
     ],
 
@@ -131,19 +131,19 @@ return [
     'source' => [
         'recharge' => '充值贈送',
         'activity' => '活動贈送',
-        'manual' => '手動發放',
+        'manual' => '手動派獎',
         'unknown' => '未知來源',
     ],
 
     // 中奖记录状态
     'record_status' => [
-        'pending' => '待發放',
-        'claimed' => '已發放', // ⭐ 更新
+        'pending' => '待派獎',
+        'claimed' => '已派獎', // ⭐ 更新
         'expired' => '已過期', // ⭐ 新增
         'cancelled' => '已取消', // ⭐ 新增
-        'processing' => '發放中', // ⭐ 新增
-        'failed' => '發放失敗',
-        'granted' => '已發放', // 兼容舊代碼
+        'processing' => '派獎中', // ⭐ 新增
+        'failed' => '派獎失敗',
+        'granted' => '已派獎', // 兼容舊代碼
         'unknown' => '未知狀態',
     ],
 
@@ -212,15 +212,15 @@ return [
         'add_live_url' => '添加直播地址',
         'expand' => '展開',
         'collapse' => '收起',
-        'distribute' => '發放',
-        'batch_distribute' => '批量發放',
-        'batch_distribute_selected' => '批量發放選中',
-        'distribute_by_ticket' => '錄入券號發放',
-        'distribute_all_pending' => '發放獎勵',  // ⭐ 新增:批量發放所有待發放記錄
-        'view_ticket_list' => '查看發放列表',
+        'distribute' => '派獎',
+        'batch_distribute' => '批量派獎',
+        'batch_distribute_selected' => '批量派獎選中',
+        'distribute_by_ticket' => '錄入券號派獎',
+        'distribute_all_pending' => '派獎獎勵',  // ⭐ 新增:批量派獎所有待派獎記錄
+        'view_ticket_list' => '查看派獎列表',
         'add_ticket' => '添加券號',
         'select_image' => '選擇圖片',
-        'confirm_distribute' => '確認發放',
+        'confirm_distribute' => '確認派獎',
     ],
 
     // 统计
@@ -230,10 +230,10 @@ return [
         'total_draws' => '總抽獎次數',
         'total_winners' => '總中獎人數',
         'total_prize_amount' => '總獎金金額',
-        'pending_count' => '待發放記錄',       // ⭐ 新增
-        'pending_amount' => '待發放金額',      // ⭐ 新增
-        'claimed_count' => '已發放記錄',       // ⭐ 新增
-        'claimed_amount' => '已發放金額',      // ⭐ 新增
+        'pending_count' => '待派獎記錄',       // ⭐ 新增
+        'pending_amount' => '待派獎金額',      // ⭐ 新增
+        'claimed_count' => '已派獎記錄',       // ⭐ 新增
+        'claimed_amount' => '已派獎金額',      // ⭐ 新增
     ],
 
     // 消息
@@ -253,10 +253,10 @@ return [
         'upload_success' => '上傳成功',
         'image_upload_success' => '圖片上傳成功',
         'image_upload_failed' => '圖片上傳失敗',
-        'distribute_success' => '發放成功',
-        'distribute_failed' => '發放失敗',
-        'batch_complete' => '批量發放完成：成功 {success} 條，失敗 {fail} 條',
-        'batch_distribute_selected' => '批量發放選中記錄',
+        'distribute_success' => '派獎成功',
+        'distribute_failed' => '派獎失敗',
+        'batch_complete' => '批量派獎完成：成功 {success} 條，失敗 {fail} 條',
+        'batch_distribute_selected' => '批量派獎選中記錄',
         'export_in_development' => '導出功能開發中',
         'live_url_updated' => '直播地址設置成功',
         'live_url_generated' => '直播地址生成成功',
@@ -276,7 +276,7 @@ return [
         'ticket_must_6_digits' => '券號必須是6位數字',
         'ticket_format_error' => '券號格式錯誤，只能包含數字且不超過6位',
         'no_prize_level' => '該活動尚未配置獎品等級',
-        'distribute_hint' => '請輸入中獎券號，系統將根據券號自動識別獎品等級並發放獎勵',
+        'distribute_hint' => '請輸入中獎券號，系統將根據券號自動識別獎品等級並派獎獎勵',
         'drawing_started' => '開獎已開始，進入開獎階段',
         'activity_ended' => '活動已結束',
         'select_tencent_config' => '請選擇騰訊雲配置',
@@ -300,20 +300,20 @@ return [
         'invalid_activity_id' => '參數錯誤：活動ID無效',
         'invalid_record_ids' => '參數錯誤：記錄ID必須是數組',
         'invalid_record_id_value' => '參數錯誤：記錄ID包含非法值',
-        'note_too_long' => '發放備註不能超過255個字符',
+        'note_too_long' => '派獎備註不能超過255個字符',
         'no_selection' => '請指定活動ID或選擇記錄',
-        'no_pending_records' => '沒有待發放的記錄',
+        'no_pending_records' => '沒有待派獎的記錄',
         // 業務邏輯驗證
-        'invalid_status' => '記錄狀態不正確，只能發放待發放的記錄',
+        'invalid_status' => '記錄狀態不正確，只能派獎待派獎的記錄',
         'status_changed' => '狀態已變更',
-        'empty_prize' => '空獎無需發放',
+        'empty_prize' => '空獎無需派獎',
         'invalid_amount' => '獎品金額必須大於0',
         'player_not_found' => '玩家不存在',
-        'player_disabled' => '玩家已被禁用，無法發放獎勵',
+        'player_disabled' => '玩家已被禁用，無法派獎獎勵',
         'activity_not_found' => '活動不存在',
-        'activity_invalid_status' => '活動狀態錯誤，只能發放已開獎待發放的活動獎勵',
-        'activity_not_in_drawing_status' => '活動狀態錯誤，只能在開獎中或已結束狀態發放獎勵',
-        'amount_exceeded' => '發放金額超出總獎金額度',
+        'activity_invalid_status' => '活動狀態錯誤，只能派獎已開獎待派獎的活動獎勵',
+        'activity_not_in_drawing_status' => '活動狀態錯誤，只能在開獎中或已結束狀態派獎獎勵',
+        'amount_exceeded' => '派獎金額超出總獎金額度',
         'ticket_not_found_or_used' => '券號 {ticket_no} 不存在或已使用',
         'prize_level_not_found_for_ticket' => '券號 {ticket_no} 的獎品等級不存在',
         'invalid_ticket_format' => '券號 {ticket_no} 格式錯誤，只能包含數字且不超過6位',
@@ -350,7 +350,7 @@ return [
         'cover_image' => '建議尺寸：750x400px，支持jpg、png格式，文件大小不超過2MB',
         'cover_alt' => '活動封面',
         'cover_preview' => '封面預覽',
-        'vip_config_hint' => '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量',
+        'vip_config_hint' => '為每個VIP等級配置達到指定打碼量後派獎的摸獎券數量',
         'prize_config_hint' => '配置獎品等級和獎勵金額(僅現金獎勵)',
         'input_ticket_no' => '輸入券號:',
     ],
@@ -360,7 +360,7 @@ return [
         'detail_title' => '中獎記錄詳情',
         'basic_info' => '基本信息',
         'prize_info' => '獎品信息',
-        'distribution_info' => '發放信息',
+        'distribution_info' => '派獎信息',
         'activity_name' => '活動名稱',
         'ticket_no' => '券號',
         'player_name' => '玩家',
@@ -369,25 +369,25 @@ return [
         'prize_type' => '獎品類型',
         'prize_amount' => '獎品金額',
         'status' => '狀態',
-        'distributed_at' => '發放時間',
-        'distributed_by' => '發放人',
-        'distribution_note' => '發放備註',
+        'distributed_at' => '派獎時間',
+        'distributed_by' => '派獎人',
+        'distribution_note' => '派獎備註',
         'created_at' => '創建時間',
         'updated_at' => '更新時間',
     ],
 
     // 确认对话框
     'confirm' => [
-        'distribute' => '確認發放此獎品到玩家賬戶？',
-        'distribute_all_pending' => '確認發放該活動所有已錄入但未發放的獎勵？\n此操作將批量發放所有待發放記錄,請謹慎操作。',  // ⭐ 新增
+        'distribute' => '確認派獎此獎品到玩家賬戶？',
+        'distribute_all_pending' => '確認派獎該活動所有已錄入但未派獎的獎勵？\n此操作將批量派獎所有待派獎記錄,請謹慎操作。',  // ⭐ 新增
     ],
 
     // 表单标签
     'form' => [
         'select_activity' => '選擇活動',
-        'select_activity_help' => '只顯示已開獎待發放的活動',
-        'distribution_note' => '發放備註',
-        'distribution_note_placeholder' => '請填寫發放備註（選填）',
+        'select_activity_help' => '只顯示已開獎待派獎的活動',
+        'distribution_note' => '派獎備註',
+        'distribution_note_placeholder' => '請填寫派獎備註（選填）',
         'vip_config_section' => 'VIP等級打碼量配置',
         'prize_config_section' => '獎品等級配置',
         'no_vip_data' => '暫無VIP等級數據',

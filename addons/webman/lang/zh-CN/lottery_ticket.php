@@ -32,7 +32,7 @@ return [
         'total_tickets' => '总发放数量',
         'used_tickets' => '已使用数量',
         'usage_rate' => '使用率',
-        'pending_count' => '待发放',
+        'pending_count' => '待派奖',
         'max_ticket_no' => '已发最大券号',  // ⭐ 当前已发放的最大券号（如：000123）
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => '奖品配置',
@@ -108,7 +108,7 @@ return [
         'closed' => '已关閉',
         'preheating' => '预熱期',        // 已废弃
         'betting' => '打码中',           // 已废弃
-        'drawn' => '已开奖待发放',       // 已废弃
+        'drawn' => '已开奖待派奖',       // 已废弃
         'unknown' => '未知状态',
     ],
 
@@ -138,13 +138,13 @@ return [
 
     // 中奖记录状态
     'record_status' => [
-        'pending' => '待发放',
-        'claimed' => '已发放', // ⭐ 更新
+        'pending' => '待派奖',
+        'claimed' => '已派奖', // ⭐ 更新
         'expired' => '已过期', // ⭐ 新增
         'cancelled' => '已取消', // ⭐ 新增
-        'processing' => '发放中', // ⭐ 新增
-        'failed' => '发放失敗',
-        'granted' => '已发放', // 兼容舊代码
+        'processing' => '派奖中', // ⭐ 新增
+        'failed' => '派奖失败',
+        'granted' => '已派奖', // 兼容舊代码
         'unknown' => '未知状态',
     ],
 
@@ -215,9 +215,9 @@ return [
         'collapse' => '收起',
         'distribute' => '发放',
         'batch_distribute' => '批量发放',
-        'batch_distribute_selected' => '批量发放选中',
-        'distribute_by_ticket' => '录入券号发放',
-        'distribute_all_pending' => '发放奖励',  // ⭐ 新增:批量发放所有待发放记录
+        'batch_distribute_selected' => '批量派奖选中',
+        'distribute_by_ticket' => '录入券号派奖',
+        'distribute_all_pending' => '派奖',  // ⭐ 新增:批量派奖所有待派奖记录
         'view_ticket_list' => '查看发放列表',
         'add_ticket' => '添加券号',
         'select_image' => '选择图片',
@@ -231,10 +231,10 @@ return [
         'total_draws' => '总抽奖次数',
         'total_winners' => '总中奖人数',
         'total_prize_amount' => '总奖金金额',
-        'pending_count' => '待发放记录',       // ⭐ 新增
-        'pending_amount' => '待发放金额',      // ⭐ 新增
-        'claimed_count' => '已发放记录',       // ⭐ 新增
-        'claimed_amount' => '已发放金额',      // ⭐ 新增
+        'pending_count' => '待派奖记录',       // ⭐ 新增
+        'pending_amount' => '待派奖金额',      // ⭐ 新增
+        'claimed_count' => '已派奖记录',       // ⭐ 新增
+        'claimed_amount' => '已派奖金额',      // ⭐ 新增
     ],
 
     // 消息
@@ -303,18 +303,18 @@ return [
         'invalid_record_id_value' => '參数错誤：记录ID包含非法值',
         'note_too_long' => '发放备註不能超过255个字符',
         'no_selection' => '请指定活动ID或选择记录',
-        'no_pending_records' => '沒有待发放的记录',
+        'no_pending_records' => '沒有待派奖的记录',
         // 业务邏輯驗證
-        'invalid_status' => '记录状态不正确，只能发放待发放的记录',
+        'invalid_status' => '记录状态不正确，只能派奖待派奖的记录',
         'status_changed' => '状态已变更',
-        'empty_prize' => '空奖无需发放',
+        'empty_prize' => '空奖无需派奖',
         'invalid_amount' => '奖品金额必須大於0',
         'player_not_found' => '玩家不存在',
-        'player_disabled' => '玩家已被禁用，无法发放奖勵',
+        'player_disabled' => '玩家已被禁用，无法派奖',
         'activity_not_found' => '活动不存在',
-        'activity_invalid_status' => '活动状态错誤，只能发放已开奖待发放的活动奖勵',
-        'activity_not_in_drawing_status' => '活动状态错误，只能在开奖中或已结束状态发放奖励',
-        'amount_exceeded' => '发放金额超出总奖金额度',
+        'activity_invalid_status' => '活动状态错誤，只能派奖已开奖待派奖的活动奖勵',
+        'activity_not_in_drawing_status' => '活动状态错误，只能在开奖中或已结束状态派奖',
+        'amount_exceeded' => '派奖金额超出总奖金额度',
         'ticket_not_found_or_used' => '券号 {ticket_no} 不存在或已使用',
         'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',
         'invalid_ticket_format' => '券号 {ticket_no} 格式错误，只能包含数字且不超过6位',
@@ -372,23 +372,23 @@ return [
         'status' => '状态',
         'distributed_at' => '发放时间',
         'distributed_by' => '发放人',
-        'distribution_note' => '发放备註',
+        'distribution_note' => '派奖备註',
         'created_at' => '创建时间',
         'updated_at' => '更新时间',
     ],
 
     // 确认对话框
     'confirm' => [
-        'distribute' => '确认发放此奖品到玩家賬戶？',
-        'distribute_all_pending' => '确认发放该活动所有已录入但未发放的奖励？\n此操作将批量发放所有待发放记录,请谨慎操作。',  // ⭐ 新增
+        'distribute' => '确认派奖此奖品到玩家賬戶？',
+        'distribute_all_pending' => '确认派奖该活动所有已录入但未派奖的奖励？\n此操作将批量派奖所有待派奖记录,请谨慎操作。',  // ⭐ 新增
     ],
 
     // 表单标签
     'form' => [
         'select_activity' => '选择活动',
-        'select_activity_help' => '只顯示已开奖待发放的活动',
-        'distribution_note' => '发放备註',
-        'distribution_note_placeholder' => '请填寫发放备註（选填）',
+        'select_activity_help' => '只顯示已开奖待派奖的活动',
+        'distribution_note' => '派奖备註',
+        'distribution_note_placeholder' => '请填寫派奖备註（选填）',
         'vip_config_section' => 'VIP等级打码量配置',
         'prize_config_section' => '奖品等级配置',
         'no_vip_data' => '暫无VIP等级数據',

@@ -32,7 +32,7 @@ return [
         'total_tickets' => 'Total Tickets',
         'used_tickets' => 'Used Tickets',
         'usage_rate' => 'Usage Rate',
-        'pending_count' => 'Pending',
+        'pending_count' => 'Pending Award',
         'max_ticket_no' => 'Max Issued Ticket',  // ⭐ Current maximum issued ticket number (e.g.: 000123)
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => 'Prize Config',
@@ -44,7 +44,7 @@ return [
         'player_account' => '玩家賬号',
         'prize_level' => 'Prize Level',
         'remark' => '备註',
-        'distribution_remark' => 'Distribution Note',
+        'distribution_remark' => 'Award Distribution Note',
         'vip_level' => 'VIP Level',
         'bet_amount_required' => 'Bet Amount Required',
         'ticket_count' => 'Ticket Count',
@@ -59,7 +59,7 @@ return [
         'ticket_no' => 'Ticket No',
         'prize_type' => 'Prize Type',
         'prize_name' => 'Prize Name',
-        'record_status' => 'Distribution Status',
+        'record_status' => 'Award Distribution Status',
         'created_time_range' => 'Created Time Range',
         'source' => '來源',
         'used_at' => 'Used At',
@@ -83,7 +83,7 @@ return [
         'remark' => '选填，可备註中奖詳情',
         'live_url' => 'e.g.: rtmp://live.example.com/stream/12345',
         'ticket_no' => 'Please enter 6-digit ticket number',
-        'distribute_remark' => '选填，可备註发放说明',
+        'award_remark' => '选填，可备註发放说明',
     ],
 
     // 模态框
@@ -92,9 +92,9 @@ return [
         'live_url_title' => 'Add Live URL',
         'live_url_prompt' => 'Please enter live stream URL:',
         'live_url_required' => 'Please enter live URL',
-        'batch_distribute_title' => '批量发放奖勵',
-        'distribute_by_ticket_title' => '发放奖勵',
-        'ticket_list_title' => 'Ticket Distribution List',
+        'batch_award_title' => '批量发放奖勵',
+        'award_by_ticket_title' => '发放奖勵',
+        'ticket_list_title' => 'Ticket Award Distribution List',
     ],
 
     // 活动状态
@@ -102,13 +102,13 @@ return [
         'all' => 'All',
         'not_started' => 'Not Started',
         'ongoing' => 'Ongoing',
-        'pending_draw' => 'Pending Draw',    // ⭐ New: Activity ended, waiting for draw
+        'pending_draw' => 'Pending Award Draw',    // ⭐ New: Activity ended, waiting for draw
         'drawing' => 'Drawing',
         'ended' => 'Ended',
         'closed' => 'Closed',
         'preheating' => 'Preheating',        // Deprecated
         'betting' => 'Betting',              // Deprecated
-        'drawn' => 'Drawn Pending Distribution', // Deprecated
+        'drawn' => 'Drawn Pending Award Award Distribution', // Deprecated
         'unknown' => 'Unknown',
     ],
 
@@ -132,19 +132,19 @@ return [
     'source' => [
         'recharge' => '充值贈送',
         'activity' => '活动贈送',
-        'manual' => 'Manual Distribution',
+        'manual' => 'Manual Award Distribution',
         'unknown' => '未知來源',
     ],
 
     // 中奖记录状态
     'record_status' => [
-        'pending' => 'Pending',
-        'claimed' => 'Distributed', // ⭐ 更新
+        'pending' => 'Pending Award',
+        'claimed' => 'Awardd', // ⭐ 更新
         'expired' => 'Expired', // ⭐ 新增
         'cancelled' => 'Cancelled', // ⭐ 新增
         'processing' => 'Processing', // ⭐ 新增
-        'failed' => 'Distribution Failed',
-        'granted' => 'Distributed', // 兼容舊代码
+        'failed' => 'Award Distribution Failed',
+        'granted' => 'Awardd', // 兼容舊代码
         'unknown' => 'Unknown',
     ],
 
@@ -213,15 +213,15 @@ return [
         'add_live_url' => 'Add Live URL',
         'expand' => 'Expand',
         'collapse' => 'Collapse',
-        'distribute' => 'Distribute',
-        'batch_distribute' => 'Batch Distribution',
-        'batch_distribute_selected' => 'Batch Distribute Selected',
-        'distribute_by_ticket' => 'Distribute by Ticket',
-        'distribute_all_pending' => 'Distribute Rewards',  // ⭐ Added: Batch distribute all pending records
-        'view_ticket_list' => 'View Distribution List',
+        'award' => 'Award',
+        'batch_award' => 'Batch Award Distribution',
+        'batch_award_selected' => 'Batch Award Selected',
+        'award_by_ticket' => 'Award by Ticket',
+        'award_all_pending' => 'Award Rewards',  // ⭐ Added: Batch award all pending records
+        'view_ticket_list' => 'View Award Distribution List',
         'add_ticket' => 'Add Ticket',
         'select_image' => 'Select Image',
-        'confirm_distribute' => 'Confirm Distribution',
+        'confirm_award' => 'Confirm Award Distribution',
     ],
 
     // 统计
@@ -254,10 +254,10 @@ return [
         'upload_success' => '上传成功',
         'image_upload_success' => 'Image uploaded successfully',
         'image_upload_failed' => '图片上传失敗',
-        'distribute_success' => 'Distribution successful',
-        'distribute_failed' => '发放失敗',
+        'award_success' => 'Award Distribution successful',
+        'award_failed' => '发放失敗',
         'batch_complete' => '批量发放完成：成功 {success} 条，失敗 {fail} 条',
-        'batch_distribute_selected' => '批量发放选中记录',
+        'batch_award_selected' => '批量发放选中记录',
         'export_in_development' => '导出功能开发中',
         'live_url_updated' => 'Live stream URL updated successfully',
         'live_url_generated' => 'Live stream URL generated successfully',
@@ -280,7 +280,7 @@ return [
         'ticket_must_6_digits' => 'Ticket number must be 6 digits',
         'ticket_format_error' => 'Invalid ticket number format, must contain only digits and not exceed 6 characters',
         'no_prize_level' => 'Prize levels not configured for this activity',
-        'distribute_hint' => 'Please enter winning ticket number, the system will automatically identify the prize level and distribute rewards',
+        'award_hint' => 'Please enter winning ticket number, the system will automatically identify the prize level and award rewards',
         'drawing_started' => 'Drawing started, entered drawing phase',
         'activity_ended' => 'Activity ended',
     ],
@@ -301,20 +301,20 @@ return [
         'invalid_activity_id' => '參数错誤：活动ID无效',
         'invalid_record_ids' => '參数错誤：记录ID必須是数組',
         'invalid_record_id_value' => '參数错誤：记录ID包含非法值',
-        'note_too_long' => 'Distribution remark cannot exceed 255 characters',
+        'note_too_long' => 'Award Distribution remark cannot exceed 255 characters',
         'no_selection' => 'Please specify activity ID or select records',
         'no_pending_records' => 'No pending distribution records',
         // 业务邏輯驗證
-        'invalid_status' => 'Invalid status, can only distribute pending records',
+        'invalid_status' => 'Invalid status, can only award pending records',
         'status_changed' => 'Status changed',
         'empty_prize' => 'No prize, no distribution needed',
         'invalid_amount' => 'Prize amount must be greater than 0',
         'player_not_found' => 'Player not found',
-        'player_disabled' => 'Player disabled, cannot distribute',
+        'player_disabled' => 'Player disabled, cannot award',
         'activity_not_found' => 'Activity not found',
         'activity_invalid_status' => 'Invalid activity status',
-        'activity_not_in_drawing_status' => 'Invalid activity status, can only distribute in DRAWING or ENDED status',
-        'amount_exceeded' => 'Distribution amount exceeds total prize',
+        'activity_not_in_drawing_status' => 'Invalid activity status, can only award in DRAWING or ENDED status',
+        'amount_exceeded' => 'Award Distribution amount exceeds total prize',
         'ticket_not_found_or_used' => 'Ticket {ticket_no} not found or used',
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',
         'invalid_ticket_format' => 'Invalid format for ticket {ticket_no}, must contain only digits and not exceed 6 characters',
@@ -360,7 +360,7 @@ return [
         'detail_title' => 'Winning Record Details',
         'basic_info' => 'Basic Info',
         'prize_info' => 'Prize Info',
-        'distribution_info' => 'Distribution Info',
+        'distribution_info' => 'Award Distribution Info',
         'activity_name' => 'Activity Name',
         'ticket_no' => 'Ticket No',
         'player_name' => 'Player',
@@ -369,24 +369,24 @@ return [
         'prize_type' => 'Prize Type',
         'prize_amount' => 'Prize Amount',
         'status' => 'Status',
-        'distributed_at' => 'Distribution Time',
-        'distributed_by' => 'Distributor',
-        'distribution_note' => 'Distribution Note',
+        'awardd_at' => 'Award Distribution Time',
+        'awardd_by' => 'Distributor',
+        'distribution_note' => 'Award Distribution Note',
         'created_at' => 'Created At',
         'updated_at' => 'Updated At',
     ],
 
     // 确认对话框
     'confirm' => [
-        'distribute' => 'Confirm distribute this prize to player account?',
-        'distribute_all_pending' => 'Confirm to distribute all pending rewards for this activity?\nThis will batch distribute all pending records. Please proceed with caution.',  // ⭐ Added
+        'award' => 'Confirm award this prize to player account?',
+        'award_all_pending' => 'Confirm to award all pending rewards for this activity?\nThis will batch award all pending records. Please proceed with caution.',  // ⭐ Added
     ],
 
     // 表单标签
     'form' => [
         'select_activity' => 'Select Activity',
         'select_activity_help' => 'Only showing drawn activities pending distribution',
-        'distribution_note' => 'Distribution Note',
+        'distribution_note' => 'Award Distribution Note',
         'distribution_note_placeholder' => 'Enter distribution note (optional)',
         'vip_config_section' => 'VIP Bet Amount Config',
         'prize_config_section' => 'Prize Level Config',

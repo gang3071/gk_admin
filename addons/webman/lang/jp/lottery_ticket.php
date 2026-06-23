@@ -32,7 +32,7 @@ return [
         'total_tickets' => 'チケット総数',
         'used_tickets' => '使用済チケット数',
         'usage_rate' => '使用率',
-        'pending_count' => '未配布',
+        'pending_count' => '未払い出し',
         'max_ticket_no' => '発行済最大チケット番号',  // ⭐ 現在発行済の最大チケット番号（例：000123）
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => '賞品設定',
@@ -44,7 +44,7 @@ return [
         'player_account' => 'プレイヤーアカウント',
         'prize_level' => '当選レベル',
         'remark' => '備考',
-        'distribution_remark' => '配布備考',
+        'distribution_remark' => '払い出し備考',
         'vip_level' => 'VIPレベル',
         'bet_amount_required' => '必要ベット額',
         'ticket_count' => 'チケット数',
@@ -59,7 +59,7 @@ return [
         'ticket_no' => 'チケット番号',
         'prize_type' => '賞品タイプ',
         'prize_name' => '賞品名',
-        'record_status' => '配布ステータス',
+        'record_status' => '払い出しステータス',
         'created_time_range' => '作成時間範囲',
         'source' => '来源',
         'used_at' => '使用日時',
@@ -83,7 +83,7 @@ return [
         'remark' => '任意入力、当選詳細を備考可能',
         'live_url' => '例: rtmp://live.example.com/stream/12345',
         'ticket_no' => '6桁のチケット番号を入力してください',
-        'distribute_remark' => '任意入力、配布説明を備考可能',
+        'distribute_remark' => '任意入力、払い出し説明を備考可能',
     ],
 
     // 模态框
@@ -92,9 +92,9 @@ return [
         'live_url_title' => 'ライブURLを追加',
         'live_url_prompt' => 'ライブストリームURLを入力:',
         'live_url_required' => 'ライブURLを入力してください',
-        'batch_distribute_title' => '一括賞品配布',
-        'distribute_by_ticket_title' => 'チケット番号入力で賞品配布',
-        'ticket_list_title' => 'チケット配布リスト',
+        'batch_distribute_title' => '一括賞品払い出し',
+        'distribute_by_ticket_title' => 'チケット番号入力で賞品払い出し',
+        'ticket_list_title' => 'チケット払い出しリスト',
     ],
 
     // 活动状态
@@ -131,19 +131,19 @@ return [
     'source' => [
         'recharge' => 'チャージ特典',
         'activity' => 'アクティビティ特典',
-        'manual' => '手動配布',
+        'manual' => '手動払い出し',
         'unknown' => '不明な来源',
     ],
 
     // 中奖记录状态
     'record_status' => [
         'pending' => '保留中',
-        'claimed' => '配布済', // ⭐ 更新
+        'claimed' => '払い出し済', // ⭐ 更新
         'expired' => '期限切れ', // ⭐ 新增
         'cancelled' => 'キャンセル済', // ⭐ 新增
         'processing' => '処理中', // ⭐ 新增
-        'failed' => '配布失敗',
-        'granted' => '配布済', // 兼容舊代码
+        'failed' => '払い出し失敗',
+        'granted' => '払い出し済', // 兼容舊代码
         'unknown' => '不明',
     ],
 
@@ -212,15 +212,15 @@ return [
         'add_live_url' => 'ライブURLを追加',
         'expand' => '展開',
         'collapse' => '折りたたむ',
-        'distribute' => '配布',
-        'batch_distribute' => '一括配布',
-        'batch_distribute_selected' => '選択を一括配布',
-        'distribute_by_ticket' => 'チケットで配布',
-        'distribute_all_pending' => '賞品を配布',  // ⭐ 新規追加: すべての未配布記録を一括配布
-        'view_ticket_list' => '配布リストを表示',
+        'distribute' => '払い出し',
+        'batch_distribute' => '一括払い出し',
+        'batch_distribute_selected' => '選択を一括払い出し',
+        'distribute_by_ticket' => 'チケットで払い出し',
+        'distribute_all_pending' => '賞品を払い出し',  // ⭐ 新規追加: すべての未払い出し記録を一括払い出し
+        'view_ticket_list' => '払い出しリストを表示',
         'add_ticket' => 'チケットを追加',
         'select_image' => '画像を選択',
-        'confirm_distribute' => '配布を確認',
+        'confirm_distribute' => '払い出しを確認',
     ],
 
     // 统计
@@ -230,10 +230,10 @@ return [
         'total_draws' => '総抽選回数',
         'total_winners' => '総当選者数',
         'total_prize_amount' => '総賞金額',
-        'pending_count' => '配布待ち記録',       // ⭐ 新增
-        'pending_amount' => '配布待ち金額',      // ⭐ 新增
-        'claimed_count' => '配布済記録',       // ⭐ 新增
-        'claimed_amount' => '配布済金額',      // ⭐ 新增
+        'pending_count' => '払い出し待ち記録',       // ⭐ 新增
+        'pending_amount' => '払い出し待ち金額',      // ⭐ 新增
+        'claimed_count' => '払い出し済記録',       // ⭐ 新增
+        'claimed_amount' => '払い出し済金額',      // ⭐ 新增
     ],
 
     // 消息
@@ -253,10 +253,10 @@ return [
         'upload_success' => 'アップロード成功',
         'image_upload_success' => '画像アップロード成功',
         'image_upload_failed' => '画像アップロード失敗',
-        'distribute_success' => '配布成功',
-        'distribute_failed' => '配布失敗',
-        'batch_complete' => '一括配布完了：成功 {success} 件、失敗 {fail} 件',
-        'batch_distribute_selected' => '選択記録を一括配布',
+        'distribute_success' => '払い出し成功',
+        'distribute_failed' => '払い出し失敗',
+        'batch_complete' => '一括払い出し完了：成功 {success} 件、失敗 {fail} 件',
+        'batch_distribute_selected' => '選択記録を一括払い出し',
         'export_in_development' => 'エクスポート機能開発中',
         'live_url_updated' => 'ライブURL設定成功',
         'live_url_generated' => 'ライブURL生成成功',
@@ -279,7 +279,7 @@ return [
         'ticket_must_6_digits' => 'チケット番号は6桁の数字である必要があります',
         'ticket_format_error' => 'チケット番号の形式が正しくありません。数字のみで6文字以内にしてください',
         'no_prize_level' => 'このアクティビティはまだ賞品レベルが設定されていません',
-        'distribute_hint' => '当選チケット番号を入力してください、システムは番号に基づいて賞品レベルを自動識別し配布します',
+        'distribute_hint' => '当選チケット番号を入力してください、システムは番号に基づいて賞品レベルを自動識別し払い出しします',
         'drawing_started' => '抽選開始、抽選段階に入りました',
         'activity_ended' => 'アクティビティが終了しました',
     ],
@@ -300,20 +300,20 @@ return [
         'invalid_activity_id' => 'パラメータエラー：アクティビティIDが無効',
         'invalid_record_ids' => 'パラメータエラー：記録IDは配列である必要があります',
         'invalid_record_id_value' => 'パラメータエラー：記録IDに不正な値が含まれています',
-        'note_too_long' => '配布備考は255文字を超えることはできません',
+        'note_too_long' => '払い出し備考は255文字を超えることはできません',
         'no_selection' => 'アクティビティIDを指定するか記録を選択してください',
-        'no_pending_records' => '配布待ちの記録がありません',
+        'no_pending_records' => '払い出し待ちの記録がありません',
         // 业务邏輯驗證
         'invalid_status' => '記録ステータスが正しくありません',
         'status_changed' => 'ステータスが変更されました',
-        'empty_prize' => '賞なし、配布不要',
+        'empty_prize' => '賞なし、払い出し不要',
         'invalid_amount' => '賞金額は0より大きくする必要があります',
         'player_not_found' => 'プレイヤーが見つかりません',
         'player_disabled' => 'プレイヤーは無効化されています',
         'activity_not_found' => 'アクティビティが存在しません',
         'activity_invalid_status' => 'アクティビティステータスエラー',
-        'activity_not_in_drawing_status' => 'アクティビティステータスエラー、抽選中または終了ステータスでのみ配布可能',
-        'amount_exceeded' => '配布金額が総賞金額を超えています',
+        'activity_not_in_drawing_status' => 'アクティビティステータスエラー、抽選中または終了ステータスでのみ払い出し可能',
+        'amount_exceeded' => '払い出し金額が総賞金額を超えています',
         'ticket_not_found_or_used' => 'チケット {ticket_no} が存在しないか使用済みです',
         'prize_level_not_found_for_ticket' => 'チケット {ticket_no} の賞品レベルが存在しません',
         'invalid_ticket_format' => 'チケット {ticket_no} の形式が正しくありません。数字のみで6文字以内にしてください',
@@ -360,7 +360,7 @@ return [
         'detail_title' => '当選記録詳細',
         'basic_info' => '基本情報',
         'prize_info' => '賞品情報',
-        'distribution_info' => '配布情報',
+        'distribution_info' => '払い出し情報',
         'activity_name' => 'アクティビティ名',
         'ticket_no' => 'チケット番号',
         'player_name' => 'プレイヤー',
@@ -369,25 +369,25 @@ return [
         'prize_type' => '賞品タイプ',
         'prize_amount' => '賞金額',
         'status' => 'ステータス',
-        'distributed_at' => '配布時刻',
-        'distributed_by' => '配布者',
-        'distribution_note' => '配布備考',
+        'distributed_at' => '払い出し時刻',
+        'distributed_by' => '払い出し者',
+        'distribution_note' => '払い出し備考',
         'created_at' => '作成日時',
         'updated_at' => '更新日時',
     ],
 
     // 确认对话框
     'confirm' => [
-        'distribute' => 'この賞品をプレイヤーアカウントに配布しますか？',
-        'distribute_all_pending' => 'このアクティビティの記録済み未配布の賞品をすべて配布しますか？\nこの操作によりすべての未配布記録が一括配布されます。慎重に操作してください。',  // ⭐ 新規追加
+        'distribute' => 'この賞品をプレイヤーアカウントに払い出ししますか？',
+        'distribute_all_pending' => 'このアクティビティの記録済み未払い出しの賞品をすべて払い出ししますか？\nこの操作によりすべての未払い出し記録が一括払い出しされます。慎重に操作してください。',  // ⭐ 新規追加
     ],
 
     // 表单标签
     'form' => [
         'select_activity' => 'アクティビティを選択',
-        'select_activity_help' => '抽選完了、配布待ちのアクティビティのみ表示',
-        'distribution_note' => '配布備考',
-        'distribution_note_placeholder' => '配布備考を入力（任意）',
+        'select_activity_help' => '抽選完了、払い出し待ちのアクティビティのみ表示',
+        'distribution_note' => '払い出し備考',
+        'distribution_note_placeholder' => '払い出し備考を入力（任意）',
         'vip_config_section' => 'VIPレベルベット額設定',
         'prize_config_section' => '賞品レベル設定',
         'no_vip_data' => 'VIPレベルデータがありません',

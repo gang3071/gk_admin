@@ -17,7 +17,7 @@ use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Divider;
 use ExAdmin\ui\component\layout\Row;
-use support\Request;
+use ExAdmin\ui\support\Request;
 
 /**
  * 渠道后台-摸奖券中奖记录
