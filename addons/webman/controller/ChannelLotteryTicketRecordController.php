@@ -157,7 +157,7 @@ class ChannelLotteryTicketRecordController
                     ->pluck('name', 'id')
                     ->toArray();
 
-                $filter->eq()->select('lottery_ticket_record.activity_id')
+                $filter->eq()->select('activity_id')
                     ->placeholder(admin_trans('lottery_ticket.fields.name'))
                     ->options($activities);
 
@@ -178,7 +178,7 @@ class ChannelLotteryTicketRecordController
                     ->placeholder(admin_trans('lottery_ticket.fields.ticket_no'));
 
                 // 奖品类型筛选
-                $filter->eq()->select('lottery_ticket_record.prize_type')
+                $filter->eq()->select('prize_type')
                     ->placeholder(admin_trans('lottery_ticket.fields.prize_type'))
                     ->options([
                         LotteryTicketRecord::PRIZE_TYPE_CASH => admin_trans('lottery_ticket.prize_type.cash'),
@@ -189,7 +189,7 @@ class ChannelLotteryTicketRecordController
                     ]);
 
                 // 发放状态筛选
-                $filter->eq()->select('lottery_ticket_record.status')
+                $filter->eq()->select('status')
                     ->placeholder(admin_trans('lottery_ticket.fields.record_status'))
                     ->options([
                         LotteryTicketRecord::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),
