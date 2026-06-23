@@ -678,10 +678,8 @@ class ChannelLotteryTicketRecordController
 
         $htmlContent .= '</div>';
 
-        // 使用Card包裹，Html组件渲染
-        return Card::create()->content([
-            Html::create()->content($htmlContent)
-        ])->bodyStyle(['padding' => '0']);
+        // 直接返回Html组件
+        return Html::create()->content($htmlContent);
     }
 
     /**
