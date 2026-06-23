@@ -635,7 +635,8 @@ class ChannelLotteryTicketActivityController
                         LotteryTicketActivity::STATUS_CLOSED => admin_trans('lottery_ticket.status.closed'),
                     ]);
 
-                $filter->form()->dateRange('start_time', 'end_time', admin_trans('lottery_ticket.filter.time_range'))
+                // 活动时间范围筛选
+                $filter->between()->dateTimeRange('created_at')
                     ->placeholder([
                         admin_trans('lottery_ticket.fields.start_time'),
                         admin_trans('lottery_ticket.fields.end_time')
