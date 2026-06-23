@@ -37,17 +37,10 @@ class StoreTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 添加出票机控制按钮（与工具栏同一排）
-            $grid->tools(
-                Button::create(admin_trans('ticket_machine.title'))
-                    ->modal([ChannelIndexController::class, 'ticketMachineControl'])
-                    ->type('primary')
-                    ->icon('PrinterOutlined')
-            );
-
-            // 只显示当前店家的数据
+            // 只显示当前店家的开分类型数据
             $grid->model()
                 ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->orderBy('created_at', 'desc');
 
             // 统计数据（基于当前筛选条件）
@@ -137,7 +130,14 @@ class StoreTicketRecordController
                     , 6);
             })->style(['background' => '#fff']);
 
-            $grid->tools($layout);
+            // 添加出票机控制按钮和统计布局（合并到一次调用）
+            $grid->tools([
+                Button::create(admin_trans('ticket_machine.title'))
+                    ->modal([ChannelIndexController::class, 'ticketMachineControl'])
+                    ->type('primary')
+                    ->icon('PrinterOutlined'),
+                $layout
+            ]);
 
             // 列定义
             $grid->column('id', 'ID')->align('center')->width(80);

@@ -283,5 +283,6 @@ return [
         //出票管理
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票記録',
+        'ticket_redeem_list' => 'チケット記録',
     ]
 ];

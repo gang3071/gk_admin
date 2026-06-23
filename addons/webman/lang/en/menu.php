@@ -283,5 +283,6 @@ return [
         //Ticket Management
         'ticket_management' => 'Ticket Management',
         'ticket_record_list' => 'Ticket Records',
+        'ticket_redeem_list' => 'Redeem Records',
     ]
 ];

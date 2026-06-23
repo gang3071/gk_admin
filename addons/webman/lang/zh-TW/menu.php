@@ -282,5 +282,6 @@ return [
         //出票管理
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票記錄',
+        'ticket_redeem_list' => '核銷記錄',
     ]
 ];
