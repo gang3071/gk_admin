@@ -173,6 +173,10 @@ class ChannelLotteryTicketRecordController
                 $filter->like()->text($playerTable . '.phone')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_phone'));
 
+                // 券号筛选
+                $filter->like()->text('lottery_ticket_record.ticket_no')
+                    ->placeholder(admin_trans('lottery_ticket.fields.ticket_no'));
+
                 // 奖品类型筛选
                 $filter->eq()->select('lottery_ticket_record.prize_type')
                     ->placeholder(admin_trans('lottery_ticket.fields.prize_type'))
