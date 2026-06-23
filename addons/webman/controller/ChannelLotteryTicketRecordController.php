@@ -81,12 +81,29 @@ class ChannelLotteryTicketRecordController
             $grid->header($layout);
 
             $grid->model()
-                ->with([
-                    'activity:id,name',  // 活动名称
-                    'player:id,name,phone,uuid'  // 玩家信息
+                ->select([
+                    'lottery_ticket_record.id',
+                    'lottery_ticket_record.activity_id',
+                    'lottery_ticket_record.player_id',
+                    'lottery_ticket_record.department_id',
+                    'lottery_ticket_record.ticket_no',
+                    'lottery_ticket_record.prize_type',
+                    'lottery_ticket_record.prize_name',
+                    'lottery_ticket_record.prize_amount',
+                    'lottery_ticket_record.status',
+                    'lottery_ticket_record.distributed_at',
+                    'lottery_ticket_record.distributed_by',
+                    'lottery_ticket_record.distribution_note',
+                    'lottery_ticket_record.created_at',
+                    'lottery_ticket_record.updated_at',
+                    $playerTable . '.name as player_name',
+                    $playerTable . '.phone as player_phone',
+                    $playerTable . '.uuid as player_uuid'
                 ])
-                ->where('department_id', $departmentId)
-                ->orderBy('created_at', 'desc');
+                ->with(['activity:id,name'])  // 活动名称使用关系
+                ->leftJoin($playerTable, 'lottery_ticket_record.player_id', '=', $playerTable . '.id')
+                ->where('lottery_ticket_record.department_id', $departmentId)
+                ->orderBy('lottery_ticket_record.created_at', 'desc');
 
             // 列定义
             $grid->column('id', admin_trans('lottery_ticket.fields.id'))->width(80)->sortable();
@@ -94,13 +111,13 @@ class ChannelLotteryTicketRecordController
             // ⭐ 使用Eloquent关系显示活动名称
             $grid->column('activity.name', admin_trans('lottery_ticket.fields.activity_name'))->width(180);
 
-            // ⭐ 使用Eloquent关系显示玩家信息
-            $grid->column('player.name', admin_trans('lottery_ticket.fields.player_name'))->width(120);
+            // ⭐ 使用JOIN字段显示玩家信息
+            $grid->column('player_name', admin_trans('lottery_ticket.fields.player_name'))->width(120);
 
-            $grid->column('player.uuid', admin_trans('lottery_ticket.fields.player_uuid'))
+            $grid->column('player_uuid', admin_trans('lottery_ticket.fields.player_uuid'))
                 ->width(150)->copyable();
 
-            $grid->column('player.phone', admin_trans('lottery_ticket.fields.player_phone'))->width(130);
+            $grid->column('player_phone', admin_trans('lottery_ticket.fields.player_phone'))->width(130);
 
             $grid->column('ticket_no', admin_trans('lottery_ticket.fields.ticket_no'))->width(160);
 
@@ -143,7 +160,7 @@ class ChannelLotteryTicketRecordController
             $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))->width(160);
 
             // 筛选
-            $grid->filter(function (Filter $filter) use ($departmentId) {
+            $grid->filter(function (Filter $filter) use ($departmentId, $playerTable) {
                 // 活动筛选
                 $activities = LotteryTicketActivity::where('department_id', $departmentId)
                     ->orderBy('created_at', 'desc')
@@ -154,16 +171,16 @@ class ChannelLotteryTicketRecordController
                     ->placeholder(admin_trans('lottery_ticket.fields.name'))
                     ->options($activities);
 
-                // 玩家名称筛选（使用关系）
-                $filter->like()->text('player->name')
+                // 玩家名称筛选
+                $filter->like()->text('player_name')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_name'));
 
-                // 玩家UUID筛选（使用关系）
-                $filter->like()->text('player->uuid')
+                // 玩家UUID筛选
+                $filter->like()->text('player_uuid')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_uuid'));
 
-                // 玩家手机筛选（使用关系）
-                $filter->like()->text('player->phone')
+                // 玩家手机筛选
+                $filter->like()->text('player_phone')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_phone'));
 
                 // 券号筛选
