@@ -7,7 +7,6 @@ use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\Player;
 use ExAdmin\ui\component\common\Button;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -15,7 +14,6 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\layout\Divider;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
@@ -84,27 +82,13 @@ class ChannelLotteryTicketRecordController
 
             $grid->model()
                 ->select([
-                    'lottery_ticket_record.id',
-                    'lottery_ticket_record.activity_id',
-                    'lottery_ticket_record.player_id',
-                    'lottery_ticket_record.department_id',
-                    'lottery_ticket_record.ticket_no',
-                    'lottery_ticket_record.prize_type',
-                    'lottery_ticket_record.prize_name',
-                    'lottery_ticket_record.prize_amount',
-                    'lottery_ticket_record.status',  // ⭐ 明确指定主表的status
-                    'lottery_ticket_record.distributed_at',
-                    'lottery_ticket_record.distributed_by',
-                    'lottery_ticket_record.distribution_note',
-                    'lottery_ticket_record.created_at',
-                    'lottery_ticket_record.updated_at',
+                    'lottery_ticket_record.*',
                     $playerTable . '.name as player_name',
                     $playerTable . '.phone as player_phone',
-                    $playerTable . '.uuid as player_uuid',
-                    'lottery_ticket_activity.name as activity_name'
+                    $playerTable . '.uuid as player_uuid'
                 ])
+                ->with(['activity:id,name'])  // ⭐ 使用Eloquent关系加载活动名称
                 ->leftJoin($playerTable, 'lottery_ticket_record.player_id', '=', $playerTable . '.id')
-                ->leftJoin('lottery_ticket_activity', 'lottery_ticket_record.activity_id', '=', 'lottery_ticket_activity.id')
                 ->where('lottery_ticket_record.department_id', $departmentId)
                 ->orderBy('lottery_ticket_record.created_at', 'desc');
 
@@ -226,38 +210,13 @@ class ChannelLotteryTicketRecordController
                     $actions->prepend(
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
-                            ->size('small')
                             ->confirm(admin_trans('lottery_ticket.confirm.distribute'))
                             ->ajax([$this, 'distribute'], ['id' => $data['id']])
                     );
                 }
 
                 $actions->hideEdit();
-                $actions->hideDel();
             });
-
-            // ⭐ 工具栏按钮
-            $grid->tools([
-                Button::create(admin_trans('lottery_ticket.action.batch_distribute'))
-                    ->modal([$this, 'batchDistributeForm'])
-                    ->width('50%')
-                    ->title(admin_trans('lottery_ticket.modal.batch_distribute_title'))
-                    ->type('primary')
-                    ->size('small'),
-
-                // ✅ 修复：ajax()方法使用路由数组，不传admin_url()
-                Button::create(admin_trans('lottery_ticket.action.export'))
-                    ->ajax([$this, 'exportRecords'])
-                    ->type('default')
-                    ->size('small')
-            ]);
-
-            // ⭐ 批量操作 (通过勾选框选择记录后批量处理)
-            $grid->selection(function ($selection) {
-                $selection->option(admin_trans('lottery_ticket.action.batch_distribute_selected'))
-                    ->ajax([$this, 'batchDistributeSelected']);
-            });
-
             $grid->hideTrashed();
         });
     }
