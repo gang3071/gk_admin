@@ -151,6 +151,11 @@ class LotteryTicketIssueService
             // 清除玩家有效奖券缓存
             $this->clearPlayerTicketCache($playerId);
 
+            // ⭐ 推送发券通知给客户端
+            if (!empty($tickets)) {
+                LotteryTicketPushService::pushTicketIssued($tickets[0], $actualCount);
+            }
+
             return $tickets;
 
         } catch (\Exception $e) {
@@ -331,6 +336,14 @@ class LotteryTicketIssueService
 
             // 清除玩家有效奖券缓存
             $this->clearPlayerTicketCache($playerId);
+
+            // ⭐ 推送发券通知给客户端
+            if (!empty($tickets)) {
+                $firstTicket = LotteryTicket::find($tickets[0]['id']);
+                if ($firstTicket) {
+                    LotteryTicketPushService::pushTicketIssued($firstTicket, $actualCount);
+                }
+            }
 
             return $tickets;
 
