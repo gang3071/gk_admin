@@ -307,11 +307,8 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
             }
 
-            // 4.2 ⭐ 提前检查是否超额发放（避免钱包已操作才发现超额）
+            // 4.2 计算新的已发放金额（用于后续更新）
             $newDistributedAmount = $activity->distributed_prize_amount + $record->prize_amount;
-            if ($newDistributedAmount > $activity->total_prize_amount) {
-                throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
-            }
 
             // 5. 锁定玩家并检查
             $player = Player::query()->lockForUpdate()->find($record->player_id);
@@ -519,11 +516,8 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
                 }
 
-                // ⭐ 提前检查是否超额发放（避免钱包已操作才发现超额）
+                // 计算新的已发放金额（用于后续更新）
                 $newDistributedAmount = $activity->distributed_prize_amount + $record->prize_amount;
-                if ($newDistributedAmount > $activity->total_prize_amount) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
-                }
 
                 // 锁定玩家
                 $player = Player::lockForUpdate()->find($record->player_id);
