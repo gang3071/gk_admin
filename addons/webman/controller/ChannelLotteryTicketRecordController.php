@@ -207,7 +207,9 @@ class ChannelLotteryTicketRecordController
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
                             ->confirm(admin_trans('lottery_ticket.confirm.distribute'))
-                            ->ajax([$this, 'distribute'], ['id' => $data['id']])
+                            ->url('/ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/distribute')
+                            ->method('post')
+                            ->data(['id' => $data['id']])
                     );
                 }
 
