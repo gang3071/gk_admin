@@ -797,6 +797,7 @@ class ChannelLotteryTicketActivityController
         }
 
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
+
         $activity->save();
 
         // 结束所有打码进度记录
@@ -806,9 +807,15 @@ class ChannelLotteryTicketActivityController
         $redisKey = "lottery_activity:{$activity->id}:ticket_sequence";
         \support\Redis::del($redisKey);
 
-        Log::info('[摸奖券] 活动关闭，已删除Redis序列号', [
+        // ⭐ 将该活动下所有未使用的券标记为过期
+        $expiredCount = LotteryTicket::where('activity_id', $activity->id)
+            ->where('status', LotteryTicket::STATUS_UNUSED)
+            ->update(['status' => LotteryTicket::STATUS_EXPIRED]);
+
+        Log::info('[摸奖券] 活动关闭', [
             'activity_id' => $activity->id,
             'redis_key' => $redisKey,
+            'expired_tickets' => $expiredCount,
         ]);
 
         // ⭐ 推送券数更新给所有参与玩家
@@ -1348,9 +1355,15 @@ class ChannelLotteryTicketActivityController
             $redisKey = "lottery_activity:{$activity->id}:ticket_sequence";
             \support\Redis::del($redisKey);
 
-            Log::info('[摸奖券] 活动结束，已删除Redis序列号', [
+            // ⭐ 将该活动下所有未使用的券标记为过期
+            $expiredCount = LotteryTicket::where('activity_id', $activity->id)
+                ->where('status', LotteryTicket::STATUS_UNUSED)
+                ->update(['status' => LotteryTicket::STATUS_EXPIRED]);
+
+            Log::info('[摸奖券] 活动结束', [
                 'activity_id' => $activity->id,
                 'redis_key' => $redisKey,
+                'expired_tickets' => $expiredCount,
             ]);
 
             // 推送活动结束通知
