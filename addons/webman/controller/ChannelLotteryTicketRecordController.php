@@ -400,23 +400,23 @@ class ChannelLotteryTicketRecordController
      * 批量发放奖励 ⭐ 核心方法
      * @auth true
      * @group channel
+     * @param int|null $activityId 活动ID（可选，如果为null则从Request获取）
+     * @param string|null $note 发放备注（可选，如果为null则从Request获取或使用默认值）
      * @return mixed
      */
-    public function batchDistribute()
+    public function batchDistribute($activityId = null, $note = null)
     {
-        $activityId = Request::input('activity_id');
-        $recordIds = Request::input('ids', []);
-        $note = Request::input('distribution_note', '批量发放');
+        // 支持两种调用方式：
+        // 1. 通过参数直接传递（新增表单调用）
+        // 2. 通过Request获取（原有批量操作调用）
+        $activityId = $activityId ?? Request::input('activity_id');
+        $note = $note ?? Request::input('distribution_note', '批量发放');
         $adminId = Admin::user()->id;
         $departmentId = Admin::user()->department_id;
 
         // ⭐ 输入验证
         if ($activityId && !is_numeric($activityId)) {
             return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
-        }
-
-        if (!empty($recordIds) && !is_array($recordIds)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_record_ids'));
         }
 
         if (strlen($note) > 255) {
@@ -432,15 +432,7 @@ class ChannelLotteryTicketRecordController
 
         if ($activityId) {
             $query->where('activity_id', $activityId);
-        } elseif (!empty($recordIds)) {
-            // ⭐ 验证数组元素都是数字
-            foreach ($recordIds as $id) {
-                if (!is_numeric($id)) {
-                    return message_error(admin_trans('lottery_ticket.error.invalid_record_id_value'));
-                }
-            }
-            $query->whereIn('id', $recordIds);
-        } else {
+        }  else {
             return message_error(admin_trans('lottery_ticket.error.no_selection'));
         }
 
@@ -732,7 +724,7 @@ class ChannelLotteryTicketRecordController
                 ->maxlength(255)
                 ->showCount();
             $form->layout('vertical');
-            // 提交处理 - 调用现有的批量发放方法
+            // 提交处理 - 直接传递参数调用批量发放方法
             $form->saving(function ($form) {
                 $activityId = $form->input('activity_id');
                 $note = $form->input('distribution_note', '批量发放');
@@ -741,13 +733,8 @@ class ChannelLotteryTicketRecordController
                     return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
                 }
 
-                // 使用Webman Request设置全局请求参数
-                $request = request();
-                $request->_data['activity_id'] = $activityId;
-                $request->_data['distribution_note'] = $note;
-
-                // 调用现有的批量发放方法
-                return $this->batchDistribute();
+                // 直接传递参数调用现有方法
+                return $this->batchDistribute($activityId, $note);
             });
         });
     }
