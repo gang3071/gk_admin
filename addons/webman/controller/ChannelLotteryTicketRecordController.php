@@ -741,37 +741,14 @@ class ChannelLotteryTicketRecordController
                     return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
                 }
 
-                // 设置全局请求参数，供batchDistribute()方法使用
-                Request::$_data['activity_id'] = $activityId;
-                Request::$_data['distribution_note'] = $note;
+                // 使用Webman Request设置全局请求参数
+                $request = request();
+                $request->_data['activity_id'] = $activityId;
+                $request->_data['distribution_note'] = $note;
 
                 // 调用现有的批量发放方法
                 return $this->batchDistribute();
             });
         });
-    }
-
-    /**
-     * 批量发放选中记录
-     * @auth true
-     * @group channel
-     * @return mixed
-     */
-    public function batchDistributeSelected()
-    {
-        $ids = Request::input('ids', []);
-
-        if (empty($ids)) {
-            return message_error(admin_trans('lottery_ticket.error.no_selection'));
-        }
-
-        // 调用批量发放接口
-        // ⚠️ 注意：这里直接合并到当前请求参数中
-        request()->_data = array_merge(request()->_data ?? [], [
-            'ids' => $ids,
-            'distribution_note' => admin_trans('lottery_ticket.message.batch_distribute_selected')
-        ]);
-
-        return $this->batchDistribute();
     }
 }
