@@ -349,7 +349,6 @@ return [
         'invalid_params' => 'パラメータエラー',
         'activity_not_ongoing' => '進行中のアクティビティのみ当選記録可能',
         'prize_level_not_found' => '賞品レベルが存在しません',
-        'live_url_required' => '先にライブURLを設定してください',
         'invalid_status_value' => '無効なステータス値',
     ],
 
