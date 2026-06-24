@@ -138,37 +138,34 @@ class StoreTicketRedeemController
             })->style(['background' => '#fff']);
 
             // 添加核销按钮和统计布局
-            $scanRedeemUrl = admin_url(['addons-webman-controller-StoreTicketRedeemController', 'scanRedeem']);
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.redeem.redeem_btn'))
                     ->type('primary')
                     ->icon('QrcodeOutlined')
-                    ->href($scanRedeemUrl)
-                    ->target('_self'),
+                    ->modal([$this, 'scanRedeem'])
+                    ->width('700px'),
                 $layout
             ]);
 
             // 列定义
             $grid->column('id', 'ID')->align('center')->width(80);
-            $grid->column('player_name', admin_trans('ticket_machine.redeem.player_id'))->display(function ($val, $data) {
-                $avatar = !empty($data['player_avatar'])
-                    ? Avatar::create()->src(is_numeric($data['player_avatar']) ? config('def_avatar.' . $data['player_avatar']) : $data['player_avatar'])->size(32)
-                    : Avatar::create()->content(mb_substr($val ?: 'U', 0, 1))->size(32);
-                return Html::create()->content([
-                    $avatar,
-                    Html::div()->content($val ?: admin_trans('player.unnamed'))->style([
-                        'marginLeft' => '8px',
-                        'fontSize' => '13px',
-                        'fontWeight' => '500',
-                        'color' => '#303133',
-                        'whiteSpace' => 'nowrap',
-                        'overflow' => 'hidden',
-                        'textOverflow' => 'ellipsis'
-                    ])
-                ])->style([
-                    'display' => 'flex',
-                    'alignItems' => 'center'
-                ]);
+            $grid->column('player.name', admin_trans('ticket_machine.redeem.player_id'))->display(function ($val, $data) {
+                $playerName = $val ?? ($data['player_name'] ?? '');
+                if (!empty($data['player_id'])) {
+                    $avatar = !empty($data['player']['avatar'])
+                        ? Avatar::create()->src(is_numeric($data['player']['avatar']) ? config('def_avatar.' . $data['player']['avatar']) : $data['player']['avatar'])->size(32)
+                        : Avatar::create()->content(mb_substr($playerName ?: 'U', 0, 1))->size(32);
+                    return Html::create()->content([
+                        $avatar,
+                        Html::div()->content($playerName ?: admin_trans('ticket_machine.redeem.unnamed'))->style([
+                            'marginLeft' => '8px',
+                            'fontSize' => '13px',
+                            'fontWeight' => '500',
+                            'color' => '#303133',
+                        ]),
+                    ])->style(['display' => 'flex', 'alignItems' => 'center']);
+                }
+                return Html::create(admin_trans('ticket_machine.redeem.no_player'))->style(['color' => '#999']);
             })->width(150);
             $grid->column('order_id', admin_trans('ticket_machine.redeem.order_id'))->copy();
             $grid->column('store_name', admin_trans('ticket_machine.redeem.store_name'));
@@ -275,12 +272,24 @@ class StoreTicketRedeemController
      */
     public function scanRedeem()
     {
-        $queryUrl = admin_url(['addons-webman-controller-StoreTicketRedeemController', 'getRecordByQrCode']);
-        $redeemUrl = admin_url(['addons-webman-controller-StoreTicketRedeemController', 'redeemById']);
-
-        return view(plugin()->webman->getPath() . '/views/scan_redeem', [
-            'queryUrl' => $queryUrl,
-            'redeemUrl' => $redeemUrl,
+        return admin_view(plugin()->webman->getPath() . '/views/scan_redeem.vue')->attrs([
+            'query_url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/getRecordByQrCode',
+            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
+            'labels' => [
+                'input_qr_code' => admin_trans('ticket_machine.redeem.input_qr_code'),
+                'scan_qr_code_placeholder' => admin_trans('ticket_machine.redeem.scan_qr_code_placeholder'),
+                'order_id' => admin_trans('ticket_machine.redeem.order_id'),
+                'store_name' => admin_trans('ticket_machine.redeem.store_name'),
+                'machine_no' => admin_trans('ticket_machine.redeem.machine_no'),
+                'score' => admin_trans('ticket_machine.redeem.score'),
+                'status' => admin_trans('ticket_machine.redeem.status'),
+                'ticket_type' => admin_trans('ticket_machine.redeem.ticket_type'),
+                'qr_code_no' => admin_trans('ticket_machine.redeem.qr_code_no'),
+                'created_at' => admin_trans('ticket_machine.redeem.created_at'),
+                'redeem_confirm' => admin_trans('ticket_machine.redeem.redeem_confirm'),
+                'player_name' => admin_trans('ticket_machine.redeem.player_name'),
+                'player_id' => admin_trans('ticket_machine.redeem.player_id'),
+            ],
         ]);
     }
 
@@ -335,12 +344,31 @@ class StoreTicketRedeemController
         $record = TicketRecord::query()
             ->where('qr_code_no', $qrCodeNo)
             ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
             ->first();
 
         if (empty($record)) {
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
+        }
+
+        // 通过 player_id 关联获取玩家信息
+        $playerName = '';
+        $playerAvatar = '';
+        $playerUuid = '';
+
+        if (!empty($record->player_id)) {
+            $player = \addons\webman\model\Player::query()
+                ->where('id', $record->player_id)
+                ->first();
+
+            if ($player) {
+                $playerName = $player->name ?? '';
+                $playerUuid = $player->uuid ?? '';
+                // 处理头像URL
+                $avatar = $player->avatar ?? '';
+                if (!empty($avatar)) {
+                    $playerAvatar = is_numeric($avatar) ? config('def_avatar.' . $avatar) : $avatar;
+                }
+            }
         }
 
         return json_encode([
@@ -351,8 +379,16 @@ class StoreTicketRedeemController
                 'store_name' => $record->store_name,
                 'machine_no' => $record->machine_no,
                 'score' => $record->score,
+                'ticket_type' => $record->ticket_type,
+                'ticket_type_name' => $record->ticket_type_name,
                 'status' => $record->status,
                 'status_name' => $record->status_name,
+                'qr_code_no' => $record->qr_code_no,
+                'created_at' => $record->created_at,
+                'player_id' => $record->player_id,
+                'player_name' => $playerName,
+                'player_avatar' => $playerAvatar,
+                'player_uuid' => $playerUuid,
             ]
         ]);
     }

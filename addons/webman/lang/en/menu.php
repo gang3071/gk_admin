@@ -293,6 +293,10 @@ return [
         'store_lottery_ticket_activity_list' => 'Lottery Activities',
         'store_lottery_ticket_list' => 'Lottery Tickets',
         'store_lottery_ticket_record_list' => 'Winning Records',
+        //Ticket Management
+        'ticket_management' => 'Ticket Management',
+        'ticket_record_list' => 'Ticket Records',
+        'ticket_redeem_list' => 'Redeem Records',
     ],
     'help' => [
         'controlled_menu' => 'This menu is controlled by feature toggle, name cannot be modified',
@@ -303,9 +307,5 @@ return [
     'error' => [
         'create_disabled' => 'Creating menus through UI is disabled, please use migration files (Phinx)',
         'name_readonly' => 'Menu name is read-only and cannot be modified',
-        //Ticket Management
-        'ticket_management' => 'Ticket Management',
-        'ticket_record_list' => 'Ticket Records',
-        'ticket_redeem_list' => 'Redeem Records',
     ]
 ];

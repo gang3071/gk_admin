@@ -293,6 +293,10 @@ return [
         'store_lottery_ticket_activity_list' => '抽選券キャンペーン',
         'store_lottery_ticket_list' => '抽選券リスト',
         'store_lottery_ticket_record_list' => '当選記録',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票記録',
+        'ticket_redeem_list' => 'チケット記録',
     ],
     'help' => [
         'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',
@@ -303,9 +307,5 @@ return [
     'error' => [
         'create_disabled' => 'UIからのメニュー作成は無効です。マイグレーションファイル（Phinx）を使用してください',
         'name_readonly' => 'メニュー名は読み取り専用です。変更することはできません',
-        //出票管理
-        'ticket_management' => '出票管理',
-        'ticket_record_list' => '出票記録',
-        'ticket_redeem_list' => 'チケット記録',
     ]
 ];

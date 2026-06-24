@@ -9,6 +9,7 @@ use addons\webman\model\TicketRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\card\Card;
@@ -142,6 +143,23 @@ class StoreTicketRecordController
             // 列定义
             $grid->column('id', 'ID')->align('center')->width(80);
             $grid->column('order_id', admin_trans('ticket_machine.record.order_id'))->copy();
+            $grid->column('player.name', admin_trans('ticket_machine.record.player_name'))->display(function ($val, $data) {
+                $playerName = $val ?? ($data['player_name'] ?? '');
+                if (!empty($data['player_id'])) {
+                    $avatar = !empty($data['player']['avatar'])
+                        ? Avatar::create()->src(is_numeric($data['player']['avatar']) ? config('def_avatar.' . $data['player']['avatar']) : $data['player']['avatar'])->size(24)
+                        : Avatar::create()->content(mb_substr($playerName ?: 'U', 0, 1))->size(24);
+                    return Html::create()->content([
+                        $avatar,
+                        Html::create($playerName ?: admin_trans('ticket_machine.record.unnamed'))->style([
+                            'marginLeft' => '8px',
+                            'fontSize' => '13px',
+                            'color' => '#303133',
+                        ]),
+                    ])->style(['display' => 'flex', 'alignItems' => 'center']);
+                }
+                return Html::create(admin_trans('ticket_machine.record.no_player'))->style(['color' => '#999']);
+            })->width(120);
             $grid->column('store_name', admin_trans('ticket_machine.record.store_name'));
             $grid->column('machine_no', admin_trans('ticket_machine.record.machine_no'))->align('center');
             $grid->column('score', admin_trans('ticket_machine.record.score'))->align('right');

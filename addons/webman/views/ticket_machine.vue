@@ -118,6 +118,21 @@
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 4px;">关联玩家（可选）</div>
+            <a-select
+              v-model:value="selectedPlayerId"
+              show-search
+              placeholder="输入玩家名称搜索"
+              :filter-option="false"
+              :options="playerOptions"
+              @search="searchPlayers"
+              :loading="playerSearching"
+              allow-clear
+              style="width: 100%;"
+            >
+            </a-select>
+          </div>
+          <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 4px;">分数/金额</div>
             <a-input-number v-model:value="ticketScore" :min="0" placeholder="分数/金额" style="width: 100%;" />
           </div>
@@ -181,6 +196,10 @@ export default {
       qrCode: '',
       ticketType: 1,
       ticketScore: 0,
+      selectedPlayerId: null,
+      playerOptions: [],
+      playerSearching: false,
+      playerSearchTimer: null,
       hexCommand: '',
       logs: [],
       receiveBuffer: [],
@@ -582,6 +601,7 @@ export default {
               score: this.ticketScore,
               qr_code: this.qrCode,
               ticket_type: this.ticketType,
+              player_id: this.selectedPlayerId || 0,
               store_admin_id: this.store_admin_id,
               department_id: this.department_id,
             },
@@ -596,6 +616,43 @@ export default {
           this.addLog('warn', '票据记录保存异常: ' + (e.message || ''));
         }
       }
+    },
+
+    // 搜索玩家
+    async searchPlayers(keyword) {
+      if (!keyword || keyword.length < 2) {
+        this.playerOptions = [];
+        return;
+      }
+
+      // 防抖
+      if (this.playerSearchTimer) {
+        clearTimeout(this.playerSearchTimer);
+      }
+
+      this.playerSearchTimer = setTimeout(async () => {
+        this.playerSearching = true;
+        try {
+          const res = await this.$request({
+            url: 'ex-admin/addons-webman-controller-ChannelIndexController/searchPlayers',
+            method: 'get',
+            params: { keyword: keyword },
+          });
+
+          if (res.code === 200 && res.data) {
+            this.playerOptions = res.data.map(p => ({
+              value: p.id,
+              label: p.name + (p.uuid ? ' (' + p.uuid + ')' : ''),
+            }));
+          } else {
+            this.playerOptions = [];
+          }
+        } catch (e) {
+          this.playerOptions = [];
+        } finally {
+          this.playerSearching = false;
+        }
+      }, 300);
     },
 
     // 发送HEX

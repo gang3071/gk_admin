@@ -3306,6 +3306,7 @@ class ChannelIndexController
             $score = (float) request()->input('score', 0);
             $qrCode = request()->input('qr_code', '');
             $ticketType = (int) request()->input('ticket_type', 1);
+            $playerId = (int) request()->input('player_id', 0);
             $storeAdminId = (int) request()->input('store_admin_id', 0);
             $departmentId = (int) request()->input('department_id', 0);
 
@@ -3316,12 +3317,23 @@ class ChannelIndexController
             $orderId = \addons\webman\model\TicketRecord::generateOrderId();
             $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
 
+            // 获取玩家名称
+            $playerName = '';
+            if ($playerId > 0) {
+                $player = \addons\webman\model\Player::query()->where('id', $playerId)->first();
+                if ($player) {
+                    $playerName = $player->name ?? '';
+                }
+            }
+
             $record = \addons\webman\model\TicketRecord::create([
                 'order_id'       => $orderId,
                 'department_id'  => $departmentId,
                 'store_admin_id' => $storeAdminId,
                 'store_name'     => $storeName,
                 'machine_no'     => $machineNo,
+                'player_id'      => $playerId > 0 ? $playerId : null,
+                'player_name'    => $playerName,
                 'score'          => $score,
                 'qr_code'        => $qrCode,
                 'qr_code_no'     => $qrCodeNo,
@@ -3341,6 +3353,35 @@ class ChannelIndexController
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * 搜索玩家
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function searchPlayers(): Response
+    {
+        $keyword = request()->input('keyword', '');
+        $admin = Admin::user();
+
+        if (empty($keyword) || mb_strlen($keyword) < 2) {
+            return json(['code' => 200, 'data' => []]);
+        }
+
+        $players = \addons\webman\model\Player::query()
+            ->where('department_id', $admin->department_id)
+            ->where('store_admin_id', $admin->id)
+            ->where(function ($query) use ($keyword) {
+                $query->where('name', 'like', "%{$keyword}%")
+                    ->orWhere('uuid', 'like', "%{$keyword}%")
+                    ->orWhere('phone', 'like', "%{$keyword}%");
+            })
+            ->limit(20)
+            ->get(['id', 'name', 'uuid']);
+
+        return json(['code' => 200, 'data' => $players]);
     }
 
     /**

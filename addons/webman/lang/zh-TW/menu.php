@@ -292,6 +292,10 @@ return [
         'store_lottery_ticket_activity_list' => '摸獎券活動',
         'store_lottery_ticket_list' => '摸獎券列表',
         'store_lottery_ticket_record_list' => '中獎記錄',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票記錄',
+        'ticket_redeem_list' => '核銷記錄',
     ],
     'help' => [
         'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',
@@ -302,9 +306,5 @@ return [
     'error' => [
         'create_disabled' => '禁止通過界面創建菜單，請使用遷移文件（Phinx）創建',
         'name_readonly' => '菜單名稱為只讀，不可修改',
-        //出票管理
-        'ticket_management' => '出票管理',
-        'ticket_record_list' => '出票記錄',
-        'ticket_redeem_list' => '核銷記錄',
     ]
 ];
