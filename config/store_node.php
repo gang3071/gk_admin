@@ -670,4 +670,106 @@ return [
             ],
         ]
     ],
+
+    // ========== 出票记录 ==========
+    [
+        'id' => 'addons\webman\controller\StoreTicketRecordController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '出票记录',
+        'children' => [
+            // 记录列表
+            [
+                'id' => 'addons\webman\controller\StoreTicketRecordController\index',
+                'pid' => 'addons\webman\controller\StoreTicketRecordController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/index',
+                'title' => '记录列表',
+            ],
+            // 记录详情
+            [
+                'id' => 'addons\webman\controller\StoreTicketRecordController\detail',
+                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+                'action' => 'detail',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/detail',
+                'title' => '记录详情',
+            ],
+        ]
+    ],
+
+    // ========== 核销记录 ==========
+    [
+        'id' => 'addons\webman\controller\StoreTicketRedeemController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '核销记录',
+        'children' => [
+            // 记录列表
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/index',
+                'title' => '记录列表',
+            ],
+            // 记录详情
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\detail',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'action' => 'detail',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/detail',
+                'title' => '记录详情',
+            ],
+            // 核销操作
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\redeemRecord',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'action' => 'redeemRecord',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemRecord',
+                'title' => '核销操作',
+            ],
+            // 扫码核销页面
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\scanRedeem',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'action' => 'scanRedeem',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/scanRedeem',
+                'title' => '扫码核销',
+            ],
+            // 根据二维码查询记录
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\getRecordByQrCode',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'action' => 'getRecordByQrCode',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/getRecordByQrCode',
+                'title' => '查询记录',
+            ],
+            // 根据ID核销记录
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\redeemById',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'action' => 'redeemById',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
+                'title' => '核销记录',
+            ],
+        ]
+    ],
 ];

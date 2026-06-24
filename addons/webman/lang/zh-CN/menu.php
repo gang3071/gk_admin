@@ -303,5 +303,9 @@ return [
     'error' => [
         'create_disabled' => '禁止通过界面创建菜单，请使用迁移文件（Phinx）创建',
         'name_readonly' => '菜单名称为只读，不可修改',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票记录',
+        'ticket_redeem_list' => '核销记录',
     ]
 ];

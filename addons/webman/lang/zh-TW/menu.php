@@ -302,5 +302,9 @@ return [
     'error' => [
         'create_disabled' => '禁止通過界面創建菜單，請使用遷移文件（Phinx）創建',
         'name_readonly' => '菜單名稱為只讀，不可修改',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票記錄',
+        'ticket_redeem_list' => '核銷記錄',
     ]
 ];

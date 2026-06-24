@@ -303,5 +303,9 @@ return [
     'error' => [
         'create_disabled' => 'UIからのメニュー作成は無効です。マイグレーションファイル（Phinx）を使用してください',
         'name_readonly' => 'メニュー名は読み取り専用です。変更することはできません',
+        //出票管理
+        'ticket_management' => '出票管理',
+        'ticket_record_list' => '出票記録',
+        'ticket_redeem_list' => 'チケット記録',
     ]
 ];

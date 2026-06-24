@@ -68,7 +68,6 @@ Desktop.ini
 *.md
 # 但保留关键文档
 !README.md
-!CLAUDE.md
 
 # 文档目录
 /docs/

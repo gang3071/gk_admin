@@ -3217,6 +3217,133 @@ class ChannelIndexController
     }
 
     /**
+     * 出票机控制面板
+     * @group channel
+     * @auth true
+     * @return mixed
+     */
+    public function ticketMachineControl()
+    {
+        $store = Admin::user();
+        $storeName = $store->username ?? '';
+        $defaultBaudRate = env('TICKET_DEFAULT_BAUD_RATE', '115200');
+
+        return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
+            'default_baud_rate' => $defaultBaudRate,
+            'default_store_name' => $storeName,
+            'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
+            'store_admin_id' => $store->id ?? 0,
+            'department_id' => $store->department_id ?? 0,
+        ]);
+    }
+
+    /**
+     * 出票机API接口
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function ticketMachineApi(): Response
+    {
+        $action = request()->input('action', '');
+        $port = request()->input('port', '/dev/ttyUSB0');
+        $baudRate = (int) request()->input('baud_rate', 115200);
+
+        try {
+            $service = new \app\service\TicketMachineService($port, $baudRate);
+
+            $result = match ($action) {
+                'open' => (function () use ($service) {
+                    $service->open();
+                    return ['success' => true, 'message' => '连接成功'];
+                })(),
+                'close' => (function () use ($service) {
+                    $service->close();
+                    return ['success' => true, 'message' => '已断开'];
+                })(),
+                'status' => $service->getPortInfo(),
+                'heartbeat' => $service->heartbeat(),
+                'sync_datetime' => $service->setDateTime(),
+                'set_uid' => $service->setUid(request()->input('uid', '')),
+                'set_machine_no' => $service->setMachineNo((int) request()->input('machine_no', 0)),
+                'set_store_name' => $service->setStoreName(request()->input('store_name', '')),
+                'set_serial_no' => $service->setSerialNo((int) request()->input('serial_no', 0)),
+                'send_lottery' => $service->sendLotteryData(
+                    (int) request()->input('ticket_count', 0),
+                    (int) request()->input('gift_count', 0),
+                    (int) request()->input('code_table', 0),
+                    (int) request()->input('number', 0)
+                ),
+                'send_qr' => $service->sendQrCode(request()->input('qr_code', '')),
+                'send_hex' => $service->sendHex(request()->input('hex', '')),
+                'reset' => $service->sendCommand(0x01, 0x09),
+                'init' => $service->initMachine(
+                    request()->input('uid', ''),
+                    (int) request()->input('machine_no', 0),
+                    request()->input('store_name', '')
+                ),
+                'ports' => ['success' => true, 'ports' => \app\service\TicketMachineService::getPortList()],
+                default => ['success' => false, 'error' => 'Unknown action: ' . $action],
+            };
+        } catch (\Exception $e) {
+            $result = ['success' => false, 'error' => $e->getMessage()];
+        }
+
+        return json($result);
+    }
+
+    /**
+     * 保存出票记录
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function saveTicketRecord(): Response
+    {
+        try {
+            $storeName = request()->input('store_name', '');
+            $machineNo = (int) request()->input('machine_no', 0);
+            $score = (float) request()->input('score', 0);
+            $qrCode = request()->input('qr_code', '');
+            $ticketType = (int) request()->input('ticket_type', 1);
+            $storeAdminId = (int) request()->input('store_admin_id', 0);
+            $departmentId = (int) request()->input('department_id', 0);
+
+            if (empty($qrCode)) {
+                return json(['code' => 400, 'message' => 'QR码内容不能为空']);
+            }
+
+            $orderId = \addons\webman\model\TicketRecord::generateOrderId();
+            $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
+
+            $record = \addons\webman\model\TicketRecord::create([
+                'order_id'       => $orderId,
+                'department_id'  => $departmentId,
+                'store_admin_id' => $storeAdminId,
+                'store_name'     => $storeName,
+                'machine_no'     => $machineNo,
+                'score'          => $score,
+                'qr_code'        => $qrCode,
+                'qr_code_no'     => $qrCodeNo,
+                'ticket_type'    => $ticketType,
+                'status'         => \addons\webman\model\TicketRecord::STATUS_NORMAL,
+            ]);
+
+            return json([
+                'code'    => 200,
+                'message' => '保存成功',
+                'data'    => [
+                    'id'         => $record->id,
+                    'order_id'   => $orderId,
+                    'qr_code_no' => $qrCodeNo,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * 应用日期筛选条件到查询
      * @param \Illuminate\Database\Eloquent\Builder $query
      * @param string $data_type
