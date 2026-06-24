@@ -78,11 +78,8 @@ class LotteryTicketPushService
                 return false;
             }
 
-            // ⭐ 查询玩家在该活动下的总券数（未使用的）
-            $totalTickets = LotteryTicket::where('activity_id', $ticket->activity_id)
-                ->where('player_id', $ticket->player_id)
-                ->where('status', LotteryTicket::STATUS_UNUSED)
-                ->count();
+            // ⭐ 查询玩家在所有正在进行中活动下的券数
+            $ongoingActivities = self::getPlayerOngoingActivitiesTickets($ticket->player_id);
 
             $message = [
                 'type' => 'ticket_issued',
@@ -94,8 +91,8 @@ class LotteryTicketPushService
                     'ticket_id' => $ticket->id,
                     'ticket_no' => $ticket->ticket_no,
                     'count' => $count,  // 本次发放数量
-                    'total_tickets' => $totalTickets,  // ⭐ 该活动下玩家的总券数
                     'expired_at' => $ticket->expired_at,
+                    'ongoing_activities' => $ongoingActivities,  // ⭐ 所有正在进行中的活动及其券数
                 ],
             ];
 
@@ -109,6 +106,49 @@ class LotteryTicketPushService
             ]);
             return false;
         }
+    }
+
+    /**
+     * 获取玩家在所有正在进行中活动下的券数
+     *
+     * @param int $playerId 玩家ID
+     * @return array [['activity_id' => 1, 'activity_name' => 'xxx', 'ticket_count' => 5], ...]
+     */
+    protected static function getPlayerOngoingActivitiesTickets(int $playerId): array
+    {
+        // 查询正在进行中的活动
+        $ongoingActivityIds = LotteryTicketActivity::where('status', LotteryTicketActivity::STATUS_ONGOING)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($ongoingActivityIds)) {
+            return [];
+        }
+
+        // 统计玩家在这些活动下的券数
+        $ticketCounts = LotteryTicket::query()
+            ->selectRaw('activity_id, COUNT(*) as ticket_count')
+            ->where('player_id', $playerId)
+            ->whereIn('activity_id', $ongoingActivityIds)
+            ->where('status', LotteryTicket::STATUS_UNUSED)  // 只统计未使用的
+            ->groupBy('activity_id')
+            ->get()
+            ->keyBy('activity_id');
+
+        // 组装返回数据
+        $result = [];
+        foreach ($ongoingActivityIds as $activityId) {
+            $activity = self::getActivity($activityId);
+            if ($activity) {
+                $result[] = [
+                    'activity_id' => $activityId,
+                    'activity_name' => $activity->name,
+                    'ticket_count' => $ticketCounts->has($activityId) ? $ticketCounts[$activityId]->ticket_count : 0,
+                ];
+            }
+        }
+
+        return $result;
     }
 
     /**
