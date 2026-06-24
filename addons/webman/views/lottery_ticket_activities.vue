@@ -1743,13 +1743,9 @@ export default {
           data: {
             id: activity.id,
             confirmed: confirmed
-          }
-        }).catch(err => {
-          // ⭐ 捕获HTTP错误，但仍返回响应数据（用于处理40001状态码）
-          if (err.response && err.response.data) {
-            return err.response.data;
-          }
-          throw err;
+          },
+          // ⭐ 允许非200状态码不抛异常，直接返回数据
+          validateStatus: () => true
         });
 
         console.log('stopDrawing response:', res); // 调试日志

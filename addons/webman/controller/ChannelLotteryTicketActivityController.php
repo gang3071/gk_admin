@@ -1375,14 +1375,19 @@ class ChannelLotteryTicketActivityController
                 }
 
                 Db::rollBack();
-                return Response::error($confirmMessage, 40001, [
-                    'need_confirm' => true,
-                    'win_record_count' => $winRecordCount,
-                    'total_prize_amount' => $totalPrizeAmount,
-                    'pending_count' => $pendingCount,
-                    'granted_count' => $grantedCount,
-                    'ticket_nos' => $ticketNos,
+                // ⭐ 返回自定义响应（需要二次确认）
+                return response()->json([
+                    'code' => 40001,
                     'message' => $confirmMessage,
+                    'data' => [
+                        'need_confirm' => true,
+                        'win_record_count' => $winRecordCount,
+                        'total_prize_amount' => $totalPrizeAmount,
+                        'pending_count' => $pendingCount,
+                        'granted_count' => $grantedCount,
+                        'ticket_nos' => $ticketNos,
+                        'message' => $confirmMessage,
+                    ]
                 ]);
             }
             // 更新状态
