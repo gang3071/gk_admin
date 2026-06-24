@@ -373,6 +373,12 @@ class PlayerDeliveryRecordController
                         case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');
                             break;
+                        case PlayerDeliveryRecord::TYPE_TICKET_REDEEM:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_REDEEM))->color('#f50');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE))->color('#52c41a');
+                            break;
                         default:
                             $tag = '';
                     }
@@ -527,6 +533,8 @@ class PlayerDeliveryRecordController
                         PlayerDeliveryRecord::TYPE_PREPAY => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY),
                         PlayerDeliveryRecord::TYPE_REFUND => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND),
                         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD),
+                        PlayerDeliveryRecord::TYPE_TICKET_REDEEM => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_REDEEM),
+                        PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE),
                     ])->when([
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT

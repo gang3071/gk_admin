@@ -322,6 +322,8 @@ return [
         'wallet_modify' => '修改餘額',
         'lottery_game' => '彩金',
         'lottery_ticket_reward' => '摸獎券中獎',
+        'ticket_redeem' => '出票核銷',
+        'ticket_open_score' => '掃碼開分',
     ],
     'source' => [
         'system' => '系統',

@@ -344,26 +344,17 @@ class StoreTicketRedeemController
         // 尝试解密加密内容（如果是加密串）
         $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
         $orderId = null;
-        $ticketId = null;
 
         if (!empty($decryptedData)) {
             $data = json_decode($decryptedData, true);
             if ($data && isset($data['order_id'])) {
                 $orderId = $data['order_id'];
             }
-            if ($data && isset($data['ticket_id'])) {
-                $ticketId = $data['ticket_id'];
-            }
         }
 
-        // 优先通过加密内容中的 order_id 或 ticket_id 查询
+        // 优先通过加密内容中的 order_id 查询
         $record = null;
-        if ($ticketId) {
-            $record = TicketRecord::query()
-                ->where('id', $ticketId)
-                ->where('store_admin_id', $admin->id)
-                ->first();
-        } elseif ($orderId) {
+        if ($orderId) {
             $record = TicketRecord::query()
                 ->where('order_id', $orderId)
                 ->where('store_admin_id', $admin->id)
@@ -528,28 +519,17 @@ class StoreTicketRedeemController
         // 尝试解密加密内容（如果是加密串）
         $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
         $orderId = null;
-        $ticketId = null;
 
         if (!empty($decryptedData)) {
             $data = json_decode($decryptedData, true);
             if ($data && isset($data['order_id'])) {
                 $orderId = $data['order_id'];
             }
-            if ($data && isset($data['ticket_id'])) {
-                $ticketId = $data['ticket_id'];
-            }
         }
 
-        // 优先通过加密内容中的 order_id 或 ticket_id 查询
+        // 优先通过加密内容中的 order_id 查询
         $record = null;
-        if ($ticketId) {
-            $record = TicketRecord::query()
-                ->where('id', $ticketId)
-                ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
-                ->first();
-        } elseif ($orderId) {
+        if ($orderId) {
             $record = TicketRecord::query()
                 ->where('order_id', $orderId)
                 ->where('store_admin_id', $admin->id)

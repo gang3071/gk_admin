@@ -55,6 +55,8 @@ return [
         PlayerDeliveryRecord::TYPE_PREPAY => '預扣金額',
         PlayerDeliveryRecord::TYPE_REFUND => '退款',
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '摸獎券中獎獎勵',
+        PlayerDeliveryRecord::TYPE_TICKET_REDEEM => '出票核銷',
+        PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE => '掃碼開分',
     ],
     'detail' => '詳情',
     'chart' => '圖表',
