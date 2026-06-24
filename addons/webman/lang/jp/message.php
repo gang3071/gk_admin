@@ -320,6 +320,7 @@ return [
         'player_re_bet_settlement' => '賭注再清算',
         'wallet_modify' => '残高修正',
         'lottery_game' => '賞金',
+        'lottery_ticket_reward' => '抽選券当選',
     ],
     'source' => [
         'system' => 'システム',

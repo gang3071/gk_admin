@@ -321,6 +321,7 @@ return [
         'player_re_bet_settlement' => 'Bet re-settlement',
         'wallet_modify' => 'Modify balance',
         'lottery_game' => 'Lottery',
+        'lottery_ticket_reward' => 'Lottery Ticket Prize',
     ],
     'source' => [
         'system' => 'system',

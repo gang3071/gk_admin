@@ -321,6 +321,7 @@ return [
         'player_re_bet_settlement' => '注單重新結算',
         'wallet_modify' => '修改餘額',
         'lottery_game' => '彩金',
+        'lottery_ticket_reward' => '摸獎券中獎',
     ],
     'source' => [
         'system' => '系統',

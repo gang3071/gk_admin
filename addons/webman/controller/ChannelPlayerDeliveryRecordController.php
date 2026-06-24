@@ -217,7 +217,7 @@ class ChannelPlayerDeliveryRecordController
                 return Html::create()->content([
                     $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
                 ]);
-            })->fixed(true)->align('center');
+            })->align('center');
             $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
                 $val,
                 PlayerDeliveryRecord $data
