@@ -54,8 +54,8 @@ return [
 
         // 中奖记录
         'player_name' => 'プレイヤー名',
-        'player_uuid' => 'プレイヤーUUID',  // ⭐ 新規追加
-        'player_phone' => 'プレイヤー電話',
+        'player_uuid' => 'プレイヤーUUID',
+        'player_username' => 'プレイヤーアカウント',
         'ticket_no' => 'チケット番号',
         'prize_type' => '賞品タイプ',
         'prize_name' => '賞品名',

@@ -54,8 +54,8 @@ return [
 
         // 中奖记录
         'player_name' => 'Player Name',
-        'player_uuid' => 'Player UUID',  // ⭐ Added
-        'player_phone' => 'Player Phone',
+        'player_uuid' => 'Player UUID',
+        'player_username' => 'Player Account',
         'ticket_no' => 'Ticket No',
         'prize_type' => 'Prize Type',
         'prize_name' => 'Prize Name',

@@ -54,8 +54,8 @@ return [
 
         // 中奖记录
         'player_name' => '玩家名称',
-        'player_uuid' => '玩家UUID',  // ⭐ 新增
-        'player_phone' => '玩家手机',
+        'player_uuid' => '玩家UUID',
+        'player_username' => '玩家账号',
         'ticket_no' => '券号',
         'prize_type' => '奖品类型',
         'prize_name' => '奖品名称',
