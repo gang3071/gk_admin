@@ -78,6 +78,12 @@ class LotteryTicketPushService
                 return false;
             }
 
+            // ⭐ 查询玩家在该活动下的总券数（未使用的）
+            $totalTickets = LotteryTicket::where('activity_id', $ticket->activity_id)
+                ->where('player_id', $ticket->player_id)
+                ->where('status', LotteryTicket::STATUS_UNUSED)
+                ->count();
+
             $message = [
                 'type' => 'ticket_issued',
                 'title' => '恭喜獲得摸獎券',
@@ -87,8 +93,9 @@ class LotteryTicketPushService
                     'activity_name' => $activity->name,
                     'ticket_id' => $ticket->id,
                     'ticket_no' => $ticket->ticket_no,
-                    'count' => $count,
-                    'expired_at' => $ticket->expired_at,  // ✅ 修正字段名
+                    'count' => $count,  // 本次发放数量
+                    'total_tickets' => $totalTickets,  // ⭐ 该活动下玩家的总券数
+                    'expired_at' => $ticket->expired_at,
                 ],
             ];
 
