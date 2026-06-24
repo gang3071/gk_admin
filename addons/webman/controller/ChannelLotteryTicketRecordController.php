@@ -200,8 +200,13 @@ class ChannelLotteryTicketRecordController
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
-                // 待发放的奖品可以手动发放
-                if ($data['status'] == LotteryTicketRecord::STATUS_PENDING && $data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
+                // 待发放和发放失败的奖品可以手动发放 ⭐
+                $canDistribute = in_array($data['status'], [
+                    LotteryTicketRecord::STATUS_PENDING,
+                    LotteryTicketRecord::STATUS_FAILED
+                ]) && $data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY;
+
+                if ($canDistribute) {
                     $actions->prepend(
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
@@ -264,8 +269,12 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('common.no_permission'));
             }
 
-            // 3. 检查状态
-            if ($record->status !== LotteryTicketRecord::STATUS_PENDING) {
+            // 3. 检查状态（待发放或发放失败的可以发放）⭐
+            $allowedStatuses = [
+                LotteryTicketRecord::STATUS_PENDING,
+                LotteryTicketRecord::STATUS_FAILED
+            ];
+            if (!in_array($record->status, $allowedStatuses)) {
                 throw new \Exception(admin_trans('lottery_ticket.error.invalid_status'));
             }
 
@@ -434,8 +443,11 @@ class ChannelLotteryTicketRecordController
             return message_error(admin_trans('lottery_ticket.error.note_too_long'));
         }
 
-        // 查询待发放的记录
-        $query = LotteryTicketRecord::where('status', LotteryTicketRecord::STATUS_PENDING)
+        // 查询待发放的记录（包括待发放和发放失败的）⭐
+        $query = LotteryTicketRecord::whereIn('status', [
+                LotteryTicketRecord::STATUS_PENDING,
+                LotteryTicketRecord::STATUS_FAILED
+            ])
             ->where('department_id', $departmentId);
 
         if ($activityId) {
@@ -471,8 +483,12 @@ class ChannelLotteryTicketRecordController
                     ->lockForUpdate()
                     ->first();
 
-                // 再次检查状态
-                if ($record->status !== LotteryTicketRecord::STATUS_PENDING) {
+                // 再次检查状态（待发放或发放失败的可以发放）⭐
+                $allowedStatuses = [
+                    LotteryTicketRecord::STATUS_PENDING,
+                    LotteryTicketRecord::STATUS_FAILED
+                ];
+                if (!in_array($record->status, $allowedStatuses)) {
                     throw new \Exception(admin_trans('lottery_ticket.error.status_changed'));
                 }
 
