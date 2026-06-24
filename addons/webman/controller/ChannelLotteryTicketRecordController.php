@@ -700,17 +700,20 @@ class ChannelLotteryTicketRecordController
         return Form::create(new LotteryTicketRecord(), function ($form) {
             $departmentId = Admin::user()->department_id;
 
-            // ⚠️ 风险提示 - 使用文本形式显示（ExAdmin Form不支持HTML渲染）
-            $warningText = '⚠️ ' . admin_trans('lottery_ticket.warning.batch_distribute_title') . "\n" .
-                '──────────────────────────────\n' .
-                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point1') . "\n" .
-                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point2') . "\n" .
-                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point3') . "\n" .
-                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point4') . "\n" .
-                '──────────────────────────────';
+            // ⚠️ 风险提示 - 使用Html::markdown渲染HTML内容
+            $warningHtml = '<div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 4px; margin-bottom: 16px;">
+                <div style="color: #856404; font-weight: bold; font-size: 16px; margin-bottom: 12px;">
+                    ⚠️ ' . admin_trans('lottery_ticket.warning.batch_distribute_title') . '
+                </div>
+                <div style="color: #856404; line-height: 1.8;">
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point1') . '<br>
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point2') . '<br>
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point3') . '<br>
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point4') . '
+                </div>
+            </div>';
 
-            $form->display('', '')->default($warningText)
-                ->style(['color' => '#ff9800', 'background' => '#fff3cd', 'padding' => '16px', 'border-radius' => '4px', 'border-left' => '4px solid #ff9800', 'white-space' => 'pre-line', 'margin-bottom' => '16px']);
+            $form->push(\ExAdmin\ui\component\common\Html::markdown($warningHtml));
 
             // 活动选择（显示已结束的活动，这些活动已经开奖）
             $activities = LotteryTicketActivity::where('department_id', $departmentId)
@@ -728,7 +731,7 @@ class ChannelLotteryTicketRecordController
                 ->placeholder(admin_trans('lottery_ticket.form.distribution_note_placeholder'))
                 ->maxlength(255)
                 ->showCount();
-
+            $form->layout('vertical');
             // 提交处理 - 调用现有的批量发放方法
             $form->saving(function ($form) {
                 $activityId = $form->input('activity_id');
