@@ -8,12 +8,12 @@ use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\Player;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\form\Form;
-use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
@@ -43,7 +43,7 @@ class ChannelLotteryTicketRecordController
             $stats = self::getRecordStats($departmentId, $exAdminFilter);
 
             // ⭐ 顶部统计卡片
-            $layout = Card::create()->content([
+            $layout = Layout::create()->content([
                 Row::create()
                     ->column(
                         Statistic::create()
