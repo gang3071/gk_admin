@@ -202,12 +202,10 @@ class ChannelLotteryTicketRecordController
             $grid->actions(function (Actions $actions, $data) {
                 // 待发放的奖品可以手动发放
                 if ($data['status'] == LotteryTicketRecord::STATUS_PENDING && $data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
-                    // ✅ 正确用法：使用 prepend() 添加 Button
                     $actions->prepend(
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
-                            ->confirm(admin_trans('lottery_ticket.confirm.distribute'))
-                            ->ajax([$this, 'distribute'], ['id' => $data['id']])
+                            ->confirm(admin_trans('lottery_ticket.confirm.distribute'), [$this, 'distribute'], ['id' => $data['id']])
                     );
                 }
 
@@ -230,13 +228,15 @@ class ChannelLotteryTicketRecordController
      * 发放奖励（单个）⭐ 核心方法
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function distribute(Request $request)
+    public function distribute($id = null)
     {
-        $id = $request->input('id');
-        $note = $request->input('distribution_note', '');
+        // ExAdmin的ajax会将参数作为方法参数传递
+        if (!$id) {
+            $id = Request::input('id');
+        }
+        $note = Request::input('distribution_note', '');
         $adminId = Admin::user()->id;
 
         // ⭐ 输入验证
@@ -294,9 +294,28 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
             }
 
-            $oldBalance = $player->balance;
-            $player->balance += $record->prize_amount;
-            $player->save();
+            // 5.2 通过钱包服务增加玩家余额（Redis原子操作 + 异步同步数据库）⭐
+            $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+            $newBalance = \addons\webman\service\WalletService::add($player->id, $record->prize_amount, 1);
+
+            // 5.3 记录金流明细 (PlayerDeliveryRecord) ⭐
+            $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+            $playerDeliveryRecord->player_id = $player->id;
+            $playerDeliveryRecord->department_id = $player->department_id;
+            $playerDeliveryRecord->target = $record->getTable(); // lottery_ticket_record
+            $playerDeliveryRecord->target_id = $record->id;
+            $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+            $playerDeliveryRecord->source = 'lottery_ticket_reward';
+            $playerDeliveryRecord->amount = $record->prize_amount;
+            $playerDeliveryRecord->amount_before = $oldBalance;
+            $playerDeliveryRecord->amount_after = $newBalance;
+            $playerDeliveryRecord->tradeno = $record->ticket_no; // 使用券号作为交易号
+            $playerDeliveryRecord->remark = sprintf(
+                '摸奖券中奖发放：%s - %s',
+                $record->activity->name ?? '未知活动',
+                $record->prize_name
+            );
+            $playerDeliveryRecord->save();
 
             // 6. 更新中奖记录状态
             $record->status = LotteryTicketRecord::STATUS_CLAIMED;
@@ -306,6 +325,7 @@ class ChannelLotteryTicketRecordController
             $record->save();
 
             // 7. 更新活动已发放金额（使用悲观锁）⭐
+            /** @var LotteryTicketActivity $activity */
             $activity = LotteryTicketActivity::where('id', $record->activity_id)
                 ->lockForUpdate()
                 ->first();
@@ -355,8 +375,7 @@ class ChannelLotteryTicketRecordController
                 'record_id' => $id,
                 'player_id' => $player->id,
                 'prize_amount' => $record->prize_amount,
-                'old_balance' => $oldBalance,
-                'new_balance' => $player->balance,
+                'new_balance' => $newBalance,
                 'admin_id' => $adminId,
                 'note' => $note
             ]);
@@ -394,11 +413,11 @@ class ChannelLotteryTicketRecordController
      * @group channel
      * @return mixed
      */
-    public function batchDistribute(Request $request)
+    public function batchDistribute()
     {
-        $activityId = $request->input('activity_id');
-        $recordIds = $request->input('ids', []);
-        $note = $request->input('distribution_note', '批量发放');
+        $activityId = Request::input('activity_id');
+        $recordIds = Request::input('ids', []);
+        $note = Request::input('distribution_note', '批量发放');
         $adminId = Admin::user()->id;
         $departmentId = Admin::user()->department_id;
 
@@ -442,7 +461,7 @@ class ChannelLotteryTicketRecordController
         $successCount = 0;
         $failCount = 0;
         $failReasons = [];
-
+        /** @var LotteryTicketRecord  $record */
         // 逐条发放
         foreach ($records as $record) {
             \support\Db::beginTransaction();
@@ -476,8 +495,28 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
                 }
 
-                $player->balance += $record->prize_amount;
-                $player->save();
+                // 通过钱包服务增加玩家余额（Redis原子操作 + 异步同步数据库）⭐
+                $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+                $newBalance = \addons\webman\service\WalletService::add($player->id, $record->prize_amount, 1);
+
+                // 记录金流明细 (PlayerDeliveryRecord) ⭐
+                $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                $playerDeliveryRecord->player_id = $player->id;
+                $playerDeliveryRecord->department_id = $player->department_id;
+                $playerDeliveryRecord->target = $record->getTable(); // lottery_ticket_record
+                $playerDeliveryRecord->target_id = $record->id;
+                $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+                $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                $playerDeliveryRecord->amount = $record->prize_amount;
+                $playerDeliveryRecord->amount_before = $oldBalance;
+                $playerDeliveryRecord->amount_after = $newBalance;
+                $playerDeliveryRecord->tradeno = $record->ticket_no; // 使用券号作为交易号
+                $playerDeliveryRecord->remark = sprintf(
+                    '摸奖券中奖发放：%s - %s',
+                    $activity->name ?? '未知活动',
+                    $record->prize_name
+                );
+                $playerDeliveryRecord->save();
 
                 // 更新记录
                 $record->status = LotteryTicketRecord::STATUS_CLAIMED;
@@ -638,23 +677,23 @@ class ChannelLotteryTicketRecordController
      * 批量发放选中记录
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function batchDistributeSelected(Request $request)
+    public function batchDistributeSelected()
     {
-        $ids = $request->input('ids', []);
+        $ids = Request::input('ids', []);
 
         if (empty($ids)) {
             return message_error(admin_trans('lottery_ticket.error.no_selection'));
         }
 
         // 调用批量发放接口
-        $request->_data = [
+        // ⚠️ 注意：这里直接合并到当前请求参数中
+        request()->_data = array_merge(request()->_data ?? [], [
             'ids' => $ids,
             'distribution_note' => admin_trans('lottery_ticket.message.batch_distribute_selected')
-        ];
+        ]);
 
-        return $this->batchDistribute($request);
+        return $this->batchDistribute();
     }
 }
