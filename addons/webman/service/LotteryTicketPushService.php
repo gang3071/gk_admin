@@ -109,22 +109,28 @@ class LotteryTicketPushService
 
     /**
      * 获取玩家在所有有效活动下的券数
-     * ⭐ 只统计正在进行中的活动（STATUS_ONGOING）
-     * ⭐ 排除：待开奖、开奖中、已结束、已关闭的活动
+     * ⭐ 统计：进行中、待开奖、开奖中的活动（券仍然有效）
+     * ⭐ 排除：未开始、已结束、已关闭的活动（券无效或不存在）
      *
      * @param int $playerId 玩家ID
      * @return array [['activity_id' => 1, 'activity_name' => 'xxx', 'ticket_count' => 5], ...]
      */
     protected static function getPlayerOngoingActivitiesTickets(int $playerId): array
     {
-        // ⭐ 只查询正在进行中的活动（STATUS_ONGOING）
+        // ⭐ 查询券仍然有效的活动：
+        // - STATUS_ONGOING (进行中，可以发券)
+        // - STATUS_PENDING_DRAW (待开奖，不再发券但券有效)
+        // - STATUS_DRAWING (开奖中，券有效，可能被抽中)
+        //
         // 排除的状态：
-        // - STATUS_PENDING_DRAW (待开奖，券已失效)
-        // - STATUS_DRAWING (开奖中，券已失效)
-        // - STATUS_ENDED (已结束)
-        // - STATUS_CLOSED (已关闭)
-        // - STATUS_NOT_STARTED (未开始)
-        $ongoingActivityIds = LotteryTicketActivity::where('status', LotteryTicketActivity::STATUS_ONGOING)
+        // - STATUS_NOT_STARTED (未开始，无券)
+        // - STATUS_ENDED (已结束，券失效)
+        // - STATUS_CLOSED (已关闭，券失效)
+        $ongoingActivityIds = LotteryTicketActivity::whereIn('status', [
+            LotteryTicketActivity::STATUS_ONGOING,
+            LotteryTicketActivity::STATUS_PENDING_DRAW,
+            LotteryTicketActivity::STATUS_DRAWING,
+        ])
             ->pluck('id')
             ->toArray();
 
