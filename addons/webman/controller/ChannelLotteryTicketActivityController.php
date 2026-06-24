@@ -1376,7 +1376,7 @@ class ChannelLotteryTicketActivityController
 
                 Db::rollBack();
                 // ⭐ 返回自定义响应（需要二次确认）
-                return response()->json([
+                return json([
                     'code' => 40001,
                     'message' => $confirmMessage,
                     'data' => [
