@@ -202,12 +202,11 @@ class ChannelLotteryTicketRecordController
             $grid->actions(function (Actions $actions, $data) {
                 // 待发放的奖品可以手动发放
                 if ($data['status'] == LotteryTicketRecord::STATUS_PENDING && $data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
-                    // ✅ 使用 api() 方法传递参数
                     $actions->prepend(
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
                             ->confirm(admin_trans('lottery_ticket.confirm.distribute'))
-                            ->api('/ex-admin/addons-webman-controller-ChannelLotteryTicketRecordController/distribute', 'post', ['id' => $data['id']])
+                            ->ajax('distribute', ['id' => $data['id']])
                     );
                 }
 
