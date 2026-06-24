@@ -45,13 +45,8 @@ return [
     // 消费者目录：app/queue/redis/
     // 队列列表：lottery-bet-progress, lottery-ticket-push
 
-    // 摸奖券过期处理定时任务（每5分钟执行一次）
-    'lottery_ticket_expire' => [
-        'handler' => process\LotteryTicketExpireProcess::class,
-        'reloadable' => true,
-        'count' => 1,  // 只需要1个进程
-        'constructor' => []
-    ],
+    // ⭐ 摸奖券过期处理已废弃
+    // 改为在活动结束/关闭时直接将券标记为过期，不需要定时扫描
 
     // 摸奖券打码进度扫描任务（定时扫描增量游戏记录，批量更新进度）
     // 用于处理 gk_work 批量插入的游戏记录
