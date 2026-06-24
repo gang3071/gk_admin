@@ -302,7 +302,7 @@ return [
         'live_not_started' => '直播尚未開始，無法結束',
         'cannot_start_drawing' => '活動進行中無法開獎，請等待活動結束後再開獎（只有已結束狀態的活動才能開獎）',
         'cannot_stop_drawing' => '當前狀態無法停止開獎（只有開獎中的活動可以結束）',
-        'cannot_record_win_in_current_status' => '當前狀態無法錄入中獎（只能在進行中、待開獎、開獎中或已結束狀態錄入）',
+        'cannot_record_win_in_current_status' => '當前狀態無法錄入中獎（只能在進行中或開獎中狀態錄入）',
         // 輸入驗證
         'invalid_record_id' => '參數錯誤：記錄ID無效',
         'invalid_activity_id' => '參數錯誤：活動ID無效',

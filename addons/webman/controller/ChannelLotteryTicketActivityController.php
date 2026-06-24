@@ -1063,13 +1063,11 @@ class ChannelLotteryTicketActivityController
             // - ONGOING（活动进行中）- 可提前录入
             // - PENDING_DRAW（待开奖）- 活动结束等待开奖
             // - DRAWING（开奖中）- 正在开奖
-            // - ENDED（已结束）- 允许补录漏掉的中奖券号 ⭐ 新增
-            // 不允许在 CLOSED（已关闭）状态录入
+            // 不允许在 ENDED（已结束）或 CLOSED（已关闭）状态录入
             $allowedStatuses = [
                 LotteryTicketActivity::STATUS_ONGOING,
                 LotteryTicketActivity::STATUS_PENDING_DRAW,
                 LotteryTicketActivity::STATUS_DRAWING,
-                LotteryTicketActivity::STATUS_ENDED,  // ⭐ 新增：允许在已结束状态补录
             ];
 
             if (!in_array($activity->status, $allowedStatuses)) {

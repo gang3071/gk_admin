@@ -302,7 +302,7 @@ return [
         'live_not_started' => 'ライブがまだ開始されていません、終了できません',
         'cannot_start_drawing' => 'アクティビティ進行中は抽選を開始できません。終了まで待ってください（終了済みステータスのみ抽選開始可能）',
         'cannot_stop_drawing' => '現在のステータスでは抽選を停止できません（抽選中のアクティビティのみ終了可能）',
-        'cannot_record_win_in_current_status' => '現在のステータスでは当選を記録できません（進行中、抽選待ち、抽選中または終了済みステータスのみ記録可能）',
+        'cannot_record_win_in_current_status' => '現在のステータスでは当選を記録できません（進行中または抽選中のステータスのみ記録可能）',
         // 输入驗證
         'invalid_record_id' => 'パラメータエラー：記録IDが無効',
         'invalid_activity_id' => 'パラメータエラー：アクティビティIDが無効',

@@ -108,8 +108,8 @@
                     {{ trans.startDrawing || '开始开奖' }}
                   </a-menu-item>
 
-                  <!-- ⭐ 录入中奖（进行中/待开奖/开奖中/已结束） -->
-                  <a-menu-item v-if="activity.status === 1 || activity.status === 5 || activity.status === 6 || activity.status === 2" key="record">
+                  <!-- ⭐ 录入中奖（进行中/待开奖/开奖中） -->
+                  <a-menu-item v-if="activity.status === 1 || activity.status === 5 || activity.status === 6" key="record">
                     <trophy-outlined/>
                     {{ trans.recordWin }}
                   </a-menu-item>
