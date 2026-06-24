@@ -700,20 +700,17 @@ class ChannelLotteryTicketRecordController
         return Form::create(new LotteryTicketRecord(), function ($form) {
             $departmentId = Admin::user()->department_id;
 
-            // ⚠️ 风险提示 - 使用divider显示醒目提示（使用HTML格式）
-            $form->divider()->content('
-                <div style="padding: 12px 16px; background: #fff3cd; border-left: 4px solid #ff9800; margin-bottom: 16px;">
-                    <div style="color: #856404; font-weight: bold; margin-bottom: 8px; font-size: 15px;">
-                        ⚠️ ' . admin_trans('lottery_ticket.warning.batch_distribute_title') . '
-                    </div>
-                    <div style="color: #856404; line-height: 1.8;">
-                        • ' . admin_trans('lottery_ticket.warning.batch_distribute_point1') . '<br>
-                        • ' . admin_trans('lottery_ticket.warning.batch_distribute_point2') . '<br>
-                        • ' . admin_trans('lottery_ticket.warning.batch_distribute_point3') . '<br>
-                        • ' . admin_trans('lottery_ticket.warning.batch_distribute_point4') . '
-                    </div>
-                </div>
-            ');
+            // ⚠️ 风险提示 - 使用文本形式显示（ExAdmin Form不支持HTML渲染）
+            $warningText = '⚠️ ' . admin_trans('lottery_ticket.warning.batch_distribute_title') . "\n" .
+                '──────────────────────────────\n' .
+                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point1') . "\n" .
+                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point2') . "\n" .
+                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point3') . "\n" .
+                '• ' . admin_trans('lottery_ticket.warning.batch_distribute_point4') . "\n" .
+                '──────────────────────────────';
+
+            $form->display('', '')->default($warningText)
+                ->style(['color' => '#ff9800', 'background' => '#fff3cd', 'padding' => '16px', 'border-radius' => '4px', 'border-left' => '4px solid #ff9800', 'white-space' => 'pre-line', 'margin-bottom' => '16px']);
 
             // 活动选择（显示已结束的活动，这些活动已经开奖）
             $activities = LotteryTicketActivity::where('department_id', $departmentId)
