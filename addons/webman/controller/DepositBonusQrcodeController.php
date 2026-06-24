@@ -55,12 +55,12 @@ class DepositBonusQrcodeController
 
             $grid->column('deposit_amount', admin_trans('deposit_bonus_order.fields.deposit_amount'))
                 ->display(function ($val) {
-                    return '¥' . number_format($val, 2);
+                    return 'NT$' . number_format($val, 2);
                 })->align('center');
 
             $grid->column('bonus_amount', admin_trans('deposit_bonus_order.fields.bonus_amount'))
                 ->display(function ($val) {
-                    return Tag::create('¥' . number_format($val, 2))->color('green');
+                    return Tag::create('NT$' . number_format($val, 2))->color('green');
                 })->align('center');
 
             $grid->column('bet_progress', admin_trans('deposit_bonus_order.fields.bet_progress'))
@@ -243,19 +243,19 @@ class DepositBonusQrcodeController
                 });
             $detail->item('deposit_amount', admin_trans('deposit_bonus_order.fields.deposit_amount'))
                 ->display(function ($val) {
-                    return '¥' . number_format($val, 2);
+                    return 'NT$' . number_format($val, 2);
                 });
             $detail->item('bonus_amount', admin_trans('deposit_bonus_order.fields.bonus_amount'))
                 ->display(function ($val) {
-                    return '¥' . number_format($val, 2);
+                    return 'NT$' . number_format($val, 2);
                 });
             $detail->item('required_bet_amount', admin_trans('deposit_bonus_order.fields.required_bet_amount'))
                 ->display(function ($val) {
-                    return '¥' . number_format($val, 2);
+                    return 'NT$' . number_format($val, 2);
                 });
             $detail->item('current_bet_amount', admin_trans('deposit_bonus_order.fields.current_bet_amount'))
                 ->display(function ($val) {
-                    return '¥' . number_format($val, 2);
+                    return 'NT$' . number_format($val, 2);
                 });
             $detail->item('bet_progress', admin_trans('deposit_bonus_order.fields.bet_progress'))
                 ->display(function ($val, DepositBonusOrder $data) {

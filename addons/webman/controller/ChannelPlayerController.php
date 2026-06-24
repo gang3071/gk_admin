@@ -5047,10 +5047,11 @@ class ChannelPlayerController
                 'THB' => '฿',
                 'KRW' => '₩',
                 'JPY' => '¥',
+                'TWD' => 'NT$',  // 新台币
             ];
 
-            // 默认值
-            $currencySymbol = '¥';
+            // 默认值（新台币）
+            $currencySymbol = 'NT$';
             $ratio = 1;
 
             /** @var Channel $channel */

@@ -616,7 +616,7 @@ class ChannelLotteryTicketActivityController
                     $amount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $data->id)
                         ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
                         ->sum('prize_amount');
-                    return '¥' . number_format($amount, 2);
+                    return 'NT$' . number_format($amount, 2);
                 });
 
             // ⭐ 筛选器
