@@ -64,14 +64,14 @@ class LotteryTicketPushService
 
 
     /**
-     * 获取玩家在所有有效活动下的券数
+     * 获取玩家在所有有效活动下的总券数
      * ⭐ 统计：进行中、待开奖、开奖中的活动（券仍然有效）
      * ⭐ 排除：未开始、已结束、已关闭的活动（券无效或不存在）
      *
      * @param int $playerId 玩家ID
-     * @return array [['activity_id' => 1, 'activity_name' => 'xxx', 'ticket_count' => 5], ...]
+     * @return int 总券数
      */
-    protected static function getPlayerOngoingActivitiesTickets(int $playerId): array
+    protected static function getPlayerTotalTickets(int $playerId): int
     {
         // ⭐ 查询券仍然有效的活动：
         // - STATUS_ONGOING (进行中，可以发券)
@@ -91,33 +91,17 @@ class LotteryTicketPushService
             ->toArray();
 
         if (empty($ongoingActivityIds)) {
-            return [];
+            return 0;
         }
 
-        // 统计玩家在这些活动下的券数
-        $ticketCounts = LotteryTicket::query()
-            ->selectRaw('activity_id, COUNT(*) as ticket_count')
+        // 统计玩家在这些活动下的总券数
+        $totalTickets = LotteryTicket::query()
             ->where('player_id', $playerId)
             ->whereIn('activity_id', $ongoingActivityIds)
             ->where('status', LotteryTicket::STATUS_UNUSED)  // 只统计未使用的
-            ->groupBy('activity_id')
-            ->get()
-            ->keyBy('activity_id');
+            ->count();
 
-        // 组装返回数据
-        $result = [];
-        foreach ($ongoingActivityIds as $activityId) {
-            $activity = self::getActivity($activityId);
-            if ($activity) {
-                $result[] = [
-                    'activity_id' => $activityId,
-                    'activity_name' => $activity->name,
-                    'ticket_count' => $ticketCounts->has($activityId) ? $ticketCounts[$activityId]->ticket_count : 0,
-                ];
-            }
-        }
-
-        return $result;
+        return $totalTickets;
     }
 
     /**
@@ -125,20 +109,23 @@ class LotteryTicketPushService
      *
      * @param int $playerId 玩家ID
      * @param string $message 提示消息（可选）
+     * @param int|null $totalTickets 总券数（可选，传null则自动查询）
      * @return bool
      */
-    public static function pushPlayerTicketsUpdate(int $playerId, string $message = ''): bool
+    public static function pushPlayerTicketsUpdate(int $playerId, string $message = '', ?int $totalTickets = null): bool
     {
         try {
-            // 获取玩家在所有正在进行中活动下的券数
-            $ongoingActivities = self::getPlayerOngoingActivitiesTickets($playerId);
+            // ⭐ 如果未传券数，则查询数据库
+            if ($totalTickets === null) {
+                $totalTickets = self::getPlayerTotalTickets($playerId);
+            }
 
             $pushMessage = [
-                'type' => 'ticket_issued',  // 统一使用 ticket_issued 类型
+                'type' => 'ticket_issued',
                 'title' => '摸獎券更新',
                 'message' => $message ?: '您的摸獎券已更新',
                 'data' => [
-                    'ongoing_activities' => $ongoingActivities,
+                    'total_tickets' => $totalTickets,  // 只推送总券数
                 ],
             ];
 

@@ -152,6 +152,7 @@ class LotteryTicketIssueService
             $this->clearPlayerTicketCache($playerId);
 
             // ⭐ 推送发券通知给客户端
+            // ⚠️ 不传 totalTickets 参数，让推送服务重新查询最新数据，确保数据一致性
             $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $actualCount);
             LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
 
@@ -245,7 +246,7 @@ class LotteryTicketIssueService
      * @param int $playerId 玩家ID
      * @param int $count 发放数量
      * @param string $source 来源
-     * @return array 发放的奖券列表
+     * @return array ['count' => 实际发放数, 'first_ticket_no' => 首张券号, 'last_ticket_no' => 末张券号]
      * @throws \Exception
      */
     public function issueTicketsBatch(int $activityId, int $playerId, int $count, string $source = LotteryTicket::SOURCE_BETTING): array
@@ -313,18 +314,6 @@ class LotteryTicketIssueService
 
             Db::commit();
 
-            // 查询插入的奖券（用于返回模型对象）
-            $tickets = LotteryTicket::query()
-                ->where('activity_id', $activityId)
-                ->where('player_id', $playerId)
-                ->whereBetween('ticket_no', [
-                    str_pad($startSequence, 6, '0', STR_PAD_LEFT),
-                    str_pad($baseSequence, 6, '0', STR_PAD_LEFT)
-                ])
-                ->orderBy('ticket_no')
-                ->get()
-                ->toArray();
-
             Log::info('[摸奖券] 批量发放成功', [
                 'activity_id' => $activityId,
                 'player_id' => $playerId,
@@ -337,10 +326,16 @@ class LotteryTicketIssueService
             $this->clearPlayerTicketCache($playerId);
 
             // ⭐ 推送发券通知给客户端
+            // ⚠️ 不传 totalTickets 参数，让推送服务重新查询最新数据，确保数据一致性
             $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $actualCount);
             LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
 
-            return $tickets;
+            // ⭐ 只返回必要信息，避免查询和返回大量数据
+            return [
+                'count' => $actualCount,
+                'first_ticket_no' => str_pad($startSequence, 6, '0', STR_PAD_LEFT),
+                'last_ticket_no' => str_pad($baseSequence, 6, '0', STR_PAD_LEFT),
+            ];
 
         } catch (\Exception $e) {
             Db::rollBack();
