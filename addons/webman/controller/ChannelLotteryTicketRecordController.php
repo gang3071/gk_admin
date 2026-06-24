@@ -224,7 +224,9 @@ class ChannelLotteryTicketRecordController
             ]);
 
             // ✅ 隐藏批量删除和回收站
-            $grid->hideBatchDelete();
+            $grid->hideDeleteSelection();
+            $grid->hideDelete();
+            $grid->hideSelection();
             $grid->hideTrashed();
         });
     }
