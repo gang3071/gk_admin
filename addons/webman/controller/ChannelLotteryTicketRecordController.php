@@ -211,7 +211,7 @@ class ChannelLotteryTicketRecordController
 
                 // ✅ 隐藏编辑和删除按钮
                 $actions->hideEdit();
-                $actions->hideDelete();
+                $actions->hideDel();
             });
 
             // ⭐ 工具栏按钮
