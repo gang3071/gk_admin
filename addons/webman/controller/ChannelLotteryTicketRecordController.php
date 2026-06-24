@@ -735,14 +735,104 @@ class ChannelLotteryTicketRecordController
                 $activityId = $form->input('activity_id');
                 $note = $form->input('distribution_note', '批量发放');
 
-                // 调用批量发放接口
-                $request = new Request();
-                $request->_data = [
-                    'activity_id' => $activityId,
-                    'distribution_note' => $note
-                ];
+                if (!$activityId) {
+                    return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+                }
 
-                return $this->batchDistribute($request);
+                // 直接处理批量发放逻辑
+                $departmentId = Admin::user()->department_id;
+
+                // 查询待发放的记录
+                $query = LotteryTicketRecord::whereIn('status', [
+                        LotteryTicketRecord::STATUS_PENDING,
+                        LotteryTicketRecord::STATUS_FAILED
+                    ])
+                    ->where('department_id', $departmentId)
+                    ->where('activity_id', $activityId);
+
+                $records = $query->get();
+
+                if ($records->isEmpty()) {
+                    return message_error(admin_trans('lottery_ticket.error.no_pending_records'));
+                }
+
+                $successCount = 0;
+                $failCount = 0;
+                $failReasons = [];
+
+                // 逐条发放
+                foreach ($records as $record) {
+                    \support\Db::beginTransaction();
+                    try {
+                        // 锁定记录
+                        $record = LotteryTicketRecord::where('id', $record->id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        // 检查状态
+                        $allowedStatuses = [
+                            LotteryTicketRecord::STATUS_PENDING,
+                            LotteryTicketRecord::STATUS_FAILED
+                        ];
+                        if (!in_array($record->status, $allowedStatuses)) {
+                            throw new \Exception(admin_trans('lottery_ticket.error.status_changed'));
+                        }
+
+                        // 检查奖品类型和金额
+                        if ($record->prize_type === LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
+                            throw new \Exception(admin_trans('lottery_ticket.error.empty_prize'));
+                        }
+                        if ($record->prize_amount <= 0) {
+                            throw new \Exception(admin_trans('lottery_ticket.error.invalid_amount'));
+                        }
+
+                        // 调用钱包服务发放奖励
+                        $walletService = new \addons\webman\service\WalletService();
+                        $result = $walletService->addBalance(
+                            $record->player_id,
+                            $record->prize_amount,
+                            $record->prize_type === LotteryTicketRecord::PRIZE_TYPE_CASH ? 'cash' : 'bonus',
+                            'lottery_prize',
+                            $note,
+                            ['lottery_record_id' => $record->id]
+                        );
+
+                        if (!$result['success']) {
+                            throw new \Exception($result['message'] ?? admin_trans('lottery_ticket.error.wallet_failed'));
+                        }
+
+                        // 更新记录状态
+                        $record->status = LotteryTicketRecord::STATUS_CLAIMED;
+                        $record->distributed_at = date('Y-m-d H:i:s');
+                        $record->distribution_note = $note;
+                        $record->save();
+
+                        $successCount++;
+                        \support\Db::commit();
+                    } catch (\Exception $e) {
+                        \support\Db::rollBack();
+                        $failCount++;
+                        $failReasons[] = "ID {$record->id}: " . $e->getMessage();
+                        \support\Log::error('[摸奖券] 批量发放失败', [
+                            'record_id' => $record->id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+
+                $message = admin_trans('lottery_ticket.message.batch_complete', null, [
+                    'success' => $successCount,
+                    'fail' => $failCount
+                ]);
+
+                if ($failCount > 0 && !empty($failReasons)) {
+                    $message .= "\n失敗詳情:\n" . implode("\n", array_slice($failReasons, 0, 5));
+                    if (count($failReasons) > 5) {
+                        $message .= "\n...（還有 " . (count($failReasons) - 5) . " 條錯誤）";
+                    }
+                }
+
+                return $successCount > 0 ? message_success($message) : message_error($message);
             });
         });
     }
