@@ -1875,11 +1875,8 @@ class ChannelLotteryTicketActivityController
                         throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
                     }
 
-                    // 检查是否超额发放
+                    // 计算新的已发放金额（用于后续更新）
                     $newDistributedAmount = $activity->distributed_prize_amount + $lockedRecord->prize_amount;
-                    if ($newDistributedAmount > $activity->total_prize_amount) {
-                        throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
-                    }
 
                     // 发放奖励
                     if ($lockedRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH) {
@@ -2147,11 +2144,8 @@ class ChannelLotteryTicketActivityController
                 throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
             }
 
-            // ⭐ 12. 检查是否超额发放
+            // ⭐ 12. 计算新的已发放金额（用于后续更新）
             $newDistributedAmount = $activity->distributed_prize_amount + $winRecord->prize_amount;
-            if ($newDistributedAmount > $activity->total_prize_amount) {
-                throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
-            }
 
             // ⭐ 13. 发放奖励（根据奖品类型）
             if ($winRecord->prize_type == \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH) {
