@@ -1780,8 +1780,11 @@ export default {
         // ⭐ 后端要求二次确认，显示详细统计信息
         const data = res.data;
 
+        // ⭐ 将 \n 字符串替换为真正的换行符
+        const confirmMessage = (data.confirm_message || '').replace(/\\n/g, '\n');
+
         // 构建确认内容（保留换行符）
-        const contentLines = (data.confirm_message || '').split('\n');
+        const contentLines = confirmMessage.split('\n');
 
         // 如果有录入券号，显示券号列表（最多显示10个）
         let ticketList = '';
