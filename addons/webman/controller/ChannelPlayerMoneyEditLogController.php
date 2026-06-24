@@ -425,7 +425,7 @@ class ChannelPlayerMoneyEditLogController
                 $activity_ids = Activity::query()->whereJsonContains('department_id',
                     Admin::user()->department_id)->pluck('id');
                 // 获取当前语言（使用ExAdmin的语言设置）
-                $currentLang = \ExAdmin\ui\support\Request::cookie('ex_admin_lang', 'zh-TW');
+                $currentLang = request()->cookie('ex_admin_lang', 'zh-TW');
                 $options = ActivityContent::query()->where('lang', Str::replace('_', '-', $currentLang))
                     ->whereIn('activity_id', $activity_ids)->pluck('name', 'id')->toArray();
                 $filter->eq()->select('activity')
