@@ -288,11 +288,32 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.invalid_amount'));
             }
 
-            // 4. 更新状态为发放中
-            $record->status = LotteryTicketRecord::STATUS_PROCESSING;
-            $record->save();
+            // 4. 锁定活动并检查（先检查活动，避免钱包操作后才发现问题）⭐
+            /** @var LotteryTicketActivity $activity */
+            $activity = LotteryTicketActivity::where('id', $record->activity_id)
+                ->lockForUpdate()
+                ->first();
 
-            // 5. 转账到玩家账户
+            if (!$activity) {
+                throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
+            }
+
+            // 4.1 检查活动状态（线下摇球，只需检查状态）⭐
+            $allowedStatuses = [
+                LotteryTicketActivity::STATUS_DRAWING,
+                LotteryTicketActivity::STATUS_ENDED,
+            ];
+            if (!in_array($activity->status, $allowedStatuses)) {
+                throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
+            }
+
+            // 4.2 ⭐ 提前检查是否超额发放（避免钱包已操作才发现超额）
+            $newDistributedAmount = $activity->distributed_prize_amount + $record->prize_amount;
+            if ($newDistributedAmount > $activity->total_prize_amount) {
+                throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
+            }
+
+            // 5. 锁定玩家并检查
             $player = Player::query()->lockForUpdate()->find($record->player_id);
             if (!$player) {
                 throw new \Exception(admin_trans('lottery_ticket.error.player_not_found'));
@@ -303,11 +324,15 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
             }
 
-            // 5.2 通过钱包服务增加玩家余额（Redis原子操作 + 异步同步数据库）⭐
+            // 6. 更新状态为发放中
+            $record->status = LotteryTicketRecord::STATUS_PROCESSING;
+            $record->save();
+
+            // 7. ⭐ 所有检查都通过后，执行钱包操作（Redis操作无法回滚，所以最后执行）
             $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
             $newBalance = \addons\webman\service\WalletService::add($player->id, $record->prize_amount, 1);
 
-            // 5.3 记录金流明细 (PlayerDeliveryRecord) ⭐
+            // 8. 记录金流明细 (PlayerDeliveryRecord) ⭐
             $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
             $playerDeliveryRecord->player_id = $player->id;
             $playerDeliveryRecord->department_id = $player->department_id;
@@ -326,38 +351,14 @@ class ChannelLotteryTicketRecordController
             );
             $playerDeliveryRecord->save();
 
-            // 6. 更新中奖记录状态
+            // 9. 更新中奖记录状态
             $record->status = LotteryTicketRecord::STATUS_CLAIMED;
             $record->distributed_by = $adminId;
             $record->distributed_at = date('Y-m-d H:i:s');
             $record->distribution_note = $note;
             $record->save();
 
-            // 7. 更新活动已发放金额（使用悲观锁）⭐
-            /** @var LotteryTicketActivity $activity */
-            $activity = LotteryTicketActivity::where('id', $record->activity_id)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$activity) {
-                throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
-            }
-
-            // 7.1 检查活动状态（线下摇球，只需检查状态）⭐
-            $allowedStatuses = [
-                LotteryTicketActivity::STATUS_DRAWING,
-                LotteryTicketActivity::STATUS_ENDED,
-            ];
-            if (!in_array($activity->status, $allowedStatuses)) {
-                throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
-            }
-
-            // 7.2 检查是否超额发放 ⭐
-            $newDistributedAmount = $activity->distributed_prize_amount + $record->prize_amount;
-            if ($newDistributedAmount > $activity->total_prize_amount) {
-                throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
-            }
-
+            // 10. 更新活动已发放金额
             $activity->distributed_prize_amount = $newDistributedAmount;
             $activity->save();
 
@@ -500,7 +501,31 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.invalid_amount'));
                 }
 
-                // 转账
+                // ⭐ 先锁定活动并检查（避免钱包操作后才发现超额）
+                $activity = LotteryTicketActivity::where('id', $record->activity_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$activity) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
+                }
+
+                // 检查活动状态（线下摇球，只需检查状态）⭐
+                $allowedStatuses = [
+                    LotteryTicketActivity::STATUS_DRAWING,
+                    LotteryTicketActivity::STATUS_ENDED,
+                ];
+                if (!in_array($activity->status, $allowedStatuses)) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
+                }
+
+                // ⭐ 提前检查是否超额发放（避免钱包已操作才发现超额）
+                $newDistributedAmount = $activity->distributed_prize_amount + $record->prize_amount;
+                if ($newDistributedAmount > $activity->total_prize_amount) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
+                }
+
+                // 锁定玩家
                 $player = Player::lockForUpdate()->find($record->player_id);
                 if (!$player) {
                     throw new \Exception(admin_trans('lottery_ticket.error.player_not_found'));
@@ -511,7 +536,7 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
                 }
 
-                // 通过钱包服务增加玩家余额（Redis原子操作 + 异步同步数据库）⭐
+                // ⭐ 所有检查都通过后，执行钱包操作（Redis操作无法回滚，所以最后执行）
                 $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
                 $newBalance = \addons\webman\service\WalletService::add($player->id, $record->prize_amount, 1);
 
@@ -541,30 +566,7 @@ class ChannelLotteryTicketRecordController
                 $record->distribution_note = $note;
                 $record->save();
 
-                // 更新活动统计（使用悲观锁）⭐
-                $activity = LotteryTicketActivity::where('id', $record->activity_id)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$activity) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.activity_not_found'));
-                }
-
-                // 检查活动状态（线下摇球，只需检查状态）⭐
-                $allowedStatuses = [
-                    LotteryTicketActivity::STATUS_DRAWING,
-                    LotteryTicketActivity::STATUS_ENDED,
-                ];
-                if (!in_array($activity->status, $allowedStatuses)) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.activity_not_in_drawing_status'));
-                }
-
-                // 检查是否超额发放 ⭐
-                $newDistributedAmount = $activity->distributed_prize_amount + $record->prize_amount;
-                if ($newDistributedAmount > $activity->total_prize_amount) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.amount_exceeded'));
-                }
-
+                // 更新活动已发放金额
                 $activity->distributed_prize_amount = $newDistributedAmount;
                 $activity->save();
 

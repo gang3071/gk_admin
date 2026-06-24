@@ -1804,6 +1804,7 @@ class ChannelLotteryTicketActivityController
         Db::beginTransaction();
         try {
             // ⭐ 2. 验证活动并锁定
+            /** @var LotteryTicketActivity $activity */
             $activity = LotteryTicketActivity::where('id', $activityId)
                 ->lockForUpdate()
                 ->first();
