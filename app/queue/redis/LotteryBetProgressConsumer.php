@@ -59,16 +59,14 @@ class LotteryBetProgressConsumer implements Consumer
                         'total_tickets' => $activityResult['total_tickets'],
                     ]);
 
-                    // ✅ 推送通知给玩家（批量发放时传入发放数量）
-                    if (!empty($activityResult['tickets']) && is_array($activityResult['tickets'])) {
-                        // 获取第一张券用于推送（批量发放时可能有多张）
-                        $firstTicket = reset($activityResult['tickets']);
-                        if ($firstTicket) {
-                            LotteryTicketPushService::pushTicketIssued(
-                                $firstTicket,
-                                $activityResult['tickets_issued']
-                            );
-                        }
+                    // ✅ 推送通知给玩家
+                    if (!empty($activityResult['tickets_issued'])) {
+                        $message = sprintf(
+                            '您在活動「%s」中獲得了 %d 張摸獎券！',
+                            $activityResult['activity_name'],
+                            $activityResult['tickets_issued']
+                        );
+                        LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
                     }
                 }
             }

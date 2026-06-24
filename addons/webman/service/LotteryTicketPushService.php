@@ -62,45 +62,127 @@ class LotteryTicketPushService
         }
     }
 
+
     /**
-     * 推送摸奖券发放通知
+     * 获取玩家在所有有效活动下的总券数
+     * ⭐ 统计：进行中、待开奖、开奖中的活动（券仍然有效）
+     * ⭐ 排除：未开始、已结束、已关闭的活动（券无效或不存在）
      *
-     * @param LotteryTicket $ticket 摸奖券对象
-     * @param int $count 发放数量（批量发放时）
+     * @param int $playerId 玩家ID
+     * @return int 总券数
+     */
+    protected static function getPlayerTotalTickets(int $playerId): int
+    {
+        // ⭐ 查询券仍然有效的活动：
+        // - STATUS_ONGOING (进行中，可以发券)
+        // - STATUS_PENDING_DRAW (待开奖，不再发券但券有效)
+        // - STATUS_DRAWING (开奖中，券有效，可能被抽中)
+        //
+        // 排除的状态：
+        // - STATUS_NOT_STARTED (未开始，无券)
+        // - STATUS_ENDED (已结束，券失效)
+        // - STATUS_CLOSED (已关闭，券失效)
+        $ongoingActivityIds = LotteryTicketActivity::whereIn('status', [
+            LotteryTicketActivity::STATUS_ONGOING,
+            LotteryTicketActivity::STATUS_PENDING_DRAW,
+            LotteryTicketActivity::STATUS_DRAWING,
+        ])
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($ongoingActivityIds)) {
+            return 0;
+        }
+
+        // 统计玩家在这些活动下的总券数
+        $totalTickets = LotteryTicket::query()
+            ->where('player_id', $playerId)
+            ->whereIn('activity_id', $ongoingActivityIds)
+            ->where('status', LotteryTicket::STATUS_UNUSED)  // 只统计未使用的
+            ->count();
+
+        return $totalTickets;
+    }
+
+    /**
+     * 推送玩家有效券数更新（通用方法）
+     *
+     * @param int $playerId 玩家ID
+     * @param string $message 提示消息（可选）
+     * @param int|null $totalTickets 总券数（可选，传null则自动查询）
      * @return bool
      */
-    public static function pushTicketIssued(LotteryTicket $ticket, int $count = 1): bool
+    public static function pushPlayerTicketsUpdate(int $playerId, string $message = '', ?int $totalTickets = null): bool
     {
         try {
-            // ✅ 使用缓存获取活动
-            $activity = self::getActivity($ticket->activity_id);
-            if (!$activity) {
-                return false;
+            // ⭐ 如果未传券数，则查询数据库
+            if ($totalTickets === null) {
+                $totalTickets = self::getPlayerTotalTickets($playerId);
             }
 
-            $message = [
+            $pushMessage = [
                 'type' => 'ticket_issued',
-                'title' => '恭喜獲得摸獎券',
-                'message' => sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $count),
+                'title' => '摸獎券更新',
+                'message' => $message ?: '您的摸獎券已更新',
                 'data' => [
-                    'activity_id' => $ticket->activity_id,
-                    'activity_name' => $activity->name,
-                    'ticket_id' => $ticket->id,
-                    'ticket_no' => $ticket->ticket_no,
-                    'count' => $count,
-                    'expired_at' => $ticket->expired_at,  // ✅ 修正字段名
+                    'total_tickets' => $totalTickets,  // 只推送总券数
                 ],
             ];
 
             // 推送给玩家
-            return self::pushToPlayer($ticket->player_id, 'lottery_ticket', $message);
+            return self::pushToPlayer($playerId, 'lottery_ticket', $pushMessage);
 
         } catch (\Exception $e) {
-            Log::error('摸奖券发放推送失败', [
-                'ticket_id' => $ticket->id ?? null,
+            Log::error('券数更新推送失败', [
+                'player_id' => $playerId,
                 'error' => $e->getMessage(),
             ]);
             return false;
+        }
+    }
+
+    /**
+     * 批量推送券数更新（活动状态变化时推送给所有参与玩家）
+     *
+     * @param int $activityId 活动ID
+     * @param string $message 推送消息
+     * @return int 推送成功的玩家数量
+     */
+    public static function pushActivityPlayersTicketsUpdate(int $activityId, string $message = ''): int
+    {
+        try {
+            // 查询该活动下所有有券的玩家
+            $playerIds = LotteryTicket::where('activity_id', $activityId)
+                ->distinct()
+                ->pluck('player_id')
+                ->toArray();
+
+            if (empty($playerIds)) {
+                return 0;
+            }
+
+            $successCount = 0;
+            foreach ($playerIds as $playerId) {
+                if (self::pushPlayerTicketsUpdate($playerId, $message)) {
+                    $successCount++;
+                }
+            }
+
+            Log::info('批量推送券数更新', [
+                'activity_id' => $activityId,
+                'message' => $message,
+                'total_players' => count($playerIds),
+                'success_count' => $successCount,
+            ]);
+
+            return $successCount;
+
+        } catch (\Exception $e) {
+            Log::error('批量推送券数更新失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
         }
     }
 

@@ -205,15 +205,15 @@ class LotteryTicketBetProgressService
                     // ⭐ 改用统一的批量发券服务（使用Redis序列号）
                     $issueService = new LotteryTicketIssueService();
                     try {
-                        $tickets = $issueService->issueTicketsBatch(
+                        $result = $issueService->issueTicketsBatch(
                             $progress->activity_id,
                             $progress->player_id,
                             $ticketsToIssue,
                             LotteryTicket::SOURCE_BETTING
                         );
 
-                        $issuedCount = count($tickets);
-                        $firstTicketNo = $tickets[0]['ticket_no'] ?? null;
+                        $issuedCount = $result['count'];
+                        $firstTicketNo = $result['first_ticket_no'];
 
                         // 更新周期数和发券数
                         if ($issuedCount > 0) {
@@ -247,15 +247,9 @@ class LotteryTicketBetProgressService
                     if ($issuedCount > 0 && $firstTicketNo) {
                         $shouldPushProgress = true;
 
-                        // 查询第一张券用于推送发券通知（弹窗通知）
-                        $firstTicket = LotteryTicket::where('activity_id', $activity->id)
-                            ->where('player_id', $progress->player_id)
-                            ->where('ticket_no', $firstTicketNo)
-                            ->first();
-
-                        if ($firstTicket) {
-                            LotteryTicketPushService::pushTicketIssued($firstTicket, $issuedCount);
-                        }
+                        // 推送发券通知（弹窗通知）
+                        $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $issuedCount);
+                        LotteryTicketPushService::pushPlayerTicketsUpdate($progress->player_id, $message);
 
                         $results[] = [
                             'activity_id' => $progress->activity_id,
@@ -386,7 +380,7 @@ class LotteryTicketBetProgressService
         // 调用新的统一服务
         $issueService = new LotteryTicketIssueService();
         try {
-            $tickets = $issueService->issueTicketsBatch(
+            $result = $issueService->issueTicketsBatch(
                 $progress->activity_id,
                 $progress->player_id,
                 $count,
@@ -394,8 +388,8 @@ class LotteryTicketBetProgressService
             );
 
             return [
-                'issued_count' => count($tickets),
-                'first_ticket_no' => $tickets[0]['ticket_no'] ?? null,
+                'issued_count' => $result['count'],
+                'first_ticket_no' => $result['first_ticket_no'],
             ];
         } catch (\Exception $e) {
             Log::error('发券失败（兼容方法）', [

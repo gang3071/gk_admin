@@ -474,14 +474,14 @@ class LotteryBetProgressScanTask
                     Db::beginTransaction();
                     try {
                         // 批量发券
-                        $tickets = $issueService->issueTicketsBatch(
+                        $result = $issueService->issueTicketsBatch(
                             $activityId,
                             $progress->player_id,
                             $ticketsToIssue,
                             \addons\webman\model\LotteryTicket::SOURCE_BETTING
                         );
 
-                        $issuedCount = count($tickets);
+                        $issuedCount = $result['count'];
 
                         // 更新进度记录
                         Db::update("

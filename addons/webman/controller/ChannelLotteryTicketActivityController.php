@@ -811,6 +811,12 @@ class ChannelLotteryTicketActivityController
             'redis_key' => $redisKey,
         ]);
 
+        // ⭐ 推送券数更新给所有参与玩家
+        \addons\webman\service\LotteryTicketPushService::pushActivityPlayersTicketsUpdate(
+            $activity->id,
+            sprintf('活動「%s」已關閉', $activity->name)
+        );
+
         return message_success(admin_trans('lottery_ticket.message.close_success'));
     }
 
