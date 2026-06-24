@@ -390,6 +390,15 @@ return [
         'award_all_pending' => 'Confirm to award all pending rewards for this activity?\nThis will batch award all pending records. Please proceed with caution.',  // ⭐ Added
     ],
 
+    // Risk Warning
+    'warning' => [
+        'batch_distribute_title' => 'Batch Distribution Risk Warning',
+        'batch_distribute_point1' => 'This will automatically distribute ALL pending records for the selected activity, no manual selection needed',
+        'batch_distribute_point2' => 'Successful distribution will immediately credit player wallets and CANNOT be reversed',
+        'batch_distribute_point3' => 'Please verify winning records and amounts before proceeding',
+        'batch_distribute_point4' => 'Exercise extra caution with large prize amounts',
+    ],
+
     // 表单标签
     'form' => [
         'select_activity' => 'Select Activity',

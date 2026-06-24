@@ -391,6 +391,15 @@ return [
         'distribute_all_pending' => '确认派奖该活动所有已录入但未派奖的奖励？\n此操作将批量派奖所有待派奖记录,请谨慎操作。',  // ⭐ 新增
     ],
 
+    // 风险警告
+    'warning' => [
+        'batch_distribute_title' => '批量派奖风险提示',
+        'batch_distribute_point1' => '此操作将自动派发该活动下所有待派奖记录，无需手动选择',
+        'batch_distribute_point2' => '派奖成功后将立即增加玩家钱包余额，无法撤销',
+        'batch_distribute_point3' => '建议先核对中奖记录和金额是否正确',
+        'batch_distribute_point4' => '大额奖金请谨慎确认后再操作',
+    ],
+
     // 表单标签
     'form' => [
         'select_activity' => '选择活动',

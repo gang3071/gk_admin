@@ -700,6 +700,19 @@ class ChannelLotteryTicketRecordController
         return Form::create(new LotteryTicketRecord(), function ($form) {
             $departmentId = Admin::user()->department_id;
 
+            // ⚠️ 风险提示
+            $form->html(
+                '<div style="padding: 16px; margin-bottom: 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px;">' .
+                '<h4 style="color: #856404; margin: 0 0 8px 0;">⚠️ ' . admin_trans('lottery_ticket.warning.batch_distribute_title') . '</h4>' .
+                '<ul style="margin: 0; padding-left: 20px; color: #856404;">' .
+                '<li>' . admin_trans('lottery_ticket.warning.batch_distribute_point1') . '</li>' .
+                '<li>' . admin_trans('lottery_ticket.warning.batch_distribute_point2') . '</li>' .
+                '<li>' . admin_trans('lottery_ticket.warning.batch_distribute_point3') . '</li>' .
+                '<li>' . admin_trans('lottery_ticket.warning.batch_distribute_point4') . '</li>' .
+                '</ul>' .
+                '</div>'
+            );
+
             // 活动选择（显示已结束的活动，这些活动已经开奖）
             $activities = LotteryTicketActivity::where('department_id', $departmentId)
                 ->where('status', LotteryTicketActivity::STATUS_ENDED)
