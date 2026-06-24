@@ -136,7 +136,8 @@ return [
     'redeem' => [
         'title' => '核销记录',
         'order_id' => '订单号',
-        'player_id' => '玩家信息',
+        'player_id' => '玩家ID',
+        'player_name' => '玩家名称',
         'unnamed' => '未命名',
         'no_player' => '未绑定',
         'store_name' => '店名',

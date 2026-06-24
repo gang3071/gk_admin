@@ -141,7 +141,6 @@ class StoreTicketRedeemController
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.redeem.redeem_btn'))
                     ->type('primary')
-                    ->icon('QrcodeOutlined')
                     ->modal([$this, 'scanRedeem'])
                     ->width('700px'),
                 $layout
@@ -394,6 +393,72 @@ class StoreTicketRedeemController
     }
 
     /**
+     * 根据ID查询记录
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function getRecordById()
+    {
+        $id = request()->input('id', 0);
+
+        if (empty($id)) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.invalid_parameter')]);
+        }
+
+        $admin = Admin::user();
+        $record = TicketRecord::query()
+            ->where('id', $id)
+            ->where('store_admin_id', $admin->id)
+            ->first();
+
+        if (empty($record)) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
+        }
+
+        // 通过 player_id 关联获取玩家信息
+        $playerName = '';
+        $playerAvatar = '';
+        $playerUuid = '';
+
+        if (!empty($record->player_id)) {
+            $player = \addons\webman\model\Player::query()
+                ->where('id', $record->player_id)
+                ->first();
+
+            if ($player) {
+                $playerName = $player->name ?? '';
+                $playerUuid = $player->uuid ?? '';
+                $avatar = $player->avatar ?? '';
+                if (!empty($avatar)) {
+                    $playerAvatar = is_numeric($avatar) ? config('def_avatar.' . $avatar) : $avatar;
+                }
+            }
+        }
+
+        return json_encode([
+            'code' => 0,
+            'data' => [
+                'id' => $record->id,
+                'order_id' => $record->order_id,
+                'store_name' => $record->store_name,
+                'machine_no' => $record->machine_no,
+                'score' => $record->score,
+                'ticket_type' => $record->ticket_type,
+                'ticket_type_name' => $record->ticket_type_name,
+                'status' => $record->status,
+                'status_name' => $record->status_name,
+                'qr_code_no' => $record->qr_code_no,
+                'created_at' => $record->created_at,
+                'player_id' => $record->player_id,
+                'player_name' => $playerName,
+                'player_avatar' => $playerAvatar,
+                'player_uuid' => $playerUuid,
+            ]
+        ]);
+    }
+
+    /**
      * 通过二维码核销
      * @group store
      * @auth true
@@ -431,45 +496,30 @@ class StoreTicketRedeemController
      * @auth true
      * @return Form
      */
-    public function redeemModal(): Form
+    public function redeemModal()
     {
         $id = request()->input('id', 0);
-        $admin = Admin::user();
 
-        $record = TicketRecord::query()
-            ->where('id', $id)
-            ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
-            ->first();
-
-        if (empty($record)) {
-            return Form::create([], function (Form $form) {
-                $form->alert(admin_trans('ticket_machine.redeem.record_not_found'), 'error');
-            });
-        }
-
-        return Form::create($record, function (Form $form) use ($record) {
-            $form->layout('vertical');
-
-            // 二维码编号（禁用，从列表点击时已确定）
-            $form->text('qr_code_no', admin_trans('ticket_machine.redeem.input_qr_code'))
-                ->disabled(true);
-
-            $form->desc('order_id', admin_trans('ticket_machine.redeem.order_id'));
-            $form->desc('store_name', admin_trans('ticket_machine.redeem.store_name'));
-            $form->desc('machine_no', admin_trans('ticket_machine.redeem.machine_no'));
-            $form->desc('score', admin_trans('ticket_machine.redeem.score'));
-            $form->desc('status', admin_trans('ticket_machine.redeem.status'))->display(function ($val) {
-                return match ($val) {
-                    TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
-                    TicketRecord::STATUS_PRINTED => admin_trans('ticket_machine.redeem.status_printed'),
-                    default => admin_trans('ticket_machine.redeem.status_unknown'),
-                };
-            });
-
-            $form->confirm(admin_trans('ticket_machine.redeem.redeem_confirm'), [$this, 'redeemRecord'], ['id' => $record->id]);
-        });
+        return admin_view(plugin()->webman->getPath() . '/views/scan_redeem.vue')->attrs([
+            'query_url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/getRecordById',
+            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
+            'record_id' => $id,
+            'labels' => [
+                'input_qr_code' => admin_trans('ticket_machine.redeem.input_qr_code'),
+                'scan_qr_code_placeholder' => admin_trans('ticket_machine.redeem.scan_qr_code_placeholder'),
+                'order_id' => admin_trans('ticket_machine.redeem.order_id'),
+                'store_name' => admin_trans('ticket_machine.redeem.store_name'),
+                'machine_no' => admin_trans('ticket_machine.redeem.machine_no'),
+                'score' => admin_trans('ticket_machine.redeem.score'),
+                'status' => admin_trans('ticket_machine.redeem.status'),
+                'ticket_type' => admin_trans('ticket_machine.redeem.ticket_type'),
+                'qr_code_no' => admin_trans('ticket_machine.redeem.qr_code_no'),
+                'created_at' => admin_trans('ticket_machine.redeem.created_at'),
+                'redeem_confirm' => admin_trans('ticket_machine.redeem.redeem_confirm'),
+                'player_name' => admin_trans('ticket_machine.redeem.player_name'),
+                'player_id' => admin_trans('ticket_machine.redeem.player_id'),
+            ],
+        ]);
     }
 
     /**
