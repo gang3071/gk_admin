@@ -327,6 +327,9 @@ return [
         'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',
         'invalid_ticket_format' => '券号 {ticket_no} 格式错误，只能包含数字且不超过6位',
         'bet_progress_not_found' => '未找到打码进度记录',
+        // 停止开奖确认
+        'stop_drawing_no_records_confirm' => '⚠️ 尚未录入任何中奖券号！\n\n停止开奖后将无法再录入中奖券号，活动将进入已结束状态。\n\n确定要停止开奖吗？',
+        'stop_drawing_with_records_confirm' => '确认停止开奖？\n\n📊 中奖统计：\n• 已录入券号数：{count} 张\n• 奖金总额：NT$ {amount}\n• 待派奖：{pending} 笔\n• 已派奖：{granted} 笔\n\n⚠️ 停止后将无法再录入中奖券号',
         // 其他
         'too_many_levels' => '最多只能设置 {max} 个奖品等级',
         'no_prize_levels' => '请至少设置一个奖品等级',

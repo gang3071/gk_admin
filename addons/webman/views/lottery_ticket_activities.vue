@@ -1734,32 +1734,56 @@ export default {
       this.liveModalVisible = true;
     },
 
-    // ⭐ 停止开奖（手动触发）
-    stopDrawing(activity) {
-      this.$confirm({
-        title: '确认停止开奖？',
-        content: '停止后活动将进入已结束状态，可继续发放奖励',
-        okText: '确认停止',
-        cancelText: '取消',
-        onOk: async () => {
-          try {
-            const res = await this.$request({
-              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/stopDrawing',
-              method: 'post',
-              data: {id: activity.id}
-            });
-
-            if (res.code === 200) {
-              this.$message.success('开奖已停止');
-              this.fetchActivities();
-            } else {
-              this.$message.error(res.message || res.msg || '停止开奖失败');
-            }
-          } catch (error) {
-            this.$message.error('停止开奖失败');
+    // ⭐ 停止开奖（手动触发）- 必须二次确认
+    async stopDrawing(activity, confirmed = false) {
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/stopDrawing',
+          method: 'post',
+          data: {
+            id: activity.id,
+            confirmed: confirmed
           }
+        });
+
+        if (res.code === 200) {
+          this.$message.success('开奖已停止');
+          this.fetchActivities();
+        } else if (res.code === 40001 && res.data?.need_confirm) {
+          // ⭐ 后端要求二次确认，显示详细统计信息
+          const data = res.data;
+
+          // 构建确认内容（保留换行符）
+          const contentLines = (res.message || '').split('\n');
+
+          // 如果有录入券号，显示券号列表（最多显示10个）
+          let ticketList = '';
+          if (data.ticket_nos && data.ticket_nos.length > 0) {
+            const displayTickets = data.ticket_nos.slice(0, 10);
+            ticketList = '\n\n🎫 已录入券号：\n' + displayTickets.join(', ');
+            if (data.ticket_nos.length > 10) {
+              ticketList += ` ...等${data.ticket_nos.length}个`;
+            }
+          }
+
+          this.$confirm({
+            title: data.win_record_count === 0 ? '⚠️ 警告：未录入中奖券号' : '确认停止开奖',
+            content: contentLines.join('\n') + ticketList,
+            okText: '确认停止开奖',
+            okType: 'danger',
+            cancelText: data.win_record_count === 0 ? '取消，先录入中奖' : '取消',
+            width: 520,
+            onOk: () => {
+              // 用户确认后，带上 confirmed=true 重新调用
+              this.stopDrawing(activity, true);
+            }
+          });
+        } else {
+          this.$message.error(res.message || res.msg || '停止开奖失败');
         }
-      });
+      } catch (error) {
+        this.$message.error('停止开奖失败');
+      }
     },
 
     // 添加奖品等级

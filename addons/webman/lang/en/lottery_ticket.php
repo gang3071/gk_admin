@@ -327,6 +327,9 @@ return [
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',
         'invalid_ticket_format' => 'Invalid format for ticket {ticket_no}, must contain only digits and not exceed 6 characters',
         'bet_progress_not_found' => 'Bet progress record not found',
+        // Stop drawing confirmation
+        'stop_drawing_no_records_confirm' => '⚠️ No winning tickets recorded yet!\n\nAfter stopping drawing, you will not be able to record winning tickets. The activity will enter ENDED status.\n\nAre you sure to stop drawing?',
+        'stop_drawing_with_records_confirm' => 'Confirm to stop drawing?\n\n📊 Winning Statistics:\n• Recorded tickets: {count}\n• Total prize amount: NT$ {amount}\n• Pending awards: {pending}\n• Granted awards: {granted}\n\n⚠️ Cannot record more tickets after stopping',
         // 其他
         'too_many_levels' => 'Max {max} prize levels allowed',
         'no_prize_levels' => 'Please set at least one prize level',

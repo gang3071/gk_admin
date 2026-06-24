@@ -1322,6 +1322,7 @@ class ChannelLotteryTicketActivityController
     public function stopDrawing()
     {
         $id = Request::input('id');
+        $confirmed = Request::input('confirmed', false); // ⭐ 二次确认参数
 
         // ⭐ 验证ID参数
         if (!$id || !is_numeric($id)) {
@@ -1344,6 +1345,45 @@ class ChannelLotteryTicketActivityController
             if (!$activity->canStopDrawing()) {
                 Db::rollBack();
                 return message_error(admin_trans('lottery_ticket.error.cannot_stop_drawing'));
+            }
+
+            // ⭐ 二次确认机制：停止开奖前必须确认
+            if (!$confirmed) {
+                // 统计中奖记录信息
+                $winRecords = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+                    ->select(['id', 'ticket_no', 'prize_amount', 'status'])
+                    ->get();
+
+                $winRecordCount = $winRecords->count();
+                $totalPrizeAmount = $winRecords->sum('prize_amount');
+                $pendingCount = $winRecords->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)->count();
+                $grantedCount = $winRecords->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_GRANTED)->count();
+                $ticketNos = $winRecords->pluck('ticket_no')->toArray();
+
+                // 准备确认信息
+                if ($winRecordCount === 0) {
+                    // 未录入任何中奖券号
+                    $confirmMessage = admin_trans('lottery_ticket.error.stop_drawing_no_records_confirm');
+                } else {
+                    // 已录入中奖券号，显示详细信息
+                    $confirmMessage = admin_trans('lottery_ticket.error.stop_drawing_with_records_confirm', null, [
+                        'count' => $winRecordCount,
+                        'amount' => number_format($totalPrizeAmount, 2),
+                        'pending' => $pendingCount,
+                        'granted' => $grantedCount,
+                    ]);
+                }
+
+                Db::rollBack();
+                return Response::error($confirmMessage, 40001, [
+                    'need_confirm' => true,
+                    'win_record_count' => $winRecordCount,
+                    'total_prize_amount' => $totalPrizeAmount,
+                    'pending_count' => $pendingCount,
+                    'granted_count' => $grantedCount,
+                    'ticket_nos' => $ticketNos,
+                    'message' => $confirmMessage,
+                ]);
             }
             // 更新状态
             $activity->status = LotteryTicketActivity::STATUS_ENDED;
