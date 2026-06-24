@@ -56,6 +56,11 @@ class TicketRecord extends Model
     const STATUS_NORMAL = 1;     // 正常
     const STATUS_PRINTED = 2;    // 已打印
     const STATUS_USED = 3;       // 已使用
+    const STATUS_PENDING = 4;    // 待核销
+
+    // 扫码状态常量
+    const SCAN_STATUS_PENDING = 0;  // 待扫码
+    const SCAN_STATUS_SCANNED = 1;  // 已扫码
 
     /**
      * 获取票据类型名称

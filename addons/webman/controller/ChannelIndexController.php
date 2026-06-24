@@ -3326,33 +3326,102 @@ class ChannelIndexController
                 }
             }
 
+            // 生成加密内容（用于二维码展示）
+            $encryptData = json_encode([
+                'order_id' => $orderId,
+                'player_id' => $playerId,
+                'score' => $score,
+                'timestamp' => time(),
+            ]);
+            $encryptedContent = $this->encryptTicketContent($encryptData);
+
             $record = \addons\webman\model\TicketRecord::create([
-                'order_id'       => $orderId,
-                'department_id'  => $departmentId,
-                'store_admin_id' => $storeAdminId,
-                'store_name'     => $storeName,
-                'machine_no'     => $machineNo,
-                'player_id'      => $playerId > 0 ? $playerId : null,
-                'player_name'    => $playerName,
-                'score'          => $score,
-                'qr_code'        => $qrCode,
-                'qr_code_no'     => $qrCodeNo,
-                'ticket_type'    => $ticketType,
-                'status'         => \addons\webman\model\TicketRecord::STATUS_NORMAL,
+                'order_id'           => $orderId,
+                'department_id'      => $departmentId,
+                'store_admin_id'     => $storeAdminId,
+                'store_name'         => $storeName,
+                'machine_no'         => $machineNo,
+                'player_id'          => $playerId > 0 ? $playerId : null,
+                'player_name'        => $playerName,
+                'score'              => $score,
+                'qr_code'            => $qrCode,
+                'qr_code_no'         => $qrCodeNo,
+                'encrypted_content'  => $encryptedContent,
+                'ticket_type'        => $ticketType,
+                'status'             => \addons\webman\model\TicketRecord::STATUS_NORMAL,
+                'scan_status'        => \addons\webman\model\TicketRecord::SCAN_STATUS_PENDING,
             ]);
 
             return json([
                 'code'    => 200,
                 'message' => '保存成功',
                 'data'    => [
-                    'id'         => $record->id,
-                    'order_id'   => $orderId,
-                    'qr_code_no' => $qrCodeNo,
+                    'id'                => $record->id,
+                    'order_id'          => $orderId,
+                    'qr_code_no'        => $qrCodeNo,
+                    'encrypted_content' => $encryptedContent,
                 ],
             ]);
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * 加密出票内容（AES-256-CBC，与API项目一致）
+     * @param string $value 待加密内容
+     * @return string 加密后的Base64字符串
+     */
+    protected function encryptTicketContent(string $value): string
+    {
+        $key = config('app.key', '');
+        if (empty($key)) {
+            // 使用默认密钥
+            $key = 'base64:' . base64_encode('webman_secret_key_32_chars!!');
+        }
+        if (str_starts_with($key, 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+
+        // 截取前32字节作为密钥
+        $key = substr($key, 0, 32);
+        // 使用 md5(key) 前16字节作为 IV（与API项目一致）
+        $iv = substr(md5($key), 0, 16);
+
+        $encrypted = openssl_encrypt($value, 'AES-256-CBC', $key, 0, $iv);
+        return base64_encode($iv . $encrypted);
+    }
+
+    /**
+     * 解密出票内容（AES-256-CBC，与API项目一致）
+     * @param string $value 加密的Base64字符串
+     * @return string 解密后的内容
+     */
+    public static function decryptTicketContent(string $value): string
+    {
+        if (empty($value)) {
+            return '';
+        }
+
+        $key = config('app.key', '');
+        if (empty($key)) {
+            $key = 'base64:' . base64_encode('webman_secret_key_32_chars!!');
+        }
+        if (str_starts_with($key, 'base64:')) {
+            $key = base64_decode(substr($key, 7));
+        }
+
+        $key = substr($key, 0, 32);
+        $decoded = base64_decode($value, true);
+        if ($decoded === false) {
+            return '';
+        }
+
+        $iv = substr($decoded, 0, 16);
+        $encrypted = substr($decoded, 16);
+
+        $decrypted = openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
+        return $decrypted !== false ? $decrypted : '';
     }
 
     /**
