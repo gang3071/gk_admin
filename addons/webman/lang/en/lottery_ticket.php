@@ -303,7 +303,7 @@ return [
         'live_not_started' => 'Live stream not started yet, cannot end',
         'cannot_start_drawing' => 'Cannot start drawing while activity is ongoing. Please wait until activity ends (only ended activities can start drawing)',
         'cannot_stop_drawing' => 'Cannot stop drawing in current status (only drawing activities can be ended)',
-        'cannot_record_win_in_current_status' => 'Cannot record winners in current status (only allowed during ongoing or drawing status)',
+        'cannot_record_win_in_current_status' => 'Cannot record winners in current status (only allowed during ongoing, pending draw, drawing or ended status)',
         // 输入驗證
         'invalid_record_id' => '參数错誤：记录ID无效',
         'invalid_activity_id' => '參数错誤：活动ID无效',

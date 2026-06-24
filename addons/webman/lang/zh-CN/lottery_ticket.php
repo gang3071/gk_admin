@@ -303,7 +303,7 @@ return [
         'live_not_started' => '直播尚未开始，无法结束',
         'cannot_start_drawing' => '活动进行中无法开奖，请等待活动结束后再开奖（只有已结束状态的活动才能开奖）',
         'cannot_stop_drawing' => '当前状态无法停止开奖（只有开奖中的活动可以结束）',
-        'cannot_record_win_in_current_status' => '当前状态无法录入中奖（只能在进行中或开奖中状态录入）',
+        'cannot_record_win_in_current_status' => '当前状态无法录入中奖（只能在进行中、待开奖、开奖中或已结束状态录入）',
         // 输入驗證
         'invalid_record_id' => '參数错誤：记录ID无效',
         'invalid_activity_id' => '參数错誤：活动ID无效',
