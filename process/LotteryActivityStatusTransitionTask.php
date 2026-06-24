@@ -192,6 +192,12 @@ class LotteryActivityStatusTransitionTask
 
         // 发送待开奖通知
         \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'pending_draw');
+
+        // ⭐ 推送券数更新（活动结束后券失效，玩家有效券数减少）
+        \addons\webman\service\LotteryTicketPushService::pushActivityPlayersTicketsUpdate(
+            $activity->id,
+            sprintf('活動「%s」已結束', $activity->name)
+        );
     }
 
     /**
@@ -210,6 +216,12 @@ class LotteryActivityStatusTransitionTask
 
         // 发送开奖通知
         \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'drawing_start');
+
+        // ⭐ 推送券数更新
+        \addons\webman\service\LotteryTicketPushService::pushActivityPlayersTicketsUpdate(
+            $activity->id,
+            sprintf('活動「%s」開始開獎', $activity->name)
+        );
     }
 
     /**
@@ -230,5 +242,11 @@ class LotteryActivityStatusTransitionTask
 
         // 发送活动结束通知
         \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'ended');
+
+        // ⭐ 推送券数更新
+        \addons\webman\service\LotteryTicketPushService::pushActivityPlayersTicketsUpdate(
+            $activity->id,
+            sprintf('活動「%s」已完全結束', $activity->name)
+        );
     }
 }

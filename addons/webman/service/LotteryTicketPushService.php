@@ -152,6 +152,89 @@ class LotteryTicketPushService
     }
 
     /**
+     * 推送玩家有效券数更新（活动状态变化时）
+     *
+     * @param int $playerId 玩家ID
+     * @param int|null $affectedActivityId 受影响的活动ID（可选，用于日志）
+     * @param string $reason 更新原因（如：活动结束、活动关闭等）
+     * @return bool
+     */
+    public static function pushPlayerTicketsUpdate(int $playerId, ?int $affectedActivityId = null, string $reason = ''): bool
+    {
+        try {
+            // 获取玩家在所有正在进行中活动下的券数
+            $ongoingActivities = self::getPlayerOngoingActivitiesTickets($playerId);
+
+            $message = [
+                'type' => 'tickets_update',
+                'title' => '摸獎券更新',
+                'message' => $reason ?: '您的摸獎券狀態已更新',
+                'data' => [
+                    'ongoing_activities' => $ongoingActivities,
+                    'affected_activity_id' => $affectedActivityId,
+                    'reason' => $reason,
+                ],
+            ];
+
+            // 推送给玩家
+            return self::pushToPlayer($playerId, 'lottery_ticket', $message);
+
+        } catch (\Exception $e) {
+            Log::error('券数更新推送失败', [
+                'player_id' => $playerId,
+                'affected_activity_id' => $affectedActivityId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * 批量推送券数更新（活动状态变化时推送给所有参与玩家）
+     *
+     * @param int $activityId 活动ID
+     * @param string $reason 更新原因
+     * @return int 推送成功的玩家数量
+     */
+    public static function pushActivityPlayersTicketsUpdate(int $activityId, string $reason = ''): int
+    {
+        try {
+            // 查询该活动下所有有券的玩家
+            $playerIds = LotteryTicket::where('activity_id', $activityId)
+                ->distinct()
+                ->pluck('player_id')
+                ->toArray();
+
+            if (empty($playerIds)) {
+                return 0;
+            }
+
+            $successCount = 0;
+            foreach ($playerIds as $playerId) {
+                if (self::pushPlayerTicketsUpdate($playerId, $activityId, $reason)) {
+                    $successCount++;
+                }
+            }
+
+            Log::info('批量推送券数更新', [
+                'activity_id' => $activityId,
+                'reason' => $reason,
+                'total_players' => count($playerIds),
+                'success_count' => $successCount,
+            ]);
+
+            return $successCount;
+
+        } catch (\Exception $e) {
+            Log::error('批量推送券数更新失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
+    }
+
+    /**
      * 推送中奖通知
      *
      * @param LotteryTicketRecord $record 中奖记录
