@@ -1375,10 +1375,10 @@ class ChannelLotteryTicketActivityController
                 }
 
                 Db::rollBack();
-                // ⭐ 返回自定义响应（需要二次确认）
+                // ⭐ 返回 200 状态码但带 need_confirm 标记（兼容 ExAdmin）
                 return json([
-                    'code' => 40001,
-                    'message' => $confirmMessage,
+                    'code' => 200,  // ⭐ 使用 200 避免被 ExAdmin 拦截
+                    'message' => 'need_confirm',  // ⭐ 特殊标记
                     'data' => [
                         'need_confirm' => true,
                         'win_record_count' => $winRecordCount,
@@ -1386,7 +1386,7 @@ class ChannelLotteryTicketActivityController
                         'pending_count' => $pendingCount,
                         'granted_count' => $grantedCount,
                         'ticket_nos' => $ticketNos,
-                        'message' => $confirmMessage,
+                        'confirm_message' => $confirmMessage,  // ⭐ 确认提示信息
                     ]
                 ]);
             }
