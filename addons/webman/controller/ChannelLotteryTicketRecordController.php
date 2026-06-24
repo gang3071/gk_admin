@@ -232,13 +232,12 @@ class ChannelLotteryTicketRecordController
      * 发放奖励（单个）⭐ 核心方法
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function distribute(Request $request)
+    public function distribute()
     {
-        $id = $request->input('id');
-        $note = $request->input('distribution_note', '');
+        $id = Request::input('id');
+        $note = Request::input('distribution_note', '');
         $adminId = Admin::user()->id;
 
         // ⭐ 输入验证
@@ -396,11 +395,11 @@ class ChannelLotteryTicketRecordController
      * @group channel
      * @return mixed
      */
-    public function batchDistribute(Request $request)
+    public function batchDistribute()
     {
-        $activityId = $request->input('activity_id');
-        $recordIds = $request->input('ids', []);
-        $note = $request->input('distribution_note', '批量发放');
+        $activityId = Request::input('activity_id');
+        $recordIds = Request::input('ids', []);
+        $note = Request::input('distribution_note', '批量发放');
         $adminId = Admin::user()->id;
         $departmentId = Admin::user()->department_id;
 
@@ -640,23 +639,23 @@ class ChannelLotteryTicketRecordController
      * 批量发放选中记录
      * @auth true
      * @group channel
-     * @param Request $request
      * @return mixed
      */
-    public function batchDistributeSelected(Request $request)
+    public function batchDistributeSelected()
     {
-        $ids = $request->input('ids', []);
+        $ids = Request::input('ids', []);
 
         if (empty($ids)) {
             return message_error(admin_trans('lottery_ticket.error.no_selection'));
         }
 
         // 调用批量发放接口
-        $request->_data = [
+        // ⚠️ 注意：这里直接合并到当前请求参数中
+        request()->_data = array_merge(request()->_data ?? [], [
             'ids' => $ids,
             'distribution_note' => admin_trans('lottery_ticket.message.batch_distribute_selected')
-        ];
+        ]);
 
-        return $this->batchDistribute($request);
+        return $this->batchDistribute();
     }
 }
