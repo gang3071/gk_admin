@@ -182,7 +182,7 @@ class ChannelLotteryTicketRecordController
                     ]);
 
                 // 发放状态筛选
-                $filter->eq()->select('lottery_ticket_record.status')
+                $filter->eq()->select('status')
                     ->placeholder(admin_trans('lottery_ticket.fields.record_status'))
                     ->options([
                         LotteryTicketRecord::STATUS_PENDING => admin_trans('lottery_ticket.record_status.pending'),
