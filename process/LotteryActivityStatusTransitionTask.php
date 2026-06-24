@@ -12,7 +12,7 @@ use Workerman\Worker;
  * 摸奖券活动状态自动流转任务
  * 定时检查活动状态并自动更新
  *
- * 执行频率: 每分钟一次
+ * 执行频率: 每5秒一次
  * 处理逻辑: 检查活动时间节点，自动更新状态
  *
  * 状态流转规则（新增"待开奖"状态）:
@@ -32,12 +32,12 @@ class LotteryActivityStatusTransitionTask
 {
     public function onWorkerStart(Worker $worker)
     {
-        // 每分钟执行一次（错开扫描任务）
-        new Crontab('0 */1 * * * *', function () {
+        // 每5秒执行一次（更及时的状态流转）
+        new Crontab('*/5 * * * * *', function () {
             $this->checkAndTransitionStatus();
         });
 
-        Log::info('摸奖券活动状态流转任务已启动');
+        Log::info('摸奖券活动状态流转任务已启动（每5秒执行）');
     }
 
     /**
