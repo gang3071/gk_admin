@@ -206,7 +206,7 @@ class ChannelLotteryTicketRecordController
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
                             ->confirm(admin_trans('lottery_ticket.confirm.distribute'))
-                            ->ajax('distribute', ['id' => $data['id']])
+                            ->ajax([$this, 'distribute'], ['id' => $data['id']])
                     );
                 }
 
@@ -231,9 +231,12 @@ class ChannelLotteryTicketRecordController
      * @group channel
      * @return mixed
      */
-    public function distribute()
+    public function distribute($id = null)
     {
-        $id = Request::input('id');
+        // ExAdmin的ajax会将参数作为方法参数传递
+        if (!$id) {
+            $id = Request::input('id');
+        }
         $note = Request::input('distribution_note', '');
         $adminId = Admin::user()->id;
 
