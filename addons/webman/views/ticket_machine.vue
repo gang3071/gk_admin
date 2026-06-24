@@ -4,32 +4,43 @@
     <!-- 连接配置 -->
     <a-card title="连接配置" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #409EFF'}">
       <a-row :gutter="16">
-        <a-col :span="6">
-          <div style="margin-bottom: 8px; font-weight: 500;">串口路径</div>
-          <a-input v-model:value="config.port" placeholder="点击连接时选择串口" disabled />
+        <a-col :span="16">
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 6px;">串口路径</div>
+            <a-select
+              v-model:value="config.port"
+              placeholder="选择串口"
+              style="width: 100%;"
+              :loading="portsLoading"
+              @dropdownVisibleChange="handlePortDropdown"
+              allowClear
+            >
+              <a-select-option v-for="port in availablePorts" :key="port.path" :value="port.path">
+                {{ port.path }}
+              </a-select-option>
+            </a-select>
+          </div>
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 6px;">波特率</div>
+            <a-select v-model:value="config.baudRate" style="width: 100%;">
+              <a-select-option value="9600">9600</a-select-option>
+              <a-select-option value="19200">19200</a-select-option>
+              <a-select-option value="38400">38400</a-select-option>
+              <a-select-option value="57600">57600</a-select-option>
+              <a-select-option value="115200">115200</a-select-option>
+            </a-select>
+          </div>
         </a-col>
-        <a-col :span="4">
-          <div style="margin-bottom: 8px; font-weight: 500;">波特率</div>
-          <a-select v-model:value="config.baudRate" style="width: 100%;">
-            <a-select-option value="9600">9600</a-select-option>
-            <a-select-option value="19200">19200</a-select-option>
-            <a-select-option value="38400">38400</a-select-option>
-            <a-select-option value="57600">57600</a-select-option>
-            <a-select-option value="115200">115200</a-select-option>
-          </a-select>
-        </a-col>
-        <a-col :span="4">
-          <div style="margin-bottom: 8px; font-weight: 500;">状态</div>
-          <a-tag :color="isConnected ? 'success' : 'error'" style="padding: 4px 12px; font-size: 14px;">
-            {{ isConnected ? '✓ 已连接' : '✗ 未连接' }}
-          </a-tag>
-        </a-col>
-        <a-col :span="6">
-          <div style="margin-bottom: 8px; font-weight: 500;">&nbsp;</div>
-          <a-space>
-            <a-button type="primary" @click="connect" :disabled="isConnected">连接</a-button>
-            <a-button danger @click="disconnect" :disabled="!isConnected">断开</a-button>
-          </a-space>
+        <a-col :span="8">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px;">
+            <a-tag :color="isConnected ? 'success' : 'error'" style="padding: 6px 24px; font-size: 16px; margin: 0;">
+              {{ isConnected ? '✓ 已连接' : '✗ 未连接' }}
+            </a-tag>
+            <div style="display: flex; gap: 12px;">
+              <a-button type="primary" @click="connect" :disabled="isConnected" style="min-width: 90px;">连接</a-button>
+              <a-button danger @click="disconnect" :disabled="!isConnected" style="min-width: 90px;">断开</a-button>
+            </div>
+          </div>
         </a-col>
       </a-row>
     </a-card>
@@ -122,13 +133,15 @@
             <a-select
               v-model:value="selectedPlayerId"
               show-search
-              placeholder="输入玩家名称搜索"
-              :filter-option="false"
+              placeholder="选择或搜索玩家"
+              :filter-option="filterPlayerOption"
               :options="playerOptions"
-              @search="searchPlayers"
               :loading="playerSearching"
               allow-clear
               style="width: 100%;"
+              @popupScroll="handlePlayerScroll"
+              @search="searchPlayers"
+              @change="handlePlayerChange"
             >
             </a-select>
           </div>
@@ -179,6 +192,9 @@ export default {
       reader: null,
       readLoopAbort: null,
       heartbeatTimer: null,
+      availablePorts: [],
+      portsLoading: false,
+      selectedPortId: null,
       config: {
         port: '',
         baudRate: this.default_baud_rate || '115200',
@@ -200,6 +216,9 @@ export default {
       playerOptions: [],
       playerSearching: false,
       playerSearchTimer: null,
+      playerPage: 1,
+      playerHasMore: true,
+      playerKeyword: '',
       hexCommand: '',
       logs: [],
       receiveBuffer: [],
@@ -265,7 +284,7 @@ export default {
     },
 
     // 发送命令并等待响应
-    async sendCommand(cmdType, cmd, data = []) {
+    async sendCommand(cmdType, cmd, data = [], waitResponse = true) {
       if (!this.port || !this.isConnected) {
         this.addLog('error', '串口未连接');
         return null;
@@ -285,18 +304,30 @@ export default {
         return null;
       }
 
-      // 等待响应
+      // 如果不需要等待响应，直接返回
+      if (!waitResponse) {
+        return true;
+      }
+
+      // 等待响应（带超时）
       return new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          this.pendingResolve = null;
+          // 只清除自己的 pendingResolve
+          if (this.pendingResolve && this.pendingResolve.cmd === cmd) {
+            this.pendingResolve = null;
+          }
           this.addLog('warn', '响应超时 (2秒)');
           resolve(null);
         }, 2000);
 
-        this.pendingResolve = (responseData) => {
-          clearTimeout(timeout);
-          this.pendingResolve = null;
-          resolve(responseData);
+        // 存储期望的命令类型
+        this.pendingResolve = {
+          cmd: cmd,
+          callback: (responseData) => {
+            clearTimeout(timeout);
+            this.pendingResolve = null;
+            resolve(responseData);
+          }
         };
       });
     },
@@ -334,8 +365,15 @@ export default {
                   const hexStr = Array.from(frame.data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
                   this.addLog('success', '解析帧: ' + frame.cmdType.toString(16).padStart(2, '0') + ' ' + frame.cmd.toString(16).padStart(2, '0') + ' DATA=[' + hexStr + ']');
 
+                  // 检查是否是期望的响应
                   if (this.pendingResolve) {
-                    this.pendingResolve(frame);
+                    // 如果期望的命令匹配，调用回调
+                    if (this.pendingResolve.cmd === frame.cmd) {
+                      this.pendingResolve.callback(frame);
+                    } else {
+                      // 不匹配的响应，记录日志
+                      this.addLog('info', '收到非期望响应，忽略');
+                    }
                   }
                 }
               }
@@ -364,10 +402,88 @@ export default {
       this.addLog('info', '读取循环已退出');
     },
 
+    // 获取可用串口列表
+    async loadPorts() {
+      if (!('serial' in navigator)) {
+        this.addLog('warn', '浏览器不支持 Web Serial API');
+        return;
+      }
+
+      this.portsLoading = true;
+      try {
+        // 获取已授权的串口列表
+        const ports = await navigator.serial.getPorts();
+        this.availablePorts = ports.map((port, index) => {
+          const info = port.getInfo();
+          return {
+            path: 'USB Serial ' + (index + 1) + ' (VID:' + (info.usbVendorId || '????').toString(16).padStart(4, '0') + ' PID:' + (info.usbProductId || '????').toString(16).padStart(4, '0') + ')',
+            port: port,
+            description: '',
+          };
+        });
+
+        // 如果没有已授权的串口，提示用户
+        if (this.availablePorts.length === 0) {
+          this.addLog('info', '未发现已授权串口，请先点击"添加串口"授权设备');
+        }
+      } catch (e) {
+        this.addLog('error', '获取串口列表失败: ' + e.message);
+      } finally {
+        this.portsLoading = false;
+      }
+    },
+
+    // 下拉框打开时刷新串口列表
+    handlePortDropdown(open) {
+      if (open) {
+        this.loadPorts();
+      }
+    },
+
+    // 选择串口设备
+    handlePortSelect(index) {
+      if (index !== null && index !== undefined && this.availablePorts[index]) {
+        this.port = this.availablePorts[index].port;
+        // 不自动覆盖手动输入的端口名
+        if (!this.config.port) {
+          this.config.port = this.availablePorts[index].path;
+        }
+      } else {
+        this.port = null;
+      }
+    },
+
+    // 添加新串口
+    async addNewPort() {
+      if (!('serial' in navigator)) {
+        this.addLog('error', '浏览器不支持 Web Serial API');
+        return;
+      }
+
+      try {
+        const port = await navigator.serial.requestPort();
+        await this.loadPorts();
+        // 自动选择新添加的串口
+        const info = port.getInfo();
+        const portName = 'USB Serial (VID:' + (info.usbVendorId || '????').toString(16) + ' PID:' + (info.usbProductId || '????').toString(16) + ')';
+        this.config.port = portName;
+        this.port = port;
+      } catch (e) {
+        if (e.name !== 'NotFoundError') {
+          this.addLog('error', '添加串口失败: ' + e.message);
+        }
+      }
+    },
+
     // 连接串口
     async connect() {
       if (!('serial' in navigator)) {
         this.addLog('error', '浏览器不支持 Web Serial API，请使用 Chrome/Edge 浏览器');
+        return;
+      }
+
+      if (!this.config.port) {
+        this.addLog('error', '请先选择串口');
         return;
       }
 
@@ -377,18 +493,16 @@ export default {
       }
 
       try {
-        this.addLog('info', '请选择串口设备...');
+        // 查找选中的串口对象
+        const selectedPort = this.availablePorts.find(p => p.path === this.config.port);
+        if (!selectedPort) {
+          this.addLog('error', '未找到选中的串口，请重新选择');
+          return;
+        }
 
-        // 弹出串口选择框
-        this.port = await navigator.serial.requestPort();
-
-        // 获取端口信息
-        const info = this.port.getInfo();
-        const portName = 'USB Serial (VID:' + (info.usbVendorId || '????').toString(16) + ' PID:' + (info.usbProductId || '????').toString(16) + ')';
-        this.config.port = portName;
-
-        this.addLog('info', '已选择: ' + portName);
-        this.addLog('info', '正在打开串口，波特率: ' + this.config.baudRate);
+        this.port = selectedPort.port;
+        this.addLog('info', '正在打开串口: ' + this.config.port);
+        this.addLog('info', '波特率: ' + this.config.baudRate);
 
         // 打开串口
         await this.port.open({
@@ -573,25 +687,22 @@ export default {
       if (!this.qrCode) { this.addLog('error', '请输入QR码内容'); return; }
 
       // TODO: 测试模式 - 跳过实际出票，只保存数据
-      const TEST_MODE = true;
+      const TEST_MODE = false;
 
       if (TEST_MODE) {
         this.addLog('warn', '[测试模式] 跳过实际出票');
       } else {
-        // 发送到出票机
+        // 发送到出票机（不等待响应，设备会直接打印）
         const data = Array.from(this.qrCode).map(c => c.charCodeAt(0));
-        const r = await this.sendCommand(0x01, 0x08, data);
-
-        if (!r) {
-          this.addLog('error', 'QR码发送失败');
-          return;
-        }
-        this.addLog('success', 'QR码已发送并打印');
+        await this.sendCommand(0x01, 0x08, data, false);
+        this.addLog('success', 'QR码已发送，等待打印...');
       }
 
       // 保存到数据库
       if (this.save_ticket_url) {
         try {
+          this.addLog('info', '保存数据: player_id=' + this.selectedPlayerId);
+
           const saveRes = await this.$request({
             url: this.save_ticket_url,
             method: 'post',
@@ -618,41 +729,78 @@ export default {
       }
     },
 
-    // 搜索玩家
-    async searchPlayers(keyword) {
-      if (!keyword || keyword.length < 2) {
+    // 本地过滤玩家选项
+    filterPlayerOption(input, option) {
+      return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+    },
+
+    // 玩家选择变化
+    handlePlayerChange(value) {
+      if (!value) {
+        // 清空选择时，重新加载全部玩家
+        this.playerKeyword = '';
+        this.playerPage = 1;
+        this.playerHasMore = true;
         this.playerOptions = [];
-        return;
+        this.loadPlayers();
       }
+    },
 
-      // 防抖
-      if (this.playerSearchTimer) {
-        clearTimeout(this.playerSearchTimer);
-      }
+    // 搜索玩家
+    searchPlayers(keyword) {
+      this.playerKeyword = keyword || '';
+      this.playerPage = 1;
+      this.playerHasMore = true;
+      this.playerOptions = [];
+      this.loadPlayers();
+    },
 
-      this.playerSearchTimer = setTimeout(async () => {
-        this.playerSearching = true;
-        try {
-          const res = await this.$request({
-            url: 'ex-admin/addons-webman-controller-ChannelIndexController/searchPlayers',
-            method: 'get',
-            params: { keyword: keyword },
-          });
+    // 加载玩家列表
+    async loadPlayers() {
+      if (this.playerSearching) return;
 
-          if (res.code === 200 && res.data) {
-            this.playerOptions = res.data.map(p => ({
-              value: p.id,
-              label: p.name + (p.uuid ? ' (' + p.uuid + ')' : ''),
-            }));
+      this.playerSearching = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelIndexController/searchPlayers',
+          method: 'get',
+          params: {
+            keyword: this.playerKeyword,
+            page: this.playerPage,
+            page_size: 50,
+          },
+        });
+
+        if (res.code === 200 && res.data) {
+          const newOptions = res.data.map(p => ({
+            value: p.id,
+            label: p.name + (p.uuid ? ' (' + p.uuid + ')' : ''),
+          }));
+
+          if (this.playerPage === 1) {
+            this.playerOptions = newOptions;
           } else {
-            this.playerOptions = [];
+            this.playerOptions = [...this.playerOptions, ...newOptions];
           }
-        } catch (e) {
-          this.playerOptions = [];
-        } finally {
-          this.playerSearching = false;
+
+          this.playerHasMore = newOptions.length >= 50;
         }
-      }, 300);
+      } catch (e) {
+        console.error('加载玩家失败:', e);
+      } finally {
+        this.playerSearching = false;
+      }
+    },
+
+    // 滚动加载更多
+    handlePlayerScroll(e) {
+      const { target } = e;
+      if (target.scrollTop + target.offsetHeight >= target.scrollHeight - 20) {
+        if (this.playerHasMore && !this.playerSearching) {
+          this.playerPage++;
+          this.loadPlayers();
+        }
+      }
     },
 
     // 发送HEX
@@ -688,6 +836,12 @@ export default {
     this.addLog('info', '使用 Web Serial API 直接访问串口');
     this.addLog('info', '请使用 Chrome/Edge 浏览器');
     this.addLog('info', '========================================');
+
+    // 加载串口列表
+    this.loadPorts();
+
+    // 加载玩家列表
+    this.loadPlayers();
   },
 
   beforeUnmount() {

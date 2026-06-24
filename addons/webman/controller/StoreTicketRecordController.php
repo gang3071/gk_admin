@@ -135,6 +135,7 @@ class StoreTicketRecordController
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.title'))
                     ->modal([ChannelIndexController::class, 'ticketMachineControl'])
+                    ->width('900px')
                     ->type('primary')
                     ->icon('PrinterOutlined'),
                 $layout

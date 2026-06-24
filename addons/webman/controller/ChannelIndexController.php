@@ -3364,21 +3364,27 @@ class ChannelIndexController
     public function searchPlayers(): Response
     {
         $keyword = request()->input('keyword', '');
+        $page = (int) request()->input('page', 1);
+        $pageSize = (int) request()->input('page_size', 50);
         $admin = Admin::user();
 
-        if (empty($keyword) || mb_strlen($keyword) < 2) {
-            return json(['code' => 200, 'data' => []]);
-        }
-
-        $players = \addons\webman\model\Player::query()
+        $query = \addons\webman\model\Player::query()
             ->where('department_id', $admin->department_id)
-            ->where('store_admin_id', $admin->id)
-            ->where(function ($query) use ($keyword) {
-                $query->where('name', 'like', "%{$keyword}%")
+            ->where('store_admin_id', $admin->id);
+
+        // 关键词搜索
+        if (!empty($keyword) && mb_strlen($keyword) >= 1) {
+            $query->where(function ($q) use ($keyword) {
+                $q->where('name', 'like', "%{$keyword}%")
                     ->orWhere('uuid', 'like', "%{$keyword}%")
                     ->orWhere('phone', 'like', "%{$keyword}%");
-            })
-            ->limit(20)
+            });
+        }
+
+        $players = $query
+            ->orderBy('id', 'desc')
+            ->skip(($page - 1) * $pageSize)
+            ->take($pageSize)
             ->get(['id', 'name', 'uuid']);
 
         return json(['code' => 200, 'data' => $players]);

@@ -116,6 +116,10 @@ export default {
   props: {
     query_url: String,
     redeem_url: String,
+    record_id: {
+      type: [Number, String],
+      default: 0,
+    },
     labels: Object,
   },
   data() {
@@ -138,11 +142,16 @@ export default {
     }
   },
   mounted() {
-    this.$nextTick(() => {
-      if (this.$refs.qrInput) {
-        this.$refs.qrInput.focus();
-      }
-    });
+    // 如果有 record_id，自动加载记录
+    if (this.record_id && this.record_id > 0) {
+      this.loadRecordById(this.record_id);
+    } else {
+      this.$nextTick(() => {
+        if (this.$refs.qrInput) {
+          this.$refs.qrInput.focus();
+        }
+      });
+    }
   },
   methods: {
     getStatusColor(status) {
@@ -161,6 +170,38 @@ export default {
       if (this.record.status === 0) return '该记录已禁用';
       if (this.record.status === 3) return '该记录已核销';
       return '无法核销';
+    },
+
+    async loadRecordById(id) {
+      this.loading = true;
+      this.record = null;
+      this.message = '';
+      this.messageDesc = '';
+
+      try {
+        const res = await this.$request({
+          url: this.query_url,
+          method: 'get',
+          params: { id: id },
+        });
+
+        if (res.code === 0) {
+          this.record = res.data;
+          this.message = '查询成功';
+          this.messageType = 'success';
+          this.messageDesc = this.canRedeem ? '请确认订单信息后点击核销' : this.getRedeemDisabledReason();
+        } else {
+          this.message = res.msg || '查询失败';
+          this.messageType = 'error';
+          this.messageDesc = '';
+        }
+      } catch (e) {
+        this.message = '查询失败';
+        this.messageType = 'error';
+        this.messageDesc = e.message || '';
+      } finally {
+        this.loading = false;
+      }
     },
 
     async queryRecord() {
