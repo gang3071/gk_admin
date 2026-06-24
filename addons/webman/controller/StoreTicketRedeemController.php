@@ -340,13 +340,63 @@ class StoreTicketRedeemController
         }
 
         $admin = Admin::user();
-        $record = TicketRecord::query()
-            ->where('qr_code_no', $qrCodeNo)
-            ->where('store_admin_id', $admin->id)
-            ->first();
+
+        // 尝试解密加密内容（如果是加密串）
+        $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
+        $orderId = null;
+        $ticketId = null;
+
+        if (!empty($decryptedData)) {
+            $data = json_decode($decryptedData, true);
+            if ($data && isset($data['order_id'])) {
+                $orderId = $data['order_id'];
+            }
+            if ($data && isset($data['ticket_id'])) {
+                $ticketId = $data['ticket_id'];
+            }
+        }
+
+        // 优先通过加密内容中的 order_id 或 ticket_id 查询
+        $record = null;
+        if ($ticketId) {
+            $record = TicketRecord::query()
+                ->where('id', $ticketId)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+        } elseif ($orderId) {
+            $record = TicketRecord::query()
+                ->where('order_id', $orderId)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+        }
+
+        // 如果加密查询未找到，回退到 qr_code_no 查询
+        if (empty($record)) {
+            $record = TicketRecord::query()
+                ->where('qr_code_no', $qrCodeNo)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+        }
+
+        // 尝试通过 encrypted_content 字段匹配
+        if (empty($record)) {
+            $record = TicketRecord::query()
+                ->where('encrypted_content', $qrCodeNo)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+        }
 
         if (empty($record)) {
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
+        }
+
+        // 更新扫码状态
+        if ($record->scan_status == \addons\webman\model\TicketRecord::SCAN_STATUS_PENDING) {
+            $record->update([
+                'scan_status' => \addons\webman\model\TicketRecord::SCAN_STATUS_SCANNED,
+                'scanned_at' => now(),
+                'scanned_by' => 'admin_' . $admin->id,
+            ]);
         }
 
         // 通过 player_id 关联获取玩家信息
@@ -383,6 +433,7 @@ class StoreTicketRedeemController
                 'status' => $record->status,
                 'status_name' => $record->status_name,
                 'qr_code_no' => $record->qr_code_no,
+                'encrypted_content' => $record->encrypted_content,
                 'created_at' => $record->created_at,
                 'player_id' => $record->player_id,
                 'player_name' => $playerName,
@@ -473,19 +524,71 @@ class StoreTicketRedeemController
         }
 
         $admin = Admin::user();
-        $record = TicketRecord::query()
-            ->where('qr_code_no', $qrCodeNo)
-            ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
-            ->first();
+
+        // 尝试解密加密内容（如果是加密串）
+        $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
+        $orderId = null;
+        $ticketId = null;
+
+        if (!empty($decryptedData)) {
+            $data = json_decode($decryptedData, true);
+            if ($data && isset($data['order_id'])) {
+                $orderId = $data['order_id'];
+            }
+            if ($data && isset($data['ticket_id'])) {
+                $ticketId = $data['ticket_id'];
+            }
+        }
+
+        // 优先通过加密内容中的 order_id 或 ticket_id 查询
+        $record = null;
+        if ($ticketId) {
+            $record = TicketRecord::query()
+                ->where('id', $ticketId)
+                ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+                ->first();
+        } elseif ($orderId) {
+            $record = TicketRecord::query()
+                ->where('order_id', $orderId)
+                ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+                ->first();
+        }
+
+        // 如果加密查询未找到，回退到 qr_code_no 查询
+        if (empty($record)) {
+            $record = TicketRecord::query()
+                ->where('qr_code_no', $qrCodeNo)
+                ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+                ->first();
+        }
+
+        // 尝试通过 encrypted_content 字段匹配
+        if (empty($record)) {
+            $record = TicketRecord::query()
+                ->where('encrypted_content', $qrCodeNo)
+                ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+                ->first();
+        }
 
         if (empty($record)) {
             return message_error(admin_trans('ticket_machine.redeem.record_not_found'));
         }
 
-        // 更新状态为已使用
-        $record->update(['status' => TicketRecord::STATUS_USED]);
+        // 更新状态为已使用，标记扫码状态
+        $record->update([
+            'status' => TicketRecord::STATUS_USED,
+            'scan_status' => TicketRecord::SCAN_STATUS_SCANNED,
+            'scanned_at' => now(),
+            'scanned_by' => 'admin_' . $admin->id,
+        ]);
 
         return message_success(admin_trans('ticket_machine.redeem.redeem_success'));
     }
