@@ -294,9 +294,28 @@ class ChannelLotteryTicketRecordController
                 throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
             }
 
-            $oldBalance = $player->balance;
-            $player->balance += $record->prize_amount;
-            $player->save();
+            // 5.2 通过钱包服务增加玩家余额（Redis原子操作 + 异步同步数据库）⭐
+            $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+            $newBalance = \addons\webman\service\WalletService::add($player->id, $record->prize_amount, 1);
+
+            // 5.3 记录金流明细 (PlayerDeliveryRecord) ⭐
+            $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+            $playerDeliveryRecord->player_id = $player->id;
+            $playerDeliveryRecord->department_id = $player->department_id;
+            $playerDeliveryRecord->target = $record->getTable(); // lottery_ticket_record
+            $playerDeliveryRecord->target_id = $record->id;
+            $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+            $playerDeliveryRecord->source = 'lottery_ticket_reward';
+            $playerDeliveryRecord->amount = $record->prize_amount;
+            $playerDeliveryRecord->amount_before = $oldBalance;
+            $playerDeliveryRecord->amount_after = $newBalance;
+            $playerDeliveryRecord->tradeno = $record->ticket_no; // 使用券号作为交易号
+            $playerDeliveryRecord->remark = sprintf(
+                '摸奖券中奖发放：%s - %s',
+                $record->activity->name ?? '未知活动',
+                $record->prize_name
+            );
+            $playerDeliveryRecord->save();
 
             // 6. 更新中奖记录状态
             $record->status = LotteryTicketRecord::STATUS_CLAIMED;
@@ -306,6 +325,7 @@ class ChannelLotteryTicketRecordController
             $record->save();
 
             // 7. 更新活动已发放金额（使用悲观锁）⭐
+            /** @var LotteryTicketActivity $activity */
             $activity = LotteryTicketActivity::where('id', $record->activity_id)
                 ->lockForUpdate()
                 ->first();
@@ -355,8 +375,7 @@ class ChannelLotteryTicketRecordController
                 'record_id' => $id,
                 'player_id' => $player->id,
                 'prize_amount' => $record->prize_amount,
-                'old_balance' => $oldBalance,
-                'new_balance' => $player->balance,
+                'new_balance' => $newBalance,
                 'admin_id' => $adminId,
                 'note' => $note
             ]);
@@ -442,7 +461,7 @@ class ChannelLotteryTicketRecordController
         $successCount = 0;
         $failCount = 0;
         $failReasons = [];
-
+        /** @var LotteryTicketRecord  $record */
         // 逐条发放
         foreach ($records as $record) {
             \support\Db::beginTransaction();
@@ -476,8 +495,28 @@ class ChannelLotteryTicketRecordController
                     throw new \Exception(admin_trans('lottery_ticket.error.player_disabled'));
                 }
 
-                $player->balance += $record->prize_amount;
-                $player->save();
+                // 通过钱包服务增加玩家余额（Redis原子操作 + 异步同步数据库）⭐
+                $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+                $newBalance = \addons\webman\service\WalletService::add($player->id, $record->prize_amount, 1);
+
+                // 记录金流明细 (PlayerDeliveryRecord) ⭐
+                $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                $playerDeliveryRecord->player_id = $player->id;
+                $playerDeliveryRecord->department_id = $player->department_id;
+                $playerDeliveryRecord->target = $record->getTable(); // lottery_ticket_record
+                $playerDeliveryRecord->target_id = $record->id;
+                $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+                $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                $playerDeliveryRecord->amount = $record->prize_amount;
+                $playerDeliveryRecord->amount_before = $oldBalance;
+                $playerDeliveryRecord->amount_after = $newBalance;
+                $playerDeliveryRecord->tradeno = $record->ticket_no; // 使用券号作为交易号
+                $playerDeliveryRecord->remark = sprintf(
+                    '摸奖券中奖发放：%s - %s',
+                    $activity->name ?? '未知活动',
+                    $record->prize_name
+                );
+                $playerDeliveryRecord->save();
 
                 // 更新记录
                 $record->status = LotteryTicketRecord::STATUS_CLAIMED;

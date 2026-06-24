@@ -15,16 +15,28 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int $id 主键ID
  * @property int $department_id 所属渠道部门ID
  * @property string $name 活动名称
- * @property string $description 活动说明
+ * @property string|null $description 活动说明
+ * @property string|null $cover_image 活动封面图片URL
+ * @property string|null $live_url 直播流地址
+ * @property int $live_status 直播状态 0=未开播 1=直播中 2=已结束
+ * @property string|null $status_history 状态变更历史(JSON)
  * @property string $start_time 活动开始时间
  * @property string $end_time 活动结束时间
- * @property int $status 活动状态(0:未开始,1:进行中,2:已结束,3:已关闭)
+ * @property string $draw_method 开奖方式：ball=摇球，manual=手动录入
+ * @property string|null $draw_completed_at 开奖完成时间
+ * @property string|null $prize_distributed_at 奖励发放完成时间
+ * @property float $total_prize_amount 总奖金金额
+ * @property float $distributed_prize_amount 已发放奖金金额
+ * @property int $auto_draw 是否自动开奖 0=否 1=是
+ * @property int $status 活动状态(0:未开始,1:进行中,2:已结束,3:已关闭,5:待开奖,6:开奖中)
  * @property int $total_tickets 总发放摸奖券数量
  * @property int $used_tickets 已使用摸奖券数量
- * @property string $prize_config 奖品配置(JSON格式)
+ * @property int $current_ticket_no 当前已发券数
+ * @property int $max_ticket_no 最大可发券数（默认100万张）
+ * @property array|string $prize_config 奖品配置(JSON格式)
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
- * @property string $deleted_at 删除时间
+ * @property string|null $deleted_at 删除时间
  *
  * @property Channel $channel
  * @property LotteryTicket[] $tickets
@@ -56,6 +68,9 @@ class LotteryTicketActivity extends Model
 
     protected $casts = [
         'prize_config' => 'array',
+        'status_history' => 'array',
+        'total_prize_amount' => 'decimal:2',
+        'distributed_prize_amount' => 'decimal:2',
     ];
 
     /**
@@ -107,7 +122,8 @@ class LotteryTicketActivity extends Model
      */
     public function recordStatusChange(int $newStatus, string $reason = ''): void
     {
-        $history = $this->status_history ? json_decode($this->status_history, true) : [];
+        // ✅ 使用 $casts 自动处理 JSON 编解码
+        $history = $this->status_history ?? [];
 
         $history[] = [
             'from_status' => $this->status,
@@ -116,7 +132,7 @@ class LotteryTicketActivity extends Model
             'changed_at' => date('Y-m-d H:i:s'),
         ];
 
-        $this->status_history = json_encode($history, JSON_UNESCAPED_UNICODE);
+        $this->status_history = $history;
         $this->status = $newStatus;
     }
 
