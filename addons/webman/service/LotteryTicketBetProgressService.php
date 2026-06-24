@@ -247,15 +247,9 @@ class LotteryTicketBetProgressService
                     if ($issuedCount > 0 && $firstTicketNo) {
                         $shouldPushProgress = true;
 
-                        // 查询第一张券用于推送发券通知（弹窗通知）
-                        $firstTicket = LotteryTicket::where('activity_id', $activity->id)
-                            ->where('player_id', $progress->player_id)
-                            ->where('ticket_no', $firstTicketNo)
-                            ->first();
-
-                        if ($firstTicket) {
-                            LotteryTicketPushService::pushTicketIssued($firstTicket, $issuedCount);
-                        }
+                        // 推送发券通知（弹窗通知）
+                        $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $issuedCount);
+                        LotteryTicketPushService::pushPlayerTicketsUpdate($progress->player_id, $message);
 
                         $results[] = [
                             'activity_id' => $progress->activity_id,

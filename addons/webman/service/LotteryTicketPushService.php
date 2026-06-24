@@ -62,50 +62,6 @@ class LotteryTicketPushService
         }
     }
 
-    /**
-     * 推送摸奖券发放通知（兼容旧接口）
-     *
-     * @param LotteryTicket $ticket 摸奖券对象
-     * @param int $count 发放数量（批量发放时）
-     * @return bool
-     *
-     * @deprecated 建议直接使用 pushPlayerTicketsUpdate($playerId, $message)
-     */
-    public static function pushTicketIssued(LotteryTicket $ticket, int $count = 1): bool
-    {
-        try {
-            // ✅ 使用缓存获取活动
-            $activity = self::getActivity($ticket->activity_id);
-            if (!$activity) {
-                return false;
-            }
-
-            // ⭐ 复用统一的推送方法
-            $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $count);
-            return self::pushPlayerTicketsUpdate($ticket->player_id, $message);
-
-        } catch (\Exception $e) {
-            Log::error('摸奖券发放推送失败', [
-                'ticket_id' => $ticket->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * 推送发券通知（新方法，推荐使用）
-     *
-     * @param int $playerId 玩家ID
-     * @param string $activityName 活动名称
-     * @param int $count 发放数量
-     * @return bool
-     */
-    public static function pushTicketIssuedSimple(int $playerId, string $activityName, int $count): bool
-    {
-        $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activityName, $count);
-        return self::pushPlayerTicketsUpdate($playerId, $message);
-    }
 
     /**
      * 获取玩家在所有有效活动下的券数

@@ -152,9 +152,8 @@ class LotteryTicketIssueService
             $this->clearPlayerTicketCache($playerId);
 
             // ⭐ 推送发券通知给客户端
-            if (!empty($tickets)) {
-                LotteryTicketPushService::pushTicketIssued($tickets[0], $actualCount);
-            }
+            $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $actualCount);
+            LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
 
             return $tickets;
 
@@ -338,12 +337,8 @@ class LotteryTicketIssueService
             $this->clearPlayerTicketCache($playerId);
 
             // ⭐ 推送发券通知给客户端
-            if (!empty($tickets)) {
-                $firstTicket = LotteryTicket::find($tickets[0]['id']);
-                if ($firstTicket) {
-                    LotteryTicketPushService::pushTicketIssued($firstTicket, $actualCount);
-                }
-            }
+            $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $actualCount);
+            LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
 
             return $tickets;
 
