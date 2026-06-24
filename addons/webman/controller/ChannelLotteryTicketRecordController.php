@@ -40,8 +40,11 @@ class ChannelLotteryTicketRecordController
             // 获取玩家表名（使用配置，默认为'player'）
             $playerTable = config('plugin.rockys.ex-admin-webman.database.player_table', 'player');
 
-            // ⭐ 顶部统计数据
-            $stats = self::getRecordStats($departmentId);
+            // ✅ 获取筛选条件
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            // ⭐ 顶部统计数据（根据筛选条件计算）
+            $stats = self::getRecordStats($departmentId, $exAdminFilter);
 
             // ⭐ 顶部统计卡片
             $layout = Card::create()->content([
@@ -619,17 +622,31 @@ class ChannelLotteryTicketRecordController
      * @param int $departmentId
      * @return array
      */
-    private static function getRecordStats(int $departmentId): array
+    /**
+     * 获取中奖记录统计数据（支持筛选条件）
+     * @param int $departmentId
+     * @param array $filter
+     * @return array
+     */
+    private static function getRecordStats(int $departmentId, array $filter = []): array
     {
-        // 待发放
-        $pendingData = LotteryTicketRecord::where('department_id', $departmentId)
-            ->where('status', LotteryTicketRecord::STATUS_PENDING)
+        // ✅ 构建基础查询（应用筛选条件）
+        $baseQuery = LotteryTicketRecord::where('department_id', $departmentId);
+
+        // 应用筛选条件
+        if (!empty($filter)) {
+            self::applyFilters($baseQuery, $filter);
+        }
+
+        // 待发放统计
+        $pendingQuery = clone $baseQuery;
+        $pendingData = $pendingQuery->where('status', LotteryTicketRecord::STATUS_PENDING)
             ->selectRaw('COUNT(*) as count, COALESCE(SUM(prize_amount), 0) as amount')
             ->first();
 
-        // 已发放
-        $claimedData = LotteryTicketRecord::where('department_id', $departmentId)
-            ->where('status', LotteryTicketRecord::STATUS_CLAIMED)
+        // 已发放统计
+        $claimedQuery = clone $baseQuery;
+        $claimedData = $claimedQuery->where('status', LotteryTicketRecord::STATUS_CLAIMED)
             ->selectRaw('COUNT(*) as count, COALESCE(SUM(prize_amount), 0) as amount')
             ->first();
 
@@ -639,6 +656,59 @@ class ChannelLotteryTicketRecordController
             'claimed_count' => $claimedData->count ?? 0,
             'claimed_amount' => $claimedData->amount ?? 0,
         ];
+    }
+
+    /**
+     * 应用筛选条件到查询
+     * @param $query
+     * @param array $filter
+     */
+    private static function applyFilters($query, array $filter)
+    {
+        // 活动筛选
+        if (!empty($filter['activity_id'])) {
+            $query->where('activity_id', $filter['activity_id']);
+        }
+
+        // 券号筛选
+        if (!empty($filter['ticket_no'])) {
+            $query->where('ticket_no', 'like', '%' . $filter['ticket_no'] . '%');
+        }
+
+        // 奖品类型筛选
+        if (!empty($filter['prize_type'])) {
+            $query->where('prize_type', $filter['prize_type']);
+        }
+
+        // 发放状态筛选
+        if (!empty($filter['status'])) {
+            $query->where('status', $filter['status']);
+        }
+
+        // 玩家相关筛选（使用关系）
+        if (!empty($filter['player'])) {
+            $query->whereHas('player', function ($q) use ($filter) {
+                if (!empty($filter['player']['name'])) {
+                    $q->where('name', 'like', '%' . $filter['player']['name'] . '%');
+                }
+                if (!empty($filter['player']['uuid'])) {
+                    $q->where('uuid', 'like', '%' . $filter['player']['uuid'] . '%');
+                }
+                if (!empty($filter['player']['username'])) {
+                    $q->where('username', 'like', '%' . $filter['player']['username'] . '%');
+                }
+            });
+        }
+
+        // 时间范围筛选
+        if (!empty($filter['created_at'])) {
+            if (!empty($filter['created_at'][0])) {
+                $query->where('created_at', '>=', $filter['created_at'][0]);
+            }
+            if (!empty($filter['created_at'][1])) {
+                $query->where('created_at', '<=', $filter['created_at'][1]);
+            }
+        }
     }
 
 
