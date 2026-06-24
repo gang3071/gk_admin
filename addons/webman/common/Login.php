@@ -2065,7 +2065,7 @@ class Login extends LoginAbstract
                     [
                         'title' => admin_trans('lottery_ticket.stats.pending_amount'),
                         'number' => floatval($pendingData->amount ?? 0),
-                        'prefix' => '¥',
+                        'prefix' => 'NT$',
                         'suffix' => ''
                     ],
                     [
@@ -2077,7 +2077,7 @@ class Login extends LoginAbstract
                     [
                         'title' => admin_trans('lottery_ticket.stats.claimed_amount'),
                         'number' => floatval($claimedData->amount ?? 0),
-                        'prefix' => '¥',
+                        'prefix' => 'NT$',
                         'suffix' => ''
                     ],
                 ];
