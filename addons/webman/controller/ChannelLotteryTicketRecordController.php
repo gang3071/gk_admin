@@ -11,7 +11,6 @@ use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
@@ -39,43 +38,25 @@ class ChannelLotteryTicketRecordController
             // ✅ 获取筛选条件
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
-            // ⭐ 顶部统计数据（根据筛选条件计算）
-            $stats = self::getRecordStats($departmentId, $exAdminFilter);
-
-            // ⭐ 顶部统计卡片
-            $layout = Layout::create()->content([
-                Row::create()
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.pending_count'))
-                            ->value($stats['pending_count'])
-                            ->valueStyle(['color' => '#ff9800']),
-                        6
-                    )
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.pending_amount'))
-                            ->value(number_format($stats['pending_amount'], 2))
-                            ->prefix('¥')
-                            ->valueStyle(['color' => '#ff9800']),
-                        6
-                    )
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.claimed_count'))
-                            ->value($stats['claimed_count'])
-                            ->valueStyle(['color' => '#4caf50']),
-                        6
-                    )
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.claimed_amount'))
-                            ->value(number_format($stats['claimed_amount'], 2))
-                            ->prefix('¥')
-                            ->valueStyle(['color' => '#4caf50']),
-                        6
-                    )
-            ])->bodyStyle(['padding' => '20px']);
+            // ⭐ 顶部统计卡片（使用Vue组件 + API接口）
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($exAdminFilter, $departmentId) {
+                $row->gutter([10, 0]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type' => 'LotteryTicketRecord',
+                    'department_id' => $departmentId,
+                    'trans' => [
+                        'panelHeader' => admin_trans('lottery_ticket.stats.panel_header'),
+                        'loading' => admin_trans('lottery_ticket.stats.loading'),
+                        'refresh' => admin_trans('lottery_ticket.stats.refresh'),
+                        'loadError' => admin_trans('lottery_ticket.stats.load_error'),
+                        'retry' => admin_trans('lottery_ticket.stats.retry'),
+                        'clickToView' => admin_trans('lottery_ticket.stats.click_to_view'),
+                        'loadFailedMsg' => admin_trans('lottery_ticket.stats.load_failed_msg'),
+                    ]
+                ]));
+            })->style(['background' => '#fff']);
 
             $grid->header($layout);
 
@@ -419,23 +400,23 @@ class ChannelLotteryTicketRecordController
      * 批量发放奖励 ⭐ 核心方法
      * @auth true
      * @group channel
+     * @param int|null $activityId 活动ID（可选，如果为null则从Request获取）
+     * @param string|null $note 发放备注（可选，如果为null则从Request获取或使用默认值）
      * @return mixed
      */
-    public function batchDistribute()
+    public function batchDistribute($activityId = null, $note = null)
     {
-        $activityId = Request::input('activity_id');
-        $recordIds = Request::input('ids', []);
-        $note = Request::input('distribution_note', '批量发放');
+        // 支持两种调用方式：
+        // 1. 通过参数直接传递（新增表单调用）
+        // 2. 通过Request获取（原有批量操作调用）
+        $activityId = $activityId ?? Request::input('activity_id');
+        $note = $note ?? Request::input('distribution_note', '批量发放');
         $adminId = Admin::user()->id;
         $departmentId = Admin::user()->department_id;
 
         // ⭐ 输入验证
         if ($activityId && !is_numeric($activityId)) {
             return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
-        }
-
-        if (!empty($recordIds) && !is_array($recordIds)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_record_ids'));
         }
 
         if (strlen($note) > 255) {
@@ -451,15 +432,7 @@ class ChannelLotteryTicketRecordController
 
         if ($activityId) {
             $query->where('activity_id', $activityId);
-        } elseif (!empty($recordIds)) {
-            // ⭐ 验证数组元素都是数字
-            foreach ($recordIds as $id) {
-                if (!is_numeric($id)) {
-                    return message_error(admin_trans('lottery_ticket.error.invalid_record_id_value'));
-                }
-            }
-            $query->whereIn('id', $recordIds);
-        } else {
+        }  else {
             return message_error(admin_trans('lottery_ticket.error.no_selection'));
         }
 
@@ -719,6 +692,21 @@ class ChannelLotteryTicketRecordController
         return Form::create(new LotteryTicketRecord(), function ($form) {
             $departmentId = Admin::user()->department_id;
 
+            // ⚠️ 风险提示 - 使用Html::markdown渲染HTML内容
+            $warningHtml = '<div style="padding: 16px; background: #fff3cd; border-left: 4px solid #ff9800; border-radius: 4px; margin-bottom: 16px;">
+                <div style="color: #856404; font-weight: bold; font-size: 16px; margin-bottom: 12px;">
+                    ⚠️ ' . admin_trans('lottery_ticket.warning.batch_distribute_title') . '
+                </div>
+                <div style="color: #856404; line-height: 1.8;">
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point1') . '<br>
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point2') . '<br>
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point3') . '<br>
+                    • ' . admin_trans('lottery_ticket.warning.batch_distribute_point4') . '
+                </div>
+            </div>';
+
+            $form->push(\ExAdmin\ui\component\common\Html::markdown($warningHtml));
+
             // 活动选择（显示已结束的活动，这些活动已经开奖）
             $activities = LotteryTicketActivity::where('department_id', $departmentId)
                 ->where('status', LotteryTicketActivity::STATUS_ENDED)
@@ -735,45 +723,19 @@ class ChannelLotteryTicketRecordController
                 ->placeholder(admin_trans('lottery_ticket.form.distribution_note_placeholder'))
                 ->maxlength(255)
                 ->showCount();
-
-            // 提交处理
+            $form->layout('vertical');
+            // 提交处理 - 直接传递参数调用批量发放方法
             $form->saving(function ($form) {
                 $activityId = $form->input('activity_id');
                 $note = $form->input('distribution_note', '批量发放');
 
-                // 调用批量发放接口
-                $request = new Request();
-                $request->_data = [
-                    'activity_id' => $activityId,
-                    'distribution_note' => $note
-                ];
+                if (!$activityId) {
+                    return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+                }
 
-                return $this->batchDistribute($request);
+                // 直接传递参数调用现有方法
+                return $this->batchDistribute($activityId, $note);
             });
         });
-    }
-
-    /**
-     * 批量发放选中记录
-     * @auth true
-     * @group channel
-     * @return mixed
-     */
-    public function batchDistributeSelected()
-    {
-        $ids = Request::input('ids', []);
-
-        if (empty($ids)) {
-            return message_error(admin_trans('lottery_ticket.error.no_selection'));
-        }
-
-        // 调用批量发放接口
-        // ⚠️ 注意：这里直接合并到当前请求参数中
-        request()->_data = array_merge(request()->_data ?? [], [
-            'ids' => $ids,
-            'distribution_note' => admin_trans('lottery_ticket.message.batch_distribute_selected')
-        ]);
-
-        return $this->batchDistribute();
     }
 }

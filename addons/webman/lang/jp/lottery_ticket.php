@@ -230,10 +230,18 @@ return [
         'total_draws' => '総抽選回数',
         'total_winners' => '総当選者数',
         'total_prize_amount' => '総賞金額',
-        'pending_count' => '払い出し待ち記録',       // ⭐ 新增
-        'pending_amount' => '払い出し待ち金額',      // ⭐ 新增
-        'claimed_count' => '払い出し済記録',       // ⭐ 新增
-        'claimed_amount' => '払い出し済金額',      // ⭐ 新增
+        'pending_count' => '払い出し待ち記録',
+        'pending_amount' => '払い出し待ち金額',
+        'claimed_count' => '払い出し済記録',
+        'claimed_amount' => '払い出し済金額',
+        'count_suffix' => '件',
+        'panel_header' => '統計データを表示',
+        'loading' => 'データ読み込み中...',
+        'refresh' => '更新',
+        'load_error' => 'データ読み込み失敗',
+        'retry' => '再試行',
+        'click_to_view' => 'クリックして統計データを表示',
+        'load_failed_msg' => 'データ読み込みに失敗しました。再試行してください',
     ],
 
     // 消息
@@ -341,7 +349,6 @@ return [
         'invalid_params' => 'パラメータエラー',
         'activity_not_ongoing' => '進行中のアクティビティのみ当選記録可能',
         'prize_level_not_found' => '賞品レベルが存在しません',
-        'live_url_required' => '先にライブURLを設定してください',
         'invalid_status_value' => '無効なステータス値',
     ],
 
@@ -380,6 +387,15 @@ return [
     'confirm' => [
         'distribute' => 'この賞品をプレイヤーアカウントに払い出ししますか？',
         'distribute_all_pending' => 'このアクティビティの記録済み未払い出しの賞品をすべて払い出ししますか？\nこの操作によりすべての未払い出し記録が一括払い出しされます。慎重に操作してください。',  // ⭐ 新規追加
+    ],
+
+    // リスク警告
+    'warning' => [
+        'batch_distribute_title' => '一括払い出しリスク警告',
+        'batch_distribute_point1' => 'この操作により、選択したアクティビティのすべての未払い出し記録が自動的に払い出しされます。手動選択は不要です',
+        'batch_distribute_point2' => '払い出し成功後、プレイヤーウォレット残高が即座に増加し、取り消すことはできません',
+        'batch_distribute_point3' => '操作前に当選記録と金額が正しいことを確認することをお勧めします',
+        'batch_distribute_point4' => '高額賞金の場合は、慎重に確認してから操作してください',
     ],
 
     // 表单标签

@@ -230,10 +230,18 @@ return [
         'total_draws' => '總抽獎次數',
         'total_winners' => '總中獎人數',
         'total_prize_amount' => '總獎金金額',
-        'pending_count' => '待派獎記錄',       // ⭐ 新增
-        'pending_amount' => '待派獎金額',      // ⭐ 新增
-        'claimed_count' => '已派獎記錄',       // ⭐ 新增
-        'claimed_amount' => '已派獎金額',      // ⭐ 新增
+        'pending_count' => '待派獎記錄',
+        'pending_amount' => '待派獎金額',
+        'claimed_count' => '已派獎記錄',
+        'claimed_amount' => '已派獎金額',
+        'count_suffix' => '筆',
+        'panel_header' => '查看統計數據',
+        'loading' => '數據加載中...',
+        'refresh' => '刷新數據',
+        'load_error' => '數據加載失敗',
+        'retry' => '重試',
+        'click_to_view' => '點擊展開查看統計數據',
+        'load_failed_msg' => '數據加載失敗，請重試',
     ],
 
     // 消息
@@ -380,6 +388,15 @@ return [
     'confirm' => [
         'distribute' => '確認派獎此獎品到玩家賬戶？',
         'distribute_all_pending' => '確認派獎該活動所有已錄入但未派獎的獎勵？\n此操作將批量派獎所有待派獎記錄,請謹慎操作。',  // ⭐ 新增
+    ],
+
+    // 风险警告
+    'warning' => [
+        'batch_distribute_title' => '批量派獎風險提示',
+        'batch_distribute_point1' => '此操作將自動派發該活動下所有待派獎記錄，無需手動選擇',
+        'batch_distribute_point2' => '派獎成功後將立即增加玩家錢包餘額，無法撤銷',
+        'batch_distribute_point3' => '建議先核對中獎記錄和金額是否正確',
+        'batch_distribute_point4' => '大額獎金請謹慎確認後再操作',
     ],
 
     // 表单标签

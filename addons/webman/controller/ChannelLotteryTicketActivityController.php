@@ -616,7 +616,7 @@ class ChannelLotteryTicketActivityController
                     $amount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $data->id)
                         ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
                         ->sum('prize_amount');
-                    return '¥' . number_format($amount, 2);
+                    return 'NT$' . number_format($amount, 2);
                 });
 
             // ⭐ 筛选器
@@ -752,7 +752,7 @@ class ChannelLotteryTicketActivityController
                     $lines = [];
                     foreach ($data->prizeLevels->sortBy('level_rank') as $level) {
                         $remaining = $level->prize_count - $level->won_count;
-                        $lines[] = $level->level_name . '：¥' . number_format($level->prize_amount, 2) . '（剩余' . $remaining . '/' . $level->prize_count . '）';
+                        $lines[] = $level->level_name . '：NT$' . number_format($level->prize_amount, 2) . '（剩余' . $remaining . '/' . $level->prize_count . '）';
                     }
                     return implode("\n", $lines);
                 });
@@ -766,7 +766,7 @@ class ChannelLotteryTicketActivityController
                     $lines = [];
                     foreach ($data->vipConfigs->sortBy('vip_level_id') as $config) {
                         $vipName = $config->vipLevel ? $config->vipLevel->level_name : 'VIP' . $config->vip_level_id;
-                        $lines[] = $vipName . '：打码¥' . number_format($config->bet_amount_required, 2) . ' 获得' . $config->ticket_count . '张券';
+                        $lines[] = $vipName . '：打码NT$' . number_format($config->bet_amount_required, 2) . ' 获得' . $config->ticket_count . '张券';
                     }
                     return implode("\n", $lines);
                 });
