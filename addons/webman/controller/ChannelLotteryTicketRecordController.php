@@ -200,13 +200,8 @@ class ChannelLotteryTicketRecordController
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
-                // 待发放和发放失败的奖品可以手动发放 ⭐
-                $canDistribute = in_array($data['status'], [
-                    LotteryTicketRecord::STATUS_PENDING,
-                    LotteryTicketRecord::STATUS_FAILED
-                ]) && $data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY;
-
-                if ($canDistribute) {
+                // ✅ 发放按钮始终显示（未中奖的除外），点击时在方法内判断状态
+                if ($data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
                     $actions->prepend(
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
@@ -214,7 +209,9 @@ class ChannelLotteryTicketRecordController
                     );
                 }
 
+                // ✅ 隐藏编辑和删除按钮
                 $actions->hideEdit();
+                $actions->hideDelete();
             });
 
             // ⭐ 工具栏按钮
@@ -225,6 +222,9 @@ class ChannelLotteryTicketRecordController
                     ->title(admin_trans('lottery_ticket.modal.batch_distribute_title'))
                     ->size('small'),
             ]);
+
+            // ✅ 隐藏批量删除和回收站
+            $grid->hideBatchDelete();
             $grid->hideTrashed();
         });
     }
