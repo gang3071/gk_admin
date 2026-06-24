@@ -230,10 +230,18 @@ return [
         'total_draws' => '總抽獎次數',
         'total_winners' => '總中獎人數',
         'total_prize_amount' => '總獎金金額',
-        'pending_count' => '待派獎記錄',       // ⭐ 新增
-        'pending_amount' => '待派獎金額',      // ⭐ 新增
-        'claimed_count' => '已派獎記錄',       // ⭐ 新增
-        'claimed_amount' => '已派獎金額',      // ⭐ 新增
+        'pending_count' => '待派獎記錄',
+        'pending_amount' => '待派獎金額',
+        'claimed_count' => '已派獎記錄',
+        'claimed_amount' => '已派獎金額',
+        'count_suffix' => '筆',
+        'panel_header' => '查看統計數據',
+        'loading' => '數據加載中...',
+        'refresh' => '刷新數據',
+        'load_error' => '數據加載失敗',
+        'retry' => '重試',
+        'click_to_view' => '點擊展開查看統計數據',
+        'load_failed_msg' => '數據加載失敗，請重試',
     ],
 
     // 消息

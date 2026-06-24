@@ -228,13 +228,21 @@ return [
     'stats' => [
         'total_activities' => 'Total Activities',
         'ongoing_activities' => 'Ongoing Activities',
-        'total_draws' => '总抽奖次数',
+        'total_draws' => 'Total Draws',
         'total_winners' => 'Total Winners',
-        'total_prize_amount' => '总奖金金额',
-        'pending_count' => '待发放记录',       // ⭐ 新增
-        'pending_amount' => '待发放金额',      // ⭐ 新增
-        'claimed_count' => '已发放记录',       // ⭐ 新增
-        'claimed_amount' => '已发放金额',      // ⭐ 新增
+        'total_prize_amount' => 'Total Prize Amount',
+        'pending_count' => 'Pending Records',
+        'pending_amount' => 'Pending Amount',
+        'claimed_count' => 'Claimed Records',
+        'claimed_amount' => 'Claimed Amount',
+        'count_suffix' => '',
+        'panel_header' => 'View Statistics',
+        'loading' => 'Loading data...',
+        'refresh' => 'Refresh',
+        'load_error' => 'Failed to load data',
+        'retry' => 'Retry',
+        'click_to_view' => 'Click to view statistics',
+        'load_failed_msg' => 'Failed to load data, please retry',
     ],
 
     // 消息

@@ -39,43 +39,25 @@ class ChannelLotteryTicketRecordController
             // ✅ 获取筛选条件
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
-            // ⭐ 顶部统计数据（根据筛选条件计算）
-            $stats = self::getRecordStats($departmentId, $exAdminFilter);
-
-            // ⭐ 顶部统计卡片
-            $layout = Layout::create()->content([
-                Row::create()
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.pending_count'))
-                            ->value($stats['pending_count'])
-                            ->valueStyle(['color' => '#ff9800']),
-                        6
-                    )
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.pending_amount'))
-                            ->value(number_format($stats['pending_amount'], 2))
-                            ->prefix('¥')
-                            ->valueStyle(['color' => '#ff9800']),
-                        6
-                    )
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.claimed_count'))
-                            ->value($stats['claimed_count'])
-                            ->valueStyle(['color' => '#4caf50']),
-                        6
-                    )
-                    ->column(
-                        Statistic::create()
-                            ->title(admin_trans('lottery_ticket.stats.claimed_amount'))
-                            ->value(number_format($stats['claimed_amount'], 2))
-                            ->prefix('¥')
-                            ->valueStyle(['color' => '#4caf50']),
-                        6
-                    )
-            ])->bodyStyle(['padding' => '20px']);
+            // ⭐ 顶部统计卡片（使用Vue组件 + API接口）
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($exAdminFilter, $departmentId) {
+                $row->gutter([10, 0]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type' => 'LotteryTicketRecord',
+                    'department_id' => $departmentId,
+                    'trans' => [
+                        'panelHeader' => admin_trans('lottery_ticket.stats.panel_header'),
+                        'loading' => admin_trans('lottery_ticket.stats.loading'),
+                        'refresh' => admin_trans('lottery_ticket.stats.refresh'),
+                        'loadError' => admin_trans('lottery_ticket.stats.load_error'),
+                        'retry' => admin_trans('lottery_ticket.stats.retry'),
+                        'clickToView' => admin_trans('lottery_ticket.stats.click_to_view'),
+                        'loadFailedMsg' => admin_trans('lottery_ticket.stats.load_failed_msg'),
+                    ]
+                ]));
+            })->style(['background' => '#fff']);
 
             $grid->header($layout);
 

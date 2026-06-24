@@ -231,10 +231,18 @@ return [
         'total_winners' => '総当選者数',
         'total_prize_amount' => '総賞金額',
         'pending_count' => '払い出し待ち記録',       // ⭐ 新增
-        'pending_amount' => '払い出し待ち金額',      // ⭐ 新增
-        'claimed_count' => '払い出し済記録',       // ⭐ 新增
-        'claimed_amount' => '払い出し済金額',      // ⭐ 新增
-    ],
+        'pending_count' => '払い出し待ち記録',
+        'pending_amount' => '払い出し待ち金額',
+        'claimed_count' => '払い出し済記録',
+        'claimed_amount' => '払い出し済金額',
+        'count_suffix' => '件',
+        'panel_header' => '統計データを表示',
+        'loading' => 'データ読み込み中...',
+        'refresh' => '更新',
+        'load_error' => 'データ読み込み失敗',
+        'retry' => '再試行',
+        'click_to_view' => 'クリックして統計データを表示',
+        'load_failed_msg' => 'データ読み込みに失敗しました。再試行してください',
 
     // 消息
     'message' => [

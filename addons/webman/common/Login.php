@@ -13,6 +13,7 @@ use addons\webman\model\PlayerGameLog;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerRechargeRecord;
+use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\Component;
@@ -1984,6 +1985,102 @@ class Login extends LoginAbstract
                     }
                 }
 
+                break;
+
+            case 'LotteryTicketRecord':
+                // 摸奖券中奖记录统计
+                $query = LotteryTicketRecord::query();
+
+                if (!empty($departmentId)) {
+                    $query->where('department_id', $departmentId);
+                }
+
+                // 应用筛选条件
+                if (!empty($exAdminFilter)) {
+                    // 活动筛选
+                    if (!empty($exAdminFilter['activity_id'])) {
+                        $query->where('activity_id', $exAdminFilter['activity_id']);
+                    }
+
+                    // 券号筛选
+                    if (!empty($exAdminFilter['ticket_no'])) {
+                        $query->where('ticket_no', 'like', '%' . $exAdminFilter['ticket_no'] . '%');
+                    }
+
+                    // 奖品类型筛选
+                    if (!empty($exAdminFilter['prize_type'])) {
+                        $query->where('prize_type', $exAdminFilter['prize_type']);
+                    }
+
+                    // 发放状态筛选
+                    if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
+                        $query->where('status', $exAdminFilter['status']);
+                    }
+
+                    // 玩家相关筛选
+                    if (!empty($exAdminFilter['player'])) {
+                        $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                            if (!empty($exAdminFilter['player']['name'])) {
+                                $q->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                            }
+                            if (!empty($exAdminFilter['player']['uuid'])) {
+                                $q->where('uuid', 'like', '%' . $exAdminFilter['player']['uuid'] . '%');
+                            }
+                            if (!empty($exAdminFilter['player']['phone'])) {
+                                $q->where('phone', 'like', '%' . $exAdminFilter['player']['phone'] . '%');
+                            }
+                        });
+                    }
+
+                    // 创建时间范围筛选
+                    if (!empty($exAdminFilter['created_at'])) {
+                        if (!empty($exAdminFilter['created_at'][0])) {
+                            $query->where('created_at', '>=', $exAdminFilter['created_at'][0] . ' 00:00:00');
+                        }
+                        if (!empty($exAdminFilter['created_at'][1])) {
+                            $query->where('created_at', '<=', $exAdminFilter['created_at'][1] . ' 23:59:59');
+                        }
+                    }
+                }
+
+                // 待发放统计
+                $pendingQuery = clone $query;
+                $pendingData = $pendingQuery->where('status', LotteryTicketRecord::STATUS_PENDING)
+                    ->selectRaw('COUNT(*) as count, COALESCE(SUM(prize_amount), 0) as amount')
+                    ->first();
+
+                // 已发放统计
+                $claimedQuery = clone $query;
+                $claimedData = $claimedQuery->where('status', LotteryTicketRecord::STATUS_CLAIMED)
+                    ->selectRaw('COUNT(*) as count, COALESCE(SUM(prize_amount), 0) as amount')
+                    ->first();
+
+                $data = [
+                    [
+                        'title' => admin_trans('lottery_ticket.stats.pending_count'),
+                        'number' => $pendingData->count ?? 0,
+                        'prefix' => '',
+                        'suffix' => admin_trans('lottery_ticket.stats.count_suffix')
+                    ],
+                    [
+                        'title' => admin_trans('lottery_ticket.stats.pending_amount'),
+                        'number' => floatval($pendingData->amount ?? 0),
+                        'prefix' => '¥',
+                        'suffix' => ''
+                    ],
+                    [
+                        'title' => admin_trans('lottery_ticket.stats.claimed_count'),
+                        'number' => $claimedData->count ?? 0,
+                        'prefix' => '',
+                        'suffix' => admin_trans('lottery_ticket.stats.count_suffix')
+                    ],
+                    [
+                        'title' => admin_trans('lottery_ticket.stats.claimed_amount'),
+                        'number' => floatval($claimedData->amount ?? 0),
+                        'prefix' => '¥',
+                        'suffix' => ''
+                    ],
+                ];
                 break;
         }
         return Response::success($data);

@@ -231,10 +231,18 @@ return [
         'total_draws' => '总抽奖次数',
         'total_winners' => '总中奖人数',
         'total_prize_amount' => '总奖金金额',
-        'pending_count' => '待派奖记录',       // ⭐ 新增
-        'pending_amount' => '待派奖金额',      // ⭐ 新增
-        'claimed_count' => '已派奖记录',       // ⭐ 新增
-        'claimed_amount' => '已派奖金额',      // ⭐ 新增
+        'pending_count' => '待派奖记录',
+        'pending_amount' => '待派奖金额',
+        'claimed_count' => '已派奖记录',
+        'claimed_amount' => '已派奖金额',
+        'count_suffix' => '笔',
+        'panel_header' => '查看统计数据',
+        'loading' => '数据加载中...',
+        'refresh' => '刷新数据',
+        'load_error' => '数据加载失败',
+        'retry' => '重试',
+        'click_to_view' => '点击展开查看统计数据',
+        'load_failed_msg' => '数据加载失败，请重试',
     ],
 
     // 消息
