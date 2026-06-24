@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'all' => 'すべて',
     'date_start' => '開始日',
     'date_end' => '終了日',
     'created_at_start' => '開始時刻',

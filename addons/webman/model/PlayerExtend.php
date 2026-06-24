@@ -39,6 +39,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property float machine_put_point 机器投钞总点数
  * @property float team_machine_put_point 机器投钞总点数(团队)
  * @property float team_machine_put_amount 机器投钞总金额(团队)
+ * @property float pending_cashback_amount 待领取反水金额
+ * @property float total_cashback_amount 总反水金额
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  *
@@ -141,6 +143,58 @@ class PlayerExtend extends Model
     public function getCoinRechargeAmountAttribute($value): float
     {
         return floatval($value);
+    }
+
+    /**
+     * 待领取反水金额
+     *
+     * @param $value
+     * @return float
+     */
+    public function getPendingCashbackAmountAttribute($value): float
+    {
+        return floatval($value);
+    }
+
+    /**
+     * 总反水金额
+     *
+     * @param $value
+     * @return float
+     */
+    public function getTotalCashbackAmountAttribute($value): float
+    {
+        return floatval($value);
+    }
+
+    /**
+     * 增加反水金额（待领取 + 总反水）
+     *
+     * @param float $amount 反水金额
+     * @return void
+     */
+    public function addCashback(float $amount): void
+    {
+        if ($amount <= 0) {
+            return;
+        }
+        $this->increment('pending_cashback_amount', $amount);
+        $this->increment('total_cashback_amount', $amount);
+    }
+
+    /**
+     * 领取反水（清零待领取金额）
+     *
+     * @return float 本次领取的金额
+     */
+    public function claimCashback(): float
+    {
+        $amount = $this->pending_cashback_amount;
+        if ($amount <= 0) {
+            return 0;
+        }
+        $this->decrement('pending_cashback_amount', $amount);
+        return $amount;
     }
 
     protected static function booted()

@@ -51,15 +51,19 @@ class WalletService
             if (!$forceRefresh) {
                 $cached = Redis::get($cacheKey);
                 if ($cached !== null && $cached !== false) {
-                    return self::fixPrecision((float)$cached);
+                    // 🔧 整数化改造：Redis 存储"分"，转换为"元"
+                    $balanceInCents = (int)$cached;
+                    return round($balanceInCents / 100, 2);
                 }
             }
 
             // 缓存未命中或强制刷新，从数据库读取
             $balance = self::getBalanceFromDB($playerId, $platformId);
 
-            // 更新缓存（永不过期，Redis 是余额的唯一实时标准）
-            Redis::set($cacheKey, $balance);
+            // 🔧 整数化改造：更新缓存时转换为"分"
+            // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+            $balanceInCents = (int)round($balance * 100);
+            Redis::set($cacheKey, $balanceInCents);
 
             return self::fixPrecision($balance);
         } catch (\Throwable $e) {
@@ -148,7 +152,10 @@ class WalletService
     {
         try {
             $cacheKey = self::getCacheKey($playerId, $platformId);
-            Redis::set($cacheKey, $balance);
+            // 🔧 整数化改造：元 × 100 → 分
+            // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+            $balanceInCents = (int)round($balance * 100);
+            Redis::set($cacheKey, $balanceInCents);
             return true;
         } catch (\Throwable $e) {
             Log::warning('WalletService: Failed to update cache', [
@@ -253,7 +260,9 @@ class WalletService
 
             foreach ($playerIds as $index => $playerId) {
                 if (isset($cached[$index]) && $cached[$index] !== false && $cached[$index] !== null) {
-                    $result[$playerId] = self::fixPrecision((float)$cached[$index]);
+                    // 🔧 整数化改造：Redis 存储"分"，转换为"元"
+                    $balanceInCents = (int)$cached[$index];
+                    $result[$playerId] = round($balanceInCents / 100, 2);
                 } else {
                     $missedIds[] = $playerId;
                 }
@@ -280,7 +289,10 @@ class WalletService
                 // 回填缓存
                 try {
                     $cacheKey = self::getCacheKey($wallet->player_id, $platformId);
-                    Redis::set($cacheKey, $balance);
+                    // 🔧 整数化改造：元 × 100 → 分
+                    // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+                    $balanceInCents = (int)round($balance * 100);
+                    Redis::set($cacheKey, $balanceInCents);
                 } catch (\Throwable $e) {
                     // 忽略缓存回填失败
                 }
@@ -293,7 +305,9 @@ class WalletService
                     // 缓存不存在的玩家（避免缓存穿透）
                     try {
                         $cacheKey = self::getCacheKey($playerId, $platformId);
-                        Redis::set($cacheKey, 0.0);
+                        // 🔧 整数化改造：0 分（整数）
+                        // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+                        Redis::set($cacheKey, 0);
                     } catch (\Throwable $e) {
                         // 忽略缓存回填失败
                     }
@@ -382,7 +396,10 @@ class WalletService
 
                 try {
                     $cacheKey = self::getCacheKey($wallet->player_id, $platformId);
-                    Redis::set($cacheKey, $balance);
+                    // 🔧 整数化改造：元 × 100 → 分
+                    // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+                    $balanceInCents = (int)round($balance * 100);
+                    Redis::set($cacheKey, $balanceInCents);
                     $successCount++;
                 } catch (\Throwable $e) {
                     $failedCount++;
@@ -394,7 +411,9 @@ class WalletService
             foreach ($notFoundPlayerIds as $playerId) {
                 try {
                     $cacheKey = self::getCacheKey($playerId, $platformId);
-                    Redis::set($cacheKey, 0.0);
+                    // 🔧 整数化改造：0 分（整数）
+                    // ⚠️ 永不过期：Redis 是余额的唯一实时标准
+                    Redis::set($cacheKey, 0);
                     $successCount++;
                 } catch (\Throwable $e) {
                     $failedCount++;
@@ -425,70 +444,97 @@ class WalletService
     // ========================================
 
     /**
-     * Lua 脚本：原子性增加余额
+     * Lua 脚本：原子性增加余额（整数化版本）
+     *
+     * 🔧 整数化改造（2026-05-10）：
+     * - Redis 存储单位：分（整数）
+     * - ARGV[1] 传入单位：分（整数）
+     * - 返回单位：分（整数）
      *
      * 用于：管理员充值、活动奖励、推荐人奖励等场景
      *
      * KEYS[1] = wallet:balance:{player_id}
-     * ARGV[1] = 增加金额
+     * ARGV[1] = 增加金额（分）
      * ARGV[2] = 缓存TTL（默认3600秒）
      *
-     * 返回：新余额
+     * 返回：JSON {ok: 1, balance: 新余额(分), old: 旧余额(分), new: 新余额(分)}
      */
     private const LUA_ATOMIC_INCREMENT = <<<'LUA'
 local key = KEYS[1]
-local amount = tonumber(ARGV[1])
+local amountInCents = math.floor(tonumber(ARGV[1]) + 0.5)  -- 确保整数
+local ttl = tonumber(ARGV[2]) or 3600
 
--- 读取当前余额
-local currentBalance = tonumber(redis.call('GET', key)) or 0
+-- Redis 存储的是"分"（整数）
+local currentBalanceInCents = tonumber(redis.call('GET', key)) or 0
 
--- 计算新余额
-local newBalance = currentBalance + amount
+-- 整数加法
+local newBalanceInCents = currentBalanceInCents + amountInCents
 
--- 原子性写入（永不过期）
-redis.call('SET', key, newBalance)
+-- 存储"分"（整数，永不过期）
+redis.call('SET', key, newBalanceInCents)
 
-return newBalance
+return cjson.encode({
+    ok = 1,
+    balance = newBalanceInCents,
+    old = currentBalanceInCents,
+    new = newBalanceInCents
+})
 LUA;
 
     /**
-     * Lua 脚本：原子性减少余额（带余额检查）
+     * Lua 脚本：原子性减少余额（带余额检查）（整数化版本）
+     *
+     * 🔧 整数化改造（2026-05-10）：
+     * - Redis 存储单位：分（整数）
+     * - ARGV[1] 传入单位：分（整数）
+     * - 返回单位：分（整数）
+     * - 移除浮点容差（整数运算无需容差）
      *
      * 用于：管理员扣款、系统调整等场景
      *
      * KEYS[1] = wallet:balance:{player_id}
-     * ARGV[1] = 减少金额
+     * ARGV[1] = 减少金额（分）
      * ARGV[2] = 缓存TTL（默认3600秒）
      *
      * 返回：
-     * - 成功：{ok: 1, balance: 新余额, old: 旧余额, new: 新余额}
-     * - 余额不足：{ok: 0, error: "insufficient_balance", balance: 当前余额, old: 当前余额}
+     * - 成功：{ok: 1, balance: 新余额(分), old: 旧余额(分), new: 新余额(分)}
+     * - 余额不足：{ok: 0, error: "insufficient_balance", balance: 当前余额(分), old: 当前余额(分)}
      */
     private const LUA_ATOMIC_DECREMENT = <<<'LUA'
 local key = KEYS[1]
-local amount = tonumber(ARGV[1])
+local amountInCents = math.floor(tonumber(ARGV[1]) + 0.5)
+local ttl = tonumber(ARGV[2]) or 3600
 
--- 读取当前余额
-local currentBalance = tonumber(redis.call('GET', key)) or 0
+-- Redis 存储的是"分"（整数）
+local currentBalanceInCents = tonumber(redis.call('GET', key)) or 0
 
--- 余额检查（添加 0.01 容差以解决浮点数精度问题）
-local tolerance = 0.01
-if currentBalance + tolerance < amount then
-    return cjson.encode({ok = 0, error = 'insufficient_balance', balance = currentBalance, old = currentBalance})
+-- 余额检查（整数比较，无需容差）
+if currentBalanceInCents < amountInCents then
+    return cjson.encode({
+        ok = 0,
+        error = 'insufficient_balance',
+        balance = currentBalanceInCents,
+        old = currentBalanceInCents
+    })
 end
 
--- 计算新余额
-local newBalance = currentBalance - amount
+-- 整数减法
+local newBalanceInCents = currentBalanceInCents - amountInCents
 
--- 防止负数余额
-if newBalance < 0 then
-    newBalance = 0
+-- 防止负数余额（双重保险）
+if newBalanceInCents < 0 then
+    newBalanceInCents = 0
 end
 
 -- 原子性写入（永不过期）
-redis.call('SET', key, newBalance)
+redis.call('SET', key, newBalanceInCents)
 
-return cjson.encode({ok = 1, balance = newBalance, old = currentBalance, new = newBalance})
+return cjson.encode({
+    ok = 1,
+    balance = newBalanceInCents,
+    old = currentBalanceInCents,
+    new = newBalanceInCents
+})
 LUA;
 
     /**
@@ -514,11 +560,15 @@ LUA;
             // 记录变更前余额（用于爆机检测）
             $oldBalance = self::getBalance($playerId, 1);
 
+            // 🔧 整数化改造：元 × 100 → 分
+            $amountInCents = (int)round($amount * 100);
+
             $result = Redis::eval(
                 self::LUA_ATOMIC_INCREMENT,
                 1,  // 1 个 KEYS 参数
                 $cacheKey,  // KEYS[1]
-                $amount     // ARGV[1]
+                $amountInCents,    // ARGV[1]（分）
+                $ttl        // ARGV[2]
             );
 
             if ($result === false || $result === null) {
@@ -528,8 +578,17 @@ LUA;
                 );
             }
 
-            // Lua 脚本返回数字（新余额），修正精度
-            $newBalance = self::fixPrecision((float)$result);
+            // 🔧 整数化改造：Lua 返回 JSON
+            $decoded = json_decode($result, true);
+            if ($decoded === null && json_last_error() !== JSON_ERROR_NONE) {
+                throw new \RuntimeException(
+                    sprintf('[WalletService::atomicIncrement] Redis Lua 脚本返回值解码失败: %s',
+                        json_last_error_msg())
+                );
+            }
+
+            // 🔧 整数化改造：分 ÷ 100 → 元
+            $newBalance = round($decoded['balance'] / 100, 2);
 
             // ✅ 异步同步数据库（Redis 是实时标准，数据库用于持久化）
             self::asyncUpdateDB($playerId, $newBalance);
@@ -566,11 +625,15 @@ LUA;
         $cacheKey = self::getCacheKey($playerId, 1);
 
         try {
+            // 🔧 整数化改造：元 × 100 → 分
+            $amountInCents = (int)round($amount * 100);
+
             $result = Redis::eval(
                 self::LUA_ATOMIC_DECREMENT,
                 1,  // 1 个 KEYS 参数
                 $cacheKey,  // KEYS[1]
-                $amount     // ARGV[1]
+                $amountInCents,    // ARGV[1]（分）
+                $ttl        // ARGV[2]
             );
 
             if ($result === false || $result === null) {
@@ -590,12 +653,15 @@ LUA;
                 );
             }
 
-            // 🔧 修正精度（Lua 返回的键：ok, balance, old, new, error）
+            // 🔧 整数化改造：分 ÷ 100 → 元（Lua 返回的键：ok, balance, old, new, error）
             if (isset($decoded['balance'])) {
-                $decoded['balance'] = self::fixPrecision((float)$decoded['balance']);
+                $decoded['balance'] = round($decoded['balance'] / 100, 2);
             }
             if (isset($decoded['old'])) {
-                $decoded['old'] = self::fixPrecision((float)$decoded['old']);
+                $decoded['old'] = round($decoded['old'] / 100, 2);
+            }
+            if (isset($decoded['new'])) {
+                $decoded['new'] = round($decoded['new'] / 100, 2);
             }
 
             // ✅ 异步同步数据库（仅在扣款成功时）

@@ -38,12 +38,12 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWashRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\model\VipLevel;
 use addons\webman\model\PromoterProfitGameRecord;
 use addons\webman\model\PromoterProfitRecord;
 use addons\webman\model\SystemSetting;
 use addons\webman\service\WalletService;
 use app\exception\GameException;
-use app\service\machine\MachineServices;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -68,11 +68,11 @@ use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Db;
 use support\Log;
-use think\Exception;
 use Webman\Push\PushException;
 
 /**
@@ -174,6 +174,7 @@ class PlayerController
         $quickSearch = Request::input('quickSearch', '');
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
+
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select([
                 'player.*',
@@ -199,6 +200,12 @@ class PlayerController
                 'national_level.name as level_name',
                 'level_list.level as level',
                 'national_promoter.level as level_sort',
+                // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
+                DB::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
+                // 打码量相关字段
+                'player.total_bet_amount',
+                DB::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
+                'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
             ])
             ->when(!empty($id), function ($query) use ($id) {
                 $query->where('player.recommend_id', $id);
@@ -210,6 +217,24 @@ class PlayerController
             ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
             ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
+            // LEFT JOIN 渠道最低VIP等级（通过子查询预计算，使用原始SQL避免绑定参数问题）
+            ->leftJoin(
+                DB::raw('(SELECT department_id, MIN(sort) as min_sort FROM vip_level WHERE status = ' . VipLevel::STATUS_ENABLED . ' GROUP BY department_id) as channel_min_vip'),
+                'player.department_id', '=', 'channel_min_vip.department_id'
+            )
+            ->leftJoin('vip_level as channel_min_vip_level', function ($join) {
+                $join->on('channel_min_vip.department_id', '=', 'channel_min_vip_level.department_id')
+                    ->on('channel_min_vip.min_sort', '=', 'channel_min_vip_level.sort');
+            })
+            // LEFT JOIN 下一等级（通过子查询获取当前等级的下一个等级）
+            ->leftJoin(
+                DB::raw('(SELECT vl.department_id, vl.sort, vl.upgrade_bet_amount FROM vip_level vl WHERE vl.status = ' . VipLevel::STATUS_ENABLED . ') as next_vip_level'),
+                function ($join) {
+                    $join->on('player.department_id', '=', 'next_vip_level.department_id')
+                        ->whereRaw('next_vip_level.sort = (SELECT MIN(vl2.sort) FROM vip_level vl2 WHERE vl2.department_id = player.department_id AND vl2.sort > COALESCE(vip_level.sort, channel_min_vip_level.sort) AND vl2.status = ' . VipLevel::STATUS_ENABLED . ')');
+                }
+            )
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
                     ->Join(DB::raw('( SELECT player_id, max( id ) AS id FROM player_login_record GROUP BY player_id) AS t'),
@@ -290,9 +315,9 @@ class PlayerController
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
             }
         }
-        $totalNum = clone $query;
-        $total = $totalNum->get()->count();
-        $list = $query->forPage($page, $size)
+        // ✅ 优化：直接使用 count() 而不是 get()->count()，避免加载所有数据到内存
+        $total = $query->count();
+        $list = (clone $query)->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
                     $query->orderBy($exAdminSortField, $exAdminSortBy);
@@ -394,6 +419,61 @@ class PlayerController
             })->sortable();
 
             $grid->column('channel_name', admin_trans('player.fields.department_id'))->width('150px')->align('center');
+
+            // VIP等级列：优先显示玩家自己的等级，没有则显示渠道最低等级
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) {
+                    $levelName = $value;
+                    if (empty($levelName) && !empty($data['vip_level_id'])) {
+                        $levelName = '-';
+                    }
+                    if (empty($levelName)) {
+                        return '-';
+                    }
+
+                    // 计算打码进度
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = floatval($data['next_upgrade_bet_amount'] ?? 0);
+
+                    // 计算进度百分比
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet > 0) {
+                        // 进度 = (当前打码量 - 当前等级要求) / (下一等级要求 - 当前等级要求) * 100
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif ($nextUpgradeBet == 0 && $currentUpgradeBet > 0) {
+                        // 已是最高等级
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    // 构建显示内容
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    // 添加进度条（如果不是最高等级）
+                    if ($nextUpgradeBet > 0) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                })
+                ->align('center')->width(180);
             $grid->column('pending_amount',
                 admin_trans('national_promoter.fields.pending_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('settlement_amount',
@@ -2020,24 +2100,33 @@ class PlayerController
         $machine->gaming = 1;
         $machine->last_game_at = date('Y-m-d H:i:s');
         $machine->save();
-        $services = MachineServices::createServices($machine);
+
+        // 通过 API 获取机台状态
+        $status = $this->getMachineStatusViaApi($machine);
+
         if ($machine->gaming_user_id != $changePlayer->id) {
             //斯洛 移分off
             if ($machine->type == GameType::TYPE_SLOT) {
-                if ($services->move_point == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
-                    $services->sendCmd($services::MOVE_POINT_ON, 0, 'player', $changePlayer->id);
+                if (($status->move_point ?? 0) == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
+                    // 通过 API 发送移分指令
+                    $cmdClass = match([$machine->type, $machine->control_type]) {
+                        [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => \app\service\machine\Slot::class,
+                        [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => \app\service\machine\SongSlot::class,
+                        default => \app\service\machine\Slot::class,
+                    };
+                    \app\service\MachineApiService::sendCmd($machine->id, $cmdClass::MOVE_POINT_ON, 0, $changePlayer->id);
                 }
-                $playerScore = $services->player_score;
-                $playerPressure = $services->player_pressure;
+                $playerScore = $status->player_score ?? 0;
+                $playerPressure = $status->player_pressure ?? 0;
                 if (empty($playerPressure)) {
-                    $services->player_pressure = $services->bet;
+                    \app\service\MachineApiService::updateMachineState($machine->id, 'player_pressure', $status->bet ?? 0);
                 }
                 if (empty($playerScore)) {
-                    $services->player_score = $services->win;
+                    \app\service\MachineApiService::updateMachineState($machine->id, 'player_score', $status->win ?? 0);
                 }
             }
             if ($machine->type == GameType::TYPE_STEEL_BALL) {
-                $services->player_win_number = 0;
+                \app\service\MachineApiService::updateMachineState($machine->id, 'player_win_number', 0);
             }
             //记录游戏局记录
             /** @var PlayerGameRecord $gameRecord */
@@ -2064,9 +2153,11 @@ class PlayerController
             $machine->last_point_at = date('Y-m-d H:i:s');
             $machine->save();
 
-            $services->last_play_time = time();
-            $services->gaming = 1;
-            $services->gaming_user_id = $changePlayer->id;
+            // 通过 API 更新机台状态
+            \app\service\MachineApiService::updateMachineState($machine->id, 'last_play_time', time());
+            \app\service\MachineApiService::updateMachineState($machine->id, 'gaming', 1);
+            \app\service\MachineApiService::updateMachineState($machine->id, 'gaming_user_id', $changePlayer->id);
+
             // 玩家上分后需剔除其他观看中玩家
             sendSocketMessage('group-' . $machine->id, [
                 'msg_type' => 'machine_start',
@@ -2075,24 +2166,27 @@ class PlayerController
                 'machine_code' => $machine->code,
                 'gaming_user_id' => $machine->gaming_user_id,
             ]);
+
             /** @var SystemSetting $setting */
             $setting = SystemSetting::where('feature', 'gift_keeping_minutes')->where('status', 1)->first();
             if (!empty($setting) && $setting->num >= 0) {
-                $services->keep_seconds = bcmul($setting->num, 60);
+                $newKeepSeconds = bcmul($setting->num, 60);
+                \app\service\MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds);
+
                 // 发送增加保留时长消息
                 sendSocketMessage('player-' . $machine->gaming_user_id . '-' . $machine->id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
                 sendSocketMessage('player-' . $machine->gaming_user_id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
             }
         }
@@ -3280,8 +3374,7 @@ class PlayerController
                         $playerMoneyEditLog->inmoney = $playerRechargeRecord->inmoney;
                         $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerMoneyEditLog->origin_money = $beforeGameAmount;
                         $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
                         $playerMoneyEditLog->save();
@@ -3343,13 +3436,9 @@ class PlayerController
                 }
                 DB::beginTransaction();
                 try {
-                    // ✅ 添加行锁，防止高并发冲突
-                    $playerWallet = PlayerPlatformCash::query()
-                        ->where('player_id', $player->id)
-                        ->lockForUpdate()
-                        ->first();
+                    // ✅ 从 Redis 读取提现前余额
+                    $beforeGameAmount = \addons\webman\service\WalletService::getBalance($player->id);
 
-                    $beforeGameAmount = $playerWallet->money;
                     // 生成订单
                     $playerWithdrawRecord = new PlayerWithdrawRecord();
                     $playerWithdrawRecord->player_id = $player->id;
@@ -3369,12 +3458,12 @@ class PlayerController
                     $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
                     $playerWithdrawRecord->remark = $form->input('remark') ?? '';
                     $playerWithdrawRecord->user_id = Admin::id() ?? 0;
-                    $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
+                    $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                     $playerWithdrawRecord->save();
-                    // 玩家钱包扣减
-                    $playerWallet->money = bcsub($playerWallet->money, $playerWithdrawRecord->point, 2);
-                    $playerWallet->save(); // ✅ 触发模型事件，自动同步 Redis
+
+                    // ✅ 使用 WalletService 原子扣款
+                    $afterGameAmount = \addons\webman\service\WalletService::deduct($player->id, $playerWithdrawRecord->point);
+
                     // 更新玩家统计
                     $player->player_extend->withdraw_amount = bcadd($player->player_extend->withdraw_amount,
                         $playerWithdrawRecord->point, 2);
@@ -3390,7 +3479,7 @@ class PlayerController
                     $playerDeliveryRecord->source = 'artificial_withdrawal';
                     $playerDeliveryRecord->amount = $playerWithdrawRecord->point;
                     $playerDeliveryRecord->amount_before = $beforeGameAmount;
-                    $playerDeliveryRecord->amount_after = $playerWallet->money;
+                    $playerDeliveryRecord->amount_after = $afterGameAmount;  // ✅ 使用返回值
                     $playerDeliveryRecord->tradeno = $playerWithdrawRecord->tradeno ?? '';
                     $playerDeliveryRecord->remark = $playerWithdrawRecord->remark ?? '';
                     $playerDeliveryRecord->save();
@@ -3407,10 +3496,9 @@ class PlayerController
                     $playerMoneyEditLog->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee, 2);
                     $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                     $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                    $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
+                    $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                     $playerMoneyEditLog->origin_money = $beforeGameAmount;
-                    $playerMoneyEditLog->after_money = $player->machine_wallet->money;
+                    $playerMoneyEditLog->after_money = $afterGameAmount;  // ✅ 使用返回值
                     $playerMoneyEditLog->save();
                     DB::commit();
                 } catch (\Exception $e) {
@@ -3528,6 +3616,7 @@ class PlayerController
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
                         PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK,
                         PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // ⭐ 摸奖券奖励
                         PlayerDeliveryRecord::TYPE_REGISTER_PRESENT,
                         PlayerDeliveryRecord::TYPE_PROFIT,
                         PlayerDeliveryRecord::TYPE_LOTTERY,
@@ -3810,5 +3899,47 @@ class PlayerController
             $grid->hideAdd();
             $grid->expandFilter();
         });
+    }
+
+    /**
+     * 通过 API 获取机台状态
+     *
+     * @param Machine $machine 机台对象
+     * @param string $lang 语言
+     * @return object 返回一个包含机台状态的对象
+     */
+    private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
+    {
+        try {
+            $result = \app\service\MachineApiService::getMachineStatus($machine->id, $lang);
+
+            // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
+            $status = new \stdClass();
+
+            // 从 machine_info 中提取数据
+            if (isset($result['machine_info'])) {
+                foreach ($result['machine_info'] as $key => $value) {
+                    $status->$key = $value;
+                }
+            }
+
+            // 从 cache_data 中提取数据
+            if (isset($result['cache_data'])) {
+                foreach ($result['cache_data'] as $key => $value) {
+                    // 移除前缀
+                    $cleanKey = str_replace('machine_tcp_data_cache_' . $machine->id . '_', '', $key);
+                    $status->$cleanKey = $value;
+                }
+            }
+
+            return $status;
+        } catch (\Exception $e) {
+            \support\Log::error('Get machine status via API failed', [
+                'machine_id' => $machine->id,
+                'error' => $e->getMessage()
+            ]);
+            // 返回一个空对象，避免后续代码报错
+            return new \stdClass();
+        }
     }
 }

@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => '机台资讯',
         'channel_machine_report' => '机台报表',
         'channel_up_and_down_report' => '上下分报表',
+        'channel_machine_list' => '机台列表',
         'machine_strategy_list' => '机台攻略',
         'machine_producer' => '厂家列表',
         //前端配置
@@ -197,6 +198,7 @@ return [
         'agent_profit_statistics' => '分润统计',
         'agent_profit_records' => '分润记录',
         'agent_settlement_records' => '结算记录',
+        'agent_store_profit_report' => '店家分润报表',
         //店机后台设备管理
         'store_player' => '设备管理',
         'store_player_list' => '设备列表',
@@ -272,5 +274,34 @@ return [
         'limit_management' => '限红管理',
         'limit_group_management' => '限红组管理',
         'platform_config' => '平台配置',
+        //VIP等级管理
+        'vip_level' => 'VIP等级管理',
+        'channel_vip_level' => 'VIP等级管理',
+        //摸奖券管理
+        'lottery_ticket_manage' => '摸奖券管理',
+        'lottery_ticket_dashboard' => '进行中的活动',
+        'lottery_ticket_history' => '历史活动记录',
+        'lottery_ticket_records' => '中奖记录',
+        //代理后台摸奖券管理
+        'agent_lottery_ticket_management' => '摸奖券管理',
+        'agent_lottery_ticket_activity_list' => '摸奖券活动',
+        'agent_lottery_ticket_list' => '摸奖券列表',
+        'agent_lottery_ticket_record_list' => '中奖记录',
+        'agent_lottery_ticket_win_record_list' => '中奖记录',  // 旧菜单名（兼容）
+        //店家后台摸奖券管理
+        'store_lottery_ticket_management' => '摸奖券管理',
+        'store_lottery_ticket_activity_list' => '摸奖券活动',
+        'store_lottery_ticket_list' => '摸奖券列表',
+        'store_lottery_ticket_record_list' => '中奖记录',
+    ],
+    'help' => [
+        'controlled_menu' => '此菜单受功能开关控制，名称不可修改',
+        'name_readonly' => '菜单名称由迁移文件管理，不可通过界面修改',
+        'use_migration' => '（请使用迁移文件创建菜单）',
+        'create_by_migration' => '菜单必须通过迁移文件创建，不能通过界面直接添加',
+    ],
+    'error' => [
+        'create_disabled' => '禁止通过界面创建菜单，请使用迁移文件（Phinx）创建',
+        'name_readonly' => '菜单名称为只读，不可修改',
     ]
 ];

@@ -12,6 +12,7 @@ return [
     'media_line' => '播放线路',
     'media_app_not_found' => '媒体服务APP未设置',
     'pull_ip_not_found' => '未设置拉流IP',
+    'tencent_play_config_not_found' => '未找到启用的腾讯云播放配置，请先在系统设置中配置',
     'media_title' => '视频播放地址 ',
     'play_address' => '播放地址 ',
     'fields' => [

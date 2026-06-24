@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => 'マシン情報',
         'channel_machine_report' => 'マシンレポート',
         'channel_up_and_down_report' => 'アップアンドダウンレポート',
+        'channel_machine_list' => 'マシンリスト',
         'machine_strategy_list' => 'マシン戦略',
         'machine_Producer' => 'メーカーリスト',
         // フロントエンドの設定
@@ -197,6 +198,7 @@ return [
         'agent_profit_statistics' => '利益統計',
         'agent_profit_records' => '利益記録',
         'agent_settlement_records' => '決済記録',
+        'agent_store_profit_report' => '店舗利益レポート',
         //店舗デバイス管理
         'store_player' => 'デバイス管理',
         'store_player_list' => 'デバイスリスト',
@@ -272,5 +274,34 @@ return [
         'limit_management' => '制限管理',
         'limit_group_management' => '制限グループ管理',
         'platform_config' => 'プラットフォーム設定',
+        //VIPレベル管理
+        'vip_level' => 'VIPレベル管理',
+        'channel_vip_level' => 'VIPレベル管理',
+        //抽選券管理
+        'lottery_ticket_manage' => '抽選券管理',
+        'lottery_ticket_dashboard' => '実施中のキャンペーン',
+        'lottery_ticket_history' => 'キャンペーン履歴',
+        'lottery_ticket_records' => '当選記録',
+        //代理店バックエンド抽選券管理
+        'agent_lottery_ticket_management' => '抽選券管理',
+        'agent_lottery_ticket_activity_list' => '抽選券キャンペーン',
+        'agent_lottery_ticket_list' => '抽選券リスト',
+        'agent_lottery_ticket_record_list' => '当選記録',
+        'agent_lottery_ticket_win_record_list' => '当選記録',  // 旧メニュー名（互換性）
+        //店舗バックエンド抽選券管理
+        'store_lottery_ticket_management' => '抽選券管理',
+        'store_lottery_ticket_activity_list' => '抽選券キャンペーン',
+        'store_lottery_ticket_list' => '抽選券リスト',
+        'store_lottery_ticket_record_list' => '当選記録',
+    ],
+    'help' => [
+        'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',
+        'name_readonly' => 'メニュー名はマイグレーションファイルで管理されており、UIから変更できません',
+        'use_migration' => '（マイグレーションファイルを使用してメニューを作成してください）',
+        'create_by_migration' => 'メニューはマイグレーションファイルで作成する必要があり、UIから直接追加できません',
+    ],
+    'error' => [
+        'create_disabled' => 'UIからのメニュー作成は無効です。マイグレーションファイル（Phinx）を使用してください',
+        'name_readonly' => 'メニュー名は読み取り専用です。変更することはできません',
     ]
 ];

@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <title>摸獎券直播</title>
+  <!-- TCPlayer v5.1.0 CSS -->
+  <link href="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/tcplayer.min.css" rel="stylesheet"/>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      overflow: hidden;
+    }
+    .player-container {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    #player-wrapper {
+      width: 100%;
+      max-width: 100%;
+      height: 100vh;
+      position: relative;
+      background: #000;
+    }
+    #player-container-id {
+      width: 100%;
+      height: 100%;
+    }
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      z-index: 1000;
+    }
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 20px;
+      font-size: 16px;
+    }
+    .error-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      color: #fff;
+      padding: 40px;
+      z-index: 999;
+      background: rgba(0,0,0,0.9);
+      border-radius: 8px;
+      max-width: 500px;
+    }
+    .error-icon {
+      font-size: 60px;
+      margin-bottom: 20px;
+    }
+    .error-title {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    .error-message {
+      font-size: 14px;
+      color: #999;
+      margin-bottom: 20px;
+      white-space: pre-line;
+      line-height: 1.6;
+    }
+    .retry-btn {
+      padding: 10px 30px;
+      background: #1890ff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .retry-btn:hover {
+      background: #40a9ff;
+    }
+    .info-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px 20px;
+      font-size: 12px;
+      z-index: 100;
+    }
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+      animation: pulse 2s infinite;
+    }
+    .status-live {
+      background: #52c41a;
+    }
+    .status-error {
+      background: #ff4d4f;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    /* 调试面板样式 */
+    .debug-panel {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.9);
+      color: #0f0;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      max-width: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      z-index: 9999;
+      border: 1px solid #333;
+      display: none;
+    }
+    .debug-panel.show {
+      display: block;
+    }
+    .debug-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #333;
+    }
+    .debug-title {
+      color: #0ff;
+      font-weight: bold;
+      font-size: 13px;
+    }
+    .debug-close {
+      background: #f00;
+      color: #fff;
+      border: none;
+      padding: 2px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 10px;
+    }
+    .debug-toggle {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.8);
+      color: #0f0;
+      border: 1px solid #0f0;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      z-index: 9998;
+      font-family: 'Courier New', monospace;
+    }
+    .debug-section {
+      margin-bottom: 15px;
+      padding: 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+    }
+    .debug-section-title {
+      color: #ff0;
+      font-weight: bold;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+    .debug-item {
+      margin: 3px 0;
+      line-height: 1.4;
+    }
+    .debug-label {
+      color: #0ff;
+    }
+    .debug-value {
+      color: #0f0;
+      word-break: break-all;
+    }
+    .debug-error {
+      color: #f00;
+    }
+    .debug-success {
+      color: #0f0;
+    }
+    .debug-warning {
+      color: #ff0;
+    }
+    .debug-log-item {
+      padding: 3px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .debug-timestamp {
+      color: #888;
+      font-size: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="player-container">
+    <div id="player-wrapper">
+      <!-- 加载中遮罩 -->
+      <div class="loading-overlay" id="loading-overlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在連接直播...</div>
+      </div>
+
+      <!-- 错误提示 -->
+      <div class="error-container" id="error-container" style="display: none;">
+        <div class="error-icon">⚠️</div>
+        <div class="error-title">直播連接失敗</div>
+        <div class="error-message" id="error-message"></div>
+        <button class="retry-btn" onclick="retryConnect()">重試</button>
+      </div>
+
+      <!-- TCPlayer容器（v5 版本需要 video 标签） -->
+      <video id="player-container-id" playsinline preload="auto" webkit-playsinline></video>
+    </div>
+
+    <!-- 信息栏 -->
+    <div class="info-bar" id="info-bar" style="display: none;">
+      <span class="status-indicator status-live" id="status-indicator"></span>
+      <span id="status-text">直播中</span>
+      <span style="margin-left: 20px;">協議：<span id="protocol-text">-</span></span>
+      <span style="margin-left: 20px;">版本：TCPlayer v5.1.0</span>
+    </div>
+  </div>
+
+  <!-- 调试面板切换按钮（已禁用）-->
+  <!-- <button class="debug-toggle" id="debug-toggle" onclick="toggleDebugPanel()">🐛 調試</button> -->
+
+  <!-- 调试面板（已禁用）-->
+  <!-- <div class="debug-panel" id="debug-panel">
+    <div class="debug-header">
+      <div class="debug-title">🔍 調試面板</div>
+      <button class="debug-close" onclick="toggleDebugPanel()">✕</button>
+    </div>
+
+    <div class="debug-section">
+      <div class="debug-section-title">📋 URL 參數</div>
+      <div id="debug-url-params"></div>
+    </div>
+
+    <div class="debug-section">
+      <div class="debug-section-title">🎬 播放器配置</div>
+      <div id="debug-player-config"></div>
+    </div>
+
+    <div class="debug-section">
+      <div class="debug-section-title">📊 播放器狀態</div>
+      <div id="debug-player-status"></div>
+    </div>
+
+    <div class="debug-section">
+      <div class="debug-section-title">🌐 環境檢測</div>
+      <div id="debug-environment"></div>
+    </div>
+
+    <div class="debug-section">
+      <div class="debug-section-title">📝 事件日誌 (最近10條)</div>
+      <div id="debug-event-logs"></div>
+    </div>
+  </div> -->
+
+  <!-- TCPlayer v5.1.0 脚本 -->
+  <script src="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/tcplayer.v5.1.0.min.js"></script>
+
+  <!-- 腾讯云快直播 WebRTC 插件 -->
+  <script src="https://web.sdk.qcloud.com/player/tcplayer/release/v5.1.0/libs/hls.min.0.13.2m.js"></script>
+
+  <script>
+    let player = null;
+    let liveUrl = '';
+    let currentProtocol = '';
+    let eventLogs = [];  // 事件日志数组
+    let debugMode = false;  // 调试模式标志
+
+    // 获取URL参数
+    function getUrlParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    // ==================== 调试系统 ====================
+
+    // 添加日志
+    function addLog(type, message, data = null) {
+      const timestamp = new Date().toLocaleTimeString('zh-TW', { hour12: false, fractionalSecondDigits: 3 });
+      const logEntry = {
+        timestamp,
+        type,  // 'info', 'success', 'warning', 'error'
+        message,
+        data
+      };
+
+      eventLogs.unshift(logEntry);
+      if (eventLogs.length > 50) {
+        eventLogs = eventLogs.slice(0, 50);  // 保留最近50条
+      }
+
+      // 控制台输出已禁用
+      // const emoji = {
+      //   'info': 'ℹ️',
+      //   'success': '✅',
+      //   'warning': '⚠️',
+      //   'error': '❌'
+      // }[type] || '📝';
+
+      // console.log(`${emoji} [${timestamp}] ${message}`, data || '');
+
+      // 更新调试面板
+      updateDebugPanel();
+    }
+
+    // 切换调试面板
+    function toggleDebugPanel() {
+      const panel = document.getElementById('debug-panel');
+      const isShown = panel.classList.contains('show');
+
+      if (isShown) {
+        panel.classList.remove('show');
+        debugMode = false;
+      } else {
+        panel.classList.add('show');
+        debugMode = true;
+        updateDebugPanel();
+      }
+    }
+
+    // 更新调试面板
+    function updateDebugPanel() {
+      if (!debugMode) return;
+
+      // 1. URL 参数
+      const urlParams = new URLSearchParams(window.location.search);
+      let urlParamsHtml = '';
+      if (urlParams.toString()) {
+        urlParams.forEach((value, key) => {
+          urlParamsHtml += `
+            <div class="debug-item">
+              <span class="debug-label">${key}:</span>
+              <span class="debug-value">${value.substring(0, 100)}${value.length > 100 ? '...' : ''}</span>
+            </div>
+          `;
+        });
+      } else {
+        urlParamsHtml = '<div class="debug-item debug-warning">⚠️ 無 URL 參數</div>';
+      }
+      document.getElementById('debug-url-params').innerHTML = urlParamsHtml;
+
+      // 2. 播放器配置
+      let configHtml = '';
+      if (player) {
+        const videoEl = document.querySelector('video');
+        configHtml = `
+          <div class="debug-item"><span class="debug-label">協議類型:</span> <span class="debug-value">${currentProtocol}</span></div>
+          <div class="debug-item"><span class="debug-label">播放地址:</span> <span class="debug-value">${liveUrl.substring(0, 80)}...</span></div>
+          <div class="debug-item"><span class="debug-label">video.src:</span> <span class="debug-value">${videoEl?.src || '無'}</span></div>
+          <div class="debug-item"><span class="debug-label">License URL:</span> <span class="debug-value">${getUrlParam('licenseUrl') || getUrlParam('license') || '❌ 未配置'}</span></div>
+          <div class="debug-item"><span class="debug-label">License Key:</span> <span class="debug-value">${getUrlParam('licenseKey') ? '✅ 已配置' : '❌ 未配置'}</span></div>
+        `;
+      } else {
+        configHtml = '<div class="debug-item debug-warning">⚠️ 播放器未初始化</div>';
+      }
+      document.getElementById('debug-player-config').innerHTML = configHtml;
+
+      // 3. 播放器状态
+      let statusHtml = '';
+      if (player) {
+        const videoEl = document.querySelector('video');
+        statusHtml = `
+          <div class="debug-item"><span class="debug-label">readyState:</span> <span class="debug-value">${videoEl?.readyState} (${getReadyStateText(videoEl?.readyState)})</span></div>
+          <div class="debug-item"><span class="debug-label">networkState:</span> <span class="debug-value">${videoEl?.networkState} (${getNetworkStateText(videoEl?.networkState)})</span></div>
+          <div class="debug-item"><span class="debug-label">paused:</span> <span class="debug-value">${player.paused()}</span></div>
+          <div class="debug-item"><span class="debug-label">currentTime:</span> <span class="debug-value">${player.currentTime()?.toFixed(2)}s</span></div>
+          <div class="debug-item"><span class="debug-label">error:</span> <span class="${player.error() ? 'debug-error' : 'debug-success'}">${player.error() ? JSON.stringify(player.error()) : '無錯誤'}</span></div>
+        `;
+      } else {
+        statusHtml = '<div class="debug-item debug-warning">⚠️ 播放器未初始化</div>';
+      }
+      document.getElementById('debug-player-status').innerHTML = statusHtml;
+
+      // 4. 环境检测
+      const isHttps = window.location.protocol === 'https:';
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const environmentHtml = `
+        <div class="debug-item"><span class="debug-label">頁面協議:</span> <span class="${isHttps ? 'debug-success' : 'debug-warning'}">${window.location.protocol}</span></div>
+        <div class="debug-item"><span class="debug-label">主機名:</span> <span class="debug-value">${window.location.hostname}</span></div>
+        <div class="debug-item"><span class="debug-label">瀏覽器:</span> <span class="debug-value">${navigator.userAgent.split(' ').slice(-2).join(' ')}</span></div>
+        <div class="debug-item"><span class="debug-label">WebRTC 可用:</span> <span class="${isHttps || isLocalhost ? 'debug-success' : 'debug-error'}">${isHttps || isLocalhost ? '✅ 是' : '❌ 否 (需要 HTTPS)'}</span></div>
+        <div class="debug-item"><span class="debug-label">TCPlayer 版本:</span> <span class="debug-value">v5.1.0</span></div>
+      `;
+      document.getElementById('debug-environment').innerHTML = environmentHtml;
+
+      // 5. 事件日志（最近10条）
+      let logsHtml = '';
+      const recentLogs = eventLogs.slice(0, 10);
+      if (recentLogs.length > 0) {
+        recentLogs.forEach(log => {
+          const colorClass = {
+            'info': 'debug-value',
+            'success': 'debug-success',
+            'warning': 'debug-warning',
+            'error': 'debug-error'
+          }[log.type] || 'debug-value';
+
+          logsHtml += `
+            <div class="debug-log-item">
+              <span class="debug-timestamp">[${log.timestamp}]</span>
+              <span class="${colorClass}">${log.message}</span>
+            </div>
+          `;
+        });
+      } else {
+        logsHtml = '<div class="debug-item debug-warning">⚠️ 暫無日誌</div>';
+      }
+      document.getElementById('debug-event-logs').innerHTML = logsHtml;
+    }
+
+    // 获取 readyState 描述
+    function getReadyStateText(state) {
+      const states = {
+        0: 'HAVE_NOTHING',
+        1: 'HAVE_METADATA',
+        2: 'HAVE_CURRENT_DATA',
+        3: 'HAVE_FUTURE_DATA',
+        4: 'HAVE_ENOUGH_DATA'
+      };
+      return states[state] || 'UNKNOWN';
+    }
+
+    // 获取 networkState 描述
+    function getNetworkStateText(state) {
+      const states = {
+        0: 'NETWORK_EMPTY',
+        1: 'NETWORK_IDLE',
+        2: 'NETWORK_LOADING',
+        3: 'NETWORK_NO_SOURCE'
+      };
+      return states[state] || 'UNKNOWN';
+    }
+
+    // ==================== 原有功能 ====================
+
+    // 检测协议类型
+    function detectProtocol(url) {
+      if (!url) return 'unknown';
+      const lowerUrl = url.toLowerCase();
+
+      if (lowerUrl.startsWith('webrtc://')) return 'webrtc';
+      if (lowerUrl.startsWith('rtmp://') || lowerUrl.startsWith('rtmps://')) return 'rtmp';
+      if (lowerUrl.includes('.m3u8')) return 'hls';
+      if (lowerUrl.includes('.flv')) return 'flv';
+
+      return 'unknown';
+    }
+
+    // 获取协议描述
+    function getProtocolDescription(protocol) {
+      const descriptions = {
+        'webrtc': 'WebRTC（超低延遲 <1秒）',
+        'flv': 'HTTP-FLV（低延遲 2-5秒）',
+        'hls': 'HLS（高兼容性 10-30秒）',
+        'rtmp': 'RTMP（僅推流用）',
+        'unknown': '未知協議'
+      };
+      return descriptions[protocol] || protocol.toUpperCase();
+    }
+
+    // 初始化播放器
+    function initPlayer() {
+      if (debugMode) addLog('info', '========== 開始初始化播放器 ==========');
+
+      liveUrl = getUrlParam('url');
+      const licenseUrl = getUrlParam('licenseUrl') || getUrlParam('license');
+      const licenseKey = getUrlParam('licenseKey');
+
+      if (debugMode) {
+        addLog('info', '📋 解析 URL 參數', {
+          url: liveUrl,
+          licenseUrl: licenseUrl,
+          licenseKey: licenseKey ? '已提供' : '未提供',
+          fullUrl: window.location.href
+        });
+      }
+
+      if (!liveUrl) {
+        addLog('error', '❌ 未提供直播地址');
+        showError('未提供直播地址\n\n請在活動管理中配置直播地址');
+        return;
+      }
+
+      currentProtocol = detectProtocol(liveUrl);
+      const protocolDesc = getProtocolDescription(currentProtocol);
+      document.getElementById('protocol-text').textContent = protocolDesc;
+
+      if (debugMode) {
+        addLog('success', `✅ 檢測到協議類型: ${currentProtocol} (${protocolDesc})`);
+        addLog('info', `🎬 準備播放: ${liveUrl.substring(0, 80)}...`);
+      }
+
+      // RTMP协议不支持
+      if (currentProtocol === 'rtmp') {
+        addLog('error', 'RTMP 協議不支持瀏覽器播放');
+        showError('⚠️ RTMP 協議不支持瀏覽器播放\n\n現代瀏覽器已不支持 RTMP 協議。\n\n請使用 FLV、HLS 或 WebRTC 格式。');
+        return;
+      }
+
+      // 检查 WebRTC 环境要求
+      if (currentProtocol === 'webrtc') {
+        const isHttps = window.location.protocol === 'https:';
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+        // 环境检查
+        if (!isHttps && !isLocalhost) {
+          addLog('error', '❌ WebRTC 需要 HTTPS 環境（或 localhost）');
+          if (debugMode) addLog('warning', `當前協議: ${window.location.protocol}, 主機: ${window.location.hostname}`);
+          showError('⚠️ WebRTC 播放需要 HTTPS\n\n當前頁面使用 HTTP 協議，WebRTC 無法播放。\n\n解決方案：\n1. 使用 HTTPS 訪問此頁面\n2. 或使用 FLV/HLS 協議播放');
+          return;
+        }
+      }
+
+      try {
+        if (debugMode) addLog('info', '⚙️ 構建播放器配置...');
+
+        // TCPlayer v5配置（根据协议类型）
+        let playerConfig = {
+          autoplay: true,
+          live: true,
+          width: '100%',
+          height: '100%',
+          controlBar: {
+            progressControl: false,
+            playToggle: true,
+            volumePanel: true,
+            fullscreenToggle: true
+          },
+          language: 'zh-TW'
+        };
+
+        // 🔑 添加 License 配置（如果有）
+        if (licenseUrl && licenseKey) {
+          playerConfig.licenceUrl = licenseUrl;   // 英式拼写（官方推荐）
+          playerConfig.licenceKey = licenseKey;
+          playerConfig.licenseUrl = licenseUrl;   // 美式拼写（兼容）
+          playerConfig.licenseKey = licenseKey;
+          if (debugMode) addLog('success', 'License 已配置');
+        } else {
+          addLog('warning', 'License 未提供，可能會出現錯誤', {
+            licenseUrl: licenseUrl ? '有' : '無',
+            licenseKey: licenseKey ? '有' : '無'
+          });
+        }
+
+        // 根据协议添加对应的地址配置
+        if (currentProtocol === 'flv') {
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'video/x-flv'
+          }];
+          if (debugMode) addLog('info', '使用 HTTP-FLV 格式');
+
+        } else if (currentProtocol === 'hls') {
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'application/x-mpegURL'
+          }];
+          if (debugMode) addLog('info', '使用 HLS 格式');
+
+        } else if (currentProtocol === 'webrtc') {
+          // WebRTC 快直播配置
+          playerConfig.sources = [{
+            src: liveUrl,
+            type: 'application/x-mpegURL'
+          }];
+
+          playerConfig.autoplay = true;
+          playerConfig.preload = 'auto';
+          playerConfig.playbackRates = [1];
+          playerConfig.controls = true;
+
+          playerConfig.html5 = {
+            hls: {
+              overrideNative: true,
+              debug: false
+            }
+          };
+
+          if (debugMode) addLog('success', 'WebRTC 配置已應用');
+
+        } else {
+          addLog('error', '不支持的播放協議: ' + currentProtocol);
+          showError('不支持的播放協議\n\n請使用 FLV、HLS 或 WebRTC 格式');
+          return;
+        }
+
+        if (debugMode) addLog('info', '播放器配置詳情', playerConfig);
+
+        // 检查容器是否存在
+        const container = document.getElementById('player-container-id');
+        if (!container) {
+          addLog('error', '播放器容器未找到');
+          showError('播放器容器未找到');
+          return;
+        }
+        if (debugMode) addLog('success', '播放器容器已找到');
+
+        // 创建播放器实例
+        if (debugMode) addLog('info', '正在創建播放器實例...');
+        player = new TCPlayer('player-container-id', playerConfig);
+
+        if (debugMode) {
+          addLog('success', '播放器實例創建成功');
+          addLog('info', `初始狀態 - readyState: ${player.readyState()}, networkState: ${player.networkState()}`);
+        }
+
+        // 定期更新调试面板
+        setInterval(() => {
+          if (debugMode && player) {
+            updateDebugPanel();
+          }
+        }, 1000);
+
+        // 10秒后检查播放器状态
+        setTimeout(() => {
+          if (!player) return;
+
+          const videoEl = document.querySelector('video');
+          addLog('info', '⏰ [10秒後狀態檢查]', {
+            readyState: `${player.readyState()} (${getReadyStateText(player.readyState())})`,
+            networkState: `${player.networkState()} (${getNetworkStateText(player.networkState())})`,
+            paused: player.paused(),
+            currentTime: player.currentTime()?.toFixed(2) + 's',
+            error: player.error() ? `Code ${player.error().code}` : '無',
+            videoSrc: videoEl?.src || '無',
+            videoCurrentSrc: videoEl?.currentSrc || '無'
+          });
+
+          // 如果 10 秒后还没开始播放，记录警告
+          if (player.paused() && !player.error()) {
+            addLog('warning', '⚠️ 10秒後仍未開始播放，可能原因：推流未開始或網絡問題');
+          }
+        }, 10000);
+
+        // 监听播放器事件
+        player.on('loadstart', function() {
+          if (debugMode) addLog('info', 'loadstart - 開始加載媒體');
+        });
+
+        player.on('loadedmetadata', function() {
+          if (debugMode) {
+            addLog('success', 'loadedmetadata - 元數據加載完成');
+            const videoEl = document.querySelector('video');
+            if (videoEl) {
+              addLog('info', `視頻尺寸: ${videoEl.videoWidth}x${videoEl.videoHeight}`);
+            }
+          }
+          hideLoading();
+          showInfoBar('直播中', true);
+        });
+
+        player.on('canplay', function() {
+          if (debugMode) addLog('success', 'canplay - 可以開始播放');
+          hideLoading();
+        });
+
+        player.on('playing', function() {
+          if (debugMode) addLog('success', 'playing - 正在播放中');
+          hideLoading();
+          showInfoBar('直播中', true);
+        });
+
+        player.on('waiting', function() {
+          if (debugMode) addLog('warning', 'waiting - 緩衝中');
+          showInfoBar('緩衝中...', true);
+        });
+
+        player.on('pause', function() {
+          if (debugMode) addLog('info', 'pause - 已暫停');
+          showInfoBar('已暫停', false);
+        });
+
+        player.on('ended', function() {
+          if (debugMode) addLog('info', 'ended - 播放結束');
+          showInfoBar('直播已結束', false);
+        });
+
+        player.on('progress', function() {
+          // 下载进度事件频繁，仅在调试模式记录
+          if (debugMode && eventLogs.length < 5) {
+            addLog('info', 'progress - 下載數據中');
+          }
+        });
+
+        player.on('stalled', function() {
+          if (debugMode) addLog('warning', 'stalled - 網絡停滯');
+        });
+
+        player.on('suspend', function() {
+          if (debugMode) addLog('warning', 'suspend - 加載掛起');
+        });
+
+        player.on('abort', function() {
+          addLog('error', 'abort - 加載中止');
+        });
+
+        player.on('emptied', function() {
+          if (debugMode) addLog('warning', 'emptied - 媒體為空');
+        });
+
+        player.on('error', function(error) {
+          addLog('error', '播放器錯誤', {
+            code: error?.code,
+            message: error?.message
+          });
+
+          let errorMsg = '播放錯誤\n\n';
+          let logMsg = '';
+
+          // 根据错误类型提供详细提示
+          if (error && error.code) {
+            switch(error.code) {
+              case 1:
+                errorMsg = '媒體加載中止\n\n可能是網絡問題或用戶操作';
+                logMsg = 'Error Code 1: MEDIA_ERR_ABORTED';
+                break;
+              case 2:
+                errorMsg = '網絡錯誤：無法加載直播流\n\n';
+                errorMsg += '可能原因：\n';
+                errorMsg += '1. 直播尚未開始（最常見）\n';
+                errorMsg += '2. 網絡連接問題\n';
+                errorMsg += '3. 直播地址已過期（txTime）\n\n';
+                errorMsg += '💡 請確認 OBS 已開始推流';
+                logMsg = 'Error Code 2: MEDIA_ERR_NETWORK - 網絡錯誤或推流未開始';
+                break;
+              case 3:
+                errorMsg = '解碼錯誤\n\n視頻格式可能不支持';
+                logMsg = 'Error Code 3: MEDIA_ERR_DECODE - 解碼失敗';
+                break;
+              case 4:
+                errorMsg = '媒體源不支持\n\n';
+                if (currentProtocol === 'webrtc') {
+                  errorMsg += '⚠️ TCPlayer v5 不完全支持 WebRTC 播放\n\n';
+                  errorMsg += '💡 建議解決方案：\n';
+                  errorMsg += '1. 將直播地址改為 FLV 格式（推薦）\n';
+                  errorMsg += '   • 延遲：2-5 秒（接近 WebRTC）\n';
+                  errorMsg += '   • 兼容性：✅ 優秀\n';
+                  errorMsg += '   • HTTP/HTTPS：✅ 都支持\n\n';
+                  errorMsg += '2. 或使用 HLS 格式（高兼容性）\n';
+                  errorMsg += '   • 延遲：10-30 秒\n';
+                  errorMsg += '   • 兼容性：✅ 最佳\n\n';
+                  errorMsg += '請在活動管理後台修改直播地址格式';
+                } else {
+                  errorMsg += '請檢查直播源格式';
+                }
+                logMsg = 'Error Code 4: MEDIA_ERR_SRC_NOT_SUPPORTED - 媒體源不支持';
+                if (currentProtocol === 'webrtc') {
+                  logMsg += ' (WebRTC 不支持，建議改用 FLV)';
+                }
+                break;
+              case 55:
+                errorMsg = '❌ License 錯誤 (Error 55)\n\n';
+                errorMsg += '錯誤原因：SDK 未正確獲取 License URL\n\n';
+                errorMsg += '調試信息：\n';
+                errorMsg += '• License URL: ' + (getUrlParam('licenseUrl') || getUrlParam('license') || '❌ 未提供') + '\n';
+                errorMsg += '• License Key: ' + (getUrlParam('licenseKey') ? '✅ 已提供' : '❌ 未提供') + '\n\n';
+                errorMsg += '💡 請檢查活動管理中的播放器配置';
+                logMsg = 'Error Code 55: LICENSE_ERROR - License 配置錯誤';
+                break;
+              default:
+                errorMsg += '錯誤代碼：' + error.code;
+                if (error.message) {
+                  errorMsg += '\n錯誤信息：' + error.message;
+                }
+                logMsg = `Error Code ${error.code}: ${error.message || 'Unknown'}`;
+            }
+          } else if (error && error.message) {
+            errorMsg = error.message;
+            logMsg = 'Error: ' + error.message;
+          }
+
+          addLog('error', logMsg || '未知錯誤');
+          showError(errorMsg);
+        });
+
+        // 3秒后如果还在加载，显示提示
+        setTimeout(() => {
+          if (document.getElementById('loading-overlay').style.display !== 'none') {
+            document.querySelector('.loading-text').innerHTML = '連接時間較長，請稍候...<br><small style="color: #999; font-size: 12px;">請確認直播流已開始推送</small>';
+            addLog('warning', '⚠️ 加載時間超過 3 秒，連接較慢');
+          }
+        }, 3000);
+
+      } catch (error) {
+        addLog('error', '❌ 播放器初始化異常', { error: error.message, stack: error.stack });
+        showError('播放器初始化失敗：' + error.message);
+      }
+    }
+
+    // 显示错误
+    function showError(message) {
+      addLog('error', '❌ 顯示錯誤提示給用戶', { message });
+      hideLoading();
+      document.getElementById('error-message').textContent = message;
+      document.getElementById('error-container').style.display = 'block';
+      showInfoBar('連接失敗', false);
+      document.getElementById('status-indicator').className = 'status-indicator status-error';
+    }
+
+    // 隐藏加载
+    function hideLoading() {
+      document.getElementById('loading-overlay').style.display = 'none';
+    }
+
+    // 显示信息栏
+    function showInfoBar(statusText, isLive) {
+      document.getElementById('info-bar').style.display = 'block';
+      document.getElementById('status-text').textContent = statusText;
+
+      const indicator = document.getElementById('status-indicator');
+      indicator.className = 'status-indicator ' + (isLive ? 'status-live' : 'status-error');
+    }
+
+    // 重试连接
+    function retryConnect() {
+      addLog('info', '🔄 用戶觸發重試連接');
+      document.getElementById('error-container').style.display = 'none';
+      document.getElementById('loading-overlay').style.display = 'flex';
+
+      if (player) {
+        addLog('info', '🗑️ 銷毀舊播放器實例');
+        player.dispose();
+        player = null;
+      }
+
+      // 清空部分日志（保留最近 10 条）
+      eventLogs = eventLogs.slice(0, 10);
+
+      setTimeout(initPlayer, 500);
+    }
+
+    // 页面加载时初始化
+    window.addEventListener('load', () => {
+      // 调试功能已禁用
+      // const urlParams = new URLSearchParams(window.location.search);
+      // if (urlParams.get('debug') === '1' || urlParams.get('debug') === 'true') {
+      //   toggleDebugPanel();
+      // }
+
+      initPlayer();
+    });
+
+    // 页面卸载时销毁播放器
+    window.addEventListener('beforeunload', () => {
+      if (player) {
+        player.dispose();
+      }
+    });
+
+    // 键盘快捷键已禁用
+    // window.addEventListener('keydown', (e) => {
+    //   if (e.key === 'd' || e.key === 'D') {
+    //     toggleDebugPanel();
+    //   }
+    // });
+  </script>
+</body>
+</html>

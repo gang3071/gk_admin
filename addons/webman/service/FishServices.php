@@ -3,7 +3,7 @@
 namespace addons\webman\service;
 
 use addons\webman\model\Machine;
-use think\Exception;
+use Exception;
 
 class FishServices
 {
@@ -122,9 +122,9 @@ class FishServices
                     $validator = validator($param, [
                         'open_point' => 'required|numeric|min:1'
                     ], [
-                        'open_point.required' => trans('open_point_required', [], 'message'),
-                        'open_point.numeric' => trans('open_point_numeric', [], 'message'),
-                        'open_point.min' => trans('open_point_min', [], 'message'),
+                        'open_point.required' => admin_trans('message.open_point_required'),
+                        'open_point.numeric' => admin_trans('message.open_point_numeric'),
+                        'open_point.min' => admin_trans('message.open_point_min'),
                     ]);
                     if ($validator->fails()) {
                         throw new Exception($validator->errors()->first());

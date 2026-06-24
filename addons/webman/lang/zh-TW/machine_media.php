@@ -12,6 +12,7 @@ return [
     'media_line' => '播放線路',
     'media_app_not_found' => '媒體服務APP未設定',
     'pull_ip_not_found' => '未設定拉流IP',
+    'tencent_play_config_not_found' => '未找到啟用的騰訊雲播放配置，請先在系統設置中配置',
     'media_title' => '視頻播放地址',
     'play_address' => '播放地址',
     'fields' => [

@@ -34,6 +34,7 @@ return [
         'email' => '郵箱',
         'line' => 'line',
         'department_id' => '通路',
+        'vip_level' => 'VIP等級',
         'status' => '帳號狀態',
         'status_withdraw' => '取款功能',
         'status_transfer' => '轉點功能',
@@ -313,5 +314,16 @@ return [
     'player_source_options' => [
         1 => '線上',
         2 => '線下',
+    ],
+
+    // 錯誤信息
+    'error' => [
+        'wash_amount_must_greater_than_zero' => '洗分金額必須大於0',
+        'wallet_deduct_amount_must_greater_than_zero' => '錢包扣除金額必須大於0',
+        'currency_config_not_found' => '幣種配置不存在',
+        'zero_balance_cannot_wash' => '當前餘額為0，無法洗分',
+        'deduction_failed' => '扣款失敗',
+        'platform_not_found' => '平台不存在',
+        'platform_not_in_channel' => '平台不在渠道範圍內',
     ],
 ];

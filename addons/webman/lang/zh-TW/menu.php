@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => '機台資訊',
         'channel_machine_report' => '機台報表',
         'channel_up_and_down_report' => '上下分報表',
+        'channel_machine_list' => '機台列表',
         'machine_strategy_list' => '機台攻略',
         'machine_producer' => '廠家清單',
 //前端配寘
@@ -196,6 +197,7 @@ return [
         'agent_profit_statistics' => '分潤統計',
         'agent_profit_records' => '分潤記錄',
         'agent_settlement_records' => '結算記錄',
+        'agent_store_profit_report' => '店家分潤報表',
         //店機後台設備管理
         'store_player' => '設備管理',
         'store_player_list' => '設備列表',
@@ -271,5 +273,34 @@ return [
         'limit_management' => '限紅管理',
         'limit_group_management' => '限紅組管理',
         'platform_config' => '平台配置',
+        //VIP等級管理
+        'vip_level' => 'VIP等級管理',
+        'channel_vip_level' => 'VIP等級管理',
+        //摸奖券管理
+        'lottery_ticket_manage' => '摸獎券管理',
+        'lottery_ticket_dashboard' => '進行中的活動',
+        'lottery_ticket_history' => '歷史活動記錄',
+        'lottery_ticket_records' => '中獎記錄',
+        //代理后台摸奖券管理
+        'agent_lottery_ticket_management' => '摸獎券管理',
+        'agent_lottery_ticket_activity_list' => '摸獎券活動',
+        'agent_lottery_ticket_list' => '摸獎券列表',
+        'agent_lottery_ticket_record_list' => '中獎記錄',
+        'agent_lottery_ticket_win_record_list' => '中獎記錄',  // 旧菜单名（兼容）
+        //店家后台摸奖券管理
+        'store_lottery_ticket_management' => '摸獎券管理',
+        'store_lottery_ticket_activity_list' => '摸獎券活動',
+        'store_lottery_ticket_list' => '摸獎券列表',
+        'store_lottery_ticket_record_list' => '中獎記錄',
+    ],
+    'help' => [
+        'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',
+        'name_readonly' => '菜單名稱由遷移文件管理，不可通過界面修改',
+        'use_migration' => '（請使用遷移文件創建菜單）',
+        'create_by_migration' => '菜單必須通過遷移文件創建，不能通過界面直接添加',
+    ],
+    'error' => [
+        'create_disabled' => '禁止通過界面創建菜單，請使用遷移文件（Phinx）創建',
+        'name_readonly' => '菜單名稱為只讀，不可修改',
     ]
 ];

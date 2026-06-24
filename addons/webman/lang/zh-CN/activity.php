@@ -20,7 +20,7 @@ return [
     'created_at_start' => '开始时间',
     'created_at_end' => '结束时间',
     'activity_phase_must' => '请填写活动阶段配置',
-    'game_type_must_diff' => '钢珠和solt无法同时参加同一活动',
+    'game_type_must_diff' => '钢珠和slot无法同时参加同一活动',
     'not_fount' => '活动未找到',
     'activity_content_must' => '请填写活动内容',
     'game_type_fail' => '机台类型错误',

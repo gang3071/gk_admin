@@ -91,6 +91,7 @@ return [
         'channel_machine_information' => 'Machine information',
         'channel_machine_report' => 'Machine report',
         'channel_up_and_down_report' => 'Up and down report',
+        'channel_machine_list' => 'Machine List',
         'machine_strategy_list' => 'Machine Strategy',
         'machine_producer' => 'Manufacturer list',
         //Front-end configuration
@@ -196,6 +197,7 @@ return [
         'agent_profit_statistics' => 'Profit Statistics',
         'agent_profit_records' => 'Profit Records',
         'agent_settlement_records' => 'Settlement Records',
+        'agent_store_profit_report' => 'Store Profit Report',
         //Store Device Management
         'store_player' => 'Device Management',
         'store_player_list' => 'Device List',
@@ -272,5 +274,34 @@ return [
         'limit_management' => 'Limit Management',
         'limit_group_management' => 'Limit Group Management',
         'platform_config' => 'Platform Configuration',
+        //VIP Level Management
+        'vip_level' => 'VIP Level Management',
+        'channel_vip_level' => 'VIP Level Management',
+        //Lottery Ticket Management
+        'lottery_ticket_manage' => 'Lottery Ticket Management',
+        'lottery_ticket_dashboard' => 'Active Campaigns',
+        'lottery_ticket_history' => 'Campaign History',
+        'lottery_ticket_records' => 'Winning Records',
+        //Agent Backend Lottery Ticket Management
+        'agent_lottery_ticket_management' => 'Lottery Ticket Management',
+        'agent_lottery_ticket_activity_list' => 'Lottery Activities',
+        'agent_lottery_ticket_list' => 'Lottery Tickets',
+        'agent_lottery_ticket_record_list' => 'Winning Records',
+        'agent_lottery_ticket_win_record_list' => 'Winning Records',  // Old menu name (compatibility)
+        //Store Lottery Ticket Management
+        'store_lottery_ticket_management' => 'Lottery Ticket Management',
+        'store_lottery_ticket_activity_list' => 'Lottery Activities',
+        'store_lottery_ticket_list' => 'Lottery Tickets',
+        'store_lottery_ticket_record_list' => 'Winning Records',
+    ],
+    'help' => [
+        'controlled_menu' => 'This menu is controlled by feature toggle, name cannot be modified',
+        'name_readonly' => 'Menu name is managed by migration files, cannot be modified through UI',
+        'use_migration' => '(Please use migration files to create menus)',
+        'create_by_migration' => 'Menus must be created through migration files, not through UI',
+    ],
+    'error' => [
+        'create_disabled' => 'Creating menus through UI is disabled, please use migration files (Phinx)',
+        'name_readonly' => 'Menu name is read-only and cannot be modified',
     ]
 ];

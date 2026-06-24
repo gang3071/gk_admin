@@ -1189,7 +1189,6 @@ export default {
         this.channelName = `machine-real-time-information-${this.department_id}`;
         pushManager.subscribe(this.channelName, this.handleMessage, this);
 
-        console.log('[InfoList] WebSocket initialized successfully');
       } catch (error) {
         console.error('[InfoList] Init WebSocket failed:', error);
       }
@@ -1252,7 +1251,6 @@ export default {
             break;
         }
       } catch (e) {
-        console.warn('[InfoList] Parse message failed:', e);
       }
     },
     queryData(params = {}) {

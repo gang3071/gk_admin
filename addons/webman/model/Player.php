@@ -58,6 +58,8 @@ use support\Cache;
  * @property string account 账户
  * @property int player_type 玩家类型
  * @property int player_source 玩家来源 1-线上 2-线下
+ * @property int vip_level_id 当前VIP等级ID
+ * @property float total_bet_amount 总打码量（累计不清零）
  *
  * @property PlayerExtend player_extend
  * @property PlayerPlatformCash machine_wallet
@@ -76,6 +78,8 @@ use support\Cache;
  * @property PlayerBank bankCard 玩家提现账号
  * @property AdminUser agentAdmin 所属代理后台账号
  * @property AdminUser storeAdmin 所属店家后台账号
+ * @property VipLevel vipLevel VIP等级
+ * @property PlayerVipPeriod[] vipPeriods VIP周期记录
  * @package addons\webman\model
  */
 class Player extends Model
@@ -303,9 +307,27 @@ class Player extends Model
     protected static function booted()
     {
         static::created(function (Player $player) {
+            // 创建玩家扩展信息
             $playerExtend = new PlayerExtend();
             $playerExtend->player_id = $player->id;
             $playerExtend->save();
+
+            // 自动设置最低VIP等级（如果玩家没有设置VIP等级）
+            if (empty($player->vip_level_id) || $player->vip_level_id == 0) {
+                // 查找该渠道的最低VIP等级
+                $lowestVipLevel = VipLevel::query()
+                    ->where('department_id', $player->department_id)
+                    ->where('status', VipLevel::STATUS_ENABLED)
+                    ->orderBy('sort', 'asc')
+                    ->orderBy('id', 'asc')
+                    ->first();
+
+                // 如果找到了VIP等级，则设置为玩家的等级
+                if ($lowestVipLevel) {
+                    $player->vip_level_id = $lowestVipLevel->id;
+                    $player->saveQuietly(); // 使用saveQuietly避免触发updated事件
+                }
+            }
         });
         static::updated(function (Player $player) {
             $columns = [
@@ -370,5 +392,23 @@ class Player extends Model
     public function bankCard(): hasMany
     {
         return $this->hasMany(plugin()->webman->config('database.player_bank_model'), 'player_id');
+    }
+
+    /**
+     * VIP等级
+     * @return BelongsTo
+     */
+    public function vipLevel(): BelongsTo
+    {
+        return $this->belongsTo(VipLevel::class, 'vip_level_id');
+    }
+
+    /**
+     * VIP周期记录
+     * @return HasMany
+     */
+    public function vipPeriods(): HasMany
+    {
+        return $this->hasMany(PlayerVipPeriod::class, 'player_id');
     }
 }

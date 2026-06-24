@@ -25,7 +25,48 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+//
+//    // 内存监控进程（每分钟监控一次，自动分析内存泄漏）
+//    'memory_monitor' => [
+//        'handler' => process\MemoryMonitor::class,
+//        'reloadable' => true,
+//        'constructor' => []
+//    ],
 
+    // VIP反水补算定时任务
+    'vip_cashback' => [
+        'handler' => process\VipCashbackTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
+    // ✅ 摸奖券队列消费者已迁移到标准 redis-queue 插件
+    // 配置位置：config/plugin/webman/redis-queue/process.php
+    // 消费者目录：app/queue/redis/
+    // 队列列表：lottery-bet-progress, lottery-ticket-push
+
+    // 摸奖券过期处理定时任务（每5分钟执行一次）
+    'lottery_ticket_expire' => [
+        'handler' => process\LotteryTicketExpireProcess::class,
+        'reloadable' => true,
+        'count' => 1,  // 只需要1个进程
+        'constructor' => []
+    ],
+
+    // 摸奖券打码进度扫描任务（定时扫描增量游戏记录，批量更新进度）
+    // 用于处理 gk_work 批量插入的游戏记录
+    'lottery_bet_progress_scan' => [
+        'handler' => process\LotteryBetProgressScanTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
+    // 摸奖券活动状态自动流转任务（检查时间节点，自动更新活动状态）
+    'lottery_activity_status_transition' => [
+        'handler' => process\LotteryActivityStatusTransitionTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
     // ✅ 内存监控进程已禁用（问题已解决，不再需要监控）
     // 'memory_monitor' => [
     //     'handler' => process\MemoryMonitor::class,

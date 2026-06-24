@@ -1,0 +1,51 @@
+<?php
+
+return [
+    'title' => 'VIP等级管理',
+    'cashback' => '反水比例',
+    'cashback_title' => ':name - 反水比例设置',
+    'import_template' => '一键导入模板',
+    'import_confirm' => '确定要导入VIP默认模板吗？将创建10个默认VIP等级（VIP1-VIP10）',
+    'import_error_exists' => '该渠道已有 {count} 个VIP等级，无需重复导入',
+    'already_exists_count' => '(已有{count}个)',
+    'import_confirm_override' => '继续导入将覆盖现有数据，是否继续？',
+    'import_failed' => '导入失败：',
+    'sync_players' => '同步玩家等级',
+    'sync_players_confirm' => '发现 {count} 个存量玩家未设置VIP等级，将为他们分配最低等级（VIP1）。确定要同步吗？',
+    'sync_failed' => '同步失败：',
+    'fields' => [
+        'id' => 'ID',
+        'name' => '等级名称',
+        'upgrade_limit_days' => '升级限制时间（天）',
+        'retain_level_days' => '保级时间（天）',
+        'retain_level_bet_amount' => '保级所需打码量',
+        'upgrade_bet_amount' => '升级所需打码量',
+        'min_claim_amount' => '最小领取额',
+        'birthday_bonus' => '生日礼金',
+        'sort' => '排序',
+        'status' => '状态',
+        'created_at' => '创建时间',
+        'updated_at' => '更新时间',
+    ],
+    'placeholder' => [
+        'name' => '请输入VIP等级名称，如：VIP1、黄金会员',
+    ],
+    'help' => [
+        'name' => '会员等级名称',
+        'upgrade_limit_days' => '升级限制时间，单位为天',
+        'retain_level_days' => '保级时间，单位为天',
+        'retain_level_bet_amount' => '保级所需打码量',
+        'upgrade_bet_amount' => '升级所需打码量',
+        'min_claim_amount' => '最小领取额',
+        'birthday_bonus' => '生日礼金',
+        'sort' => '数值越小越靠前',
+        'cashback_ratio' => '反水比例，100=100%，0.1=0.1%',
+    ],
+    'status' => [
+        0 => '禁用',
+        1 => '启用',
+    ],
+    'messages' => [
+        'cashback_saved' => '反水比例保存成功',
+    ],
+];

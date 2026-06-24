@@ -3,9 +3,9 @@
 namespace addons\webman\service;
 
 use addons\webman\model\Machine;
+use Exception;
 use GuzzleHttp\Promise\PromiseInterface;
 use Illuminate\Http\Client\Response;
-use think\Exception;
 
 class SlotService
 {
@@ -127,9 +127,9 @@ class SlotService
                 $validator = validator($param, [
                     'open_point' => 'required|numeric|min:1'
                 ], [
-                    'open_point.required' => trans('open_point_required', [], 'message'),
-                    'open_point.numeric' => trans('open_point_numeric', [], 'message'),
-                    'open_point.min' => trans('open_point_min', [], 'message'),
+                    'open_point.required' => admin_trans('message.open_point_required'),
+                    'open_point.numeric' => admin_trans('message.open_point_numeric'),
+                    'open_point.min' => admin_trans('message.open_point_min'),
                 ]);
                 if ($validator->fails()) {
                     throw new Exception($validator->errors()->first());
@@ -140,9 +140,9 @@ class SlotService
                 $validator = validator($param, [
                     'open_times' => 'required|numeric|min:1'
                 ], [
-                    'open_times.required' => trans('open_times_required', [], 'message'),
-                    'open_times.numeric' => trans('open_times_numeric', [], 'message'),
-                    'open_times.min' => trans('open_times_min', [], 'message'),
+                    'open_times.required' => admin_trans('message.open_times_required'),
+                    'open_times.numeric' => admin_trans('message.open_times_numeric'),
+                    'open_times.min' => admin_trans('message.open_times_min'),
                 ]);
                 if ($validator->fails()) {
                     throw new Exception($validator->errors()->first());

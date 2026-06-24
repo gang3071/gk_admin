@@ -38,6 +38,7 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAutoShiftConfig;
+use addons\webman\model\VipLevel;
 use addons\webman\model\StoreSetting;
 use addons\webman\service\ImportService;
 use addons\webman\service\WalletService;
@@ -182,6 +183,14 @@ class ChannelPlayerController
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
 
+        // 预加载渠道的 VIP 等级列表（用于筛选和显示）
+        $channelVipLevels = VipLevel::query()
+            ->where('department_id', Admin::user()->department_id)
+            ->where('status', VipLevel::STATUS_ENABLED)
+            ->orderBy('sort', 'asc')
+            ->get(['id', 'name', 'sort', 'upgrade_bet_amount'])
+            ->keyBy('sort');
+
         // 构建基础查询字段（不包含余额和爆机状态，从 Redis 获取）
         $selectFields = [
             'player.*',
@@ -196,6 +205,12 @@ class ChannelPlayerController
             'player_register_record.ip',
             'player_register_record.country_name',
             'player_register_record.city_name',
+            // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
+            Db::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
+            // 打码量相关字段
+            'player.total_bet_amount',
+            Db::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
+            'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -217,6 +232,25 @@ class ChannelPlayerController
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
+            // VIP等级关联
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
+            // LEFT JOIN 渠道最低VIP等级（通过子查询预计算，使用原始SQL避免绑定参数问题）
+            ->leftJoin(
+                Db::raw('(SELECT department_id, MIN(sort) as min_sort FROM vip_level WHERE status = ' . VipLevel::STATUS_ENABLED . ' GROUP BY department_id) as channel_min_vip'),
+                'player.department_id', '=', 'channel_min_vip.department_id'
+            )
+            ->leftJoin('vip_level as channel_min_vip_level', function ($join) {
+                $join->on('channel_min_vip.department_id', '=', 'channel_min_vip_level.department_id')
+                    ->on('channel_min_vip.min_sort', '=', 'channel_min_vip_level.sort');
+            })
+            // LEFT JOIN 下一等级（通过子查询获取当前等级的下一个等级）
+            ->leftJoin(
+                Db::raw('(SELECT vl.department_id, vl.sort, vl.upgrade_bet_amount FROM vip_level vl WHERE vl.status = ' . VipLevel::STATUS_ENABLED . ') as next_vip_level'),
+                function ($join) {
+                    $join->on('player.department_id', '=', 'next_vip_level.department_id')
+                        ->whereRaw('next_vip_level.sort = (SELECT MIN(vl2.sort) FROM vip_level vl2 WHERE vl2.department_id = player.department_id AND vl2.sort > COALESCE(vip_level.sort, channel_min_vip_level.sort) AND vl2.status = ' . VipLevel::STATUS_ENABLED . ')');
+                }
+            )
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -314,7 +348,7 @@ class ChannelPlayerController
             })
             ->toArray();
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel, $playerOptions) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel, $playerOptions, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -406,6 +440,61 @@ class ChannelPlayerController
                     return Tag::create(admin_trans('player.fields.player_source_online'))->color('blue');
                 }
             })->ellipsis(true)->align('center');
+
+            // VIP等级列：优先显示玩家自己的等级，没有则显示渠道最低等级
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) {
+                    $levelName = $value;
+                    if (empty($levelName) && !empty($data['vip_level_id'])) {
+                        $levelName = '-';
+                    }
+                    if (empty($levelName)) {
+                        return '-';
+                    }
+
+                    // 计算打码进度
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = floatval($data['next_upgrade_bet_amount'] ?? 0);
+
+                    // 计算进度百分比
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet > 0) {
+                        // 进度 = (当前打码量 - 当前等级要求) / (下一等级要求 - 当前等级要求) * 100
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif ($nextUpgradeBet == 0 && $currentUpgradeBet > 0) {
+                        // 已是最高等级
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    // 构建显示内容
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    // 添加进度条（如果不是最高等级）
+                    if ($nextUpgradeBet > 0) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                })
+                ->align('center')->width(180);
 
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
@@ -515,7 +604,13 @@ class ChannelPlayerController
                 admin_trans('player.fields.status_offline_open'))->switch()->ellipsis(true)->align('center');
             $grid->column('status_baccarat',
                 admin_trans('player.fields.status_baccarat'))->switch()->ellipsis(true)->align('center');
-            $grid->filter(function (Filter $filter) use ($channel, $playerOptions) {
+            // 获取渠道 VIP 等级选项
+            $vipLevelOptions = ['' => admin_trans('public_msg.all')];
+            foreach ($channelVipLevels as $level) {
+                $vipLevelOptions[$level->id] = $level->name;
+            }
+
+            $grid->filter(function (Filter $filter) use ($channel, $playerOptions, $vipLevelOptions) {
                 // 设备下拉选择
                 $filter->eq()->select('player_id')
                     ->placeholder(admin_trans('player.filter.select_device'))
@@ -528,6 +623,11 @@ class ChannelPlayerController
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
+
+                // VIP等级筛选
+                $filter->eq()->select('vip_level_id')
+                    ->placeholder(admin_trans('player.fields.vip_level'))
+                    ->options($vipLevelOptions);
 
                 // 线下渠道：代理和店家筛选
                 if ($channel && $channel->is_offline == 1) {
@@ -601,19 +701,12 @@ class ChannelPlayerController
                 $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
                 $dropdown = $actions->dropdown();
-                $actions->prepend(Button::create(admin_trans('offline_channel.electronic_game_disabled'))
-                    ->drawer([$this, 'playerGameList'], ['player_id' => $data['id']])
-                    ->type('primary'));
-                $actions->prepend(Button::create('百家禁用')
-                    ->drawer([$this, 'playerPlatformList'], ['player_id' => $data['id']])
-                    ->type('primary'));
-                $actions->prepend(Button::create(admin_trans('channel_agent.open_score'))
-                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px'));
-                $actions->prepend(Button::create('游戏账号')
-                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
-                    ->type('default')
-                    ->size('small')
-                    ->width('90%'));
+
+                // 电子游戏禁用
+                $dropdown->prepend(admin_trans('offline_channel.electronic_game_disabled'), 'fas fa-gamepad')
+                    ->modal([$this, 'playerGameList'], ['player_id' => $data['id']])
+                    ->width('80%');
+
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
                     $dropdown->prepend($data['is_coin'] == 0 ? admin_trans('player.set_coin') : admin_trans('player.cancel_coin'),
@@ -626,6 +719,15 @@ class ChannelPlayerController
                     $dropdown->prepend(admin_trans('player.set_promoter'), 'fas fa-key')
                         ->modal([$this, 'setPromoter'], ['id' => $data['id']])->width('25%');
                 }
+
+                // 开分
+                $dropdown->append(admin_trans('channel_agent.open_score'), 'fas fa-coins')
+                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px');
+
+                // 游戏账号
+                $dropdown->append('游戏账号', 'fas fa-user-circle')
+                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
+                    ->width('90%');
 
                 if ($channel->wallet_action_status == 1) {
                     $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
@@ -653,6 +755,11 @@ class ChannelPlayerController
                         'money' => $data['money'] ?? 0,
                         'is_crashed' => $data['is_crashed'] ?? 0,
                     ])->width('600px');
+
+                // 百家禁用
+                $dropdown->append('百家禁用', 'fas fa-ban')
+                    ->modal([$this, 'playerPlatformList'], ['player_id' => $data['id']])
+                    ->width('80%');
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -726,6 +833,11 @@ class ChannelPlayerController
         // 设备ID筛选
         if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
             $query->where('player.id', $requestFilter['player_id']);
+        }
+
+        // VIP等级筛选
+        if (isset($requestFilter['vip_level_id']) && $requestFilter['vip_level_id'] !== '') {
+            $query->where('player.vip_level_id', $requestFilter['vip_level_id']);
         }
 
         // 线下渠道：按 player_type 筛选
@@ -1316,7 +1428,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -1506,7 +1618,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -2458,7 +2570,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -2524,8 +2636,7 @@ class ChannelPlayerController
                         $playerMoneyEditLog->inmoney = $playerRechargeRecord->inmoney;
                         $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerMoneyEditLog->origin_money = $beforeGameAmount;
                         $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
                         $playerMoneyEditLog->save();
@@ -2588,7 +2699,7 @@ class ChannelPlayerController
                     $lockKey = "player:balance:lock:{$player->id}";
                     $lock = \support\Redis::set($lockKey, 1, ['NX', 'EX' => 10]);
                     if (!$lock) {
-                        return message_error('操作繁忙，请稍后重试');
+                        return message_error(admin_trans('common.error.busy_retry'));
                     }
 
                     try {
@@ -2614,8 +2725,7 @@ class ChannelPlayerController
                         $playerWithdrawRecord->finish_time = date('Y-m-d H:i:s');
                         $playerWithdrawRecord->remark = $form->input('remark') ?? '';
                         $playerWithdrawRecord->user_id = Admin::id() ?? 0;
-                        $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerWithdrawRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerWithdrawRecord->save();
 
                         $withdrawAmount = $playerWithdrawRecord->point;
@@ -2663,8 +2773,7 @@ class ChannelPlayerController
                         $playerMoneyEditLog->inmoney = bcsub($playerWithdrawRecord->money, $playerWithdrawRecord->fee, 2);
                         $playerMoneyEditLog->remark = $form->input('remark') ?? '';
                         $playerMoneyEditLog->user_id = Admin::id() ?? 0;
-                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                            [], 'message');
+                        $playerMoneyEditLog->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                         $playerMoneyEditLog->origin_money = $beforeGameAmount;
                         $playerMoneyEditLog->after_money = $newBalance;  // ✅ 使用 Redis 计算的新值
                         $playerMoneyEditLog->save();
@@ -4834,7 +4943,7 @@ class ChannelPlayerController
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable_switch', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
 
@@ -4910,7 +5019,7 @@ class ChannelPlayerController
             }
         } catch (Exception $e) {
             Log::error('toggle_game_disable', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
 
@@ -5138,8 +5247,8 @@ class ChannelPlayerController
                 // 开分逻辑
                 DB::beginTransaction();
                 try {
-                    /** @var PlayerPlatformCash $deviceWallet */
-                    $deviceWallet = PlayerPlatformCash::query()->where('player_id', $devicePlayer->id)->lockForUpdate()->first();
+                    // ✅ 从 Redis 读取充值前余额
+                    $beforeGameAmount = \addons\webman\service\WalletService::getBalance($devicePlayer->id);
 
                     // 生成充值订单
                     $playerRechargeRecord = new PlayerRechargeRecord();
@@ -5165,9 +5274,8 @@ class ChannelPlayerController
                     $playerRechargeRecord->user_name = Admin::user()->name ?? '';
                     $playerRechargeRecord->save();
 
-                    // 更新玩家钱包
-                    $deviceWallet->money = bcadd($deviceWallet->money, $playerRechargeRecord->point, 2);
-                    $deviceWallet->save();
+                    // ✅ 使用 WalletService 原子加款（主玩家充值）
+                    $afterGameAmount = \addons\webman\service\WalletService::add($devicePlayer->id, $playerRechargeRecord->point);
 
                     // 更新玩家充值总额
                     $devicePlayer->player_extend->recharge_amount = bcadd($devicePlayer->player_extend->recharge_amount,
@@ -5184,12 +5292,13 @@ class ChannelPlayerController
                             // 推广员为全民代理
                             if (!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1) {
                                 // 首充返佣金额
-                                /** @var PlayerPlatformCash $recommendPlayerWallet */
-                                $recommendPlayerWallet = PlayerPlatformCash::query()->where('player_id',
-                                    $devicePlayer->recommend_id)->lockForUpdate()->first();
-                                $beforeRechargeAmount = $recommendPlayerWallet->money;
                                 $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
-                                $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $rechargeRebate, 2);
+
+                                // ✅ 从 Redis 读取推荐人余额（返佣前）
+                                $beforeRechargeAmount = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                                // ✅ 使用 WalletService 原子加款（推荐人返佣）
+                                $afterRechargeAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $rechargeRebate);
 
                                 // 写入首充金流明细
                                 $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -5201,7 +5310,7 @@ class ChannelPlayerController
                                 $playerDeliveryRecord->source = 'national_promoter';
                                 $playerDeliveryRecord->amount = $rechargeRebate;
                                 $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
-                                $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                $playerDeliveryRecord->amount_after = $afterRechargeAmount;  // ✅ 使用返回值
                                 $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                                 $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                                 $playerDeliveryRecord->save();
@@ -5216,8 +5325,13 @@ class ChannelPlayerController
 
                                 if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
                                     $inviteMoney = $national_invite->money;
-                                    $amount_before = $recommendPlayerWallet->money;
-                                    $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $inviteMoney, 2);
+
+                                    // ✅ 从 Redis 读取推荐人余额（邀请奖励前）
+                                    $amount_before = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                                    // ✅ 使用 WalletService 原子加款（邀请奖励）
+                                    $afterInviteAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $inviteMoney);
+
                                     // 写入金流明细
                                     $inviteDeliveryRecord = new PlayerDeliveryRecord;
                                     $inviteDeliveryRecord->player_id = $recommendPlayer->id;
@@ -5228,13 +5342,12 @@ class ChannelPlayerController
                                     $inviteDeliveryRecord->source = 'national_promoter';
                                     $inviteDeliveryRecord->amount = $inviteMoney;
                                     $inviteDeliveryRecord->amount_before = $amount_before;
-                                    $inviteDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                    $inviteDeliveryRecord->amount_after = $afterInviteAmount;  // ✅ 使用返回值
                                     $inviteDeliveryRecord->tradeno = '';
                                     $inviteDeliveryRecord->remark = '';
                                     $inviteDeliveryRecord->save();
                                 }
                                 $recommendPlayer->push();
-                                $recommendPlayerWallet->save();
 
                                 // 全民代理收益记录
                                 $nationalProfitRecord = new NationalProfitRecord();
@@ -5259,8 +5372,8 @@ class ChannelPlayerController
                     $rechargeDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
                     $rechargeDeliveryRecord->source = 'artificial_recharge';
                     $rechargeDeliveryRecord->amount = $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_before = $deviceWallet->money - $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_after = $deviceWallet->money;
+                    $rechargeDeliveryRecord->amount_before = $beforeGameAmount;  // ✅ 使用上方已获取的充值前余额
+                    $rechargeDeliveryRecord->amount_after = $afterGameAmount;   // ✅ 使用 WalletService::add() 返回值
                     $rechargeDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                     $rechargeDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                     $rechargeDeliveryRecord->save();
@@ -5273,7 +5386,7 @@ class ChannelPlayerController
                 } catch (Exception $e) {
                     DB::rollBack();
                     Log::error('store_open_score', [$e->getTrace()]);
-                    return message_error($e->getMessage() ?? trans('system_error', [], 'message'));
+                    return message_error($e->getMessage() ?? admin_trans('message.system_error'));
                 }
 
                 // 发送充值通知（发送游戏点数）
@@ -5391,11 +5504,11 @@ class ChannelPlayerController
 
         // 验证洗分金额
         if ($washAmount <= 0) {
-            return message_error('洗分金额必须大于0');
+            return message_error(admin_trans('player.error.wash_amount_must_greater_than_zero'));
         }
 
         if ($deductAmount <= 0) {
-            return message_error('钱包扣除金额必须大于0');
+            return message_error(admin_trans('player.error.wallet_deduct_amount_must_greater_than_zero'));
         }
 
         /** @var Player $player */
@@ -5414,7 +5527,7 @@ class ChannelPlayerController
             ->first();
 
         if (!$currency) {
-            return message_error('币种配置不存在');
+            return message_error(admin_trans('player.error.currency_config_not_found'));
         }
 
         // ✅ 重新检查爆机状态和余额（表单提交前余额可能已变化）
@@ -5423,7 +5536,7 @@ class ChannelPlayerController
 
         // 如果余额为0，不允许洗分
         if ($previousAmount <= 0) {
-            return message_error('当前余额为0，无法洗分');
+            return message_error(admin_trans('player.error.zero_balance_cannot_wash'));
         }
 
         // ✅ 根据最新余额和爆机状态重新计算洗分金额
@@ -5461,7 +5574,7 @@ class ChannelPlayerController
                 'deduct_amount' => $deductAmount,
                 'error' => $e->getMessage(),
             ]);
-            return message_error('扣款失败：' . $e->getMessage());
+            return message_error(admin_trans('player.error.deduction_failed') . ': ' . $e->getMessage());
         }
 
         // ✅ 创建业务记录（提现记录、金流明细等）
@@ -5843,13 +5956,13 @@ class ChannelPlayerController
             // 验证平台是否存在
             $platform = GamePlatform::query()->find($platform_id);
             if (empty($platform)) {
-                return message_error('平台不存在');
+                return message_error(admin_trans('player.error.platform_not_found'));
             }
 
             // 获取渠道允许的游戏平台
             $channelGamePlatformIds = json_decode($player->channel->game_platform, true);
             if (empty($channelGamePlatformIds) || !in_array($platform_id, $channelGamePlatformIds)) {
-                return message_error('平台不在渠道范围内');
+                return message_error(admin_trans('player.error.platform_not_in_channel'));
             }
 
             // 查询当前是否已禁用（game_id=0）
@@ -5896,7 +6009,7 @@ class ChannelPlayerController
             }
         } catch (Exception $e) {
             Log::error('toggle_platform_disable_switch', [$e->getMessage(), $e->getTrace()]);
-            return message_error('操作失败：' . $e->getMessage());
+            return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
 }

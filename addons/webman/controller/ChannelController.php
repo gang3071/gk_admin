@@ -14,6 +14,7 @@ use addons\webman\model\ExternalApp;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
+use addons\webman\model\VipLevel;
 use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Copy;
@@ -203,6 +204,9 @@ class ChannelController
                 }
                 if ($channel->lottery_status == 1) {
                     $channelFunction[] = 'lottery_status';
+                }
+                if ($channel->vip_level_status == 1) {
+                    $channelFunction[] = 'vip_level_status';
                 }
                 $html = Html::create();
                 foreach ($channelFunction as $option) {
@@ -491,11 +495,17 @@ class ChannelController
                 if ($channel->lottery_status == 1) {
                     $channelFunction[] = 'lottery_status';
                 }
+                if ($channel->lottery_ticket_enabled == 1) {
+                    $channelFunction[] = 'lottery_ticket_enabled';
+                }
                 if ($channel->eh_payment_recharge_status == 1) {
                     $channelFunction[] = 'eh_payment_recharge_status';
                 }
                 if ($channel->eh_payment_withdraw_status == 1) {
                     $channelFunction[] = 'eh_payment_withdraw_status';
+                }
+                if ($channel->vip_level_status == 1) {
+                    $channelFunction[] = 'vip_level_status';
                 }
             }
             $form->row(function (Form $form) use ($channelFunction) {
@@ -518,19 +528,50 @@ class ChannelController
                         'ranking_status' => admin_trans('channel.fields.ranking_status'),
                         'activity_status' => admin_trans('channel.fields.activity_status'),
                         'lottery_status' => admin_trans('channel.fields.lottery_status'),
+                        'lottery_ticket_enabled' => admin_trans('channel.fields.lottery_ticket_enabled'),
                         'gb_payment_recharge_status' => admin_trans('channel.fields.gb_payment_recharge_status'),
                         'gb_payment_withdraw_status' => admin_trans('channel.fields.gb_payment_withdraw_status'),
                         'status_machine' => admin_trans('channel.fields.status_machine'),
                         'eh_payment_recharge_status' => admin_trans('channel.fields.eh_payment_recharge_status'),
                         'eh_payment_withdraw_status' => admin_trans('channel.fields.eh_payment_withdraw_status'),
+                        'vip_level_status' => admin_trans('channel.fields.vip_level_status'),
                     ])
                     ->help(admin_trans('channel.channel_function_help'))
                     ->when([1], function (Form $form) {
                         $form->text('line_client_id', admin_trans('channel.fields.line_client_id'))
                             ->maxlength('50')
                             ->help(admin_trans('channel.line_client_id_help'));
+                    })
+                    ->when(['vip_level_status'], function (Form $form) {
+                        // 获取当前渠道的VIP等级列表
+                        $vipLevelOptions = [];
+                        $enabledLevelIds = [];
+                        if ($form->isEdit()) {
+                            $id = $form->driver()->get('id');
+                            $channel = Channel::find($id);
+                            if ($channel) {
+                                $vipLevels = VipLevel::query()
+                                    ->where('department_id', $channel->department_id)
+                                    ->orderBy('sort', 'asc')
+                                    ->get();
+                                foreach ($vipLevels as $level) {
+                                    $vipLevelOptions[$level->id] = $level->name;
+                                    if ($level->status == VipLevel::STATUS_ENABLED) {
+                                        $enabledLevelIds[] = $level->id;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (!empty($vipLevelOptions)) {
+                            $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
+                                ->options($vipLevelOptions)
+                                ->value($enabledLevelIds)
+                                ->help(admin_trans('channel.help.vip_levels'));
+                        }
                     });
             });
+
             $form->layout('vertical');
 
             $form->saving(function (Form $form) {
@@ -600,12 +641,14 @@ class ChannelController
                             $channel->app_force_update = $form->input('app_force_update') ? 1 : 0;
                             $channel->app_download_url = $form->input('app_download_url');
                         }
+                        $channel->vip_level_status = in_array('vip_level_status', $channelFunction) ? 1 : 0;
                         $channel->currency = $form->input('currency');
                         $channel->machine_media_line = $form->input('machine_media_line');
                         $channel->download_url = $form->input('download_url');
                         $channel->department_id = $adminDepartment->id;
                         $channel->user_id = $adminUser->id;
                         $channel->site_id = gen_uuid(); // 站点标识
+                        $channel->status = 1; // 默认启用渠道
                         $channel->recharge_status = in_array('recharge_status', $channelFunction);
                         $channel->q_talk_recharge_status = in_array('q_talk_recharge_status', $channelFunction);
                         $channel->q_talk_point_status = in_array('q_talk_point_status', $channelFunction);
@@ -624,6 +667,7 @@ class ChannelController
                         $channel->ranking_status = in_array('ranking_status', $channelFunction);
                         $channel->activity_status = in_array('activity_status', $channelFunction);
                         $channel->lottery_status = in_array('lottery_status', $channelFunction);
+                        $channel->lottery_ticket_enabled = in_array('lottery_ticket_enabled', $channelFunction);
                         $channel->gb_payment_recharge_status = in_array('gb_payment_recharge_status', $channelFunction);
                         $channel->gb_payment_withdraw_status = in_array('gb_payment_withdraw_status', $channelFunction);
                         $channel->status_machine = in_array('status_machine', $channelFunction);
@@ -746,6 +790,7 @@ class ChannelController
                             $channel->app_force_update = $form->input('app_force_update') ? 1 : 0;
                             $channel->app_download_url = $form->input('app_download_url');
                         }
+                        $channel->vip_level_status = in_array('vip_level_status', $channelFunction) ? 1 : 0;
                         $channel->currency = $form->input('currency');
                         $channel->machine_media_line = $form->input('machine_media_line');
                         $channel->download_url = $form->input('download_url');
@@ -769,6 +814,7 @@ class ChannelController
                         $channel->ranking_status = in_array('ranking_status', $channelFunction);
                         $channel->activity_status = in_array('activity_status', $channelFunction);
                         $channel->lottery_status = in_array('lottery_status', $channelFunction);
+                        $channel->lottery_ticket_enabled = in_array('lottery_ticket_enabled', $channelFunction);
                         $channel->status_machine = in_array('status_machine', $channelFunction);
                         $channel->eh_payment_recharge_status = in_array('eh_payment_recharge_status', $channelFunction);
                         $channel->eh_payment_withdraw_status = in_array('eh_payment_withdraw_status', $channelFunction);
@@ -813,6 +859,40 @@ class ChannelController
                         if (!empty($insert)) {
                             ChannelGameWeb::query()->insert($insert);
                         }
+
+                        // 处理VIP等级启用/禁用（当VIP等级功能开启时）
+                        if ($channel->vip_level_status == 1) {
+                            $selectedVipLevels = $form->input('vip_levels', []);
+                            if (!empty($selectedVipLevels)) {
+                                // 获取该渠道的所有VIP等级
+                                $allVipLevels = VipLevel::query()
+                                    ->where('department_id', $channel->department_id)
+                                    ->pluck('id')
+                                    ->toArray();
+
+                                // 启用选中的VIP等级
+                                VipLevel::query()
+                                    ->where('department_id', $channel->department_id)
+                                    ->whereIn('id', $selectedVipLevels)
+                                    ->update(['status' => VipLevel::STATUS_ENABLED]);
+
+                                // 禁用未选中的VIP等级
+                                $unselectedLevels = array_diff($allVipLevels, $selectedVipLevels);
+                                if (!empty($unselectedLevels)) {
+                                    VipLevel::query()
+                                        ->where('department_id', $channel->department_id)
+                                        ->whereIn('id', $unselectedLevels)
+                                        ->update(['status' => VipLevel::STATUS_DISABLED]);
+                                }
+
+                                Log::info("更新VIP等级状态", [
+                                    'department_id' => $channel->department_id,
+                                    'enabled_levels' => $selectedVipLevels,
+                                    'disabled_levels' => $unselectedLevels,
+                                ]);
+                            }
+                        }
+
                         DB::commit();
                     } catch (Exception $e) {
                         DB::rollBack();

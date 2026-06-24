@@ -54,6 +54,7 @@ return [
         PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => '再精算',
         PlayerDeliveryRecord::TYPE_PREPAY => '事前控除',
         PlayerDeliveryRecord::TYPE_REFUND => '返金',
+        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '抽選券当選報酬',
     ],
     'detail' => '詳細',
     'chart' => 'チャート',

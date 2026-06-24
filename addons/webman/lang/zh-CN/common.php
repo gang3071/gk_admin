@@ -160,4 +160,32 @@ return [
         'night' => '晚班',
         'night_desc' => '晚班自动交班（00:00-08:00）',
     ],
+
+    // 通用UI
+    'start_time' => '开始时间',
+    'end_time' => '结束时间',
+    'no_permission' => '没有权限',
+    'refresh' => '刷新',
+    'save' => '保存',
+    'cancel' => '取消',
+    'loading' => '加载中...',
+    'submit' => '提交',
+    'confirm' => '确认',
+    'delete' => '删除',
+    'edit' => '编辑',
+    'view' => '查看',
+    'create' => '创建',
+    'update' => '更新',
+    'search' => '搜索',
+    'reset' => '重置',
+    'export' => '导出',
+    'import' => '导入',
+    'close' => '关闭',
+    'back' => '返回',
+
+    // 通用错误（分组）
+    'error' => [
+        'busy_retry' => '操作繁忙，请稍后重试',
+        'operation_failed' => '操作失败',
+    ],
 ];

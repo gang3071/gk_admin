@@ -13,6 +13,7 @@ return [
         'withdraw_amount' => '累計洗分',
         'machine_put_point' => '投鈔',
         'lottery_amount' => '宝くじ',
+        'activity_total' => 'アクティビティ報酬',
         'subtotal' => '小計',
         'agent_commission' => '代理手数料率',
         'agent_profit' => '代理分潤',

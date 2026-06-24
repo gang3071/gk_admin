@@ -73,7 +73,8 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")
             ->first();
 
@@ -81,6 +82,7 @@ class ChannelIndexController
             'recharge_total' => $operationStatisticsQuery->recharge_total ?? 0,
             'withdrawal_total' => $operationStatisticsQuery->withdrawal_total ?? 0,
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
+            'activity_total' => $operationStatisticsQuery->activity_total ?? 0,
         ];
 
         // ✅ 拉彩统计数据（使用子查询，channelIndex 使用 department_id）
@@ -126,13 +128,17 @@ class ChannelIndexController
         $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金)
+            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
             $incomeTotal = bcadd(
                 $operationStatistics['recharge_total'] ?? 0,
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal = $operationStatistics['withdrawal_total'] ?? 0;
+            $outcomeTotal = bcadd(
+                bcadd($operationStatistics['withdrawal_total'] ?? 0, $lotteryStatistics['lottery_amount'] ?? 0, 2),
+                $operationStatistics['activity_total'] ?? 0,
+                2
+            );
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // 数据周期筛选
@@ -1302,13 +1308,15 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")
             ->first();
 
         $rechargeAmount = $deliveryStatisticsQuery->recharge_total ?? 0;
         $withdrawAmount = $deliveryStatisticsQuery->withdrawal_total ?? 0;
         $machinePutPoint = $deliveryStatisticsQuery->machine_put_point ?? 0;
+        $activityTotal = $deliveryStatisticsQuery->activity_total ?? 0;
 
         // ✅ 查询电子游戏总押注（使用子查询）
         $electronicBetTotal = PlayGameRecord::query()
@@ -1374,6 +1382,7 @@ class ChannelIndexController
             'recharge_amount' => $rechargeAmount,
             'withdraw_amount' => $withdrawAmount,
             'machine_put_point' => $machinePutPoint,
+            'activity_total' => $activityTotal,
             'electronic_bet' => $electronicBetTotal,
             'steel_ball_bet' => $steelBallBetTotal,
             'slot_bet' => $slotBetTotal,
@@ -1445,13 +1454,17 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'agentIndex'], ['data_type' => 'month']);
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_month']);
 
-        // 计算盈余小计 = (开分 + 投钞) - (洗分 + 彩金)
+        // 计算盈余小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
         $incomeTotal = bcadd(
             $statisticsData['recharge_amount'] ?? 0,
             $statisticsData['machine_put_point'] ?? 0,
             2
         );
-        $outcomeTotal = $statisticsData['withdraw_amount'] ?? 0;
+        $outcomeTotal = bcadd(
+            bcadd($statisticsData['withdraw_amount'] ?? 0, $lotteryStatistics['lottery_amount'] ?? 0, 2),
+            $statisticsData['activity_total'] ?? 0,
+            2
+        );
         $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
         $layout = Layout::create();
@@ -1972,9 +1985,46 @@ class ChannelIndexController
                 ])
                 ->toArray();
 
+            // 查询彩金数据
+            $lotteryData = PlayerLotteryRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`amount`) as lottery_amount')
+                ])
+                ->toArray();
+
+            // 查询活动奖励数据
+            $activityData = PlayerDeliveryRecord::query()
+                ->whereDate('created_at', '>=', $range)
+                ->whereHas('player', function ($query) use ($storeIds) {
+                    $query->whereIn('store_admin_id', $storeIds)
+                        ->where('is_promoter', 0);
+                })
+                ->whereIn('type', [
+                    PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                    PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
+                ])
+                ->groupBy('date')
+                ->orderBy('date', 'DESC')
+                ->get([
+                    DB::raw('Date(`created_at`) as date'),
+                    DB::raw('SUM(`amount`) as activity_amount')
+                ])
+                ->toArray();
+
             $dataA = $rechargeData ? array_column($rechargeData, 'recharge_amount', 'date') : [];
             $dataB = $withdrawData ? array_column($withdrawData, 'withdraw_amount', 'date') : [];
             $dataC = $machineData ? array_column($machineData, 'machine_amount', 'date') : [];
+            $dataD = $lotteryData ? array_column($lotteryData, 'lottery_amount', 'date') : [];
+            $dataE = $activityData ? array_column($activityData, 'activity_amount', 'date') : [];
         }
 
         $xAxis = [];
@@ -1985,7 +2035,10 @@ class ChannelIndexController
             $rechargeAmount = $dataA[$date] ?? 0;
             $withdrawAmount = $dataB[$date] ?? 0;
             $machinePutPoint = $dataC[$date] ?? 0;
-            $yAxis[] = $rechargeAmount + $machinePutPoint - $withdrawAmount;
+            $lotteryAmount = $dataD[$date] ?? 0;
+            $activityAmount = $dataE[$date] ?? 0;
+            // 盈亏 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
+            $yAxis[] = $rechargeAmount + $machinePutPoint - $withdrawAmount - $lotteryAmount - $activityAmount;
         }
         return BarChart::create()
             ->height('280px')
@@ -2081,7 +2134,8 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")
             ->first();
 
@@ -2089,6 +2143,7 @@ class ChannelIndexController
             'recharge_total' => $operationStatisticsQuery->recharge_total ?? 0,
             'withdrawal_total' => $operationStatisticsQuery->withdrawal_total ?? 0,
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
+            'activity_total' => $operationStatisticsQuery->activity_total ?? 0,
         ];
 
         // ✅ 拉彩统计数据（使用子查询替代 whereIn）
@@ -2288,15 +2343,15 @@ class ChannelIndexController
                 Admin::user()->id)->orderBy('id', 'desc')->first();
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金)
+            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
             $incomeTotal = bcadd(
                 $operationStatistics['recharge_total'] ?? 0,
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
             $outcomeTotal = bcadd(
-                $operationStatistics['withdrawal_total'] ?? 0,
-                $lotteryStatistics['lottery_amount'] ?? 0,
+                bcadd($operationStatistics['withdrawal_total'] ?? 0, $lotteryStatistics['lottery_amount'] ?? 0, 2),
+                $operationStatistics['activity_total'] ?? 0,
                 2
             );
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
@@ -2913,6 +2968,8 @@ class ChannelIndexController
                             PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分
                             PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD, // 后台加点
                             PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT, // 后台扣点
+                            PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,      // 活动奖励
+                            PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // 摸奖券奖励
                         ])
                         ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
                         ->where('player_delivery_record.created_at', '<=', $endTime)
@@ -2921,6 +2978,10 @@ class ChannelIndexController
                                 THEN player_delivery_record.amount ELSE 0 END) AS machine_put_point,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS lottery_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS activity_bonus_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS lottery_ticket_reward_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . "
@@ -2936,6 +2997,8 @@ class ChannelIndexController
                     $playerDeliveryRecord = $result ? $result->toArray() : [
                         'machine_put_point' => 0,
                         'lottery_amount' => 0,
+                        'activity_bonus_amount' => 0,
+                        'lottery_ticket_reward_amount' => 0,
                         'recharge_amount' => 0,
                         'withdrawal_amount' => 0,
                         'modified_add_amount' => 0,
@@ -3021,6 +3084,10 @@ class ChannelIndexController
 
                     $storeAgentShiftHandoverRecord->lottery_amount =
                         $playerDeliveryRecord['lottery_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->activity_bonus_amount =
+                        $playerDeliveryRecord['activity_bonus_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->lottery_ticket_reward_amount =
+                        $playerDeliveryRecord['lottery_ticket_reward_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->start_time = $startTime;
                     $storeAgentShiftHandoverRecord->end_time = $endTime;
                     $storeAgentShiftHandoverRecord->user_id = $admin->id;
@@ -3217,20 +3284,15 @@ class ChannelIndexController
             // 统计该设备在此时间段的数据
             $result = PlayerDeliveryRecord::query()
                 ->selectRaw('
-                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as machine_point,
-                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
-                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
-                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
-                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
-                    SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_deduct_amount
-                ', [
-                    PlayerDeliveryRecord::TYPE_MACHINE,
-                    PlayerDeliveryRecord::TYPE_LOTTERY,
-                    PlayerDeliveryRecord::TYPE_RECHARGE,
-                    PlayerDeliveryRecord::TYPE_WITHDRAWAL,
-                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
-                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
-                ])
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ' THEN amount ELSE 0 END) as machine_point,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_LOTTERY . ' THEN amount ELSE 0 END) as lottery_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . ' THEN amount ELSE 0 END) as activity_bonus_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ' THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' THEN amount ELSE 0 END) as recharge_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' THEN amount ELSE 0 END) as withdrawal_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD . ' THEN amount ELSE 0 END) as modified_add_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT . ' THEN amount ELSE 0 END) as modified_deduct_amount
+                ')
                 ->where('player_id', $player->id)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
@@ -3239,6 +3301,8 @@ class ChannelIndexController
             $data = $result ? $result->toArray() : [
                 'machine_point' => 0,
                 'lottery_amount' => 0,
+                'activity_bonus_amount' => 0,
+                'lottery_ticket_reward_amount' => 0,
                 'recharge_amount' => 0,
                 'withdrawal_amount' => 0,
                 'modified_add_amount' => 0,
@@ -3247,7 +3311,15 @@ class ChannelIndexController
 
             // 计算总收入、总支出、利润
             $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
-            $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
+            $totalOut = bcadd(
+                bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2),
+                bcadd(
+                    bcadd($data['lottery_amount'], $data['activity_bonus_amount'], 2),
+                    $data['lottery_ticket_reward_amount'],
+                    2
+                ),
+                2
+            );
             $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut,2);
 
             // 只保存有数据的设备（至少有一项不为0）
@@ -3267,6 +3339,8 @@ class ChannelIndexController
                     'modified_add_amount' => (float)$data['modified_add_amount'],
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],
+                    'activity_bonus_amount' => (float)$data['activity_bonus_amount'],
+                    'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
                     'total_in' => (float)$totalIn,
                     'total_out' => (float)$totalOut,
                     'profit' => (float)$profit,

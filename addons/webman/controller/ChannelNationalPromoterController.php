@@ -32,9 +32,9 @@ use ExAdmin\ui\component\grid\ToolTip;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
+use Exception;
 use Illuminate\Support\Str;
 use support\Db;
-use think\Exception;
 
 /**
  * 渠道玩家

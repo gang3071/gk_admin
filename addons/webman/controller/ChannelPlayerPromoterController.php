@@ -45,10 +45,10 @@ use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use Exception;
 use Illuminate\Support\Str;
 use support\Db;
 use support\Log;
-use think\Exception;
 use Webman\RedisQueue\Client;
 
 /**
@@ -1262,7 +1262,10 @@ class ChannelPlayerPromoterController
                 $db = PromoterProfitRecord::whereRaw('promoter_player_id = ' . $id . ' and status = ' . PromoterProfitRecord::STATUS_UNCOMPLETED)
                     ->select('date');
                 $grid->model()
-                    ->where('type', PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS)
+                    ->whereIn('type', [
+                        PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // ⭐ 摸奖券奖励
+                    ])
                     ->whereIn('player_id', function ($query) use ($id) {
                         $query->select('player_id')
                             ->from('promoter_profit_record')
@@ -1273,7 +1276,10 @@ class ChannelPlayerPromoterController
                     ->orderBy('id', 'desc');
             } else {
                 $grid->model()
-                    ->where('type', PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS)
+                    ->whereIn('type', [
+                        PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // ⭐ 摸奖券奖励
+                    ])
                     ->where('player_id', $id)
                     ->whereDate('updated_at', $date)
                     ->orderBy('id', 'desc');
@@ -1640,6 +1646,7 @@ class ChannelPlayerPromoterController
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
                         return Tag::create(trans($val, [], 'message', $lang))->color('red');
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
                         return Tag::create(trans($val, [], 'message', $lang))->color('blue');
                     default:
                         return '';
@@ -2055,8 +2062,12 @@ class ChannelPlayerPromoterController
             $playerPromoter->last_settlement_time = date('Y-m-d');
             $playerPromoter->last_settlement_timestamp = date('Y-m-d H:i:s');
             //线下站结算只产生记录不增加余额
-            $amountBefore = $playerPromoter->player->machine_wallet->money;
-            $amountAfter = bcadd($amountBefore, $settlement, 2);
+            // ✅ 从 Redis 读取推广员余额（结算前）
+            $amountBefore = \addons\webman\service\WalletService::getBalance($playerPromoter->player_id);
+
+            // ✅ 使用 WalletService 原子加款（推广员收益结算）
+            $amountAfter = \addons\webman\service\WalletService::add($playerPromoter->player_id, $settlement);
+
             $playerDeliveryRecord = new PlayerDeliveryRecord;
             $playerDeliveryRecord->player_id = $playerPromoter->player_id;
             $playerDeliveryRecord->department_id = $playerPromoter->department_id;
@@ -2066,7 +2077,7 @@ class ChannelPlayerPromoterController
             $playerDeliveryRecord->source = 'profit';
             $playerDeliveryRecord->amount = $settlement;
             $playerDeliveryRecord->amount_before = $amountBefore;
-            $playerDeliveryRecord->amount_after = $amountAfter;
+            $playerDeliveryRecord->amount_after = $amountAfter;  // ✅ 使用返回值
             $playerDeliveryRecord->tradeno = $promoterProfitSettlementRecord->tradeno ?? '';
             $playerDeliveryRecord->remark = '';
             $playerDeliveryRecord->save();
@@ -2193,9 +2204,12 @@ class ChannelPlayerPromoterController
                     ]);
             }
             if ($is_settlement && $settlement > 0) {
-                // 增加钱包余额
-                $amountBefore = $playerPromoter->player->machine_wallet->money;
-                $amountAfter = bcadd($amountBefore, $settlement, 2);
+                // ✅ 从 Redis 读取推广员余额（结算前）
+                $amountBefore = \addons\webman\service\WalletService::getBalance($playerPromoter->player_id);
+
+                // ✅ 使用 WalletService 原子加款（推广员收益结算）
+                $amountAfter = \addons\webman\service\WalletService::add($playerPromoter->player_id, $settlement);
+
                 $playerDeliveryRecord = new PlayerDeliveryRecord;
                 $playerDeliveryRecord->player_id = $playerPromoter->player_id;
                 $playerDeliveryRecord->department_id = $playerPromoter->department_id;
@@ -2205,13 +2219,10 @@ class ChannelPlayerPromoterController
                 $playerDeliveryRecord->source = 'profit';
                 $playerDeliveryRecord->amount = $settlement;
                 $playerDeliveryRecord->amount_before = $amountBefore;
-                $playerDeliveryRecord->amount_after = $amountAfter;
+                $playerDeliveryRecord->amount_after = $amountAfter;  // ✅ 使用返回值
                 $playerDeliveryRecord->tradeno = $promoterProfitSettlementRecord->tradeno ?? '';
                 $playerDeliveryRecord->remark = '';
                 $playerDeliveryRecord->save();
-
-                $playerPromoter->player->machine_wallet->money = $amountAfter;
-                $playerPromoter->player->machine_wallet->save();
             }
             $playerPromoter->push();
             DB::commit();

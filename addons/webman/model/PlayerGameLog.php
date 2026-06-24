@@ -114,6 +114,9 @@ class PlayerGameLog extends Model
     protected static function booted()
     {
         static::created(function (PlayerGameLog $playerGameLog) {
+            // 注意：摸奖券打码进度更新由定时任务处理（LotteryBetProgressScanTask）
+            // 因为游戏记录在 gk_work 批量插入，模型事件在 gk_admin 中不会触发
+
             $date = date('Y-m-d');
             /** @var MachineReport $machineReport */
             $machineReport = MachineReport::where('machine_id', $playerGameLog->machine_id)

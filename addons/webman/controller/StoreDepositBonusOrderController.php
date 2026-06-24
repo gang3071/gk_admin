@@ -8,10 +8,12 @@ use addons\webman\model\DepositBonusActivity;
 use addons\webman\model\DepositBonusOrder;
 use addons\webman\model\Player;
 use app\service\DepositBonusQrcodeService;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\detail\Detail;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -161,12 +163,14 @@ class StoreDepositBonusOrderController
             $grid->setForm()->drawer($this->form());
             $grid->hideDelete();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
-                $actions->add(['addons-webman-controller-StoreDepositBonusOrderController', 'detail'], ['id' => '{id}'])
-                    ->drawer()
-                    ->content(admin_trans('deposit_bonus_order.view_detail'));
+                $actions->prepend(
+                    Button::create(admin_trans('deposit_bonus_order.view_detail'))
+                        ->type('link')
+                        ->drawer([$this, 'detail'], ['id' => $data['id']])
+                );
             })->align('center');
         });
     }

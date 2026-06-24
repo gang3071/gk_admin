@@ -17,7 +17,11 @@ use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\service\MediaServer;
 use addons\webman\service\WalletService;
-use app\service\machine\MachineServices;
+use app\service\machine\Jackpot;
+use app\service\machine\Slot;
+use app\service\machine\SongJackpot;
+use app\service\machine\SongSlot;
+use app\service\MachineApiService;
 use Carbon\CarbonInterval;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -37,7 +41,6 @@ use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Col;
-use ExAdmin\ui\component\layout\Divider;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\component\navigation\dropdown\Dropdown;
@@ -46,7 +49,6 @@ use ExAdmin\ui\response\Notification;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
 use Exception;
-use GatewayWorker\Lib\Gateway;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use support\Cache;
@@ -198,22 +200,14 @@ class MachineController
             ->display(function ($val, Machine $data) {
                 $machineStatus = 'offline';
                 try {
-                    switch ($data->type) {
-                        case GameType::TYPE_SLOT:
-                            if (Gateway::isUidOnline($data->domain . ':' . $data->port) && Gateway::isUidOnline($data->auto_card_domain . ':' . $data->auto_card_port)) {
-                                $machineStatus = 'online';
-                            }
-                            break;
-                        case GameType::TYPE_STEEL_BALL:
-                            if (Gateway::isUidOnline($data->domain . ':' . $data->port)) {
-                                $machineStatus = 'online';
-                            }
-                            break;
+                    // 通过 API 检查机台在线状态
+                    if ($this->checkMachineOnlineViaApi($data)) {
+                        $machineStatus = 'online';
                     }
                 } catch (\Exception $e) {
-                    // Gateway 服务不可用时默认显示离线
-                    \support\Log::warning('Gateway connection failed', [
-                        'register_address' => Gateway::$registerAddress ?? 'not set',
+                    // API 服务不可用时默认显示离线
+                    \support\Log::warning('Check machine online via API failed', [
+                        'machine_id' => $data->id,
                         'error' => $e->getMessage()
                     ]);
                 }
@@ -239,7 +233,13 @@ class MachineController
         )
             ->align('left');
         $grid->column('viewers', admin_trans('machine.fields.viewers'))->display(function ($val, Machine $data) {
-            return getViewers($data->id);
+            $media = MachineMedia::where('machine_id', $data->id)->whereNull('deleted_at')->first();
+            if (!$media) {
+                return 0;
+            }
+            $mediaServer = new MediaServer($media->push_ip, $media->media_app);
+            $viewers = $mediaServer->getViewers($media->stream_name);
+            return $viewers !== false ? $viewers : 0;
         })->align('center');
         $grid->column('min_point', admin_trans('machine.fields.min_point'))->align('center');
         $grid->column('max_point', admin_trans('machine.fields.max_point'))->align('center');
@@ -250,8 +250,8 @@ class MachineController
             $val,
             Machine $data
         ) {
-            $services = MachineServices::createServices($data);
-            return Switches::create(null, $services->has_lock)
+            $services = $this->getMachineStatusViaApi($data);
+            return Switches::create(null, $services->has_lock ?? 0)
                 ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
                 ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
                 ->field('has_lock')
@@ -539,32 +539,62 @@ class MachineController
                 })
                 ->pane(admin_trans('machine_media.media_line'), function (Form $form) {
                     $form->hasMany('machine_media', '', function (Form $form) {
+                        $form->hidden('id');
+
+                        // 第一行：推流地址 + 拉流地址
                         $form->row(function (Form $form) {
-                            $form->hidden('id');
-                            $form->password('push_ip',
-                                admin_trans('machine_media.fields.push_ip'))->visibilityToggle(false)->span(11)->required();
-                            $form->push(Divider::create()->content(' '));
-                            $form->text('pull_ip', admin_trans('machine_media.fields.pull_ip'))->span(11)->required();
-                            $form->text('media_ip', admin_trans('machine_media.fields.media_ip'))->span(11)->required();
-                            $form->push(Divider::create()->content(' '));
-                            $form->select('media_app', admin_trans('machine_media.fields.media_app'))
-                                ->options([
-                                    'WebRTCAppEE' => 'WebRTCAppEE',
-                                    'ShenQi' => 'ShenQi',
-                                    'h265' => 'h265',
-                                    'life' => 'life',
-                                ])
-                                ->default('WebRTCAppEE')
-                                ->required()
-                                ->showSearch()
-                                ->span(11)
-                                ->dropdownMatchSelectWidth()
-                                ->style(['width' => '100%']);
-                            $form->text('stream_name',
-                                admin_trans('machine_media.fields.stream_name'))->span(11)->disabled(true)->help(admin_trans('machine.help.stream_name'));
-                            $form->push(Divider::create()->content(' '));
-                            $form->switch('is_ams', admin_trans('machine_media.fields.is_ams'));
-                        })->class(['activity-phase-has-many']);
+                            $form->column(function (Form $form) {
+                                $form->password('push_ip', admin_trans('machine_media.fields.push_ip'))
+                                    ->visibilityToggle(false)
+                                    ->required()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+
+                            $form->column(function (Form $form) {
+                                $form->text('pull_ip', admin_trans('machine_media.fields.pull_ip'))
+                                    ->required()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+                        });
+
+                        // 第二行：流媒体地址 + 流媒体APP
+                        $form->row(function (Form $form) {
+                            $form->column(function (Form $form) {
+                                $form->text('media_ip', admin_trans('machine_media.fields.media_ip'))
+                                    ->required()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+
+                            $form->column(function (Form $form) {
+                                $form->select('media_app', admin_trans('machine_media.fields.media_app'))
+                                    ->options([
+                                        'WebRTCAppEE' => 'WebRTCAppEE',
+                                        'ShenQi' => 'ShenQi',
+                                        'h265' => 'h265',
+                                        'life' => 'life',
+                                    ])
+                                    ->default('WebRTCAppEE')
+                                    ->required()
+                                    ->showSearch()
+                                    ->dropdownMatchSelectWidth()
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+                        });
+
+                        // 第三行：流名称 + AMS开关
+                        $form->row(function (Form $form) {
+                            $form->column(function (Form $form) {
+                                $form->text('stream_name', admin_trans('machine_media.fields.stream_name'))
+                                    ->disabled(true)
+                                    ->help(admin_trans('machine.help.stream_name'))
+                                    ->style(['width' => '100%']);
+                            })->span(12);
+
+                            $form->column(function (Form $form) {
+                                $form->switch('is_ams', admin_trans('machine_media.fields.is_ams'))
+                                    ->default(false);
+                            })->span(12);
+                        });
                     })->sortField('sort')->defaultRow(1);
                 })->destroyInactiveTabPane(false);
 
@@ -717,23 +747,23 @@ class MachineController
         $isAms = 0,
     ): bool|MachineMedia {
         if (!empty($pushIp) || !empty($mediaIp) || !empty($pullIp) || !empty($mediaApp)) {
-            Db::beginTransaction();
-            try {
-                if (empty($pushIp)) {
-                    throw new Exception(admin_trans('machine_media.push_ip_not_found'));
-                }
-                if (empty($pullIp)) {
-                    throw new Exception(admin_trans('machine_media.pull_ip_not_found'));
-                }
-                if (empty($mediaIp)) {
-                    throw new Exception(admin_trans('machine_media.media_ip_not_found'));
-                }
-                if (empty($code)) {
-                    throw new Exception(admin_trans('machine_media.media_name_not_found'));
-                }
-                if (empty($mediaApp)) {
-                    throw new Exception(admin_trans('machine_media.media_app_not_found'));
-                }
+            // ⚠️ 移除内层事务，由外层调用者控制事务
+            // 这样可以避免嵌套事务导致的锁等待超时问题
+            if (empty($pushIp)) {
+                throw new Exception(admin_trans('machine_media.push_ip_not_found'));
+            }
+            if (empty($pullIp)) {
+                throw new Exception(admin_trans('machine_media.pull_ip_not_found'));
+            }
+            if (empty($mediaIp)) {
+                throw new Exception(admin_trans('machine_media.media_ip_not_found'));
+            }
+            if (empty($code)) {
+                throw new Exception(admin_trans('machine_media.media_name_not_found'));
+            }
+            if (empty($mediaApp)) {
+                throw new Exception(admin_trans('machine_media.media_app_not_found'));
+            }
                 /** @var MachineMedia $media */
                 if (!empty($mediaId)) {
                     $media = MachineMedia::find($mediaId);
@@ -748,6 +778,9 @@ class MachineController
                         $insertData = [];
                         /** @var MachineTencentPlay $machineTencentPlay */
                         $machineTencentPlay = MachineTencentPlay::query()->where('status', 1)->first();
+                        if (empty($machineTencentPlay)) {
+                            throw new Exception(admin_trans('machine_media.tencent_play_config_not_found'));
+                        }
                         $pushData = getPushUrl($media->machine->code, $machineTencentPlay->push_domain,
                             $machineTencentPlay->push_key);
                         $pushList[] = [
@@ -794,13 +827,15 @@ class MachineController
                     $media->sort = $sort;
                     $media->is_ams = $isAms;
                     $media->user_id = Admin::id() ?? 0;
-                    $media->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
-                        [], 'message');
+                    $media->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : admin_trans('message.system_automatic');
                     $pushList = [];
                     $insertData = [];
                     if ($isAms == 0) {
                         /** @var MachineTencentPlay $machineTencentPlay */
                         $machineTencentPlay = MachineTencentPlay::query()->where('status', 1)->first();
+                        if (empty($machineTencentPlay)) {
+                            throw new Exception(admin_trans('machine_media.tencent_play_config_not_found'));
+                        }
                         $pushData = getPushUrl($media->machine->code, $machineTencentPlay->push_domain,
                             $machineTencentPlay->push_key);
                         $pushList[] = [
@@ -837,11 +872,6 @@ class MachineController
                         MachineMediaPush::query()->insert($insertData);
                     }
                 }
-                Db::commit();
-            } catch (\Exception) {
-                Db::rollback();
-                throw new Exception(admin_trans('machine_media.get_media_fail'));
-            }
 
             return $media;
         }
@@ -900,6 +930,9 @@ class MachineController
             $insertData = [];
             /** @var MachineTencentPlay $machineTencentPlay */
             $machineTencentPlay = MachineTencentPlay::query()->where('status', 1)->first();
+            if (empty($machineTencentPlay)) {
+                throw new Exception(admin_trans('machine_media.tencent_play_config_not_found'));
+            }
             $pushData = getPushUrl($media->machine->code, $machineTencentPlay->push_domain,
                 $machineTencentPlay->push_key);
             $pushList[] = [
@@ -1062,8 +1095,8 @@ class MachineController
                 $val,
                 Machine $data
             ) {
-                $services = MachineServices::createServices($data, Container::getInstance()->translator->getLocale());
-                $seconds = $services->keep_seconds;
+                $services = $this->getMachineStatusViaApi($data, Container::getInstance()->translator->getLocale());
+                $seconds = $services->keep_seconds ?? 0;
                 if ($seconds > 3600) {
                     $hours = intval($seconds / 3600);
                     $time = $hours . ":" . gmstrftime('%M:%S', $seconds);
@@ -1078,10 +1111,10 @@ class MachineController
                 $val,
                 Machine $data
             ) {
-                $services = MachineServices::createServices($data);
-                return Switches::create(null, $services->has_lock)
+                $services = $this->getMachineStatusViaApi($data);
+                return Switches::create(null, $services->has_lock ?? 0)
                     ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
+                    ->url('ex-admin/machine/changeLock')
                     ->field('has_lock')
                     ->params([
                         'id' => [$data->id],
@@ -1089,19 +1122,21 @@ class MachineController
             })->align('center');
             $grid->column('last_point_at', admin_trans('machine.fields.last_point_at'))
                 ->display(function ($val, Machine $data) {
-                    $services = MachineServices::createServices($data,
+                    $services = $this->getMachineStatusViaApi($data,
                         Container::getInstance()->translator->getLocale());
+                    $lastPointAt = $services->last_point_at ?? 0;
                     return Html::create()->content([
-                        $services->last_point_at ? date('Y-m-d H:i:s', $services->last_point_at) : '',
+                        $lastPointAt ? date('Y-m-d H:i:s', $lastPointAt) : '',
                     ]);
                 })
                 ->align('center');
             $grid->column('last_game_at', admin_trans('machine.fields.last_game_at'))
                 ->display(function ($val, Machine $data) {
-                    $services = MachineServices::createServices($data,
+                    $services = $this->getMachineStatusViaApi($data,
                         Container::getInstance()->translator->getLocale());
+                    $lastPlayTime = $services->last_play_time ?? 0;
                     return Html::create()->content([
-                        $services->last_play_time ? date('Y-m-d H:i:s', $services->last_play_time) : '',
+                        $lastPlayTime ? date('Y-m-d H:i:s', $lastPlayTime) : '',
                     ]);
                 })->align('center');
             $grid->hideDelete();
@@ -1238,9 +1273,11 @@ class MachineController
         return Form::create(new $this->model(), function (Form $form) use ($id) {
             /** @var Machine $data */
             $data = $form->driver()->model()->where('id', $id)->first();
-            $services = MachineServices::createServices($data, Container::getInstance()->translator->getLocale());
-            $data->keep_seconds = $services->keep_seconds;
-            $data->keeping = $services->keeping;
+
+            // 通过 API 获取机台状态
+            $status = $this->getMachineStatusViaApi($data, Container::getInstance()->translator->getLocale());
+            $data->keep_seconds = $status->keep_seconds ?? 0;
+            $data->keeping = $status->keeping ?? 0;
             $form->push(Detail::create($data, function (Detail $detail) {
                 $detail->item('keep_seconds', admin_trans('machine.fields.keep_seconds'))->display(function ($val) {
                     return CarbonInterval::seconds($val)->cascade()->forHumans(null, true);
@@ -1284,13 +1321,18 @@ class MachineController
             $form->saving(function (Form $form) use ($id, $data) {
                 /** @var Machine $machine */
                 $machine = $form->driver()->model()->where('id', $id)->first();
-                $services = MachineServices::createServices($machine,
-                    Container::getInstance()->translator->getLocale());
+
+                // 通过 API 获取机台当前状态
+                $status = $this->getMachineStatusViaApi($machine, Container::getInstance()->translator->getLocale());
+
                 if ($machine->gaming == 0) {
                     return message_error(admin_trans('machine.has_un_gaming'));
                 }
+
                 $inputData = $form->input();
                 $duration = 0;
+                $newKeepSeconds = $status->keep_seconds ?? 0;
+
                 if (isset($inputData['duration']) && !empty($inputData['duration']) && $inputData['duration'] > 0) {
                     switch ($inputData['type']) {
                         case 1:
@@ -1304,37 +1346,40 @@ class MachineController
                             break;
                     }
                     if ($inputData['action_type'] == 1) {
-                        $services->keep_seconds = bcadd($services->keep_seconds, $duration);
+                        $newKeepSeconds = bcadd($newKeepSeconds, $duration);
                     } else {
-                        $services->keep_seconds = max(bcsub($services->keep_seconds, $duration), 0);
+                        $newKeepSeconds = max(bcsub($newKeepSeconds, $duration), 0);
                     }
+
+                    // 通过 API 更新保留时长
+                    MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds);
                 }
+
                 sendSocketMessage('player-' . $machine->gaming_user_id . '-' . $machine->id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
                 sendSocketMessage('player-' . $machine->gaming_user_id, [
                     'msg_type' => 'player_machine_keeping',
                     'player_id' => $machine->gaming_user_id,
                     'machine_id' => $machine->id,
-                    'keep_seconds' => $services->keep_seconds,
-                    'keeping' => $services->keeping
+                    'keep_seconds' => $newKeepSeconds,
+                    'keeping' => $status->keeping ?? 0
                 ]);
 
                 $machineKeepingLog = new MachineKeepingLog();
                 $machineKeepingLog->player_id = 0;
                 $machineKeepingLog->machine_id = $data->id;
                 $machineKeepingLog->machine_name = $data->name;
-                $machineKeepingLog->keep_seconds = $services->keep_seconds;
+                $machineKeepingLog->keep_seconds = $newKeepSeconds;
                 $machineKeepingLog->is_system = 2;
                 $machineKeepingLog->user_id = Admin::id();
                 $machineKeepingLog->department_id = Admin::user()->department_id;
                 $machineKeepingLog->remark = $inputData['remark'];
                 $machineKeepingLog->save();
-
 
                 return message_success(admin_trans('machine.action.action_success'));
             });
@@ -1446,7 +1491,18 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine, Container::getInstance()->translator->getLocale());
+            // 通过 API 获取机台状态
+            $services = $this->getMachineStatusViaApi($machine, Container::getInstance()->translator->getLocale());
+
+            // 根据机台类型获取常量类
+            $cmdClass = match([$machine->type, $machine->control_type]) {
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => Slot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
+                default => Slot::class,
+            };
+
             switch ($action) {
                 case 'open_custom': // 开分自定(斯洛+钢珠)
                     machineOpenAnyFree($player, $machine, $params['open']);
@@ -1473,28 +1529,28 @@ class MachineController
                     resetMachineTrans($machine, $player);
                     break;
                 case 'start': // 開始(斯洛)
-                    if ($services->auto == 1) {
+                    if (($services->auto ?? 0) == 1) {
                         throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
                     }
-                    if ($services->move_point == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
-                        $services->sendCmd($services::MOVE_POINT_ON, 0, 'admin', Admin::id());
+                    if (($services->move_point ?? 0) == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
                     }
-                    $services->sendCmd($services::PRESSURE, 0, 'admin', Admin::id());
-                    $services->sendCmd($services::START, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::PRESSURE, 0, Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::START, 0, Admin::id());
                     break;
                 case 'auto': // 自動ON(斯洛)
                     if ($machine->type == GameType::TYPE_SLOT) {
-                        $services->sendCmd($services::OUT_ON, 0, 'admin', Admin::id());
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::OUT_ON, 0, Admin::id());
                         if ($machine->control_type == Machine::CONTROL_TYPE_MEI) {
-                            $services->sendCmd($services::GET_AUTO_STATUS, 0, 'admin', Admin::id());
+                            $this->sendMachineCmdViaApi($machine, $cmdClass::GET_AUTO_STATUS, 0, Admin::id());
                         }
                     }
                     break;
                 case 'move_on': // 移分ON(斯洛)
-                    $services->sendCmd($services::MOVE_POINT_ON, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
                     break;
                 case 'move_off': // 移分OFF(斯洛)
-                    $services->sendCmd($services::MOVE_POINT_OFF, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_OFF, 0, Admin::id());
                     break;
                 case 'pressure': // 總壓分(斯洛)
                 case 'score': // 總得分(斯洛)
@@ -1512,28 +1568,28 @@ class MachineController
                 case 'all_down_turn': // 全部下轉(钢珠)
                 case 'plc_start_or_stop': // 自動開始/暫停(钢珠)
                 case 'stop_1': // A(斯洛)
-                if ($services->auto == 1) {
+                if (($services->auto ?? 0) == 1) {
                     throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
                 }
-                $services->sendCmd($services::STOP_ONE, 0, 'admin', Admin::id());
+                $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_ONE, 0, Admin::id());
                 break;
                 case 'stop_2': // B(斯洛)
-                    if ($services->auto == 1) {
+                    if (($services->auto ?? 0) == 1) {
                         throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
                     }
-                    $services->sendCmd($services::STOP_TWO, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_TWO, 0, Admin::id());
                     break;
                 case 'stop_3': // C(斯洛)
-                    if ($services->auto == 1) {
+                    if (($services->auto ?? 0) == 1) {
                         throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
                     }
-                    $services->sendCmd($services::STOP_THREE, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_THREE, 0, Admin::id());
                     break;
                 case 'stop_auto': // 自動OFF(斯洛)
                     if ($machine->type == GameType::TYPE_STEEL_BALL) {
-                        $services->sendCmd($services::AUTO_UP_TURN, 0, 'admin', Admin::id());
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::AUTO_UP_TURN, 0, Admin::id());
                     } elseif ($machine->type == GameType::TYPE_SLOT) {
-                        $services->sendCmd($services::OUT_OFF, 0, 'admin', Admin::id());
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::OUT_OFF, 0, Admin::id());
                     } else {
                         throw new Exception(admin_trans('machine.action.action_game_type_error'));
                     }
@@ -1666,8 +1722,8 @@ class MachineController
                 $val,
                 Machine $data
             ) {
-                $services = MachineServices::createServices($data, Container::getInstance()->translator->getLocale());
-                $seconds = $services->keep_seconds;
+                $services = $this->getMachineStatusViaApi($data, Container::getInstance()->translator->getLocale());
+                $seconds = $services->keep_seconds ?? 0;
                 if ($seconds > 3600) {
                     $hours = intval($seconds / 3600);
                     $time = $hours . ":" . gmstrftime('%M:%S', $seconds);
@@ -1691,10 +1747,10 @@ class MachineController
                 $val,
                 Machine $data
             ) {
-                $services = MachineServices::createServices($data);
-                return Switches::create(null, $services->has_lock)
+                $services = $this->getMachineStatusViaApi($data);
+                return Switches::create(null, $services->has_lock ?? 0)
                     ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
+                    ->url('ex-admin/machine/changeLock')
                     ->field('has_lock')
                     ->params([
                         'id' => [$data->id],
@@ -1702,19 +1758,21 @@ class MachineController
             })->align('center');
             $grid->column('last_point_at', admin_trans('machine.fields.last_point_at'))
                 ->display(function ($val, Machine $data) {
-                    $services = MachineServices::createServices($data,
+                    $services = $this->getMachineStatusViaApi($data,
                         Container::getInstance()->translator->getLocale());
+                    $lastPointAt = $services->last_point_at ?? 0;
                     return Html::create()->content([
-                        $services->last_point_at ? date('Y-m-d H:i:s', $services->last_point_at) : '',
+                        $lastPointAt ? date('Y-m-d H:i:s', $lastPointAt) : '',
                     ]);
                 })
                 ->align('center');
             $grid->column('last_game_at', admin_trans('machine.fields.last_game_at'))
                 ->display(function ($val, Machine $data) {
-                    $services = MachineServices::createServices($data,
+                    $services = $this->getMachineStatusViaApi($data,
                         Container::getInstance()->translator->getLocale());
+                    $lastPlayTime = $services->last_play_time ?? 0;
                     return Html::create()->content([
-                        $services->last_play_time ? date('Y-m-d H:i:s', $services->last_play_time) : '',
+                        $lastPlayTime ? date('Y-m-d H:i:s', $lastPlayTime) : '',
                     ]);
                 })->align('center');
             $grid->hideDelete();
@@ -1996,15 +2054,16 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine);
-            $services->has_lock = $data['has_lock'];
-            if ($services->has_lock == 1) {
+            // 通过 API 更新机台锁状态
+            MachineApiService::updateMachineState($machine->id, 'has_lock', $data['has_lock']);
+
+            if ($data['has_lock'] == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
             }
         } catch (\Exception $e) {
             return message_error($e->getMessage());
         }
-        
+
         return message_success(admin_trans('machine.action.action_success'));
     }
 
@@ -2020,12 +2079,23 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine);
+            // 通过 API 获取机台状态
+            $services = $this->getMachineStatusViaApi($machine);
+
+            // 根据机台类型获取常量类
+            $cmdClass = match([$machine->type, $machine->control_type]) {
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => Slot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
+                default => Slot::class,
+            };
+
             if ($machine->control_type == Machine::CONTROL_TYPE_MEI) {
-                if ($services->push_auto == 0) {
-                    $services->sendCmd($services::PUSH . $services::PUSH_THREE, 0, 'admin', Admin::id());
+                if (($services->push_auto ?? 0) == 0) {
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::PUSH . $cmdClass::PUSH_THREE, 0, Admin::id());
                 } else {
-                    $services->sendCmd($services::PUSH_STOP, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::PUSH_STOP, 0, Admin::id());
                 }
             }
         } catch (\Exception $e) {
@@ -2047,22 +2117,25 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine);
-            if ($services->keeping == 1) {
+            // 通过 API 获取机台状态
+            $status = $this->getMachineStatusViaApi($machine);
+
+            if ($status->keeping == 1) {
                 //鋼珠自動中不能保留
                 if ($machine->type == 0) {
-                    if ($services->auto == 1) {
+                    if ($status->auto == 1) {
                         throw new Exception(admin_trans('machine.btn.no_keeping'));
                     }
                 }
-                $services->keeping = 1;
-                $services->keeping_user_id = $machine->gaming_user_id;
-                $services->last_keep_at = time();
+                // 通过 API 更新保留状态
+                MachineApiService::updateMachineState($machine->id, 'keeping', 1);
+                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', $machine->gaming_user_id);
+                MachineApiService::updateMachineState($machine->id, 'last_keep_at', time());
             } else {
-                $services->keeping = 0;
-                $services->keeping_user_id = 0;
+                MachineApiService::updateMachineState($machine->id, 'keeping', 0);
+                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', 0);
             }
-            $services->last_play_time = time();
+            MachineApiService::updateMachineState($machine->id, 'last_play_time', time());
         } catch (\Exception $e) {
             return message_error($e->getMessage());
         }
@@ -2328,16 +2401,29 @@ class MachineController
             return message_error(admin_trans('machine.change_point_gaming'));
         }
         try {
-            $services = MachineServices::createServices($machine);
+            // 通过 API 获取机台状态
+            $services = $this->getMachineStatusViaApi($machine);
+
+            // 根据机台类型获取常量类
+            $cmdClass = match([$machine->type, $machine->control_type]) {
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => Slot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
+                default => Slot::class,
+            };
+
             switch ($machine->type) {
                 case GameType::TYPE_STEEL_BALL:
-                    $services->change_point_card_status = 1;
-                    $services->sendCmd($services::WIN_NUMBER, 0, 'admin', Admin::id());
+                    // 注意：change_point_card_status 需要通过 API 设置
+                    // $services->change_point_card_status = 1;
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::WIN_NUMBER, 0, Admin::id());
                     break;
                 case GameType::TYPE_SLOT:
-                    $services->change_point_card_status = 1;
-                    $services->sendCmd($services::READ_WIN, 0, 'admin', Admin::id());
-                    $services->sendCmd($services::READ_BET, 0, 'admin', Admin::id());
+                    // 注意：change_point_card_status 需要通过 API 设置
+                    // $services->change_point_card_status = 1;
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::READ_WIN, 0, Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::READ_BET, 0, Admin::id());
                     break;
                 default:
                     throw new Exception();
@@ -2368,16 +2454,27 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            $services = MachineServices::createServices($machine);
+            // 通过 API 获取机台状态
+            $services = $this->getMachineStatusViaApi($machine);
+
+            // 根据机台类型获取常量类
+            $cmdClass = match([$machine->type, $machine->control_type]) {
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => Slot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
+                default => Slot::class,
+            };
+
             switch ($machine->type) {
                 case GameType::TYPE_SLOT:
-                    $services->sendCmd($services::ALL_DOWN, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::ALL_DOWN, 0, Admin::id());
                     $services->bet = 0;
                     $services->score = 0;
                     $services->player_pressure = 0;
                     break;
                 case GameType::TYPE_STEEL_BALL:
-                    $services->sendCmd($services::CLEAR_LOG, 0, 'admin', Admin::id());
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::CLEAR_LOG, 0, Admin::id());
                     $services->win_number = 0;
                     $services->player_win_number = 0;
                     break;
@@ -2523,5 +2620,181 @@ class MachineController
         }
 
         return message_success(admin_trans('machine.action.action_success'));
+    }
+
+    /**
+     * 获取机台状态数据（通过 API）
+     *
+     * @param Machine $machine 机台对象
+     * @param string $lang 语言
+     * @return object 返回一个包含机台状态的对象
+     */
+    private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
+    {
+        try {
+            $result = MachineApiService::getMachineStatus($machine->id, $lang);
+
+            // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
+            $status = new \stdClass();
+
+            // 从 machine_info 中提取数据
+            if (isset($result['machine_info'])) {
+                foreach ($result['machine_info'] as $key => $value) {
+                    $status->$key = $value;
+                }
+            }
+
+            // 从 cache_data 中提取数据
+            if (isset($result['cache_data'])) {
+                foreach ($result['cache_data'] as $key => $value) {
+                    // 移除前缀
+                    $cleanKey = str_replace('machine_tcp_data_cache_' . $machine->id . '_', '', $key);
+                    $status->$cleanKey = $value;
+                }
+            }
+
+            return $status;
+        } catch (Exception $e) {
+            \support\Log::error('Get machine status via API failed', [
+                'machine_id' => $machine->id,
+                'error' => $e->getMessage()
+            ]);
+            // 返回一个空对象，避免后续代码报错
+            return new \stdClass();
+        }
+    }
+
+    /**
+     * 检查机台是否在线（通过 API）
+     *
+     * @param Machine $machine 机台对象
+     * @return bool
+     */
+    private function checkMachineOnlineViaApi(Machine $machine): bool
+    {
+        try {
+            $result = MachineApiService::checkOnline($machine->id);
+            return $result['online'] ?? false;
+        } catch (Exception $e) {
+            \support\Log::warning('Check machine online via API failed', [
+                'machine_id' => $machine->id,
+                'error' => $e->getMessage()
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * 发送机台指令（通过 API）
+     *
+     * @param Machine $machine 机台对象
+     * @param string $cmd 指令
+     * @param int $data 数据
+     * @param int $adminId 管理员ID
+     * @param string $lang 语言
+     * @return array
+     * @throws Exception
+     */
+    private function sendMachineCmdViaApi(Machine $machine, string $cmd, int $data = 0, int $adminId = 0, string $lang = 'zh_CN'): array
+    {
+        return MachineApiService::sendCmd($machine->id, $cmd, $data, $adminId, $lang);
+    }
+
+    /**
+     * 批量刷新机台在线状态
+     * @auth true
+     * @return Msg
+     */
+    public function refreshOnlineStatus(): Msg
+    {
+        try {
+            $machineIds = request()->post('machine_ids', []);
+
+            if (empty($machineIds)) {
+                return message_error(admin_trans('machine.no_machine_selected'));
+            }
+
+            $results = MachineApiService::batchCheckOnline($machineIds);
+
+            $onlineCount = 0;
+            $offlineCount = 0;
+            foreach ($results as $result) {
+                if ($result['online']) {
+                    $onlineCount++;
+                } else {
+                    $offlineCount++;
+                }
+            }
+
+            return message_success(admin_trans('machine.refresh_success', null, [
+                '{total}' => count($results),
+                '{online}' => $onlineCount,
+                '{offline}' => $offlineCount,
+            ]))->refreshGrid();
+
+        } catch (Exception $e) {
+            return message_error($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取机台在线统计
+     * @auth true
+     * @return Msg
+     */
+    public function getOnlineStatistics(): Msg
+    {
+        try {
+            $statistics = MachineApiService::getOnlineStatistics();
+
+            $html = Html::div()->content([
+                Html::h4(admin_trans('machine.online_statistics')),
+                Html::create()->content([
+                    admin_trans('machine.total_machines') . ': ' . $statistics['total'],
+                    Html::br(),
+                    admin_trans('machine.online_machines') . ': ',
+                    Html::span($statistics['online'])->style(['color' => 'green', 'font-weight' => 'bold']),
+                    Html::br(),
+                    admin_trans('machine.offline_machines') . ': ',
+                    Html::span($statistics['offline'])->style(['color' => 'red', 'font-weight' => 'bold']),
+                    Html::br(),
+                    Html::br(),
+                ]),
+            ]);
+
+            // 按类型显示
+            if (!empty($statistics['by_type'])) {
+                $typeHtml = [];
+                foreach ($statistics['by_type'] as $typeName => $typeStats) {
+                    $typeLabel = match($typeName) {
+                        'slot' => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT),
+                        'steel_ball' => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL),
+                        'fish' => admin_trans('game_type.game_type.' . GameType::TYPE_FISH),
+                        default => $typeName,
+                    };
+
+                    $typeHtml[] = Html::div()->content([
+                        Html::strong($typeLabel . ': '),
+                        admin_trans('machine.total') . ': ' . $typeStats['total'] . ', ',
+                        Html::span(admin_trans('machine.online') . ': ' . $typeStats['online'])
+                            ->style(['color' => 'green']),
+                        ', ',
+                        Html::span(admin_trans('machine.offline') . ': ' . $typeStats['offline'])
+                            ->style(['color' => 'red']),
+                        Html::br(),
+                    ]);
+                }
+                $html->content($typeHtml);
+            }
+
+            return notification_success(
+                admin_trans('machine.statistics_title'),
+                $html,
+                ['duration' => 10]
+            );
+
+        } catch (Exception $e) {
+            return message_error($e->getMessage());
+        }
     }
 }

@@ -314,6 +314,57 @@ return [
         ]
     ],
 
+    // ========== 摸奖券管理 ==========
+    [
+        'id' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '摸奖券管理',
+        'children' => [
+            // 摸奖券活动列表
+            [
+                'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
+                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/index',
+                'title' => '摸奖券活动',
+            ],
+            // 查看活动详情
+            [
+                'id' => 'addons\webman\controller\StoreLotteryTicketActivityController\getActivityDetail',
+                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController\index',
+                'action' => 'getActivityDetail',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketActivityController/getActivityDetail',
+                'title' => '查看活动详情',
+            ],
+            // 摸奖券列表
+            [
+                'id' => 'addons\webman\controller\StoreLotteryTicketController\index',
+                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketController/index',
+                'title' => '摸奖券列表',
+            ],
+            // 中奖记录列表
+            [
+                'id' => 'addons\webman\controller\StoreLotteryTicketRecordController\index',
+                'pid' => 'addons\webman\controller\StoreLotteryTicketActivityController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLotteryTicketRecordController/index',
+                'title' => '中奖记录',
+            ],
+        ]
+    ],
+
     // ========== 充值满赠管理 ==========
     [
         'id' => 'addons\webman\controller\StoreDepositBonusActivityController-',
@@ -496,7 +547,27 @@ return [
                 'group' => 'store',
                 'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/index',
                 'title' => '记录列表',
-            ]
+            ],
+            // 查看设备明细
+            [
+                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\deviceDetails',
+                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+                'action' => 'deviceDetails',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/deviceDetails',
+                'title' => '查看设备明细',
+            ],
+            // 导出交班记录
+            [
+                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\export',
+                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
+                'action' => 'export',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/export',
+                'title' => '导出交班记录',
+            ],
         ]
     ],
 

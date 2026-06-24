@@ -19,6 +19,7 @@ use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWalletTransfer;
+use addons\webman\model\VipLevel;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -229,6 +230,14 @@ class ChannelAgentController
         /** @var AdminUser $admin */
         $admin = Admin::user();
 
+        // 预加载渠道的 VIP 等级列表
+        $channelVipLevels = VipLevel::query()
+            ->where('department_id', $admin->department_id)
+            ->where('status', VipLevel::STATUS_ENABLED)
+            ->orderBy('sort', 'asc')
+            ->get(['id', 'name', 'sort', 'upgrade_bet_amount'])
+            ->keyBy('sort');
+
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $requestFilter = Request::input('ex_admin_filter', []);
@@ -243,12 +252,18 @@ class ChannelAgentController
                 'player_extend.machine_put_point',
                 'player_promoter.name as promoter_name',
                 'store_admin.username as store_admin_username',
-                'store_admin.nickname as store_admin_nickname'
+                'store_admin.nickname as store_admin_nickname',
+                // VIP等级字段
+                'vip_level.name as vip_level_name',
+                'vip_level.sort as vip_level_sort',
+                'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
             ])
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player_promoter', 'player.recommend_id', '=', 'player_promoter.player_id')
             ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
+            // VIP等级关联
+            ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
             ->where('player.type', Player::TYPE_PLAYER)
             ->where('player.is_promoter', 0);
 
@@ -277,6 +292,10 @@ class ChannelAgentController
             // 设备ID筛选
             if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
                 $query->where('player.id', $requestFilter['player_id']);
+            }
+            // VIP等级筛选
+            if (isset($requestFilter['vip_level_id']) && $requestFilter['vip_level_id'] !== '') {
+                $query->where('player.vip_level_id', $requestFilter['vip_level_id']);
             }
             if (!empty($requestFilter['created_at_start'])) {
                 $query->where('player.created_at', '>=', $requestFilter['created_at_start']);
@@ -326,19 +345,25 @@ class ChannelAgentController
             unset($item);
         }
 
+        // ✅ 优化：批量查询彩金（避免 N+1 查询问题）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+
+            // 一次性查询所有玩家的彩金总额
+            $lotteryAmounts = PlayerLotteryRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                ->select('player_id', Db::raw('COALESCE(SUM(amount), 0) as total_amount'))
+                ->groupBy('player_id')
+                ->pluck('total_amount', 'player_id')
+                ->toArray();
+        }
+
         // 计算每个设备的彩金和小计
         foreach ($list as &$item) {
-            // 查询该设备的累计彩金
-            $lotteryAmount = PlayerLotteryRecord::query()
-                ->where('player_id', $item['id'])
-                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                ->sum('amount') ?? 0;
-
-            $item['lottery_amount'] = $lotteryAmount;
+            $item['lottery_amount'] = $lotteryAmounts[$item['id']] ?? 0;
 
             // 计算小计 = 开分 - (洗分 + 彩金)
-            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
-            // 注意：洗分（recharge_amount）已经包含了彩金，所以不需要再加彩金
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
 
@@ -385,7 +410,7 @@ class ChannelAgentController
             })
             ->toArray();
 
-        return Grid::create($list, function (Grid $grid) use ($admin, $total, $list, $playerOptions) {
+        return Grid::create($list, function (Grid $grid) use ($admin, $total, $list, $playerOptions, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -398,6 +423,63 @@ class ChannelAgentController
                 ]);
             })->width('100px')->ellipsis(true)->fixed(true)->align('center');
             $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center');
+
+            // VIP等级列
+            $grid->column('vip_level_name', admin_trans('player.fields.vip_level'))
+                ->display(function ($value, $data) use ($channelVipLevels) {
+                    $levelName = $value;
+                    if (empty($levelName)) {
+                        $minLevel = $channelVipLevels->first();
+                        $levelName = $minLevel ? $minLevel->name : '-';
+                    }
+                    if ($levelName === '-') {
+                        return '-';
+                    }
+
+                    $currentSort = $data['vip_level_sort'] ?? 0;
+                    if ($currentSort == 0) {
+                        $minLevel = $channelVipLevels->first();
+                        $currentSort = $minLevel ? $minLevel->sort : 0;
+                    }
+                    $nextLevel = $channelVipLevels->where('sort', '>', $currentSort)->first();
+
+                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
+                    $nextUpgradeBet = $nextLevel ? floatval($nextLevel->upgrade_bet_amount) : 0;
+
+                    $progress = 0;
+                    $progressText = '';
+                    if ($nextUpgradeBet > 0 && $currentUpgradeBet >= 0) {
+                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
+                        if ($betDiff > 0) {
+                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
+                        }
+                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } elseif (!$nextLevel) {
+                        $progress = 100;
+                        $progressText = admin_trans('player.vip_max_level');
+                    } else {
+                        $progressText = number_format($totalBetAmount, 0);
+                    }
+
+                    $content = [
+                        Tag::create($levelName)->color('purple'),
+                        Html::div()->content([
+                            Html::create($progressText)->style(['font-size' => '12px', 'color' => '#666']),
+                        ]),
+                    ];
+
+                    if ($nextLevel) {
+                        $content[] = \ExAdmin\ui\component\feedback\Progress::create()
+                            ->percent(round($progress, 1))
+                            ->showInfo(false)
+                            ->size('small')
+                            ->style(['margin-top' => '4px', 'width' => '100px']);
+                    }
+
+                    return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
+                })
+                ->align('center')->width(180);
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
                 $val
@@ -465,7 +547,13 @@ class ChannelAgentController
                 };
             })->ellipsis(true)->align('center');
             $grid->column('created_at', admin_trans('player.fields.created_at'))->ellipsis(true)->align('center');
-            $grid->filter(function (Filter $filter) use ($admin, $playerOptions) {
+            // VIP等级选项
+            $vipLevelOptions = ['' => admin_trans('public_msg.all')];
+            foreach ($channelVipLevels as $level) {
+                $vipLevelOptions[$level->id] = $level->name;
+            }
+
+            $grid->filter(function (Filter $filter) use ($admin, $playerOptions, $vipLevelOptions) {
                 // 设备下拉选择
                 $filter->eq()->select('player_id')
                     ->placeholder(admin_trans('player.filter.select_device'))
@@ -475,6 +563,12 @@ class ChannelAgentController
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
+
+                // VIP等级筛选
+                $filter->eq()->select('vip_level_id')
+                    ->placeholder(admin_trans('player.fields.vip_level'))
+                    ->options($vipLevelOptions);
+
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
@@ -1057,7 +1151,6 @@ class ChannelAgentController
             }
 
             // 店家不再有 PlayerPlatformCash，设为 null
-            $storePlatformCash = null;
             /** @var PlayerPlatformCash $machinePlatformCash */
             $machinePlatformCash = PlayerPlatformCash::query()->where('player_id', $data['id'])->first();
 
@@ -1142,7 +1235,7 @@ class ChannelAgentController
                     $jsPointsUnit = admin_trans('channel_agent.js.points_unit');
                     $jsExchangeRateLabel = admin_trans('channel_agent.js.exchange_rate_label');
                     $form->push(Html::markdown(
-                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>' . $jsConversionPreview . '</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">' . $jsPleaseEnterAmount . '</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 ' . $jsPointsUnit . '</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">' . $jsExchangeRateLabel . ' 1 ' . $currencySymbol . ' = ' . $ratio . ' ' . admin_trans('channel_agent.game_points') . '</div></div><script>(function(){const r=' . $ratio . ',s="' . $currencySymbol . '",pu="' . $jsPointsUnit . '",pea="' . $jsPleaseEnterAmount . '";function u(){setTimeout(function(){const i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){const v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" "+pu,p.style.color="#0ea5e9"):(m.textContent=pea,p.textContent="0 "+pu,p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
+                        '><div style="margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px"><div style="font-size:14px;color:#0369a1"><strong>' . $jsConversionPreview . '</strong><span id="money-preview-2" style="color:#0c4a6e;font-weight:600">' . $jsPleaseEnterAmount . '</span><span style="margin:0 8px">→</span><span id="points-preview-2" style="color:#0ea5e9;font-weight:700;font-size:16px">0 ' . $jsPointsUnit . '</span></div><div style="font-size:12px;color:#64748b;margin-top:4px">' . $jsExchangeRateLabel . ' 1 ' . $currencySymbol . ' = ' . $ratio . ' ' . admin_trans('channel_agent.game_points') . '</div></div><script>(function(){var r=' . $ratio . ',s="' . $currencySymbol . '",pu="' . $jsPointsUnit . '",pea="' . $jsPleaseEnterAmount . '";function u(){setTimeout(function(){var i=document.querySelector("input[name=\'amount\']"),m=document.getElementById("money-preview-2"),p=document.getElementById("points-preview-2");i&&m&&p&&(i.addEventListener("input",function(){var v=parseFloat(this.value)||0,pts=Math.floor(v*r);v>0?(m.textContent=s+v.toFixed(2),p.textContent=pts.toLocaleString()+" "+pu,p.style.color="#0ea5e9"):(m.textContent=pea,p.textContent="0 "+pu,p.style.color="#94a3b8")}),i.value&&i.dispatchEvent(new Event("input")))},100)}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",u):u()})();</script>'
                     ));
                 }
             } else {
@@ -1234,8 +1327,8 @@ class ChannelAgentController
                 // 开分逻辑
                 DB::beginTransaction();
                 try {
-                    /** @var PlayerPlatformCash $deviceWallet */
-                    $deviceWallet = PlayerPlatformCash::query()->where('player_id', $devicePlayer->id)->lockForUpdate()->first();
+                    // ✅ 从 Redis 读取充值前余额
+                    $beforeGameAmount = \addons\webman\service\WalletService::getBalance($devicePlayer->id);
 
                     // 生成充值订单
                     $playerRechargeRecord = new PlayerRechargeRecord();
@@ -1257,9 +1350,8 @@ class ChannelAgentController
                     $playerRechargeRecord->user_name = Admin::user()->name ?? '';
                     $playerRechargeRecord->save();
 
-                    // 更新玩家钱包
-                    $deviceWallet->money = bcadd($deviceWallet->money, $playerRechargeRecord->point, 2);
-                    $deviceWallet->save();
+                    // ✅ 使用 WalletService 原子加款（主玩家充值）
+                    $afterGameAmount = \addons\webman\service\WalletService::add($devicePlayer->id, $playerRechargeRecord->point);
 
                     // 更新玩家充值总额
                     $devicePlayer->player_extend->recharge_amount = bcadd($devicePlayer->player_extend->recharge_amount,
@@ -1276,12 +1368,13 @@ class ChannelAgentController
                             // 推广员为全民代理
                             if (!empty($recommendPlayer->national_promoter) && $recommendPlayer->is_promoter < 1) {
                                 // 首充返佣金额
-                                /** @var PlayerPlatformCash $recommendPlayerWallet */
-                                $recommendPlayerWallet = PlayerPlatformCash::query()->where('player_id',
-                                    $devicePlayer->recommend_id)->lockForUpdate()->first();
-                                $beforeRechargeAmount = $recommendPlayerWallet->money;
                                 $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
-                                $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $rechargeRebate, 2);
+
+                                // ✅ 从 Redis 读取推荐人余额（返佣前）
+                                $beforeRechargeAmount = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                                // ✅ 使用 WalletService 原子加款（推荐人返佣）
+                                $afterRechargeAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $rechargeRebate);
 
                                 // 写入首充金流明细
                                 $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -1293,7 +1386,7 @@ class ChannelAgentController
                                 $playerDeliveryRecord->source = 'national_promoter';
                                 $playerDeliveryRecord->amount = $rechargeRebate;
                                 $playerDeliveryRecord->amount_before = $beforeRechargeAmount;
-                                $playerDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                $playerDeliveryRecord->amount_after = $afterRechargeAmount;  // ✅ 使用返回值
                                 $playerDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                                 $playerDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                                 $playerDeliveryRecord->save();
@@ -1308,8 +1401,13 @@ class ChannelAgentController
 
                                 if (!empty($national_invite) && $national_invite->interval > 0 && $recommendPlayer->national_promoter->invite_num % $national_invite->interval == 0) {
                                     $inviteMoney = $national_invite->money;
-                                    $amount_before = $recommendPlayerWallet->money;
-                                    $recommendPlayerWallet->money = bcadd($recommendPlayerWallet->money, $inviteMoney, 2);
+
+                                    // ✅ 从 Redis 读取推荐人余额（邀请奖励前）
+                                    $amount_before = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+
+                                    // ✅ 使用 WalletService 原子加款（邀请奖励）
+                                    $afterInviteAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $inviteMoney);
+
                                     // 写入金流明细
                                     $inviteDeliveryRecord = new PlayerDeliveryRecord;
                                     $inviteDeliveryRecord->player_id = $recommendPlayer->id;
@@ -1320,13 +1418,12 @@ class ChannelAgentController
                                     $inviteDeliveryRecord->source = 'national_promoter';
                                     $inviteDeliveryRecord->amount = $inviteMoney;
                                     $inviteDeliveryRecord->amount_before = $amount_before;
-                                    $inviteDeliveryRecord->amount_after = $recommendPlayer->machine_wallet->money;
+                                    $inviteDeliveryRecord->amount_after = $afterInviteAmount;  // ✅ 使用返回值
                                     $inviteDeliveryRecord->tradeno = '';
                                     $inviteDeliveryRecord->remark = '';
                                     $inviteDeliveryRecord->save();
                                 }
                                 $recommendPlayer->push();
-                                $recommendPlayerWallet->save();
 
                                 // 全民代理收益记录
                                 $nationalProfitRecord = new NationalProfitRecord();
@@ -1351,21 +1448,17 @@ class ChannelAgentController
                     $rechargeDeliveryRecord->type = PlayerDeliveryRecord::TYPE_RECHARGE;
                     $rechargeDeliveryRecord->source = 'artificial_recharge';
                     $rechargeDeliveryRecord->amount = $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_before = $deviceWallet->money - $playerRechargeRecord->point;
-                    $rechargeDeliveryRecord->amount_after = $deviceWallet->money;
+                    $rechargeDeliveryRecord->amount_before = $beforeGameAmount;
+                    $rechargeDeliveryRecord->amount_after = $afterGameAmount;
                     $rechargeDeliveryRecord->tradeno = $playerRechargeRecord->tradeno ?? '';
                     $rechargeDeliveryRecord->remark = $playerRechargeRecord->remark ?? '';
                     $rechargeDeliveryRecord->save();
-
-                    // 注意：旧的推荐系统营收统计已移除
-                    // 新架构中，营收统计通过 StoreAgentProfitRecord 表记录
-                    // 可通过查询相关记录表实时计算，而不是在此累加
 
                     DB::commit();
                 } catch (Exception $e) {
                     DB::rollBack();
                     Log::error('store_open_score', [$e->getTrace()]);
-                    return message_error($e->getMessage() ?? trans('system_error', [], 'message'));
+                    return message_error($e->getMessage() ?? admin_trans('message.system_error'));
                 }
 
                 // 发送充值通知（发送游戏点数）
@@ -1684,6 +1777,7 @@ class ChannelAgentController
                         }
                         break;
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
                         return Tag::create(admin_trans('message.source.' . $val))->color('blue');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
@@ -1740,6 +1834,9 @@ class ChannelAgentController
                             break;
                         case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS))->color('#CC6600');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');
                             break;
                         case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT))->color('#CC6600');

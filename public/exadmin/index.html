@@ -397,7 +397,7 @@
     })();
 </script>
 
-<!-- 🎯 "记住我"功能修复脚本 (2026-05-13) -->
+<!-- 🎯 "记住我"功能修复脚本 (2026-05-13)  -->
 <script>
     (function() {
         'use strict';
@@ -470,7 +470,6 @@
   'use strict';
 
   // ========== 方案1：拦截原生 XMLHttpRequest (不依赖 axios) ==========
-  console.log('[退出登录拦截器] 开始设置 XMLHttpRequest 拦截...');
 
   // 🎯 防止重复处理 401 错误
   var handling401 = false;
@@ -494,12 +493,10 @@
         try {
           // 🎯 调试：打印所有请求，找出退出登录的真实 URL
           if (url && (url.includes('login') || url.includes('logout') || url.includes('system'))) {
-            console.log('[XHR 拦截器] 请求:', url, '状态:', xhr.status);
           }
 
           // 🎯 处理 401 认证错误 - 自动跳转到登录页
           if (xhr.status === 401) {
-            console.log('[XHR 拦截器] ⚠️ 检测到 401 错误:', url);
 
             // 检查是否已在登录页
             var currentHash = window.location.hash || '';
@@ -517,20 +514,17 @@
             // 🎯 防止重复处理：如果正在处理，跳过
             // 但如果是受保护的资源返回 401，即使 hash 显示在登录页也要处理（这是自动跳转阶段的情况）
             if (handling401) {
-              console.log('[XHR 拦截器] 401 错误：正在处理中，忽略');
               return;
             }
 
             // 如果在登录页且不是受保护的资源请求，跳过
             if (isLoginPage && !isProtectedResource) {
-              console.log('[XHR 拦截器] 401 错误：已在登录页且非受保护资源，忽略');
               return;
             }
 
             // 设置处理标记
             handling401 = true;
 
-            console.log('[XHR 拦截器] 401 错误：清理数据并跳转到登录页');
 
             // 判断当前是哪个后台
             var hostname = window.location.hostname;
@@ -565,16 +559,13 @@
             // 清理 Cookie
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-            console.log('[XHR 拦截器] 401 处理：数据已清理，准备跳转到:', loginPath);
 
             // 🎯 检查当前 hash，避免重复跳转
             var currentHash = window.location.hash;
             if (currentHash !== loginPath) {
-              console.log('[XHR 拦截器] 401 处理：当前页面不是登录页，执行跳转');
               // 立即跳转到登录页，不延迟（避免期间又有请求触发）
               window.location.hash = loginPath;
             } else {
-              console.log('[XHR 拦截器] 401 处理：已在登录页，无需跳转');
               // 如果已经在登录页，立即重置标记
               handling401 = false;
               return;
@@ -584,7 +575,6 @@
             var resetHandling = function() {
               if (window.location.hash === loginPath) {
                 handling401 = false;
-                console.log('[XHR 拦截器] 401 处理：已跳转到登录页，重置 handling401');
                 window.removeEventListener('hashchange', resetHandling);
               }
             };
@@ -594,7 +584,6 @@
             setTimeout(function() {
               if (handling401) {
                 handling401 = false;
-                console.log('[XHR 拦截器] 401 处理：超时强制重置 handling401');
                 window.removeEventListener('hashchange', resetHandling);
               }
             }, 300);
@@ -602,7 +591,6 @@
 
           // 检测是否是退出登录请求（多种可能的 URL 格式）
           if (url && (url.includes('logout') || url.includes('/login/logout') || url.includes('/ex-admin/login/logout'))) {
-            console.log('[退出登录拦截器-XHR] ✅ 检测到退出登录请求:', url);
 
             // 判断当前是哪个后台
             var hostname = window.location.hostname;
@@ -622,7 +610,6 @@
 
             // 设置"强制清理"标记
             sessionStorage.setItem('force_cleanup_' + source, 'true');
-            console.log('[退出登录拦截器-XHR] 已设置 force_cleanup 标记:', source);
 
             // 立即清理所有"记住我"数据
             ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
@@ -638,7 +625,6 @@
             // 清理 Cookie
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-            console.log('[退出登录拦截器-XHR] ✅ 数据清理完成！准备跳转到:', loginPath);
 
             // 🎯 立即跳转到登录页
             window.location.hash = loginPath;
@@ -656,7 +642,6 @@
     return originalSend.apply(this, arguments);
   };
 
-  console.log('[退出登录拦截器] XMLHttpRequest 拦截设置完成！');
 
   // ========== 方案2：axios 拦截器（稍后尝试设置，不阻塞页面加载） ==========
   // 全局标记：是否正在处理 401 错误
@@ -667,7 +652,6 @@
       return false;
     }
 
-    console.log('[退出登录拦截器] 已注册 axios 响应拦截器');
 
     // 🎯 添加请求拦截器 - 在登录页阻止某些请求
     window.axios.interceptors.request.use(
@@ -678,7 +662,6 @@
 
         // 如果在登录页，且请求的是需要认证的接口（如 system/info），添加标记
         if (isLoginPage && config.url && config.url.includes('/ex-admin/system/info')) {
-          console.log('[请求拦截器] 登录页检测到 system/info 请求，标记为可取消');
           config.__fromLoginPage = true;
         }
 
@@ -694,12 +677,10 @@
       function(response) {
         // 打印所有响应，方便调试
         if (response.config && response.config.url) {
-          console.log('[拦截器] 捕获响应:', response.config.url, response.data);
         }
 
         // 🎯 检测退出登录请求
         if (response.config && response.config.url && response.config.url.includes('/login/logout')) {
-          console.log('[退出登录拦截器] ✅ 检测到退出登录请求，开始清理数据...');
 
           // 判断当前是哪个后台
           var hostname = window.location.hostname;
@@ -710,11 +691,9 @@
 
           // 设置"强制清理"标记，登录页会读取这个标记
           sessionStorage.setItem('force_cleanup_' + source, 'true');
-          console.log('[退出登录拦截器] 已设置 force_cleanup 标记:', source);
 
           // 立即清理所有"记住我"数据
           ['admin', 'channel', 'agent', 'store'].forEach(function(s) {
-            console.log('[退出登录拦截器] 清理 source:', s);
             localStorage.removeItem('ex_admin_remember_me_' + s);
             localStorage.removeItem('ex_admin_token_expire_' + s);
             localStorage.removeItem('/' + s + '_ex-admin-token');
@@ -727,13 +706,10 @@
           // 清理 Cookie
           document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-          console.log('[退出登录拦截器] ✅ 数据清理完成！');
-          console.log('[退出登录拦截器] localStorage 剩余项:', Object.keys(localStorage));
         }
 
         // 检查是否需要清理存储（后端返回 clear_storage: true，备用方案）
         if (response.data && response.data.data && response.data.data.clear_storage === true) {
-          console.log('[退出登录拦截器] ✅ 检测到 clear_storage 标记（备用方案）');
           var hostname = window.location.hostname;
           var source = 'admin';
           if (hostname.includes('zi-test') || hostname.includes('channel')) source = 'channel';
@@ -748,7 +724,6 @@
       function(error) {
         // 🎯 处理 401 错误 - 认证失败，应跳转到登录页
         if (error.response && error.response.status === 401) {
-          console.log('[拦截器] ⚠️ 捕获 401 错误:', error.config.url);
 
           // 检查是否已经在登录页
           var currentPath = window.location.hash || window.location.pathname;
@@ -758,7 +733,6 @@
           var fromLoginPage = error.config && error.config.__fromLoginPage;
 
           if (fromLoginPage || isLoginPage) {
-            console.log('[拦截器] 401 错误：已在登录页或来自登录页的请求，静默忽略');
             // 返回一个空的成功响应，避免页面卡住
             return Promise.resolve({
               data: { code: 401, message: 'Unauthorized (ignored on login page)' },
@@ -770,7 +744,6 @@
           // 不在登录页，需要跳转到登录页
           if (!handling401) {
             handling401 = true;
-            console.log('[拦截器] 401 错误：认证失败，清理数据并跳转到登录页');
 
             // 清理所有认证数据
             ['admin', 'channel', 'agent', 'store'].forEach(function(source) {
@@ -782,7 +755,6 @@
             localStorage.removeItem('ex_admin_token');
             document.cookie = 'ex_admin_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
 
-            console.log('[拦截器] 401 错误：数据已清理，准备跳转到登录页');
 
             // 🎯 跳转到登录页
             setTimeout(function() {
@@ -798,7 +770,6 @@
                 loginPath = '#/store/index';
               }
 
-              console.log('[拦截器] 跳转到:', loginPath);
               window.location.hash = loginPath;
 
               // 重置标记
@@ -837,17 +808,14 @@
         // 尝试从 Vue 实例获取
         if (window.Vue && window.Vue.prototype && window.Vue.prototype.$request) {
           window.axios = window.Vue.prototype.$request;
-          console.log('[退出登录拦截器] 从 Vue.prototype.$request 获取到 axios');
         }
       }
 
       if (setupLogoutCleanup()) {
         clearInterval(checkAxios);
-        console.log('[退出登录拦截器] axios 拦截器设置成功！尝试次数:', attempts);
       } else if (attempts >= maxAttempts) {
         clearInterval(checkAxios);
         // XHR 拦截器已经可以工作了，所以这里只是静默失败
-        console.log('[退出登录拦截器] axios 未找到，使用 XHR 拦截器');
       }
     }, 100);
   }, 2000); // 延迟 2 秒后再开始尝试，确保页面先加载
