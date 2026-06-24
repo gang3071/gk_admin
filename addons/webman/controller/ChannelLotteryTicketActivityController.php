@@ -1076,8 +1076,9 @@ class ChannelLotteryTicketActivityController
                     continue;
                 }
 
-                // 去除首尾空格
+                // 去除首尾空格和大括号（兼容 {000001} 格式）
                 $ticketNo = trim($ticketNo);
+                $ticketNo = trim($ticketNo, '{}');
 
                 // 验证券号：必须是纯数字且1-6位
                 if (!preg_match('/^\d{1,6}$/', $ticketNo)) {
