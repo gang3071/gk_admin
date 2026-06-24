@@ -205,8 +205,7 @@ class ChannelLotteryTicketRecordController
                     $actions->prepend(
                         Button::create(admin_trans('lottery_ticket.action.distribute'))
                             ->type('primary')
-                            ->confirm(admin_trans('lottery_ticket.confirm.distribute'))
-                            ->ajax([$this, 'distribute'], ['id' => $data['id']])
+                            ->confirm(admin_trans('lottery_ticket.confirm.distribute'), [$this, 'distribute'], ['id' => $data['id']])
                     );
                 }
 
