@@ -1736,19 +1736,43 @@ export default {
 
     // ⭐ 停止开奖（手动触发）- 必须二次确认
     async stopDrawing(activity, confirmed = false) {
+      let res;
+
       try {
-        const res = await this.$request({
+        res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/stopDrawing',
           method: 'post',
           data: {
             id: activity.id,
             confirmed: confirmed
-          },
-          // ⭐ 允许非200状态码不抛异常，直接返回数据
-          validateStatus: () => true
+          }
         });
+      } catch (error) {
+        // ⭐ ExAdmin 的 $request 会将非200响应作为错误抛出
+        // 我们需要从错误中提取响应数据
+        console.log('Caught error:', error);
+        console.log('error.response:', error.response);
+        console.log('error.data:', error.data);
 
-        console.log('stopDrawing response:', res); // 调试日志
+        // 尝试多种方式获取响应数据
+        if (error.response?.data) {
+          res = error.response.data;
+        } else if (error.data) {
+          res = error.data;
+        } else if (typeof error === 'object' && error.code) {
+          res = error;
+        } else {
+          // 真正的网络错误
+          this.$message.error('网络错误：' + (error.message || '未知错误'));
+          return;
+        }
+      }
+
+      // ⭐ 详细调试日志
+      console.log('stopDrawing response:', res);
+      console.log('res.code:', res.code, 'type:', typeof res.code);
+      console.log('res.data:', res.data);
+      console.log('res.data?.need_confirm:', res.data?.need_confirm);
 
         if (res.code === 200) {
           this.$message.success('开奖已停止');
@@ -1785,10 +1809,6 @@ export default {
         } else {
           this.$message.error(res.message || res.msg || '停止开奖失败');
         }
-      } catch (error) {
-        console.error('stopDrawing error:', error); // 调试日志
-        this.$message.error('停止开奖失败：' + (error.message || '未知错误'));
-      }
     },
 
     // 添加奖品等级
