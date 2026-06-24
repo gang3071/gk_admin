@@ -2208,7 +2208,7 @@ class ChannelIndexController
         ];
         $selfProfitAmount = 0;
         // 店家的配置直接从 AdminUser 读取
-        $ratio = $store->ratio ?? 0;
+        $agentCommission = $store->agent_commission ?? 0;
         $adjustAmount = $store->adjust_amount ?? 0;
         $lastSettlementTimestamp = $store->last_settlement_timestamp;
 
@@ -2233,8 +2233,8 @@ class ChannelIndexController
         $machinePutPoint = bcadd(0, $totalData['total_point'] ?? 0, 2);
         $presentOutAmount = bcadd(0, $totalData['total_out'] ?? 0, 2);
         $totalPoint = bcsub(bcadd($machinePutPoint, $presentInAmount, 2), $presentOutAmount, 2);
-        if (100 - $ratio > 0) {
-            $selfProfitAmount = bcmul($totalPoint, (100 - $ratio) / 100, 2);
+        if (100 - $agentCommission > 0) {
+            $selfProfitAmount = bcmul($totalPoint, (100 - $agentCommission) / 100, 2);
         }
         $info['present_in_amount'] = $presentInAmount;
         $info['present_out_amount'] = $presentOutAmount;
@@ -2242,8 +2242,8 @@ class ChannelIndexController
         $info['self_profit_amount'] = bcadd($selfProfitAmount, $adjustAmount, 2);
         $info['total_point'] = $totalPoint;
         $info['adjust_amount'] = $adjustAmount;
-        $info['profit_amount'] = $ratio > 0 ? bcmul($totalPoint, $ratio / 100, 2) : 0;
-        $info['ratio'] = $ratio;
+        $info['profit_amount'] = $agentCommission > 0 ? bcmul($totalPoint, $agentCommission / 100, 2) : 0;
+        $info['ratio'] = $agentCommission;
 
         // 店家不再有 PlayerPlatformCash，设为 null
         $storePlatformCash = null;
