@@ -1348,6 +1348,7 @@ class ChannelLotteryTicketActivityController
             // 更新状态
             $activity->status = LotteryTicketActivity::STATUS_ENDED;
             $activity->draw_completed_at = date('Y-m-d H:i:s');
+            $activity->ended_at = date('Y-m-d H:i:s'); // ✅ 记录实际结束时间
             $activity->recordStatusChange(LotteryTicketActivity::STATUS_ENDED, '管理员手动结束');
             $activity->save();
 
