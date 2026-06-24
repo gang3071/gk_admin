@@ -1744,7 +1744,15 @@ export default {
             id: activity.id,
             confirmed: confirmed
           }
+        }).catch(err => {
+          // ⭐ 捕获HTTP错误，但仍返回响应数据（用于处理40001状态码）
+          if (err.response && err.response.data) {
+            return err.response.data;
+          }
+          throw err;
         });
+
+        console.log('stopDrawing response:', res); // 调试日志
 
         if (res.code === 200) {
           this.$message.success('开奖已停止');
@@ -1782,7 +1790,8 @@ export default {
           this.$message.error(res.message || res.msg || '停止开奖失败');
         }
       } catch (error) {
-        this.$message.error('停止开奖失败');
+        console.error('stopDrawing error:', error); // 调试日志
+        this.$message.error('停止开奖失败：' + (error.message || '未知错误'));
       }
     },
 
