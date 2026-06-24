@@ -55,6 +55,8 @@ return [
         PlayerDeliveryRecord::TYPE_PREPAY => '事前控除',
         PlayerDeliveryRecord::TYPE_REFUND => '返金',
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '抽選券当選報酬',
+        PlayerDeliveryRecord::TYPE_TICKET_REDEEM => '出票キャンセル',
+        PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE => 'スキャン開分',
     ],
     'detail' => '詳細',
     'chart' => 'チャート',

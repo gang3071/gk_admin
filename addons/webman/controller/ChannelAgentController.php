@@ -1899,6 +1899,12 @@ class ChannelAgentController
                         case PlayerDeliveryRecord::TYPE_REFUND:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND))->color('#a0d911');
                             break;
+                        case PlayerDeliveryRecord::TYPE_TICKET_REDEEM:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_REDEEM))->color('#f50');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE))->color('#52c41a');
+                            break;
                         default:
                             $tag = '';
                     }

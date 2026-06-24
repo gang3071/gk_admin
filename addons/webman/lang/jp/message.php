@@ -321,6 +321,8 @@ return [
         'wallet_modify' => '残高修正',
         'lottery_game' => '賞金',
         'lottery_ticket_reward' => '抽選券当選',
+        'ticket_redeem' => '出票キャンセル',
+        'ticket_open_score' => 'スキャン開分',
     ],
     'source' => [
         'system' => 'システム',

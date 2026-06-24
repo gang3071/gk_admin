@@ -322,6 +322,8 @@ return [
         'wallet_modify' => 'Modify balance',
         'lottery_game' => 'Lottery',
         'lottery_ticket_reward' => 'Lottery Ticket Prize',
+        'ticket_redeem' => 'Ticket Redeem',
+        'ticket_open_score' => 'Scan Open Score',
     ],
     'source' => [
         'system' => 'system',
