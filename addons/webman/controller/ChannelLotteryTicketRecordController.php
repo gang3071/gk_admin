@@ -36,10 +36,6 @@ class ChannelLotteryTicketRecordController
 
             // 只显示当前渠道的记录
             $departmentId = Admin::user()->department_id;
-
-            // 获取玩家表名（使用配置，默认为'player'）
-            $playerTable = config('plugin.rockys.ex-admin-webman.database.player_table', 'player');
-
             // ✅ 获取筛选条件
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
