@@ -149,10 +149,6 @@
             <div style="font-weight: 500; margin-bottom: 4px;">分数/金额</div>
             <a-input-number v-model:value="ticketScore" :min="0" placeholder="分数/金额" style="width: 100%;" />
           </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">QR码内容</div>
-            <a-input v-model:value="qrCode" placeholder="QR码内容" />
-          </div>
           <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">发送QR码</a-button>
         </a-card>
       </a-col>
@@ -209,7 +205,6 @@ export default {
         codeTable: 0,
         number: 0,
       },
-      qrCode: '',
       ticketType: 1,
       ticketScore: 0,
       selectedPlayerId: null,
@@ -540,6 +535,10 @@ export default {
 
         if (testResult) {
           this.addLog('success', '设备响应正常！');
+
+          // 连接成功后自动同步时间
+          this.addLog('info', '自动同步时间...');
+          await this.syncDatetime();
         } else {
           this.addLog('warn', '设备未响应，请检查：');
           this.addLog('warn', '1. 出票机是否已开机');
@@ -604,13 +603,24 @@ export default {
       this.addLog(r ? 'success' : 'error', r ? '心跳正常 - 设备在线' : '心跳失败');
     },
 
-    // 同步时间
+    // 同步时间（北京时间 UTC+8）
     async syncDatetime() {
       const now = new Date();
-      const data = [
-        (now.getFullYear() >> 8) & 0xFF, now.getFullYear() & 0xFF,
-        now.getMonth() + 1, now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds()
-      ];
+      // 转换为北京时间
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const beijingTime = new Date(utc + 8 * 3600000);
+
+      const year = beijingTime.getFullYear() % 100; // 只取后两位: 2026 -> 26
+      const month = beijingTime.getMonth() + 1;
+      const day = beijingTime.getDate();
+      const hours = beijingTime.getHours();
+      const minutes = beijingTime.getMinutes();
+      const seconds = beijingTime.getSeconds();
+
+      const data = [year, month, day, hours, minutes, seconds];
+
+      this.addLog('info', `北京时间: 20${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`);
+
       const r = await this.sendCommand(0x01, 0x02, data);
       this.addLog(r ? 'success' : 'error', r ? '日期时间已同步' : '同步失败');
     },
@@ -621,12 +631,21 @@ export default {
 
       this.addLog('info', '===== 开始初始化设备 =====');
 
-      // 1. 同步时间
+      // 1. 同步时间（北京时间 UTC+8）
       const now = new Date();
-      await this.sendCommand(0x01, 0x02, [
-        (now.getFullYear() >> 8) & 0xFF, now.getFullYear() & 0xFF,
-        now.getMonth() + 1, now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds()
-      ]);
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const beijingTime = new Date(utc + 8 * 3600000);
+
+      const year = beijingTime.getFullYear() % 100; // 只取后两位: 2026 -> 26
+      const month = beijingTime.getMonth() + 1;
+      const day = beijingTime.getDate();
+      const hours = beijingTime.getHours();
+      const minutes = beijingTime.getMinutes();
+      const seconds = beijingTime.getSeconds();
+
+      this.addLog('info', `北京时间: 20${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`);
+
+      await this.sendCommand(0x01, 0x02, [year, month, day, hours, minutes, seconds]);
       this.addLog('success', '日期时间已同步');
 
       // 2. 设置UID
@@ -684,49 +703,61 @@ export default {
 
     // 发送QR码
     async sendQrCode() {
-      if (!this.qrCode) { this.addLog('error', '请输入QR码内容'); return; }
-
-      // TODO: 测试模式 - 跳过实际出票，只保存数据
-      const TEST_MODE = false;
-
-      if (TEST_MODE) {
-        this.addLog('warn', '[测试模式] 跳过实际出票');
-      } else {
-        // 发送到出票机（不等待响应，设备会直接打印）
-        const data = Array.from(this.qrCode).map(c => c.charCodeAt(0));
-        await this.sendCommand(0x01, 0x08, data, false);
-        this.addLog('success', 'QR码已发送，等待打印...');
+      if (!this.ticketScore || this.ticketScore <= 0) {
+        this.addLog('error', '请输入有效的分数/金额');
+        return;
       }
 
-      // 保存到数据库
-      if (this.save_ticket_url) {
-        try {
-          this.addLog('info', '保存数据: player_id=' + this.selectedPlayerId);
+      // 先保存到数据库，获取加密后的内容
+      if (!this.save_ticket_url) {
+        this.addLog('error', '保存地址未配置');
+        return;
+      }
 
-          const saveRes = await this.$request({
-            url: this.save_ticket_url,
-            method: 'post',
-            data: {
-              store_name: this.config.storeName,
-              machine_no: this.config.machineNo,
-              score: this.ticketScore,
-              qr_code: this.qrCode,
-              ticket_type: this.ticketType,
-              player_id: this.selectedPlayerId || 0,
-              store_admin_id: this.store_admin_id,
-              department_id: this.department_id,
-            },
-          });
+      let encryptedContent = '';
+      let orderId = '';
 
-          if (saveRes.code === 200) {
-            this.addLog('success', '票据记录已保存: ' + (saveRes.data?.order_id || ''));
-          } else {
-            this.addLog('warn', '票据记录保存失败: ' + (saveRes.message || ''));
-          }
-        } catch (e) {
-          this.addLog('warn', '票据记录保存异常: ' + (e.message || ''));
+      try {
+        this.addLog('info', '保存数据: player_id=' + this.selectedPlayerId);
+
+        const saveRes = await this.$request({
+          url: this.save_ticket_url,
+          method: 'post',
+          data: {
+            store_name: this.config.storeName,
+            machine_no: this.config.machineNo,
+            score: this.ticketScore,
+            qr_code: 'auto_generated',
+            ticket_type: this.ticketType,
+            player_id: this.selectedPlayerId || 0,
+            store_admin_id: this.store_admin_id,
+            department_id: this.department_id,
+          },
+        });
+
+        if (saveRes.code === 200) {
+          orderId = saveRes.data?.order_id || '';
+          encryptedContent = saveRes.data?.encrypted_content || '';
+          this.addLog('success', '票据记录已保存: ' + orderId);
+        } else {
+          this.addLog('error', '票据记录保存失败: ' + (saveRes.message || ''));
+          return;
         }
+      } catch (e) {
+        this.addLog('error', '票据记录保存异常: ' + (e.message || ''));
+        return;
       }
+
+      // 使用加密内容作为QR码发送到出票机
+      if (!encryptedContent) {
+        this.addLog('error', '未获取到加密内容');
+        return;
+      }
+
+      // 发送到出票机（不等待响应，设备会直接打印）
+      const data = Array.from(encryptedContent).map(c => c.charCodeAt(0));
+      await this.sendCommand(0x01, 0x08, data, false);
+      this.addLog('success', 'QR码已发送，等待打印...');
     },
 
     // 本地过滤玩家选项

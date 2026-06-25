@@ -55,8 +55,6 @@ return [
         PlayerDeliveryRecord::TYPE_PREPAY => 'Prepay Deduction',
         PlayerDeliveryRecord::TYPE_REFUND => 'Refund',
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => 'Lottery Ticket Reward',
-        PlayerDeliveryRecord::TYPE_TICKET_REDEEM => 'Ticket Redeem',
-        PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE => 'Scan Open Score',
     ],
     'detail' => 'details',
     'chart' => 'chart',

@@ -1744,6 +1744,14 @@ class ChannelAgentController
                 $val,
                 PlayerDeliveryRecord $data
             ) {
+                // 优先使用翻译，如果翻译不存在则使用原始值
+                $transKey = 'message.target.' . $val;
+                $translatedText = admin_trans($transKey);
+                // 如果翻译不存在（返回的是翻译键本身），则使用原始值
+                if ($translatedText === $transKey) {
+                    $translatedText = $val;
+                }
+
                 switch ($data->type) {
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
@@ -1775,6 +1783,8 @@ class ChannelAgentController
                                 'machineInfo'
                             ],
                                 ['data' => $data->machine->toArray()])->width('60%')->title($data->machine->code . ' ' . $data->machine->name);
+                        }else{
+                            return Tag::create($translatedText)->color('cyan');
                         }
                         break;
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
@@ -1898,12 +1908,6 @@ class ChannelAgentController
                             break;
                         case PlayerDeliveryRecord::TYPE_REFUND:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND))->color('#a0d911');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_TICKET_REDEEM:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_REDEEM))->color('#f50');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE))->color('#52c41a');
                             break;
                         default:
                             $tag = '';

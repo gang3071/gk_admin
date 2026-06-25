@@ -1596,9 +1596,6 @@ class PlayerPromoterController
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                     case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
                         return Tag::create(trans($val, [], 'message', $lang))->color('blue');
-                    case PlayerDeliveryRecord::TYPE_TICKET_REDEEM:
-                    case PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE:
-                        return Tag::create(trans($val, [], 'message', $lang))->color('green');
                     default:
                         return '';
                 }
@@ -1614,12 +1611,6 @@ class PlayerPromoterController
                             break;
                         case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_TICKET_REDEEM:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_REDEEM))->color('#f50');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_TICKET_OPEN_SCORE))->color('#52c41a');
                             break;
                         default:
                             $tag = '';
