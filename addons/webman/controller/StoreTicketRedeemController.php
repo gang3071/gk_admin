@@ -342,14 +342,19 @@ class StoreTicketRedeemController
         $admin = Admin::user();
 
         // 尝试解密加密内容（如果是加密串）
-        $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
         $orderId = null;
+        try {
+            $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
 
-        if (!empty($decryptedData)) {
-            $data = json_decode($decryptedData, true);
-            if ($data && isset($data['order_id'])) {
-                $orderId = $data['order_id'];
+            if (!empty($decryptedData)) {
+                $data = json_decode($decryptedData, true);
+                if ($data && isset($data['order_id'])) {
+                    $orderId = $data['order_id'];
+                }
             }
+        } catch (\Exception $e) {
+            // 解密失败，继续尝试其他查询方式
+            \support\Log::warning('解密QR码内容失败: ' . $e->getMessage(), ['qr_code_no' => $qrCodeNo]);
         }
 
         // 优先通过加密内容中的 order_id 查询
@@ -381,14 +386,11 @@ class StoreTicketRedeemController
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
         }
 
-        // 更新扫码状态
-        if ($record->scan_status == \addons\webman\model\TicketRecord::SCAN_STATUS_PENDING) {
-            $record->update([
-                'scan_status' => \addons\webman\model\TicketRecord::SCAN_STATUS_SCANNED,
-                'scanned_at' => now(),
-                'scanned_by' => 'admin_' . $admin->id,
-            ]);
-        }
+        // 更新扫码信息
+        $record->update([
+            'scanned_at' => date('Y-m-d H:i:s'),
+            'scanned_by' => 'admin_' . $admin->id,
+        ]);
 
         // 通过 player_id 关联获取玩家信息
         $playerName = '';
@@ -396,7 +398,7 @@ class StoreTicketRedeemController
         $playerUuid = '';
 
         if (!empty($record->player_id)) {
-            $player = \addons\webman\model\Player::query()
+            $player = Player::query()
                 ->where('id', $record->player_id)
                 ->first();
 
@@ -464,7 +466,7 @@ class StoreTicketRedeemController
         $playerUuid = '';
 
         if (!empty($record->player_id)) {
-            $player = \addons\webman\model\Player::query()
+            $player = Player::query()
                 ->where('id', $record->player_id)
                 ->first();
 
@@ -517,14 +519,19 @@ class StoreTicketRedeemController
         $admin = Admin::user();
 
         // 尝试解密加密内容（如果是加密串）
-        $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
         $orderId = null;
+        try {
+            $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
 
-        if (!empty($decryptedData)) {
-            $data = json_decode($decryptedData, true);
-            if ($data && isset($data['order_id'])) {
-                $orderId = $data['order_id'];
+            if (!empty($decryptedData)) {
+                $data = json_decode($decryptedData, true);
+                if ($data && isset($data['order_id'])) {
+                    $orderId = $data['order_id'];
+                }
             }
+        } catch (\Exception $e) {
+            // 解密失败，继续尝试其他查询方式
+            \support\Log::warning('解密QR码内容失败: ' . $e->getMessage(), ['qr_code_no' => $qrCodeNo]);
         }
 
         // 优先通过加密内容中的 order_id 查询
@@ -562,11 +569,10 @@ class StoreTicketRedeemController
             return message_error(admin_trans('ticket_machine.redeem.record_not_found'));
         }
 
-        // 更新状态为已使用，标记扫码状态
+        // 更新状态为已使用
         $record->update([
             'status' => TicketRecord::STATUS_USED,
-            'scan_status' => TicketRecord::SCAN_STATUS_SCANNED,
-            'scanned_at' => now(),
+            'scanned_at' => date('Y-m-d H:i:s'),
             'scanned_by' => 'admin_' . $admin->id,
         ]);
 
@@ -577,7 +583,7 @@ class StoreTicketRedeemController
      * 核销弹窗（从列表点击）
      * @group store
      * @auth true
-     * @return Form
+     * @return Html
      */
     public function redeemModal()
     {

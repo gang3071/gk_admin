@@ -3349,7 +3349,6 @@ class ChannelIndexController
                 'encrypted_content'  => $encryptedContent,
                 'ticket_type'        => $ticketType,
                 'status'             => \addons\webman\model\TicketRecord::STATUS_NORMAL,
-                'scan_status'        => \addons\webman\model\TicketRecord::SCAN_STATUS_PENDING,
             ]);
 
             return json([
@@ -3413,12 +3412,19 @@ class ChannelIndexController
 
         $key = substr($key, 0, 32);
         $decoded = base64_decode($value, true);
-        if ($decoded === false) {
+
+        // 验证 base64 解码是否成功，且长度至少为 16 字节（IV）+ 密文
+        if ($decoded === false || strlen($decoded) < 17) {
             return '';
         }
 
         $iv = substr($decoded, 0, 16);
         $encrypted = substr($decoded, 16);
+
+        // 验证密文长度是否为 16 的倍数
+        if (strlen($encrypted) === 0 || strlen($encrypted) % 16 !== 0) {
+            return '';
+        }
 
         $decrypted = openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
         return $decrypted !== false ? $decrypted : '';
