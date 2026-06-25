@@ -164,6 +164,30 @@ export default {
       return colors[status] || 'default';
     },
 
+    closeModal() {
+      // 向上查找最近的弹窗容器，点击其关闭按钮
+      const el = this.$el;
+      const modalWrap = el.closest ? el.closest('.ant-modal-wrap') : null;
+      if (modalWrap) {
+        const closeBtn = modalWrap.querySelector('.ant-modal-close');
+        if (closeBtn) {
+          closeBtn.click();
+          return;
+        }
+      }
+      // 备用方案：查找当前页面中所有可见弹窗
+      const modals = document.querySelectorAll('.ant-modal-wrap');
+      for (const modal of modals) {
+        if (modal.style.display !== 'none') {
+          const closeBtn = modal.querySelector('.ant-modal-close');
+          if (closeBtn) {
+            closeBtn.click();
+            return;
+          }
+        }
+      }
+    },
+
     getRedeemDisabledReason() {
       if (!this.record) return '无法核销';
       if (this.record.ticket_type !== 2) return '只有洗分票可以核销';
@@ -260,22 +284,11 @@ export default {
         });
 
         if (res.code === 0) {
-          this.message = '核销成功';
-          this.messageType = 'success';
-          this.messageDesc = '订单 ' + this.record.order_id + ' 已核销，金额 ' + this.record.score;
-
-          // 重置
-          setTimeout(() => {
-            this.qrCodeNo = '';
-            this.record = null;
-            this.message = '';
-            this.messageDesc = '';
-            this.$nextTick(() => {
-              if (this.$refs.qrInput) {
-                this.$refs.qrInput.focus();
-              }
-            });
-          }, 3000);
+          this.$message.success('核销成功');
+          // 关闭弹窗
+          this.$nextTick(() => {
+            this.closeModal();
+          });
         } else {
           this.message = res.msg || '核销失败';
           this.messageType = 'error';

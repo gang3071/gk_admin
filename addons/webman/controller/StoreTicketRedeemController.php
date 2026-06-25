@@ -300,8 +300,7 @@ class StoreTicketRedeemController
      */
     public function redeemById()
     {
-        $input = json_decode(request()->getContent(), true);
-        $id = $input['id'] ?? 0;
+        $id = request()->input('id', 0);
 
         if (empty($id)) {
             return json_encode(['code' => -1, 'msg' => admin_trans('common.invalid_parameter')]);
@@ -320,7 +319,11 @@ class StoreTicketRedeemController
         }
 
         // 更新状态为已使用
-        $record->update(['status' => TicketRecord::STATUS_USED]);
+        $record->update([
+            'status' => TicketRecord::STATUS_USED,
+            'scanned_at' => date('Y-m-d H:i:s'),
+            'scanned_by' => 'admin_' . $admin->id,
+        ]);
 
         return json_encode(['code' => 0, 'msg' => admin_trans('ticket_machine.redeem.redeem_success')]);
     }
@@ -427,7 +430,7 @@ class StoreTicketRedeemController
                 'status_name' => $record->status_name,
                 'qr_code_no' => $record->qr_code_no,
                 'encrypted_content' => $record->encrypted_content,
-                'created_at' => $record->created_at ? date('Y-m-d H:i:s', strtotime($record->created_at)) : '',
+                'created_at' => $record->created_at instanceof \DateTimeInterface ? $record->created_at->format('Y-m-d H:i:s') : (string) ($record->created_at ?? ''),
                 'player_id' => $record->player_id,
                 'player_name' => $playerName,
                 'player_avatar' => $playerAvatar,
@@ -493,7 +496,8 @@ class StoreTicketRedeemController
                 'status' => $record->status,
                 'status_name' => $record->status_name,
                 'qr_code_no' => $record->qr_code_no,
-                'created_at' => $record->created_at ? date('Y-m-d H:i:s', strtotime($record->created_at)) : '',
+                'encrypted_content' => $record->encrypted_content ?? '',
+                'created_at' => $record->created_at instanceof \DateTimeInterface ? $record->created_at->format('Y-m-d H:i:s') : (string) ($record->created_at ?? ''),
                 'player_id' => $record->player_id,
                 'player_name' => $playerName,
                 'player_avatar' => $playerAvatar,
@@ -736,7 +740,11 @@ class StoreTicketRedeemController
         }
 
         // 更新状态为已使用
-        $record->update(['status' => TicketRecord::STATUS_USED]);
+        $record->update([
+            'status' => TicketRecord::STATUS_USED,
+            'scanned_at' => date('Y-m-d H:i:s'),
+            'scanned_by' => 'admin_' . $admin->id,
+        ]);
 
         return message_success(admin_trans('ticket_machine.redeem.redeem_success'));
     }
