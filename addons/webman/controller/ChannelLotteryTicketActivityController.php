@@ -465,6 +465,16 @@ class ChannelLotteryTicketActivityController
                     throw new \Exception(admin_trans('lottery_ticket.error.cannot_edit_started'));
                 }
 
+                // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
+                $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
+                if ($conflictActivity) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
+                        'name' => $conflictActivity->name,
+                        'start_time' => $conflictActivity->start_time,
+                        'end_time' => $conflictActivity->end_time,
+                    ]));
+                }
+
                 $activity->update([
                     'name' => $data['name'],
                     'description' => $data['description'] ?? '',
@@ -488,35 +498,7 @@ class ChannelLotteryTicketActivityController
                 }
             } else {
                 // ⭐ 创建新活动前，检查时间段是否与其他活动冲突
-                // 只有未开始、进行中、待开奖、开奖中的活动需要检查（已结束和已关闭的不影响）
-                $conflictActivity = LotteryTicketActivity::where('department_id', $departmentId)
-                    ->whereIn('status', [
-                        LotteryTicketActivity::STATUS_NOT_STARTED,  // 未开始
-                        LotteryTicketActivity::STATUS_ONGOING,      // 进行中（打码中）
-                        LotteryTicketActivity::STATUS_PENDING_DRAW, // 待开奖
-                        LotteryTicketActivity::STATUS_DRAWING,      // 开奖中
-                    ])
-                    ->where(function ($query) use ($startTime, $endTime) {
-                        // 时间冲突判断：
-                        // 新活动的开始时间在已有活动期间内
-                        // OR 新活动的结束时间在已有活动期间内
-                        // OR 新活动完全包含已有活动
-                        $query->where(function ($q) use ($startTime, $endTime) {
-                            // 情况1：新活动开始时间在已有活动期间
-                            $q->where('start_time', '<=', date('Y-m-d H:i:s', $startTime))
-                              ->where('end_time', '>', date('Y-m-d H:i:s', $startTime));
-                        })->orWhere(function ($q) use ($startTime, $endTime) {
-                            // 情况2：新活动结束时间在已有活动期间
-                            $q->where('start_time', '<', date('Y-m-d H:i:s', $endTime))
-                              ->where('end_time', '>=', date('Y-m-d H:i:s', $endTime));
-                        })->orWhere(function ($q) use ($startTime, $endTime) {
-                            // 情况3：新活动完全包含已有活动
-                            $q->where('start_time', '>=', date('Y-m-d H:i:s', $startTime))
-                              ->where('end_time', '<=', date('Y-m-d H:i:s', $endTime));
-                        });
-                    })
-                    ->first();
-
+                $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime);
                 if ($conflictActivity) {
                     throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
                         'name' => $conflictActivity->name,
@@ -2463,5 +2445,47 @@ class ChannelLotteryTicketActivityController
 
             return message_error($e->getMessage());
         }
+    }
+
+    /**
+     * 检查活动时间段是否与其他活动冲突
+     * @param int $departmentId 部门ID
+     * @param int $startTime 开始时间戳
+     * @param int $endTime 结束时间戳
+     * @param int|null $excludeActivityId 排除的活动ID（编辑时使用）
+     * @return LotteryTicketActivity|null 冲突的活动，无冲突返回null
+     */
+    private function checkActivityTimeConflict($departmentId, $startTime, $endTime, $excludeActivityId = null)
+    {
+        $query = LotteryTicketActivity::where('department_id', $departmentId)
+            ->whereIn('status', [
+                LotteryTicketActivity::STATUS_NOT_STARTED,  // 未开始
+                LotteryTicketActivity::STATUS_ONGOING,      // 进行中（打码中）
+                LotteryTicketActivity::STATUS_PENDING_DRAW, // 待开奖
+                LotteryTicketActivity::STATUS_DRAWING,      // 开奖中
+            ])
+            ->where(function ($query) use ($startTime, $endTime) {
+                // 时间冲突判断：三种情况
+                $query->where(function ($q) use ($startTime, $endTime) {
+                    // 情况1：新活动开始时间在已有活动期间
+                    $q->where('start_time', '<=', date('Y-m-d H:i:s', $startTime))
+                      ->where('end_time', '>', date('Y-m-d H:i:s', $startTime));
+                })->orWhere(function ($q) use ($startTime, $endTime) {
+                    // 情况2：新活动结束时间在已有活动期间
+                    $q->where('start_time', '<', date('Y-m-d H:i:s', $endTime))
+                      ->where('end_time', '>=', date('Y-m-d H:i:s', $endTime));
+                })->orWhere(function ($q) use ($startTime, $endTime) {
+                    // 情况3：新活动完全包含已有活动
+                    $q->where('start_time', '>=', date('Y-m-d H:i:s', $startTime))
+                      ->where('end_time', '<=', date('Y-m-d H:i:s', $endTime));
+                });
+            });
+
+        // 编辑时排除当前活动
+        if ($excludeActivityId) {
+            $query->where('id', '!=', $excludeActivityId);
+        }
+
+        return $query->first();
     }
 }
