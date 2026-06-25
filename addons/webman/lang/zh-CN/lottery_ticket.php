@@ -295,6 +295,8 @@ return [
 
     // 错误信息
     'error' => [
+        // 时间冲突
+        'time_conflict_with_activity' => '活动时间与现有活动「{name}」冲突（{start_time} ~ {end_time}），同一时间段只能有一个活动在进行中',
         'record_not_found' => '记录不存在',
         'live_url_required' => '请填写直播地址',
         'live_url_too_long' => '直播地址过长（最多500字符）',

@@ -487,6 +487,44 @@ class ChannelLotteryTicketActivityController
                     ]);
                 }
             } else {
+                // ⭐ 创建新活动前，检查时间段是否与其他活动冲突
+                // 只有未开始、进行中、待开奖、开奖中的活动需要检查（已结束和已关闭的不影响）
+                $conflictActivity = LotteryTicketActivity::where('department_id', $departmentId)
+                    ->whereIn('status', [
+                        LotteryTicketActivity::STATUS_NOT_STARTED,  // 未开始
+                        LotteryTicketActivity::STATUS_ONGOING,      // 进行中（打码中）
+                        LotteryTicketActivity::STATUS_PENDING_DRAW, // 待开奖
+                        LotteryTicketActivity::STATUS_DRAWING,      // 开奖中
+                    ])
+                    ->where(function ($query) use ($startTime, $endTime) {
+                        // 时间冲突判断：
+                        // 新活动的开始时间在已有活动期间内
+                        // OR 新活动的结束时间在已有活动期间内
+                        // OR 新活动完全包含已有活动
+                        $query->where(function ($q) use ($startTime, $endTime) {
+                            // 情况1：新活动开始时间在已有活动期间
+                            $q->where('start_time', '<=', date('Y-m-d H:i:s', $startTime))
+                              ->where('end_time', '>', date('Y-m-d H:i:s', $startTime));
+                        })->orWhere(function ($q) use ($startTime, $endTime) {
+                            // 情况2：新活动结束时间在已有活动期间
+                            $q->where('start_time', '<', date('Y-m-d H:i:s', $endTime))
+                              ->where('end_time', '>=', date('Y-m-d H:i:s', $endTime));
+                        })->orWhere(function ($q) use ($startTime, $endTime) {
+                            // 情况3：新活动完全包含已有活动
+                            $q->where('start_time', '>=', date('Y-m-d H:i:s', $startTime))
+                              ->where('end_time', '<=', date('Y-m-d H:i:s', $endTime));
+                        });
+                    })
+                    ->first();
+
+                if ($conflictActivity) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
+                        'name' => $conflictActivity->name,
+                        'start_time' => $conflictActivity->start_time,
+                        'end_time' => $conflictActivity->end_time,
+                    ]));
+                }
+
                 // 创建
                 $activity = LotteryTicketActivity::create([
                     'name' => $data['name'],

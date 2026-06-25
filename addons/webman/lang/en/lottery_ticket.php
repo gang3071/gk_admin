@@ -295,6 +295,8 @@ return [
 
     // 错误信息
     'error' => [
+        // Time conflict
+        'time_conflict_with_activity' => 'Activity time conflicts with existing activity "{name}" ({start_time} ~ {end_time}). Only one activity can be active at the same time.',
         'record_not_found' => 'Record not found',
         'live_url_required' => 'Please enter live stream URL',
         'live_url_too_long' => 'Live stream URL too long (max 500 characters)',

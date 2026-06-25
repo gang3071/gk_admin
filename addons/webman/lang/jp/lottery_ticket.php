@@ -294,6 +294,8 @@ return [
 
     // 错误信息
     'error' => [
+        // 時間競合
+        'time_conflict_with_activity' => 'アクティビティ時間が既存のアクティビティ「{name}」と競合しています（{start_time} ~ {end_time}）。同一時間帯には1つのアクティビティのみ進行可能です。',
         'record_not_found' => '記録が存在しません',
         'live_url_required' => 'ライブURLを入力してください',
         'live_url_too_long' => 'ライブURLが長すぎます（最大500文字）',
