@@ -17,6 +17,7 @@ return [
         1 => 'Electronic Game Hall',
         2 => 'Physical Hall',
         3 => 'Standby Page',
+        4 => 'Horizontal Background',
     ],
     'url_max_length' => 'The link address can be up to 200 characters',
     'help' => [

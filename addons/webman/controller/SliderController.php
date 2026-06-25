@@ -71,6 +71,7 @@ class SliderController
                         1 => admin_trans('slider.ad_position.1'),
                         2 => admin_trans('slider.ad_position.2'),
                         3 => admin_trans('slider.ad_position.3'),
+                        4 => admin_trans('slider.ad_position.4'),
                     ]);
             });
             $grid->hideDelete();
@@ -95,6 +96,7 @@ class SliderController
                     1 => admin_trans('slider.ad_position.1'),
                     2 => admin_trans('slider.ad_position.2'),
                     3 => admin_trans('slider.ad_position.3'),
+                    4 => admin_trans('slider.ad_position.4'),
                 ])->required()
                 ->when(1, function ($form) {
                     $form->image('picture_url', admin_trans('slider.fields.picture_url'))
