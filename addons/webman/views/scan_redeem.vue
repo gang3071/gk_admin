@@ -12,7 +12,8 @@
             placeholder="请输入或扫描二维码编号"
             size="large"
             ref="qrInput"
-            @pressEnter="queryRecord"
+            :disabled="inputLocked"
+            @input="onScanInput"
           >
             <template #prefix>
               <qrcode-outlined style="color: #bfbfbf;" />
@@ -21,6 +22,7 @@
         </a-col>
         <a-col :span="8">
           <a-button
+            v-if="!inputLocked"
             type="primary"
             size="large"
             block
@@ -29,6 +31,15 @@
           >
             <template #icon><search-outlined /></template>
             查找
+          </a-button>
+          <a-button
+            v-else
+            size="large"
+            block
+            @click="resetScan"
+          >
+            <template #icon><reload-outlined /></template>
+            重新扫码
           </a-button>
         </a-col>
       </a-row>
@@ -128,6 +139,9 @@ export default {
       record: null,
       loading: false,
       redeeming: false,
+      inputLocked: false,
+      inputTimer: null,
+      lastScannedValue: '',
       message: '',
       messageDesc: '',
       messageType: 'info',
@@ -162,6 +176,74 @@ export default {
         3: 'orange',   // 已使用
       };
       return colors[status] || 'default';
+    },
+
+    onScanInput() {
+      console.log('[扫码] 输入事件触发, 当前值长度:', this.qrCodeNo.length);
+      // 等待输入完成：每次输入重置 500ms 定时器
+      if (this.inputTimer) {
+        console.log('[扫码] 重置输入定时器');
+        clearTimeout(this.inputTimer);
+      }
+      this.inputTimer = setTimeout(() => {
+        this.inputTimer = null;
+        const raw = this.qrCodeNo.trim();
+        console.log('[扫码] 输入完成, 原始值长度:', raw.length, '原始值:', raw.substring(0, 30) + '...');
+        if (!raw) return;
+        // 提取第一次扫码的内容（去除重复拼接的部分）
+        const value = this.extractFirstOccurrence(raw);
+        console.log('[扫码] 提取结果长度:', value.length, '是否重复:', value.length < raw.length);
+        this.qrCodeNo = value;
+        // 内容去重：和上次扫描的值相同则忽略
+        if (value === this.lastScannedValue) {
+          console.log('[扫码] 内容重复, 忽略. lastScannedValue:', this.lastScannedValue.substring(0, 30) + '...');
+          this.qrCodeNo = '';
+          return;
+        }
+        console.log('[扫码] 新内容, 触发查询. value:', value.substring(0, 30) + '...');
+        this.queryRecord();
+      }, 500);
+    },
+
+    // 从重复拼接的字符串中提取第一次的内容
+    // 例如 "ABC123ABC123ABC123" → "ABC123"
+    extractFirstOccurrence(str) {
+      if (!str || str.length < 50) {
+        console.log('[去重] 字符串太短, 跳过检测. 长度:', str ? str.length : 0);
+        return str;
+      }
+      console.log('[去重] 开始检测重复, 字符串长度:', str.length);
+      // 从最小可能长度开始检测
+      for (let len = 50; len <= Math.floor(str.length / 2); len++) {
+        const prefix = str.substring(0, len);
+        let isRepetition = true;
+        for (let i = len; i < str.length; i++) {
+          if (str[i] !== prefix[i % len]) {
+            isRepetition = false;
+            break;
+          }
+        }
+        if (isRepetition) {
+          console.log('[去重] 发现重复, 重复单元长度:', len, '重复单元:', prefix.substring(0, 30) + '...');
+          return prefix;
+        }
+      }
+      console.log('[去重] 未发现重复, 返回原始字符串');
+      return str;
+    },
+
+    resetScan() {
+      this.qrCodeNo = '';
+      this.record = null;
+      this.inputLocked = false;
+      this.lastScannedValue = '';
+      this.message = '';
+      this.messageDesc = '';
+      this.$nextTick(() => {
+        if (this.$refs.qrInput) {
+          this.$refs.qrInput.focus();
+        }
+      });
     },
 
     closeModal() {
@@ -236,6 +318,9 @@ export default {
         return;
       }
 
+      // 去除首尾空格
+      this.qrCodeNo = this.qrCodeNo.trim();
+
       this.loading = true;
       this.record = null;
       this.message = '';
@@ -250,6 +335,9 @@ export default {
 
         if (res.code === 0) {
           this.record = res.data;
+          this.inputLocked = true;
+          // 记录已扫描的值，相同内容不再触发查询
+          this.lastScannedValue = this.qrCodeNo;
           this.message = '查询成功';
           this.messageType = 'success';
           this.messageDesc = this.canRedeem ? '请确认订单信息后点击核销' : this.getRedeemDisabledReason();

@@ -350,9 +350,12 @@ class StoreTicketRedeemController
             $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
 
             if (!empty($decryptedData)) {
+                // 新格式：直接是 order_id；旧格式：JSON 包含 order_id
                 $data = json_decode($decryptedData, true);
                 if ($data && isset($data['order_id'])) {
                     $orderId = $data['order_id'];
+                } else {
+                    $orderId = $decryptedData;
                 }
             }
         } catch (\Exception $e) {
@@ -528,9 +531,12 @@ class StoreTicketRedeemController
             $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
 
             if (!empty($decryptedData)) {
+                // 新格式：直接是 order_id；旧格式：JSON 包含 order_id
                 $data = json_decode($decryptedData, true);
                 if ($data && isset($data['order_id'])) {
                     $orderId = $data['order_id'];
+                } else {
+                    $orderId = $decryptedData;
                 }
             }
         } catch (\Exception $e) {

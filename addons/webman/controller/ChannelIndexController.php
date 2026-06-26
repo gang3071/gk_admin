@@ -3326,14 +3326,8 @@ class ChannelIndexController
                 }
             }
 
-            // 生成加密内容（用于二维码展示）
-            $encryptData = json_encode([
-                'order_id' => $orderId,
-                'player_id' => $playerId,
-                'score' => $score,
-                'timestamp' => time(),
-            ]);
-            $encryptedContent = $this->encryptTicketContent($encryptData);
+            // 生成加密内容（用于二维码展示，只保留 order_id 以缩短长度）
+            $encryptedContent = $this->encryptTicketContent($orderId);
 
             $record = \addons\webman\model\TicketRecord::create([
                 'order_id'           => $orderId,
