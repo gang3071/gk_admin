@@ -7,18 +7,21 @@
         <a-col :span="16">
           <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 6px;">串口路径</div>
-            <a-select
-              v-model:value="config.port"
-              placeholder="选择串口"
-              style="width: 100%;"
-              :loading="portsLoading"
-              @dropdownVisibleChange="handlePortDropdown"
-              allowClear
-            >
-              <a-select-option v-for="port in availablePorts" :key="port.path" :value="port.path">
-                {{ port.path }}
-              </a-select-option>
-            </a-select>
+            <div style="display: flex; gap: 8px;">
+              <a-select
+                v-model:value="config.port"
+                placeholder="选择串口"
+                style="flex: 1;"
+                :loading="portsLoading"
+                @dropdownVisibleChange="handlePortDropdown"
+                allowClear
+              >
+                <a-select-option v-for="port in availablePorts" :key="port.path" :value="port.path">
+                  {{ port.path }}
+                </a-select-option>
+              </a-select>
+              <a-button @click="addNewPort" style="flex-shrink: 0;">添加串口</a-button>
+            </div>
           </div>
           <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 6px;">波特率</div>
