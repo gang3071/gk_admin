@@ -48,28 +48,8 @@
       </a-row>
     </a-card>
 
-    <!-- 设备配置 + 操作按钮 -->
+    <!-- 设备操作 + QR码打印 -->
     <a-row :gutter="16" style="margin-bottom: 16px;">
-      <a-col :span="12">
-        <a-card title="设备配置" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">唯一ID (UID)</div>
-            <div style="color: #909399; font-size: 12px; margin-bottom: 4px;">16个字符的唯一标识</div>
-            <a-input v-model:value="config.uid" maxlength="16" placeholder="16字符" />
-          </div>
-          <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">机台号</div>
-            <div style="color: #909399; font-size: 12px; margin-bottom: 4px;">范围: 0-65535</div>
-            <a-input-number v-model:value="config.machineNo" :min="0" :max="65535" placeholder="0-65535" style="width: 100%;" />
-          </div>
-          <div style="margin-bottom: 16px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">店名称</div>
-            <div style="color: #909399; font-size: 12px; margin-bottom: 4px;">最多10个字符</div>
-            <a-input v-model:value="config.storeName" maxlength="10" placeholder="店名称" />
-          </div>
-          <a-button type="primary" block @click="initMachine" :disabled="!isConnected">初始化设备</a-button>
-        </a-card>
-      </a-col>
       <a-col :span="12">
         <a-card title="设备操作" size="small" :headStyle="{borderBottom: '2px solid #E6A23C'}">
           <div style="margin-bottom: 12px;">
@@ -93,33 +73,6 @@
               <a-button danger block @click="resetMachine" :disabled="!isConnected">复位</a-button>
             </a-col>
           </a-row>
-        </a-card>
-      </a-col>
-    </a-row>
-
-    <!-- 出票操作 -->
-    <a-row :gutter="16" style="margin-bottom: 16px;">
-      <a-col :span="12">
-        <a-card title="彩票数据" size="small" :headStyle="{borderBottom: '2px solid #409EFF'}">
-          <a-row :gutter="8" style="margin-bottom: 12px;">
-            <a-col :span="6">
-              <div style="font-weight: 500; margin-bottom: 4px;">票数</div>
-              <a-input-number v-model:value="lottery.ticketCount" :min="0" placeholder="票数" style="width: 100%;" />
-            </a-col>
-            <a-col :span="6">
-              <div style="font-weight: 500; margin-bottom: 4px;">赠送</div>
-              <a-input-number v-model:value="lottery.giftCount" :min="0" placeholder="赠送" style="width: 100%;" />
-            </a-col>
-            <a-col :span="6">
-              <div style="font-weight: 500; margin-bottom: 4px;">码表</div>
-              <a-input-number v-model:value="lottery.codeTable" :min="0" placeholder="码表" style="width: 100%;" />
-            </a-col>
-            <a-col :span="6">
-              <div style="font-weight: 500; margin-bottom: 4px;">数</div>
-              <a-input-number v-model:value="lottery.number" :min="0" :max="999999" placeholder="0-999999" style="width: 100%;" />
-            </a-col>
-          </a-row>
-          <a-button type="primary" block @click="sendLottery" :disabled="!isConnected">发送彩票数据</a-button>
         </a-card>
       </a-col>
       <a-col :span="12">
@@ -180,6 +133,7 @@ export default {
   props: {
     default_baud_rate: String,
     default_store_name: String,
+    default_store_uid: String,
     save_ticket_url: String,
     store_admin_id: Number,
     department_id: Number,
@@ -197,7 +151,7 @@ export default {
       config: {
         port: '',
         baudRate: this.default_baud_rate || '115200',
-        uid: '',
+        uid: this.default_store_uid || '',
         machineNo: 0,
         storeName: this.default_store_name || '',
         serialNo: 0,
@@ -282,23 +236,23 @@ export default {
     },
 
     // 发送命令并等待响应
-    async sendCommand(cmdType, cmd, data = [], waitResponse = true) {
+    async sendCommand(cmdType, cmd, data = [], waitResponse = true, silent = false) {
       if (!this.port || !this.isConnected) {
-        this.addLog('error', '串口未连接');
+        if (!silent) this.addLog('error', '串口未连接');
         return null;
       }
 
       const frame = this.buildFrame(cmdType, cmd, data);
       const hexStr = Array.from(frame).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-      this.addLog('send', '发送 [' + frame.length + '字节]: ' + hexStr);
+      if (!silent) this.addLog('send', '发送 CMD=' + cmd.toString(16).padStart(2, '0') + ' [' + frame.length + '字节]: ' + hexStr);
 
       try {
         const writer = this.port.writable.getWriter();
         await writer.write(frame);
         writer.releaseLock();
-        this.addLog('info', '数据已写入串口');
+        if (!silent) this.addLog('info', '数据已写入串口');
       } catch (e) {
-        this.addLog('error', '发送失败: ' + e.message);
+        if (!silent) this.addLog('error', '发送失败: ' + e.message);
         return null;
       }
 
@@ -314,13 +268,15 @@ export default {
           if (this.pendingResolve && this.pendingResolve.cmd === cmd) {
             this.pendingResolve = null;
           }
-          this.addLog('warn', '响应超时 (2秒)');
+          if (!silent) this.addLog('warn', '响应超时 CMD=' + cmd.toString(16).padStart(2, '0') + ' (2秒)');
           resolve(null);
         }, 2000);
 
         // 存储期望的命令类型
         this.pendingResolve = {
           cmd: cmd,
+          cmdType: cmdType,
+          silent: silent,
           callback: (responseData) => {
             clearTimeout(timeout);
             this.pendingResolve = null;
@@ -360,18 +316,29 @@ export default {
                 let frame;
                 while ((frame = this.parseFrame(buffer)) !== null) {
                   buffer = buffer.slice(frame.consumed);
-                  const hexStr = Array.from(frame.data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-                  this.addLog('success', '解析帧: ' + frame.cmdType.toString(16).padStart(2, '0') + ' ' + frame.cmd.toString(16).padStart(2, '0') + ' DATA=[' + hexStr + ']');
+                  // 心跳响应(cmd=0x01)静默处理，不记录日志
+                  const isHeartbeat = frame.cmd === 0x01;
+                  const isSilent = isHeartbeat || (this.pendingResolve && this.pendingResolve.silent);
+
+                  if (!isSilent) {
+                    const hexStr = Array.from(frame.data).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+                    this.addLog('receive', '解析帧: cmd=' + frame.cmd.toString(16).padStart(2, '0') + ' DATA=[' + hexStr + ']');
+                  }
 
                   // 检查是否是期望的响应
-                  if (this.pendingResolve) {
-                    // 如果期望的命令匹配，调用回调
+                  if (this.pendingResolve && !isHeartbeat) {
+                    if (!isSilent) {
+                      this.addLog('info', '期望响应: cmd=' + this.pendingResolve.cmd.toString(16).padStart(2, '0') + ', 收到: cmd=' + frame.cmd.toString(16).padStart(2, '0'));
+                    }
                     if (this.pendingResolve.cmd === frame.cmd) {
+                      if (!isSilent) this.addLog('success', '命令响应匹配成功');
                       this.pendingResolve.callback(frame);
                     } else {
-                      // 不匹配的响应，记录日志
-                      this.addLog('info', '收到非期望响应，忽略');
+                      if (!isSilent) this.addLog('warn', '命令响应不匹配，忽略');
                     }
+                  } else if (this.pendingResolve && isHeartbeat) {
+                    // 心跳响应回调
+                    this.pendingResolve.callback(frame);
                   }
                 }
               }
@@ -539,9 +506,70 @@ export default {
         if (testResult) {
           this.addLog('success', '设备响应正常！');
 
-          // 连接成功后自动同步时间
+          // 连接成功后自动初始化设备
+          this.addLog('info', '===== 自动初始化设备 =====');
+
+          // 1. 同步时间
           this.addLog('info', '自动同步时间...');
-          await this.syncDatetime();
+          const timeResult = await this.syncDatetime();
+          this.addLog(timeResult ? 'success' : 'error', '同步时间: ' + (timeResult ? '成功' : '失败'));
+          await new Promise(r => setTimeout(r, 50)); // 延迟50ms
+
+          // 2. 设置UID（使用店机UUID）
+          this.addLog('info', '准备设置UID, config.uid=' + this.config.uid);
+          if (this.config.uid) {
+            const uid = this.config.uid.padStart(16, '0').substring(0, 16);
+            const uidData = Array.from(uid).map(c => c.charCodeAt(0));
+            this.addLog('info', '发送UID数据: ' + uid + ' (长度:' + uidData.length + ')');
+            const uidResult = await this.sendCommand(0x01, 0x03, uidData);
+            this.addLog(uidResult ? 'success' : 'error', 'UID设置: ' + (uidResult ? '成功' : '失败') + ' -> ' + uid);
+            await new Promise(r => setTimeout(r, 50)); // 延迟50ms
+          } else {
+            this.addLog('warn', 'UID为空，跳过设置');
+          }
+
+          // 3. 设置店名称（使用后端GBK编码）
+          this.addLog('info', '准备设置店名称, config.storeName=' + this.config.storeName);
+          if (this.config.storeName) {
+            let name = this.config.storeName || '';
+            let nameBytes = [];
+
+            // 通过后端API进行GBK编码
+            try {
+              const encodeRes = await this.$request({
+                url: 'ex-admin/addons-webman-controller-ChannelIndexController/ticketMachineApi',
+                method: 'get',
+                params: { action: 'encode_gbk', text: name },
+              });
+              if (encodeRes.success && encodeRes.bytes) {
+                nameBytes = encodeRes.bytes;
+                this.addLog('info', 'GBK编码: ' + encodeRes.hex);
+              } else {
+                this.addLog('warn', 'GBK编码失败，使用UTF-8');
+                const encoder = new TextEncoder();
+                nameBytes = Array.from(encoder.encode(name));
+              }
+            } catch (e) {
+              this.addLog('warn', 'GBK编码请求失败，使用UTF-8: ' + e.message);
+              const encoder = new TextEncoder();
+              nameBytes = Array.from(encoder.encode(name));
+            }
+
+            // 确保正好10个字节
+            if (nameBytes.length > 10) {
+              nameBytes = nameBytes.slice(0, 10);
+            } else {
+              while (nameBytes.length < 10) nameBytes.push(0x20); // 用空格填充
+            }
+            const nameHex = nameBytes.map(b => b.toString(16).padStart(2, '0')).join(' ');
+            this.addLog('info', '发送店名称数据: [' + nameHex + '] (长度:' + nameBytes.length + ')');
+            const nameResult = await this.sendCommand(0x01, 0x05, nameBytes);
+            this.addLog(nameResult ? 'success' : 'error', '店名称设置: ' + (nameResult ? '成功' : '失败') + ' -> "' + name + '"');
+          } else {
+            this.addLog('warn', '店名称为空，跳过设置');
+          }
+
+          this.addLog('success', '===== 设备初始化完成 =====');
         } else {
           this.addLog('warn', '设备未响应，请检查：');
           this.addLog('warn', '1. 出票机是否已开机');
@@ -552,7 +580,7 @@ export default {
         // 启动心跳
         this.addLog('info', '心跳已启动 (每10秒)');
         this.heartbeatTimer = setInterval(async () => {
-          await this.sendCommand(0x01, 0x01);
+          await this.sendCommand(0x01, 0x01, [], true, true);
         }, 10000);
 
       } catch (e) {
@@ -626,6 +654,7 @@ export default {
 
       const r = await this.sendCommand(0x01, 0x02, data);
       this.addLog(r ? 'success' : 'error', r ? '日期时间已同步' : '同步失败');
+      return !!r;
     },
 
     // 初始化设备
@@ -711,6 +740,13 @@ export default {
         return;
       }
 
+      // 暂停心跳，避免干扰命令响应
+      if (this.heartbeatTimer) {
+        clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = null;
+        this.addLog('info', '心跳已暂停');
+      }
+
       // 先保存到数据库，获取加密后的内容
       if (!this.save_ticket_url) {
         this.addLog('error', '保存地址未配置');
@@ -751,6 +787,39 @@ export default {
         return;
       }
 
+      // 设置序列号为 order_id 的数字部分（取后7位）
+      this.addLog('info', '准备设置序列号, order_id=' + orderId);
+      const numericPart = orderId.replace(/[^0-9]/g, '');
+      this.addLog('info', '提取数字部分: ' + numericPart + ' (长度:' + numericPart.length + ')');
+      const serialNo = parseInt(numericPart.slice(-7)) || 0;
+      this.config.serialNo = serialNo;
+      const serialData = [(serialNo >> 24) & 0xFF, (serialNo >> 16) & 0xFF, (serialNo >> 8) & 0xFF, serialNo & 0xFF];
+      const serialHex = serialData.map(b => b.toString(16).padStart(2, '0')).join(' ');
+      this.addLog('info', '发送序列号数据: [' + serialHex + '] = ' + serialNo + ' (4字节)');
+
+      // 手动构造帧并发送，用于调试
+      const frame = this.buildFrame(0x01, 0x06, serialData);
+      const frameHex = Array.from(frame).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+      this.addLog('send', '序列号帧: ' + frameHex);
+
+      const serialResult = await this.sendCommand(0x01, 0x06, serialData);
+      this.addLog(serialResult ? 'success' : 'error', '序列号设置: ' + (serialResult ? '成功' : '失败') + ' -> ' + serialNo);
+
+      // 等待更长时间确保设备处理完成
+      await new Promise(r => setTimeout(r, 100));
+
+      // 先发送彩票数据（分数设置到前两位，其他传0）
+      const score = Math.floor(this.ticketScore);
+      const lotteryData = [
+        (score >> 8) & 0xFF,  // 票数 = 分数高字节
+        score & 0xFF,         // 赠送 = 分数低字节
+        0,                    // 码表 = 0
+        0, 0, 0, 0           // 数 = 0 (4字节)
+      ];
+      this.addLog('info', '发送彩票数据: 分数=' + score);
+      await this.sendCommand(0x01, 0x07, lotteryData);
+      this.addLog('success', '彩票数据已发送');
+
       // 使用加密内容作为QR码发送到出票机
       if (!encryptedContent) {
         this.addLog('error', '未获取到加密内容');
@@ -760,7 +829,13 @@ export default {
       // 发送到出票机（不等待响应，设备会直接打印）
       const data = Array.from(encryptedContent).map(c => c.charCodeAt(0));
       await this.sendCommand(0x01, 0x08, data, false);
-      this.addLog('success', 'QR码已发送，等待打印...');
+      this.addLog('success', 'QR码已发送: ' + orderId);
+
+      // 重启心跳
+      this.heartbeatTimer = setInterval(async () => {
+        await this.sendCommand(0x01, 0x01, [], true, true);
+      }, 10000);
+      this.addLog('info', '心跳已重启');
     },
 
     // 本地过滤玩家选项

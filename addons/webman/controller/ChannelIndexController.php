@@ -3301,12 +3301,16 @@ class ChannelIndexController
     public function ticketMachineControl()
     {
         $store = Admin::user();
-        $storeName = $store->username ?? '';
+        $storeName = $store->nickname ?? '';
         $defaultBaudRate = env('TICKET_DEFAULT_BAUD_RATE', '115200');
+
+        // 生成16位唯一ID（基于store_id，前缀S，后面补零）
+        $storeUid = 'S' . str_pad((string)($store->id ?? 0), 15, '0', STR_PAD_LEFT);
 
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
+            'default_store_uid' => $storeUid,
             'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
             'store_admin_id' => $store->id ?? 0,
             'department_id' => $store->department_id ?? 0,
@@ -3359,6 +3363,13 @@ class ChannelIndexController
                     request()->input('store_name', '')
                 ),
                 'ports' => ['success' => true, 'ports' => \app\service\TicketMachineService::getPortList()],
+                'encode_gbk' => (function () {
+                    $text = request()->input('text', '');
+                    // 将UTF-8转换为GBK编码
+                    $gbkBytes = mb_convert_encoding($text, 'GBK', 'UTF-8');
+                    $byteArray = array_values(unpack('C*', $gbkBytes));
+                    return ['success' => true, 'bytes' => $byteArray, 'hex' => implode(' ', array_map(function($b) { return sprintf('%02X', $b); }, $byteArray))];
+                })(),
                 default => ['success' => false, 'error' => 'Unknown action: ' . $action],
             };
         } catch (\Exception $e) {
