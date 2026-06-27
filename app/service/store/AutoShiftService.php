@@ -3,8 +3,10 @@
 namespace app\service\store;
 
 use addons\webman\model\Currency;
+use addons\webman\model\PlayGameRecord;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\model\PlayerGameLog;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
@@ -239,7 +241,10 @@ class AutoShiftService
             $shiftRecord->total_in = $statistics['total_in'];
             $shiftRecord->total_out = $statistics['total_out'];
             $shiftRecord->lottery_amount = $statistics['lottery_amount'];
+            $shiftRecord->lottery_ticket_reward_amount = $statistics['lottery_ticket_reward_amount'];
             $shiftRecord->total_profit_amount = $statistics['total_profit'];
+            $shiftRecord->electronic_game_bet_amount = $statistics['electronic_game_bet_amount'];
+            $shiftRecord->machine_bet_amount = $statistics['machine_bet_amount'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
 
@@ -270,6 +275,7 @@ class AutoShiftService
             $log->total_in = $statistics['total_in'];
             $log->total_out = $statistics['total_out'];
             $log->lottery_amount = $statistics['lottery_amount'];
+            $log->lottery_ticket_reward_amount = $statistics['lottery_ticket_reward_amount'];
             $log->total_profit = $statistics['total_profit'];
             $log->save();
 
@@ -357,6 +363,7 @@ class AutoShiftService
             ->selectRaw('
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as machine_put_point,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as lottery_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as recharge_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as withdrawal_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as modified_add_amount,
@@ -364,6 +371,7 @@ class AutoShiftService
             ', [
                 PlayerDeliveryRecord::TYPE_MACHINE,
                 PlayerDeliveryRecord::TYPE_LOTTERY,
+                PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // 开分
                 PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD, // 后台加点
@@ -380,6 +388,7 @@ class AutoShiftService
         $data = $result ? $result->toArray() : [
             'machine_put_point' => 0,
             'lottery_amount' => 0,
+            'lottery_ticket_reward_amount' => 0,
             'recharge_amount' => 0,
             'withdrawal_amount' => 0,
             'modified_add_amount' => 0,
@@ -400,13 +409,36 @@ class AutoShiftService
         // 计算每台设备的明细统计
         $deviceDetails = $this->calculateDeviceDetails($admin->department_id, $bindAdminUserId, $startTime, $endTime);
 
+        // 计算电子游戏打码量（从 play_game_record 表的 bet 字段汇总）
+        $electronicGameBetAmount = PlayGameRecord::query()
+            ->join('player', 'play_game_record.player_id', '=', 'player.id')
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
+            ->where('play_game_record.created_at', '>', $startTime)
+            ->where('play_game_record.created_at', '<=', $endTime)
+            ->sum('play_game_record.bet');
+
+        // 计算机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
+        $machineBetAmount = PlayerGameLog::query()
+            ->join('player', 'player_game_log.player_id', '=', 'player.id')
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
+            ->where('player_game_log.created_at', '>', $startTime)
+            ->where('player_game_log.created_at', '<=', $endTime)
+            ->sum('player_game_log.chip_amount');
+
         return [
             'machine_amount' => (float)$machineAmount,
             'machine_point' => (int)$data['machine_put_point'],
             'total_in' => (float)$totalIn,
             'total_out' => (float)$totalOut,
             'lottery_amount' => (float)$data['lottery_amount'],
+            'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
             'total_profit' => (float)$totalProfit,
+            'electronic_game_bet_amount' => (float)$electronicGameBetAmount,
+            'machine_bet_amount' => (float)$machineBetAmount,
             // 详细分类数据
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],
@@ -450,6 +482,7 @@ class AutoShiftService
                 player_id,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as machine_point,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
@@ -457,6 +490,7 @@ class AutoShiftService
             ', [
                 PlayerDeliveryRecord::TYPE_MACHINE,
                 PlayerDeliveryRecord::TYPE_LOTTERY,
+                PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_RECHARGE,
                 PlayerDeliveryRecord::TYPE_WITHDRAWAL,
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
@@ -468,6 +502,26 @@ class AutoShiftService
             ->groupBy('player_id')
             ->get()
             ->keyBy('player_id');  // 以 player_id 为键，方便后续查找
+
+        // 3. 查询电子游戏打码量（从 play_game_record 表）
+        $electronicGameBetMap = PlayGameRecord::query()
+            ->selectRaw('player_id, SUM(bet) as total_bet')
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('player_id')
+            ->get()
+            ->pluck('total_bet', 'player_id');
+
+        // 4. 查询机器打码量（从 player_game_log 表）
+        $machineBetMap = PlayerGameLog::query()
+            ->selectRaw('player_id, SUM(chip_amount) as total_chip')
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('player_id')
+            ->get()
+            ->pluck('total_chip', 'player_id');
 
         // 3. 在内存中合并数据（无数据库查询）
         $deviceDetails = [];
@@ -488,9 +542,14 @@ class AutoShiftService
             $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
             $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut, 2);
 
+            // 获取该设备的电子游戏打码量和机器打码量
+            $electronicGameBet = (float)($electronicGameBetMap[$player->id] ?? 0);
+            $machineBet = (float)($machineBetMap[$player->id] ?? 0);
+
             // 只保存有数据的设备（至少有一项不为0）
             if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
-                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0) {
+                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
+                $data['lottery_ticket_reward_amount'] > 0 || $electronicGameBet > 0 || $machineBet > 0) {
 
                 $deviceDetails[] = [
                     'department_id' => $departmentId,
@@ -504,6 +563,9 @@ class AutoShiftService
                     'modified_add_amount' => (float)$data['modified_add_amount'],
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],
+                    'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
+                    'electronic_game_bet_amount' => $electronicGameBet,
+                    'machine_bet_amount' => $machineBet,
                     'total_in' => (float)$totalIn,
                     'total_out' => (float)$totalOut,
                     'profit' => (float)$profit,
@@ -514,7 +576,9 @@ class AutoShiftService
         // ✅ 显式释放大对象，帮助垃圾回收
         $players = null;
         $statistics = null;
-        unset($players, $statistics);
+        $electronicGameBetMap = null;
+        $machineBetMap = null;
+        unset($players, $statistics, $electronicGameBetMap, $machineBetMap);
 
         return $deviceDetails;
     }

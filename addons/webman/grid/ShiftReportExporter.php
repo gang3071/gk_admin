@@ -27,6 +27,8 @@ class ShiftReportExporter extends Excel
         'lottery_amount' => 0,       // 彩金
         'activity_bonus_amount' => 0, // 活动奖励
         'lottery_ticket_reward_amount' => 0, // 摸奖券奖励
+        'electronic_game_bet_amount' => 0, // 电子游戏打码量
+        'machine_bet_amount' => 0,   // 机器打码量
         'total_in' => 0,             // 总收入
         'total_out' => 0,            // 总支出
         'profit' => 0                // 利润
@@ -89,7 +91,7 @@ class ShiftReportExporter extends Excel
             $titleText = admin_trans('shift_handover.shift_id') . ': ' . $originalRecord->id . '    ' .
                          admin_trans('shift_handover.shift_time') . ': ' . $originalRecord->start_time . ' ~ ' . $originalRecord->end_time;
             $this->sheet->setCellValue('A' . $this->currentRow, $titleText);
-            $this->sheet->mergeCells('A' . $this->currentRow . ':K' . $this->currentRow);
+            $this->sheet->mergeCells('A' . $this->currentRow . ':O' . $this->currentRow);
             $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                 'font' => ['bold' => true, 'size' => 14],
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
@@ -122,6 +124,8 @@ class ShiftReportExporter extends Excel
                     admin_trans('shift_handover.lottery_amount'),
                     admin_trans('shift_handover.activity_bonus_amount'),
                     admin_trans('shift_handover.lottery_ticket_reward_amount'),
+                    admin_trans('shift_handover.electronic_game_bet_amount'),
+                    admin_trans('shift_handover.machine_bet_amount'),
                     admin_trans('shift_handover.total_in'),
                     admin_trans('shift_handover.total_out'),
                     admin_trans('shift_handover.profit')
@@ -132,7 +136,7 @@ class ShiftReportExporter extends Excel
                     $this->sheet->setCellValueByColumnAndRow($index + 1, $this->currentRow, $header);
                 }
 
-                $this->sheet->getStyle('A' . $this->currentRow . ':M' . $this->currentRow)->applyFromArray([
+                $this->sheet->getStyle('A' . $this->currentRow . ':O' . $this->currentRow)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -151,6 +155,8 @@ class ShiftReportExporter extends Excel
                     'lottery_amount' => 0,
                     'activity_bonus_amount' => 0,
                     'lottery_ticket_reward_amount' => 0,
+                    'electronic_game_bet_amount' => 0,
+                    'machine_bet_amount' => 0,
                     'total_in' => 0,
                     'total_out' => 0,
                     'profit' => 0
@@ -176,6 +182,8 @@ class ShiftReportExporter extends Excel
                     $lotteryAmount = $detail ? $detail->lottery_amount : 0;
                     $activityBonusAmount = $detail ? $detail->activity_bonus_amount : 0;
                     $lotteryTicketRewardAmount = $detail ? $detail->lottery_ticket_reward_amount : 0;
+                    $electronicGameBetAmount = $detail ? $detail->electronic_game_bet_amount : 0;
+                    $machineBetAmount = $detail ? $detail->machine_bet_amount : 0;
                     $totalIn = $detail ? $detail->total_in : 0;
                     $totalOut = $detail ? $detail->total_out : 0;
                     $profit = $detail ? $detail->profit : 0;
@@ -190,25 +198,27 @@ class ShiftReportExporter extends Excel
                     $this->sheet->setCellValue('H' . $this->currentRow, number_format($lotteryAmount, 2));
                     $this->sheet->setCellValue('I' . $this->currentRow, number_format($activityBonusAmount, 2));
                     $this->sheet->setCellValue('J' . $this->currentRow, number_format($lotteryTicketRewardAmount, 2));
-                    $this->sheet->setCellValue('K' . $this->currentRow, number_format($totalIn, 2));
-                    $this->sheet->setCellValue('L' . $this->currentRow, number_format($totalOut, 2));
-                    $this->sheet->setCellValue('M' . $this->currentRow, number_format($profit, 2));
+                    $this->sheet->setCellValue('K' . $this->currentRow, number_format($electronicGameBetAmount, 2));
+                    $this->sheet->setCellValue('L' . $this->currentRow, number_format($machineBetAmount, 2));
+                    $this->sheet->setCellValue('M' . $this->currentRow, number_format($totalIn, 2));
+                    $this->sheet->setCellValue('N' . $this->currentRow, number_format($totalOut, 2));
+                    $this->sheet->setCellValue('O' . $this->currentRow, number_format($profit, 2));
 
                     // 数字列右对齐
-                    $this->sheet->getStyle('C' . $this->currentRow . ':M' . $this->currentRow)
+                    $this->sheet->getStyle('C' . $this->currentRow . ':O' . $this->currentRow)
                         ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
                     // 交替行背景色
                     $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
-                    $this->sheet->getStyle('A' . $this->currentRow . ':M' . $this->currentRow)->applyFromArray([
+                    $this->sheet->getStyle('A' . $this->currentRow . ':O' . $this->currentRow)->applyFromArray([
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
                     ]);
 
                     // 利润颜色
                     $profitColor = $profit >= 0 ? '3f8600' : 'cf1322';
-                    $this->sheet->getStyle('M' . $this->currentRow)->getFont()->getColor()->setRGB($profitColor);
-                    $this->sheet->getStyle('M' . $this->currentRow)->getFont()->setBold(true);
+                    $this->sheet->getStyle('O' . $this->currentRow)->getFont()->getColor()->setRGB($profitColor);
+                    $this->sheet->getStyle('O' . $this->currentRow)->getFont()->setBold(true);
 
                     // 累加小计
                     $subtotal['machine_point'] += $machinePoint;
@@ -219,6 +229,8 @@ class ShiftReportExporter extends Excel
                     $subtotal['lottery_amount'] += $lotteryAmount;
                     $subtotal['activity_bonus_amount'] += $activityBonusAmount;
                     $subtotal['lottery_ticket_reward_amount'] += $lotteryTicketRewardAmount;
+                    $subtotal['electronic_game_bet_amount'] += $electronicGameBetAmount;
+                    $subtotal['machine_bet_amount'] += $machineBetAmount;
                     $subtotal['total_in'] += $totalIn;
                     $subtotal['total_out'] += $totalOut;
                     $subtotal['profit'] += $profit;
@@ -241,11 +253,13 @@ class ShiftReportExporter extends Excel
                 $this->sheet->setCellValue('H' . $this->currentRow, number_format($subtotal['lottery_amount'], 2));
                 $this->sheet->setCellValue('I' . $this->currentRow, number_format($subtotal['activity_bonus_amount'], 2));
                 $this->sheet->setCellValue('J' . $this->currentRow, number_format($subtotal['lottery_ticket_reward_amount'], 2));
-                $this->sheet->setCellValue('K' . $this->currentRow, number_format($subtotal['total_in'], 2));
-                $this->sheet->setCellValue('L' . $this->currentRow, number_format($subtotal['total_out'], 2));
-                $this->sheet->setCellValue('M' . $this->currentRow, number_format($subtotal['profit'], 2));
+                $this->sheet->setCellValue('K' . $this->currentRow, number_format($subtotal['electronic_game_bet_amount'], 2));
+                $this->sheet->setCellValue('L' . $this->currentRow, number_format($subtotal['machine_bet_amount'], 2));
+                $this->sheet->setCellValue('M' . $this->currentRow, number_format($subtotal['total_in'], 2));
+                $this->sheet->setCellValue('N' . $this->currentRow, number_format($subtotal['total_out'], 2));
+                $this->sheet->setCellValue('O' . $this->currentRow, number_format($subtotal['profit'], 2));
 
-                $this->sheet->getStyle('A' . $this->currentRow . ':M' . $this->currentRow)->applyFromArray([
+                $this->sheet->getStyle('A' . $this->currentRow . ':O' . $this->currentRow)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -255,7 +269,7 @@ class ShiftReportExporter extends Excel
 
                 // 小计利润颜色
                 $subtotalProfitColor = $subtotal['profit'] >= 0 ? '3f8600' : 'cf1322';
-                $this->sheet->getStyle('M' . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
+                $this->sheet->getStyle('O' . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
 
                 $this->currentRow++;
 
@@ -354,6 +368,8 @@ class ShiftReportExporter extends Excel
                         'lottery_amount' => 0,
                         'activity_bonus_amount' => 0,
                         'lottery_ticket_reward_amount' => 0,
+                        'electronic_game_bet_amount' => 0,
+                        'machine_bet_amount' => 0,
                         'total_in' => 0,
                         'total_out' => 0,
                         'profit' => 0
@@ -404,6 +420,8 @@ class ShiftReportExporter extends Excel
                         $this->deviceTotals[$deviceKey]['lottery_amount'] += $detail->lottery_amount;
                         $this->deviceTotals[$deviceKey]['activity_bonus_amount'] += $detail->activity_bonus_amount;
                         $this->deviceTotals[$deviceKey]['lottery_ticket_reward_amount'] += $detail->lottery_ticket_reward_amount;
+                        $this->deviceTotals[$deviceKey]['electronic_game_bet_amount'] += $detail->electronic_game_bet_amount;
+                        $this->deviceTotals[$deviceKey]['machine_bet_amount'] += $detail->machine_bet_amount;
                         $this->deviceTotals[$deviceKey]['total_in'] += $detail->total_in;
                         $this->deviceTotals[$deviceKey]['total_out'] += $detail->total_out;
                         $this->deviceTotals[$deviceKey]['profit'] += $detail->profit;
@@ -418,6 +436,8 @@ class ShiftReportExporter extends Excel
                     $this->grandTotal['lottery_amount'] += $detail->lottery_amount;
                     $this->grandTotal['activity_bonus_amount'] += $detail->activity_bonus_amount;
                     $this->grandTotal['lottery_ticket_reward_amount'] += $detail->lottery_ticket_reward_amount;
+                    $this->grandTotal['electronic_game_bet_amount'] += $detail->electronic_game_bet_amount;
+                    $this->grandTotal['machine_bet_amount'] += $detail->machine_bet_amount;
                     $this->grandTotal['total_in'] += $detail->total_in;
                     $this->grandTotal['total_out'] += $detail->total_out;
                     $this->grandTotal['profit'] += $detail->profit;
@@ -481,6 +501,8 @@ class ShiftReportExporter extends Excel
             admin_trans('shift_handover.lottery_amount'),
             admin_trans('shift_handover.auto.activity_bonus_amount'),
             admin_trans('shift_handover.auto.lottery_ticket_reward_amount'),
+            admin_trans('shift_handover.electronic_game_bet_amount'),
+            admin_trans('shift_handover.machine_bet_amount'),
             admin_trans('shift_handover.total_in'),
             admin_trans('shift_handover.total_out'),
             admin_trans('shift_handover.profit')
@@ -490,7 +512,7 @@ class ShiftReportExporter extends Excel
             $this->sheet->setCellValueByColumnAndRow($index + 1, $topRow, $header);
         }
 
-        $this->sheet->getStyle('A' . $topRow . ':M' . $topRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $topRow . ':O' . $topRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 11],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -517,25 +539,27 @@ class ShiftReportExporter extends Excel
             $this->sheet->setCellValue('H' . $topRow, number_format($device['lottery_amount'], 2));
             $this->sheet->setCellValue('I' . $topRow, number_format($device['activity_bonus_amount'], 2));
             $this->sheet->setCellValue('J' . $topRow, number_format($device['lottery_ticket_reward_amount'], 2));
-            $this->sheet->setCellValue('K' . $topRow, number_format($device['total_in'], 2));
-            $this->sheet->setCellValue('L' . $topRow, number_format($device['total_out'], 2));
-            $this->sheet->setCellValue('M' . $topRow, number_format($device['profit'], 2));
+            $this->sheet->setCellValue('K' . $topRow, number_format($device['electronic_game_bet_amount'], 2));
+            $this->sheet->setCellValue('L' . $topRow, number_format($device['machine_bet_amount'], 2));
+            $this->sheet->setCellValue('M' . $topRow, number_format($device['total_in'], 2));
+            $this->sheet->setCellValue('N' . $topRow, number_format($device['total_out'], 2));
+            $this->sheet->setCellValue('O' . $topRow, number_format($device['profit'], 2));
 
             // 数字列右对齐
-            $this->sheet->getStyle('C' . $topRow . ':M' . $topRow)
+            $this->sheet->getStyle('C' . $topRow . ':O' . $topRow)
                 ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
             // 交替行背景色
             $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
-            $this->sheet->getStyle('A' . $topRow . ':M' . $topRow)->applyFromArray([
+            $this->sheet->getStyle('A' . $topRow . ':O' . $topRow)->applyFromArray([
                 'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
                 'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
             ]);
 
             // 利润颜色
             $profitColor = $device['profit'] >= 0 ? '3f8600' : 'cf1322';
-            $this->sheet->getStyle('M' . $topRow)->getFont()->getColor()->setRGB($profitColor);
-            $this->sheet->getStyle('M' . $topRow)->getFont()->setBold(true);
+            $this->sheet->getStyle('O' . $topRow)->getFont()->getColor()->setRGB($profitColor);
+            $this->sheet->getStyle('O' . $topRow)->getFont()->setBold(true);
 
             $this->sheet->getRowDimension($topRow)->setRowHeight(20);
             $topRow++;
@@ -553,11 +577,13 @@ class ShiftReportExporter extends Excel
         $this->sheet->setCellValue('H' . $topRow, number_format($this->grandTotal['lottery_amount'], 2));
         $this->sheet->setCellValue('I' . $topRow, number_format($this->grandTotal['activity_bonus_amount'], 2));
         $this->sheet->setCellValue('J' . $topRow, number_format($this->grandTotal['lottery_ticket_reward_amount'], 2));
-        $this->sheet->setCellValue('K' . $topRow, number_format($this->grandTotal['total_in'], 2));
-        $this->sheet->setCellValue('L' . $topRow, number_format($this->grandTotal['total_out'], 2));
-        $this->sheet->setCellValue('M' . $topRow, number_format($this->grandTotal['profit'], 2));
+        $this->sheet->setCellValue('K' . $topRow, number_format($this->grandTotal['electronic_game_bet_amount'], 2));
+        $this->sheet->setCellValue('L' . $topRow, number_format($this->grandTotal['machine_bet_amount'], 2));
+        $this->sheet->setCellValue('M' . $topRow, number_format($this->grandTotal['total_in'], 2));
+        $this->sheet->setCellValue('N' . $topRow, number_format($this->grandTotal['total_out'], 2));
+        $this->sheet->setCellValue('O' . $topRow, number_format($this->grandTotal['profit'], 2));
 
-        $this->sheet->getStyle('A' . $topRow . ':M' . $topRow)->applyFromArray([
+        $this->sheet->getStyle('A' . $topRow . ':O' . $topRow)->applyFromArray([
             'font' => ['bold' => true, 'size' => 12],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFC000']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -569,7 +595,7 @@ class ShiftReportExporter extends Excel
 
         // 总计利润颜色
         $grandProfitColor = $this->grandTotal['profit'] >= 0 ? '3f8600' : 'cf1322';
-        $this->sheet->getStyle('M' . $topRow)->getFont()->getColor()->setRGB($grandProfitColor);
+        $this->sheet->getStyle('O' . $topRow)->getFont()->getColor()->setRGB($grandProfitColor);
         $topRow++;
 
         // 空行
@@ -634,9 +660,11 @@ class ShiftReportExporter extends Excel
             'H' => 14,  // 彩金
             'I' => 14,  // 活动奖励
             'J' => 14,  // 摸奖券奖励
-            'K' => 14,  // 总收入
-            'L' => 14,  // 总支出
-            'M' => 16,  // 利润
+            'K' => 14,  // 电子游戏打码量
+            'L' => 14,  // 机器打码量
+            'M' => 14,  // 总收入
+            'N' => 14,  // 总支出
+            'O' => 16,  // 利润
         ];
 
         foreach ($widths as $col => $width) {

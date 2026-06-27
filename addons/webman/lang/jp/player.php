@@ -210,6 +210,7 @@ return [
     'total_withdraw_amount' => '累計キャッシュ',
     'total_machine_put_point' => '現金預金',
     'total_lottery_amount' => 'ジャックポット',
+    'total_lottery_ticket_reward_amount' => '抽選券',
     'subtotal' => '小計',
     'wash_point_config' => '洗分設定',
     'current_shift_stats' => '現在のシフト統計',

@@ -78,6 +78,9 @@ return [
     'bound_agent' => 'バインド代理',
     'current_payment_amount' => '当期支払金額',
     'payment_ratio' => '支払比率',
+    'electronic_game_bet_amount' => '電子ゲームベット額',
+    'machine_bet_amount' => 'マシンベット額',
+    'lottery_ticket_reward_amount' => '抽選券報酬',
 
     // ボタン
     'shift_handover' => '引継ぎ',

@@ -210,6 +210,7 @@ return [
     'total_withdraw_amount' => 'Total Wash Score',
     'total_machine_put_point' => 'Cash Deposit',
     'total_lottery_amount' => 'Jackpot',
+    'total_lottery_ticket_reward_amount' => 'Lottery Ticket',
     'subtotal' => 'Subtotal',
     'wash_point_config' => 'Wash Point Config',
     'current_shift_stats' => 'Current Shift Stats',

@@ -211,6 +211,7 @@ return [
     'total_withdraw_amount' => '累计洗分',
     'total_machine_put_point' => '投钞',
     'total_lottery_amount' => '彩金',
+    'total_lottery_ticket_reward_amount' => '摸奖券',
     'subtotal' => '小计',
     'wash_point_config' => '洗分配置',
     'current_shift_stats' => '当前班次统计',

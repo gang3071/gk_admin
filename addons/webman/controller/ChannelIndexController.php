@@ -74,7 +74,8 @@ class ChannelIndexController
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
-                SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
             ")
             ->first();
 
@@ -83,6 +84,7 @@ class ChannelIndexController
             'withdrawal_total' => $operationStatisticsQuery->withdrawal_total ?? 0,
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
             'activity_total' => $operationStatisticsQuery->activity_total ?? 0,
+            'lottery_ticket_reward_amount' => $operationStatisticsQuery->lottery_ticket_reward_amount ?? 0,
         ];
 
         // ✅ 拉彩统计数据（使用子查询，channelIndex 使用 department_id）
@@ -151,7 +153,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 4);
+            , 2);
 
             // 总开分（对应玩家报表的总充值点数）
             $row->column(
@@ -179,7 +181,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 4);
+            , 3);
 
             // 总洗分（对应玩家报表的总提现点数）
             $row->column(
@@ -207,7 +209,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 4);
+            , 3);
 
             // 总投钞
             $row->column(
@@ -235,7 +237,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 4);
+            , 3);
 
             // 总拉彩
             $row->column(
@@ -263,7 +265,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 4);
+            , 3);
 
             // 盈余小计
             $row->column(
@@ -291,7 +293,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 4);
+            , 3);
 
             $row->column(
                 Card::create([
@@ -1309,7 +1311,8 @@ class ChannelIndexController
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
-                SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
             ")
             ->first();
 
@@ -1317,6 +1320,7 @@ class ChannelIndexController
         $withdrawAmount = $deliveryStatisticsQuery->withdrawal_total ?? 0;
         $machinePutPoint = $deliveryStatisticsQuery->machine_put_point ?? 0;
         $activityTotal = $deliveryStatisticsQuery->activity_total ?? 0;
+        $lotteryTicketRewardAmount = $deliveryStatisticsQuery->lottery_ticket_reward_amount ?? 0;
 
         // ✅ 查询电子游戏总押注（使用子查询）
         $electronicBetTotal = PlayGameRecord::query()
@@ -1383,6 +1387,7 @@ class ChannelIndexController
             'withdraw_amount' => $withdrawAmount,
             'machine_put_point' => $machinePutPoint,
             'activity_total' => $activityTotal,
+            'lottery_ticket_reward_amount' => $lotteryTicketRewardAmount,
             'electronic_bet' => $electronicBetTotal,
             'steel_ball_bet' => $steelBallBetTotal,
             'slot_bet' => $slotBetTotal,
@@ -2195,7 +2200,8 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
             ")
             ->first();
 
@@ -2225,7 +2231,31 @@ class ChannelIndexController
             ),
             'total_outcome' => $currentShiftDeliveryQuery->withdrawal_total ?? 0,
             'lottery_amount' => $currentShiftLotteryQuery->lottery_amount ?? 0,
+            'lottery_ticket_reward_amount' => $currentShiftDeliveryQuery->lottery_ticket_reward_amount ?? 0,
         ];
+
+        // 当前班次打码量统计
+        // 电子游戏打码量（从 play_game_record 表的 bet 字段汇总）
+        $currentShiftStats['electronic_game_bet_amount'] = (float)\addons\webman\model\PlayGameRecord::query()
+            ->join('player', 'play_game_record.player_id', '=', 'player.id')
+            ->where('player.department_id', $store->department_id)
+            ->where('player.store_admin_id', $store->id)
+            ->where('player.is_promoter', 0)
+            ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                $query->where('play_game_record.created_at', '>', $lastShiftTime);
+            })
+            ->sum('play_game_record.bet');
+
+        // 机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
+        $currentShiftStats['machine_bet_amount'] = (float)\addons\webman\model\PlayerGameLog::query()
+            ->join('player', 'player_game_log.player_id', '=', 'player.id')
+            ->where('player.department_id', $store->department_id)
+            ->where('player.store_admin_id', $store->id)
+            ->where('player.is_promoter', 0)
+            ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                $query->where('player_game_log.created_at', '>', $lastShiftTime);
+            })
+            ->sum('player_game_log.chip_amount');
 
         // 总利润 = (充值 + 投钞) - 提现 - 彩金
         $currentShiftStats['total_profit'] = bcsub(
@@ -2441,27 +2471,29 @@ class ChannelIndexController
                 ])
                 , 12);
 
-            // 当期上缴金额 + 上缴比例
+            // 电子游戏打码量 + 机器打码量
             $row->column(
                 Card::create([
-                    Row::create()->column(Icon::create('fas fa-money-bill')->style([
+                    Row::create()->column(Icon::create('fas fa-gamepad')->style([
                         'fontSize' => '36px',
                         'color' => '#409eff',
                         'marginRight' => '15px'
                     ]), 4),
-                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.current_payment_amount'))->value(floatval($info['profit_amount'] ?? 0))
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.electronic_game_bet_amount'))->value(number_format(floatval($currentShiftStats['electronic_game_bet_amount'] ?? 0), 2))
                         ->valueStyle([
                             'fontSize' => '16px',
                             'fontWeight' => '500',
-                            'textAlign' => 'center'
+                            'textAlign' => 'center',
+                            'color' => '#E6A23C'
                         ])->style([
                             'textAlign' => 'center'
                         ]), 10),
-                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.payment_ratio'))->value(floatval($info['ratio'] ?? 0) . '%')
+                    Row::create()->column(Statistic::create()->title(admin_trans('data_center.machine_bet_amount'))->value(number_format(floatval($currentShiftStats['machine_bet_amount'] ?? 0), 2))
                         ->valueStyle([
                             'fontSize' => '16px',
                             'fontWeight' => '500',
-                            'textAlign' => 'center'
+                            'textAlign' => 'center',
+                            'color' => '#F56C6C'
                         ])->style([
                             'textAlign' => 'center'
                         ]), 10),
@@ -2521,7 +2553,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 3);
 
             // 下分总和
             $row->column(
@@ -2543,7 +2575,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 3);
 
             // 投钞总和
             $row->column(
@@ -2565,7 +2597,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 3);
 
             // 拉彩次数
             $row->column(
@@ -2587,7 +2619,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 3);
 
             // 拉彩金额
             $row->column(
@@ -2609,7 +2641,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 3);
 
             // 小计
             $row->column(
@@ -2632,7 +2664,7 @@ class ChannelIndexController
                     'textAlign' => 'center',
                     'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
                 ])
-            , 4);
+            , 3);
 
             // ========== 第四行：当前班次实时统计标题 ==========
             $row->column(
@@ -2662,7 +2694,7 @@ class ChannelIndexController
                 ])
             , 24);
 
-            // ========== 第五行：当前班次数据卡片（5个指标）==========
+            // ========== 第五行：当前班次数据卡片（6个指标）==========
             $currentShiftProfit = floatval($currentShiftStats['total_profit'] ?? 0);
 
             // 机台投钞点数
@@ -2685,7 +2717,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 5);
+            , 4);
 
             // 总收入
             $row->column(
@@ -2707,7 +2739,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 5);
+            , 4);
 
             // 总支出
             $row->column(
@@ -2729,7 +2761,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 5);
+            , 4);
 
             // 彩金
             $row->column(
@@ -2741,6 +2773,28 @@ class ChannelIndexController
                             'marginBottom' => '8px'
                         ]),
                         Html::div()->content(number_format(floatval($currentShiftStats['lottery_amount'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#E6A23C',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 4);
+
+            // 摸奖券
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('shift_handover.lottery_ticket_reward_amount_short'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format(floatval($currentShiftStats['lottery_ticket_reward_amount'] ?? 0), 2))->style([
                             'fontSize' => '15px',
                             'fontWeight' => 'bold',
                             'color' => '#E6A23C',
@@ -2775,7 +2829,7 @@ class ChannelIndexController
                     'backgroundColor' => $currentShiftProfit >= 0 ? '#f0f9ff' : '#fef0f0',
                     'borderLeft' => '3px solid ' . ($currentShiftProfit >= 0 ? '#67C23A' : '#F56C6C')
                 ])
-            , 5);
+            , 4);
 
             // ========== 图表区域 ==========
             $row->column(Card::create($this->openWashChart([$store->id]))->hoverable(), 16);
@@ -3005,6 +3059,26 @@ class ChannelIndexController
                         'modified_deduct_amount' => 0,
                     ];
 
+                    // 5.1 统计电子游戏打码量（从 play_game_record 表的 bet 字段汇总）
+                    $electronicGameBetAmount = \addons\webman\model\PlayGameRecord::query()
+                        ->join('player', 'play_game_record.player_id', '=', 'player.id')
+                        ->where('player.department_id', $admin->department_id)
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player.is_promoter', 0)
+                        ->where('play_game_record.created_at', '>', $startTime)
+                        ->where('play_game_record.created_at', '<=', $endTime)
+                        ->sum('play_game_record.bet');
+
+                    // 5.2 统计机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
+                    $machineBetAmount = \addons\webman\model\PlayerGameLog::query()
+                        ->join('player', 'player_game_log.player_id', '=', 'player.id')
+                        ->where('player.department_id', $admin->department_id)
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player.is_promoter', 0)
+                        ->where('player_game_log.created_at', '>', $startTime)
+                        ->where('player_game_log.created_at', '<=', $endTime)
+                        ->sum('player_game_log.chip_amount');
+
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
                     if (!$admin->department) {
@@ -3094,6 +3168,8 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->user_name = $admin->username;
                     $storeAgentShiftHandoverRecord->bind_admin_user_id = $admin->id;
                     $storeAgentShiftHandoverRecord->is_auto_shift = 0;
+                    $storeAgentShiftHandoverRecord->electronic_game_bet_amount = (float)$electronicGameBetAmount;
+                    $storeAgentShiftHandoverRecord->machine_bet_amount = (float)$machineBetAmount;
 
                     // 计算利润（投钞 + 总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(bcadd($storeAgentShiftHandoverRecord->machine_point, $storeAgentShiftHandoverRecord->total_in, 2), $storeAgentShiftHandoverRecord->total_out, 2);
@@ -3523,6 +3599,33 @@ class ChannelIndexController
             ->select(['id', 'name', 'phone'])
             ->get();
 
+        // 如果没有设备，直接返回
+        if ($players->isEmpty()) {
+            return;
+        }
+
+        $playerIds = $players->pluck('id')->toArray();
+
+        // 批量查询每台设备的电子游戏打码量
+        $electronicGameBetMap = \addons\webman\model\PlayGameRecord::query()
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->selectRaw('player_id, SUM(bet) as total_bet')
+            ->groupBy('player_id')
+            ->pluck('total_bet', 'player_id')
+            ->map(fn($v) => (float)$v);
+
+        // 批量查询每台设备的机器打码量
+        $machineBetMap = \addons\webman\model\PlayerGameLog::query()
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->selectRaw('player_id, SUM(chip_amount) as total_chip')
+            ->groupBy('player_id')
+            ->pluck('total_chip', 'player_id')
+            ->map(fn($v) => (float)$v);
+
         foreach ($players as $player) {
             // 统计该设备在此时间段的数据
             $result = PlayerDeliveryRecord::query()
@@ -3552,6 +3655,10 @@ class ChannelIndexController
                 'modified_deduct_amount' => 0,
             ];
 
+            // 获取该设备的打码量
+            $electronicGameBet = $electronicGameBetMap[$player->id] ?? 0;
+            $machineBet = $machineBetMap[$player->id] ?? 0;
+
             // 计算总收入、总支出、利润
             $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
             $totalOut = bcadd(
@@ -3563,11 +3670,12 @@ class ChannelIndexController
                 ),
                 2
             );
-            $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut,2);
+            $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
             if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
-                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0) {
+                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
+                $electronicGameBet > 0 || $machineBet > 0) {
 
                 StoreShiftDeviceDetail::create([
                     'shift_record_id' => $shiftRecordId,
@@ -3584,6 +3692,8 @@ class ChannelIndexController
                     'lottery_amount' => (float)$data['lottery_amount'],
                     'activity_bonus_amount' => (float)$data['activity_bonus_amount'],
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
+                    'electronic_game_bet_amount' => $electronicGameBet,
+                    'machine_bet_amount' => $machineBet,
                     'total_in' => (float)$totalIn,
                     'total_out' => (float)$totalOut,
                     'profit' => (float)$profit,

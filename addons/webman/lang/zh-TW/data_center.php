@@ -78,6 +78,9 @@ return [
     'bound_agent' => '綁定代理',
     'current_payment_amount' => '當期上繳金額',
     'payment_ratio' => '上繳比例',
+    'electronic_game_bet_amount' => '電子遊戲打碼量',
+    'machine_bet_amount' => '機台打碼量',
+    'lottery_ticket_reward_amount' => '摸獎券獎勵',
 
     // 按鈕
     'shift_handover' => '交班',

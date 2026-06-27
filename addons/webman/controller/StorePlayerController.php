@@ -166,7 +166,8 @@ class StorePlayerController
                 $deliveryStats = $deliveryQuery->selectRaw("
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
-                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
                 ")->first();
 
                 // 查询筛选时间段内的彩金
@@ -188,6 +189,7 @@ class StorePlayerController
                 $item['recharge_amount'] = floatval($deliveryStats->recharge_amount ?? 0);
                 $item['withdraw_amount'] = floatval($deliveryStats->withdraw_amount ?? 0);
                 $item['lottery_amount'] = floatval($lotteryAmount);
+                $item['lottery_ticket_reward_amount'] = floatval($deliveryStats->lottery_ticket_reward_amount ?? 0);
             } else {
                 // 没有时间筛选，使用 player_extend 的累计数据
                 // 查询累计彩金
@@ -196,7 +198,14 @@ class StorePlayerController
                     ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
                     ->sum('amount') ?? 0;
 
+                // 查询累计摸奖券
+                $lotteryTicketRewardAmount = PlayerDeliveryRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
+                    ->sum('amount') ?? 0;
+
                 $item['lottery_amount'] = floatval($lotteryAmount);
+                $item['lottery_ticket_reward_amount'] = floatval($lotteryTicketRewardAmount);
             }
 
             // 计算累计小计 = (开分 + 投钞) - (洗分 + 彩金)
@@ -241,11 +250,39 @@ class StorePlayerController
 
             $currentShiftLottery = $currentShiftLotteryQuery->sum('amount') ?? 0;
 
+            // 查询当前班次电子游戏打码量
+            $currentElectronicGameBet = \addons\webman\model\PlayGameRecord::query()
+                ->where('player_id', $playerId)
+                ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                    $query->where('created_at', '>', $lastShiftTime);
+                })
+                ->sum('bet') ?? 0;
+
+            // 查询当前班次机器打码量
+            $currentMachineBet = \addons\webman\model\PlayerGameLog::query()
+                ->where('player_id', $playerId)
+                ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                    $query->where('created_at', '>', $lastShiftTime);
+                })
+                ->sum('chip_amount') ?? 0;
+
+            // 查询当前班次摸奖券
+            $currentLotteryTicketReward = PlayerDeliveryRecord::query()
+                ->where('player_id', $playerId)
+                ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
+                ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                    $query->where('created_at', '>', $lastShiftTime);
+                })
+                ->sum('amount') ?? 0;
+
             // 存储当前未交班数据
             $item['current_machine_put_point'] = floatval($currentShiftDelivery->current_machine_put_point ?? 0);
             $item['current_total_income'] = floatval($currentShiftDelivery->current_total_income ?? 0);
             $item['current_total_outcome'] = floatval($currentShiftDelivery->current_total_outcome ?? 0);
             $item['current_lottery_amount'] = floatval($currentShiftLottery);
+            $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketReward);
+            $item['current_electronic_game_bet'] = floatval($currentElectronicGameBet);
+            $item['current_machine_bet'] = floatval($currentMachineBet);
 
             // 计算当前未交班总利润 = 总收入 - 总支出 - 彩金
             $item['current_total_profit'] = bcsub(
@@ -439,6 +476,14 @@ class StorePlayerController
                 ]);
             })->width(110)->align('center');
 
+            $grid->column('lottery_ticket_reward_amount', admin_trans('player.total_lottery_ticket_reward_amount'))->display(function ($value) {
+                return Html::create(number_format(floatval($value ?? 0), 2))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500',
+                    'color' => '#E6A23C'
+                ]);
+            })->width(110)->align('center');
+
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style([
@@ -514,6 +559,54 @@ class StorePlayerController
                             'fontSize' => '11px',
                             'fontWeight' => '500',
                             'color' => '#E6A23C'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 摸奖券
+                    Html::div()->content([
+                        Html::create(admin_trans('shift_handover.lottery_ticket_reward_amount_short') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_lottery_ticket_reward'] ?? 0), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#E6A23C'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 电子游戏打码量
+                    Html::div()->content([
+                        Html::create(admin_trans('data_center.electronic_game_bet_amount') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_electronic_game_bet'] ?? 0), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#E6A23C'
+                        ])
+                    ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
+
+                    // 机器打码量
+                    Html::div()->content([
+                        Html::create(admin_trans('data_center.machine_bet_amount') . ': ')->style([
+                            'fontSize' => '11px',
+                            'color' => '#666',
+                            'display' => 'inline-block',
+                            'width' => '60px',
+                            'textAlign' => 'left'
+                        ]),
+                        Html::create(number_format(floatval($data['current_machine_bet'] ?? 0), 2))->style([
+                            'fontSize' => '11px',
+                            'fontWeight' => '500',
+                            'color' => '#F56C6C'
                         ])
                     ])->style(['marginBottom' => '2px', 'display' => 'flex', 'alignItems' => 'center']),
 

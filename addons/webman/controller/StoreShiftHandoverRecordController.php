@@ -63,6 +63,8 @@ class StoreShiftHandoverRecordController
             $grid->column('lottery_amount', admin_trans('shift_handover.lottery_amount'))->width(100)->align('center');
             $grid->column('activity_bonus_amount', admin_trans('shift_handover.auto.activity_bonus_amount'))->width(100)->align('center');
             $grid->column('lottery_ticket_reward_amount', admin_trans('shift_handover.auto.lottery_ticket_reward_amount'))->width(120)->align('center');
+            $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.record.electronic_game_bet_amount'))->width(120)->align('center');
+            $grid->column('machine_bet_amount', admin_trans('shift_handover.record.machine_bet_amount'))->width(120)->align('center');
             $grid->column('total_profit_amount', admin_trans('shift_handover.record.total_profit'))->width(100)->align('center')
                 ->display(function ($value) {
                     $color = $value >= 0 ? '#3f8600' : '#cf1322';
@@ -138,6 +140,17 @@ class StoreShiftHandoverRecordController
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
                             // 第5行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.electronic_game_bet_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($row['electronic_game_bet_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.machine_bet_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($row['machine_bet_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第6行
                             Html::div()->content([
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.total_profit'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
@@ -266,6 +279,16 @@ class StoreShiftHandoverRecordController
                     return number_format($value, 2);
                 });
 
+            $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.device.electronic_game_bet_amount'))->width(120)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
+            $grid->column('machine_bet_amount', admin_trans('shift_handover.device.machine_bet_amount'))->width(120)->align('center')
+                ->display(function ($value) {
+                    return number_format($value, 2);
+                });
+
             $grid->column('total_in', admin_trans('shift_handover.total_in'))->width(100)->align('center')
                 ->display(function ($value) {
                     $color = '#3f8600';
@@ -368,7 +391,18 @@ class StoreShiftHandoverRecordController
                                     Html::create(number_format($row['total_out'], 2))->style(['color' => '#cf1322'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
-                            // 第6行 - 利润
+                            // 第6行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.device.label.electronic_game_bet_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['electronic_game_bet_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.device.label.machine_bet_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),
+                                    Html::create(number_format($row['machine_bet_amount'], 2))
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第7行 - 利润
                             Html::div()->content([
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.device.label.device_profit'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '120px']),

@@ -23,6 +23,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $lottery_amount 彩金发放金额（TYPE_LOTTERY=13）
  * @property float $activity_bonus_amount 活动奖励金额（TYPE_ACTIVITY_BONUS=10）
  * @property float $lottery_ticket_reward_amount 摸奖券中奖奖励金额（TYPE_LOTTERY_TICKET_REWARD=33）
+ * @property float $electronic_game_bet_amount 电子游戏打码量
+ * @property float $machine_bet_amount 机器打码量
  * @property float $total_profit_amount 总利润（总收入 - 总支出）
  * @property int $is_auto_shift 是否自动交班（0=手动交班，1=自动交班）
  * @property int $auto_shift_log_id 自动交班日志ID（关联 store_auto_shift_log.id，仅自动交班时有值）

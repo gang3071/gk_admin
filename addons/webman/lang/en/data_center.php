@@ -78,6 +78,9 @@ return [
     'bound_agent' => 'Bound Agent',
     'current_payment_amount' => 'Current Payment Amount',
     'payment_ratio' => 'Payment Ratio',
+    'electronic_game_bet_amount' => 'Electronic Game Bet',
+    'machine_bet_amount' => 'Machine Bet',
+    'lottery_ticket_reward_amount' => 'Lottery Ticket Reward',
 
     // Buttons
     'shift_handover' => 'Shift Handover',
