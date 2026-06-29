@@ -747,13 +747,12 @@ export default {
         this.addLog('info', '心跳已暂停');
       }
 
-      // 先保存到数据库，获取加密后的内容
+      // 先保存到数据库，获取 order_id
       if (!this.save_ticket_url) {
         this.addLog('error', '保存地址未配置');
         return;
       }
 
-      let encryptedContent = '';
       let orderId = '';
 
       try {
@@ -776,7 +775,6 @@ export default {
 
         if (saveRes.code === 200) {
           orderId = saveRes.data?.order_id || '';
-          encryptedContent = saveRes.data?.encrypted_content || '';
           this.addLog('success', '票据记录已保存: ' + orderId);
         } else {
           this.addLog('error', '票据记录保存失败: ' + (saveRes.message || ''));
@@ -820,14 +818,14 @@ export default {
       await this.sendCommand(0x01, 0x07, lotteryData);
       this.addLog('success', '彩票数据已发送');
 
-      // 使用加密内容作为QR码发送到出票机
-      if (!encryptedContent) {
-        this.addLog('error', '未获取到加密内容');
+      // 使用 order_id 作为QR码发送到出票机
+      if (!orderId) {
+        this.addLog('error', '未获取到订单号');
         return;
       }
 
       // 发送到出票机（不等待响应，设备会直接打印）
-      const data = Array.from(encryptedContent).map(c => c.charCodeAt(0));
+      const data = Array.from(orderId).map(c => c.charCodeAt(0));
       await this.sendCommand(0x01, 0x08, data, false);
       this.addLog('success', 'QR码已发送: ' + orderId);
 

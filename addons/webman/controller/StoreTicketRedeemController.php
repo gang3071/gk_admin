@@ -344,35 +344,13 @@ class StoreTicketRedeemController
 
         $admin = Admin::user();
 
-        // 尝试解密加密内容（如果是加密串）
-        $orderId = null;
-        try {
-            $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
+        // 直接使用 order_id 查询
+        $record = TicketRecord::query()
+            ->where('order_id', $qrCodeNo)
+            ->where('store_admin_id', $admin->id)
+            ->first();
 
-            if (!empty($decryptedData)) {
-                // 新格式：直接是 order_id；旧格式：JSON 包含 order_id
-                $data = json_decode($decryptedData, true);
-                if ($data && isset($data['order_id'])) {
-                    $orderId = $data['order_id'];
-                } else {
-                    $orderId = $decryptedData;
-                }
-            }
-        } catch (\Exception $e) {
-            // 解密失败，继续尝试其他查询方式
-            \support\Log::warning('解密QR码内容失败: ' . $e->getMessage(), ['qr_code_no' => $qrCodeNo]);
-        }
-
-        // 优先通过加密内容中的 order_id 查询
-        $record = null;
-        if ($orderId) {
-            $record = TicketRecord::query()
-                ->where('order_id', $orderId)
-                ->where('store_admin_id', $admin->id)
-                ->first();
-        }
-
-        // 如果加密查询未找到，回退到 qr_code_no 查询
+        // 如果未找到，回退到 qr_code_no 查询
         if (empty($record)) {
             $record = TicketRecord::query()
                 ->where('qr_code_no', $qrCodeNo)
@@ -525,50 +503,18 @@ class StoreTicketRedeemController
 
         $admin = Admin::user();
 
-        // 尝试解密加密内容（如果是加密串）
-        $orderId = null;
-        try {
-            $decryptedData = \addons\webman\controller\ChannelIndexController::decryptTicketContent($qrCodeNo);
+        // 直接使用 order_id 查询
+        $record = TicketRecord::query()
+            ->where('order_id', $qrCodeNo)
+            ->where('store_admin_id', $admin->id)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+            ->first();
 
-            if (!empty($decryptedData)) {
-                // 新格式：直接是 order_id；旧格式：JSON 包含 order_id
-                $data = json_decode($decryptedData, true);
-                if ($data && isset($data['order_id'])) {
-                    $orderId = $data['order_id'];
-                } else {
-                    $orderId = $decryptedData;
-                }
-            }
-        } catch (\Exception $e) {
-            // 解密失败，继续尝试其他查询方式
-            \support\Log::warning('解密QR码内容失败: ' . $e->getMessage(), ['qr_code_no' => $qrCodeNo]);
-        }
-
-        // 优先通过加密内容中的 order_id 查询
-        $record = null;
-        if ($orderId) {
-            $record = TicketRecord::query()
-                ->where('order_id', $orderId)
-                ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
-                ->first();
-        }
-
-        // 如果加密查询未找到，回退到 qr_code_no 查询
+        // 如果未找到，回退到 qr_code_no 查询
         if (empty($record)) {
             $record = TicketRecord::query()
                 ->where('qr_code_no', $qrCodeNo)
-                ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
-                ->first();
-        }
-
-        // 尝试通过 encrypted_content 字段匹配
-        if (empty($record)) {
-            $record = TicketRecord::query()
-                ->where('encrypted_content', $qrCodeNo)
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
