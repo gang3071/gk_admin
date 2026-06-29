@@ -175,7 +175,6 @@ class StoreTicketRedeemController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.redeem.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.redeem.status_normal'))->color('blue'),
-                    TicketRecord::STATUS_PRINTED => Tag::create(admin_trans('ticket_machine.redeem.status_printed'))->color('green'),
                     TicketRecord::STATUS_USED => Tag::create(admin_trans('ticket_machine.redeem.status_used'))->color('orange'),
                     default => Tag::create(admin_trans('ticket_machine.redeem.status_unknown'))->color('default'),
                 };
@@ -212,7 +211,6 @@ class StoreTicketRedeemController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.redeem.status_disabled'),
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
-                        TicketRecord::STATUS_PRINTED => admin_trans('ticket_machine.redeem.status_printed'),
                         TicketRecord::STATUS_USED => admin_trans('ticket_machine.redeem.status_used'),
                     ])
                     ->style(['width' => '150px']);
@@ -231,7 +229,7 @@ class StoreTicketRedeemController
                 $actions->hideDel();
 
                 // 核销按钮（放在最前面）
-                if (in_array($data['status'], [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])) {
+                if ($data['status'] == TicketRecord::STATUS_NORMAL) {
                     $actions->prepend(
                         Button::create(admin_trans('ticket_machine.redeem.redeem'))
                             ->modal([$this, 'redeemModal'], ['id' => $data['id']])
@@ -311,7 +309,7 @@ class StoreTicketRedeemController
             ->where('id', $id)
             ->where('store_admin_id', $admin->id)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+            ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
         if (empty($record)) {
@@ -508,7 +506,7 @@ class StoreTicketRedeemController
             ->where('order_id', $qrCodeNo)
             ->where('store_admin_id', $admin->id)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+            ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
         // 如果未找到，回退到 qr_code_no 查询
@@ -517,7 +515,7 @@ class StoreTicketRedeemController
                 ->where('qr_code_no', $qrCodeNo)
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+                ->where('status', TicketRecord::STATUS_NORMAL)
                 ->first();
         }
 
@@ -591,7 +589,6 @@ class StoreTicketRedeemController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.redeem.status_disabled'),
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
-                    TicketRecord::STATUS_PRINTED => admin_trans('ticket_machine.redeem.status_printed'),
                     TicketRecord::STATUS_USED => admin_trans('ticket_machine.redeem.status_used'),
                     default => admin_trans('ticket_machine.redeem.status_unknown'),
                 };
@@ -684,7 +681,7 @@ class StoreTicketRedeemController
             ->where('id', $id)
             ->where('store_admin_id', $admin->id)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->whereIn('status', [TicketRecord::STATUS_NORMAL, TicketRecord::STATUS_PRINTED])
+            ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
         if (empty($record)) {

@@ -3,11 +3,14 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\Channel;
+use addons\webman\model\LevelList;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\VipLevel;
@@ -784,10 +787,23 @@ class StorePlayerController
                 $admin = Admin::user();
                 $phone = $form->input('phone');
                 $password = $form->input('password');
+                $departmentId = $admin->department_id;
+
+                // 检查全民代理等级是否配置（同步自总后台逻辑）
+                if (!LevelList::query()->where('department_id', $departmentId)->orderBy('must_chip_amount')->exists()) {
+                    return message_error(admin_trans('player.national_level_not_configure'));
+                }
 
                 $existingPlayer = Player::query()->where('phone', $phone)->first();
                 if (!empty($existingPlayer)) {
                     return message_error(admin_trans('player.phone_has_register'));
+                }
+
+                // 验证渠道是否存在（同步自总后台逻辑）
+                /** @var Channel $channel */
+                $channel = Channel::where('department_id', $departmentId)->first();
+                if (empty($channel)) {
+                    return message_error(trans('channel_not_found', [], 'message'));
                 }
 
                 DB::beginTransaction();
@@ -801,25 +817,32 @@ class StorePlayerController
                     if ($form->input('avatar_type') == 2) {
                         $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
                     }
+                    // 店机后台固定值：国家代码86、线上来源
                     $player->country_code = '86';
                     $player->player_source = Player::PLAYER_SOURCE_ONLINE;
                     $player->type = Player::TYPE_PLAYER;
-                    $player->currency = $admin->department->currency ?? 'CNY';
-                    $player->department_id = $admin->department_id;
+                    $player->currency = $channel->currency;
+                    $player->department_id = $departmentId;
+                    // 店机后台特有：绑定到当前店机管理员
                     $player->store_admin_id = $admin->id;
                     $player->password = $password;
                     $player->uuid = generate15DigitUniqueId();
                     $player->recommend_code = createCode();
                     $player->save();
 
+                    // 创建玩家扩展信息
                     addPlayerExtend($player);
 
+                    // 更新身份证信息（店机后台特有）
                     PlayerExtend::query()->where('player_id', $player->id)->update([
                         'id_number' => $form->input('id_number'),
                         'id_card_front' => $form->input('id_card_front'),
                         'id_card_back' => $form->input('id_card_back'),
                         'personal_photo' => $form->input('personal_photo'),
                     ]);
+
+                    // 创建注册记录（同步自总后台逻辑）
+                    addRegisterRecord($player->id, PlayerRegisterRecord::TYPE_ADMIN, $departmentId);
 
                     DB::commit();
                 } catch (\Exception $e) {

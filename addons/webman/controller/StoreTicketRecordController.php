@@ -174,7 +174,6 @@ class StoreTicketRecordController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.record.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.record.status_normal'))->color('blue'),
-                    TicketRecord::STATUS_PRINTED => Tag::create(admin_trans('ticket_machine.record.status_printed'))->color('green'),
                     TicketRecord::STATUS_USED => Tag::create(admin_trans('ticket_machine.record.status_used'))->color('orange'),
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
@@ -199,7 +198,6 @@ class StoreTicketRecordController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.record.status_disabled'),
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
-                        TicketRecord::STATUS_PRINTED => admin_trans('ticket_machine.record.status_printed'),
                         TicketRecord::STATUS_USED => admin_trans('ticket_machine.record.status_used'),
                     ])
                     ->style(['width' => '150px']);
@@ -266,7 +264,6 @@ class StoreTicketRecordController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.record.status_disabled'),
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
-                    TicketRecord::STATUS_PRINTED => admin_trans('ticket_machine.record.status_printed'),
                     TicketRecord::STATUS_USED => admin_trans('ticket_machine.record.status_used'),
                     default => admin_trans('ticket_machine.record.status_unknown'),
                 };

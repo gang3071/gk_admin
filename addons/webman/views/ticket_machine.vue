@@ -528,7 +528,15 @@ export default {
             this.addLog('warn', 'UID为空，跳过设置');
           }
 
-          // 3. 设置店名称（使用后端GBK编码）
+          // 3. 设置序列号
+          this.addLog('info', '准备设置序列号, config.serialNo=' + this.config.serialNo);
+          const serialNo = this.config.serialNo || 0;
+          const serialData = [(serialNo >> 24) & 0xFF, (serialNo >> 16) & 0xFF, (serialNo >> 8) & 0xFF, serialNo & 0xFF];
+          const serialResult = await this.sendCommand(0x01, 0x06, serialData);
+          this.addLog(serialResult ? 'success' : 'error', '序列号设置: ' + (serialResult ? '成功' : '失败') + ' -> ' + serialNo);
+          await new Promise(r => setTimeout(r, 50)); // 延迟50ms
+
+          // 4. 设置店名称（使用后端GBK编码）
           this.addLog('info', '准备设置店名称, config.storeName=' + this.config.storeName);
           if (this.config.storeName) {
             let name = this.config.storeName || '';
@@ -785,25 +793,25 @@ export default {
         return;
       }
 
-      // 设置序列号为 order_id 的数字部分（取后7位）
-      this.addLog('info', '准备设置序列号, order_id=' + orderId);
-      const numericPart = orderId.replace(/[^0-9]/g, '');
-      this.addLog('info', '提取数字部分: ' + numericPart + ' (长度:' + numericPart.length + ')');
-      const serialNo = parseInt(numericPart.slice(-7)) || 0;
-      this.config.serialNo = serialNo;
-      const serialData = [(serialNo >> 24) & 0xFF, (serialNo >> 16) & 0xFF, (serialNo >> 8) & 0xFF, serialNo & 0xFF];
-      const serialHex = serialData.map(b => b.toString(16).padStart(2, '0')).join(' ');
-      this.addLog('info', '发送序列号数据: [' + serialHex + '] = ' + serialNo + ' (4字节)');
+      // 设置UID为 order_id（16字节，不足补0）
+      this.addLog('info', '设置UID: ' + orderId);
+      const uid = orderId.padEnd(16, '0').substring(0, 16);
+      const uidData = Array.from(uid).map(c => c.charCodeAt(0));
+      const uidResult = await this.sendCommand(0x01, 0x03, uidData);
+      this.addLog(uidResult ? 'success' : 'error', 'UID设置: ' + (uidResult ? '成功' : '失败') + ' -> ' + uid);
 
-      // 手动构造帧并发送，用于调试
-      const frame = this.buildFrame(0x01, 0x06, serialData);
-      const frameHex = Array.from(frame).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
-      this.addLog('send', '序列号帧: ' + frameHex);
+      // 等待设备处理
+      await new Promise(r => setTimeout(r, 100));
 
-      const serialResult = await this.sendCommand(0x01, 0x06, serialData);
-      this.addLog(serialResult ? 'success' : 'error', '序列号设置: ' + (serialResult ? '成功' : '失败') + ' -> ' + serialNo);
+      // 设置序列号为 order_id（16字节，不足补0）
+      this.addLog('info', '设置序列号: ' + orderId);
+      const serialStr = orderId.padEnd(16, '0').substring(0, 16);
+      const serialData16 = Array.from(serialStr).map(c => c.charCodeAt(0));
+      this.addLog('info', '发送序列号数据: ' + serialStr + ' (长度:' + serialData16.length + ')');
+      const serialResult = await this.sendCommand(0x01, 0x06, serialData16);
+      this.addLog(serialResult ? 'success' : 'error', '序列号设置: ' + (serialResult ? '成功' : '失败') + ' -> ' + serialStr);
 
-      // 等待更长时间确保设备处理完成
+      // 等待设备处理
       await new Promise(r => setTimeout(r, 100));
 
       // 先发送彩票数据（分数设置到前两位，其他传0）
@@ -825,9 +833,10 @@ export default {
       }
 
       // 发送到出票机（不等待响应，设备会直接打印）
-      const data = Array.from(orderId).map(c => c.charCodeAt(0));
+      // 追加1字节填充(0x20)，避免打印机短数据截断bug
+      const data = [...Array.from(orderId).map(c => c.charCodeAt(0)), 0x20];
       await this.sendCommand(0x01, 0x08, data, false);
-      this.addLog('success', 'QR码已发送: ' + orderId);
+      this.addLog('success', 'QR码已发送: ' + orderId + ' (' + data.length + '字节)');
 
       // 重启心跳
       this.heartbeatTimer = setInterval(async () => {
