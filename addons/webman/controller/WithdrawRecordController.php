@@ -52,9 +52,9 @@ class WithdrawRecordController
             // 修复前：加载完整的 player, channel, player_extend 对象
             // 修复后：只加载必要字段
             $grid->model()->with([
-                'player:id,uuid,name,phone,department_id',       // 限制玩家字段
+                'player:id,uuid,name,phone,department_id,real_name',       // 限制玩家字段
                 'channel:id,department_id,name',                  // 限制渠道字段
-                'player.player_extend:id,player_id,real_name',   // 限制扩展字段
+                'player.player_extend:id,player_id',   // 限制扩展字段
             ])->orderBy('created_at', 'desc');
             $exAdminFilter = Request::input('ex_admin_filter', []);
             if (!empty($exAdminFilter)) {
