@@ -20,7 +20,7 @@ class VipCashbackService
     /**
      * 每批处理记录数
      */
-    const BATCH_SIZE = 200;
+    const BATCH_SIZE = 2000;
 
     /**
      * @var callable|null 日志回调（可注入，用于单元测试）
