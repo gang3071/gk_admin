@@ -39,7 +39,7 @@ class VipCashbackTask
         $this->doWork();
 
         // 每5分钟执行一次（Cron 表达式：秒 分 时 日 月 周）
-        new Crontab('0 */5 * * * *', function () {
+        new Crontab('0 */1 * * * *', function () {
             $this->doWork();
         });
     }
