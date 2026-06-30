@@ -38,8 +38,8 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAutoShiftConfig;
-use addons\webman\model\VipLevel;
 use addons\webman\model\StoreSetting;
+use addons\webman\model\VipLevel;
 use addons\webman\service\ImportService;
 use addons\webman\service\WalletService;
 use app\exception\GameException;
@@ -757,9 +757,9 @@ class ChannelPlayerController
                     ])->width('600px');
 
                 // 百家禁用
-                $dropdown->append('百家禁用', 'fas fa-ban')
-                    ->modal([$this, 'playerPlatformList'], ['player_id' => $data['id']])
-                    ->width('80%');
+                $dropdown->append(admin_trans('channel_player.platform_disable'), 'fas fa-ban')
+                    ->drawer([$this, 'playerPlatformList'], ['player_id' => $data['id']])
+                ;
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {
@@ -5837,7 +5837,7 @@ class ChannelPlayerController
             ->filter(function ($platform) {
                 // 筛选出包含真人视讯(3)或牌桌(5)的平台
                 $cateIds = json_decode($platform->cate_id, true);
-                return is_array($cateIds) && (in_array(3, $cateIds) || in_array(5, $cateIds));
+                return is_array($cateIds) && in_array(3, $cateIds);
             })
             ->pluck('id')
             ->toArray();
@@ -5851,7 +5851,7 @@ class ChannelPlayerController
             ->toArray();
 
         return Grid::create(new GamePlatform(), function (Grid $grid) use ($selectedPlatformIds, $player_id, $baijiaGamePlatformIds, $player) {
-            $grid->title('百家禁用 - ' . $player->name);
+            $grid->title(admin_trans('channel_player.platform_disable_title', ['name' => $player->name]));
 
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
@@ -5877,7 +5877,7 @@ class ChannelPlayerController
             $grid->bordered(true);
 
             // 平台名称（带图标）
-            $grid->column('name', '平台名称')->display(function ($val, GamePlatform $data) {
+            $grid->column('name', admin_trans('channel_player.platform_name'))->display(function ($val, GamePlatform $data) {
                 if ($data->logo) {
                     $image = Image::create()
                         ->width(50)
@@ -5898,13 +5898,16 @@ class ChannelPlayerController
             })->hide();
 
             // 添加状态开关列
-            $grid->column('status_switch', '游戏状态')->display(function ($val, $data) use ($selectedPlatformIds, $player_id) {
+            $grid->column('status_switch', admin_trans('channel_player.game_status'))->display(function ($val, $data) use ($selectedPlatformIds, $player_id) {
                 // 判断当前平台是否被禁用：0=禁用，1=正常
                 $isDisabled = in_array($data->id, $selectedPlatformIds);
                 $status = $isDisabled ? 0 : 1;
 
                 return Switches::create(null, $status)
-                    ->options([[1 => '正常'], [0 => '禁用']])
+                    ->options([
+                        [1 => admin_trans('channel_player.status_normal')],
+                        [0 => admin_trans('channel_player.status_disabled')]
+                    ])
                     ->ajax([$this, 'togglePlatformDisableSwitch'], [
                         'player_id' => $player_id,
                         'platform_id' => $data->id
@@ -5917,12 +5920,12 @@ class ChannelPlayerController
             $grid->hideTrashed();
             $grid->filter(function (Filter $filter) {
                 $filter->eq()->select('disabled_status')
-                    ->placeholder('禁用状态')
+                    ->placeholder(admin_trans('channel_player.disabled_status'))
                     ->style(['width' => '120px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        1 => '已禁用',
-                        0 => '未禁用'
+                        1 => admin_trans('channel_player.status_disabled'),
+                        0 => admin_trans('channel_player.status_not_disabled')
                     ]);
             });
 
