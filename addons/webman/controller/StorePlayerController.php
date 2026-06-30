@@ -15,6 +15,7 @@ use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\VipLevel;
 use addons\webman\service\WalletService;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
@@ -332,6 +333,14 @@ class StorePlayerController
             })->style(['background' => '#fff']);
 
             $grid->header($layout);
+
+            // 添加玩家按钮
+            $grid->tools([
+                Button::create(admin_trans('player.add_player'))
+                    ->type('primary')
+                    ->modal($this->form())
+                    ->width('60%')
+            ]);
 
             $grid->column('id', admin_trans('player.fields.id'))->display(function ($value) {
                 return Html::create($value)->style([
