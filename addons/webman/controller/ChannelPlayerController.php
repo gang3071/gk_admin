@@ -330,12 +330,13 @@ class ChannelPlayerController
             $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
         }
 
-        // 获取设备选项列表用于筛选器下拉选择
+        // 获取设备选项列表用于筛选器下拉选择（限制数量避免内存溢出）
         $playerOptions = Player::query()
             ->where('department_id', Admin::user()->department_id)
             ->where('type', Player::TYPE_PLAYER)
             ->where('is_promoter', 0)
             ->orderBy('id', 'desc')
+            ->limit(500)  // 限制最多500条，避免数据量过大
             ->get(['id', 'name', 'uuid'])
             ->mapWithKeys(function ($player) {
                 $label = $player->name
@@ -702,10 +703,44 @@ class ChannelPlayerController
                 $actions->hideDel();
                 $dropdown = $actions->dropdown();
 
+
+                // 开分
+                $dropdown->append(admin_trans('channel_agent.open_score'), 'fas fa-coins')
+                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px');
+
+                // 游戏账号
+                $dropdown->append('游戏账号', 'fas fa-user-circle')
+                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
+                    ->width('90%');
+
+
+                $dropdown->append(admin_trans('player.wallet.artificial_withdrawal'), 'PayCircleOutlined')
+                    ->modal($this->artificialWithdrawal([
+                        'id' => $data['id'],
+                        'money' => $data['money'] ?? 0,
+                    ]))->width('600px')->title(Html::create(admin_trans('player.wallet.artificial_withdrawal'))->content(
+                        ToolTip::create(Icon::create('QuestionCircleOutlined')->style([
+                            'marginLeft' => '5px',
+                            'cursor' => 'pointer'
+                        ]))->title(admin_trans('player.wallet.artificial_withdrawal_tip'))
+                    ));
+
+                // 洗分功能
+                $dropdown->prepend(admin_trans('player.wash_score'), 'SwapOutlined')
+                    ->modal([$this, 'washScoreForm'], [
+                        'id' => $data['id'],
+                        'money' => $data['money'] ?? 0,
+                        'is_crashed' => $data['is_crashed'] ?? 0,
+                    ])->width('600px');
                 // 电子游戏禁用
                 $dropdown->prepend(admin_trans('offline_channel.electronic_game_disabled'), 'fas fa-gamepad')
                     ->modal([$this, 'playerGameList'], ['player_id' => $data['id']])
-                    ->width('80%');
+                    ->width('600px');
+
+                // 禁用百家
+                $dropdown->prepend(admin_trans('channel_player.platform_disable'), 'fas fa-gamepad')
+                    ->modal([$this, 'playerPlatformList'], ['player_id' => $data['id']])
+                    ->width('800px');
 
                 // 线下渠道不显示设置币商功能
                 if ($channel->coin_status == 1 && $channel->is_offline != 1) {
@@ -720,14 +755,6 @@ class ChannelPlayerController
                         ->modal([$this, 'setPromoter'], ['id' => $data['id']])->width('25%');
                 }
 
-                // 开分
-                $dropdown->append(admin_trans('channel_agent.open_score'), 'fas fa-coins')
-                    ->modal($this->presentNoPassword(['id' => $data['id']]))->width('600px');
-
-                // 游戏账号
-                $dropdown->append('游戏账号', 'fas fa-user-circle')
-                    ->modal([$this, 'platformAccountList'], ['player_id' => $data['id']])
-                    ->width('90%');
 
                 if ($channel->wallet_action_status == 1) {
                     $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
@@ -737,65 +764,14 @@ class ChannelPlayerController
                         ]))->width('600px');
                 }
 
-                $dropdown->append(admin_trans('player.wallet.artificial_withdrawal'), 'PayCircleOutlined')
-                    ->modal($this->artificialWithdrawal([
-                        'id' => $data['id'],
-                        'money' => $data['money'] ?? 0,
-                    ]))->width('600px')->title(Html::create(admin_trans('player.wallet.artificial_withdrawal'))->content(
-                        ToolTip::create(Icon::create('QuestionCircleOutlined')->style([
-                            'marginLeft' => '5px',
-                            'cursor' => 'pointer'
-                        ]))->title(admin_trans('player.wallet.artificial_withdrawal_tip'))
-                    ));
-
-                // 洗分功能
-                $dropdown->append(admin_trans('player.wash_score'), 'SwapOutlined')
-                    ->modal([$this, 'washScoreForm'], [
-                        'id' => $data['id'],
-                        'money' => $data['money'] ?? 0,
-                        'is_crashed' => $data['is_crashed'] ?? 0,
-                    ])->width('600px');
 
                 // 百家禁用
-                $dropdown->append(admin_trans('channel_player.platform_disable'), 'fas fa-ban')
-                    ->drawer([$this, 'playerPlatformList'], ['player_id' => $data['id']])
-                ;
             });
-            $grid->updateing(function ($ids, $data) {
-                if (isset($ids[0]) && isset($data['player_extend'])) {
-                    if (PlayerExtend::updateOrCreate(
-                        ['player_id' => $ids[0]],
-                        $data['player_extend']
-                    )) {
-                        return message_success(admin_trans('player.remark_edit_success'));
-                    }
-                }
-                if (isset($ids[0]) && isset($data['remark'])) {
-                    if (PlayerExtend::query()->where('player_id', $ids[0])->update(
-                        ['remark' => $data['remark']]
-                    )) {
-                        return message_success(admin_trans('form.save_success'));
-                    }
-                }
-                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
-                    if (Player::query()->where('id', $ids[0])->update(
-                        $data
-                    )) {
-                        return message_success(admin_trans('form.save_success'));
-                    }
-                }
-                if (isset($ids[0]) && isset($data['player_tag'])) {
-                    $playerTag = implode(',', $data['player_tag']);
-                    if (Player::query()->where('id', $ids[0])->update(
-                        ['player_tag' => $playerTag]
-                    )) {
-                        return message_success(admin_trans('form.save_success'));
-                    }
-                }
-            });
+
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
+
         });
     }
 
@@ -2511,6 +2487,31 @@ class ChannelPlayerController
                         return message_success(admin_trans('player.remark_edit_success'));
                     }
                 }
+                if (isset($ids[0]) && isset($data['remark'])) {
+                    if (PlayerExtend::query()->where('player_id', $ids[0])->update(
+                        ['remark' => $data['remark']]
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
+                    if (Player::query()->where('id', $ids[0])->update(
+                        $data
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+                if (isset($ids[0]) && isset($data['player_tag'])) {
+                    $playerTag = implode(',', $data['player_tag']);
+                    if (Player::query()->where('id', $ids[0])->update(
+                        ['player_tag' => $playerTag]
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+
+                // ✅ 默认返回失败消息（修复空白页面问题）
+                return message_error(admin_trans('form.save_failed'));
             });
         });
     }
