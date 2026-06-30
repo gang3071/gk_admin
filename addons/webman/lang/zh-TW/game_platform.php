@@ -13,6 +13,8 @@ return [
         'ratio' => '電子遊戲結算比值',
         'has_lobby' => '是否進入大廳',
         'picture' => '用戶端大圖',
+        'maintenance_time' => '維護時間',
+        'maintenance_status' => '維護功能',
     ],
     'display_mode' => [
         1 => '橫版',
@@ -30,4 +32,5 @@ return [
     'view_game' => '查看遊戲',
     'player_not_fount' => '未設定後管玩家帳號',
     'disable' => '遊戲平臺已被禁用',
+    'no_maintenance' => '無維護',
 ];

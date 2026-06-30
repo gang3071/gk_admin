@@ -13,6 +13,8 @@ return [
         'ratio' => 'ゲーム決済比',
         'has_lobby' => 'ロビーに入るかどうか',
         'picture' => 'クライアントのグラフ',
+        'maintenance_time' => 'メンテナンス時間',
+        'maintenance_status' => 'メンテナンス機能',
     ],
     'display_mode' => [
         1 => '横画面',
@@ -30,4 +32,5 @@ return [
     'view_game' => 'ゲームの表示',
     'player_not_fount' => '後管理プレイヤーアカウントが設定されていません',
     'disable' => 'ゲームプラットフォームが無効になっています',
+    'no_maintenance' => 'メンテナンスなし',
 ];
