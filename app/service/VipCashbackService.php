@@ -200,7 +200,7 @@ class VipCashbackService
             ->whereNull($table . '.vip_level_id')
             ->where($table . '.bet', '>', 0)
             ->join('player', $table . '.player_id', '=', 'player.id')
-            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
+//            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
             ->select($table . '.*');
 
         if ($this->sinceDate) {
@@ -221,7 +221,7 @@ class VipCashbackService
     {
         return Player::query()
             ->whereIn('id', $playerIds)
-            ->where('player_source', Player::PLAYER_SOURCE_ONLINE)
+//            ->where('player_source', Player::PLAYER_SOURCE_ONLINE)
             ->get()
             ->keyBy('id');
     }
