@@ -16,11 +16,11 @@
             <a-menu @click="handleCreateMenuClick">
               <a-menu-item key="new">
                 <plus-outlined/>
-                从零创建
+                {{ trans.createFromScratch || '從零創建' }}
               </a-menu-item>
               <a-menu-item key="copy">
                 <copy-outlined/>
-                从历史活动创建
+                {{ trans.createFromHistory || '從歷史活動創建' }}
               </a-menu-item>
             </a-menu>
           </template>
@@ -73,11 +73,11 @@
               <!-- ⭐ 直播状态标签 -->
               <a-tag v-if="activity.live_url && activity.live_status === 1" color="red" style="margin-left: 8px;">
                 <play-circle-outlined style="margin-right: 4px;"/>
-                直播中
+                {{ trans.liveStreaming || '直播中' }}
               </a-tag>
               <a-tag v-else-if="activity.live_url && activity.live_status === 0" color="blue" style="margin-left: 8px;">
                 <video-camera-outlined style="margin-right: 4px;"/>
-                未开播
+                {{ trans.notLive || '未開播' }}
               </a-tag>
               <span class="activity-name">{{ activity.name }}</span>
             </div>
@@ -135,19 +135,19 @@
                   <!-- 预览直播（仅当有直播地址时） -->
                   <a-menu-item key="previewLive" v-if="activity.live_url">
                     <play-circle-outlined/>
-                    预览直播
+                    {{ trans.previewLive || '預覽直播' }}
                   </a-menu-item>
 
                   <!-- ⭐ 开始直播（仅当有直播地址且未开播时） -->
                   <a-menu-item v-if="activity.live_url && activity.live_status === 0" key="startLive">
                     <play-circle-outlined style="color: #52c41a;"/>
-                    开始直播
+                    {{ trans.startLive || '開始直播' }}
                   </a-menu-item>
 
                   <!-- ⭐ 结束直播（仅当直播中时） -->
                   <a-menu-item v-if="activity.live_status === 1" key="endLive">
                     <stop-outlined style="color: #ff4d4f;"/>
-                    结束直播
+                    {{ trans.endLive || '結束直播' }}
                   </a-menu-item>
 
                   <!-- 关闭活动（进行中） -->
@@ -311,7 +311,7 @@
                 <template #icon>
                   <unordered-list-outlined/>
                 </template>
-                查看发放列表
+                {{ trans.viewTicketList || '查看發放列表' }}
               </a-button>
             </a-space>
 
@@ -334,7 +334,7 @@
     <!-- ⭐ 选择历史活动模态框 -->
     <a-modal
         v-model:visible="historyModalVisible"
-        title="选择历史活动"
+        :title="trans.selectHistoryActivity || '選擇歷史活動'"
         width="800px"
         :footer="null"
     >
@@ -376,7 +376,7 @@
             </a-list-item>
           </template>
         </a-list>
-        <a-empty v-if="!historyLoading && historyActivities.length === 0" description="暂无历史活动"/>
+        <a-empty v-if="!historyLoading && historyActivities.length === 0" :description="trans.noHistoryActivities || '暫無歷史活動'"/>
       </a-spin>
     </a-modal>
 
@@ -417,7 +417,7 @@
           >
             <a-button type="primary">
               <upload-outlined/>
-              选择图片
+              {{ trans.selectImage || '選擇圖片' }}
             </a-button>
           </a-upload>
           <div style="margin-top: 4px; margin-bottom: 8px; color: #999; font-size: 12px;">
@@ -709,7 +709,7 @@
     <!-- 发放列表抽屉 -->
     <a-drawer
         v-model:visible="ticketListVisible"
-        title="摸奖券发放列表"
+        :title="trans.ticketListTitle || '摸獎券發放列表'"
         width="900px"
         :body-style="{ padding: '16px' }"
     >
@@ -746,13 +746,13 @@
               <template #icon>
                 <search-outlined/>
               </template>
-              搜索
+              {{ trans.search || '搜索' }}
             </a-button>
             <a-button @click="handleTicketReset">
               <template #icon>
                 <reload-outlined/>
               </template>
-              重置
+              {{ trans.reset || '重置' }}
             </a-button>
           </a-space>
         </a-form-item>

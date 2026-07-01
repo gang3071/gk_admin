@@ -458,5 +458,8 @@ return [
         'ending_live' => '正在結束直播...',
         'start_live_failed' => '開始直播失敗',
         'end_live_failed' => '結束直播失敗',
+        'ticket_list_title' => '摸獎券發放列表',
+        'search' => '搜索',
+        'reset' => '重置',
     ],
 ];
