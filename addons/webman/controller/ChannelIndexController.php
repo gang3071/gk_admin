@@ -2257,14 +2257,12 @@ class ChannelIndexController
             })
             ->sum('player_game_log.chip_amount');
 
-        // 总利润 = (充值 + 投钞) - 提现 - 彩金
+        // 总利润 = (充值 + 投钞) - 洗分
+        // 注意：total_outcome 只包含洗分(withdrawal_total)，不包含彩金
+        // 彩金、摸奖券奖励只用于展示，不参与利润计算（已经发放给客户，客户洗分会洗掉）
         $currentShiftStats['total_profit'] = bcsub(
-            bcsub(
-                $currentShiftStats['total_income'],
-                $currentShiftStats['total_outcome'],
-                2
-            ),
-            $currentShiftStats['lottery_amount'],
+            $currentShiftStats['total_income'],
+            $currentShiftStats['total_outcome'],
             2
         );
 

@@ -305,10 +305,12 @@ class StorePlayerController
                 $item['current_electronic_game_bet'] = floatval($currentElectronicGameBetByPlayer[$playerId] ?? 0);
                 $item['current_machine_bet'] = floatval($currentMachineBetByPlayer[$playerId] ?? 0);
 
-                // 计算当前未交班总利润
+                // 计算当前未交班总利润 = (开分 + 投钞) - 洗分
+                // 注意：current_total_outcome 只包含洗分(TYPE_WITHDRAWAL)，不包含彩金
+                // 彩金、摸奖券奖励只用于展示，不参与利润计算（已经发放给客户，客户洗分会洗掉）
                 $item['current_total_profit'] = bcsub(
-                    bcsub($item['current_total_income'], $item['current_total_outcome'], 2),
-                    $item['current_lottery_amount'],
+                    bcadd($item['current_total_income'], $item['current_machine_put_point'], 2),
+                    $item['current_total_outcome'],
                     2
                 );
             }
