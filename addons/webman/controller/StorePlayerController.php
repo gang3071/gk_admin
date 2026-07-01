@@ -778,32 +778,20 @@ class StorePlayerController
                 $orgData = $form->driver()->get();
 
                 $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
-                $form->select('player_source', admin_trans('player.fields.player_source'))
-                    ->options([
-                        Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
-                        Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
-                    ])
-                    ->required();
-                $form->radio('avatar_type', admin_trans('player.avatar_type'))
-                    ->button()
-                    ->default(2)
-                    ->options([
-                        1 => admin_trans('player.upload_avatar'),
-                        2 => admin_trans('player.def_avatar')
-                    ])
-                    ->when(1, function (Form $form) {
-                        $form->image('avatar',
-                            admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
-                    })->when(2, function (Form $form) use ($options) {
-                        $form->radio('def_avatar', admin_trans('player.def_avatar'))
-                            ->default(1)
-                            ->options($options);
-                    });
-                $form->text('name', admin_trans('player.fields.name'))->maxlength(50);
-                $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50);
+                $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                    ->default(1)
+                    ->options($options);
+                $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+                $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
+                $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
                 $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->text('address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
+                $form->date('birthday', admin_trans('player_extend.fields.birthday'))->required();
+                $form->text('email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
+                $form->text('line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
+                $form->textarea('remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
 
                 $form->saved(function () {
                     return message_success(admin_trans('player.save_player_info_success'));
@@ -820,13 +808,8 @@ class StorePlayerController
                     try {
                         // 更新 Player 主表
                         $player->name = $form->input('name');
-                        $player->player_source = $form->input('player_source') ?? Player::PLAYER_SOURCE_OFFLINE;
-                        if ($form->input('avatar_type') == 1) {
-                            $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
-                        }
-                        if ($form->input('avatar_type') == 2) {
-                            $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
-                        }
+                        $player->real_name = $form->input('real_name');
+                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
                         $player->save();
 
                         // 更新 PlayerExtend 扩展表
@@ -837,6 +820,11 @@ class StorePlayerController
                                 'id_card_front' => $form->input('id_card_front'),
                                 'id_card_back' => $form->input('id_card_back'),
                                 'personal_photo' => $form->input('personal_photo'),
+                                'address' => $form->input('address'),
+                                'birthday' => $form->input('birthday'),
+                                'email' => $form->input('email'),
+                                'line' => $form->input('line'),
+                                'remark' => $form->input('remark'),
                             ]
                         );
 
@@ -852,33 +840,20 @@ class StorePlayerController
                 // ========== 新增模式 ==========
                 $form->title(admin_trans('player.add_player'));
                 $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
-                $form->select('player_source', admin_trans('player.fields.player_source'))
-                    ->options([
-                        Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
-                        Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
-                    ])
-                    ->default(Player::PLAYER_SOURCE_OFFLINE)
-                    ->required();
-                $form->radio('avatar_type', admin_trans('player.avatar_type'))
-                    ->button()
-                    ->default(2)
-                    ->options([
-                        1 => admin_trans('player.upload_avatar'),
-                        2 => admin_trans('player.def_avatar')
-                    ])
-                    ->when(1, function (Form $form) {
-                        $form->image('avatar',
-                            admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
-                    })->when(2, function (Form $form) use ($options) {
-                        $form->radio('def_avatar', admin_trans('player.def_avatar'))
-                            ->default(1)
-                            ->options($options);
-                    });
+                $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                    ->default(1)
+                    ->options($options);
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+                $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->text('address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
+                $form->date('birthday', admin_trans('player_extend.fields.birthday'))->required();
+                $form->text('email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
+                $form->text('line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
+                $form->textarea('remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
                 $form->password('password', admin_trans('player.new_password'))
                     ->rule([
                         'confirmed' => admin_trans('player.password_confim_validate'),
@@ -920,20 +895,17 @@ class StorePlayerController
                         $player = new Player();
                         $player->phone = $phone;
                         $player->name = $form->input('name');
-                        if ($form->input('avatar_type') == 1) {
-                            $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
-                        }
-                        if ($form->input('avatar_type') == 2) {
-                            $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
-                        }
-                        // 店机后台固定值：国家代码86
+                        $player->real_name = $form->input('real_name');
+                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
+                        // 店机后台固定值：国家代码86、线上来源
                         $player->country_code = '86';
-                        $player->player_source = $form->input('player_source') ?? Player::PLAYER_SOURCE_OFFLINE;
+                        $player->player_source = Player::PLAYER_SOURCE_ONLINE;
                         $player->type = Player::TYPE_PLAYER;
                         $player->currency = $channel->currency;
                         $player->department_id = $departmentId;
-                        // 店机后台特有：绑定到当前店机管理员
+                        // 店机后台特有：绑定到当前店机管理员及其上级代理
                         $player->store_admin_id = $admin->id;
+                        $player->agent_admin_id = $admin->parent_admin_id ?? 0;
                         $player->password = $password;
                         $player->uuid = generate15DigitUniqueId();
                         $player->recommend_code = createCode();
@@ -942,12 +914,17 @@ class StorePlayerController
                         // 创建玩家扩展信息
                         addPlayerExtend($player);
 
-                        // 更新身份证信息（店机后台特有）
+                        // 更新扩展信息
                         PlayerExtend::query()->where('player_id', $player->id)->update([
                             'id_number' => $form->input('id_number'),
                             'id_card_front' => $form->input('id_card_front'),
                             'id_card_back' => $form->input('id_card_back'),
                             'personal_photo' => $form->input('personal_photo'),
+                            'address' => $form->input('address'),
+                            'birthday' => $form->input('birthday'),
+                            'email' => $form->input('email'),
+                            'line' => $form->input('line'),
+                            'remark' => $form->input('remark'),
                         ]);
 
                         // 创建注册记录（同步自总后台逻辑）
