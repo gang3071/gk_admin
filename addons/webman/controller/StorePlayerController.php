@@ -129,7 +129,7 @@ class StorePlayerController
             ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
-            ->orderBy('player.id', 'asc')
+            ->orderBy('player.id', 'desc')
             ->get()
             ->toArray();
 
@@ -147,36 +147,35 @@ class StorePlayerController
             unset($item);
         }
 
-        // 计算每个设备的统计数据
-        foreach ($list as &$item) {
-            $playerId = $item['id'];
-
-            // === 1. 累计数据（受时间筛选影响） ===
-            // 检查是否有统计时间范围筛选
+        // ✅ 性能优化：批量查询替代循环查询（解决N+1问题）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
             $hasStatsTimeFilter = !empty($requestFilter['stats_start_time']) || !empty($requestFilter['stats_end_time']);
 
+            // === 批量查询累计数据 ===
             if ($hasStatsTimeFilter) {
-                // 查询筛选时间段内的财务记录
-                $deliveryQuery = PlayerDeliveryRecord::query()
-                    ->where('player_id', $playerId);
+                // 批量查询筛选时间段内的财务记录
+                $deliveryStatsQuery = PlayerDeliveryRecord::query()
+                    ->whereIn('player_id', $playerIds);
 
                 if (!empty($requestFilter['stats_start_time'])) {
-                    $deliveryQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
+                    $deliveryStatsQuery->where('created_at', '>=', $requestFilter['stats_start_time']);
                 }
                 if (!empty($requestFilter['stats_end_time'])) {
-                    $deliveryQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
+                    $deliveryStatsQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
                 }
 
-                $deliveryStats = $deliveryQuery->selectRaw("
+                $deliveryStatsByPlayer = $deliveryStatsQuery->selectRaw("
+                    player_id,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
-                ")->first();
+                ")->groupBy('player_id')->pluck(null, 'player_id')->toArray();
 
-                // 查询筛选时间段内的彩金
+                // 批量查询筛选时间段内的彩金
                 $lotteryQuery = PlayerLotteryRecord::query()
-                    ->where('player_id', $playerId)
+                    ->whereIn('player_id', $playerIds)
                     ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
 
                 if (!empty($requestFilter['stats_start_time'])) {
@@ -186,141 +185,153 @@ class StorePlayerController
                     $lotteryQuery->where('created_at', '<=', $requestFilter['stats_end_time']);
                 }
 
-                $lotteryAmount = $lotteryQuery->sum('amount') ?? 0;
-
-                // 覆盖累计数据
-                $item['machine_put_point'] = floatval($deliveryStats->machine_put_point ?? 0);
-                $item['recharge_amount'] = floatval($deliveryStats->recharge_amount ?? 0);
-                $item['withdraw_amount'] = floatval($deliveryStats->withdraw_amount ?? 0);
-                $item['lottery_amount'] = floatval($lotteryAmount);
-                $item['lottery_ticket_reward_amount'] = floatval($deliveryStats->lottery_ticket_reward_amount ?? 0);
+                $lotteryByPlayer = $lotteryQuery->selectRaw('player_id, SUM(amount) as total_amount')
+                    ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
             } else {
-                // 没有时间筛选，使用 player_extend 的累计数据
-                // 查询累计彩金
-                $lotteryAmount = PlayerLotteryRecord::query()
-                    ->where('player_id', $playerId)
+                // 没有时间筛选，批量查询累计彩金
+                $lotteryByPlayer = PlayerLotteryRecord::query()
+                    ->whereIn('player_id', $playerIds)
                     ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                    ->sum('amount') ?? 0;
+                    ->selectRaw('player_id, SUM(amount) as total_amount')
+                    ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
-                // 查询累计摸奖券
-                $lotteryTicketRewardAmount = PlayerDeliveryRecord::query()
-                    ->where('player_id', $playerId)
+                // 批量查询累计摸奖券
+                $lotteryTicketRewardByPlayer = PlayerDeliveryRecord::query()
+                    ->whereIn('player_id', $playerIds)
                     ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
-                    ->sum('amount') ?? 0;
+                    ->selectRaw('player_id, SUM(amount) as total_amount')
+                    ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
-                $item['lottery_amount'] = floatval($lotteryAmount);
-                $item['lottery_ticket_reward_amount'] = floatval($lotteryTicketRewardAmount);
+                $deliveryStatsByPlayer = [];
             }
 
-            // 计算累计小计 = (开分 + 投钞) - (洗分 + 彩金)
-            $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
-            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
-            $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
-            $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
-
-            // 收入 = 开分 + 投钞
-            $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
-            // 支出 = 洗分 + 彩金
-            $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
-            // 小计 = 收入 - 支出
-            $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
-
-            // 存储纯开分金额（扣除投钞后），用于展示
-            $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
-
-            // === 2. 当前未交班数据（不受时间筛选影响） ===
-            // 查询从最后交班时间到现在的财务数据
+            // === 批量查询当前未交班数据 ===
+            // 批量查询当前班次财务数据
             $currentShiftDeliveryQuery = PlayerDeliveryRecord::query()
-                ->where('player_id', $playerId);
+                ->whereIn('player_id', $playerIds);
 
             if ($lastShiftTime) {
                 $currentShiftDeliveryQuery->where('created_at', '>', $lastShiftTime);
             }
 
-            $currentShiftDelivery = $currentShiftDeliveryQuery->selectRaw("
+            $currentShiftDeliveryByPlayer = $currentShiftDeliveryQuery->selectRaw("
+                player_id,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS current_machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS current_total_income,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS current_total_outcome
-            ")->first();
+            ")->groupBy('player_id')->pluck(null, 'player_id')->toArray();
 
-            // 查询从最后交班时间到现在的彩金
+            // 批量查询当前班次彩金
             $currentShiftLotteryQuery = PlayerLotteryRecord::query()
-                ->where('player_id', $playerId)
+                ->whereIn('player_id', $playerIds)
                 ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
 
             if ($lastShiftTime) {
                 $currentShiftLotteryQuery->where('created_at', '>', $lastShiftTime);
             }
 
-            $currentShiftLottery = $currentShiftLotteryQuery->sum('amount') ?? 0;
+            $currentShiftLotteryByPlayer = $currentShiftLotteryQuery->selectRaw('player_id, SUM(amount) as total_amount')
+                ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
-            // 查询当前班次电子游戏打码量
-            $currentElectronicGameBet = \addons\webman\model\PlayGameRecord::query()
-                ->where('player_id', $playerId)
+            // 批量查询当前班次电子游戏打码量
+            $currentElectronicGameBetQuery = \addons\webman\model\PlayGameRecord::query()
+                ->whereIn('player_id', $playerIds)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('created_at', '>', $lastShiftTime);
-                })
-                ->sum('bet') ?? 0;
+                });
 
-            // 查询当前班次机器打码量
-            $currentMachineBet = \addons\webman\model\PlayerGameLog::query()
-                ->where('player_id', $playerId)
+            $currentElectronicGameBetByPlayer = $currentElectronicGameBetQuery->selectRaw('player_id, SUM(bet) as total_bet')
+                ->groupBy('player_id')->pluck('total_bet', 'player_id')->toArray();
+
+            // 批量查询当前班次机器打码量
+            $currentMachineBetQuery = \addons\webman\model\PlayerGameLog::query()
+                ->whereIn('player_id', $playerIds)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('created_at', '>', $lastShiftTime);
-                })
-                ->sum('chip_amount') ?? 0;
+                });
 
-            // 查询当前班次摸奖券
-            $currentLotteryTicketReward = PlayerDeliveryRecord::query()
-                ->where('player_id', $playerId)
+            $currentMachineBetByPlayer = $currentMachineBetQuery->selectRaw('player_id, SUM(chip_amount) as total_chip')
+                ->groupBy('player_id')->pluck('total_chip', 'player_id')->toArray();
+
+            // 批量查询当前班次摸奖券
+            $currentLotteryTicketRewardQuery = PlayerDeliveryRecord::query()
+                ->whereIn('player_id', $playerIds)
                 ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('created_at', '>', $lastShiftTime);
-                })
-                ->sum('amount') ?? 0;
+                });
 
-            // 存储当前未交班数据
-            $item['current_machine_put_point'] = floatval($currentShiftDelivery->current_machine_put_point ?? 0);
-            $item['current_total_income'] = floatval($currentShiftDelivery->current_total_income ?? 0);
-            $item['current_total_outcome'] = floatval($currentShiftDelivery->current_total_outcome ?? 0);
-            $item['current_lottery_amount'] = floatval($currentShiftLottery);
-            $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketReward);
-            $item['current_electronic_game_bet'] = floatval($currentElectronicGameBet);
-            $item['current_machine_bet'] = floatval($currentMachineBet);
+            $currentLotteryTicketRewardByPlayer = $currentLotteryTicketRewardQuery->selectRaw('player_id, SUM(amount) as total_amount')
+                ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
-            // 计算当前未交班总利润 = 总收入 - 总支出 - 彩金
-            $item['current_total_profit'] = bcsub(
-                bcsub($item['current_total_income'], $item['current_total_outcome'], 2),
-                $item['current_lottery_amount'],
-                2
-            );
+            // === 合并数据到列表 ===
+            foreach ($list as &$item) {
+                $playerId = $item['id'];
+
+                // 累计数据
+                if ($hasStatsTimeFilter) {
+                    $stats = $deliveryStatsByPlayer[$playerId] ?? null;
+                    $item['machine_put_point'] = floatval($stats['machine_put_point'] ?? 0);
+                    $item['recharge_amount'] = floatval($stats['recharge_amount'] ?? 0);
+                    $item['withdraw_amount'] = floatval($stats['withdraw_amount'] ?? 0);
+                    $item['lottery_ticket_reward_amount'] = floatval($stats['lottery_ticket_reward_amount'] ?? 0);
+                } else {
+                    $item['lottery_ticket_reward_amount'] = floatval($lotteryTicketRewardByPlayer[$playerId] ?? 0);
+                }
+                $item['lottery_amount'] = floatval($lotteryByPlayer[$playerId] ?? 0);
+
+                // 计算累计小计
+                $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+                $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
+                $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+                $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
+
+                $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
+                $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
+                $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
+                $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+
+                // 当前未交班数据
+                $currentStats = $currentShiftDeliveryByPlayer[$playerId] ?? null;
+                $item['current_machine_put_point'] = floatval($currentStats['current_machine_put_point'] ?? 0);
+                $item['current_total_income'] = floatval($currentStats['current_total_income'] ?? 0);
+                $item['current_total_outcome'] = floatval($currentStats['current_total_outcome'] ?? 0);
+                $item['current_lottery_amount'] = floatval($currentShiftLotteryByPlayer[$playerId] ?? 0);
+                $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketRewardByPlayer[$playerId] ?? 0);
+                $item['current_electronic_game_bet'] = floatval($currentElectronicGameBetByPlayer[$playerId] ?? 0);
+                $item['current_machine_bet'] = floatval($currentMachineBetByPlayer[$playerId] ?? 0);
+
+                // 计算当前未交班总利润
+                $item['current_total_profit'] = bcsub(
+                    bcsub($item['current_total_income'], $item['current_total_outcome'], 2),
+                    $item['current_lottery_amount'],
+                    2
+                );
+            }
+            unset($item);
         }
 
-        // ✅ 内存优化：使用 lazy() 惰性加载替代一次性 get()
-        // 修复前：3000 台设备 = 5 MB 内存，5 个并发进程 = 25 MB
-        // 修复后：惰性加载 = 稳定在 1 MB 以内
-        $playerOptions = Player::query()
-            ->where('department_id', $departmentId)
-            ->where('store_admin_id', $storeAdminId)
-            ->where('is_promoter', 0)
-            ->orderBy('id', 'asc')
-            ->select(['id', 'name', 'uuid'])
-            ->lazy(500)
-            ->mapWithKeys(function ($player) {
-                $label = $player->name
-                    ? "{$player->name} (ID: {$player->id})"
-                    : "ID: {$player->id}";
-                if ($player->uuid) {
-                    $label .= " - {$player->uuid}";
-                }
-                return [$player->id => $label];
-            })
-            ->all();
+        // ✅ 优化：直接从已查询的 list 构建 playerOptions，避免重复查询
+        $playerOptions = [];
+        foreach ($list as $item) {
+            $label = $item['name']
+                ? "{$item['name']} (ID: {$item['id']})"
+                : "ID: {$item['id']}";
+            if (!empty($item['uuid'])) {
+                $label .= " - {$item['uuid']}";
+            }
+            $playerOptions[$item['id']] = $label;
+        }
 
         return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
+
+            // 设置分页
+            $grid->pagination()->pageSize(50);
+            $grid->pagination()->showSizeChanger(true);
+            $grid->pagination()->pageSizeOptions(['20', '50', '100', '200']);
 
             // 添加统计信息面板
             $layout = Layout::create();
