@@ -2291,11 +2291,8 @@ class ChannelIndexController
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal = bcadd(
-                $operationStatistics['withdrawal_total'] ?? 0,
-                $lotteryStatistics['lottery_amount'] ?? 0,
-                2
-            );
+            // 注意：洗分已包含彩金，彩金只用于展示
+            $outcomeTotal = $operationStatistics['withdrawal_total'] ?? 0;
             $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
 
             // ========== 第一行：操作栏 ==========
