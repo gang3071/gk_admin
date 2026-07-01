@@ -22,6 +22,7 @@ use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 use support\Db;
+use support\Log;
 
 /**
  * 店机后台 - 设备列表
@@ -236,6 +237,7 @@ class StorePlayerController
                 2
             );
         }
+        Log::info('数据', [$list]);
         unset($item); // 清除引用，避免污染数组
 
         // ✅ 内存优化：使用 lazy() 惰性加载替代一次性 get()
