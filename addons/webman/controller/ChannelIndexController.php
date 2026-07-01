@@ -3017,14 +3017,17 @@ class ChannelIndexController
                     );
 
                     // 计算总支出（洗分 + 后台扣点）
+                    // 注意：洗分已包含彩金，不需要重复计算
                     $storeAgentShiftHandoverRecord->total_out = bcadd(
                         $playerDeliveryRecord['withdrawal_amount'] ?? 0,
                         $playerDeliveryRecord['modified_deduct_amount'] ?? 0,
                         2
                     );
 
+                    // 存储彩金（仅用于展示，不参与支出计算）
                     $storeAgentShiftHandoverRecord->lottery_amount =
                         $playerDeliveryRecord['lottery_amount'] ?? 0;
+
                     $storeAgentShiftHandoverRecord->start_time = $startTime;
                     $storeAgentShiftHandoverRecord->end_time = $endTime;
                     $storeAgentShiftHandoverRecord->user_id = $admin->id;
@@ -3032,8 +3035,13 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->bind_admin_user_id = $admin->id;
                     $storeAgentShiftHandoverRecord->is_auto_shift = 0;
 
-                    // 计算利润（投钞 + 总收入 - 总支出）
-                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(bcadd($storeAgentShiftHandoverRecord->machine_point, $storeAgentShiftHandoverRecord->total_in, 2), $storeAgentShiftHandoverRecord->total_out, 2);
+                    // 计算利润（总收入 - 总支出）
+                    // 注意：total_in 已包含投钞，不需要再加
+                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
+                        $storeAgentShiftHandoverRecord->total_in,
+                        $storeAgentShiftHandoverRecord->total_out,
+                        2
+                    );
                     $storeAgentShiftHandoverRecord->save();
 
                     // 8.5 保存设备明细
