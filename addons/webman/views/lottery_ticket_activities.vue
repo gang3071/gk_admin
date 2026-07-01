@@ -129,7 +129,7 @@
                   <!-- 添加/编辑直播地址（所有状态） -->
                   <a-menu-item key="live">
                     <video-camera-outlined/>
-                    {{ activity.live_url ? '编辑直播地址' : trans.addLiveUrl }}
+                    {{ activity.live_url ? (trans.ui?.edit_live_url || '編輯直播地址') : trans.addLiveUrl }}
                   </a-menu-item>
 
                   <!-- 预览直播（仅当有直播地址时） -->
@@ -421,14 +421,14 @@
             </a-button>
           </a-upload>
           <div style="margin-top: 4px; margin-bottom: 8px; color: #999; font-size: 12px;">
-            建议尺寸：750x400px，支持jpg、png格式，文件大小不超过2MB
+            {{ trans.ui?.cover_hint || '建議尺寸：750x400px，支持jpg、png格式，文件大小不超過2MB' }}
           </div>
           <a-spin :spinning="uploading" style="display: block; margin-top: 8px;">
             <img
                 v-if="formData.cover_image"
                 :src="formData.cover_image"
                 style="max-width: 300px; border: 1px solid #d9d9d9; border-radius: 4px;"
-                alt="封面预览"
+                :alt="trans.ui?.cover_preview_alt || '封面預覽'"
             />
           </a-spin>
         </a-form-item>
@@ -503,7 +503,7 @@
             </a-row>
           </div>
         </div>
-        <a-empty v-else description="暂无VIP等级数据" style="margin: 20px 0;"/>
+        <a-empty v-else :description="trans.ui?.no_vip_data_desc || '暫無VIP等級數據'" style="margin: 20px 0;"/>
 
         <!-- 奖品等级配置 -->
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
@@ -785,21 +785,21 @@
     <!-- 直播流名称设置 Modal -->
     <a-modal
         v-model:visible="liveModalVisible"
-        title="设置直播流名称"
+        :title="trans.ui?.set_live_stream_title || '設置直播流名稱'"
         @ok="submitLiveUrl"
         @cancel="handleLiveModalClose"
     >
       <a-form layout="vertical">
         <a-alert
-            message="💡 只需填写流名称，系统会自动生成腾讯云直播地址"
+            :message="trans.ui?.live_stream_hint || '💡 只需填寫流名稱，系統會自動生成騰訊雲直播地址'"
             show-icon
             style="margin-bottom: 16px;"
             type="info"
         />
-        <a-form-item label="直播流名称">
+        <a-form-item :label="trans.ui?.live_stream_label || '直播流名稱'">
           <a-input
               v-model:value="liveUrlInput"
-              placeholder="例如：mojiangjuan"
+              :placeholder="trans.ui?.live_stream_placeholder || '例如：mojiangjuan'"
               allow-clear
           >
             <template #prefix>
@@ -807,7 +807,7 @@
             </template>
           </a-input>
           <div style="margin-top: 8px; color: #999; font-size: 12px;">
-            建议使用英文、数字、下划线，此名称需与OBS推流配置一致
+            {{ trans.ui?.live_stream_name_hint || '建議使用英文、數字、下劃線，此名稱需與OBS推流配置一致' }}
           </div>
         </a-form-item>
       </a-form>
@@ -816,7 +816,7 @@
     <!-- ⭐ 直播预览 Modal -->
     <a-modal
         v-model:visible="livePreviewVisible"
-        :title="'直播预览 - ' + (currentActivity?.name || '摸奖券活动')"
+        :title="(trans.ui?.live_preview_title || '直播預覽 - {name}').replace('{name}', currentActivity?.name || '摸獎券活動')"
         width="90%"
         :footer="null"
         @cancel="closeLivePreview"
@@ -840,7 +840,7 @@
                 {{ currentActivity?.name }}
               </div>
               <div style="font-size: 12px; color: #999;">
-                直播地址：{{ livePreviewUrl }}
+                {{ trans.ui?.live_url_label || '直播地址：' }}{{ livePreviewUrl }}
               </div>
             </div>
             <div>
@@ -853,7 +853,7 @@
                 <template #icon>
                   <copy-outlined/>
                 </template>
-                复制地址
+                {{ trans.ui?.copy_url || '複製地址' }}
               </a-button>
               <a-button
                   size="small"
@@ -862,7 +862,7 @@
                 <template #icon>
                   <link-outlined/>
                 </template>
-                新窗口打开
+                {{ trans.ui?.open_new_window || '新窗口打開' }}
               </a-button>
             </div>
           </div>
@@ -873,7 +873,7 @@
           <div style="display: flex; align-items: flex-start; color: #856404;">
             <warning-outlined style="font-size: 18px; margin-right: 8px; margin-top: 2px;"/>
             <div>
-              <div style="font-weight: bold; margin-bottom: 4px;">RTMP 协议播放提示</div>
+              <div style="font-weight: bold; margin-bottom: 4px;">{{ trans.ui?.rtmp_protocol_warning || 'RTMP 協議播放提示' }}</div>
               <div style="font-size: 12px; line-height: 1.6;">
                 RTMP协议在现代浏览器中可能无法播放（需要Flash支持）。<br/>
                 建议联系腾讯云客服获取 <strong>HLS播放地址（.m3u8格式）</strong> 或 <strong>HTTP-FLV格式</strong>，以获得更好的兼容性。<br/>
@@ -883,7 +883,7 @@
           </div>
         </div>
       </div>
-      <a-empty v-else description="未获取到直播地址" />
+      <a-empty v-else :description="trans.ui?.no_live_url || '未獲取到直播地址'" />
     </a-modal>
 
   </div>
@@ -1143,7 +1143,7 @@ export default {
     handleBeforeUpload(file) {
       const isImage = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg';
       if (!isImage) {
-        this.$message.error('只能上传 JPG/PNG 格式的图片！');
+        this.$message.error(this.trans.validation?.image_format_error || '只能上傳 JPG/PNG 格式的圖片！');
         return false;
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
@@ -1388,13 +1388,13 @@ export default {
     // ⭐ 预览直播
     async previewLive(activity) {
       if (!activity.live_url) {
-        this.$message.warning('该活动尚未设置直播流名称');
+        this.$message.warning(this.trans.ui?.activity_no_live_url || '該活動尚未設置直播流名稱');
         return;
       }
 
       // live_url存储的是流名称，通过API获取播放器配置
       try {
-        const loading = this.$message.loading('正在生成直播地址...', 0);
+        const loading = this.$message.loading(this.trans.ui?.generating_live_url || '正在生成直播地址...', 0);
 
         const res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getLivePlayerConfig',
@@ -1414,11 +1414,11 @@ export default {
           this.livePreviewVisible = true;
 
         } else {
-          this.$message.error(res.message || '生成直播地址失败');
+          this.$message.error(res.message || (this.trans.ui?.generate_live_url_failed || '生成直播地址失敗'));
         }
       } catch (error) {
         console.error('生成直播地址失败:', error);
-        this.$message.error('生成直播地址失败');
+        this.$message.error(this.trans.ui?.generate_live_url_failed || '生成直播地址失敗');
       }
     },
 
@@ -1491,7 +1491,7 @@ export default {
     async copyLiveUrl() {
       try {
         await navigator.clipboard.writeText(this.livePreviewUrl);
-        this.$message.success('直播地址已复制到剪贴板');
+        this.$message.success(this.trans.ui?.live_url_copied || '直播地址已複製到剪貼板');
       } catch (err) {
         // 兼容旧浏览器
         const input = document.createElement('input');
@@ -1500,7 +1500,7 @@ export default {
         input.select();
         document.execCommand('copy');
         document.body.removeChild(input);
-        this.$message.success('直播地址已复制到剪贴板');
+        this.$message.success(this.trans.ui?.live_url_copied || '直播地址已複製到剪貼板');
       }
     },
 
@@ -1544,12 +1544,12 @@ export default {
 
       // 验证流名称格式（只允许英文、数字、下划线）
       if (!/^[a-zA-Z0-9_]+$/.test(streamName)) {
-        this.$message.error('流名称只能包含英文、数字和下划线');
+        this.$message.error(this.trans.ui?.stream_name_format_error || '流名稱只能包含英文、數字和下劃線');
         return;
       }
 
       if (streamName.length > 50) {
-        this.$message.error('流名称不能超过50个字符');
+        this.$message.error(this.trans.ui?.stream_name_too_long || '流名稱不能超過50個字符');
         return;
       }
 
@@ -1804,7 +1804,7 @@ export default {
           content: contentLines.join('\n') + ticketList,
           okText: '确认停止开奖',
           okType: 'danger',
-          cancelText: data.win_record_count === 0 ? '取消，先录入中奖' : '取消',
+          cancelText: data.win_record_count === 0 ? (this.trans.ui?.cancel_enter_win || '取消，先錄入中獎') : (this.trans.cancel || '取消'),
           width: 520,
           onOk: () => {
             // 用户确认后，带上 confirmed=true 重新调用
