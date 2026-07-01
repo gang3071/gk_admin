@@ -2237,4 +2237,42 @@ return [
         'url' => 'ex-admin/addons-webman-controller-VipLevelController/cashback',
         'title' => 'VIP反水比例',
     ],
+    // 出票记录（总后台）
+    [
+        'id' => 'addons\webman\controller\AdminTicketRecordController\index',
+        'pid' => 0,
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminTicketRecordController/index',
+        'title' => '出票记录列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\AdminTicketRecordController\detail',
+        'pid' => 'addons\webman\controller\AdminTicketRecordController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminTicketRecordController/detail',
+        'title' => '出票记录详情',
+    ],
+    // 核销记录（总后台）
+    [
+        'id' => 'addons\webman\controller\AdminTicketRedeemController\index',
+        'pid' => 0,
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminTicketRedeemController/index',
+        'title' => '核销记录列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\AdminTicketRedeemController\detail',
+        'pid' => 'addons\webman\controller\AdminTicketRedeemController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminTicketRedeemController/detail',
+        'title' => '核销记录详情',
+    ],
 ];

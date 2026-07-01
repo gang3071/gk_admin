@@ -2145,4 +2145,42 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelVipLevelController/syncPlayers',
         'title' => '同步玩家等级',
     ],
+    // 出票记录（渠道后台）
+    [
+        'id' => 'addons\webman\controller\ChannelTicketRecordController\index',
+        'pid' => 0,
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelTicketRecordController/index',
+        'title' => '出票记录列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelTicketRecordController\detail',
+        'pid' => 'addons\webman\controller\ChannelTicketRecordController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelTicketRecordController/detail',
+        'title' => '出票记录详情',
+    ],
+    // 核销记录（渠道后台）
+    [
+        'id' => 'addons\webman\controller\ChannelTicketRedeemController\index',
+        'pid' => 0,
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelTicketRedeemController/index',
+        'title' => '核销记录列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelTicketRedeemController\detail',
+        'pid' => 'addons\webman\controller\ChannelTicketRedeemController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelTicketRedeemController/detail',
+        'title' => '核销记录详情',
+    ],
 ];
