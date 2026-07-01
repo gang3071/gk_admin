@@ -17,6 +17,7 @@ use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
+use Illuminate\Support\Facades\Request;
 
 /**
  * 核销记录管理（总后台）
@@ -33,27 +34,70 @@ class AdminTicketRedeemController
     public function index(): Grid
     {
         $admin = Admin::user();
+        $page = Request::input('ex_admin_page', 1);
+        $size = Request::input('ex_admin_size', 20);
+        $requestFilter = Request::input('ex_admin_filter', []);
 
-        return Grid::create(new TicketRecord(), function (Grid $grid) use ($admin) {
+        // 构建查询（不使用模型实例，避免触发 DataPermissions 全局作用域）
+        $query = TicketRecord::query()
+            ->select(['qr_ticket_record.*', 'player.avatar as player_avatar'])
+            ->leftJoin('player', 'qr_ticket_record.player_id', '=', 'player.id')
+            ->where('qr_ticket_record.department_id', $admin->department_id)
+            ->where('qr_ticket_record.ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->orderBy('qr_ticket_record.created_at', 'desc');
+
+        // 应用筛选条件
+        if (!empty($requestFilter['order_id'])) {
+            $query->where('qr_ticket_record.order_id', 'like', '%' . $requestFilter['order_id'] . '%');
+        }
+        if (!empty($requestFilter['qr_code_no'])) {
+            $query->where('qr_ticket_record.qr_code_no', 'like', '%' . $requestFilter['qr_code_no'] . '%');
+        }
+        if (!empty($requestFilter['machine_no'])) {
+            $query->where('qr_ticket_record.machine_no', 'like', '%' . $requestFilter['machine_no'] . '%');
+        }
+        if (!empty($requestFilter['store_name'])) {
+            $query->where('qr_ticket_record.store_name', $requestFilter['store_name']);
+        }
+        if (isset($requestFilter['status']) && $requestFilter['status'] !== '') {
+            $query->where('qr_ticket_record.status', $requestFilter['status']);
+        }
+        if (!empty($requestFilter['created_at_start'])) {
+            $query->where('qr_ticket_record.created_at', '>=', $requestFilter['created_at_start']);
+        }
+        if (!empty($requestFilter['created_at_end'])) {
+            $query->where('qr_ticket_record.created_at', '<=', $requestFilter['created_at_end']);
+        }
+
+        // 统计数据
+        $totalData = TicketRecord::query()
+            ->where('department_id', $admin->department_id)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->selectRaw(
+                'sum(score) as total_score, count(*) as total_count, sum(IF(status = ' . TicketRecord::STATUS_USED . ', 1, 0)) as used_count, sum(IF(status = ' . TicketRecord::STATUS_USED . ', score, 0)) as used_score'
+            )
+            ->first();
+
+        // 分页
+        $total = (clone $query)->count();
+        $list = $query->forPage($page, $size)->get()->toArray();
+
+        // 店名下拉选项
+        $storeOptions = ['' => admin_trans('public_msg.all')];
+        $stores = TicketRecord::query()
+            ->where('department_id', $admin->department_id)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->distinct()
+            ->pluck('store_name')
+            ->toArray();
+        foreach ($stores as $store) {
+            $storeOptions[$store] = $store;
+        }
+
+        return Grid::create($list, function (Grid $grid) use ($admin, $total, $totalData, $storeOptions) {
             $grid->title(admin_trans('ticket_machine.redeem.title'));
             $grid->autoHeight();
-
-            // 按部门隔离，显示洗分类型数据
-            $grid->model()
-                ->select(['qr_ticket_record.*', 'player.avatar as player_avatar'])
-                ->leftJoin('player', 'qr_ticket_record.player_id', '=', 'player.id')
-                ->where('qr_ticket_record.department_id', $admin->department_id)
-                ->where('qr_ticket_record.ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->orderBy('qr_ticket_record.created_at', 'desc');
-
-            // 统计数据
-            $totalData = TicketRecord::query()
-                ->where('department_id', $admin->department_id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->selectRaw(
-                    'sum(score) as total_score, count(*) as total_count, sum(IF(status = ' . TicketRecord::STATUS_USED . ', 1, 0)) as used_count, sum(IF(status = ' . TicketRecord::STATUS_USED . ', score, 0)) as used_score'
-                )
-                ->first();
+            $grid->total($total);
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
@@ -170,17 +214,6 @@ class AdminTicketRedeemController
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
 
             // 筛选器
-            $storeOptions = ['' => admin_trans('public_msg.all')];
-            $stores = TicketRecord::query()
-                ->where('department_id', $admin->department_id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->distinct()
-                ->pluck('store_name')
-                ->toArray();
-            foreach ($stores as $store) {
-                $storeOptions[$store] = $store;
-            }
-
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->expand();
                 $filter->like('order_id', admin_trans('ticket_machine.redeem.order_id'));
