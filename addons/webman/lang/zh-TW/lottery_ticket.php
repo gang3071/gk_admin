@@ -129,6 +129,7 @@ return [
 
     // 来源
     'source' => [
+        'betting' => '打碼獲得',
         'recharge' => '充值贈送',
         'activity' => '活動贈送',
         'manual' => '手動派獎',

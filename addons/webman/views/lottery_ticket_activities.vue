@@ -713,34 +713,35 @@
         width="900px"
         :body-style="{ padding: '16px' }"
     >
-      <!-- ⭐ 筛选表单 -->
+      <!-- ⭐ 筛选表单 - 优化样式 -->
       <a-form layout="inline" style="margin-bottom: 16px;">
-        <a-form-item label="券号">
+        <a-form-item>
           <a-input
               v-model:value="ticketFilter.ticket_no"
-              placeholder="输入券号"
+              placeholder="券号"
               allow-clear
               style="width: 150px;"
           />
         </a-form-item>
-        <a-form-item label="玩家UUID">
+        <a-form-item>
           <a-input
               v-model:value="ticketFilter.player_uuid"
-              placeholder="输入玩家UUID"
+              placeholder="玩家UUID"
               allow-clear
               style="width: 180px;"
           />
         </a-form-item>
-        <a-form-item label="发放时间">
+        <a-form-item>
           <a-range-picker
               v-model:value="ticketFilter.time_range"
               show-time
               format="YYYY-MM-DD HH:mm:ss"
+              :placeholder="['开始时间', '结束时间']"
               style="width: 360px;"
           />
         </a-form-item>
-        <a-form-item>
-          <a-space>
+        <a-form-item style="margin-left: 16px;">
+          <a-space :size="8">
             <a-button type="primary" @click="handleTicketSearch">
               <template #icon>
                 <search-outlined/>
@@ -772,13 +773,11 @@
             <a-typography-text copyable>{{ record.player_uuid }}</a-typography-text>
           </template>
           <template v-if="column.key === 'status'">
-            <a-tag :color="getTicketStatusColor(record.status)">
-              {{ getTicketStatusText(record.status) }}
+            <a-tag :color="record.status_color">
+              {{ record.status }}
             </a-tag>
           </template>
-          <template v-if="column.key === 'source'">
-            {{ getSourceText(record.source) }}
-          </template>
+          <!-- ✅ 后端已返回转换好的文本，直接显示，不需要再转换 -->
         </template>
       </a-table>
     </a-drawer>
@@ -2069,11 +2068,12 @@ export default {
     // 获取来源文本
     getSourceText(source) {
       const sourceMap = {
+        'betting': '打码获得',
         'recharge': '充值赠送',
         'activity': '活动赠送',
         'manual': '手动发放'
       };
-      return sourceMap[source] || source;
+      return sourceMap[source] || '未知来源';
     }
   }
 };

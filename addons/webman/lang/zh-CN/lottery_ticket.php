@@ -130,6 +130,7 @@ return [
 
     // 来源
     'source' => [
+        'betting' => '打码获得',
         'recharge' => '充值贈送',
         'activity' => '活动贈送',
         'manual' => '手动发放',

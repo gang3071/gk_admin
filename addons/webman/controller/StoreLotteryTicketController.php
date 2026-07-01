@@ -118,6 +118,7 @@ class StoreLotteryTicketController
             $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))
                 ->width(160)->align('center');
 
+
             // 筛选器
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('ticket_no')
