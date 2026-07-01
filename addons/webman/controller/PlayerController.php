@@ -782,112 +782,31 @@ class PlayerController
         }
         return Form::create(new $this->model(), function (Form $form) use ($options) {
             if ($form->isEdit()) {
-                $form->title(admin_trans('player.details'));
-                $form->row(function (Form $form) use ($options) {
-                    $form->column(function (Form $form) use ($options) {
-                        $form->text('phone',
-                            admin_trans('player.fields.phone'))->maxlength(50)->disabled(true);
-                        $form->text('name', admin_trans('player.fields.name'))->maxlength(50);
-                        $form->radio('avatar_type', admin_trans('player.avatar_type'))
-                            ->button()
-                            ->default(is_numeric($form->driver()->get('avatar')) ? 2 : 1)
-                            ->options([
-                                1 => admin_trans('player.upload_avatar'),
-                                2 => admin_trans('player.def_avatar')
-                            ])
-                            ->when(1, function (Form $form) {
-                                $form->image('avatar',
-                                    admin_trans('player.fields.avatar'))->value(is_numeric($form->driver()->get('avatar')) ? '' : $form->driver()->get('avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
-                            })->when(2, function (Form $form) use ($options) {
-                                $form->radio('def_avatar', admin_trans('player.def_avatar'))
-                                    ->default(1)
-                                    ->options($options);
-                            });
-                        $form->text('player_extend.id_number',
-                            admin_trans('player_extend.fields.id_number'))->ruleAlphaNum()->maxlength(20);
-                        $form->image('player_extend.id_card_front',
-                            admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
-                        $form->image('player_extend.id_card_back',
-                            admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
-                        $form->image('player_extend.personal_photo',
-                            admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
-                        $form->switch('is_test',
-                            admin_trans('player.fields.is_test'));
-                        $form->desc('the_last_player_login_record.created_at',
-                            admin_trans('player.fields.login_at'))->value($form->input('the_last_player_login_record.created_at') ? date('Y-m-d H:i:s',
-                            strtotime($form->input('the_last_player_login_record.created_at'))) : '');
-                        $form->desc('created_at',
-                            admin_trans('player.fields.created_at'))->value($form->input('created_at') ? date('Y-m-d H:i:s',
-                            strtotime($form->input('created_at'))) : '');
-                    })->span(12);
-
-                    $form->column(function (Form $form) {
-                        $form->text('player_extend.address',
-                            admin_trans('player_extend.fields.address'))->maxlength(255);
-                        $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'));
-                        $form->text('player_extend.email',
-                            admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(20);
-                        $form->text('player_extend.line',
-                            admin_trans('player_extend.fields.line'))->ruleAlphaNum()->maxlength(20);
-                        $form->select('machine_play_num', admin_trans('player.fields.machine_play_num'))->options([
-                            1 => 1,
-                            2 => 2,
-                            3 => 3,
-                            4 => 4,
-                            5 => 5
-                        ]);
-                        $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))
-                            ->showCount()
-                            ->rule(['max:255' => admin_trans('player_extend.fields.remark')]);
-                        $form->desc('player_register_record.ip', admin_trans('player.fields.register_ip'));
-                        $form->desc('player_register_record.register_domain',
-                            admin_trans('player.fields.register_domain'));
-                    })->span(12);
-                });
-            } else {
-                $form->title(admin_trans('player.add_player'));
-                $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->ruleAlphaNum()->required();
-                $form->radio('avatar_type', admin_trans('player.avatar_type'))
-                    ->button()
-                    ->default(2)
-                    ->options([
-                        1 => admin_trans('player.upload_avatar'),
-                        2 => admin_trans('player.def_avatar')
-                    ])
-                    ->when(1, function (Form $form) {
-                        $form->image('avatar',
-                            admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
-                    })->when(2, function (Form $form) use ($options) {
-                        $form->radio('def_avatar', admin_trans('player.def_avatar'))
-                            ->default(1)
-                            ->options($options);
-                    });
-                $form->select('country_code', admin_trans('player.fields.country_code'))->options([
-                    PhoneSmsLog::COUNTRY_CODE_CH => PhoneSmsLog::COUNTRY_CODE_CH,
-                    PhoneSmsLog::COUNTRY_CODE_TW => PhoneSmsLog::COUNTRY_CODE_TW,
-                    PhoneSmsLog::COUNTRY_CODE_JP => PhoneSmsLog::COUNTRY_CODE_JP
-                ])->required();
-                $form->select('department_id', admin_trans('player.fields.department_id'))->remoteOptions(admin_url([
-                    'addons-webman-controller-ChannelController',
-                    'getDepartmentOptions'
-                ]))->required();
-                $form->switch('is_test', admin_trans('player.fields.is_test'));
+                $form->title(admin_trans('player.edit_player'));
+                $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
+                $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                    ->default(1)
+                    ->options($options);
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
-                $form->password('password', admin_trans('player.new_password'))
-                    ->rule([
-                        'confirmed' => admin_trans('player.password_confim_validate'),
-                        'min:6' => admin_trans('player.password_min_number')
-                    ])
-                    ->value('')
-                    ->required();
-                $form->password('password_confirmation', admin_trans('player.confim_password'))
-                    ->required();
-            }
-            $form->saved(function () {
-                return message_success(admin_trans('player.save_player_info_success'));
-            });
-            $form->saving(function (Form $form) {
-                if ($form->isEdit()) {
+                $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
+                $form->text('player_extend.id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50);
+                $form->image('player_extend.id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->image('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->image('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->text('player_extend.address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
+                $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'))->required();
+                $form->text('player_extend.email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
+                $form->text('player_extend.line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
+                $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
+                $form->switch('is_test', admin_trans('player.fields.is_test'));
+                $form->select('machine_play_num', admin_trans('player.fields.machine_play_num'))->options([
+                    1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5
+                ]);
+
+                $form->saved(function () {
+                    return message_success(admin_trans('player.save_player_info_success'));
+                });
+                $form->saving(function (Form $form) {
                     $orgData = $form->driver()->get();
                     /** @var Player $player */
                     $player = Player::find($orgData['id']);
@@ -897,21 +816,22 @@ class PlayerController
                     DB::beginTransaction();
                     try {
                         $player->name = $form->input('name');
+                        $player->real_name = $form->input('real_name');
                         $player->is_test = $form->input('is_test');
                         $player->machine_play_num = $form->input('machine_play_num');
-                        $player->avatar = $form->input('avatar_type') == 1 ? $form->input('avatar') : $form->input('def_avatar');
+                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
                         $player->save();
+
                         PlayerExtend::query()->updateOrCreate(['player_id' => $orgData['id']], [
-                            'address' => $form->input('player_extend.address'),
-                            'birthday' => $form->input('player_extend.birthday'),
                             'id_number' => $form->input('player_extend.id_number'),
                             'id_card_front' => $form->input('player_extend.id_card_front'),
                             'id_card_back' => $form->input('player_extend.id_card_back'),
                             'personal_photo' => $form->input('player_extend.personal_photo'),
+                            'address' => $form->input('player_extend.address'),
+                            'birthday' => $form->input('player_extend.birthday'),
                             'email' => $form->input('player_extend.email'),
                             'line' => $form->input('player_extend.line'),
                             'remark' => $form->input('player_extend.remark'),
-                            'player_id' => $orgData['id']
                         ]);
                         DB::commit();
                     } catch (\Exception $e) {
@@ -919,14 +839,52 @@ class PlayerController
                         return message_error($e->getMessage());
                     }
                     return message_success(admin_trans('player.save_player_info_success'));
-                } else {
+                });
+            } else {
+                $form->title(admin_trans('player.add_player'));
+                $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
+                $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                    ->default(1)
+                    ->options($options);
+                $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+                $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
+                $form->select('country_code', admin_trans('player.fields.country_code'))->options([
+                    PhoneSmsLog::COUNTRY_CODE_CH => PhoneSmsLog::COUNTRY_CODE_CH,
+                    PhoneSmsLog::COUNTRY_CODE_TW => PhoneSmsLog::COUNTRY_CODE_TW,
+                    PhoneSmsLog::COUNTRY_CODE_JP => PhoneSmsLog::COUNTRY_CODE_JP
+                ])->required();
+                $form->select('department_id', admin_trans('player.fields.department_id'))->remoteOptions(admin_url([
+                    'addons-webman-controller-ChannelController',
+                    'getDepartmentOptions'
+                ]))->required();
+                $form->text('player_extend.id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
+                $form->image('player_extend.id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->image('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->image('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->text('player_extend.address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
+                $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'))->required();
+                $form->text('player_extend.email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
+                $form->text('player_extend.line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
+                $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
+                $form->switch('is_test', admin_trans('player.fields.is_test'));
+                $form->password('password', admin_trans('player.new_password'))
+                    ->rule([
+                        'confirmed' => admin_trans('player.password_confim_validate'),
+                        'min:6' => admin_trans('player.password_min_number')
+                    ])
+                    ->value('')
+                    ->required();
+                $form->password('password_confirmation', admin_trans('player.confim_password'))
+                    ->required();
+
+                $form->saved(function () {
+                    return message_success(admin_trans('player.save_player_info_success'));
+                });
+                $form->saving(function (Form $form) {
                     if (!LevelList::query()->where('department_id', $form->input('department_id'))->orderBy('must_chip_amount')->exists()) {
                         return message_error(admin_trans('player.national_level_not_configure'));
                     }
                     $phone = $form->input('phone');
-                    $password = $form->input('password');
-                    $country_code = $form->input('country_code');
-                    /** @var $player $machineCategory */
                     $player = Player::query()->where('phone', $phone)->first();
                     if (!empty($player)) {
                         return message_error(admin_trans('player.phone_has_register'));
@@ -941,18 +899,15 @@ class PlayerController
                         $player = new Player();
                         $player->phone = $phone;
                         $player->name = $form->input('name');
-                        if ($form->input('avatar_type') == 1) {
-                            $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
-                        }
-                        if ($form->input('avatar_type') == 2) {
-                            $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
-                        }
-                        $player->country_code = $country_code;
+                        $player->real_name = $form->input('real_name');
+                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
+                        $player->country_code = $form->input('country_code');
+                        $player->player_source = Player::PLAYER_SOURCE_ONLINE;
                         $player->type = Player::TYPE_PLAYER;
                         $player->currency = $channel->currency;
                         $player->is_test = $form->input('is_test') ?? 0;
                         $player->department_id = $channel->department_id;
-                        $player->password = $password;
+                        $player->password = $form->input('password');
                         $player->uuid = generate15DigitUniqueId();
                         $player->recommend_code = createCode();
                         $player->save();
@@ -966,6 +921,19 @@ class PlayerController
 
                         addPlayerExtend($player);
 
+                        // 更新扩展信息
+                        PlayerExtend::query()->where('player_id', $player->id)->update([
+                            'id_number' => $form->input('player_extend.id_number'),
+                            'id_card_front' => $form->input('player_extend.id_card_front'),
+                            'id_card_back' => $form->input('player_extend.id_card_back'),
+                            'personal_photo' => $form->input('player_extend.personal_photo'),
+                            'address' => $form->input('player_extend.address'),
+                            'birthday' => $form->input('player_extend.birthday'),
+                            'email' => $form->input('player_extend.email'),
+                            'line' => $form->input('player_extend.line'),
+                            'remark' => $form->input('player_extend.remark'),
+                        ]);
+
                         addRegisterRecord($player->id, PlayerRegisterRecord::TYPE_ADMIN, $player->department_id);
 
                         DB::commit();
@@ -974,8 +942,8 @@ class PlayerController
                         return message_error($e->getMessage());
                     }
                     return message_success(admin_trans('player.save_player_info_success'));
-                }
-            });
+                });
+            }
         });
     }
 
