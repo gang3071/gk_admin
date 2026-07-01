@@ -180,16 +180,16 @@ class StorePlayerController
                 $item['lottery_amount'] = floatval($lotteryAmount);
             }
 
-            // 计算累计小计 = (开分 + 投钞) - (洗分 + 彩金)
+            // 计算累计小计 = (开分 + 投钞) - 洗分
+            // 注意：洗分已包含彩金，彩金只用于展示
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
-            $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
 
             // 收入 = 开分 + 投钞
             $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
-            // 支出 = 洗分 + 彩金
-            $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
+            // 支出 = 洗分（已包含彩金）
+            $outcomeTotal = $withdrawAmount;
             // 小计 = 收入 - 支出
             $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
 
