@@ -558,7 +558,7 @@ class AgentStoreProfitReportExporter extends Excel
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
             // 计算小计 = (开分 + 投钞) - 洗分
-            // 注意：洗分中已包含彩金（发放后客户洗分会洗掉），不需要重复扣除
+            // 注意：洗分中不包含彩金（彩金已发放给客户，客户洗分会洗掉）
             $totalIn = bcadd(strval($rechargeAmount), strval($machinePutPoint), 2);
             $subtotal = bcsub($totalIn, strval($withdrawAmount), 2);
 

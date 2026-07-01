@@ -167,7 +167,7 @@ class ChannelStoreProfitReportController
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
             // 计算小计 = (开分 + 投钞) - 洗分
-            // 注意：洗分中已包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
+            // 注意：洗分中不包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 

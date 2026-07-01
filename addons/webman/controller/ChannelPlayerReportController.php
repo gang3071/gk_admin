@@ -214,8 +214,9 @@ class ChannelPlayerReportController
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE)
             ->sum('player_delivery_record.amount');
 
-        //送输赢
-        $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['activity_total'] + $summaryData['lottery_total'] + $summaryData['modified_total'];
+        // 送输赢 = 下分 - 上分 + 游戏输赢 + 管理员加点
+        // 注意：不包含彩金和活动奖励（发放后客户洗分会洗掉，已在下分中体现）
+        $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['modified_total'];
         
         $summaryData['total_amount'] = $summaryData['self_recharge_total'] + $summaryData['artificial_recharge_total'] + $summaryData['machine_chip_total'] + $summaryData['channel_withdrawal_total'] + $summaryData['artificial_withdrawal_total'];
         $baseQuery

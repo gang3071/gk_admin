@@ -146,7 +146,7 @@ class AgentStoreProfitReportController
 
             // 计算小计 = (开分 + 投钞) - 洗分
             // 注意：此处从账变记录统计，TYPE_RECHARGE和TYPE_MACHINE是分开的，需要相加
-            // 洗分已包含彩金
+            // 注意：洗分中不包含彩金（彩金已发放给客户，客户洗分会洗掉）
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
