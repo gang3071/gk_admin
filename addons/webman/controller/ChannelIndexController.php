@@ -2172,14 +2172,11 @@ class ChannelIndexController
             'lottery_amount' => $currentShiftLotteryQuery->lottery_amount ?? 0,
         ];
 
-        // 总利润 = (充值 + 投钞) - 提现 - 彩金
+        // 总利润 = (充值 + 投钞) - 提现
+        // 注意：提现（洗分）已包含彩金，彩金只用于展示
         $currentShiftStats['total_profit'] = bcsub(
-            bcsub(
-                $currentShiftStats['total_income'],
-                $currentShiftStats['total_outcome'],
-                2
-            ),
-            $currentShiftStats['lottery_amount'],
+            $currentShiftStats['total_income'],
+            $currentShiftStats['total_outcome'],
             2
         );
 
