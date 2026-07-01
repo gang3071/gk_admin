@@ -326,6 +326,7 @@ return [
         'activity_not_in_drawing_status' => '活动状态错误，只能在开奖中或已结束状态派奖',
         'amount_exceeded' => '派奖金额超出总奖金额度',
         'ticket_not_found_or_used' => '券号 {ticket_no} 不存在或已使用',
+        'ticket_already_won' => '券号 {ticket_no} 已录入过中奖记录，不能重复录入',
         'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',
         'invalid_ticket_format' => '券号 {ticket_no} 格式错误，只能包含数字且不超过6位',
         'bet_progress_not_found' => '未找到打码进度记录',

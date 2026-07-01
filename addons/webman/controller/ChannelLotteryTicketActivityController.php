@@ -1019,7 +1019,7 @@ class ChannelLotteryTicketActivityController
                 'source' => $this->getSourceText($ticket->source),
                 'status' => $this->getTicketStatusText($ticket->status),
                 'status_color' => $this->getTicketStatusColor($ticket->status),
-                'created_at' => $ticket->created_at,
+                'created_at' => $ticket->created_at ? date('Y-m-d H:i:s', strtotime($ticket->created_at)) : '-',
             ];
         });
 
@@ -1122,6 +1122,16 @@ class ChannelLotteryTicketActivityController
 
                 if (!$ticket) {
                     $errors[] = admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]);
+                    continue;
+                }
+
+                // ✅ 双重检查：防止数据不一致（券状态未更新但已有中奖记录）
+                $existingRecord = \addons\webman\model\LotteryTicketRecord::where('ticket_id', $ticket->id)
+                    ->where('activity_id', $activityId)
+                    ->first();
+
+                if ($existingRecord) {
+                    $errors[] = admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]);
                     continue;
                 }
 
@@ -1542,7 +1552,7 @@ class ChannelLotteryTicketActivityController
                 'prize_level' => $record->prize_name,
                 'prize_type' => $record->prize_type,
                 'prize_amount' => $record->prize_amount,
-                'created_at' => $record->created_at,
+                'created_at' => $record->created_at ? date('Y-m-d H:i:s', strtotime($record->created_at)) : '-',
             ];
         });
 
@@ -1643,8 +1653,8 @@ class ChannelLotteryTicketActivityController
                 'status_text' => $this->getTicketStatusText($ticket->status),
                 'source' => $ticket->source,
                 'source_text' => $this->getSourceText($ticket->source),
-                'created_at' => $ticket->created_at,
-                'expired_at' => $ticket->expired_at,  // ✅ 修正字段名
+                'created_at' => $ticket->created_at ? date('Y-m-d H:i:s', strtotime($ticket->created_at)) : '-',
+                'expired_at' => $ticket->expired_at ? date('Y-m-d H:i:s', strtotime($ticket->expired_at)) : '-',
             ];
         });
 
@@ -1694,7 +1704,7 @@ class ChannelLotteryTicketActivityController
                 'prize_type' => $record->prize_type,
                 'prize_amount' => $record->prize_amount,
                 'status' => $record->status,
-                'created_at' => $record->created_at,
+                'created_at' => $record->created_at ? date('Y-m-d H:i:s', strtotime($record->created_at)) : '-',
             ];
         });
 
