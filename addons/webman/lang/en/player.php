@@ -94,6 +94,7 @@ return [
     'player_info' => 'Player information',
     'save_player_info_success' => 'Save successfully',
     'add_player' => 'Add player',
+    'edit_player' => 'Edit player',
     'phone_has_register' => 'Mobile phone number has been registered',
     'avatar_type' => 'avatar',
     'upload_avatar' => 'Upload avatar',

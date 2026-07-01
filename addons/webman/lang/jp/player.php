@@ -93,6 +93,7 @@ return [
     'player_info' => 'プレイヤー情報',
     'save_player_info_success' => '正常に保存されました',
     'add_player' => 'プレーヤーを追加',
+    'edit_player' => 'プレーヤーを編集',
     'phone_has_register' => '携帯電話番号が登録されました',
     'avatar_type' => 'アバター',
     'upload_avatar' => 'アバターをアップロード',

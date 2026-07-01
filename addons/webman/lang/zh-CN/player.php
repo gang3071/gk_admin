@@ -94,6 +94,7 @@ return [
     'player_info' => '玩家信息',
     'save_player_info_success' => '保存成功',
     'add_player' => '添加玩家',
+    'edit_player' => '编辑玩家',
     'phone_has_register' => '手机号已注册',
     'avatar_type' => '头像',
     'upload_avatar' => '上传头像',
