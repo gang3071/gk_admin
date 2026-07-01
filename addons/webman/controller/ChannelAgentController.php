@@ -364,6 +364,8 @@ class ChannelAgentController
             $item['lottery_amount'] = $lotteryAmounts[$item['id']] ?? 0;
 
             // 计算小计 = 开分 - (洗分 + 彩金)
+            // 计算小计 = 开分 - 洗分
+            // 注意：开分（recharge_amount）已包含投钞，洗分已包含彩金
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
 

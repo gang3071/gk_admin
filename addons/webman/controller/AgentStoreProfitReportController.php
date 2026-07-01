@@ -144,14 +144,11 @@ class AgentStoreProfitReportController
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
-            // 计算小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
+            // 计算小计 = (开分 + 投钞) - 洗分
+            // 注意：此处从账变记录统计，TYPE_RECHARGE和TYPE_MACHINE是分开的，需要相加
+            // 洗分已包含彩金
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-            $totalOut = bcadd(
-                bcadd($withdrawAmount, $lotteryAmount, 2),
-                $activityTotal,
-                2
-            );
-            $subtotal = bcsub($totalIn, $totalOut, 2);
+            $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
             // 计算代理分润：小计 * 代理抽成比例
             $agentCommission = floatval($store->agent_commission ?? 0);
