@@ -61,6 +61,27 @@
             border-radius: 2px;
             padding: 10px;
         }
+        /* 修复图片上传按钮居中问题 */
+        .file-upload {
+            align-items: center !important;
+        }
+        .file-list {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .image-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* 确保上传按钮内容居中 */
+        .image-btn .ant-space {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>

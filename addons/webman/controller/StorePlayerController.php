@@ -759,6 +759,13 @@ class StorePlayerController
         return Form::create(new Player(), function (Form $form) use ($options) {
             $form->title(admin_trans('player.add_player'));
             $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
+            $form->select('player_source', admin_trans('player.fields.player_source'))
+                ->options([
+                    Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
+                    Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
+                ])
+                ->default(Player::PLAYER_SOURCE_OFFLINE)
+                ->required();
             $form->radio('avatar_type', admin_trans('player.avatar_type'))
                 ->button()
                 ->default(2)
@@ -826,9 +833,9 @@ class StorePlayerController
                     if ($form->input('avatar_type') == 2) {
                         $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
                     }
-                    // 店机后台固定值：国家代码86、线上来源
+                    // 店机后台固定值：国家代码86
                     $player->country_code = '86';
-                    $player->player_source = Player::PLAYER_SOURCE_ONLINE;
+                    $player->player_source = $form->input('player_source') ?? Player::PLAYER_SOURCE_OFFLINE;
                     $player->type = Player::TYPE_PLAYER;
                     $player->currency = $channel->currency;
                     $player->department_id = $departmentId;
