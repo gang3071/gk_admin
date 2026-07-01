@@ -39,13 +39,12 @@ class StoreTicketRedeemController
             $grid->title(admin_trans('ticket_machine.redeem.title'));
             $grid->autoHeight();
 
-            // 关联 player 表获取头像
+            // 使用子查询获取玩家头像，避免 join 导致字段冲突
             $grid->model()
-                ->select(['qr_ticket_record.*', 'player.avatar as player_avatar'])
-                ->leftJoin('player', 'qr_ticket_record.player_id', '=', 'player.id')
-                ->where('qr_ticket_record.store_admin_id', $admin->id)
-                ->where('qr_ticket_record.ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->orderBy('qr_ticket_record.created_at', 'desc');
+                ->selectRaw('qr_ticket_record.*, (SELECT avatar FROM player WHERE player.id = qr_ticket_record.player_id LIMIT 1) as player_avatar')
+                ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->orderBy('created_at', 'desc');
 
             // 统计数据（使用独立查询，避免 join 和 group by 问题）
             $totalData = TicketRecord::query()
@@ -196,11 +195,11 @@ class StoreTicketRedeemController
                 $storeOptions[$store] = $store;
             }
 
+            $grid->expandFilter();
             $grid->filter(function (Filter $filter) use ($storeOptions) {
-                $filter->expand();
-                $filter->like('order_id', admin_trans('ticket_machine.redeem.order_id'));
-                $filter->like('qr_code_no', admin_trans('ticket_machine.redeem.qr_code_no'));
-                $filter->like('machine_no', admin_trans('ticket_machine.redeem.machine_no'));
+                $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
+                $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.redeem.qr_code_no'));
+                $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.redeem.machine_no'));
                 $filter->eq()->select('store_name')
                     ->placeholder(admin_trans('ticket_machine.redeem.store_name'))
                     ->options($storeOptions)
@@ -214,11 +213,10 @@ class StoreTicketRedeemController
                         TicketRecord::STATUS_USED => admin_trans('ticket_machine.redeem.status_used'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->between('created_at', admin_trans('ticket_machine.redeem.created_at'))->datetime();
+                $filter->form()->hidden('created_at_start');
+                $filter->form()->hidden('created_at_end');
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end');
             });
-
-            // 关闭新增按钮
-            $grid->disableCreateButton();
 
             // 隐藏清空数据按钮
             $grid->hideDelete();

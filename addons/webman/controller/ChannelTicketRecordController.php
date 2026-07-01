@@ -175,10 +175,11 @@ class ChannelTicketRecordController
             }
 
             // 筛选器
+            $grid->expandFilter();
             $grid->filter(function (Filter $filter) use ($storeOptions) {
-                $filter->like('order_id', admin_trans('ticket_machine.record.order_id'));
-                $filter->like('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'));
-                $filter->like('machine_no', admin_trans('ticket_machine.record.machine_no'));
+                $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));
+                $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.record.qr_code_no'));
+                $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.record.machine_no'));
                 $filter->eq()->select('store_name')
                     ->placeholder(admin_trans('ticket_machine.record.store_name'))
                     ->options($storeOptions)
@@ -200,10 +201,11 @@ class ChannelTicketRecordController
                         TicketRecord::STATUS_USED => admin_trans('ticket_machine.record.status_used'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->between('created_at', admin_trans('ticket_machine.record.created_at'))->datetime();
+                $filter->form()->hidden('created_at_start');
+                $filter->form()->hidden('created_at_end');
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end');
             });
 
-            $grid->disableCreateButton();
             $grid->hideDelete();
 
             // 操作列 - 只保留查看
