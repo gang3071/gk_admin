@@ -740,7 +740,7 @@
               style="width: 360px;"
           />
         </a-form-item>
-        <a-form-item>
+        <a-form-item style="margin-left: 16px;">
           <a-space :size="8">
             <a-button type="primary" @click="handleTicketSearch">
               <template #icon>
