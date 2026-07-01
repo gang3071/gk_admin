@@ -1019,7 +1019,7 @@ class ChannelLotteryTicketActivityController
                 'source' => $this->getSourceText($ticket->source),
                 'status' => $this->getTicketStatusText($ticket->status),
                 'status_color' => $this->getTicketStatusColor($ticket->status),
-                'created_at' => $ticket->created_at,
+                'created_at' => $ticket->created_at ? date('Y-m-d H:i:s', strtotime($ticket->created_at)) : '-',
             ];
         });
 
@@ -1552,7 +1552,7 @@ class ChannelLotteryTicketActivityController
                 'prize_level' => $record->prize_name,
                 'prize_type' => $record->prize_type,
                 'prize_amount' => $record->prize_amount,
-                'created_at' => $record->created_at,
+                'created_at' => $record->created_at ? date('Y-m-d H:i:s', strtotime($record->created_at)) : '-',
             ];
         });
 
@@ -1653,8 +1653,8 @@ class ChannelLotteryTicketActivityController
                 'status_text' => $this->getTicketStatusText($ticket->status),
                 'source' => $ticket->source,
                 'source_text' => $this->getSourceText($ticket->source),
-                'created_at' => $ticket->created_at,
-                'expired_at' => $ticket->expired_at,  // ✅ 修正字段名
+                'created_at' => $ticket->created_at ? date('Y-m-d H:i:s', strtotime($ticket->created_at)) : '-',
+                'expired_at' => $ticket->expired_at ? date('Y-m-d H:i:s', strtotime($ticket->expired_at)) : '-',
             ];
         });
 
@@ -1704,7 +1704,7 @@ class ChannelLotteryTicketActivityController
                 'prize_type' => $record->prize_type,
                 'prize_amount' => $record->prize_amount,
                 'status' => $record->status,
-                'created_at' => $record->created_at,
+                'created_at' => $record->created_at ? date('Y-m-d H:i:s', strtotime($record->created_at)) : '-',
             ];
         });
 
