@@ -291,9 +291,18 @@ class StorePlayerController
                 $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
 
                 $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
-                $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
-                $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
-                $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+
+                if ($hasStatsTimeFilter) {
+                    // 有时间筛选：从账变记录统计，TYPE_RECHARGE和TYPE_MACHINE是分开的
+                    // 小计 = (开分 + 投钞) - 洗分
+                    $item['subtotal'] = bcsub($incomeTotal, $withdrawAmount, 2);
+                    $item['pure_recharge_amount'] = $rechargeAmount;
+                } else {
+                    // 无时间筛选：使用player_extend累计数据，recharge_amount已包含投钞
+                    // 小计 = 开分 - 洗分
+                    $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
+                    $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+                }
 
                 // 当前未交班数据
                 $currentStats = $currentShiftDeliveryByPlayer[$playerId] ?? null;
