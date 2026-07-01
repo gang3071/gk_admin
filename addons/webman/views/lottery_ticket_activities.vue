@@ -773,13 +773,11 @@
             <a-typography-text copyable>{{ record.player_uuid }}</a-typography-text>
           </template>
           <template v-if="column.key === 'status'">
-            <a-tag :color="getTicketStatusColor(record.status)">
-              {{ getTicketStatusText(record.status) }}
+            <a-tag :color="record.status_color">
+              {{ record.status }}
             </a-tag>
           </template>
-          <template v-if="column.key === 'source'">
-            {{ getSourceText(record.source) }}
-          </template>
+          <!-- ✅ 后端已返回转换好的文本，直接显示，不需要再转换 -->
         </template>
       </a-table>
     </a-drawer>
