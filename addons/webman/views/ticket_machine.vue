@@ -814,15 +814,17 @@ export default {
       // 等待设备处理
       await new Promise(r => setTimeout(r, 100));
 
-      // 先发送彩票数据（分数设置到前两位，其他传0）
+      // 先发送彩票数据
       const score = Math.floor(this.ticketScore);
       const lotteryData = [
-        (score >> 8) & 0xFF,  // 票数 = 分数高字节
-        score & 0xFF,         // 赠送 = 分数低字节
-        0,                    // 码表 = 0
-        0, 0, 0, 0           // 数 = 0 (4字节)
+        (score >> 24) & 0xFF,  // 分数字节1 (最高位)
+        (score >> 16) & 0xFF,  // 分数字节2
+        (score >> 8) & 0xFF,   // 分数字节3
+        score & 0xFF,          // 分数字节4 (最低位)
+        0,                     // 码表 = 0
+        0, 0                   // 预留
       ];
-      this.addLog('info', '发送彩票数据: 分数=' + score);
+      this.addLog('info', '发送彩票数据: 分数=' + score + ' HEX=[' + lotteryData.map(b => b.toString(16).padStart(2, '0')).join(' ') + ']');
       await this.sendCommand(0x01, 0x07, lotteryData);
       this.addLog('success', '彩票数据已发送');
 
