@@ -180,16 +180,16 @@ class StorePlayerController
                 $item['lottery_amount'] = floatval($lotteryAmount);
             }
 
-            // 计算累计小计 = (开分 + 投钞) - 洗分
-            // 注意：洗分已包含彩金，彩金只用于展示
+            // 计算累计小计 = (开分 + 投钞) - (洗分 + 彩金)
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+            $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
 
             // 收入 = 开分 + 投钞
             $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
-            // 支出 = 洗分（已包含彩金）
-            $outcomeTotal = $withdrawAmount;
+            // 支出 = 洗分 + 彩金
+            $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
             // 小计 = 收入 - 支出
             $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
 
@@ -228,11 +228,14 @@ class StorePlayerController
             $item['current_total_outcome'] = floatval($currentShiftDelivery->current_total_outcome ?? 0);
             $item['current_lottery_amount'] = floatval($currentShiftLottery);
 
-            // 计算当前未交班总利润 = (总收入 + 投钞) - 总支出
-            // 注意：洗分（总支出）已包含彩金，彩金只用于展示
+            // 计算当前未交班总利润 = (总收入 + 投钞) - 总支出 - 彩金
             $item['current_total_profit'] = bcsub(
-                bcadd($item['current_total_income'], $item['current_machine_put_point'], 2),
-                $item['current_total_outcome'],
+                bcsub(
+                    bcadd($item['current_total_income'], $item['current_machine_put_point'], 2),
+                    $item['current_total_outcome'],
+                    2
+                ),
+                $item['current_lottery_amount'],
                 2
             );
         }
