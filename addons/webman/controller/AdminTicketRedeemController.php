@@ -17,7 +17,6 @@ use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
-use Illuminate\Support\Facades\Request;
 
 /**
  * 核销记录管理（总后台）
@@ -34,9 +33,9 @@ class AdminTicketRedeemController
     public function index(): Grid
     {
         $admin = Admin::user();
-        $page = Request::input('ex_admin_page', 1);
-        $size = Request::input('ex_admin_size', 20);
-        $requestFilter = Request::input('ex_admin_filter', []);
+        $page = request()->input('ex_admin_page', 1);
+        $size = request()->input('ex_admin_size', 20);
+        $requestFilter = request()->input('ex_admin_filter', []);
 
         // 构建查询（不使用模型实例，避免触发 DataPermissions 全局作用域）
         $query = TicketRecord::query()
