@@ -415,6 +415,23 @@ return [
         'prize_config_section' => '賞品レベル設定',
         'no_vip_data' => 'VIPレベルデータがありません',
         'no_vip_config' => 'VIPレベル未設定',
+        // ⭐ 第二批：フォームラベル（2026-07-01）
+        'cover_image' => 'アクティビティカバー画像',
+        'vip_level' => 'VIPレベル',
+        'bet_amount_required' => '必要ベット額',
+        'ticket_count' => 'チケット数',
+        'prize_amount_label' => '賞金額',
+        'prize_count' => '賞品数',
+        'level_label' => 'レベル',
+        'vip_config_hint' => '各VIPレベルで指定ベット額に達した後に発行するくじチケット数を設定',
+        'prize_config_hint' => '賞品レベルと賞金額を設定（現金のみ）',
+        'input_ticket_hint' => '数字を入力、例：12 または 000012',
+        'add_ticket_no' => 'チケット番号を追加',
+        'cover_alt' => 'アクティビティカバー',
+        'end_live_confirm_content_full' => 'ライブ配信を終了しますか？終了後、プレイヤーは視聴できなくなります。',
+        'confirm_end' => '終了確認',
+        'live_stream_name_required' => 'ライブストリーム名を入力してください',
+        'at_least_one_ticket' => '少なくとも1つのチケット番号を入力してください',
     ],
 
     // フィルター ⭐ 追加
@@ -422,6 +439,16 @@ return [
         'time_range' => '時間範囲',
         'create_time_range' => '作成時間範囲',
         'activity_time_range' => 'アクティビティ時間範囲',
+    ],
+
+    // テーブル列見出し ⭐ 第二批（2026-07-01）
+    'table' => [
+        'level' => 'レベル',
+        'vip_level' => 'VIPレベル',
+        'bet_amount_required' => '必要ベット額',
+        'ticket_count' => 'チケット数',
+        'prize_amount' => '賞金額',
+        'created_at' => '配布時間',
     ],
 
     // 验证消息

@@ -166,7 +166,7 @@
               <img
                   :src="activity.cover_image"
                   style="width: 100%; height: 150px; object-fit: cover; border-radius: 4px;"
-                  alt="活动封面"
+                  :alt="trans.form?.cover_alt || '活動封面'"
               />
             </div>
 
@@ -355,7 +355,7 @@
                   <img
                       :src="item.cover_image"
                       style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;"
-                      alt="活动封面"
+                      :alt="trans.form?.cover_alt || '活動封面'"
                   />
                 </div>
                 <a-card-meta>
@@ -408,7 +408,7 @@
           />
         </a-form-item>
 
-        <a-form-item label="活动封面图片">
+        <a-form-item :label="trans.form?.cover_image || '活動封面圖片'">
           <a-upload
               :before-upload="handleBeforeUpload"
               :custom-request="handleCoverUpload"
@@ -462,7 +462,7 @@
         <a-divider>VIP等级打码量配置</a-divider>
 
         <a-alert
-            message="为每个VIP等级配置达到指定打码量后发放的摸奖券数量"
+            :message="trans.form?.vip_config_hint || '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量'"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -472,14 +472,14 @@
           <div v-for="(config, index) in formData.vip_configs" :key="config.vip_level_id || index" class="vip-config-item">
             <a-row :gutter="12" align="middle">
               <a-col :span="8">
-                <a-form-item label="VIP等级" style="margin-bottom: 0;">
+                <a-form-item :label="trans.form?.vip_level || 'VIP等級'" style="margin-bottom: 0;">
                   <a-tag color="blue" style="font-size: 14px; padding: 4px 12px;">
                     {{ config.vip_level_name || getVipLevelName(config.vip_level_id) }}
                   </a-tag>
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="所需打码量" style="margin-bottom: 0;">
+                <a-form-item :label="trans.form?.bet_amount_required || '所需打碼量'" style="margin-bottom: 0;">
                   <a-input-number
                       v-model:value="config.bet_amount_required"
                       :min="0"
@@ -490,7 +490,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="发放券数" style="margin-bottom: 0;">
+                <a-form-item :label="trans.form?.ticket_count || '發放券數'" style="margin-bottom: 0;">
                   <a-input-number
                       v-model:value="config.ticket_count"
                       :min="1"
@@ -509,7 +509,7 @@
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
-            message="配置奖品等级和奖励金额(仅现金奖励)"
+            :message="trans.form?.prize_config_hint || '配置獎品等級和獎勵金額(僅現金獎勵)'"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -541,7 +541,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="奖励金额">
+                <a-form-item :label="trans.form?.prize_amount_label || '獎勵金額'">
                   <a-input-number
                       v-model:value="level.prize_amount"
                       :min="0"
@@ -552,7 +552,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="奖品数量">
+                <a-form-item :label="trans.form?.prize_count || '獎品數量'">
                   <a-input-number
                       v-model:value="level.prize_count"
                       :min="0"
@@ -676,7 +676,7 @@
               <a-input
                   v-model:value="ticket.ticket_no"
                   style="width: 200px;"
-                  placeholder="输入数字，如: 12 或 000012"
+                  :placeholder="trans.form?.input_ticket_hint || '輸入數字，如: 12 或 000012'"
                   @blur="formatTicketNo(ticket)"
                   @keyup.enter="formatTicketNo(ticket)"
               />
@@ -693,7 +693,7 @@
           </div>
           <a-button type="dashed" block @click="addTicketInput(index)" style="margin-top: 8px;">
             <plus-outlined/>
-            添加券号
+            {{ trans.form?.add_ticket_no || '添加券號' }}
           </a-button>
         </a-card>
       </div>
@@ -968,15 +968,6 @@ export default {
           {required: true, message: this.trans?.prizeLevelPlaceholder || '请选择中奖等级', trigger: 'change'}
         ]
       },
-      prizeColumns: [
-        {title: '等级', key: 'level_name', dataIndex: 'level_name'},
-        {title: '奖励金额', key: 'prize_amount', dataIndex: 'prize_amount'},
-      ],
-      vipConfigColumns: [
-        {title: 'VIP等级', key: 'vip_level_name', dataIndex: 'vip_level_id'},
-        {title: '所需打码量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
-        {title: '发放券数', key: 'ticket_count', dataIndex: 'ticket_count'},
-      ],
       ticketFilter: {
         ticket_no: '',
         player_uuid: '',
@@ -1007,6 +998,19 @@ export default {
         {label: this.trans.drawing, value: 6},      // ⭐ 新增：开奖中
         {label: this.trans.ended, value: 2},
         {label: this.trans.closed, value: 3},
+      ];
+    },
+    prizeColumns() {
+      return [
+        {title: this.trans.table?.level || '等級', key: 'level_name', dataIndex: 'level_name'},
+        {title: this.trans.table?.prize_amount || '獎勵金額', key: 'prize_amount', dataIndex: 'prize_amount'},
+      ];
+    },
+    vipConfigColumns() {
+      return [
+        {title: this.trans.table?.vip_level || 'VIP等級', key: 'vip_level_name', dataIndex: 'vip_level_id'},
+        {title: this.trans.table?.bet_amount_required || '所需打碼量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
+        {title: this.trans.table?.ticket_count || '發放券數', key: 'ticket_count', dataIndex: 'ticket_count'},
       ];
     }
   },
@@ -1327,7 +1331,7 @@ export default {
       }
 
       if (records.length === 0) {
-        this.$message.warning('请至少输入一个券号');
+        this.$message.warning(this.trans.form?.at_least_one_ticket || '請至少輸入一個券號');
         return;
       }
 
@@ -1452,10 +1456,10 @@ export default {
     // ⭐ 结束直播
     async endLiveStream(activity) {
       this.$confirm({
-        title: '结束直播',
-        content: '确认结束直播吗？结束后玩家将无法继续观看。',
-        okText: '确认结束',
-        cancelText: '取消',
+        title: this.trans.ui?.end_live_confirm_title || '結束直播',
+        content: this.trans.form?.end_live_confirm_content_full || '確認結束直播嗎？結束後玩家將無法繼續觀看。',
+        okText: this.trans.form?.confirm_end || '確認結束',
+        cancelText: this.trans.cancel || '取消',
         onOk: async () => {
           try {
             const loading = this.$message.loading('正在结束直播...', 0);
@@ -1534,7 +1538,7 @@ export default {
       const streamName = this.liveUrlInput.trim();
 
       if (!streamName) {
-        this.$message.error('请输入直播流名称');
+        this.$message.error(this.trans.form?.live_stream_name_required || '請輸入直播流名稱');
         return;
       }
 

@@ -416,6 +416,23 @@ return [
         'prize_config_section' => 'Prize Level Config',
         'no_vip_data' => 'No VIP data available',
         'no_vip_config' => 'VIP not configured',
+        // ⭐ Batch 2: Form Labels (2026-07-01)
+        'cover_image' => 'Activity Cover Image',
+        'vip_level' => 'VIP Level',
+        'bet_amount_required' => 'Required Bet Amount',
+        'ticket_count' => 'Ticket Count',
+        'prize_amount_label' => 'Prize Amount',
+        'prize_count' => 'Prize Count',
+        'level_label' => 'Level',
+        'vip_config_hint' => 'Configure ticket count for each VIP level upon reaching specified bet amount',
+        'prize_config_hint' => 'Configure prize levels and reward amounts (cash only)',
+        'input_ticket_hint' => 'Enter numbers, e.g.: 12 or 000012',
+        'add_ticket_no' => 'Add Ticket Number',
+        'cover_alt' => 'Activity Cover',
+        'end_live_confirm_content_full' => 'Confirm to end live streaming? Players will not be able to continue watching after ending.',
+        'confirm_end' => 'Confirm End',
+        'live_stream_name_required' => 'Please enter live stream name',
+        'at_least_one_ticket' => 'Please enter at least one ticket number',
     ],
 
     // Filter ⭐ Added
@@ -423,6 +440,16 @@ return [
         'time_range' => 'Time Range',
         'create_time_range' => 'Create Time Range',
         'activity_time_range' => 'Activity Time Range',
+    ],
+
+    // Table Columns ⭐ Batch 2 (2026-07-01)
+    'table' => [
+        'level' => 'Level',
+        'vip_level' => 'VIP Level',
+        'bet_amount_required' => 'Required Bet Amount',
+        'ticket_count' => 'Ticket Count',
+        'prize_amount' => 'Prize Amount',
+        'created_at' => 'Distribution Time',
     ],
 
     // 验证消息

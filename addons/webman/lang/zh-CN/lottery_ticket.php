@@ -417,6 +417,23 @@ return [
         'prize_config_section' => '奖品等级配置',
         'no_vip_data' => '暫无VIP等级数據',
         'no_vip_config' => '未配置VIP等级',
+        // ⭐ 第二批：表单标签（2026-07-01）
+        'cover_image' => '活动封面图片',
+        'vip_level' => 'VIP等级',
+        'bet_amount_required' => '所需打码量',
+        'ticket_count' => '发放券数',
+        'prize_amount_label' => '奖励金额',
+        'prize_count' => '奖品数量',
+        'level_label' => '等级',
+        'vip_config_hint' => '为每个VIP等级配置达到指定打码量后发放的摸奖券数量',
+        'prize_config_hint' => '配置奖品等级和奖励金额(仅现金奖励)',
+        'input_ticket_hint' => '输入数字，如: 12 或 000012',
+        'add_ticket_no' => '添加券号',
+        'cover_alt' => '活动封面',
+        'end_live_confirm_content_full' => '确认结束直播吗？结束后玩家将无法继续观看。',
+        'confirm_end' => '确认结束',
+        'live_stream_name_required' => '请输入直播流名称',
+        'at_least_one_ticket' => '请至少输入一个券号',
     ],
 
     // 筛选器 ⭐ 新增
@@ -424,6 +441,16 @@ return [
         'time_range' => '时间范围',
         'create_time_range' => '创建时间范围',
         'activity_time_range' => '活动时间范围',
+    ],
+
+    // 表格列标题 ⭐ 第二批（2026-07-01）
+    'table' => [
+        'level' => '等级',
+        'vip_level' => 'VIP等级',
+        'bet_amount_required' => '所需打码量',
+        'ticket_count' => '发放券数',
+        'prize_amount' => '奖励金额',
+        'created_at' => '发放时间',
     ],
 
     // 验证消息

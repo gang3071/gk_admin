@@ -416,6 +416,23 @@ return [
         'prize_config_section' => '獎品等級配置',
         'no_vip_data' => '暫無VIP等級數據',
         'no_vip_config' => '未配置VIP等級',
+        // ⭐ 第二批：表单标签（2026-07-01）
+        'cover_image' => '活動封面圖片',
+        'vip_level' => 'VIP等級',
+        'bet_amount_required' => '所需打碼量',
+        'ticket_count' => '發放券數',
+        'prize_amount_label' => '獎勵金額',
+        'prize_count' => '獎品數量',
+        'level_label' => '等級',
+        'vip_config_hint' => '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量',
+        'prize_config_hint' => '配置獎品等級和獎勵金額(僅現金獎勵)',
+        'input_ticket_hint' => '輸入數字，如: 12 或 000012',
+        'add_ticket_no' => '添加券號',
+        'cover_alt' => '活動封面',
+        'end_live_confirm_content_full' => '確認結束直播嗎？結束後玩家將無法繼續觀看。',
+        'confirm_end' => '確認結束',
+        'live_stream_name_required' => '請輸入直播流名稱',
+        'at_least_one_ticket' => '請至少輸入一個券號',
     ],
 
     // 筛选器 ⭐ 新增
@@ -423,6 +440,16 @@ return [
         'time_range' => '時間範圍',
         'create_time_range' => '創建時間範圍',
         'activity_time_range' => '活動時間範圍',
+    ],
+
+    // 表格列标题 ⭐ 第二批（2026-07-01）
+    'table' => [
+        'level' => '等級',
+        'vip_level' => 'VIP等級',
+        'bet_amount_required' => '所需打碼量',
+        'ticket_count' => '發放券數',
+        'prize_amount' => '獎勵金額',
+        'created_at' => '發放時間',
     ],
 
     // 验证消息
