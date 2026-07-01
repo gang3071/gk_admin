@@ -16,11 +16,11 @@
             <a-menu @click="handleCreateMenuClick">
               <a-menu-item key="new">
                 <plus-outlined/>
-                从零创建
+                {{ trans.createFromScratch || '從零創建' }}
               </a-menu-item>
               <a-menu-item key="copy">
                 <copy-outlined/>
-                从历史活动创建
+                {{ trans.createFromHistory || '從歷史活動創建' }}
               </a-menu-item>
             </a-menu>
           </template>
@@ -73,11 +73,11 @@
               <!-- ⭐ 直播状态标签 -->
               <a-tag v-if="activity.live_url && activity.live_status === 1" color="red" style="margin-left: 8px;">
                 <play-circle-outlined style="margin-right: 4px;"/>
-                直播中
+                {{ trans.liveStreaming || '直播中' }}
               </a-tag>
               <a-tag v-else-if="activity.live_url && activity.live_status === 0" color="blue" style="margin-left: 8px;">
                 <video-camera-outlined style="margin-right: 4px;"/>
-                未开播
+                {{ trans.notLive || '未開播' }}
               </a-tag>
               <span class="activity-name">{{ activity.name }}</span>
             </div>
@@ -129,25 +129,25 @@
                   <!-- 添加/编辑直播地址（所有状态） -->
                   <a-menu-item key="live">
                     <video-camera-outlined/>
-                    {{ activity.live_url ? '编辑直播地址' : trans.addLiveUrl }}
+                    {{ activity.live_url ? (trans.ui?.edit_live_url || '編輯直播地址') : trans.addLiveUrl }}
                   </a-menu-item>
 
                   <!-- 预览直播（仅当有直播地址时） -->
                   <a-menu-item key="previewLive" v-if="activity.live_url">
                     <play-circle-outlined/>
-                    预览直播
+                    {{ trans.previewLive || '預覽直播' }}
                   </a-menu-item>
 
                   <!-- ⭐ 开始直播（仅当有直播地址且未开播时） -->
                   <a-menu-item v-if="activity.live_url && activity.live_status === 0" key="startLive">
                     <play-circle-outlined style="color: #52c41a;"/>
-                    开始直播
+                    {{ trans.startLive || '開始直播' }}
                   </a-menu-item>
 
                   <!-- ⭐ 结束直播（仅当直播中时） -->
                   <a-menu-item v-if="activity.live_status === 1" key="endLive">
                     <stop-outlined style="color: #ff4d4f;"/>
-                    结束直播
+                    {{ trans.endLive || '結束直播' }}
                   </a-menu-item>
 
                   <!-- 关闭活动（进行中） -->
@@ -166,7 +166,7 @@
               <img
                   :src="activity.cover_image"
                   style="width: 100%; height: 150px; object-fit: cover; border-radius: 4px;"
-                  alt="活动封面"
+                  :alt="trans.form?.cover_alt || '活動封面'"
               />
             </div>
 
@@ -311,7 +311,7 @@
                 <template #icon>
                   <unordered-list-outlined/>
                 </template>
-                查看发放列表
+                {{ trans.viewTicketList || '查看發放列表' }}
               </a-button>
             </a-space>
 
@@ -334,7 +334,7 @@
     <!-- ⭐ 选择历史活动模态框 -->
     <a-modal
         v-model:visible="historyModalVisible"
-        title="选择历史活动"
+        :title="trans.selectHistoryActivity || '選擇歷史活動'"
         width="800px"
         :footer="null"
     >
@@ -355,7 +355,7 @@
                   <img
                       :src="item.cover_image"
                       style="width: 100%; height: 120px; object-fit: cover; border-radius: 4px;"
-                      alt="活动封面"
+                      :alt="trans.form?.cover_alt || '活動封面'"
                   />
                 </div>
                 <a-card-meta>
@@ -376,7 +376,7 @@
             </a-list-item>
           </template>
         </a-list>
-        <a-empty v-if="!historyLoading && historyActivities.length === 0" description="暂无历史活动"/>
+        <a-empty v-if="!historyLoading && historyActivities.length === 0" :description="trans.noHistoryActivities || '暫無歷史活動'"/>
       </a-spin>
     </a-modal>
 
@@ -408,7 +408,7 @@
           />
         </a-form-item>
 
-        <a-form-item label="活动封面图片">
+        <a-form-item :label="trans.form?.cover_image || '活動封面圖片'">
           <a-upload
               :before-upload="handleBeforeUpload"
               :custom-request="handleCoverUpload"
@@ -417,18 +417,18 @@
           >
             <a-button type="primary">
               <upload-outlined/>
-              选择图片
+              {{ trans.selectImage || '選擇圖片' }}
             </a-button>
           </a-upload>
           <div style="margin-top: 4px; margin-bottom: 8px; color: #999; font-size: 12px;">
-            建议尺寸：750x400px，支持jpg、png格式，文件大小不超过2MB
+            {{ trans.ui?.cover_hint || '建議尺寸：750x400px，支持jpg、png格式，文件大小不超過2MB' }}
           </div>
           <a-spin :spinning="uploading" style="display: block; margin-top: 8px;">
             <img
                 v-if="formData.cover_image"
                 :src="formData.cover_image"
                 style="max-width: 300px; border: 1px solid #d9d9d9; border-radius: 4px;"
-                alt="封面预览"
+                :alt="trans.ui?.cover_preview_alt || '封面預覽'"
             />
           </a-spin>
         </a-form-item>
@@ -462,7 +462,7 @@
         <a-divider>VIP等级打码量配置</a-divider>
 
         <a-alert
-            message="为每个VIP等级配置达到指定打码量后发放的摸奖券数量"
+            :message="trans.form?.vip_config_hint || '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量'"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -472,14 +472,14 @@
           <div v-for="(config, index) in formData.vip_configs" :key="config.vip_level_id || index" class="vip-config-item">
             <a-row :gutter="12" align="middle">
               <a-col :span="8">
-                <a-form-item label="VIP等级" style="margin-bottom: 0;">
+                <a-form-item :label="trans.form?.vip_level || 'VIP等級'" style="margin-bottom: 0;">
                   <a-tag color="blue" style="font-size: 14px; padding: 4px 12px;">
                     {{ config.vip_level_name || getVipLevelName(config.vip_level_id) }}
                   </a-tag>
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="所需打码量" style="margin-bottom: 0;">
+                <a-form-item :label="trans.form?.bet_amount_required || '所需打碼量'" style="margin-bottom: 0;">
                   <a-input-number
                       v-model:value="config.bet_amount_required"
                       :min="0"
@@ -490,7 +490,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="发放券数" style="margin-bottom: 0;">
+                <a-form-item :label="trans.form?.ticket_count || '發放券數'" style="margin-bottom: 0;">
                   <a-input-number
                       v-model:value="config.ticket_count"
                       :min="1"
@@ -503,13 +503,13 @@
             </a-row>
           </div>
         </div>
-        <a-empty v-else description="暂无VIP等级数据" style="margin: 20px 0;"/>
+        <a-empty v-else :description="trans.ui?.no_vip_data_desc || '暫無VIP等級數據'" style="margin: 20px 0;"/>
 
         <!-- 奖品等级配置 -->
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
-            message="配置奖品等级和奖励金额(仅现金奖励)"
+            :message="trans.form?.prize_config_hint || '配置獎品等級和獎勵金額(僅現金獎勵)'"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -541,7 +541,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="奖励金额">
+                <a-form-item :label="trans.form?.prize_amount_label || '獎勵金額'">
                   <a-input-number
                       v-model:value="level.prize_amount"
                       :min="0"
@@ -552,7 +552,7 @@
                 </a-form-item>
               </a-col>
               <a-col :span="8">
-                <a-form-item label="奖品数量">
+                <a-form-item :label="trans.form?.prize_count || '獎品數量'">
                   <a-input-number
                       v-model:value="level.prize_count"
                       :min="0"
@@ -676,7 +676,7 @@
               <a-input
                   v-model:value="ticket.ticket_no"
                   style="width: 200px;"
-                  placeholder="输入数字，如: 12 或 000012"
+                  :placeholder="trans.form?.input_ticket_hint || '輸入數字，如: 12 或 000012'"
                   @blur="formatTicketNo(ticket)"
                   @keyup.enter="formatTicketNo(ticket)"
               />
@@ -693,7 +693,7 @@
           </div>
           <a-button type="dashed" block @click="addTicketInput(index)" style="margin-top: 8px;">
             <plus-outlined/>
-            添加券号
+            {{ trans.form?.add_ticket_no || '添加券號' }}
           </a-button>
         </a-card>
       </div>
@@ -709,7 +709,7 @@
     <!-- 发放列表抽屉 -->
     <a-drawer
         v-model:visible="ticketListVisible"
-        title="摸奖券发放列表"
+        :title="trans.ticketListTitle || '摸獎券發放列表'"
         width="900px"
         :body-style="{ padding: '16px' }"
     >
@@ -740,19 +740,19 @@
               style="width: 360px;"
           />
         </a-form-item>
-        <a-form-item style="margin-left: 16px;">
+        <a-form-item style="margin: 4px;">
           <a-space :size="8">
             <a-button type="primary" @click="handleTicketSearch">
               <template #icon>
                 <search-outlined/>
               </template>
-              搜索
+              {{ trans.search || '搜索' }}
             </a-button>
             <a-button @click="handleTicketReset">
               <template #icon>
                 <reload-outlined/>
               </template>
-              重置
+              {{ trans.reset || '重置' }}
             </a-button>
           </a-space>
         </a-form-item>
@@ -785,21 +785,21 @@
     <!-- 直播流名称设置 Modal -->
     <a-modal
         v-model:visible="liveModalVisible"
-        title="设置直播流名称"
+        :title="trans.ui?.set_live_stream_title || '設置直播流名稱'"
         @ok="submitLiveUrl"
         @cancel="handleLiveModalClose"
     >
       <a-form layout="vertical">
         <a-alert
-            message="💡 只需填写流名称，系统会自动生成腾讯云直播地址"
+            :message="trans.ui?.live_stream_hint || '💡 只需填寫流名稱，系統會自動生成騰訊雲直播地址'"
             show-icon
             style="margin-bottom: 16px;"
             type="info"
         />
-        <a-form-item label="直播流名称">
+        <a-form-item :label="trans.ui?.live_stream_label || '直播流名稱'">
           <a-input
               v-model:value="liveUrlInput"
-              placeholder="例如：mojiangjuan"
+              :placeholder="trans.ui?.live_stream_placeholder || '例如：mojiangjuan'"
               allow-clear
           >
             <template #prefix>
@@ -807,7 +807,7 @@
             </template>
           </a-input>
           <div style="margin-top: 8px; color: #999; font-size: 12px;">
-            建议使用英文、数字、下划线，此名称需与OBS推流配置一致
+            {{ trans.ui?.live_stream_name_hint || '建議使用英文、數字、下劃線，此名稱需與OBS推流配置一致' }}
           </div>
         </a-form-item>
       </a-form>
@@ -816,7 +816,7 @@
     <!-- ⭐ 直播预览 Modal -->
     <a-modal
         v-model:visible="livePreviewVisible"
-        :title="'直播预览 - ' + (currentActivity?.name || '摸奖券活动')"
+        :title="(trans.ui?.live_preview_title || '直播預覽 - {name}').replace('{name}', currentActivity?.name || '摸獎券活動')"
         width="90%"
         :footer="null"
         @cancel="closeLivePreview"
@@ -840,7 +840,7 @@
                 {{ currentActivity?.name }}
               </div>
               <div style="font-size: 12px; color: #999;">
-                直播地址：{{ livePreviewUrl }}
+                {{ trans.ui?.live_url_label || '直播地址：' }}{{ livePreviewUrl }}
               </div>
             </div>
             <div>
@@ -853,7 +853,7 @@
                 <template #icon>
                   <copy-outlined/>
                 </template>
-                复制地址
+                {{ trans.ui?.copy_url || '複製地址' }}
               </a-button>
               <a-button
                   size="small"
@@ -862,7 +862,7 @@
                 <template #icon>
                   <link-outlined/>
                 </template>
-                新窗口打开
+                {{ trans.ui?.open_new_window || '新窗口打開' }}
               </a-button>
             </div>
           </div>
@@ -873,7 +873,7 @@
           <div style="display: flex; align-items: flex-start; color: #856404;">
             <warning-outlined style="font-size: 18px; margin-right: 8px; margin-top: 2px;"/>
             <div>
-              <div style="font-weight: bold; margin-bottom: 4px;">RTMP 协议播放提示</div>
+              <div style="font-weight: bold; margin-bottom: 4px;">{{ trans.ui?.rtmp_protocol_warning || 'RTMP 協議播放提示' }}</div>
               <div style="font-size: 12px; line-height: 1.6;">
                 RTMP协议在现代浏览器中可能无法播放（需要Flash支持）。<br/>
                 建议联系腾讯云客服获取 <strong>HLS播放地址（.m3u8格式）</strong> 或 <strong>HTTP-FLV格式</strong>，以获得更好的兼容性。<br/>
@@ -883,7 +883,7 @@
           </div>
         </div>
       </div>
-      <a-empty v-else description="未获取到直播地址" />
+      <a-empty v-else :description="trans.ui?.no_live_url || '未獲取到直播地址'" />
     </a-modal>
 
   </div>
@@ -968,15 +968,6 @@ export default {
           {required: true, message: this.trans?.prizeLevelPlaceholder || '请选择中奖等级', trigger: 'change'}
         ]
       },
-      prizeColumns: [
-        {title: '等级', key: 'level_name', dataIndex: 'level_name'},
-        {title: '奖励金额', key: 'prize_amount', dataIndex: 'prize_amount'},
-      ],
-      vipConfigColumns: [
-        {title: 'VIP等级', key: 'vip_level_name', dataIndex: 'vip_level_id'},
-        {title: '所需打码量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
-        {title: '发放券数', key: 'ticket_count', dataIndex: 'ticket_count'},
-      ],
       ticketFilter: {
         ticket_no: '',
         player_uuid: '',
@@ -1007,6 +998,19 @@ export default {
         {label: this.trans.drawing, value: 6},      // ⭐ 新增：开奖中
         {label: this.trans.ended, value: 2},
         {label: this.trans.closed, value: 3},
+      ];
+    },
+    prizeColumns() {
+      return [
+        {title: this.trans.table?.level || '等級', key: 'level_name', dataIndex: 'level_name'},
+        {title: this.trans.table?.prize_amount || '獎勵金額', key: 'prize_amount', dataIndex: 'prize_amount'},
+      ];
+    },
+    vipConfigColumns() {
+      return [
+        {title: this.trans.table?.vip_level || 'VIP等級', key: 'vip_level_name', dataIndex: 'vip_level_id'},
+        {title: this.trans.table?.bet_amount_required || '所需打碼量', key: 'bet_amount_required', dataIndex: 'bet_amount_required'},
+        {title: this.trans.table?.ticket_count || '發放券數', key: 'ticket_count', dataIndex: 'ticket_count'},
       ];
     }
   },
@@ -1139,7 +1143,7 @@ export default {
     handleBeforeUpload(file) {
       const isImage = file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/jpg';
       if (!isImage) {
-        this.$message.error('只能上传 JPG/PNG 格式的图片！');
+        this.$message.error(this.trans.validation?.image_format_error || '只能上傳 JPG/PNG 格式的圖片！');
         return false;
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
@@ -1327,7 +1331,7 @@ export default {
       }
 
       if (records.length === 0) {
-        this.$message.warning('请至少输入一个券号');
+        this.$message.warning(this.trans.form?.at_least_one_ticket || '請至少輸入一個券號');
         return;
       }
 
@@ -1384,13 +1388,13 @@ export default {
     // ⭐ 预览直播
     async previewLive(activity) {
       if (!activity.live_url) {
-        this.$message.warning('该活动尚未设置直播流名称');
+        this.$message.warning(this.trans.ui?.activity_no_live_url || '該活動尚未設置直播流名稱');
         return;
       }
 
       // live_url存储的是流名称，通过API获取播放器配置
       try {
-        const loading = this.$message.loading('正在生成直播地址...', 0);
+        const loading = this.$message.loading(this.trans.ui?.generating_live_url || '正在生成直播地址...', 0);
 
         const res = await this.$request({
           url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getLivePlayerConfig',
@@ -1410,11 +1414,11 @@ export default {
           this.livePreviewVisible = true;
 
         } else {
-          this.$message.error(res.message || '生成直播地址失败');
+          this.$message.error(res.message || (this.trans.ui?.generate_live_url_failed || '生成直播地址失敗'));
         }
       } catch (error) {
         console.error('生成直播地址失败:', error);
-        this.$message.error('生成直播地址失败');
+        this.$message.error(this.trans.ui?.generate_live_url_failed || '生成直播地址失敗');
       }
     },
 
@@ -1452,10 +1456,10 @@ export default {
     // ⭐ 结束直播
     async endLiveStream(activity) {
       this.$confirm({
-        title: '结束直播',
-        content: '确认结束直播吗？结束后玩家将无法继续观看。',
-        okText: '确认结束',
-        cancelText: '取消',
+        title: this.trans.ui?.end_live_confirm_title || '結束直播',
+        content: this.trans.form?.end_live_confirm_content_full || '確認結束直播嗎？結束後玩家將無法繼續觀看。',
+        okText: this.trans.form?.confirm_end || '確認結束',
+        cancelText: this.trans.cancel || '取消',
         onOk: async () => {
           try {
             const loading = this.$message.loading('正在结束直播...', 0);
@@ -1487,7 +1491,7 @@ export default {
     async copyLiveUrl() {
       try {
         await navigator.clipboard.writeText(this.livePreviewUrl);
-        this.$message.success('直播地址已复制到剪贴板');
+        this.$message.success(this.trans.ui?.live_url_copied || '直播地址已複製到剪貼板');
       } catch (err) {
         // 兼容旧浏览器
         const input = document.createElement('input');
@@ -1496,7 +1500,7 @@ export default {
         input.select();
         document.execCommand('copy');
         document.body.removeChild(input);
-        this.$message.success('直播地址已复制到剪贴板');
+        this.$message.success(this.trans.ui?.live_url_copied || '直播地址已複製到剪貼板');
       }
     },
 
@@ -1534,18 +1538,18 @@ export default {
       const streamName = this.liveUrlInput.trim();
 
       if (!streamName) {
-        this.$message.error('请输入直播流名称');
+        this.$message.error(this.trans.form?.live_stream_name_required || '請輸入直播流名稱');
         return;
       }
 
       // 验证流名称格式（只允许英文、数字、下划线）
       if (!/^[a-zA-Z0-9_]+$/.test(streamName)) {
-        this.$message.error('流名称只能包含英文、数字和下划线');
+        this.$message.error(this.trans.ui?.stream_name_format_error || '流名稱只能包含英文、數字和下劃線');
         return;
       }
 
       if (streamName.length > 50) {
-        this.$message.error('流名称不能超过50个字符');
+        this.$message.error(this.trans.ui?.stream_name_too_long || '流名稱不能超過50個字符');
         return;
       }
 
@@ -1800,7 +1804,7 @@ export default {
           content: contentLines.join('\n') + ticketList,
           okText: '确认停止开奖',
           okType: 'danger',
-          cancelText: data.win_record_count === 0 ? '取消，先录入中奖' : '取消',
+          cancelText: data.win_record_count === 0 ? (this.trans.ui?.cancel_enter_win || '取消，先錄入中獎') : (this.trans.cancel || '取消'),
           width: 520,
           onOk: () => {
             // 用户确认后，带上 confirmed=true 重新调用
