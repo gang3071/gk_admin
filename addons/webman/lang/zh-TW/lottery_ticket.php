@@ -325,6 +325,7 @@ return [
         'activity_not_in_drawing_status' => '活動狀態錯誤，只能在開獎中或已結束狀態派獎獎勵',
         'amount_exceeded' => '派獎金額超出總獎金額度',
         'ticket_not_found_or_used' => '券號 {ticket_no} 不存在或已使用',
+        'ticket_already_won' => '券號 {ticket_no} 已錄入過中獎記錄，不能重複錄入',
         'prize_level_not_found_for_ticket' => '券號 {ticket_no} 的獎品等級不存在',
         'invalid_ticket_format' => '券號 {ticket_no} 格式錯誤，只能包含數字且不超過6位',
         'bet_progress_not_found' => '未找到打碼進度記錄',

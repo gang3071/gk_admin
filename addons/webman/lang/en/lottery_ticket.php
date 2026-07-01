@@ -326,6 +326,7 @@ return [
         'activity_not_in_drawing_status' => 'Invalid activity status, can only award in DRAWING or ENDED status',
         'amount_exceeded' => 'Award Distribution amount exceeds total prize',
         'ticket_not_found_or_used' => 'Ticket {ticket_no} not found or used',
+        'ticket_already_won' => 'Ticket {ticket_no} has already been recorded as a winning ticket',
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',
         'invalid_ticket_format' => 'Invalid format for ticket {ticket_no}, must contain only digits and not exceed 6 characters',
         'bet_progress_not_found' => 'Bet progress record not found',

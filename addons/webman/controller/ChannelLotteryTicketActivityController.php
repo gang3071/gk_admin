@@ -1125,6 +1125,16 @@ class ChannelLotteryTicketActivityController
                     continue;
                 }
 
+                // ✅ 双重检查：防止数据不一致（券状态未更新但已有中奖记录）
+                $existingRecord = \addons\webman\model\LotteryTicketRecord::where('ticket_id', $ticket->id)
+                    ->where('activity_id', $activityId)
+                    ->first();
+
+                if ($existingRecord) {
+                    $errors[] = admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]);
+                    continue;
+                }
+
                 // 查找奖品等级
                 $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
                 if (!$prizeLevel) {
