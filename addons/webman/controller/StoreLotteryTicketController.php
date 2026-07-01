@@ -118,22 +118,36 @@ class StoreLotteryTicketController
             $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))
                 ->width(160)->align('center');
 
-            // 筛选器
+            // 筛选器 - 优化样式
             $grid->filter(function (Filter $filter) {
+                // ✅ 隐藏所有 label，使用 placeholder 代替
+                $filter->hideLabel();
+
+                // ✅ 设置筛选器样式
+                $filter->style([
+                    'margin-bottom' => '16px',
+                    'gap' => '12px',  // 输入框间距
+                ]);
+
                 $filter->like()->text('ticket_no')
-                    ->placeholder(admin_trans('lottery_ticket.fields.ticket_no'));
+                    ->placeholder(admin_trans('lottery_ticket.fields.ticket_no'))
+                    ->width(150);
 
                 $filter->like()->text('player.uuid')
-                    ->placeholder(admin_trans('player.fields.device_uuid'));
+                    ->placeholder(admin_trans('player.fields.device_uuid'))
+                    ->width(180);
 
                 $filter->like()->text('player.name')
-                    ->placeholder(admin_trans('player.fields.device_name'));
+                    ->placeholder(admin_trans('player.fields.device_name'))
+                    ->width(150);
 
                 $filter->like()->text('activity.name')
-                    ->placeholder(admin_trans('lottery_ticket.fields.activity_name'));
+                    ->placeholder(admin_trans('lottery_ticket.fields.activity_name'))
+                    ->width(180);
 
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('lottery_ticket.fields.status'))
+                    ->width(120)
                     ->options([
                         LotteryTicket::STATUS_UNUSED => admin_trans('lottery_ticket.status.unused'),
                         LotteryTicket::STATUS_USED => admin_trans('lottery_ticket.status.used'),
@@ -142,6 +156,7 @@ class StoreLotteryTicketController
 
                 $filter->eq()->select('source')
                     ->placeholder(admin_trans('lottery_ticket.fields.source'))
+                    ->width(120)
                     ->options([
                         LotteryTicket::SOURCE_RECHARGE => admin_trans('lottery_ticket.source.recharge'),
                         LotteryTicket::SOURCE_ACTIVITY => admin_trans('lottery_ticket.source.activity'),
