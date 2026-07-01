@@ -3005,9 +3005,13 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->machine_point =
                         $playerDeliveryRecord['machine_put_point'] ?? 0;
 
-                    // 计算总收入（开分 + 后台加点）
+                    // 计算总收入（开分 + 投钞 + 后台加点）
                     $storeAgentShiftHandoverRecord->total_in = bcadd(
-                        $playerDeliveryRecord['recharge_amount'] ?? 0,
+                        bcadd(
+                            $playerDeliveryRecord['recharge_amount'] ?? 0,
+                            $playerDeliveryRecord['machine_put_point'] ?? 0,
+                            2
+                        ),
                         $playerDeliveryRecord['modified_add_amount'] ?? 0,
                         2
                     );
