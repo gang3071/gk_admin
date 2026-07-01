@@ -233,7 +233,6 @@ class StorePlayerController
                 2
             );
         }
-        Log::info('数据', [$list]);
         unset($item); // 清除引用，避免污染数组
 
         // ✅ 内存优化：使用 lazy() 惰性加载替代一次性 get()
