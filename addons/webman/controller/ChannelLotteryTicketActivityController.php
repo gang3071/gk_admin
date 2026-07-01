@@ -1499,9 +1499,9 @@ class ChannelLotteryTicketActivityController
     protected function getSourceText($source)
     {
         $map = [
+            'betting' => admin_trans('lottery_ticket.source.betting'),
             'recharge' => admin_trans('lottery_ticket.source.recharge'),
             'activity' => admin_trans('lottery_ticket.source.activity'),
-            'betting' => admin_trans('lottery_ticket.source.manual'),
             'manual' => admin_trans('lottery_ticket.source.manual'),
         ];
         return $map[$source] ?? admin_trans('lottery_ticket.source.unknown');

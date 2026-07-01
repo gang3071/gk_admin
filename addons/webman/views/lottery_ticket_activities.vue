@@ -2070,11 +2070,12 @@ export default {
     // 获取来源文本
     getSourceText(source) {
       const sourceMap = {
+        'betting': '打码获得',
         'recharge': '充值赠送',
         'activity': '活动赠送',
         'manual': '手动发放'
       };
-      return sourceMap[source] || source;
+      return sourceMap[source] || '未知来源';
     }
   }
 };

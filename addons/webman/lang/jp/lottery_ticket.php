@@ -129,6 +129,7 @@ return [
 
     // 来源
     'source' => [
+        'betting' => 'ベット進捗で獲得',
         'recharge' => 'チャージ特典',
         'activity' => 'アクティビティ特典',
         'manual' => '手動払い出し',
