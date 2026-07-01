@@ -31,13 +31,13 @@ use Illuminate\Support\Str;
 class ChannelPlayerReportController
 {
     protected $model;
-    
+
     public function __construct()
     {
         $this->model = plugin()->webman->config('database.player_delivery_record_model');
     }
-    
-    
+
+
     /**
      * 玩家报表
      * @auth true
@@ -147,43 +147,43 @@ class ChannelPlayerReportController
         });
         $summaryDataBetPlayGameRecordBaseQuery = clone $playGameRecordBaseQuery;
         $summaryDataDiffPlayGameRecordBaseQuery = clone $playGameRecordBaseQuery;
-        
+
         $summaryData['bet_total'] = $summaryDataBetPlayGameRecordBaseQuery->sum('bet');
-        
+
         $summaryData['diff_total'] = $summaryDataDiffPlayGameRecordBaseQuery->sum('diff');
-        
+
         $summaryData['self_recharge_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_RECHARGE)
             ->whereIn('player_delivery_record.source', ['self_recharge', 'gb_recharge'])
             ->sum('player_delivery_record.amount');
-        
+
         $summaryData['artificial_recharge_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_RECHARGE)
             ->where('player_delivery_record.source', 'artificial_recharge')
             ->sum('player_delivery_record.amount');
-        
+
         $summaryData['channel_withdrawal_total'] = $playerDeliveryRecordBaseQuery->clone()
                 ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_WITHDRAWAL)
                 ->whereIn('player_delivery_record.source', ['channel_withdrawal', 'gb_withdrawal'])
                 ->where('player_delivery_record.withdraw_status', PlayerWithdrawRecord::STATUS_SUCCESS)
                 ->sum('player_delivery_record.amount') * -1;
-        
+
         $summaryData['artificial_withdrawal_total'] = $playerDeliveryRecordBaseQuery->clone()
                 ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_WITHDRAWAL)
                 ->where('player_delivery_record.source', 'artificial_withdrawal')
                 ->where('player_delivery_record.withdraw_status', PlayerWithdrawRecord::STATUS_SUCCESS)
                 ->sum('player_delivery_record.amount') * -1;
-        
+
         //玩家转出
         $summaryData['coin_withdraw_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_PRESENT_IN)
             ->sum('player_delivery_record.amount');
-        
+
         //币商转入
         $summaryData['coin_transfer_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_PRESENT_OUT)
             ->sum('player_delivery_record.amount');
-        
+
         //总上分
         $summaryData['machine_up_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE_UP)
@@ -192,7 +192,7 @@ class ChannelPlayerReportController
         $summaryData['machine_down_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE_DOWN)
             ->sum('player_delivery_record.amount');
-        
+
         //活动奖励 (包含活动奖励 + 摸奖券奖励)
         $summaryData['activity_total'] = $playerDeliveryRecordBaseQuery->clone()
             ->whereIn('player_delivery_record.type', [
@@ -214,10 +214,9 @@ class ChannelPlayerReportController
             ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE)
             ->sum('player_delivery_record.amount');
 
-        // 送输赢 = 下分 - 上分 + 游戏输赢 + 管理员加点
-        // 注意：不包含彩金和活动奖励（发放后客户洗分会洗掉，已在下分中体现）
-        $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['modified_total'];
-        
+        //送输赢
+        $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['activity_total'] + $summaryData['lottery_total'] + $summaryData['modified_total'];
+
         $summaryData['total_amount'] = $summaryData['self_recharge_total'] + $summaryData['artificial_recharge_total'] + $summaryData['machine_chip_total'] + $summaryData['channel_withdrawal_total'] + $summaryData['artificial_withdrawal_total'];
         $baseQuery
             ->selectRaw("
@@ -448,7 +447,7 @@ class ChannelPlayerReportController
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 6)->style(['margin-top' => '5px']);
             })->style(['background' => '#fff']);
-            
+
             $grid->header($layout);
             $grid->driver()->setPk('id');
             $grid->column('id', admin_trans('player.fields.id'))->align('center');
@@ -485,7 +484,7 @@ class ChannelPlayerReportController
                     }
                 })
                 ->align('center')->width(80);
-            
+
             // 充值总点数
             $grid->column('recharge_total', admin_trans('player.recharge_total'))
                 ->display(function ($value) {
@@ -622,7 +621,7 @@ class ChannelPlayerReportController
                     return Html::create(number_format($value, 2))->style(['color' => $color]);
                 })
                 ->align('center')->sortable();
-            
+
             // 隐藏一些不需要的功能按钮
             $grid->hideDelete();
             $grid->hideSelection();

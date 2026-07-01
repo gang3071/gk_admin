@@ -28,7 +28,7 @@ use support\Cache;
 
 class Login extends LoginAbstract
 {
-    
+
     /**
      * 登陆页
      * @return Component
@@ -310,7 +310,7 @@ class Login extends LoginAbstract
             ],
         ]);
     }
-    
+
     /**
      * 登录验证
      * @param array $data 提交数据
@@ -406,7 +406,7 @@ class Login extends LoginAbstract
             'remember_me' => $rememberMe, // 返回记住我状态
         ]);
     }
-    
+
     /**
      * 获取验证码
      * @return Response
@@ -419,7 +419,7 @@ class Login extends LoginAbstract
         $captcha['verification'] = $errorNum > 3;
         return Response::success($captcha);
     }
-    
+
     /**
      * 退出登录
      * @return Message
@@ -435,7 +435,7 @@ class Login extends LoginAbstract
             'clear_storage' => true, // 通知前端清理localStorage和Cookie
         ]);
     }
-    
+
     /**
      * 获取验证码
      * @return Response
@@ -519,7 +519,7 @@ class Login extends LoginAbstract
                 if (isset($exAdminFilter['date_type'])) {
                     $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                 }
-                
+
                 if (!empty($exAdminFilter['recommend_id'])) {
                     $recommendId = Player::query()->where('uuid', 'like',
                         '%' . $exAdminFilter['recommend_id'] . '%')->value('id');
@@ -769,7 +769,7 @@ class Login extends LoginAbstract
                 $openAmountTotal = $openAmount->sum('open_amount');
                 $washAmountTotal = $washAmount->sum('wash_amount');
                 $totalAmount = $totalAmount->sum('total_amount');
-                
+
                 $openPointTotal = $openPoint->sum('open_point');
                 $washPointTotal = $washPoint->sum('wash_point');
                 $totalPointTotal = $totalPoint->sum('total_point');
@@ -861,7 +861,7 @@ class Login extends LoginAbstract
                             '%' . $exAdminFilter['phone'] . '%');
                     }
                     if (!empty($exAdminFilter['recommend_promoter']['name'])) {
-                        
+
                         $playGameRecordBaseQuery->leftjoin('player as rp', 'play_game_record.parent_player_id', '=',
                             'rp.id')
                             ->where(function ($q) use ($exAdminFilter) {
@@ -922,43 +922,43 @@ class Login extends LoginAbstract
                 }
                 $summaryDataBetPlayGameRecordBaseQuery = clone $playGameRecordBaseQuery;
                 $summaryDataDiffPlayGameRecordBaseQuery = clone $playGameRecordBaseQuery;
-                
+
                 $summaryData['bet_total'] = $summaryDataBetPlayGameRecordBaseQuery->sum('bet');
-                
+
                 $summaryData['diff_total'] = $summaryDataDiffPlayGameRecordBaseQuery->sum('diff');
-                
+
                 $summaryData['self_recharge_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_RECHARGE)
                     ->whereIn('player_delivery_record.source', ['self_recharge', 'gb_recharge'])
                     ->sum('player_delivery_record.amount');
-                
+
                 $summaryData['artificial_recharge_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_RECHARGE)
                     ->where('player_delivery_record.source', 'artificial_recharge')
                     ->sum('player_delivery_record.amount');
-                
+
                 $summaryData['channel_withdrawal_total'] = $playerDeliveryRecordBaseQuery->clone()
                         ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_WITHDRAWAL)
                         ->whereIn('player_delivery_record.source', ['channel_withdrawal', 'gb_withdrawal'])
                         ->where('player_delivery_record.withdraw_status', PlayerWithdrawRecord::STATUS_SUCCESS)
                         ->sum('player_delivery_record.amount') * -1;
-                
+
                 $summaryData['artificial_withdrawal_total'] = $playerDeliveryRecordBaseQuery->clone()
                         ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_WITHDRAWAL)
                         ->where('player_delivery_record.source', 'artificial_withdrawal')
                         ->where('player_delivery_record.withdraw_status', PlayerWithdrawRecord::STATUS_SUCCESS)
                         ->sum('player_delivery_record.amount') * -1;
-                
+
                 //玩家转出
                 $summaryData['coin_withdraw_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_PRESENT_IN)
                     ->sum('player_delivery_record.amount');
-                
+
                 //币商转入
                 $summaryData['coin_transfer_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_PRESENT_OUT)
                     ->sum('player_delivery_record.amount');
-                
+
                 //总上分
                 $summaryData['machine_up_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE_UP)
@@ -967,7 +967,7 @@ class Login extends LoginAbstract
                 $summaryData['machine_down_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE_DOWN)
                     ->sum('player_delivery_record.amount');
-                
+
                 //活动奖励
                 $summaryData['activity_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS)
@@ -980,12 +980,11 @@ class Login extends LoginAbstract
                 $summaryData['modified_total'] = $playerDeliveryRecordBaseQuery->clone()
                     ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD)
                     ->sum('player_delivery_record.amount');
-                
-                // 送输赢 = 下分 - 上分 + 游戏输赢 + 管理员加点
-                // 注意：不包含彩金和活动奖励（发放后客户洗分会洗掉，已在下分中体现）
-                $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['modified_total'];
+
+                //送输赢
+                $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['activity_total'] + $summaryData['lottery_total'] + $summaryData['modified_total'];
                 $summaryData['total_amount'] = $summaryData['self_recharge_total'] + $summaryData['artificial_recharge_total'] + $summaryData['channel_withdrawal_total'] + $summaryData['artificial_withdrawal_total'];
-                
+
                 $data = [
                     [
                         'title' => admin_trans('player.self_recharge_total'),
@@ -1142,7 +1141,7 @@ class Login extends LoginAbstract
                         });
                     }
                 }
-                
+
                 $totalData = $playerWithdrawRecord->selectRaw(
                     'sum(IF(type = 1, point,0)) as total_talk_inmoney,
                             sum(IF(type = 2, point,0)) as total_self_inmoney,
@@ -1238,7 +1237,7 @@ class Login extends LoginAbstract
                     if (!empty($exAdminFilter['tradeno'])) {
                         $playerRechargeRecord->where('tradeno', 'like', '%' . $exAdminFilter['tradeno'] . '%');
                     }
-                    
+
                     if (isset($exAdminFilter['date_type'])) {
                         $playerRechargeRecord->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                     }
