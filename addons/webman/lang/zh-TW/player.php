@@ -93,6 +93,7 @@ return [
     'player_info' => '玩家資訊',
     'save_player_info_success' => '保存成功',
     'add_player' => '添加玩家',
+    'edit_player' => '編輯玩家',
     'phone_has_register' => '手機號已注册',
     'avatar_type' => '頭像',
     'upload_avatar' => '上傳頭像',

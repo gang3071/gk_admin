@@ -171,7 +171,9 @@ class StorePlayerController
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
                     SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
-                ")->groupBy('player_id')->pluck(null, 'player_id')->toArray();
+                ")->groupBy('player_id')->get()->mapWithKeys(function ($item) {
+                    return [$item->player_id => $item];
+                })->toArray();
 
                 // 批量查询筛选时间段内的彩金
                 $lotteryQuery = PlayerLotteryRecord::query()
@@ -219,7 +221,9 @@ class StorePlayerController
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS current_machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS current_total_income,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS current_total_outcome
-            ")->groupBy('player_id')->pluck(null, 'player_id')->toArray();
+            ")->groupBy('player_id')->get()->mapWithKeys(function ($item) {
+                return [$item->player_id => $item];
+            })->toArray();
 
             // 批量查询当前班次彩金
             $currentShiftLotteryQuery = PlayerLotteryRecord::query()
@@ -271,10 +275,10 @@ class StorePlayerController
                 // 累计数据
                 if ($hasStatsTimeFilter) {
                     $stats = $deliveryStatsByPlayer[$playerId] ?? null;
-                    $item['machine_put_point'] = floatval($stats['machine_put_point'] ?? 0);
-                    $item['recharge_amount'] = floatval($stats['recharge_amount'] ?? 0);
-                    $item['withdraw_amount'] = floatval($stats['withdraw_amount'] ?? 0);
-                    $item['lottery_ticket_reward_amount'] = floatval($stats['lottery_ticket_reward_amount'] ?? 0);
+                    $item['machine_put_point'] = floatval($stats->machine_put_point ?? 0);
+                    $item['recharge_amount'] = floatval($stats->recharge_amount ?? 0);
+                    $item['withdraw_amount'] = floatval($stats->withdraw_amount ?? 0);
+                    $item['lottery_ticket_reward_amount'] = floatval($stats->lottery_ticket_reward_amount ?? 0);
                 } else {
                     $item['lottery_ticket_reward_amount'] = floatval($lotteryTicketRewardByPlayer[$playerId] ?? 0);
                 }
@@ -293,9 +297,9 @@ class StorePlayerController
 
                 // 当前未交班数据
                 $currentStats = $currentShiftDeliveryByPlayer[$playerId] ?? null;
-                $item['current_machine_put_point'] = floatval($currentStats['current_machine_put_point'] ?? 0);
-                $item['current_total_income'] = floatval($currentStats['current_total_income'] ?? 0);
-                $item['current_total_outcome'] = floatval($currentStats['current_total_outcome'] ?? 0);
+                $item['current_machine_put_point'] = floatval($currentStats->current_machine_put_point ?? 0);
+                $item['current_total_income'] = floatval($currentStats->current_total_income ?? 0);
+                $item['current_total_outcome'] = floatval($currentStats->current_total_outcome ?? 0);
                 $item['current_lottery_amount'] = floatval($currentShiftLotteryByPlayer[$playerId] ?? 0);
                 $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketRewardByPlayer[$playerId] ?? 0);
                 $item['current_electronic_game_bet'] = floatval($currentElectronicGameBetByPlayer[$playerId] ?? 0);
@@ -732,7 +736,7 @@ class StorePlayerController
             });
 
             $grid->actions(function (Actions $actions) {
-                $actions->hideEdit();
+                $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
                 $actions->detail()->modal($this->viewForm())->width('60%');
             });
@@ -756,7 +760,7 @@ class StorePlayerController
     }
 
     /**
-     * 添加玩家表单
+     * 添加/编辑玩家表单
      * @auth true
      * @group store
      * @return Form
@@ -768,116 +772,195 @@ class StorePlayerController
             $options[$key] = Avatar::create()->style(['padding' => '1px'])->src($item)->shape('square');
         }
         return Form::create(new Player(), function (Form $form) use ($options) {
-            $form->title(admin_trans('player.add_player'));
-            $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
-            $form->select('player_source', admin_trans('player.fields.player_source'))
-                ->options([
-                    Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
-                    Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
-                ])
-                ->default(Player::PLAYER_SOURCE_OFFLINE)
-                ->required();
-            $form->radio('avatar_type', admin_trans('player.avatar_type'))
-                ->button()
-                ->default(2)
-                ->options([
-                    1 => admin_trans('player.upload_avatar'),
-                    2 => admin_trans('player.def_avatar')
-                ])
-                ->when(1, function (Form $form) {
-                    $form->image('avatar',
-                        admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
-                })->when(2, function (Form $form) use ($options) {
-                    $form->radio('def_avatar', admin_trans('player.def_avatar'))
-                        ->default(1)
-                        ->options($options);
+            if ($form->isEdit()) {
+                // ========== 编辑模式 ==========
+                $form->title(admin_trans('player.edit_player'));
+                $orgData = $form->driver()->get();
+
+                $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
+                $form->select('player_source', admin_trans('player.fields.player_source'))
+                    ->options([
+                        Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
+                        Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
+                    ])
+                    ->required();
+                $form->radio('avatar_type', admin_trans('player.avatar_type'))
+                    ->button()
+                    ->default(2)
+                    ->options([
+                        1 => admin_trans('player.upload_avatar'),
+                        2 => admin_trans('player.def_avatar')
+                    ])
+                    ->when(1, function (Form $form) {
+                        $form->image('avatar',
+                            admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
+                    })->when(2, function (Form $form) use ($options) {
+                        $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                            ->default(1)
+                            ->options($options);
+                    });
+                $form->text('name', admin_trans('player.fields.name'))->maxlength(50);
+                $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50);
+                $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
+
+                $form->saved(function () {
+                    return message_success(admin_trans('player.save_player_info_success'));
                 });
-            $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
-            $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
-            $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
-            $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
-            $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
-            $form->password('password', admin_trans('player.new_password'))
-                ->rule([
-                    'confirmed' => admin_trans('player.password_confim_validate'),
-                    'min:6' => admin_trans('player.password_min_number')
-                ])
-                ->value('')
-                ->required();
-            $form->password('password_confirmation', admin_trans('player.confim_password'))
-                ->required();
+                $form->saving(function (Form $form) {
+                    $orgData = $form->driver()->get();
+                    $player = Player::find($orgData['id']);
 
-            $form->saved(function () {
-                return message_success(admin_trans('player.save_player_info_success'));
-            });
-            $form->saving(function (Form $form) {
-                $admin = Admin::user();
-                $phone = $form->input('phone');
-                $password = $form->input('password');
-                $departmentId = $admin->department_id;
-
-                // 检查全民代理等级是否配置（同步自总后台逻辑）
-                if (!LevelList::query()->where('department_id', $departmentId)->orderBy('must_chip_amount')->exists()) {
-                    return message_error(admin_trans('player.national_level_not_configure'));
-                }
-
-                $existingPlayer = Player::query()->where('phone', $phone)->first();
-                if (!empty($existingPlayer)) {
-                    return message_error(admin_trans('player.phone_has_register'));
-                }
-
-                // 验证渠道是否存在（同步自总后台逻辑）
-                /** @var Channel $channel */
-                $channel = Channel::where('department_id', $departmentId)->first();
-                if (empty($channel)) {
-                    return message_error(trans('channel_not_found', [], 'message'));
-                }
-
-                DB::beginTransaction();
-                try {
-                    $player = new Player();
-                    $player->phone = $phone;
-                    $player->name = $form->input('name');
-                    if ($form->input('avatar_type') == 1) {
-                        $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
+                    if (empty($player)) {
+                        return message_error(admin_trans('player.not_fount'));
                     }
-                    if ($form->input('avatar_type') == 2) {
-                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
+
+                    DB::beginTransaction();
+                    try {
+                        // 更新 Player 主表
+                        $player->name = $form->input('name');
+                        $player->player_source = $form->input('player_source') ?? Player::PLAYER_SOURCE_OFFLINE;
+                        if ($form->input('avatar_type') == 1) {
+                            $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
+                        }
+                        if ($form->input('avatar_type') == 2) {
+                            $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
+                        }
+                        $player->save();
+
+                        // 更新 PlayerExtend 扩展表
+                        PlayerExtend::query()->updateOrCreate(
+                            ['player_id' => $orgData['id']],
+                            [
+                                'id_number' => $form->input('id_number'),
+                                'id_card_front' => $form->input('id_card_front'),
+                                'id_card_back' => $form->input('id_card_back'),
+                                'personal_photo' => $form->input('personal_photo'),
+                            ]
+                        );
+
+                        DB::commit();
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return message_error($e->getMessage());
                     }
-                    // 店机后台固定值：国家代码86
-                    $player->country_code = '86';
-                    $player->player_source = $form->input('player_source') ?? Player::PLAYER_SOURCE_OFFLINE;
-                    $player->type = Player::TYPE_PLAYER;
-                    $player->currency = $channel->currency;
-                    $player->department_id = $departmentId;
-                    // 店机后台特有：绑定到当前店机管理员
-                    $player->store_admin_id = $admin->id;
-                    $player->password = $password;
-                    $player->uuid = generate15DigitUniqueId();
-                    $player->recommend_code = createCode();
-                    $player->save();
 
-                    // 创建玩家扩展信息
-                    addPlayerExtend($player);
+                    return message_success(admin_trans('player.save_player_info_success'));
+                });
+            } else {
+                // ========== 新增模式 ==========
+                $form->title(admin_trans('player.add_player'));
+                $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
+                $form->select('player_source', admin_trans('player.fields.player_source'))
+                    ->options([
+                        Player::PLAYER_SOURCE_ONLINE => admin_trans('player.fields.player_source_online'),
+                        Player::PLAYER_SOURCE_OFFLINE => admin_trans('player.fields.player_source_offline'),
+                    ])
+                    ->default(Player::PLAYER_SOURCE_OFFLINE)
+                    ->required();
+                $form->radio('avatar_type', admin_trans('player.avatar_type'))
+                    ->button()
+                    ->default(2)
+                    ->options([
+                        1 => admin_trans('player.upload_avatar'),
+                        2 => admin_trans('player.def_avatar')
+                    ])
+                    ->when(1, function (Form $form) {
+                        $form->image('avatar',
+                            admin_trans('player.fields.avatar'))->ext('jpg,png,jpeg')->fileSize('1m');
+                    })->when(2, function (Form $form) use ($options) {
+                        $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                            ->default(1)
+                            ->options($options);
+                    });
+                $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+                $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
+                $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
+                $form->password('password', admin_trans('player.new_password'))
+                    ->rule([
+                        'confirmed' => admin_trans('player.password_confim_validate'),
+                        'min:6' => admin_trans('player.password_min_number')
+                    ])
+                    ->value('')
+                    ->required();
+                $form->password('password_confirmation', admin_trans('player.confim_password'))
+                    ->required();
 
-                    // 更新身份证信息（店机后台特有）
-                    PlayerExtend::query()->where('player_id', $player->id)->update([
-                        'id_number' => $form->input('id_number'),
-                        'id_card_front' => $form->input('id_card_front'),
-                        'id_card_back' => $form->input('id_card_back'),
-                        'personal_photo' => $form->input('personal_photo'),
-                    ]);
+                $form->saved(function () {
+                    return message_success(admin_trans('player.save_player_info_success'));
+                });
+                $form->saving(function (Form $form) {
+                    $admin = Admin::user();
+                    $phone = $form->input('phone');
+                    $password = $form->input('password');
+                    $departmentId = $admin->department_id;
 
-                    // 创建注册记录（同步自总后台逻辑）
-                    addRegisterRecord($player->id, PlayerRegisterRecord::TYPE_ADMIN, $departmentId);
+                    // 检查全民代理等级是否配置（同步自总后台逻辑）
+                    if (!LevelList::query()->where('department_id', $departmentId)->orderBy('must_chip_amount')->exists()) {
+                        return message_error(admin_trans('player.national_level_not_configure'));
+                    }
 
-                    DB::commit();
-                } catch (\Exception $e) {
-                    DB::rollBack();
-                    return message_error($e->getMessage());
-                }
-                return message_success(admin_trans('player.save_player_info_success'));
-            });
+                    $existingPlayer = Player::query()->where('phone', $phone)->first();
+                    if (!empty($existingPlayer)) {
+                        return message_error(admin_trans('player.phone_has_register'));
+                    }
+
+                    // 验证渠道是否存在（同步自总后台逻辑）
+                    /** @var Channel $channel */
+                    $channel = Channel::where('department_id', $departmentId)->first();
+                    if (empty($channel)) {
+                        return message_error(trans('channel_not_found', [], 'message'));
+                    }
+
+                    DB::beginTransaction();
+                    try {
+                        $player = new Player();
+                        $player->phone = $phone;
+                        $player->name = $form->input('name');
+                        if ($form->input('avatar_type') == 1) {
+                            $player->avatar = $form->input('avatar') ?? config('def_avatar.1');
+                        }
+                        if ($form->input('avatar_type') == 2) {
+                            $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
+                        }
+                        // 店机后台固定值：国家代码86
+                        $player->country_code = '86';
+                        $player->player_source = $form->input('player_source') ?? Player::PLAYER_SOURCE_OFFLINE;
+                        $player->type = Player::TYPE_PLAYER;
+                        $player->currency = $channel->currency;
+                        $player->department_id = $departmentId;
+                        // 店机后台特有：绑定到当前店机管理员
+                        $player->store_admin_id = $admin->id;
+                        $player->password = $password;
+                        $player->uuid = generate15DigitUniqueId();
+                        $player->recommend_code = createCode();
+                        $player->save();
+
+                        // 创建玩家扩展信息
+                        addPlayerExtend($player);
+
+                        // 更新身份证信息（店机后台特有）
+                        PlayerExtend::query()->where('player_id', $player->id)->update([
+                            'id_number' => $form->input('id_number'),
+                            'id_card_front' => $form->input('id_card_front'),
+                            'id_card_back' => $form->input('id_card_back'),
+                            'personal_photo' => $form->input('personal_photo'),
+                        ]);
+
+                        // 创建注册记录（同步自总后台逻辑）
+                        addRegisterRecord($player->id, PlayerRegisterRecord::TYPE_ADMIN, $departmentId);
+
+                        DB::commit();
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        return message_error($e->getMessage());
+                    }
+                    return message_success(admin_trans('player.save_player_info_success'));
+                });
+            }
         });
     }
 

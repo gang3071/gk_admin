@@ -153,7 +153,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 2);
+            , 4);
 
             // 总开分（对应玩家报表的总充值点数）
             $row->column(
@@ -181,7 +181,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 3);
+            , 4);
 
             // 总洗分（对应玩家报表的总提现点数）
             $row->column(
@@ -209,7 +209,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 3);
+            , 4);
 
             // 总投钞
             $row->column(
@@ -237,7 +237,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 3);
+            , 4);
 
             // 总拉彩
             $row->column(
@@ -265,7 +265,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 3);
+            , 4);
 
             // 盈余小计
             $row->column(
@@ -293,7 +293,7 @@ class ChannelIndexController
                     'alignItems' => 'center',
                     'height' => '54px'
                 ])
-            , 3);
+            , 4);
 
             $row->column(
                 Card::create([
