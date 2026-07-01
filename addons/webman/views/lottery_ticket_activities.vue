@@ -713,34 +713,35 @@
         width="900px"
         :body-style="{ padding: '16px' }"
     >
-      <!-- ⭐ 筛选表单 -->
+      <!-- ⭐ 筛选表单 - 优化样式 -->
       <a-form layout="inline" style="margin-bottom: 16px;">
-        <a-form-item label="券号">
+        <a-form-item>
           <a-input
               v-model:value="ticketFilter.ticket_no"
-              placeholder="输入券号"
+              placeholder="券号"
               allow-clear
               style="width: 150px;"
           />
         </a-form-item>
-        <a-form-item label="玩家UUID">
+        <a-form-item>
           <a-input
               v-model:value="ticketFilter.player_uuid"
-              placeholder="输入玩家UUID"
+              placeholder="玩家UUID"
               allow-clear
               style="width: 180px;"
           />
         </a-form-item>
-        <a-form-item label="发放时间">
+        <a-form-item>
           <a-range-picker
               v-model:value="ticketFilter.time_range"
               show-time
               format="YYYY-MM-DD HH:mm:ss"
+              :placeholder="['开始时间', '结束时间']"
               style="width: 360px;"
           />
         </a-form-item>
         <a-form-item>
-          <a-space>
+          <a-space :size="8">
             <a-button type="primary" @click="handleTicketSearch">
               <template #icon>
                 <search-outlined/>
