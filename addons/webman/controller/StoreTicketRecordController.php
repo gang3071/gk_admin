@@ -184,6 +184,7 @@ class StoreTicketRecordController
             $grid->filter(function (Filter $filter) {
                 $filter->like('order_id', admin_trans('ticket_machine.record.order_id'));
                 $filter->like('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'));
+                $filter->like('machine_no', admin_trans('ticket_machine.record.machine_no'));
                 $filter->eq()->select('ticket_type')
                     ->placeholder(admin_trans('ticket_machine.record.ticket_type'))
                     ->options([

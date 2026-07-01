@@ -164,15 +164,26 @@ class AdminTicketRedeemController
             });
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
 
+            // 获取店名下拉选项
+            $storeOptions = ['' => admin_trans('public_msg.all')];
+            $stores = TicketRecord::query()
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->distinct()
+                ->pluck('store_name')
+                ->toArray();
+            foreach ($stores as $store) {
+                $storeOptions[$store] = $store;
+            }
+
             // 筛选器
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->expand();
                 $filter->like('order_id', admin_trans('ticket_machine.redeem.order_id'));
                 $filter->like('qr_code_no', admin_trans('ticket_machine.redeem.qr_code_no'));
                 $filter->like('machine_no', admin_trans('ticket_machine.redeem.machine_no'));
                 $filter->eq()->select('store_name')
                     ->placeholder(admin_trans('ticket_machine.redeem.store_name'))
-                    ->options(['' => admin_trans('public_msg.all')])
+                    ->options($storeOptions)
                     ->style(['width' => '150px']);
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('ticket_machine.redeem.status'))
