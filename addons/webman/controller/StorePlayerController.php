@@ -22,7 +22,6 @@ use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 use support\Db;
-use support\Log;
 
 /**
  * 店机后台 - 设备列表
@@ -181,17 +180,25 @@ class StorePlayerController
                 $item['lottery_amount'] = floatval($lotteryAmount);
             }
 
-            // 计算累计小计 = 开分 - 洗分
-            // 注意：开分（recharge_amount）已包含投钞，洗分已包含彩金
+            // 计算累计小计
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
 
-            // 小计 = 开分 - 洗分
-            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
-
-            // 存储纯开分金额（扣除投钞后），用于展示
-            $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+            if ($hasStatsTimeFilter) {
+                // 有时间筛选：从账变记录统计，TYPE_RECHARGE和TYPE_MACHINE是分开的
+                // 小计 = (开分 + 投钞) - 洗分
+                $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
+                $item['subtotal'] = bcsub($totalIn, $withdrawAmount, 2);
+                // 纯开分 = 开分（不含投钞）
+                $item['pure_recharge_amount'] = $rechargeAmount;
+            } else {
+                // 无时间筛选：使用player_extend累计数据，recharge_amount已包含投钞
+                // 小计 = 开分 - 洗分
+                $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
+                // 纯开分 = 开分 - 投钞
+                $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+            }
 
             // === 2. 当前未交班数据（不受时间筛选影响） ===
             // 查询从最后交班时间到现在的财务数据

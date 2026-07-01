@@ -47,3 +47,48 @@ Desktop.ini
 
 # Admin assets (可选，如果需要提交则注释掉)
 # /public/admin/
+
+# Documentation and debug files
+*.md
+!README.md
+!CLAUDE.md
+*.sql
+*.sh
+*.bat
+*.php
+!addons/**/*.php
+!config/**/*.php
+!support/**/*.php
+!plugin/**/*.php
+!process/**/*.php
+!database/**/*.php
+phinx.php
+*.txt
+!composer.json
+!package.json
+.env.gateway.example
+
+# Scripts directory
+scripts/
+docs/
+
+# Temporary test files
+test_*.php
+check_*.php
+analyze_*.php
+monitor_*.php
+apply_*.bat
+deploy*.sh
+fix_*.sh
+fix_*.bat
+setup_*.bat
+update_*.sh
+update_*.bat
+verify_*.sh
+verify_*.bat
+cleanup_*.php
+create_*.php
+diagnose_*.sh
+export_*.php
+find_*.sh
+restart_*.sh
