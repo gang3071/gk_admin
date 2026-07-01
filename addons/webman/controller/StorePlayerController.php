@@ -228,14 +228,11 @@ class StorePlayerController
             $item['current_total_outcome'] = floatval($currentShiftDelivery->current_total_outcome ?? 0);
             $item['current_lottery_amount'] = floatval($currentShiftLottery);
 
-            // 计算当前未交班总利润 = (总收入 + 投钞) - 总支出 - 彩金
+            // 计算当前未交班总利润 = (总收入 + 投钞) - 总支出
+            // 注意：洗分（总支出）已包含彩金，彩金只用于展示
             $item['current_total_profit'] = bcsub(
-                bcsub(
-                    bcadd($item['current_total_income'], $item['current_machine_put_point'], 2),
-                    $item['current_total_outcome'],
-                    2
-                ),
-                $item['current_lottery_amount'],
+                bcadd($item['current_total_income'], $item['current_machine_put_point'], 2),
+                $item['current_total_outcome'],
                 2
             );
         }
