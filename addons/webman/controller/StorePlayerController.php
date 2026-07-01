@@ -101,11 +101,11 @@ class StorePlayerController
         $playerCount = $totalQuery->count();
 
         $list = $query->select([
-                'player.*',
-                'player_extend.recharge_amount',
-                'player_extend.withdraw_amount',
-                'player_extend.machine_put_point'
-            ])
+            'player.*',
+            'player_extend.recharge_amount',
+            'player_extend.withdraw_amount',
+            'player_extend.machine_put_point'
+        ])
             ->orderBy('player.id', 'asc')
             ->get()
             ->toArray();
@@ -184,12 +184,11 @@ class StorePlayerController
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
             $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
-            $lotteryAmount = floatval($item['lottery_amount'] ?? 0);
 
             // 收入 = 开分 + 投钞
             $incomeTotal = bcadd($rechargeAmount, $machinePutPoint, 2);
-            // 支出 = 洗分 + 彩金
-            $outcomeTotal = bcadd($withdrawAmount, $lotteryAmount, 2);
+            // 支出 = 洗分
+            $outcomeTotal = $withdrawAmount;
             // 小计 = 收入 - 支出
             $item['subtotal'] = bcsub($incomeTotal, $outcomeTotal, 2);
 
@@ -239,6 +238,7 @@ class StorePlayerController
                 2
             );
         }
+        unset($item); // 清除引用，避免污染数组
 
         // ✅ 内存优化：使用 lazy() 惰性加载替代一次性 get()
         // 修复前：3000 台设备 = 5 MB 内存，5 个并发进程 = 25 MB
@@ -681,7 +681,7 @@ class StorePlayerController
                     $avatarHtml = $src
                         ? '<img src="' . $src . '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px" />'
                         : '<span style="display:inline-block;width:40px;height:40px;border-radius:50%;background:#ccc;text-align:center;line-height:40px;color:#fff;margin-right:8px">'
-                            . mb_substr($nameVal, 0, 1) . '</span>';
+                        . mb_substr($nameVal, 0, 1) . '</span>';
                     $form->desc('avatar', admin_trans('player.fields.avatar'))
                         ->value($avatarHtml . '<span>' . e($nameVal) . '</span>');
                     $form->desc('player_source', admin_trans('player.fields.player_source'))
