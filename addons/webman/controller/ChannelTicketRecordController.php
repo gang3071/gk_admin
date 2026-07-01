@@ -32,22 +32,49 @@ class ChannelTicketRecordController
     public function index(): Grid
     {
         $admin = Admin::user();
+        $page = request()->input('ex_admin_page', 1);
+        $size = request()->input('ex_admin_size', 20);
+        $requestFilter = request()->input('ex_admin_filter', []);
 
-        return Grid::create(new TicketRecord(), function (Grid $grid) use ($admin) {
+        // 构建查询（不使用模型实例，避免触发 DataPermissions 全局作用域）
+        $query = TicketRecord::query()
+            ->where('department_id', $admin->department_id)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->orderBy('created_at', 'desc');
+
+        // 应用筛选条件
+        if (!empty($requestFilter['order_id'])) {
+            $query->where('order_id', 'like', '%' . $requestFilter['order_id'] . '%');
+        }
+        if (!empty($requestFilter['qr_code_no'])) {
+            $query->where('qr_code_no', 'like', '%' . $requestFilter['qr_code_no'] . '%');
+        }
+        if (isset($requestFilter['ticket_type']) && $requestFilter['ticket_type'] !== '') {
+            $query->where('ticket_type', $requestFilter['ticket_type']);
+        }
+        if (isset($requestFilter['status']) && $requestFilter['status'] !== '') {
+            $query->where('status', $requestFilter['status']);
+        }
+        if (!empty($requestFilter['created_at_start'])) {
+            $query->where('created_at', '>=', $requestFilter['created_at_start']);
+        }
+        if (!empty($requestFilter['created_at_end'])) {
+            $query->where('created_at', '<=', $requestFilter['created_at_end']);
+        }
+
+        // 统计数据
+        $totalData = (clone $query)->selectRaw(
+            'sum(score) as total_score, count(*) as total_count, sum(IF(status = 3, 1, 0)) as used_count, sum(IF(status = 3, score, 0)) as used_score'
+        )->first();
+
+        // 分页
+        $total = (clone $query)->count();
+        $list = $query->forPage($page, $size)->get()->toArray();
+
+        return Grid::create($list, function (Grid $grid) use ($admin, $total, $totalData) {
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
-
-            // 按部门隔离，显示开分类型数据
-            $grid->model()
-                ->where('department_id', $admin->department_id)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-                ->orderBy('created_at', 'desc');
-
-            // 统计数据
-            $query = clone $grid->model();
-            $totalData = $query->selectRaw(
-                'sum(score) as total_score, count(*) as total_count, sum(IF(status = 3, 1, 0)) as used_count, sum(IF(status = 3, score, 0)) as used_score'
-            )->first();
+            $grid->total($total);
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
