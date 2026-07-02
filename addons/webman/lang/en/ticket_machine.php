@@ -136,6 +136,7 @@ return [
         'total_score' => 'Total Redeem：',
         'total_count' => 'Total Count：',
         'used_count' => 'Used：',
-        'used_score' => 'Used Amount：',
+        'backend_used_score' => 'Backend：',
+        'machine_used_score' => 'Machine：',
     ],
 ];

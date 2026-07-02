@@ -136,6 +136,7 @@ return [
         'total_score' => '合計チケット金額：',
         'total_count' => '合計チケット回数：',
         'used_count' => '使用済み：',
-        'used_score' => '使用済み金額：',
+        'backend_used_score' => 'バックエンド：',
+        'machine_used_score' => 'マシン：',
     ],
 ];

@@ -176,6 +176,7 @@ return [
         'total_score' => '总核销金额：',
         'total_count' => '总核销次数：',
         'used_count' => '已使用：',
-        'used_score' => '已使用金额：',
+        'backend_used_score' => '后台使用：',
+        'machine_used_score' => '机台使用：',
     ],
 ];

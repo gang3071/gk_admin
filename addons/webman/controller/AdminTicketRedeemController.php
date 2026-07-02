@@ -45,7 +45,10 @@ class AdminTicketRedeemController
             $totalData = TicketRecord::query()
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->selectRaw(
-                    'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
+                    'sum(score) as total_score, count(*) as total_count, '
+                    . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
+                    . 'sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
+                    . 'sum(IF(status = ' . TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
                 )
                 ->first();
 
@@ -69,7 +72,7 @@ class AdminTicketRedeemController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
+                    , 5);
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
@@ -87,7 +90,7 @@ class AdminTicketRedeemController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
+                    , 5);
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
@@ -105,12 +108,12 @@ class AdminTicketRedeemController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
+                    , 4);
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['used_score']) ? floatval($totalData['used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.used_score'))
+                            ->value(!empty($totalData['backend_used_score']) ? floatval($totalData['backend_used_score']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.backend_used_score'))
                             ->valueStyle([
                                 'font-size' => '14px',
                                 'font-weight' => '500',
@@ -123,7 +126,25 @@ class AdminTicketRedeemController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
+                    , 5);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($totalData['machine_used_score']) ? floatval($totalData['machine_used_score']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.machine_used_score'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#722ed1'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 5);
             })->style(['background' => '#fff']);
 
             $grid->tools([$layout]);
