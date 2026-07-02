@@ -51,7 +51,7 @@ class StoreTicketRedeemController
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->selectRaw(
-                    'sum(score) as total_score, count(*) as total_count, sum(IF(status = ' . TicketRecord::STATUS_USED . ', 1, 0)) as used_count, sum(IF(status = ' . TicketRecord::STATUS_USED . ', score, 0)) as used_score'
+                    'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
                 )
                 ->first();
 
@@ -174,7 +174,8 @@ class StoreTicketRedeemController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.redeem.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.redeem.status_normal'))->color('blue'),
-                    TicketRecord::STATUS_USED => Tag::create(admin_trans('ticket_machine.redeem.status_used'))->color('orange'),
+                    TicketRecord::STATUS_BACKEND_USED => Tag::create(admin_trans('ticket_machine.redeem.status_backend_used'))->color('orange'),
+                    TicketRecord::STATUS_MACHINE_USED => Tag::create(admin_trans('ticket_machine.redeem.status_machine_used'))->color('purple'),
                     default => Tag::create(admin_trans('ticket_machine.redeem.status_unknown'))->color('default'),
                 };
             });
@@ -210,7 +211,8 @@ class StoreTicketRedeemController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.redeem.status_disabled'),
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
-                        TicketRecord::STATUS_USED => admin_trans('ticket_machine.redeem.status_used'),
+                        TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
+                        TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->form()->hidden('created_at_start');
@@ -316,7 +318,7 @@ class StoreTicketRedeemController
 
         // 更新状态为已使用
         $record->update([
-            'status' => TicketRecord::STATUS_USED,
+            'status' => TicketRecord::STATUS_BACKEND_USED,
             'scanned_at' => date('Y-m-d H:i:s'),
             'scanned_by' => 'admin_' . $admin->id,
         ]);
@@ -523,7 +525,7 @@ class StoreTicketRedeemController
 
         // 更新状态为已使用
         $record->update([
-            'status' => TicketRecord::STATUS_USED,
+            'status' => TicketRecord::STATUS_BACKEND_USED,
             'scanned_at' => date('Y-m-d H:i:s'),
             'scanned_by' => 'admin_' . $admin->id,
         ]);
@@ -587,7 +589,8 @@ class StoreTicketRedeemController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.redeem.status_disabled'),
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
-                    TicketRecord::STATUS_USED => admin_trans('ticket_machine.redeem.status_used'),
+                    TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
+                    TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
                     default => admin_trans('ticket_machine.redeem.status_unknown'),
                 };
             });
@@ -688,7 +691,7 @@ class StoreTicketRedeemController
 
         // 更新状态为已使用
         $record->update([
-            'status' => TicketRecord::STATUS_USED,
+            'status' => TicketRecord::STATUS_BACKEND_USED,
             'scanned_at' => date('Y-m-d H:i:s'),
             'scanned_by' => 'admin_' . $admin->id,
         ]);

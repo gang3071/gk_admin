@@ -785,6 +785,7 @@ class PlayerController
             $form->layout('vertical');
             if ($form->isEdit()) {
                 $form->title(admin_trans('player.edit_player'));
+                $form->labelWidth(120);
                 $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
                 $form->radio('def_avatar', admin_trans('player.def_avatar'))
                     ->default(1)
@@ -844,6 +845,7 @@ class PlayerController
                 });
             } else {
                 $form->title(admin_trans('player.add_player'));
+                $form->labelWidth(120);
                 $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->required();
                 $form->radio('def_avatar', admin_trans('player.def_avatar'))
                     ->default(1)
@@ -855,7 +857,8 @@ class PlayerController
                     PhoneSmsLog::COUNTRY_CODE_TW => PhoneSmsLog::COUNTRY_CODE_TW,
                     PhoneSmsLog::COUNTRY_CODE_JP => PhoneSmsLog::COUNTRY_CODE_JP
                 ])->required();
-                // 渠道选择（放在代理商和店家上方）
+
+                // 渠道选择
                 $form->select('department_id', admin_trans('player.fields.department_id'))
                     ->remoteOptions(admin_url([
                         'addons-webman-controller-ChannelController',
@@ -865,22 +868,17 @@ class PlayerController
                     ->load(
                         $form->select('agent_admin_id', admin_trans('player.fields.agent_admin_id'))
                             ->required()
-                            ->placeholder(admin_trans('player.fields.agent_admin_id')),
+                            ->placeholder(admin_trans('player.fields.agent_admin_id'))
+                            ->load(
+                                $form->select('store_admin_id', admin_trans('player.fields.store_admin_id'))
+                                    ->required()
+                                    ->placeholder(admin_trans('player.fields.store_admin_id')),
+                                admin_url([$this, 'getStoreOptions'])
+                            )
+                            ->event('change', ['store_admin_id' => null], 'variable'),
                         admin_url([$this, 'getAgentOptions'])
                     )
                     ->event('change', ['agent_admin_id' => null, 'store_admin_id' => null], 'variable');
-
-                // 代理商选择（根据渠道级联加载）
-                $form->select('agent_admin_id', admin_trans('player.fields.agent_admin_id'))
-                    ->required()
-                    ->placeholder(admin_trans('player.fields.agent_admin_id'))
-                    ->load(
-                        $form->select('store_admin_id', admin_trans('player.fields.store_admin_id'))
-                            ->required()
-                            ->placeholder(admin_trans('player.fields.store_admin_id')),
-                        admin_url([$this, 'getStoreOptions'])
-                    )
-                    ->event('change', ['store_admin_id' => null], 'variable');
                 $form->text('player_extend.id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
                 $form->image('player_extend.id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
@@ -3917,13 +3915,13 @@ class PlayerController
             ->where('department_id', $departmentId)
             ->where('status', 1)
             ->orderBy('id', 'asc')
-            ->get(['id', 'username', 'real_name']);
+            ->get(['id', 'username', 'nickname']);
 
         $options = [];
         foreach ($agents as $agent) {
             $options[] = [
                 'value' => $agent->id,
-                'label' => $agent->real_name ?: $agent->username,
+                'label' => $agent->nickname ?: $agent->username ?: '代理商#' . $agent->id,
             ];
         }
 
@@ -3949,16 +3947,16 @@ class PlayerController
         $adminUserModel = plugin()->webman->config('database.user_model');
         $stores = $adminUserModel::query()
             ->where('type', AdminUser::TYPE_STORE)
-            ->where('parent_id', $agentId)
+            ->where('parent_admin_id', $agentId)
             ->where('status', 1)
             ->orderBy('id', 'asc')
-            ->get(['id', 'username', 'real_name']);
+            ->get(['id', 'username', 'nickname']);
 
         $options = [];
         foreach ($stores as $store) {
             $options[] = [
                 'value' => $store->id,
-                'label' => $store->real_name ?: $store->username,
+                'label' => $store->nickname ?: $store->username ?: '店家#' . $store->id,
             ];
         }
 

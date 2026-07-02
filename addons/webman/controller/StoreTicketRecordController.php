@@ -47,7 +47,7 @@ class StoreTicketRecordController
             // 统计数据（基于当前筛选条件）
             $query = clone $grid->model();
             $totalData = $query->selectRaw(
-                'sum(score) as total_score, count(*) as total_count, sum(IF(status = 3, 1, 0)) as used_count, sum(IF(status = 3, score, 0)) as used_score'
+                'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
             )->first();
 
             $layout = Layout::create();
@@ -174,7 +174,8 @@ class StoreTicketRecordController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.record.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.record.status_normal'))->color('blue'),
-                    TicketRecord::STATUS_USED => Tag::create(admin_trans('ticket_machine.record.status_used'))->color('orange'),
+                    TicketRecord::STATUS_BACKEND_USED => Tag::create(admin_trans('ticket_machine.record.status_backend_used'))->color('orange'),
+                    TicketRecord::STATUS_MACHINE_USED => Tag::create(admin_trans('ticket_machine.record.status_machine_used'))->color('purple'),
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
             });
@@ -200,7 +201,8 @@ class StoreTicketRecordController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.record.status_disabled'),
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
-                        TicketRecord::STATUS_USED => admin_trans('ticket_machine.record.status_used'),
+                        TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
+                        TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->form()->hidden('created_at_start');
@@ -265,7 +267,8 @@ class StoreTicketRecordController
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.record.status_disabled'),
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
-                    TicketRecord::STATUS_USED => admin_trans('ticket_machine.record.status_used'),
+                    TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
+                    TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
                     default => admin_trans('ticket_machine.record.status_unknown'),
                 };
             });
