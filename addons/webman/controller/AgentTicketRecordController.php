@@ -37,20 +37,18 @@ class AgentTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示代理下属玩家的开分类型数据
+            // 只显示代理下属店家的开分类型数据
+            $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
+
             $grid->model()
+                ->whereIn('store_admin_id', $storeIds)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-                ->whereHas('player', function ($query) use ($admin) {
-                    $query->where('agent_admin_id', $admin->id);
-                })
                 ->orderBy('created_at', 'desc');
 
             // 统计数据
             $totalData = TicketRecord::query()
+                ->whereIn('store_admin_id', $storeIds)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-                ->whereHas('player', function ($query) use ($admin) {
-                    $query->where('agent_admin_id', $admin->id);
-                })
                 ->selectRaw(
                     'sum(score) as total_score, count(*) as total_count, '
                     . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
@@ -177,12 +175,28 @@ class AgentTicketRecordController
             });
             $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
 
+            // 获取店名下拉选项
+            $storeOptions = ['' => admin_trans('public_msg.all')];
+            $stores = TicketRecord::query()
+                ->whereIn('store_admin_id', $storeIds)
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->distinct()
+                ->pluck('store_name')
+                ->toArray();
+            foreach ($stores as $store) {
+                $storeOptions[$store] = $store;
+            }
+
             // 筛选器
             $grid->expandFilter();
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));
                 $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.record.qr_code_no'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.record.machine_no'));
+                $filter->eq()->select('store_name')
+                    ->placeholder(admin_trans('ticket_machine.record.store_name'))
+                    ->options($storeOptions)
+                    ->style(['width' => '150px']);
                 $filter->eq()->select('ticket_type')
                     ->placeholder(admin_trans('ticket_machine.record.ticket_type'))
                     ->options([
