@@ -801,7 +801,6 @@ class StorePlayerController
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
                 $form->text('address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
                 $form->date('birthday', admin_trans('player_extend.fields.birthday'))->required();
-                $form->text('email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
                 $form->text('line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
                 $form->textarea('remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
 
@@ -863,7 +862,6 @@ class StorePlayerController
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->text('address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
                 $form->date('birthday', admin_trans('player_extend.fields.birthday'))->required();
-                $form->text('email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
                 $form->text('line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
                 $form->textarea('remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
                 $form->password('password', admin_trans('player.new_password'))
