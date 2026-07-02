@@ -130,18 +130,14 @@ class ChannelIndexController
         $layout->row(function (Row $row) use ($rechargeData, $withdrawData, $playerData, $loginData, $dropdown, $operationStatistics, $lotteryStatistics) {
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
+            // 盈余小计 = (开分 + 投钞) - 洗分
+            // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
             $incomeTotal = bcadd(
                 $operationStatistics['recharge_total'] ?? 0,
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal = bcadd(
-                bcadd($operationStatistics['withdrawal_total'] ?? 0, $lotteryStatistics['lottery_amount'] ?? 0, 2),
-                $operationStatistics['activity_total'] ?? 0,
-                2
-            );
-            $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
+            $subtotal = bcsub($incomeTotal, $operationStatistics['withdrawal_total'] ?? 0, 2);
 
             // 数据周期筛选
             $row->column(
@@ -1459,18 +1455,14 @@ class ChannelIndexController
         $dropdown->item(admin_trans('data_center.data_type.month'))->redirect([$this, 'agentIndex'], ['data_type' => 'month']);
         $dropdown->item(admin_trans('data_center.data_type.last_month'))->redirect([$this, 'agentIndex'], ['data_type' => 'last_month']);
 
-        // 计算盈余小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
+        // 计算盈余小计 = (开分 + 投钞) - 洗分
+        // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
         $incomeTotal = bcadd(
             $statisticsData['recharge_amount'] ?? 0,
             $statisticsData['machine_put_point'] ?? 0,
             2
         );
-        $outcomeTotal = bcadd(
-            bcadd($statisticsData['withdraw_amount'] ?? 0, $lotteryStatistics['lottery_amount'] ?? 0, 2),
-            $statisticsData['activity_total'] ?? 0,
-            2
-        );
-        $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
+        $subtotal = bcsub($incomeTotal, $statisticsData['withdraw_amount'] ?? 0, 2);
 
         $layout = Layout::create();
         $layout->row(function (Row $row) use (
@@ -2042,8 +2034,9 @@ class ChannelIndexController
             $machinePutPoint = $dataC[$date] ?? 0;
             $lotteryAmount = $dataD[$date] ?? 0;
             $activityAmount = $dataE[$date] ?? 0;
-            // 盈亏 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
-            $yAxis[] = $rechargeAmount + $machinePutPoint - $withdrawAmount - $lotteryAmount - $activityAmount;
+            // 盈亏 = (开分 + 投钞) - 洗分
+            // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
+            $yAxis[] = $rechargeAmount + $machinePutPoint - $withdrawAmount;
         }
         return BarChart::create()
             ->height('280px')
@@ -2257,14 +2250,12 @@ class ChannelIndexController
             })
             ->sum('player_game_log.chip_amount');
 
-        // 总利润 = (充值 + 投钞) - 提现 - 彩金
+        // 总利润 = (充值 + 投钞) - 洗分
+        // 注意：total_outcome 只包含洗分(withdrawal_total)，不包含彩金
+        // 彩金、摸奖券奖励只用于展示，不参与利润计算（已经发放给客户，客户洗分会洗掉）
         $currentShiftStats['total_profit'] = bcsub(
-            bcsub(
-                $currentShiftStats['total_income'],
-                $currentShiftStats['total_outcome'],
-                2
-            ),
-            $currentShiftStats['lottery_amount'],
+            $currentShiftStats['total_income'],
+            $currentShiftStats['total_outcome'],
             2
         );
 
@@ -2373,18 +2364,14 @@ class ChannelIndexController
                 Admin::user()->id)->orderBy('id', 'desc')->first();
             $row->gutter([10, 10]);
             // 计算运营统计的小计（基于时间筛选的数据）
-            // 盈余小计 = (开分 + 投钞) - (洗分 + 彩金 + 活动奖励)
+            // 盈余小计 = (开分 + 投钞) - 洗分
+            // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
             $incomeTotal = bcadd(
                 $operationStatistics['recharge_total'] ?? 0,
                 $operationStatistics['machine_put_point'] ?? 0,
                 2
             );
-            $outcomeTotal = bcadd(
-                bcadd($operationStatistics['withdrawal_total'] ?? 0, $lotteryStatistics['lottery_amount'] ?? 0, 2),
-                $operationStatistics['activity_total'] ?? 0,
-                2
-            );
-            $subtotal = bcsub($incomeTotal, $outcomeTotal, 2);
+            $subtotal = bcsub($incomeTotal, $operationStatistics['withdrawal_total'] ?? 0, 2);
 
             // ========== 第一行：操作栏 ==========
             $row->column(
@@ -3603,16 +3590,9 @@ class ChannelIndexController
             $machineBet = $machineBetMap[$player->id] ?? 0;
 
             // 计算总收入、总支出、利润
+            // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
             $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
-            $totalOut = bcadd(
-                bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2),
-                bcadd(
-                    bcadd($data['lottery_amount'], $data['activity_bonus_amount'], 2),
-                    $data['lottery_ticket_reward_amount'],
-                    2
-                ),
-                2
-            );
+            $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
             $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
