@@ -2168,6 +2168,51 @@ class ChannelIndexController
             'lottery_amount' => $lotteryStatisticsQuery->lottery_amount ?? 0,
         ];
 
+        // ========== 出票统计（支持时间筛选） ==========
+        // 出票记录统计（开分类型）
+        $ticketRecordQuery = \addons\webman\model\TicketRecord::query()
+            ->where('store_admin_id', $store->id)
+            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+            ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
+                $query->where(getDateWhere($dateType, 'created_at'));
+            })
+            ->selectRaw(
+                'sum(score) as total_score, count(*) as total_count, '
+                . 'sum(IF(status IN (' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ',' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
+                . 'sum(IF(status IN (' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ',' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
+            )
+            ->first();
+
+        $ticketRecordStatistics = [
+            'total_score' => floatval($ticketRecordQuery->total_score ?? 0),
+            'total_count' => intval($ticketRecordQuery->total_count ?? 0),
+            'used_count' => intval($ticketRecordQuery->used_count ?? 0),
+            'used_score' => floatval($ticketRecordQuery->used_score ?? 0),
+        ];
+
+        // 核销记录统计（洗分类型）
+        $ticketRedeemQuery = \addons\webman\model\TicketRecord::query()
+            ->where('store_admin_id', $store->id)
+            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+            ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
+                $query->where(getDateWhere($dateType, 'created_at'));
+            })
+            ->selectRaw(
+                'sum(score) as total_score, count(*) as total_count, '
+                . 'sum(IF(status IN (' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ',' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
+                . 'sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
+                . 'sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
+            )
+            ->first();
+
+        $ticketRedeemStatistics = [
+            'total_score' => floatval($ticketRedeemQuery->total_score ?? 0),
+            'total_count' => intval($ticketRedeemQuery->total_count ?? 0),
+            'used_count' => intval($ticketRedeemQuery->used_count ?? 0),
+            'backend_used_score' => floatval($ticketRedeemQuery->backend_used_score ?? 0),
+            'machine_used_score' => floatval($ticketRedeemQuery->machine_used_score ?? 0),
+        ];
+
         // ========== 当前班次实时统计（未交班数据） ==========
         /** @var StoreAgentShiftHandoverRecord|null $lastShiftRecord */
         $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
@@ -2350,6 +2395,8 @@ class ChannelIndexController
             $playerNum,
             $operationStatistics,
             $lotteryStatistics,
+            $ticketRecordStatistics,
+            $ticketRedeemStatistics,
             $store,
             $info,
             $dateType,
@@ -2540,7 +2587,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 3);
+            , 4);
 
             // 下分总和
             $row->column(
@@ -2562,7 +2609,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 3);
+            , 4);
 
             // 投钞总和
             $row->column(
@@ -2584,7 +2631,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 3);
+            , 4);
 
             // 拉彩次数
             $row->column(
@@ -2606,7 +2653,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 3);
+            , 4);
 
             // 拉彩金额
             $row->column(
@@ -2628,7 +2675,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 3);
+            , 4);
 
             // 小计
             $row->column(
@@ -2651,7 +2698,230 @@ class ChannelIndexController
                     'textAlign' => 'center',
                     'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
                 ])
-            , 3);
+            , 4);
+
+            // ========== 出票核销统计标题 ==========
+            $row->column(
+                Card::create([
+                    Row::create()->column([
+                        Icon::create('PrinterOutlined')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#67C23A']),
+                        Html::create(admin_trans('ticket_machine.record.title') . ' / ' . admin_trans('ticket_machine.redeem.title'))->style([
+                            'fontSize' => '14px',
+                            'fontWeight' => 'bold',
+                            'color' => '#303133',
+                            'marginRight' => 'auto'
+                        ])
+                    ])->style([
+                        'display' => 'flex',
+                        'alignItems' => 'center'
+                    ])
+                ])->bodyStyle([
+                    'padding' => '10px 16px',
+                    'display' => 'flex',
+                    'alignItems' => 'center',
+                    'borderLeft' => '3px solid #67C23A'
+                ])
+            , 24);
+
+            // 出票统计（4个卡片，每个colspan=6，填满一行）
+            // 出票总金额
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.record.total_score'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRecordStatistics['total_score'], 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#67C23A',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 出票总次数
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.record.total_count'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRecordStatistics['total_count']))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#52c41a',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 出票已使用数量
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.record.used_count'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRecordStatistics['used_count']))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#faad14',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 出票已使用金额
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.record.used_score'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRecordStatistics['used_score'], 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#f5222d',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 6);
+
+            // 核销统计（5个卡片，每个colspan=5，最后一格colspan=4，填满一行）
+            // 核销总金额
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.redeem.total_score'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRedeemStatistics['total_score'], 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#1890ff',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 5);
+
+            // 核销总次数
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.redeem.total_count'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRedeemStatistics['total_count']))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#52c41a',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 5);
+
+            // 核销已使用数量
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.redeem.used_count'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRedeemStatistics['used_count']))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#faad14',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 5);
+
+            // 核销后台使用金额
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.redeem.backend_used_score'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRedeemStatistics['backend_used_score'], 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#f5222d',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 5);
+
+            // 核销机台使用金额
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('ticket_machine.redeem.machine_used_score'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($ticketRedeemStatistics['machine_used_score'], 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#722ed1',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 4);
 
             // ========== 第四行：当前班次实时统计标题 ==========
             $row->column(
