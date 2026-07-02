@@ -75,6 +75,8 @@ return [
         'player_source' => '玩家来源',
         'player_source_online' => '线上',
         'player_source_offline' => '线下',
+        'agent_admin_id' => '所属代理商',
+        'store_admin_id' => '所属店家',
     ],
     'player_no_change' => '玩家沒有變動',
     'not_fount' => '未找到该玩家',

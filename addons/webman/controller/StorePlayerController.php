@@ -772,6 +772,7 @@ class StorePlayerController
             $options[$key] = Avatar::create()->style(['padding' => '1px'])->src($item)->shape('square');
         }
         return Form::create(new Player(), function (Form $form) use ($options) {
+            $form->layout('vertical');
             if ($form->isEdit()) {
                 // ========== 编辑模式 ==========
                 $form->title(admin_trans('player.edit_player'));

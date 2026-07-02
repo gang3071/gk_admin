@@ -74,6 +74,8 @@ return [
         'player_source' => 'プレイヤーソース',
         'player_source_online' => 'オンライン',
         'player_source_offline' => 'オフライン',
+        'agent_admin_id' => '所属エージェント',
+        'store_admin_id' => '所属店舗',
     ],
     'player_no_change' => 'プレイヤーは変更されていません',
     'not_fount' => 'プレーヤーが見つかりませんでした',

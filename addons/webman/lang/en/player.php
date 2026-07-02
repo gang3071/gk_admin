@@ -75,6 +75,8 @@ return [
         'player_source' => 'Player Source',
         'player_source_online' => 'Online',
         'player_source_offline' => 'Offline',
+        'agent_admin_id' => 'Agent',
+        'store_admin_id' => 'Store',
     ],
     'player_no_change' => 'The player has not changed',
     'not_fount' => 'The player was not found',
