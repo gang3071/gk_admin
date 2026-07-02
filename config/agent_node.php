@@ -494,4 +494,42 @@ return [
         'url' => 'ex-admin/addons-webman-controller-AdminController/editInfo',
         'title' => '个人信息',
     ],
+    // 出票记录（代理后台）
+    [
+        'id' => 'addons\webman\controller\AgentTicketRecordController\index',
+        'pid' => 0,
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'agent',
+        'url' => 'ex-admin/addons-webman-controller-AgentTicketRecordController/index',
+        'title' => '出票记录列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\AgentTicketRecordController\detail',
+        'pid' => 'addons\webman\controller\AgentTicketRecordController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'agent',
+        'url' => 'ex-admin/addons-webman-controller-AgentTicketRecordController/detail',
+        'title' => '出票记录详情',
+    ],
+    // 核销记录（代理后台）
+    [
+        'id' => 'addons\webman\controller\AgentTicketRedeemController\index',
+        'pid' => 0,
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'agent',
+        'url' => 'ex-admin/addons-webman-controller-AgentTicketRedeemController/index',
+        'title' => '核销记录列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\AgentTicketRedeemController\detail',
+        'pid' => 'addons\webman\controller\AgentTicketRedeemController\index',
+        'action' => 'detail',
+        'method' => 'get',
+        'group' => 'agent',
+        'url' => 'ex-admin/addons-webman-controller-AgentTicketRedeemController/detail',
+        'title' => '核销记录详情',
+    ],
 ];
