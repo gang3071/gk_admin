@@ -798,7 +798,6 @@ class PlayerController
                 $form->image('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
                 $form->text('player_extend.address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
                 $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'))->required();
-                $form->text('player_extend.email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
                 $form->text('player_extend.line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
                 $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
                 $form->switch('is_test', admin_trans('player.fields.is_test'));
@@ -885,7 +884,6 @@ class PlayerController
                 $form->image('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->text('player_extend.address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
                 $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'))->required();
-                $form->text('player_extend.email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(50)->required();
                 $form->text('player_extend.line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
                 $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
                 $form->switch('is_test', admin_trans('player.fields.is_test'));
