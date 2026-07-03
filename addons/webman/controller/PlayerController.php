@@ -205,6 +205,7 @@ class PlayerController
                 DB::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
                 // 打码量相关字段
                 'player.total_bet_amount',
+                'vip_retain_period.period_bet_amount as period_bet_amount',
                 DB::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
                 'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
             ])
@@ -236,6 +237,13 @@ class PlayerController
                         ->whereRaw('next_vip_level.sort = (SELECT MIN(vl2.sort) FROM vip_level vl2 WHERE vl2.department_id = player.department_id AND vl2.sort > COALESCE(vip_level.sort, channel_min_vip_level.sort) AND vl2.status = ' . VipLevel::STATUS_ENABLED . ')');
                 }
             )
+            // LEFT JOIN 保级周期（获取当前周期内打码量）
+            ->leftJoin('player_vip_period as vip_retain_period', function ($join) {
+                $join->on('player.id', '=', 'vip_retain_period.player_id')
+                    ->on('player.vip_level_id', '=', 'vip_retain_period.vip_level_id')
+                    ->where('vip_retain_period.period_type', '=', 'retain')
+                    ->where('vip_retain_period.status', '=', 1);
+            })
             ->when(!empty($requestFilter['ip']), function ($query) {
                 return $query->leftJoin('player_login_record as r', 'player.id', '=', 'r.player_id')
                     ->Join(DB::raw('( SELECT player_id, max( id ) AS id FROM player_login_record GROUP BY player_id) AS t'),
@@ -432,27 +440,24 @@ class PlayerController
                         return '-';
                     }
 
-                    // 计算打码进度
-                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    // 计算打码进度（使用当前周期内打码量，非累计总打码量）
+                    $periodBetAmount = floatval($data['period_bet_amount'] ?? 0);
                     $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
                     $nextUpgradeBet = floatval($data['next_upgrade_bet_amount'] ?? 0);
 
                     // 计算进度百分比
                     $progress = 0;
                     $progressText = '';
-                    if ($nextUpgradeBet > 0 && $currentUpgradeBet > 0) {
-                        // 进度 = (当前打码量 - 当前等级要求) / (下一等级要求 - 当前等级要求) * 100
-                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
-                        if ($betDiff > 0) {
-                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
-                        }
-                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
-                    } elseif ($nextUpgradeBet == 0 && $currentUpgradeBet > 0) {
+                    if ($currentUpgradeBet > 0) {
+                        // 进度 = 周期内打码量 / 当前等级升级要求 * 100
+                        $progress = min(100, max(0, ($periodBetAmount / $currentUpgradeBet) * 100));
+                        $progressText = number_format($periodBetAmount, 0) . ' / ' . number_format($currentUpgradeBet, 0);
+                    } elseif ($nextUpgradeBet > 0) {
+                        $progressText = number_format($periodBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    } else {
                         // 已是最高等级
                         $progress = 100;
                         $progressText = admin_trans('player.vip_max_level');
-                    } else {
-                        $progressText = number_format($totalBetAmount, 0);
                     }
 
                     // 构建显示内容
@@ -463,8 +468,8 @@ class PlayerController
                         ]),
                     ];
 
-                    // 添加进度条（如果不是最高等级）
-                    if ($nextUpgradeBet > 0) {
+                    // 添加进度条（有升级要求时显示）
+                    if ($currentUpgradeBet > 0) {
                         $content[] = \ExAdmin\ui\component\feedback\Progress::create()
                             ->percent(round($progress, 1))
                             ->showInfo(false)

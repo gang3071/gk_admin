@@ -67,7 +67,7 @@
           </a-row>
           <a-row :gutter="8">
             <a-col :span="12">
-              <a-button block @click="queryStatus" :disabled="!isConnected">查询状态</a-button>
+              <a-button block @click="restartPrinter" :disabled="!isConnected">重启打印机</a-button>
             </a-col>
             <a-col :span="12">
               <a-button danger block @click="resetMachine" :disabled="!isConnected">复位</a-button>
@@ -716,10 +716,11 @@ export default {
       this.addLog(r ? 'success' : 'error', r ? '序列号已设置: ' + no : '设置失败');
     },
 
-    // 查询状态
-    async queryStatus() {
-      const r = await this.sendCommand(0x01, 0x02);
-      this.addLog(r ? 'info' : 'error', r ? '状态查询已发送' : '查询失败');
+    // 重启打印机
+    async restartPrinter() {
+      this.addLog('info', '正在重启打印机...');
+      const r = await this.sendCommand(0x01, 0x0A, [], false);
+      this.addLog(r ? 'success' : 'error', r ? '重启指令已发送' : '重启失败');
     },
 
     // 复位

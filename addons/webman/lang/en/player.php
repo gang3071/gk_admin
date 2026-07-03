@@ -75,6 +75,7 @@ return [
         'player_source' => 'Player Source',
         'player_source_online' => 'Online',
         'player_source_offline' => 'Offline',
+        'vip_max_level' => 'Max Level Reached',
         'agent_admin_id' => 'Agent',
         'store_admin_id' => 'Store',
     ],

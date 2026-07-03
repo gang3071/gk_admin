@@ -74,6 +74,7 @@ return [
         'player_source' => '玩家來源',
         'player_source_online' => '線上',
         'player_source_offline' => '線下',
+        'vip_max_level' => '已達最高等級',
         'agent_admin_id' => '所屬代理商',
         'store_admin_id' => '所屬店家',
     ],

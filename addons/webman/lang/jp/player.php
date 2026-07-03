@@ -74,6 +74,7 @@ return [
         'player_source' => 'プレイヤーソース',
         'player_source_online' => 'オンライン',
         'player_source_offline' => 'オフライン',
+        'vip_max_level' => '最高レベルに達しました',
         'agent_admin_id' => '所属エージェント',
         'store_admin_id' => '所属店舗',
     ],

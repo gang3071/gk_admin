@@ -126,9 +126,17 @@ class StorePlayerController
                 'vip_level.name as vip_level_name',
                 'vip_level.sort as vip_level_sort',
                 'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
+                'vip_retain_period.period_bet_amount as period_bet_amount',
             ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
+            // LEFT JOIN 保级周期（获取当前周期内打码量）
+            ->leftJoin('player_vip_period as vip_retain_period', function ($join) {
+                $join->on('player.id', '=', 'vip_retain_period.player_id')
+                    ->on('player.vip_level_id', '=', 'vip_retain_period.vip_level_id')
+                    ->where('vip_retain_period.period_type', '=', 'retain')
+                    ->where('vip_retain_period.status', '=', 1);
+            })
             ->orderBy('player.id', 'desc')
             ->get()
             ->toArray();
@@ -430,23 +438,22 @@ class StorePlayerController
                     }
                     $nextLevel = $channelVipLevels->where('sort', '>', $currentSort)->first();
 
-                    $totalBetAmount = floatval($data['total_bet_amount'] ?? 0);
+                    // 计算打码进度（使用当前周期内打码量，非累计总打码量）
+                    $periodBetAmount = floatval($data['period_bet_amount'] ?? 0);
                     $currentUpgradeBet = floatval($data['current_upgrade_bet_amount'] ?? 0);
-                    $nextUpgradeBet = $nextLevel ? floatval($nextLevel->upgrade_bet_amount) : 0;
 
                     $progress = 0;
                     $progressText = '';
-                    if ($nextUpgradeBet > 0 && $currentUpgradeBet >= 0) {
-                        $betDiff = $nextUpgradeBet - $currentUpgradeBet;
-                        if ($betDiff > 0) {
-                            $progress = min(100, max(0, (($totalBetAmount - $currentUpgradeBet) / $betDiff) * 100));
-                        }
-                        $progressText = number_format($totalBetAmount, 0) . ' / ' . number_format($nextUpgradeBet, 0);
+                    if ($currentUpgradeBet > 0) {
+                        // 进度 = 周期内打码量 / 当前等级升级要求 * 100
+                        $progress = min(100, max(0, ($periodBetAmount / $currentUpgradeBet) * 100));
+                        $progressText = number_format($periodBetAmount, 0) . ' / ' . number_format($currentUpgradeBet, 0);
                     } elseif (!$nextLevel) {
+                        // 已是最高等级
                         $progress = 100;
                         $progressText = admin_trans('player.vip_max_level');
                     } else {
-                        $progressText = number_format($totalBetAmount, 0);
+                        $progressText = number_format($periodBetAmount, 0);
                     }
 
                     $content = [
@@ -456,7 +463,7 @@ class StorePlayerController
                         ]),
                     ];
 
-                    if ($nextLevel) {
+                    if ($currentUpgradeBet > 0) {
                         $content[] = \ExAdmin\ui\component\feedback\Progress::create()
                             ->percent(round($progress, 1))
                             ->showInfo(false)
