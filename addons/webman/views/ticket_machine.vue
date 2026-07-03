@@ -2,15 +2,15 @@
   <div style="padding: 16px; display: flex; justify-content: center;">
     <div style="width: 100%; max-width: 800px;">
     <!-- 连接配置 -->
-    <a-card title="连接配置" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #409EFF'}">
+    <a-card :title="labels.config_title || '连接配置'" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #409EFF'}">
       <a-row :gutter="16">
         <a-col :span="16">
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 6px;">串口路径</div>
+            <div style="font-weight: 500; margin-bottom: 6px;">{{ labels.field_port || '串口路径' }}</div>
             <div style="display: flex; gap: 8px;">
               <a-select
                 v-model:value="config.port"
-                placeholder="选择串口"
+                :placeholder="labels.select_port || '选择串口'"
                 style="flex: 1;"
                 :loading="portsLoading"
                 @dropdownVisibleChange="handlePortDropdown"
@@ -20,11 +20,11 @@
                   {{ port.path }}
                 </a-select-option>
               </a-select>
-              <a-button @click="addNewPort" style="flex-shrink: 0;">添加串口</a-button>
+              <a-button @click="addNewPort" style="flex-shrink: 0;">{{ labels.add_port || '添加串口' }}</a-button>
             </div>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 6px;">波特率</div>
+            <div style="font-weight: 500; margin-bottom: 6px;">{{ labels.field_baud_rate || '波特率' }}</div>
             <a-select v-model:value="config.baudRate" style="width: 100%;">
               <a-select-option value="9600">9600</a-select-option>
               <a-select-option value="19200">19200</a-select-option>
@@ -37,11 +37,11 @@
         <a-col :span="8">
           <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px;">
             <a-tag :color="isConnected ? 'success' : 'error'" style="padding: 6px 24px; font-size: 16px; margin: 0;">
-              {{ isConnected ? '✓ 已连接' : '✗ 未连接' }}
+              {{ isConnected ? '✓ ' + (labels.status_connected || '已连接') : '✗ ' + (labels.status_disconnected || '未连接') }}
             </a-tag>
             <div style="display: flex; gap: 12px;">
-              <a-button type="primary" @click="connect" :disabled="isConnected" style="min-width: 90px;">连接</a-button>
-              <a-button danger @click="disconnect" :disabled="!isConnected" style="min-width: 90px;">断开</a-button>
+              <a-button type="primary" @click="connect" :disabled="isConnected" style="min-width: 90px;">{{ labels.connect || '连接' }}</a-button>
+              <a-button danger @click="disconnect" :disabled="!isConnected" style="min-width: 90px;">{{ labels.disconnect || '断开' }}</a-button>
             </div>
           </div>
         </a-col>
@@ -51,45 +51,45 @@
     <!-- 设备操作 + QR码打印 -->
     <a-row :gutter="16" style="margin-bottom: 16px;">
       <a-col :span="12">
-        <a-card title="设备操作" size="small" :headStyle="{borderBottom: '2px solid #E6A23C'}">
+        <a-card :title="labels.device_ops_title || '设备操作'" size="small" :headStyle="{borderBottom: '2px solid #E6A23C'}">
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">打印序列号</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_serial_no || '打印序列号' }}</div>
             <a-input-number v-model:value="config.serialNo" :min="0" :max="9999999" placeholder="0-9999999" style="width: 100%;" />
           </div>
-          <a-button block @click="setSerialNo" style="margin-bottom: 16px;" :disabled="!isConnected">设置序列号</a-button>
+          <a-button block @click="setSerialNo" style="margin-bottom: 16px;" :disabled="!isConnected">{{ labels.set_serial_no || '设置序列号' }}</a-button>
           <a-row :gutter="8" style="margin-bottom: 8px;">
             <a-col :span="12">
-              <a-button block @click="syncDatetime" :disabled="!isConnected">同步时间</a-button>
+              <a-button block @click="syncDatetime" :disabled="!isConnected">{{ labels.sync_datetime || '同步时间' }}</a-button>
             </a-col>
             <a-col :span="12">
-              <a-button block @click="sendHeartbeat" :disabled="!isConnected">心跳</a-button>
+              <a-button block @click="sendHeartbeat" :disabled="!isConnected">{{ labels.heartbeat || '心跳' }}</a-button>
             </a-col>
           </a-row>
           <a-row :gutter="8">
             <a-col :span="12">
-              <a-button block @click="restartPrinter" :disabled="!isConnected">重启打印机</a-button>
+              <a-button block @click="restartPrinter" :disabled="!isConnected">{{ labels.restart_printer || '重启打印机' }}</a-button>
             </a-col>
             <a-col :span="12">
-              <a-button danger block @click="resetMachine" :disabled="!isConnected">复位</a-button>
+              <a-button danger block @click="resetMachine" :disabled="!isConnected">{{ labels.reset || '复位' }}</a-button>
             </a-col>
           </a-row>
         </a-card>
       </a-col>
       <a-col :span="12">
-        <a-card title="QR码打印" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
+        <a-card :title="labels.qr_print || 'QR码打印'" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">票据类型</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.ticket_type || '票据类型' }}</div>
             <a-select v-model:value="ticketType" style="width: 100%;">
-              <a-select-option :value="1">开分</a-select-option>
-              <a-select-option :value="2">洗分</a-select-option>
+              <a-select-option :value="1">{{ labels.type_recharge || '开分' }}</a-select-option>
+              <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">关联玩家（可选）</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.select_player || '关联玩家（可选）' }}</div>
             <a-select
               v-model:value="selectedPlayerId"
               show-search
-              placeholder="选择或搜索玩家"
+              :placeholder="labels.search_player || '选择或搜索玩家'"
               :filter-option="filterPlayerOption"
               :options="playerOptions"
               :loading="playerSearching"
@@ -102,10 +102,10 @@
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">分数/金额</div>
-            <a-input-number v-model:value="ticketScore" :min="0" placeholder="分数/金额" style="width: 100%;" />
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_score || '分数/金额' }}</div>
+            <a-input-number v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分数/金额'" style="width: 100%;" />
           </div>
-          <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">发送QR码</a-button>
+          <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">{{ labels.send_qr || '发送QR码' }}</a-button>
         </a-card>
       </a-col>
     </a-row>
@@ -684,10 +684,10 @@ export default {
 
       const data = [year, month, day, hours, minutes, seconds];
 
-      this.addLog('info', `北京时间: 20${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`);
+      this.addLog('info', `20${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')} ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`);
 
       const r = await this.sendCommand(0x01, 0x02, data);
-      this.addLog(r ? 'success' : 'error', r ? '日期时间已同步' : '同步失败');
+      this.addLog(r ? 'success' : 'error', r ? this.t('time_sync_success') : this.t('time_sync_failed'));
       return !!r;
     },
 
@@ -1001,8 +1001,8 @@ export default {
   mounted() {
     this.addLog('info', '========================================');
     this.addLog('info', this.t('init_complete'));
-    this.addLog('info', '使用 Web Serial API 直接访问串口');
-    this.addLog('info', '请使用 Chrome/Edge 浏览器');
+    this.addLog('info', this.labels.using_web_serial || '使用 Web Serial API 直接访问串口');
+    this.addLog('info', this.labels.use_chrome_edge || '请使用 Chrome/Edge 浏览器');
     this.addLog('info', '========================================');
 
     // 加载串口列表

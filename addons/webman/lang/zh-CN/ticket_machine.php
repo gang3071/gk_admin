@@ -24,6 +24,33 @@ return [
         'error_msg' => '打印机异常，请检查设备状态',
     ],
 
+    // UI 模板标签
+    'ui' => [
+        'config_title' => '连接配置',
+        'select_port' => '选择串口',
+        'add_port' => '添加串口',
+        'status_connected' => '已连接',
+        'status_disconnected' => '未连接',
+        'connect' => '连接',
+        'disconnect' => '断开',
+        'device_ops_title' => '设备操作',
+        'set_serial_no' => '设置序列号',
+        'sync_datetime' => '同步时间',
+        'heartbeat' => '心跳',
+        'restart_printer' => '重启打印机',
+        'reset' => '复位',
+        'qr_print' => 'QR码打印',
+        'ticket_type' => '票据类型',
+        'type_recharge' => '开分',
+        'type_withdraw' => '洗分',
+        'select_player' => '关联玩家（可选）',
+        'search_player' => '选择或搜索玩家',
+        'field_score' => '分数/金额',
+        'send_qr' => '发送QR码',
+        'using_web_serial' => '使用 Web Serial API 直接访问串口',
+        'use_chrome_edge' => '请使用 Chrome/Edge 浏览器',
+    ],
+
     // 操作按钮
     'action' => [
         'connect' => '连接出票机',

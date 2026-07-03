@@ -24,6 +24,33 @@ return [
         'error_msg' => 'プリンターエラー。デバイスの状態を確認してください',
     ],
 
+    // UIテンプレートラベル
+    'ui' => [
+        'config_title' => '接続設定',
+        'select_port' => 'ポート選択',
+        'add_port' => 'ポート追加',
+        'status_connected' => '接続済み',
+        'status_disconnected' => '未接続',
+        'connect' => '接続',
+        'disconnect' => '切断',
+        'device_ops_title' => 'デバイス操作',
+        'set_serial_no' => 'シリアル番号設定',
+        'sync_datetime' => '時刻同期',
+        'heartbeat' => 'ハートビート',
+        'restart_printer' => 'プリンター再起動',
+        'reset' => 'リセット',
+        'qr_print' => 'QRコード印刷',
+        'ticket_type' => 'チケットタイプ',
+        'type_recharge' => 'チャージ',
+        'type_withdraw' => '出金',
+        'select_player' => 'プレイヤー関連付け（任意）',
+        'search_player' => 'プレイヤーを選択または検索',
+        'field_score' => 'スコア/金額',
+        'send_qr' => 'QRコード送信',
+        'using_web_serial' => 'Web Serial APIでシリアルポートに直接アクセス',
+        'use_chrome_edge' => 'Chrome/Edgeブラウザをご使用ください',
+    ],
+
     // 操作ボタン
     'action' => [
         'connect' => '接続',

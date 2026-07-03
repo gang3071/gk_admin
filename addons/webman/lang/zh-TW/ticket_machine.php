@@ -24,6 +24,33 @@ return [
         'error_msg' => '印表機異常，請檢查設備狀態',
     ],
 
+    // UI 模板標籤
+    'ui' => [
+        'config_title' => '連接配置',
+        'select_port' => '選擇串口',
+        'add_port' => '添加串口',
+        'status_connected' => '已連接',
+        'status_disconnected' => '未連接',
+        'connect' => '連接',
+        'disconnect' => '斷開',
+        'device_ops_title' => '設備操作',
+        'set_serial_no' => '設置序列號',
+        'sync_datetime' => '同步時間',
+        'heartbeat' => '心跳',
+        'restart_printer' => '重啟印表機',
+        'reset' => '復位',
+        'qr_print' => 'QR碼列印',
+        'ticket_type' => '票據類型',
+        'type_recharge' => '開分',
+        'type_withdraw' => '洗分',
+        'select_player' => '關聯玩家（可選）',
+        'search_player' => '選擇或搜索玩家',
+        'field_score' => '分數/金額',
+        'send_qr' => '發送QR碼',
+        'using_web_serial' => '使用 Web Serial API 直接訪問串口',
+        'use_chrome_edge' => '請使用 Chrome/Edge 瀏覽器',
+    ],
+
     // 操作按鈕
     'action' => [
         'connect' => '連接出票機',

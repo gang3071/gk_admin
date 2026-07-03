@@ -24,6 +24,33 @@ return [
         'error_msg' => 'Printer error, please check device status',
     ],
 
+    // UI template labels
+    'ui' => [
+        'config_title' => 'Connection Config',
+        'select_port' => 'Select Port',
+        'add_port' => 'Add Port',
+        'status_connected' => 'Connected',
+        'status_disconnected' => 'Disconnected',
+        'connect' => 'Connect',
+        'disconnect' => 'Disconnect',
+        'device_ops_title' => 'Device Operations',
+        'set_serial_no' => 'Set Serial No.',
+        'sync_datetime' => 'Sync Time',
+        'heartbeat' => 'Heartbeat',
+        'restart_printer' => 'Restart Printer',
+        'reset' => 'Reset',
+        'qr_print' => 'QR Code Print',
+        'ticket_type' => 'Ticket Type',
+        'type_recharge' => 'Recharge',
+        'type_withdraw' => 'Withdraw',
+        'select_player' => 'Link Player (Optional)',
+        'search_player' => 'Select or search player',
+        'field_score' => 'Score/Amount',
+        'send_qr' => 'Send QR Code',
+        'using_web_serial' => 'Using Web Serial API for direct port access',
+        'use_chrome_edge' => 'Please use Chrome/Edge browser',
+    ],
+
     // Action buttons
     'action' => [
         'connect' => 'Connect',

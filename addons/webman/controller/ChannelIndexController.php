@@ -3590,6 +3590,23 @@ class ChannelIndexController
             $logLabels[$key] = admin_trans('ticket_machine.log.' . $key);
         }
 
+        // 收集UI模板翻译
+        $uiKeys = [
+            'config_title', 'select_port', 'add_port', 'status_connected', 'status_disconnected',
+            'connect', 'disconnect', 'device_ops_title', 'set_serial_no', 'sync_datetime',
+            'heartbeat', 'restart_printer', 'reset', 'qr_print', 'ticket_type',
+            'type_recharge', 'type_withdraw', 'select_player', 'search_player',
+            'field_score', 'send_qr', 'using_web_serial', 'use_chrome_edge',
+        ];
+        foreach ($uiKeys as $key) {
+            $logLabels[$key] = admin_trans('ticket_machine.ui.' . $key);
+        }
+
+        // 补充 field 标签
+        $logLabels['field_port'] = admin_trans('ticket_machine.field.port');
+        $logLabels['field_baud_rate'] = admin_trans('ticket_machine.field.baud_rate');
+        $logLabels['field_serial_no'] = admin_trans('ticket_machine.field.serial_no');
+
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
