@@ -51,6 +51,7 @@ class ChannelPlayerReportController
         $size = Request::input('ex_admin_size', '20');
         $baseQuery = Player::query()->withTrashed();
         $playGameRecordBaseQuery = PlayGameRecord::query()
+            ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
             ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                         [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                 $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');

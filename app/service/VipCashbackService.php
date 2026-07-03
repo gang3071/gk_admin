@@ -199,6 +199,7 @@ class VipCashbackService
         $query = PlayGameRecord::query()
             ->whereNull($table . '.vip_level_id')
             ->where($table . '.bet', '>', 0)
+            ->where($table . '.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只处理已结算记录
             ->join('player', $table . '.player_id', '=', 'player.id')
 //            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
             ->select($table . '.*');

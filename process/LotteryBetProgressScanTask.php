@@ -228,7 +228,7 @@ class LotteryBetProgressScanTask
                   AND created_at >= ?
                   AND created_at < ?
                   AND bet > 0
-                  AND settlement_status < 2
+                  AND settlement_status = 1
                 GROUP BY player_id
             ";
 
