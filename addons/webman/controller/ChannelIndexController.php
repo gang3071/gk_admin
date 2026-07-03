@@ -3564,6 +3564,32 @@ class ChannelIndexController
         // 生成16位唯一ID（基于store_id，前缀S，后面补零）
         $storeUid = 'S' . str_pad((string)($store->id ?? 0), 15, '0', STR_PAD_LEFT);
 
+        // 收集所有翻译
+        $logLabels = [];
+        $logKeys = [
+            'port_not_connected', 'browser_not_supported', 'no_port_selected', 'port_not_found',
+            'opening_port', 'baud_rate', 'port_opened', 'current_signal', 'dtr_set', 'signal_failed',
+            'heartbeat_testing', 'device_ok', 'device_no_response', 'device_check_1', 'device_check_2', 'device_check_3',
+            'heartbeat_started', 'disconnecting', 'disconnected', 'read_loop_started', 'read_loop_exited', 'read_error',
+            'no_authorized_port', 'get_port_list_failed', 'add_port_failed', 'user_cancelled', 'connect_failed',
+            'send_cmd', 'data_written', 'send_failed', 'response_timeout', 'response_match', 'response_mismatch', 'expected_response',
+            'auto_init', 'auto_sync_time', 'time_sync_success', 'time_sync_failed',
+            'setting_uid', 'send_uid_data', 'uid_set_success', 'uid_set_failed', 'uid_empty',
+            'setting_serial', 'send_serial_data', 'serial_set_success', 'serial_set_failed',
+            'setting_store_name', 'gbk_encoding', 'gbk_failed', 'send_store_name',
+            'store_name_set_success', 'store_name_set_failed', 'store_name_empty', 'init_complete',
+            'valid_score_required', 'heartbeat_paused', 'save_url_not_configured', 'saving_data',
+            'ticket_saved', 'ticket_save_failed', 'ticket_save_exception',
+            'checking_paper', 'paper_ok', 'paper_query_no_response', 'order_id_not_found',
+            'setting_uid_for_qr', 'setting_serial_for_qr', 'send_lottery_data', 'lottery_sent',
+            'qr_sent', 'heartbeat_restarted', 'restart_printer', 'restart_sent', 'restart_failed',
+            'invalid_hex', 'hex_sent', 'load_players_failed',
+            'heartbeat_failed', 'machine_no_set', 'reset_sent',
+        ];
+        foreach ($logKeys as $key) {
+            $logLabels[$key] = admin_trans('ticket_machine.log.' . $key);
+        }
+
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
@@ -3571,6 +3597,14 @@ class ChannelIndexController
             'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
             'store_admin_id' => $store->id ?? 0,
             'department_id' => $store->department_id ?? 0,
+            'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
+            'paper_jam_msg' => admin_trans('ticket_machine.paper.jam_msg'),
+            'paper_error_msg' => admin_trans('ticket_machine.paper.error_msg'),
+            'labels' => $logLabels,
+            'log_title' => admin_trans('ticket_machine.log.title'),
+            'log_clear' => admin_trans('ticket_machine.log.clear'),
+            'log_expand' => admin_trans('ticket_machine.log.expand'),
+            'log_collapse' => admin_trans('ticket_machine.log.collapse'),
         ]);
     }
 
