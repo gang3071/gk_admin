@@ -3658,6 +3658,17 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => 'QR码内容不能为空']);
             }
 
+            // 验证必填参数
+            if ($score <= 0) {
+                return json(['code' => 400, 'message' => '分数/金额必须大于0']);
+            }
+            if (empty($storeAdminId)) {
+                return json(['code' => 400, 'message' => '店家管理员ID不能为空']);
+            }
+            if (empty($departmentId)) {
+                return json(['code' => 400, 'message' => '部门ID不能为空']);
+            }
+
             $orderId = \addons\webman\model\TicketRecord::generateOrderId();
             $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
 

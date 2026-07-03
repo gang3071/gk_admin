@@ -755,7 +755,37 @@ export default {
         this.addLog('info', '心跳已暂停');
       }
 
-      // 先保存到数据库，获取 order_id
+      // 先检测纸张状态（在入库之前）
+      this.addLog('info', '检测纸张状态...');
+      const paperStatus = await this.sendCommand(0x01, 0x09, [0x00]);
+      if (paperStatus && paperStatus.data && paperStatus.data.length > 0) {
+        const paperCode = paperStatus.data[0];
+        // 0x00=正常, 0x01=缺纸, 0x02=卡纸, 0x03=其他错误
+        if (paperCode === 0x01) {
+          this.addLog('error', '打印纸不足，请添加纸张后重试');
+          this.heartbeatTimer = setInterval(async () => {
+            await this.sendCommand(0x01, 0x01, [], true, true);
+          }, 10000);
+          return;
+        } else if (paperCode === 0x02) {
+          this.addLog('error', '打印机卡纸，请处理后重试');
+          this.heartbeatTimer = setInterval(async () => {
+            await this.sendCommand(0x01, 0x01, [], true, true);
+          }, 10000);
+          return;
+        } else if (paperCode === 0x03) {
+          this.addLog('error', '打印机异常，请检查设备');
+          this.heartbeatTimer = setInterval(async () => {
+            await this.sendCommand(0x01, 0x01, [], true, true);
+          }, 10000);
+          return;
+        }
+        this.addLog('success', '纸张状态正常');
+      } else {
+        this.addLog('warn', '纸张状态查询无响应，继续打印');
+      }
+
+      // 纸张正常，保存到数据库获取 order_id
       if (!this.save_ticket_url) {
         this.addLog('error', '保存地址未配置');
         return;
