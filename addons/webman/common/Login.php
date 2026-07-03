@@ -678,26 +678,46 @@ class Login extends LoginAbstract
                         $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
                     });
                 }
-                $totalData = $query->selectRaw('sum(bet) as all_bet, sum(diff) as all_diff, sum(reward) as all_reward')->first();
+
+                // ✅ 分状态统计
+                $settledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
+                    ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, sum(reward) as total_reward, count(*) as count')->first();
+                $unsettledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
+                    ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+                $cancelledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                    ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+
                 $data = [
                     [
-                        'title' => admin_trans('play_game_record.all_bet'),
-                        'number' => !empty($totalData['all_bet']) ? floatval($totalData['all_bet']) : 0,
+                        'title' => '已结算投注',
+                        'number' => !empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0,
+                        'prefix' => '',
+                        'suffix' => '(' . ($settledData['count'] ?? 0) . '笔)'
+                    ],
+                    [
+                        'title' => '已结算盈亏',
+                        'number' => !empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0,
                         'prefix' => '',
                         'suffix' => ''
                     ],
                     [
-                        'title' => admin_trans('play_game_record.all_diff'),
-                        'number' => !empty($totalData['all_diff']) ? floatval($totalData['all_diff']) : 0,
+                        'title' => '已结算奖励',
+                        'number' => !empty($settledData['total_reward']) ? floatval($settledData['total_reward']) : 0,
                         'prefix' => '',
                         'suffix' => ''
                     ],
                     [
-                        'title' => admin_trans('play_game_record.all_reward'),
-                        'number' => !empty($totalData['all_reward']) ? floatval($totalData['all_reward']) : 0,
+                        'title' => '未结算投注',
+                        'number' => !empty($unsettledData['total_bet']) ? floatval($unsettledData['total_bet']) : 0,
                         'prefix' => '',
-                        'suffix' => ''
+                        'suffix' => '(' . ($unsettledData['count'] ?? 0) . '笔)'
                     ],
+                    [
+                        'title' => '已取消投注',
+                        'number' => !empty($cancelledData['total_bet']) ? floatval($cancelledData['total_bet']) : 0,
+                        'prefix' => '',
+                        'suffix' => '(' . ($cancelledData['count'] ?? 0) . '笔)'
+                    ]
                 ];
                 break;
             case 'MachineReport':

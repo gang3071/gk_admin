@@ -16,6 +16,7 @@ return [
         'reward' => 'ボーナス（勝ち点は計上しない）',
         'order_no' => '単号（ゲームプラットフォーム）',
         'status' => '状態',
+        'settlement_status' => '決済状態',
         'platform_action_at' => '決済時間（ゲームプラットフォーム）',
         'action_at' => '決済時間',
         'create_at' => '作成時間',
@@ -23,6 +24,12 @@ return [
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分潤',
         PlayGameRecord::STATUS_SETTLED => '分潤済み',
+    ],
+    'settlement_status' => [
+        PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED => '未決済',
+        PlayGameRecord::SETTLEMENT_STATUS_SETTLED => '決済済み',
+        PlayGameRecord::SETTLEMENT_STATUS_CANCELLED => 'キャンセル済み',
+        PlayGameRecord::SETTLEMENT_STATUS_CONFIRM => '確認',
     ],
     'all_bet' => '総注釈',
     'all_diff' => '総勝ち負け',

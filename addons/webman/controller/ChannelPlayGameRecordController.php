@@ -42,6 +42,11 @@ class ChannelPlayGameRecordController
                 'desc');
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
+            // ✅ 添加结算状态筛选
+            if (isset($exAdminFilter['settlement_status']) && $exAdminFilter['settlement_status'] !== '') {
+                $grid->model()->where('settlement_status', $exAdminFilter['settlement_status']);
+            }
+
             /** @var \addons\webman\model\AdminUser $admin */
             $admin = Admin::user();
             if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
@@ -165,6 +170,23 @@ class ChannelPlayGameRecordController
             $grid->column('reward', admin_trans('play_game_record.fields.reward'))->display(function ($val) {
                 return Html::create()->content(['+' . $val])->style(['color' => 'green']);
             })->align('center');
+
+            // ✅ 添加结算状态显示列
+            $grid->column('settlement_status', admin_trans('play_game_record.fields.settlement_status'))->display(function ($val) {
+                switch ($val) {
+                    case PlayGameRecord::SETTLEMENT_STATUS_SETTLED:
+                        return Tag::create(admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_SETTLED))->color('success');
+                    case PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED:
+                        return Tag::create(admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED))->color('warning');
+                    case PlayGameRecord::SETTLEMENT_STATUS_CANCELLED:
+                        return Tag::create(admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_CANCELLED))->color('default');
+                    case PlayGameRecord::SETTLEMENT_STATUS_CONFIRM:
+                        return Tag::create(admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_CONFIRM))->color('processing');
+                    default:
+                        return Tag::create(admin_trans('common.unknown'))->color('error');
+                }
+            })->align('center');
+
             $grid->column('platform_action_at', admin_trans('play_game_record.fields.platform_action_at'))->display(function ($val, PlayGameRecord $data) {
                 if($data->platform_id == 31){
                     $val = date('Y-m-d H:i:s', strtotime($data->platform_action_at));
@@ -197,14 +219,18 @@ class ChannelPlayGameRecordController
                 $filter->like()->text('player_phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('order_no')->placeholder(admin_trans('play_game_record.fields.order_no'));
                 $filter->like()->text('game_code')->placeholder(admin_trans('play_game_record.fields.game_code'));
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('admin.fields.status'))
+
+                // ✅ 修改为结算状态筛选
+                $filter->eq()->select('settlement_status')
+                    ->placeholder(admin_trans('play_game_record.fields.settlement_status'))
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        PlayGameRecord::STATUS_UNSETTLED => admin_trans('play_game_record.status.' . PlayGameRecord::STATUS_UNSETTLED),
-                        PlayGameRecord::STATUS_SETTLED => admin_trans('play_game_record.status.' . PlayGameRecord::STATUS_SETTLED)
+                        PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED => admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED),
+                        PlayGameRecord::SETTLEMENT_STATUS_SETTLED => admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_SETTLED),
+                        PlayGameRecord::SETTLEMENT_STATUS_CANCELLED => admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_CANCELLED),
+                        PlayGameRecord::SETTLEMENT_STATUS_CONFIRM => admin_trans('play_game_record.settlement_status.' . PlayGameRecord::SETTLEMENT_STATUS_CONFIRM)
                     ]);
                 $filter->select('search_type')
                     ->showSearch()

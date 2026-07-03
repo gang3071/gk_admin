@@ -2530,9 +2530,15 @@ class PlayerController
     {
         return Grid::create(new $this->playGameRecord(), function (Grid $grid) use ($id) {
             $grid->title(admin_trans('play_game_record.title'));
-            $grid->model()->where('player_id',
-                $id);
+            $grid->model()->where('player_id', $id);
+
             $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            // ✅ 添加结算状态筛选
+            if (isset($exAdminFilter['settlement_status']) && $exAdminFilter['settlement_status'] !== '') {
+                $grid->model()->where('settlement_status', $exAdminFilter['settlement_status']);
+            }
+
             if (!empty($exAdminFilter['created_at_start'])) {
                 $grid->model()->whereDate('created_at', '>=', $exAdminFilter['created_at_start']);
             }
@@ -2552,35 +2558,73 @@ class PlayerController
                 $grid->model()->where('order_no', $exAdminFilter['order_no']);
             }
 
-            $query = clone $grid->model();
-            $totalData = $query->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff')->first();
+            // ✅ 分状态统计
+            $baseQuery = PlayGameRecord::query()->where('player_id', $id);
+            if (!empty($exAdminFilter['created_at_start'])) {
+                $baseQuery->whereDate('created_at', '>=', $exAdminFilter['created_at_start']);
+            }
+            if (!empty($exAdminFilter['created_at_end'])) {
+                $baseQuery->whereDate('created_at', '<=', $exAdminFilter['created_at_end']);
+            }
+            if (!empty($exAdminFilter['platform_id'])) {
+                $baseQuery->where('platform_id', $exAdminFilter['platform_id']);
+            }
+
+            $settledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
+                ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, count(*) as count')->first();
+            $unsettledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED)
+                ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
+            $cancelledData = (clone $baseQuery)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
+                ->selectRaw('sum(bet) as total_bet, count(*) as count')->first();
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($totalData) {
+            $layout->row(function (Row $row) use ($settledData, $unsettledData, $cancelledData) {
                 $row->gutter([10, 0]);
+
+                // 已结算统计
                 $row->column(
                     Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('play_game_record.all_bet'))->value(!empty($totalData['total_bet']) ? floatval($totalData['total_bet']) : 0)->style([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
+                        Row::create()->column(Statistic::create()
+                            ->title('已结算投注')
+                            ->value(!empty($settledData['total_bet']) ? floatval($settledData['total_bet']) : 0)
+                            ->suffix('(' . ($settledData['count'] ?? 0) . '笔)')
+                            ->valueStyle(['color' => '#3f8600'])
+                            ->style(['font-size' => '14px', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+
                 $row->column(
                     Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('play_game_record.all_diff'))->value(!empty($totalData['total_diff']) ? floatval($totalData['total_diff']) : 0)->style([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
+                        Row::create()->column(Statistic::create()
+                            ->title('已结算盈亏')
+                            ->value(!empty($settledData['total_diff']) ? floatval($settledData['total_diff']) : 0)
+                            ->valueStyle(['color' => floatval($settledData['total_diff'] ?? 0) > 0 ? '#3f8600' : '#cf1322'])
+                            ->style(['font-size' => '14px', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+
+                // 未结算统计
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->title('未结算投注')
+                            ->value(!empty($unsettledData['total_bet']) ? floatval($unsettledData['total_bet']) : 0)
+                            ->suffix('(' . ($unsettledData['count'] ?? 0) . '笔)')
+                            ->valueStyle(['color' => '#faad14'])
+                            ->style(['font-size' => '14px', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+
+                // 已取消统计
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->title('已取消投注')
+                            ->value(!empty($cancelledData['total_bet']) ? floatval($cancelledData['total_bet']) : 0)
+                            ->suffix('(' . ($cancelledData['count'] ?? 0) . '笔)')
+                            ->valueStyle(['color' => '#8c8c8c'])
+                            ->style(['font-size' => '14px', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
             })->style(['background' => '#fff']);
             $grid->header($layout);
             $grid->autoHeight();
@@ -2629,20 +2673,41 @@ class PlayerController
             $grid->column('reward', admin_trans('play_game_record.fields.reward'))->display(function ($val) {
                 return Html::create()->content(['+' . (float)$val])->style(['color' => 'green']);
             })->align('center');
+
+            // ✅ 添加结算状态显示列
+            $grid->column('settlement_status', '结算状态')->display(function ($val) {
+                switch ($val) {
+                    case PlayGameRecord::SETTLEMENT_STATUS_SETTLED:
+                        return Tag::create('已结算')->color('success');
+                    case PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED:
+                        return Tag::create('未结算')->color('warning');
+                    case PlayGameRecord::SETTLEMENT_STATUS_CANCELLED:
+                        return Tag::create('已取消')->color('default');
+                    case PlayGameRecord::SETTLEMENT_STATUS_CONFIRM:
+                        return Tag::create('确认')->color('processing');
+                    default:
+                        return Tag::create('未知')->color('error');
+                }
+            })->align('center');
+
             $grid->column('created_at', admin_trans('play_game_record.fields.create_at'))->align('center')->sortable();
             $grid->column('action_at', admin_trans('play_game_record.fields.action_at'))->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('order_no')->placeholder(admin_trans('play_game_record.fields.order_no'));
                 $filter->like()->text('game_code')->placeholder(admin_trans('play_game_record.fields.game_code'));
-                $filter->eq()->select('status')
-                    ->placeholder(admin_trans('admin.fields.status'))
+
+                // ✅ 修改为结算状态筛选
+                $filter->eq()->select('settlement_status')
+                    ->placeholder('结算状态')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options([
-                        PlayGameRecord::STATUS_UNSETTLED => admin_trans('play_game_record.status.' . PlayGameRecord::STATUS_UNSETTLED),
-                        PlayGameRecord::STATUS_SETTLED => admin_trans('play_game_record.status.' . PlayGameRecord::STATUS_SETTLED)
+                        PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED => '未结算',
+                        PlayGameRecord::SETTLEMENT_STATUS_SETTLED => '已结算',
+                        PlayGameRecord::SETTLEMENT_STATUS_CANCELLED => '已取消',
+                        PlayGameRecord::SETTLEMENT_STATUS_CONFIRM => '确认'
                     ]);
                 $filter->eq()->select('department_id')
                     ->showSearch()

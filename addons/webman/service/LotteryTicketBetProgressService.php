@@ -426,16 +426,13 @@ class LotteryTicketBetProgressService
             ->where('created_at', '<=', $activity->end_time)
             ->sum('chip_amount') ?? 0;
 
-        // 2. 统计电子游戏打码量（未结算 + 已结算，不包括已取消）
+        // 2. 统计电子游戏打码量（只统计已结算，不包括未结算和已取消）
         $onlineBet = PlayGameRecord::query()
             ->where('player_id', $playerId)
             ->where('department_id', $activity->department_id)
             ->where('created_at', '>=', $activity->start_time)
             ->where('created_at', '<=', $activity->end_time)
-            ->whereIn('settlement_status', [
-                PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED,  // 0: 未结算
-                PlayGameRecord::SETTLEMENT_STATUS_SETTLED,    // 1: 已结算
-            ])
+            ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算
             ->sum('bet') ?? 0;
 
         // 3. 返回总打码量

@@ -16,6 +16,7 @@ return [
         'reward' => '奖金(不计入贏取)',
         'order_no' => '单号(游戏平台)',
         'status' => '状态',
+        'settlement_status' => '结算状态',
         'platform_action_at' => '结算时间(游戏平台)',
         'action_at' => '结算时间',
         'create_at' => '创建时间',
@@ -23,6 +24,12 @@ return [
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分润',
         PlayGameRecord::STATUS_SETTLED => '已分润',
+    ],
+    'settlement_status' => [
+        PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED => '未结算',
+        PlayGameRecord::SETTLEMENT_STATUS_SETTLED => '已结算',
+        PlayGameRecord::SETTLEMENT_STATUS_CANCELLED => '已取消',
+        PlayGameRecord::SETTLEMENT_STATUS_CONFIRM => '确认',
     ],
     'all_bet' => '总押注',
     'all_diff' => '总输赢',
