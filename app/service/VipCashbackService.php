@@ -257,7 +257,6 @@ class VipCashbackService
             ->where($table . '.bet', '>', 0)
             ->where($table . '.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只处理已结算记录
             ->join('player', $table . '.player_id', '=', 'player.id')
-            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
             ->select($table . '.*');
 
         // 排除百家平台（用 NOT IN 走索引）
