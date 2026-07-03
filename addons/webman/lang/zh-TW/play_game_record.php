@@ -16,6 +16,7 @@ return [
         'reward' => '獎金（不計入贏取）',
         'order_no' => '單號（遊戲平臺）',
         'status' => '狀態',
+        'settlement_status' => '結算狀態',
         'platform_action_at' => '結算時間（遊戲平臺）',
         'action_at' => '結算時間',
         'create_at' => '創建時間',
@@ -23,6 +24,12 @@ return [
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分潤',
         PlayGameRecord::STATUS_SETTLED => '已分潤',
+    ],
+    'settlement_status' => [
+        PlayGameRecord::SETTLEMENT_STATUS_UNSETTLED => '未結算',
+        PlayGameRecord::SETTLEMENT_STATUS_SETTLED => '已結算',
+        PlayGameRecord::SETTLEMENT_STATUS_CANCELLED => '已取消',
+        PlayGameRecord::SETTLEMENT_STATUS_CONFIRM => '確認',
     ],
     'all_bet' => '總押注',
     'all_diff' => '總輸贏',
