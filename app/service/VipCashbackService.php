@@ -2,6 +2,7 @@
 
 namespace app\service;
 
+use addons\webman\model\GamePlatform;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerVipPeriod;
@@ -107,10 +108,19 @@ class VipCashbackService
             $players = $this->queryPlayers($playerIds);
 
             // 获取默认VIP等级（最低等级）
+            /** @var VipLevel|null $defaultLevel */
             $defaultLevel = VipLevel::query()
                 ->where('status', VipLevel::STATUS_ENABLED)
                 ->orderBy('sort', 'asc')
                 ->first();
+
+            // 批量预加载反水比例（避免 N+1 查询）
+            $platformIds = $records->pluck('platform_id')->unique()->toArray();
+            $vipLevelIds = $players->pluck('vip_level_id')->filter()->unique()->toArray();
+            if ($defaultLevel) {
+                $vipLevelIds[] = $defaultLevel->id;
+            }
+            $cashbackMap = $this->preloadCashbackRatios(array_unique($vipLevelIds), $platformIds);
 
             // 逐条处理
             foreach ($records as $record) {
@@ -144,8 +154,8 @@ class VipCashbackService
                         }
                     }
 
-                    // 计算反水
-                    $cashbackRatio = VipLevelCashback::getCashbackRatio($vipLevelId, $record->platform_id);
+                    // 计算反水（从预加载缓存获取）
+                    $cashbackRatio = $cashbackMap[$vipLevelId][$record->platform_id] ?? 0;
                     $cashbackAmount = VipLevelCashback::calculateCashbackAmount($record->bet, $cashbackRatio);
                     $storageData = VipLevelCashback::formatForStorage($cashbackRatio, $cashbackAmount);
 
@@ -187,21 +197,72 @@ class VipCashbackService
     }
 
     /**
+     * 获取百家平台ID列表（cate_id包含3），带缓存
+     * cate_id 存储格式为 JSON 数组：[3,2,4,5,6,7,8]
+     * @return array
+     */
+    private function getBaccaratPlatformIds(): array
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $cache = GamePlatform::query()
+            ->whereRaw('JSON_CONTAINS(cate_id, CAST(? AS JSON))', [3])
+            ->pluck('id')
+            ->toArray();
+
+        return $cache;
+    }
+
+    /**
+     * 批量预加载反水比例
+     * @param array $vipLevelIds VIP等级ID列表
+     * @param array $platformIds 平台ID列表
+     * @return array [vipLevelId => [platformId => ratio]]
+     */
+    private function preloadCashbackRatios(array $vipLevelIds, array $platformIds): array
+    {
+        if (empty($vipLevelIds) || empty($platformIds)) {
+            return [];
+        }
+
+        $records = VipLevelCashback::query()
+            ->whereIn('vip_level_id', $vipLevelIds)
+            ->whereIn('platform_id', $platformIds)
+            ->where('status', 1)
+            ->get();
+
+        $map = [];
+        foreach ($records as $r) {
+            $map[$r->vip_level_id][$r->platform_id] = $r->cashback_ratio;
+        }
+        return $map;
+    }
+
+    /**
      * 查询已结算但未反水的游戏记录
-     * 关联 player 表过滤：仅查询线上玩家且存在的记录
+     * 过滤条件：线上玩家、排除百家平台（cate_id含3）
      *
      * @return \Illuminate\Support\Collection
      */
     protected function queryUnsettledRecords()
     {
         $table = (new PlayGameRecord())->getTable();
+        $baccaratIds = $this->getBaccaratPlatformIds();
 
         $query = PlayGameRecord::query()
             ->whereNull($table . '.vip_level_id')
             ->where($table . '.bet', '>', 0)
             ->join('player', $table . '.player_id', '=', 'player.id')
-//            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
+            ->where('player.player_source', Player::PLAYER_SOURCE_ONLINE)
             ->select($table . '.*');
+
+        // 排除百家平台（用 NOT IN 走索引）
+        if (!empty($baccaratIds)) {
+            $query->whereNotIn($table . '.platform_id', $baccaratIds);
+        }
 
         if ($this->sinceDate) {
             $query->where($table . '.created_at', '>=', $this->sinceDate);
@@ -221,7 +282,6 @@ class VipCashbackService
     {
         return Player::query()
             ->whereIn('id', $playerIds)
-//            ->where('player_source', Player::PLAYER_SOURCE_ONLINE)
             ->get()
             ->keyBy('id');
     }
@@ -242,6 +302,7 @@ class VipCashbackService
             'vip_level_id' => $levelId,
             'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
             'start_bet_amount' => $player->total_bet_amount ?? 0,
+            'period_bet_amount' => 0,
             'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
@@ -275,6 +336,8 @@ class VipCashbackService
             if (!$playerExtend) {
                 $playerExtend = new PlayerExtend();
                 $playerExtend->player_id = $player->id;
+                $playerExtend->pending_cashback_amount = 0;
+                $playerExtend->total_cashback_amount = 0;
                 $playerExtend->save();
             }
             $playerExtend->addCashback($cashbackAmount);
