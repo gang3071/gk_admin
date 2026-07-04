@@ -298,6 +298,7 @@ return [
         'register_present' => 'Register for free',
         'profit' => 'Promoters share profits',
         'lottery' => 'Lottery payout',
+        'lottery_random' => 'Random Lottery Payout',
         'game_out' => 'Electronic game transfer',
         'game_in' => 'Transfer to electronic game',
         'national_invite' => 'Invitation reward',

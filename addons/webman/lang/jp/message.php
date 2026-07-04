@@ -297,6 +297,7 @@ return [
         'register_present' => '無料で登録',
         'profit' => 'プロモーターは利益を分配する',
         'lottery' => '宝くじの支払い',
+        'lottery_random' => 'ランダム宝くじ支払い',
         'game_out' => 'ビデオゲームへの移行',
         'game_in' => 'ゲーム転入',
         'national_invite' => '招待奨励',

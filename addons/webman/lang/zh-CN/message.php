@@ -303,6 +303,7 @@ return [
         'player_recharge_record' => '首充奖励',
         'damage_rebate' => '客损返佣',
         'lottery' => '彩金派彩',
+        'lottery_random' => '随机彩金派彩',
         'reverse_water' => '电子游戏反水',
         'gb_recharge' => '购宝钱包开分',
         'gb_withdrawal' => '购宝钱包洗分',
