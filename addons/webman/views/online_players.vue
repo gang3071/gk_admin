@@ -2,19 +2,19 @@
   <div class="online-players-container">
     <a-tabs v-model:activeKey="activeTab" @change="onTabChange">
       <!-- 电子游戏在线玩家 -->
-      <a-tab-pane key="game" tab="电子游戏在线玩家">
-        <a-card :bordered="false" :title="`电子游戏在线玩家 (${gamePlayers.length}人在线)`">
+      <a-tab-pane key="game" tab="電子遊戲在線玩家">
+        <a-card :bordered="false" :title="`電子遊戲在線玩家 (${gamePlayers.length}人在線)`">
           <template #extra>
             <a-space>
-              <a-tag color="green">实时更新</a-tag>
-              <a-tag color="blue">最后更新: {{ lastGameUpdateTime }}</a-tag>
+              <a-tag color="green">實時更新</a-tag>
+              <a-tag color="blue">最後更新: {{ lastGameUpdateTime }}</a-tag>
               <a-button size="small" type="primary" @click="refreshGamePlayers">
                 刷新
               </a-button>
             </a-space>
           </template>
 
-          <a-empty v-if="!gameLoading && gamePlayers.length === 0" description="暂无在线玩家（最近1分钟内无押注记录）" />
+          <a-empty v-if="!gameLoading && gamePlayers.length === 0" description="暫無在線玩家（最近1分鐘內無押注記錄）" />
 
           <a-table
             v-else
@@ -50,12 +50,12 @@
               </template>
 
               <template v-if="column.key === 'status'">
-                <a-tag color="green">游戏中</a-tag>
+                <a-tag color="green">遊戲中</a-tag>
               </template>
 
               <template v-if="column.key === 'action'">
                 <a-button type="primary" size="small" @click="showGrantModal(record)">
-                  发放彩金
+                  發放彩金
                 </a-button>
               </template>
             </template>
@@ -63,20 +63,20 @@
         </a-card>
       </a-tab-pane>
 
-      <!-- 实体机台在线玩家 -->
-      <a-tab-pane key="machine" tab="实体机台在线玩家">
-        <a-card :bordered="false" :title="`实体机台在线玩家 (${machinePlayers.length}人在线)`">
+      <!-- 實體機台在線玩家 -->
+      <a-tab-pane key="machine" tab="實體機台在線玩家">
+        <a-card :bordered="false" :title="`實體機台在線玩家 (${machinePlayers.length}人在線)`">
           <template #extra>
             <a-space>
-              <a-tag color="green">实时更新</a-tag>
-              <a-tag color="blue">最后更新: {{ lastMachineUpdateTime }}</a-tag>
+              <a-tag color="green">實時更新</a-tag>
+              <a-tag color="blue">最後更新: {{ lastMachineUpdateTime }}</a-tag>
               <a-button size="small" type="primary" @click="refreshMachinePlayers">
                 刷新
               </a-button>
             </a-space>
           </template>
 
-          <a-empty v-if="!machineLoading && machinePlayers.length === 0" description="暂无在线玩家（最近1分钟内无押注记录）" />
+          <a-empty v-if="!machineLoading && machinePlayers.length === 0" description="暫無在線玩家（最近1分鐘內無押注記錄）" />
 
           <a-table
             v-else
@@ -102,7 +102,7 @@
               <template v-if="column.key === 'machine_info'">
                 <div v-if="record.machine_name">
                   <div>{{ record.machine_name }}</div>
-                  <div style="color: #999; font-size: 12px;">编号: {{ record.machine_code }}</div>
+                  <div style="color: #999; font-size: 12px;">編號: {{ record.machine_code }}</div>
                 </div>
                 <span v-else>-</span>
               </template>
@@ -115,12 +115,12 @@
               </template>
 
               <template v-if="column.key === 'status'">
-                <a-tag color="green">游戏中</a-tag>
+                <a-tag color="green">遊戲中</a-tag>
               </template>
 
               <template v-if="column.key === 'action'">
                 <a-button type="primary" size="small" @click="showGrantModal(record)">
-                  发放彩金
+                  發放彩金
                 </a-button>
               </template>
             </template>
@@ -129,10 +129,10 @@
       </a-tab-pane>
     </a-tabs>
 
-    <!-- 发放彩金弹窗 -->
+    <!-- 發放彩金彈窗 -->
     <a-modal
       v-model:visible="grantModalVisible"
-      title="发放彩金"
+      title="發放彩金"
       @ok="handleGrantLottery"
       @cancel="handleCancelGrant"
       :confirm-loading="grantLoading"
@@ -142,34 +142,34 @@
           <div>
             <div><strong>{{ selectedPlayer?.name }}</strong></div>
             <div style="color: #999; font-size: 12px;">UUID: {{ selectedPlayer?.uuid }}</div>
-            <div style="color: #999; font-size: 12px;">手机: {{ selectedPlayer?.phone }}</div>
+            <div style="color: #999; font-size: 12px;">手機: {{ selectedPlayer?.phone }}</div>
           </div>
         </a-form-item>
 
-        <a-form-item label="选择彩金" required>
+        <a-form-item label="選擇彩金" required>
           <a-select
             v-model:value="grantForm.lottery_id"
-            placeholder="请选择彩金类型"
+            placeholder="請選擇彩金類型"
             :options="lotteryOptions"
           />
         </a-form-item>
 
-        <a-form-item label="发放金额" required>
+        <a-form-item label="發放金額" required>
           <a-input-number
             v-model:value="grantForm.amount"
             :min="1"
             :max="1000000"
             :precision="2"
-            placeholder="请输入发放金额"
+            placeholder="請輸入發放金額"
             style="width: 100%;"
           />
         </a-form-item>
 
-        <a-form-item label="备注">
+        <a-form-item label="備註">
           <a-textarea
             v-model:value="grantForm.remark"
             :rows="3"
-            placeholder="请输入发放原因或备注信息"
+            placeholder="請輸入發放原因或備註信息"
           />
         </a-form-item>
       </a-form>
@@ -221,20 +221,20 @@ export default {
         { title: 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
         { title: '玩家信息', key: 'player_info', width: 200, align: 'center' },
         { title: 'UUID', dataIndex: 'uuid', key: 'uuid', width: 150, align: 'center' },
-        { title: '当前机台', key: 'machine_info', width: 180, align: 'center' },
-        { title: '最后押注时间', key: 'last_bet_time', width: 180, align: 'center' },
-        { title: '累计押注', dataIndex: 'total_pressure', key: 'total_pressure', width: 120, align: 'center' },
-        { title: '状态', key: 'status', width: 100, align: 'center' },
+        { title: '當前機台', key: 'machine_info', width: 180, align: 'center' },
+        { title: '最後押注時間', key: 'last_bet_time', width: 180, align: 'center' },
+        { title: '累計押注', dataIndex: 'total_pressure', key: 'total_pressure', width: 120, align: 'center' },
+        { title: '狀態', key: 'status', width: 100, align: 'center' },
         { title: '操作', key: 'action', width: 150, align: 'center', fixed: 'right' },
       ],
       gameColumns: [
         { title: 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
         { title: '玩家信息', key: 'player_info', width: 200, align: 'center' },
         { title: 'UUID', dataIndex: 'uuid', key: 'uuid', width: 150, align: 'center' },
-        { title: '当前平台', key: 'platform_info', width: 150, align: 'center' },
-        { title: '最后押注时间', key: 'last_bet_time', width: 180, align: 'center' },
-        { title: '累计押注', dataIndex: 'total_bet', key: 'total_bet', width: 120, align: 'center' },
-        { title: '状态', key: 'status', width: 100, align: 'center' },
+        { title: '當前平台', key: 'platform_info', width: 150, align: 'center' },
+        { title: '最後押注時間', key: 'last_bet_time', width: 180, align: 'center' },
+        { title: '累計押注', dataIndex: 'total_bet', key: 'total_bet', width: 120, align: 'center' },
+        { title: '狀態', key: 'status', width: 100, align: 'center' },
         { title: '操作', key: 'action', width: 150, align: 'center', fixed: 'right' },
       ],
     };
@@ -360,11 +360,11 @@ export default {
     // 发放彩金
     async handleGrantLottery() {
       if (!this.grantForm.lottery_id) {
-        this.$message.error('请选择彩金类型');
+        this.$message.error('請選擇彩金類型');
         return;
       }
       if (!this.grantForm.amount || this.grantForm.amount <= 0) {
-        this.$message.error('请输入有效的发放金额');
+        this.$message.error('請輸入有效的發放金額');
         return;
       }
 
@@ -377,7 +377,7 @@ export default {
         });
 
         if (res.code === 200) {
-          this.$message.success('彩金发放成功');
+          this.$message.success('彩金發放成功');
           this.grantModalVisible = false;
           this.handleCancelGrant();
           // 刷新列表
@@ -387,11 +387,11 @@ export default {
             this.refreshGamePlayers();
           }
         } else {
-          this.$message.error(res.msg || '彩金发放失败');
+          this.$message.error(res.msg || '彩金發放失敗');
         }
       } catch (error) {
-        console.error('发放彩金失败:', error);
-        this.$message.error('彩金发放失败');
+        console.error('發放彩金失敗:', error);
+        this.$message.error('彩金發放失敗');
       } finally {
         this.grantLoading = false;
       }

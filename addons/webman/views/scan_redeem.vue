@@ -1,15 +1,15 @@
 <template>
   <div style="padding: 16px;">
-    <!-- 扫码输入区域 -->
+    <!-- 掃碼輸入區域 -->
     <a-card size="small" style="margin-bottom: 16px;">
       <template #title>
-        <span>扫码核销</span>
+        <span>掃碼核銷</span>
       </template>
       <a-row :gutter="16">
         <a-col :span="16">
           <a-input
             v-model:value="qrCodeNo"
-            placeholder="请输入或扫描二维码编号"
+            placeholder="請輸入或掃描二維碼編號"
             size="large"
             ref="qrInput"
             :disabled="inputLocked"
@@ -39,14 +39,14 @@
             @click="resetScan"
           >
             <template #icon><reload-outlined /></template>
-            重新扫码
+            重新掃碼
           </a-button>
         </a-col>
       </a-row>
     </a-card>
 
-    <!-- 用户信息 -->
-    <a-card v-if="record" size="small" title="用户信息" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #722ed1'}">
+    <!-- 用戶信息 -->
+    <a-card v-if="record" size="small" title="用戶信息" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #722ed1'}">
       <a-descriptions :column="2" size="small" bordered>
         <a-descriptions-item :label="labels.player_name" :span="2">
           <div style="display: flex; align-items: center;">
@@ -59,7 +59,7 @@
             </template>
             <template v-else>
               <a-avatar size="small" style="margin-right: 8px; background-color: #d9d9d9;">?</a-avatar>
-              <span style="color: #999;">未绑定玩家</span>
+              <span style="color: #999;">未綁定玩家</span>
             </template>
           </div>
         </a-descriptions-item>
@@ -70,8 +70,8 @@
       </a-descriptions>
     </a-card>
 
-    <!-- 订单信息 -->
-    <a-card v-if="record" size="small" title="订单信息" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #1890ff'}">
+    <!-- 訂單信息 -->
+    <a-card v-if="record" size="small" title="訂單信息" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #1890ff'}">
       <a-descriptions :column="2" size="small" bordered>
         <a-descriptions-item :label="labels.order_id" :span="2">
           <a-tag color="blue">{{ record.order_id || '-' }}</a-tag>
@@ -103,7 +103,7 @@
           @click="redeemRecord"
         >
           <template #icon><check-circle-outlined /></template>
-          {{ canRedeem ? '确认核销' : getRedeemDisabledReason() }}
+          {{ canRedeem ? '確認核銷' : getRedeemDisabledReason() }}
         </a-button>
       </div>
     </a-card>
@@ -271,11 +271,11 @@ export default {
     },
 
     getRedeemDisabledReason() {
-      if (!this.record) return '无法核销';
-      if (this.record.ticket_type !== 2) return '只有洗分票可以核销';
-      if (this.record.status === 0) return '该记录已禁用';
-      if (this.record.status === 3) return '该记录已核销';
-      return '无法核销';
+      if (!this.record) return '無法核銷';
+      if (this.record.ticket_type !== 2) return '只有洗分票可以核銷';
+      if (this.record.status === 0) return '該記錄已禁用';
+      if (this.record.status === 3) return '該記錄已核銷';
+      return '無法核銷';
     },
 
     async loadRecordById(id) {
@@ -293,16 +293,16 @@ export default {
 
         if (res.code === 0) {
           this.record = res.data;
-          this.message = '查询成功';
+          this.message = '查詢成功';
           this.messageType = 'success';
-          this.messageDesc = this.canRedeem ? '请确认订单信息后点击核销' : this.getRedeemDisabledReason();
+          this.messageDesc = this.canRedeem ? '請確認訂單信息後點擊核銷' : this.getRedeemDisabledReason();
         } else {
-          this.message = res.msg || '查询失败';
+          this.message = res.msg || '查詢失敗';
           this.messageType = 'error';
           this.messageDesc = '';
         }
       } catch (e) {
-        this.message = '查询失败';
+        this.message = '查詢失敗';
         this.messageType = 'error';
         this.messageDesc = e.message || '';
       } finally {
@@ -312,7 +312,7 @@ export default {
 
     async queryRecord() {
       if (!this.qrCodeNo) {
-        this.message = '请输入二维码编号';
+        this.message = '請輸入二維碼編號';
         this.messageType = 'warning';
         this.messageDesc = '';
         return;
@@ -338,16 +338,16 @@ export default {
           this.inputLocked = true;
           // 记录已扫描的值，相同内容不再触发查询
           this.lastScannedValue = this.qrCodeNo;
-          this.message = '查询成功';
+          this.message = '查詢成功';
           this.messageType = 'success';
-          this.messageDesc = this.canRedeem ? '请确认订单信息后点击核销' : this.getRedeemDisabledReason();
+          this.messageDesc = this.canRedeem ? '請確認訂單信息後點擊核銷' : this.getRedeemDisabledReason();
         } else {
-          this.message = res.msg || '查询失败';
+          this.message = res.msg || '查詢失敗';
           this.messageType = 'error';
           this.messageDesc = '';
         }
       } catch (e) {
-        this.message = '查询失败';
+        this.message = '查詢失敗';
         this.messageType = 'error';
         this.messageDesc = e.message || '';
       } finally {
@@ -372,18 +372,18 @@ export default {
         });
 
         if (res.code === 0) {
-          this.$message.success('核销成功');
+          this.$message.success('核銷成功');
           // 关闭弹窗
           this.$nextTick(() => {
             this.closeModal();
           });
         } else {
-          this.message = res.msg || '核销失败';
+          this.message = res.msg || '核銷失敗';
           this.messageType = 'error';
           this.messageDesc = '';
         }
       } catch (e) {
-        this.message = '核销失败';
+        this.message = '核銷失敗';
         this.messageType = 'error';
         this.messageDesc = e.message || '';
       } finally {

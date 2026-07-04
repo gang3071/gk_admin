@@ -73,7 +73,7 @@
     </a-list>
   </a-drawer>
   <div>
-    <a-modal v-model:visible="open_visible" title="自定义开分" @ok="openAnyPoint" destroyOnClose="true"
+    <a-modal v-model:visible="open_visible" title="自定義開分" @ok="openAnyPoint" destroyOnClose="true"
              maskClosable="true" width="300px">
       <a-input-number v-model:value="open_any_point_value" addon-before="+" addon-after="point" :max="5000" :min="0"
                       :step="1" :precision="0"></a-input-number>

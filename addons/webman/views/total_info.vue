@@ -88,13 +88,13 @@ export default {
     trans: {
       type: Object,
       default: () => ({
-        panelHeader: '查看统计数据',
-        loading: '数据加载中...',
-        refresh: '刷新数据',
-        loadError: '数据加载失败',
-        retry: '重试',
-        clickToView: '点击展开查看统计数据',
-        loadFailedMsg: '数据加载失败，请重试'
+        panelHeader: '查看統計數據',
+        loading: '數據載入中...',
+        refresh: '刷新數據',
+        loadError: '數據載入失敗',
+        retry: '重試',
+        clickToView: '點擊展開查看統計數據',
+        loadFailedMsg: '數據載入失敗，請重試'
       })
     }
   },

@@ -4,13 +4,13 @@
       <template #icon>
         <sync-outlined :spin="true"/>
       </template>
-      在线
+      在線
     </a-tag>
     <a-tag color="default" v-model="machine_status" v-else>
       <template #icon>
         <minus-circle-outlined/>
       </template>
-      离线
+      離線
     </a-tag>
   </div>
 </template>

@@ -1,16 +1,16 @@
 <template>
   <div style="padding: 16px; display: flex; justify-content: center;">
     <div style="width: 100%; max-width: 800px;">
-    <!-- 连接配置 -->
-    <a-card :title="labels.config_title || '连接配置'" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #409EFF'}">
+    <!-- 連接配置 -->
+    <a-card :title="labels.config_title || '連接配置'" size="small" style="margin-bottom: 16px;" :headStyle="{borderBottom: '2px solid #409EFF'}">
       <a-row :gutter="16">
         <a-col :span="16">
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 6px;">{{ labels.field_port || '串口路径' }}</div>
+            <div style="font-weight: 500; margin-bottom: 6px;">{{ labels.field_port || '串口路徑' }}</div>
             <div style="display: flex; gap: 8px;">
               <a-select
                 v-model:value="config.port"
-                :placeholder="labels.select_port || '选择串口'"
+                :placeholder="labels.select_port || '選擇串口'"
                 style="flex: 1;"
                 :loading="portsLoading"
                 @dropdownVisibleChange="handlePortDropdown"
@@ -37,29 +37,29 @@
         <a-col :span="8">
           <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px;">
             <a-tag :color="isConnected ? 'success' : 'error'" style="padding: 6px 24px; font-size: 16px; margin: 0;">
-              {{ isConnected ? '✓ ' + (labels.status_connected || '已连接') : '✗ ' + (labels.status_disconnected || '未连接') }}
+              {{ isConnected ? '✓ ' + (labels.status_connected || '已連接') : '✗ ' + (labels.status_disconnected || '未連接') }}
             </a-tag>
             <div style="display: flex; gap: 12px;">
-              <a-button type="primary" @click="connect" :disabled="isConnected" style="min-width: 90px;">{{ labels.connect || '连接' }}</a-button>
-              <a-button danger @click="disconnect" :disabled="!isConnected" style="min-width: 90px;">{{ labels.disconnect || '断开' }}</a-button>
+              <a-button type="primary" @click="connect" :disabled="isConnected" style="min-width: 90px;">{{ labels.connect || '連接' }}</a-button>
+              <a-button danger @click="disconnect" :disabled="!isConnected" style="min-width: 90px;">{{ labels.disconnect || '斷開' }}</a-button>
             </div>
           </div>
         </a-col>
       </a-row>
     </a-card>
 
-    <!-- 设备操作 + QR码打印 -->
+    <!-- 設備操作 + QR碼列印 -->
     <a-row :gutter="16" style="margin-bottom: 16px;">
       <a-col :span="12">
-        <a-card :title="labels.device_ops_title || '设备操作'" size="small" :headStyle="{borderBottom: '2px solid #E6A23C'}">
+        <a-card :title="labels.device_ops_title || '設備操作'" size="small" :headStyle="{borderBottom: '2px solid #E6A23C'}">
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_serial_no || '打印序列号' }}</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_serial_no || '列印序列號' }}</div>
             <a-input-number v-model:value="config.serialNo" :min="0" :max="9999999" placeholder="0-9999999" style="width: 100%;" />
           </div>
-          <a-button block @click="setSerialNo" style="margin-bottom: 16px;" :disabled="!isConnected">{{ labels.set_serial_no || '设置序列号' }}</a-button>
+          <a-button block @click="setSerialNo" style="margin-bottom: 16px;" :disabled="!isConnected">{{ labels.set_serial_no || '設置序列號' }}</a-button>
           <a-row :gutter="8" style="margin-bottom: 8px;">
             <a-col :span="12">
-              <a-button block @click="syncDatetime" :disabled="!isConnected">{{ labels.sync_datetime || '同步时间' }}</a-button>
+              <a-button block @click="syncDatetime" :disabled="!isConnected">{{ labels.sync_datetime || '同步時間' }}</a-button>
             </a-col>
             <a-col :span="12">
               <a-button block @click="sendHeartbeat" :disabled="!isConnected">{{ labels.heartbeat || '心跳' }}</a-button>
@@ -67,29 +67,29 @@
           </a-row>
           <a-row :gutter="8">
             <a-col :span="12">
-              <a-button block @click="restartPrinter" :disabled="!isConnected">{{ labels.restart_printer || '重启打印机' }}</a-button>
+              <a-button block @click="restartPrinter" :disabled="!isConnected">{{ labels.restart_printer || '重啟打印機' }}</a-button>
             </a-col>
             <a-col :span="12">
-              <a-button danger block @click="resetMachine" :disabled="!isConnected">{{ labels.reset || '复位' }}</a-button>
+              <a-button danger block @click="resetMachine" :disabled="!isConnected">{{ labels.reset || '復位' }}</a-button>
             </a-col>
           </a-row>
         </a-card>
       </a-col>
       <a-col :span="12">
-        <a-card :title="labels.qr_print || 'QR码打印'" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
+        <a-card :title="labels.qr_print || 'QR碼列印'" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.ticket_type || '票据类型' }}</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.ticket_type || '票據類型' }}</div>
             <a-select v-model:value="ticketType" style="width: 100%;">
-              <a-select-option :value="1">{{ labels.type_recharge || '开分' }}</a-select-option>
+              <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.select_player || '关联玩家（可选）' }}</div>
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.select_player || '關聯玩家（可選）' }}</div>
             <a-select
               v-model:value="selectedPlayerId"
               show-search
-              :placeholder="labels.search_player || '选择或搜索玩家'"
+              :placeholder="labels.search_player || '選擇或搜索玩家'"
               :filter-option="filterPlayerOption"
               :options="playerOptions"
               :loading="playerSearching"
@@ -102,10 +102,10 @@
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
-            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_score || '分数/金额' }}</div>
-            <a-input-number v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分数/金额'" style="width: 100%;" />
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_score || '分數/金額' }}</div>
+            <a-input-number v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
           </div>
-          <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">{{ labels.send_qr || '发送QR码' }}</a-button>
+          <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">{{ labels.send_qr || '發送QR碼' }}</a-button>
         </a-card>
       </a-col>
     </a-row>
@@ -149,9 +149,9 @@ export default {
       type: Object,
       default: () => ({})
     },
-    log_title: { type: String, default: '通信日志' },
+    log_title: { type: String, default: '通信日誌' },
     log_clear: { type: String, default: '清空' },
-    log_expand: { type: String, default: '展开' },
+    log_expand: { type: String, default: '展開' },
     log_collapse: { type: String, default: '收起' },
   },
   data() {
@@ -787,14 +787,14 @@ export default {
       const paperStatus = await this.sendCommand(0x01, 0x09, [0x00]);
       if (paperStatus && paperStatus.data && paperStatus.data.length > 0) {
         const paperCode = paperStatus.data[0];
-        // 0x00=正常, 0x01=缺纸, 0x02=卡纸, 0x03=其他错误
+        // 0x00=正常, 0x01=缺紙, 0x02=卡紙, 0x03=其他錯誤
         if (paperCode !== 0x00) {
           const errorMap = {
-            0x01: this.paper_empty_msg || '打印纸不足，请添加纸张后重试',
-            0x02: this.paper_jam_msg || '打印机卡纸，请处理后重试',
-            0x03: this.paper_error_msg || '打印机异常，请检查设备',
+            0x01: this.paper_empty_msg || '打印紙不足，請添加紙張後重試',
+            0x02: this.paper_jam_msg || '打印機卡紙，請處理後重試',
+            0x03: this.paper_error_msg || '打印機異常，請檢查設備',
           };
-          const errorMsg = errorMap[paperCode] || '打印机异常，错误码: 0x' + paperCode.toString(16).padStart(2, '0');
+          const errorMsg = errorMap[paperCode] || '打印機異常，錯誤碼: 0x' + paperCode.toString(16).padStart(2, '0');
           this.addLog('error', errorMsg);
           this.$message.error({ content: errorMsg, duration: 3 });
           this.heartbeatTimer = setInterval(async () => {
