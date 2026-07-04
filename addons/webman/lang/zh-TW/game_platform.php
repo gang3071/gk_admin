@@ -32,5 +32,7 @@ return [
     'view_game' => '查看遊戲',
     'player_not_fount' => '未設定後管玩家帳號',
     'disable' => '遊戲平臺已被禁用',
+    'maintenance_title' => '平臺維護時間設置',
     'no_maintenance' => '無維護',
+    'maintenance_status_help' => '開啟後，在設置的維護時間內，該平臺將進入維護狀態',
 ];

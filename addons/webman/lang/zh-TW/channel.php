@@ -87,6 +87,8 @@ return [
         'type' => '通路類型',
         'notify_url' => '回調地址',
         'vip_levels' => '啟用的VIP等級',
+        'last_settlement_time' => '上次結算日期',
+        'last_settlement_timestamp' => '結算時間',
     ],
     'channel_function_help' => '人工（開分,洗分）無法和Q幣（轉入,轉出）同時使用',
     'change_game_platform' => '電子遊戲',

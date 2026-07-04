@@ -13,6 +13,7 @@ return [
         'pool_ratio' => '入池比值',
         'dispatch_ratio' => '派發比例',
         'win_ratio' => '中獎機率',
+        'win_ratio_help' => '每次押注玩家的中獎概率1為100%中獎, 最小設置1億/1的中獎概率',
         'max_pool_amount' => '最大彩池金額',
         'auto_refill_amount' => '保底金額',
         'burst_status' => '爆彩狀態',

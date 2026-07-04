@@ -42,6 +42,7 @@ return [
         'player_name' => '玩家名稱',
         'player_phone' => '玩家手機號',
         'money' => '金額',
+        'fee' => '手續費',
         'inmoney' => '洗分金額',
         'player_tag' => '標籤',
         'remark' => '備註',

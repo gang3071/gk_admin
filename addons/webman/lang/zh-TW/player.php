@@ -4,6 +4,7 @@ use addons\webman\model\PlayerMoneyEditLog;
 
 return [
     'title' => '玩家清單',
+    'view' => '查看',
     'coin_title' => '幣商清單',
     'details' => '玩家詳情',
     'coin_merchant' => '幣商',
@@ -179,6 +180,7 @@ return [
     'promoter_not_found' => '推廣員不存在',
     'promoter_has_disable' => '該推廣員帳號已禁用',
     'bind_promoter' => '綁定推廣員',
+    'national_promoter' => '全民代理',
     'import_msg' => '完成,共計{total_num}條數據,成功{success_num}條,失敗{fail_num}條,會員手機號重複{repeat_num}條,上級代理ID錯誤{recommend_error_num}條',
     'import' => '導入',
     'clear_test' => '清理測試數據',
