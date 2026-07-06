@@ -381,13 +381,17 @@ class LotteryTicketPushService
      *
      * @param int $playerId 玩家ID
      * @param int $activityId 活动ID
-     * @param float $progressPercent 进度百分比
+     * @param float $currentBetAmount 当前累计打码量（总打码量）
+     * @param float $betAmountRequired 单周期要求打码量
+     * @param float $progressPercent 进度百分比（当前周期内）
      * @param float $remainingAmount 剩余打码量
      * @return bool
      */
     public static function pushBetProgressUpdate(
         int $playerId,
         int $activityId,
+        float $currentBetAmount,
+        float $betAmountRequired,
         float $progressPercent,
         float $remainingAmount
     ): bool {
@@ -403,8 +407,10 @@ class LotteryTicketPushService
                 'data' => [
                     'activity_id' => $activityId,
                     'activity_name' => $activity->name,
-                    'progress_percent' => round($progressPercent, 2),
-                    'remaining_amount' => $remainingAmount,
+                    'current_bet_amount' => $currentBetAmount,        // 总打码量
+                    'bet_amount_required' => $betAmountRequired,      // 单周期要求打码量
+                    'progress_percent' => round($progressPercent, 2), // 当前周期进度百分比
+                    'remaining_amount' => $remainingAmount,           // 距离下次发券剩余打码量
                 ],
             ];
 

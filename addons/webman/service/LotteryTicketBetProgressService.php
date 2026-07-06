@@ -290,8 +290,10 @@ class LotteryTicketBetProgressService
                         LotteryTicketPushService::pushBetProgressUpdate(
                             $progress->player_id,
                             $activity->id,
-                            $progress->progress_percent,
-                            $progress->remaining_bet_amount
+                            $progress->current_bet_amount,      // 总打码量
+                            $progress->bet_amount_required,     // 单周期要求打码量
+                            $progress->progress_percent,        // 当前周期进度百分比
+                            $progress->remaining_bet_amount     // 距离下次发券剩余打码量
                         );
                     }
 
