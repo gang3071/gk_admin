@@ -3,6 +3,7 @@
 namespace app\service;
 
 use addons\webman\model\Channel;
+use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\VipLevel;
@@ -32,6 +33,15 @@ class VipService
 
     /** 缓存有效期（秒） */
     const CACHE_TTL = 300;
+
+    /** 推送消息类型：VIP等级变更 */
+    const MSG_TYPE_VIP_LEVEL_CHANGE = 'vip_level_change';
+
+    /** 变更类型：升级 */
+    const CHANGE_TYPE_UPGRADE = 'upgrade';
+
+    /** 变更类型：降级 */
+    const CHANGE_TYPE_DOWNGRADE = 'downgrade';
 
     /**
      * 写VIP日志
@@ -299,6 +309,35 @@ class VipService
             'excess_bet_amount' => $excessBetAmount,
             'new_start_bet_amount' => $newStartBetAmount,
         ]);
+
+        // 创建通知记录并推送升级通知
+        try {
+            Notice::query()->create([
+                'department_id' => $player->department_id,
+                'player_id' => $playerId,
+                'type' => Notice::TYPE_VIP_LEVEL_CHANGE,
+                'title' => 'VIP等級升級',
+                'content' => sprintf('恭喜！您的VIP等級已從 %s 升級至 %s', $currentLevel->name, $nextLevel->name),
+                'status' => 0,
+                'receiver' => Notice::RECEIVER_PLAYER,
+                'is_private' => 1,
+            ]);
+
+            sendSocketMessage('player-' . $playerId, [
+                'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
+                'change_type' => self::CHANGE_TYPE_UPGRADE,
+                'player_id' => $playerId,
+                'old_level_id' => $oldLevelId,
+                'old_level_name' => $currentLevel->name,
+                'new_level_id' => $newLevelId,
+                'new_level_name' => $nextLevel->name,
+            ]);
+        } catch (\Throwable $e) {
+            static::log('warning', 'VIP upgrade push failed', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -382,6 +421,35 @@ class VipService
             'new_level' => $newLevelId,
             'new_start_bet_amount' => $totalBetBefore,
         ]);
+
+        // 创建通知记录并推送降级通知
+        try {
+            Notice::query()->create([
+                'department_id' => $player->department_id,
+                'player_id' => $playerId,
+                'type' => Notice::TYPE_VIP_LEVEL_CHANGE,
+                'title' => 'VIP等級降級',
+                'content' => sprintf('很遺憾，您的VIP等級已從 %s 降級至 %s', $currentLevel->name, $prevLevel->name),
+                'status' => 0,
+                'receiver' => Notice::RECEIVER_PLAYER,
+                'is_private' => 1,
+            ]);
+
+            sendSocketMessage('player-' . $playerId, [
+                'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
+                'change_type' => self::CHANGE_TYPE_DOWNGRADE,
+                'player_id' => $playerId,
+                'old_level_id' => $oldLevelId,
+                'old_level_name' => $currentLevel->name,
+                'new_level_id' => $newLevelId,
+                'new_level_name' => $prevLevel->name,
+            ]);
+        } catch (\Throwable $e) {
+            static::log('warning', 'VIP downgrade push failed', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
