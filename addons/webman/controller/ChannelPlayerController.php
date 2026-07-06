@@ -985,69 +985,31 @@ class ChannelPlayerController
             $options[$key] = Avatar::create()->style(['padding' => '1px'])->src($item)->shape('square');
         }
         return Form::create(new $this->model(), function (Form $form) use ($options) {
+            $form->layout('vertical');
             if ($form->isEdit()) {
-                $form->title(admin_trans('player.details'));
-                $form->row(function (Form $form) use ($options) {
-                    $form->column(function (Form $form) use ($options) {
-                        $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)
-                            ->rule([
-                                (string)Rule::unique(plugin()->webman->config('database.player_model'))->ignore($form->input('id')) => admin_trans('player.phone_exist'),
-                            ])
-                            ->disabled(true);
-                        $form->text('name', admin_trans('player.fields.name'))->maxlength(50);
-                        $form->radio('avatar_type', admin_trans('player.avatar_type'))
-                            ->button()
-                            ->default(is_numeric($form->driver()->get('avatar')) ? 2 : 1)
-                            ->options([
-                                1 => admin_trans('player.upload_avatar'),
-                                2 => admin_trans('player.def_avatar')
-                            ])
-                            ->when(1, function (Form $form) {
-                                $form->file('avatar', admin_trans('player.fields.avatar'))
-                                    ->value(is_numeric($form->driver()->get('avatar')) ? '' : $form->driver()->get('avatar'))
-                                    ->ext('jpg,png,jpeg')
-                                    ->type('image')
-                                    ->fileSize('1m')
-                                    ->hideFinder()
-                                    ->paste();
-                            })->when(2, function (Form $form) use ($options) {
-                                $form->radio('def_avatar', admin_trans('player.def_avatar'))
-                                    ->default(1)
-                                    ->options($options);
-                            });
-                        $form->text('player_extend.id_number',
-                            admin_trans('player_extend.fields.id_number'))->ruleAlphaNum()->maxlength(20);
-                        $form->desc('the_last_player_login_record.created_at',
-                            admin_trans('player.fields.login_at'))->value($form->input('the_last_player_login_record.created_at') ? date('Y-m-d H:i:s',
-                            strtotime($form->input('the_last_player_login_record.created_at'))) : '');
-                        $form->desc('created_at',
-                            admin_trans('player.fields.created_at'))->value($form->input('created_at') ? date('Y-m-d H:i:s',
-                            strtotime($form->input('created_at'))) : '');
-                    })->span(12);
-
-                    $form->column(function (Form $form) {
-                        $form->text('player_extend.address',
-                            admin_trans('player_extend.fields.address'))->maxlength(255);
-                        $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'));
-                        $form->text('player_extend.email',
-                            admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(20);
-                        $form->text('player_extend.line',
-                            admin_trans('player_extend.fields.line'))->ruleAlphaNum()->maxlength(20);
-                        $form->select('machine_play_num', admin_trans('player.fields.machine_play_num'))->options([
-                            1 => 1,
-                            2 => 2,
-                            3 => 3,
-                            4 => 4,
-                            5 => 5
-                        ])->disabled();
-                        $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))
-                            ->showCount()
-                            ->rule(['max:255' => admin_trans('player_extend.fields.remark')]);
-                        $form->desc('player_register_record.ip', admin_trans('player.fields.register_ip'));
-                        $form->desc('player_register_record.register_domain',
-                            admin_trans('player.fields.register_domain'));
-                    })->span(12);
-                });
+                $form->title(admin_trans('player.edit_player'));
+                $form->labelWidth(120);
+                $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
+                $form->radio('def_avatar', admin_trans('player.def_avatar'))
+                    ->default(1)
+                    ->options($options);
+                $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
+                $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
+                $form->text('player_extend.id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50);
+                $form->image('player_extend.id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->image('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->image('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
+                $form->text('player_extend.address', admin_trans('player_extend.fields.address'))->maxlength(255);
+                $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'));
+                $form->text('player_extend.email', admin_trans('player_extend.fields.email'))->ruleEmail()->maxlength(20);
+                $form->text('player_extend.line', admin_trans('player_extend.fields.line'))->maxlength(50);
+                $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))
+                    ->showCount()
+                    ->rule(['max:255' => admin_trans('player_extend.fields.remark')]);
+                $form->switch('is_test', admin_trans('player.fields.is_test'));
+                $form->select('machine_play_num', admin_trans('player.fields.machine_play_num'))->options([
+                    1 => 1, 2 => 2, 3 => 3, 4 => 4, 5 => 5
+                ]);
             } else {
                 $form->title(admin_trans('player.add_player'));
 
@@ -1137,17 +1099,21 @@ class ChannelPlayerController
                     Db::beginTransaction();
                     try {
                         $player->name = $form->input('name');
+                        $player->real_name = $form->input('real_name');
+                        $player->is_test = $form->input('is_test');
                         $player->machine_play_num = $form->input('machine_play_num');
-                        $player->avatar = $form->input('avatar_type') == 1 ? $form->input('avatar') : $form->input('def_avatar');
+                        $player->avatar = $form->input('def_avatar') ?? config('def_avatar.1');
                         $player->save();
                         PlayerExtend::query()->updateOrCreate(['player_id' => $orgData['id']], [
+                            'id_number' => $form->input('player_extend.id_number'),
+                            'id_card_front' => $form->input('player_extend.id_card_front'),
+                            'id_card_back' => $form->input('player_extend.id_card_back'),
+                            'personal_photo' => $form->input('player_extend.personal_photo'),
                             'address' => $form->input('player_extend.address'),
                             'birthday' => $form->input('player_extend.birthday'),
-                            'id_number' => $form->input('player_extend.id_number'),
                             'email' => $form->input('player_extend.email'),
                             'line' => $form->input('player_extend.line'),
                             'remark' => $form->input('player_extend.remark'),
-                            'player_id' => $orgData['id']
                         ]);
                         Db::commit();
                     } catch (\Exception $e) {

@@ -796,20 +796,39 @@ class StorePlayerController
                 $form->title(admin_trans('player.edit_player'));
                 $orgData = $form->driver()->get();
 
+                // 加载 player_extend 扩展数据
+                $playerExtend = PlayerExtend::query()->where('player_id', $orgData['id'])->first();
+
                 $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
                 $form->radio('def_avatar', admin_trans('player.def_avatar'))
                     ->default(1)
                     ->options($options);
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
                 $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
-                $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
-                $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
-                $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
-                $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
-                $form->text('address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
-                $form->date('birthday', admin_trans('player_extend.fields.birthday'))->required();
-                $form->text('line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
-                $form->textarea('remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
+                $form->text('id_number', admin_trans('player_extend.fields.id_number'))
+                    ->maxlength(50)->required()
+                    ->default($playerExtend->id_number ?? '');
+                $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))
+                    ->ext('jpg,png,jpeg')->fileSize('5m')
+                    ->default($playerExtend->id_card_front ?? '');
+                $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))
+                    ->ext('jpg,png,jpeg')->fileSize('5m')
+                    ->default($playerExtend->id_card_back ?? '');
+                $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))
+                    ->ext('jpg,png,jpeg')->fileSize('5m')
+                    ->default($playerExtend->personal_photo ?? '');
+                $form->text('address', admin_trans('player_extend.fields.address'))
+                    ->maxlength(255)->required()
+                    ->default($playerExtend->address ?? '');
+                $form->date('birthday', admin_trans('player_extend.fields.birthday'))
+                    ->required()
+                    ->default($playerExtend->birthday ?? '');
+                $form->text('line', admin_trans('player_extend.fields.line'))
+                    ->maxlength(50)->required()
+                    ->default($playerExtend->line ?? '');
+                $form->textarea('remark', admin_trans('player_extend.fields.remark'))
+                    ->maxlength(255)->required()
+                    ->default($playerExtend->remark ?? '');
 
                 $form->saved(function () {
                     return message_success(admin_trans('player.save_player_info_success'));
