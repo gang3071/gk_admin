@@ -97,7 +97,12 @@ class PlatformLimitGroupConfigController
                     : Tag::create('禁用')->color('default');
             })->align('center');
 
-            $grid->column('created_at', '创建时间')->align('center');
+            $grid->column('created_at', '创建时间')->align('center')->display(function ($value) {
+                if (empty($value)) {
+                    return '-';
+                }
+                return \Carbon\Carbon::parse($value)->timezone('Asia/Shanghai')->format('Y-m-d H:i:s');
+            });
 
             $grid->filter(function (Filter $filter) {
                 $filter->eq()->select('limit_group_id', '限红组')
