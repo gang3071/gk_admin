@@ -827,7 +827,7 @@ class StorePlayerController
                     ->maxlength(50)->required()
                     ->default($playerExtend->line ?? '');
                 $form->textarea('remark', admin_trans('player_extend.fields.remark'))
-                    ->maxlength(255)->required()
+                    ->maxlength(255)
                     ->default($playerExtend->remark ?? '');
 
                 $form->saved(function () {

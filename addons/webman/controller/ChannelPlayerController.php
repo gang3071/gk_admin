@@ -289,7 +289,7 @@ class ChannelPlayerController
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
                     $query->orderBy($exAdminSortField, $exAdminSortBy);
                 }, function ($query) {
-                    $query->orderBy('id', 'asc');
+                    $query->orderBy('id', 'desc');
                 })
             ->get()
             ->toArray();
