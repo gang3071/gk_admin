@@ -5,6 +5,7 @@ namespace process;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\service\LotteryTicketBetProgressService;
+use addons\webman\service\LotteryTicketPushService;
 use support\Cache;
 use support\Db;
 use support\Log;
@@ -39,12 +40,12 @@ class LotteryBetProgressScanTask
 
     public function onWorkerStart(Worker $worker)
     {
-        // 每分钟执行一次（避开整点，减少服务器压力）
-        new Crontab('23 * * * * *', function () {
+        // 每3秒执行一次（实时更新打码进度）
+        new Crontab('*/3 * * * * *', function () {
             $this->scanAndUpdateBetProgress();
         });
 
-        Log::info('摸奖券打码进度扫描任务已启动（优化版）');
+        Log::info('摸奖券打码进度扫描任务已启动（3秒间隔）');
     }
 
     /**
@@ -317,6 +318,11 @@ class LotteryBetProgressScanTask
                 $ticketsIssued = $this->checkAndIssueTickets($activityId, array_keys($playerBetAmounts));
             }
 
+            // 6. 推送打码进度更新（只推送有变化的玩家，进度变化≥5%才推送）
+            if ($playersCount > 0) {
+                $this->pushProgressUpdates($activityId, array_keys($playerBetAmounts), $playerBetAmounts);
+            }
+
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             Log::debug('批量更新打码进度完成', [
@@ -503,6 +509,36 @@ class LotteryBetProgressScanTask
                             'tickets_issued' => $issuedCount,
                         ]);
 
+                        // ⭐ 推送发券通知和打码进度更新
+                        try {
+                            // 获取活动信息
+                            $activity = LotteryTicketActivity::find($activityId);
+                            if ($activity) {
+                                // 推送发券通知（弹窗）
+                                $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $issuedCount);
+                                LotteryTicketPushService::pushPlayerTicketsUpdate($progress->player_id, $message);
+
+                                // 重新获取最新进度数据用于推送
+                                $updatedProgress = LotteryTicketBetProgress::find($progress->id);
+                                if ($updatedProgress) {
+                                    // 推送打码进度更新（静默）
+                                    LotteryTicketPushService::pushBetProgressUpdate(
+                                        $progress->player_id,
+                                        $activityId,
+                                        $updatedProgress->current_bet_amount,
+                                        $updatedProgress->bet_amount_required,
+                                        $updatedProgress->progress_percent,
+                                        $updatedProgress->remaining_bet_amount
+                                    );
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            Log::warning('发券推送失败', [
+                                'player_id' => $progress->player_id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+
                     } catch (\Exception $e) {
                         Db::rollBack();
                         throw $e;
@@ -518,6 +554,91 @@ class LotteryBetProgressScanTask
         }
 
         return $totalIssued;
+    }
+
+    /**
+     * 推送打码进度更新（智能推送，避免频繁打扰）
+     *
+     * @param int $activityId 活动ID
+     * @param array $playerIds 玩家ID列表
+     * @param array $playerBetAmounts 本次新增打码量 [player_id => chip_amount]
+     */
+    protected function pushProgressUpdates(int $activityId, array $playerIds, array $playerBetAmounts): void
+    {
+        try {
+            // 获取活动信息
+            $activity = LotteryTicketActivity::find($activityId);
+            if (!$activity) {
+                return;
+            }
+
+            // 批量获取最新进度
+            $progressRecords = LotteryTicketBetProgress::query()
+                ->where('activity_id', $activityId)
+                ->whereIn('player_id', $playerIds)
+                ->where('status', LotteryTicketBetProgress::STATUS_ACTIVE)
+                ->get();
+
+            $pushedCount = 0;
+
+            foreach ($progressRecords as $progress) {
+                try {
+                    // 计算本次新增的打码量
+                    $chipAmount = $playerBetAmounts[$progress->player_id] ?? 0;
+                    if ($chipAmount <= 0) {
+                        continue;
+                    }
+
+                    // 计算旧的周期内打码量（取余数）
+                    $oldAmount = $progress->current_bet_amount - $chipAmount;
+                    $oldCycleAmount = fmod($oldAmount, $progress->bet_amount_required);
+
+                    // 计算新的周期内打码量（取余数）
+                    $newCycleAmount = fmod($progress->current_bet_amount, $progress->bet_amount_required);
+
+                    // 判断是否跨周期（已发券，上面已经推送过了）
+                    if ($newCycleAmount < $oldCycleAmount) {
+                        continue; // 跨周期的情况已经在发券时推送过了
+                    }
+
+                    // 同一周期内，计算真实进度变化
+                    $oldPercent = ($oldCycleAmount / $progress->bet_amount_required) * 100;
+                    $newPercent = ($newCycleAmount / $progress->bet_amount_required) * 100;
+
+                    // 进度变化 ≥ 5% 时才推送
+                    if (abs($newPercent - $oldPercent) >= 5) {
+                        LotteryTicketPushService::pushBetProgressUpdate(
+                            $progress->player_id,
+                            $activityId,
+                            $progress->current_bet_amount,
+                            $progress->bet_amount_required,
+                            $progress->progress_percent,
+                            $progress->remaining_bet_amount
+                        );
+                        $pushedCount++;
+                    }
+
+                } catch (\Exception $e) {
+                    Log::warning('推送进度更新失败', [
+                        'player_id' => $progress->player_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            if ($pushedCount > 0) {
+                Log::debug('打码进度推送完成', [
+                    'activity_id' => $activityId,
+                    'pushed_count' => $pushedCount,
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('批量推送进度失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
