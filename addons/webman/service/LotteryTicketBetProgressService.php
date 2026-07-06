@@ -258,18 +258,30 @@ class LotteryTicketBetProgressService
                             'total_tickets' => $progress->total_tickets_issued,
                         ];
                     }
-                    // ✅ 或者进度变化超过5%
+                    // ✅ 或者同一周期内进度变化超过5%
                     else {
-                        $oldPercent = 0;
                         if ($progress->bet_amount_required > 0) {
+                            // 计算旧的周期内打码量（取余数）
                             $oldAmount = $progress->current_bet_amount - $chipAmount;
-                            $oldPercent = floor(($oldAmount / $progress->bet_amount_required) * 100);
-                        }
-                        $newPercent = floor($progress->progress_percent);
+                            $oldCycleAmount = fmod($oldAmount, $progress->bet_amount_required);
 
-                        // 进度变化 ≥ 5% 时才推送
-                        if (abs($newPercent - $oldPercent) >= 5) {
-                            $shouldPushProgress = true;
+                            // 计算新的周期内打码量（取余数）
+                            $newCycleAmount = fmod($progress->current_bet_amount, $progress->bet_amount_required);
+
+                            // 特殊处理：如果新余数小于旧余数，说明跨周期了（已发券）
+                            if ($newCycleAmount < $oldCycleAmount) {
+                                // 跨周期的情况已经在上面发券时推送过了，这里不再推送
+                                $shouldPushProgress = false;
+                            } else {
+                                // 同一周期内，计算真实进度变化
+                                $oldPercent = ($oldCycleAmount / $progress->bet_amount_required) * 100;
+                                $newPercent = ($newCycleAmount / $progress->bet_amount_required) * 100;
+
+                                // 进度变化 ≥ 5% 时才推送
+                                if (abs($newPercent - $oldPercent) >= 5) {
+                                    $shouldPushProgress = true;
+                                }
+                            }
                         }
                     }
 
