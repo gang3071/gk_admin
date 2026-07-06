@@ -118,16 +118,16 @@ class StorePlayerController
         $playerCount = $totalQuery->count();
 
         $list = $query->select([
-                'player.*',
-                'player_extend.recharge_amount',
-                'player_extend.withdraw_amount',
-                'player_extend.machine_put_point',
-                // VIP等级字段
-                'vip_level.name as vip_level_name',
-                'vip_level.sort as vip_level_sort',
-                'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
-                'vip_retain_period.period_bet_amount as period_bet_amount',
-            ])
+            'player.*',
+            'player_extend.recharge_amount',
+            'player_extend.withdraw_amount',
+            'player_extend.machine_put_point',
+            // VIP等级字段
+            'vip_level.name as vip_level_name',
+            'vip_level.sort as vip_level_sort',
+            'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
+            'vip_retain_period.period_bet_amount as period_bet_amount',
+        ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
             // LEFT JOIN 保级周期（获取当前周期内打码量）
@@ -796,20 +796,39 @@ class StorePlayerController
                 $form->title(admin_trans('player.edit_player'));
                 $orgData = $form->driver()->get();
 
+                // 加载 player_extend 扩展数据
+                $playerExtend = PlayerExtend::query()->where('player_id', $orgData['id'])->first();
+
                 $form->text('phone', admin_trans('player.fields.phone'))->maxlength(50)->disabled();
                 $form->radio('def_avatar', admin_trans('player.def_avatar'))
                     ->default(1)
                     ->options($options);
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
                 $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
-                $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
-                $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m');
-                $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
-                $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
-                $form->text('address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
-                $form->date('birthday', admin_trans('player_extend.fields.birthday'))->required();
-                $form->text('line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
-                $form->textarea('remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
+                $form->text('id_number', admin_trans('player_extend.fields.id_number'))
+                    ->maxlength(50)->required()
+                    ->default($playerExtend->id_number ?? '');
+                $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))
+                    ->ext('jpg,png,jpeg')->fileSize('5m')
+                    ->default($playerExtend->id_card_front ?? '');
+                $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))
+                    ->ext('jpg,png,jpeg')->fileSize('5m')
+                    ->default($playerExtend->id_card_back ?? '');
+                $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))
+                    ->ext('jpg,png,jpeg')->fileSize('5m')
+                    ->default($playerExtend->personal_photo ?? '');
+                $form->text('address', admin_trans('player_extend.fields.address'))
+                    ->maxlength(255)->required()
+                    ->default($playerExtend->address ?? '');
+                $form->date('birthday', admin_trans('player_extend.fields.birthday'))
+                    ->required()
+                    ->default($playerExtend->birthday ?? '');
+                $form->text('line', admin_trans('player_extend.fields.line'))
+                    ->maxlength(50)->required()
+                    ->default($playerExtend->line ?? '');
+                $form->textarea('remark', admin_trans('player_extend.fields.remark'))
+                    ->maxlength(255)
+                    ->default($playerExtend->remark ?? '');
 
                 $form->saved(function () {
                     return message_success(admin_trans('player.save_player_info_success'));
@@ -985,7 +1004,7 @@ class StorePlayerController
                     $avatarHtml = $src
                         ? '<img src="' . $src . '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px" />'
                         : '<span style="display:inline-block;width:40px;height:40px;border-radius:50%;background:#ccc;text-align:center;line-height:40px;color:#fff;margin-right:8px">'
-                            . mb_substr($nameVal, 0, 1) . '</span>';
+                        . mb_substr($nameVal, 0, 1) . '</span>';
                     $form->desc('avatar', admin_trans('player.fields.avatar'))
                         ->value($avatarHtml . '<span>' . e($nameVal) . '</span>');
                     $form->desc('player_source', admin_trans('player.fields.player_source'))
