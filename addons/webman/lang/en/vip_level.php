@@ -48,4 +48,10 @@ return [
     'messages' => [
         'cashback_saved' => 'Cashback ratio saved successfully',
     ],
+    'notification' => [
+        'upgrade_title' => 'VIP Level Upgraded',
+        'upgrade_content' => 'Congratulations! Your VIP level has been upgraded from {old_level} to {new_level}',
+        'downgrade_title' => 'VIP Level Downgraded',
+        'downgrade_content' => 'Unfortunately, your VIP level has been downgraded from {old_level} to {new_level}',
+    ],
 ];

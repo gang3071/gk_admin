@@ -36,6 +36,8 @@ class Notice extends Model
 {
     use SoftDeletes, HasDateTimeFormatter, DataPermissions;
 
+    protected $guarded = [];
+
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];
 

@@ -48,4 +48,10 @@ return [
     'messages' => [
         'cashback_saved' => '反水比例保存成功',
     ],
+    'notification' => [
+        'upgrade_title' => 'VIP等級升級',
+        'upgrade_content' => '恭喜！您的VIP等級已從 {old_level} 升級至 {new_level}',
+        'downgrade_title' => 'VIP等級降級',
+        'downgrade_content' => '很遺憾，您的VIP等級已從 {old_level} 降級至 {new_level}',
+    ],
 ];

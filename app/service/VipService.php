@@ -312,12 +312,18 @@ class VipService
 
         // 创建通知记录并推送升级通知
         try {
+            $title = admin_trans('vip_level.notification.upgrade_title');
+            $content = admin_trans('vip_level.notification.upgrade_content', null, [
+                'old_level' => $currentLevel->name,
+                'new_level' => $nextLevel->name,
+            ]);
+
             Notice::query()->create([
                 'department_id' => $player->department_id,
                 'player_id' => $playerId,
                 'type' => Notice::TYPE_VIP_LEVEL_CHANGE,
-                'title' => 'VIP等級升級',
-                'content' => sprintf('恭喜！您的VIP等級已從 %s 升級至 %s', $currentLevel->name, $nextLevel->name),
+                'title' => $title,
+                'content' => $content,
                 'status' => 0,
                 'receiver' => Notice::RECEIVER_PLAYER,
                 'is_private' => 1,
@@ -327,8 +333,8 @@ class VipService
                 'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
                 'change_type' => self::CHANGE_TYPE_UPGRADE,
                 'player_id' => $playerId,
-                'title' => 'VIP等級升級',
-                'content' => sprintf('恭喜！您的VIP等級已從 %s 升級至 %s', $currentLevel->name, $nextLevel->name),
+                'title' => $title,
+                'content' => $content,
                 'old_level_id' => $oldLevelId,
                 'old_level_name' => $currentLevel->name,
                 'new_level_id' => $newLevelId,
@@ -426,12 +432,18 @@ class VipService
 
         // 创建通知记录并推送降级通知
         try {
+            $title = admin_trans('vip_level.notification.downgrade_title');
+            $content = admin_trans('vip_level.notification.downgrade_content', null, [
+                'old_level' => $currentLevel->name,
+                'new_level' => $prevLevel->name,
+            ]);
+
             Notice::query()->create([
                 'department_id' => $player->department_id,
                 'player_id' => $playerId,
                 'type' => Notice::TYPE_VIP_LEVEL_CHANGE,
-                'title' => 'VIP等級降級',
-                'content' => sprintf('很遺憾，您的VIP等級已從 %s 降級至 %s', $currentLevel->name, $prevLevel->name),
+                'title' => $title,
+                'content' => $content,
                 'status' => 0,
                 'receiver' => Notice::RECEIVER_PLAYER,
                 'is_private' => 1,
@@ -441,8 +453,8 @@ class VipService
                 'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
                 'change_type' => self::CHANGE_TYPE_DOWNGRADE,
                 'player_id' => $playerId,
-                'title' => 'VIP等級降級',
-                'content' => sprintf('很遺憾，您的VIP等級已從 %s 降級至 %s', $currentLevel->name, $prevLevel->name),
+                'title' => $title,
+                'content' => $content,
                 'old_level_id' => $oldLevelId,
                 'old_level_name' => $currentLevel->name,
                 'new_level_id' => $newLevelId,
