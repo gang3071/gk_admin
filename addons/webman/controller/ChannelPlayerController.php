@@ -1878,12 +1878,12 @@ class ChannelPlayerController
     //  * @return Msg
     //  * @throws \Exception
     //  */
-                    // 更新玩家统计
+    // 更新玩家统计
     //                 $player->machine_wallet->money = bcadd($player->machine_wallet->money,
     //                     $playerWalletTransfer->amount, 2);
     //                 $player->push();
     //                 $playerWalletTransfer->save();
-// 
+//
     //                 $playerDeliveryRecord = new PlayerDeliveryRecord;
     //                 $playerDeliveryRecord->player_id = $player->id;
     //                 $playerDeliveryRecord->department_id = $player->department_id;
@@ -1901,7 +1901,7 @@ class ChannelPlayerController
     //                 $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
     //                     [], 'message');
     //                 $playerDeliveryRecord->save();
-// 
+//
     //                 Db::commit();
     //             } catch (\Exception|GameException $e) {
     //                 Db::rollBack();
@@ -1909,10 +1909,10 @@ class ChannelPlayerController
     //             }
     //         }
     //     }
-// 
+//
     //     return message_success(admin_trans('admin.success'));
     // }
-// 
+//
     // /**
     //  * 游戏钱包转出
     //  * @auth true
@@ -1920,12 +1920,12 @@ class ChannelPlayerController
     //  * @param $id
     //  * @return Form|Msg
     //  */
-                    // 更新玩家统计
+    // 更新玩家统计
     //                 $player->machine_wallet->money = bcadd($player->machine_wallet->money,
     //                     $playerWalletTransfer->amount, 2);
     //                 $player->push();
     //                 $playerWalletTransfer->save();
-// 
+//
     //                 $playerDeliveryRecord = new PlayerDeliveryRecord;
     //                 $playerDeliveryRecord->player_id = $player->id;
     //                 $playerDeliveryRecord->department_id = $player->department_id;
@@ -1943,7 +1943,7 @@ class ChannelPlayerController
     //                 $playerDeliveryRecord->user_name = !empty(Admin::user()) ? Admin::user()->toArray()['username'] : trans('system_automatic',
     //                     [], 'message');
     //                 $playerDeliveryRecord->save();
-// 
+//
     //                 Db::commit();
     //             } catch (\Exception $e) {
     //                 Db::rollBack();
@@ -1957,7 +1957,7 @@ class ChannelPlayerController
     //         $form->layout('vertical');
     //     });
     // }
-// 
+//
     // /**
     //  * 游戏钱包转出
     //  * @auth true
@@ -3333,7 +3333,7 @@ class ChannelPlayerController
                             ->valueStyle(['color' => '#3f8600'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
-                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+                        ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
 
                 $row->column(
                     Card::create([
@@ -3343,7 +3343,7 @@ class ChannelPlayerController
                             ->valueStyle(['color' => floatval($settledData['total_diff'] ?? 0) > 0 ? '#3f8600' : '#cf1322'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
-                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+                        ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
 
                 // 未结算统计
                 $row->column(
@@ -3355,7 +3355,7 @@ class ChannelPlayerController
                             ->valueStyle(['color' => '#faad14'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
-                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+                        ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
 
                 // 已取消统计
                 $row->column(
@@ -3367,7 +3367,7 @@ class ChannelPlayerController
                             ->valueStyle(['color' => '#8c8c8c'])
                             ->style(['font-size' => '14px', 'text-align' => 'center'])),
                     ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '72px'])
-                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
+                        ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']), 6);
             })->style(['background' => '#fff']);
             $grid->header($layout);
             $grid->autoHeight();

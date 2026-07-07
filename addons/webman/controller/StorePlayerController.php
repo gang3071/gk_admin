@@ -118,16 +118,16 @@ class StorePlayerController
         $playerCount = $totalQuery->count();
 
         $list = $query->select([
-                'player.*',
-                'player_extend.recharge_amount',
-                'player_extend.withdraw_amount',
-                'player_extend.machine_put_point',
-                // VIP等级字段
-                'vip_level.name as vip_level_name',
-                'vip_level.sort as vip_level_sort',
-                'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
-                'vip_retain_period.period_bet_amount as period_bet_amount',
-            ])
+            'player.*',
+            'player_extend.recharge_amount',
+            'player_extend.withdraw_amount',
+            'player_extend.machine_put_point',
+            // VIP等级字段
+            'vip_level.name as vip_level_name',
+            'vip_level.sort as vip_level_sort',
+            'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
+            'vip_retain_period.period_bet_amount as period_bet_amount',
+        ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
             // LEFT JOIN 保级周期（获取当前周期内打码量）
@@ -1004,7 +1004,7 @@ class StorePlayerController
                     $avatarHtml = $src
                         ? '<img src="' . $src . '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px" />'
                         : '<span style="display:inline-block;width:40px;height:40px;border-radius:50%;background:#ccc;text-align:center;line-height:40px;color:#fff;margin-right:8px">'
-                            . mb_substr($nameVal, 0, 1) . '</span>';
+                        . mb_substr($nameVal, 0, 1) . '</span>';
                     $form->desc('avatar', admin_trans('player.fields.avatar'))
                         ->value($avatarHtml . '<span>' . e($nameVal) . '</span>');
                     $form->desc('player_source', admin_trans('player.fields.player_source'))
