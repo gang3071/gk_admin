@@ -115,12 +115,13 @@ class VipCashbackService
                 ->first();
 
             // 批量预加载反水比例（避免 N+1 查询）
+            // 预加载所有启用的VIP等级，防止升级后新等级的反水比例未被加载
             $platformIds = $records->pluck('platform_id')->unique()->toArray();
-            $vipLevelIds = $players->pluck('vip_level_id')->filter()->unique()->toArray();
-            if ($defaultLevel) {
-                $vipLevelIds[] = $defaultLevel->id;
-            }
-            $cashbackMap = $this->preloadCashbackRatios(array_unique($vipLevelIds), $platformIds);
+            $allVipLevelIds = VipLevel::query()
+                ->where('status', VipLevel::STATUS_ENABLED)
+                ->pluck('id')
+                ->toArray();
+            $cashbackMap = $this->preloadCashbackRatios($allVipLevelIds, $platformIds);
 
             // 逐条处理
             foreach ($records as $record) {
