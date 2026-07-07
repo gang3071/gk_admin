@@ -312,16 +312,17 @@ class VipService
 
         // 创建通知记录并推送升级通知
         try {
-            $title = admin_trans('vip_level.notification.upgrade_title');
-            $content = admin_trans('vip_level.notification.upgrade_content', null, [
+            $replace = [
                 'old_level' => $currentLevel->name,
                 'new_level' => $nextLevel->name,
-            ]);
+            ];
+            $title = admin_trans('notice.title.' . Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE);
+            $content = admin_trans('notice.content.' . Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE, '', $replace);
 
-            Notice::query()->create([
+            $notice = Notice::query()->create([
                 'department_id' => $player->department_id,
                 'player_id' => $playerId,
-                'type' => Notice::TYPE_VIP_LEVEL_CHANGE,
+                'type' => Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE,
                 'title' => $title,
                 'content' => $content,
                 'status' => 0,
@@ -333,6 +334,7 @@ class VipService
                 'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
                 'change_type' => self::CHANGE_TYPE_UPGRADE,
                 'player_id' => $playerId,
+                'notice_id' => $notice->id,
                 'title' => $title,
                 'content' => $content,
                 'old_level_id' => $oldLevelId,
@@ -432,16 +434,17 @@ class VipService
 
         // 创建通知记录并推送降级通知
         try {
-            $title = admin_trans('vip_level.notification.downgrade_title');
-            $content = admin_trans('vip_level.notification.downgrade_content', null, [
+            $replace = [
                 'old_level' => $currentLevel->name,
                 'new_level' => $prevLevel->name,
-            ]);
+            ];
+            $title = admin_trans('notice.title.' . Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE);
+            $content = admin_trans('notice.content.' . Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE, '', $replace);
 
-            Notice::query()->create([
+            $notice = Notice::query()->create([
                 'department_id' => $player->department_id,
                 'player_id' => $playerId,
-                'type' => Notice::TYPE_VIP_LEVEL_CHANGE,
+                'type' => Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE,
                 'title' => $title,
                 'content' => $content,
                 'status' => 0,
@@ -453,6 +456,7 @@ class VipService
                 'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
                 'change_type' => self::CHANGE_TYPE_DOWNGRADE,
                 'player_id' => $playerId,
+                'notice_id' => $notice->id,
                 'title' => $title,
                 'content' => $content,
                 'old_level_id' => $oldLevelId,

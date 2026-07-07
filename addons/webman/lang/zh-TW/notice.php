@@ -14,6 +14,8 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => '機台中洞兌獎次數（壓轉）异常通知',
         Notice::TYPE_MACHINE_LOCK => '機台异常锁定通知',
         Notice::TYPE_MACHINE_CRASH => '設備爆機通知',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP等級升級',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP等級降級',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新的開分訂單待稽核,玩家:{player_name},開分遊戲點:{point}開分金額:{money}！',
@@ -26,5 +28,7 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => '鋼珠機台設備{machine_code}， 發現中洞兌獎次數（壓轉），請維護人員及時排查問題！',
         Notice::TYPE_MACHINE_LOCK => '機台設備{machine_code}， 發生上下分异常（機台已鎖），請維護人員及時排查問題！',
         Notice::TYPE_MACHINE_CRASH => '設備已爆機：玩家 {player_name} (UID:{player_uuid}) 餘額達到 {current_amount}，超過爆機金額 {crash_amount}，請聯繫管理員處理！',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => '恭喜！您的VIP等級已從 {old_level} 升級至 {new_level}',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => '很遺憾，您的VIP等級已從 {old_level} 降級至 {new_level}',
     ],
 ];
