@@ -312,12 +312,8 @@ class VipService
 
         // 创建通知记录并推送升级通知
         try {
-            $replace = [
-                'old_level' => $currentLevel->name,
-                'new_level' => $nextLevel->name,
-            ];
-            $title = admin_trans('notice.title.' . Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE);
-            $content = admin_trans('notice.content.' . Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE, '', $replace);
+            $title = 'VIP等級升級';
+            $content = sprintf('恭喜！您的VIP等級已從 %s 升級至 %s', $currentLevel->name, $nextLevel->name);
 
             $notice = Notice::query()->create([
                 'department_id' => $player->department_id,
@@ -434,12 +430,8 @@ class VipService
 
         // 创建通知记录并推送降级通知
         try {
-            $replace = [
-                'old_level' => $currentLevel->name,
-                'new_level' => $prevLevel->name,
-            ];
-            $title = admin_trans('notice.title.' . Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE);
-            $content = admin_trans('notice.content.' . Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE, '', $replace);
+            $title = 'VIP等級降級';
+            $content = sprintf('很遺憾，您的VIP等級已從 %s 降級至 %s', $currentLevel->name, $prevLevel->name);
 
             $notice = Notice::query()->create([
                 'department_id' => $player->department_id,
