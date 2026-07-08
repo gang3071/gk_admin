@@ -166,8 +166,32 @@ class ChannelAdminUserLimitGroupController
                     ->first();
 
                 if ($limitGroupConfig) {
-                    $form->input('platform_id', $limitGroupConfig->platform_id);
-                    $form->input('platform_code', $limitGroupConfig->platform_code);
+                    $platformId = $limitGroupConfig->platform_id;
+                    $platformCode = $limitGroupConfig->platform_code;
+                    $adminUserId = $form->input('admin_user_id');
+
+                    // 验证：同一店家在同一游戏平台下只能配置一个限红组
+                    $existingQuery = AdminUserLimitGroup::query()
+                        ->where('admin_user_id', $adminUserId)
+                        ->where('platform_id', $platformId);
+
+                    // 如果是编辑，排除当前记录
+                    if ($form->isEdit() && $form->model()->id) {
+                        $existingQuery->where('id', '!=', $form->model()->id);
+                    }
+
+                    $existing = $existingQuery->first();
+
+                    if ($existing) {
+                        // 获取平台名称用于错误提示
+                        $gamePlatform = \addons\webman\model\GamePlatform::find($platformId);
+                        $platformName = $gamePlatform ? $gamePlatform->name : $platformCode;
+
+                        throw new \Exception("该店家在【{$platformName}】平台下已配置限红组，一个平台只能配置一个限红组！");
+                    }
+
+                    $form->input('platform_id', $platformId);
+                    $form->input('platform_code', $platformCode);
                 } else {
                     // 如果限红组还没有配置平台，清空平台信息
                     $form->input('platform_id', null);
