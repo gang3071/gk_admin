@@ -28,6 +28,10 @@ return [
     'activity_bonus_amount' => '活動獎勵',
     'electronic_game_bet_amount' => '電子遊戲打碼量',
     'machine_bet_amount' => '機台打碼量',
+    'ticket_redeem_current_shift' => '出票核銷統計（當前班次）',
+    'ticket_record_total_score' => '出票記錄總金額',
+    'ticket_redeem_backend_used_score' => '核銷記錄後台使用金額',
+    'ticket_subtotal' => '小計',
 
     // 錯誤訊息
     'error' => [

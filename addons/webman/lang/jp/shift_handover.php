@@ -29,6 +29,10 @@ return [
     'activity_bonus_amount' => 'アクティビティボーナス',
     'electronic_game_bet_amount' => '電子ゲームベット額',
     'machine_bet_amount' => 'マシンベット額',
+    'ticket_redeem_current_shift' => '出票・精算統計（現在のシフト）',
+    'ticket_record_total_score' => '出票記録合計金額',
+    'ticket_redeem_backend_used_score' => '精算バックエンド使用金額',
+    'ticket_subtotal' => '小計',
 
     // エラーメッセージ
     'error' => [
