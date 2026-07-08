@@ -63,6 +63,46 @@ class GamePlatform extends Model
     }
 
     /**
+     * 模型启动方法
+     * 监听保存事件，自动清理缓存
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // 监听保存后事件（包括创建和更新）
+        static::saved(function ($model) {
+            self::clearPlatformCache($model->code);
+        });
+    }
+
+    /**
+     * 清除游戏平台缓存
+     * 当平台信息修改后（包括status、maintenance等），清除缓存
+     */
+    private static function clearPlatformCache(string $platformCode): void
+    {
+        try {
+            $redis = \support\Redis::connection('default')->client();
+
+            // 1. 清理游戏平台缓存（gk_work）
+            $platformCacheKey = "game_platform:{$platformCode}";
+            $redis->del($platformCacheKey);
+
+            \support\Log::info('游戏平台缓存已自动清理（Model事件）', [
+                'platform_code' => $platformCode,
+                'cache_key' => $platformCacheKey,
+                'trigger' => 'model_saved_event',
+            ]);
+        } catch (\Exception $e) {
+            \support\Log::error('清除游戏平台缓存失败（Model事件）', [
+                'platform_code' => $platformCode,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * 默认限红组关联
      */
     public function defaultLimitGroup()
