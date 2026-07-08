@@ -654,8 +654,8 @@ class GamePlatformController
                     $gamePlat->save();
                     DB::commit();
 
-                    // ✅ 更新 gk_work 的缓存
-                    $this->clearGamePlatformCache($gamePlat->code);
+                    // ✅ 使用已有的缓存清理方法（支持限红组缓存）
+                    $this->clearGamePlatformCache($form);
 
                     // 保存成功后立即触发推送（状态、时间、星期修改）
                     $this->triggerGamePlatformMaintainNotify($id, 'maintenance_config_edit');
@@ -666,27 +666,6 @@ class GamePlatformController
                 return message_success(admin_trans('form.save_success'));
             });
         });
-    }
-
-    /**
-     * 清除游戏平台缓存（gk_work）
-     * 在编辑平台信息后调用，更新 gk_work 的缓存
-     */
-    private function clearGamePlatformCache(string $platformCode): void
-    {
-        try {
-            $cacheKey = 'game_platform:' . $platformCode;
-            \support\Cache::delete($cacheKey);
-            \support\Log::info('清除游戏平台缓存', [
-                'platform_code' => $platformCode,
-                'cache_key' => $cacheKey,
-            ]);
-        } catch (\Exception $e) {
-            \support\Log::error('清除游戏平台缓存失败', [
-                'platform_code' => $platformCode,
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 
     /**
