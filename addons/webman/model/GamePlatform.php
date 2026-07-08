@@ -70,21 +70,8 @@ class GamePlatform extends Model
     {
         parent::boot();
 
-        // 监听更新前事件（调试：查看是否触发）
-        static::updating(function ($model) {
-            \support\Log::info('GamePlatform::updating 事件触发', [
-                'id' => $model->id,
-                'code' => $model->code,
-                'dirty' => $model->getDirty(), // 被修改的字段
-            ]);
-        });
-
         // 监听保存后事件（包括创建和更新）
         static::saved(function ($model) {
-            \support\Log::info('GamePlatform::saved 事件触发', [
-                'id' => $model->id,
-                'code' => $model->code,
-            ]);
             self::clearPlatformCache($model->code);
         });
     }
@@ -121,12 +108,6 @@ class GamePlatform extends Model
                     }
                 }
             }
-
-            \support\Log::info('游戏平台缓存已自动清理（Model事件）', [
-                'platform_code' => $platformCode,
-                'cache_key' => $platformCacheKey,
-                'trigger' => 'model_saved_event',
-            ]);
         } catch (\Exception $e) {
             \support\Log::error('清除游戏平台缓存失败（Model事件）', [
                 'platform_code' => $platformCode,
