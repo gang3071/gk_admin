@@ -29,6 +29,10 @@ return [
     'activity_bonus_amount' => '活动奖励',
     'electronic_game_bet_amount' => '电子游戏打码量',
     'machine_bet_amount' => '机台打码量',
+    'ticket_redeem_current_shift' => '出票核销统计（当前班次）',
+    'ticket_record_total_score' => '出票记录总金额',
+    'ticket_redeem_backend_used_score' => '核销记录后台使用金额',
+    'ticket_subtotal' => '小计',
 
     // 错误消息
     'error' => [
