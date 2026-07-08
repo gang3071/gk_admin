@@ -70,8 +70,21 @@ class GamePlatform extends Model
     {
         parent::boot();
 
+        // 监听更新前事件（调试：查看是否触发）
+        static::updating(function ($model) {
+            \support\Log::info('GamePlatform::updating 事件触发', [
+                'id' => $model->id,
+                'code' => $model->code,
+                'dirty' => $model->getDirty(), // 被修改的字段
+            ]);
+        });
+
         // 监听保存后事件（包括创建和更新）
         static::saved(function ($model) {
+            \support\Log::info('GamePlatform::saved 事件触发', [
+                'id' => $model->id,
+                'code' => $model->code,
+            ]);
             self::clearPlatformCache($model->code);
         });
     }
