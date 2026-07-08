@@ -3429,6 +3429,23 @@ class ChannelIndexController
                         ->where('player_game_log.created_at', '<=', $endTime)
                         ->sum('player_game_log.chip_amount');
 
+                    // 5.3 统计出票记录（开分类型）
+                    $ticketRecordTotalScore = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.4 统计核销记录后台使用金额（洗分类型）
+                    $ticketRedeemBackendUsedScore = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
                     if (!$admin->department) {
@@ -3520,6 +3537,8 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->is_auto_shift = 0;
                     $storeAgentShiftHandoverRecord->electronic_game_bet_amount = (float)$electronicGameBetAmount;
                     $storeAgentShiftHandoverRecord->machine_bet_amount = (float)$machineBetAmount;
+                    $storeAgentShiftHandoverRecord->ticket_record_total_score = $ticketRecordTotalScore;
+                    $storeAgentShiftHandoverRecord->ticket_redeem_backend_used_score = $ticketRedeemBackendUsedScore;
 
                     // 计算利润（投钞 + 总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(bcadd($storeAgentShiftHandoverRecord->machine_point, $storeAgentShiftHandoverRecord->total_in, 2), $storeAgentShiftHandoverRecord->total_out, 2);

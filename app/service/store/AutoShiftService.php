@@ -7,6 +7,7 @@ use addons\webman\model\PlayGameRecord;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerGameLog;
+use addons\webman\model\TicketRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
@@ -245,6 +246,8 @@ class AutoShiftService
             $shiftRecord->total_profit_amount = $statistics['total_profit'];
             $shiftRecord->electronic_game_bet_amount = $statistics['electronic_game_bet_amount'];
             $shiftRecord->machine_bet_amount = $statistics['machine_bet_amount'];
+            $shiftRecord->ticket_record_total_score = $statistics['ticket_record_total_score'];
+            $shiftRecord->ticket_redeem_backend_used_score = $statistics['ticket_redeem_backend_used_score'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
 
@@ -429,6 +432,23 @@ class AutoShiftService
             ->where('player_game_log.created_at', '<=', $endTime)
             ->sum('player_game_log.chip_amount');
 
+        // 计算出票记录总金额（开分类型）
+        $ticketRecordTotalScore = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 计算核销记录后台使用金额（洗分类型 + 后台使用状态）
+        $ticketRedeemBackendUsedScore = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
         return [
             'machine_amount' => (float)$machineAmount,
             'machine_point' => (int)$data['machine_put_point'],
@@ -439,6 +459,8 @@ class AutoShiftService
             'total_profit' => (float)$totalProfit,
             'electronic_game_bet_amount' => (float)$electronicGameBetAmount,
             'machine_bet_amount' => (float)$machineBetAmount,
+            'ticket_record_total_score' => $ticketRecordTotalScore,
+            'ticket_redeem_backend_used_score' => $ticketRedeemBackendUsedScore,
             // 详细分类数据
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],
