@@ -89,6 +89,26 @@ class GamePlatform extends Model
             $platformCacheKey = "game_platform:{$platformCode}";
             $redis->del($platformCacheKey);
 
+            // 2. 如果是ATG/ATG2/ATG3/RSG/DG平台，清理相关限红组缓存
+            if (in_array($platformCode, ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'])) {
+                // 获取平台ID
+                $platform = self::query()->where('code', $platformCode)->first(['id']);
+                if ($platform) {
+                    // 清理平台限红组配置缓存
+                    $platformLimitConfigKey = "platform_limit_configs:{$platform->id}";
+                    $redis->del($platformLimitConfigKey);
+
+                    // 清理所有玩家的限红组配置缓存（使用SCAN避免阻塞）
+                    $pattern = "limit_group_config:{$platform->id}:*";
+                    $iterator = null;
+                    while (false !== ($keys = $redis->scan($iterator, $pattern, 100))) {
+                        if (!empty($keys)) {
+                            $redis->del(...$keys);
+                        }
+                    }
+                }
+            }
+
             \support\Log::info('游戏平台缓存已自动清理（Model事件）', [
                 'platform_code' => $platformCode,
                 'cache_key' => $platformCacheKey,

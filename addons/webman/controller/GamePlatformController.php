@@ -654,8 +654,7 @@ class GamePlatformController
                     $gamePlat->save();
                     DB::commit();
 
-                    // ✅ 使用已有的缓存清理方法（支持限红组缓存）
-                    $this->clearGamePlatformCache($form);
+                    // ✅ 缓存清理已由 Model::saved 事件自动处理
 
                     // 保存成功后立即触发推送（状态、时间、星期修改）
                     $this->triggerGamePlatformMaintainNotify($id, 'maintenance_config_edit');
