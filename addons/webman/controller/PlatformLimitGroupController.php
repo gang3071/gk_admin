@@ -85,8 +85,8 @@ class PlatformLimitGroupController
 
                     $configData = $config['config_data'] ?? [];
 
-                    // ATG平台显示营运账号
-                    if ($config['platform_code'] === 'ATG' && isset($configData['operator'])) {
+                    // ATG平台显示营运账号（包括ATG、ATG2、ATG3）
+                    if (in_array($config['platform_code'], ['ATG', 'ATG2', 'ATG3']) && isset($configData['operator'])) {
                         $configInfo[] = "营运账号: {$configData['operator']}";
                     }
                     // RSG平台显示限红范围
@@ -159,7 +159,7 @@ class PlatformLimitGroupController
     {
         $platforms = GamePlatform::query()
             ->where('status', 1)
-            ->whereIn('code', ['ATG', 'RSG', 'DG'])
+            ->whereIn('code', ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'])
             ->orderBy('sort', 'desc')
             ->orderBy('id', 'desc')
             ->get();
@@ -208,8 +208,10 @@ class PlatformLimitGroupController
             // 平台配置部分
             $form->divider('平台配置');
 
-            // 获取ATG、RSG和DG平台
+            // 获取ATG、ATG2、ATG3、RSG和DG平台
             $atgPlatform = GamePlatform::query()->where('code', 'ATG')->where('status', 1)->first();
+            $atg2Platform = GamePlatform::query()->where('code', 'ATG2')->where('status', 1)->first();
+            $atg3Platform = GamePlatform::query()->where('code', 'ATG3')->where('status', 1)->first();
             $rsgPlatform = GamePlatform::query()->where('code', 'RSG')->where('status', 1)->first();
             $dgPlatform = GamePlatform::query()->where('code', 'DG')->where('status', 1)->first();
 
@@ -232,6 +234,12 @@ class PlatformLimitGroupController
             if ($atgPlatform) {
                 $platformOptions[$atgPlatform->id] = "{$atgPlatform->name} ({$atgPlatform->code})";
             }
+            if ($atg2Platform) {
+                $platformOptions[$atg2Platform->id] = "{$atg2Platform->name} ({$atg2Platform->code})";
+            }
+            if ($atg3Platform) {
+                $platformOptions[$atg3Platform->id] = "{$atg3Platform->name} ({$atg3Platform->code})";
+            }
             if ($rsgPlatform) {
                 $platformOptions[$rsgPlatform->id] = "{$rsgPlatform->name} ({$rsgPlatform->code})";
             }
@@ -240,7 +248,7 @@ class PlatformLimitGroupController
             }
 
             if (empty($platformOptions)) {
-                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/RSG/DG）</div>');
+                $form->html('<div style="padding: 10px; color: #999;">暂无可用的游戏平台（ATG/ATG2/ATG3/RSG/DG）</div>');
             } else {
                 // 平台选择（新建必填，编辑显示）
                 if ($form->isEdit() && $existingConfig) {
@@ -249,8 +257,9 @@ class PlatformLimitGroupController
                     $form->hidden('platform_id')->value($existingConfig->platform_id);
 
                     // 编辑模式直接显示对应平台的配置字段
-                    if ($existingConfig->platform_code === 'ATG' && $atgPlatform) {
-                        $form->divider('ATG 平台配置');
+                    if (in_array($existingConfig->platform_code, ['ATG', 'ATG2', 'ATG3']) && ($atgPlatform || $atg2Platform || $atg3Platform)) {
+                        $platformName = $existingConfig->platform_code;
+                        $form->divider("{$platformName} 平台配置");
                         $form->text('atg_operator', 'X-Operator')
                             ->value($existingConfigData['operator'] ?? '')
                             ->required()
@@ -332,6 +341,66 @@ class PlatformLimitGroupController
                             $form->text('atg_provider_id', 'Provider ID')
                                 ->default('4')
                                 ->help('ATG提供商ID，默认为4');
+
+                            $form->text('atg_api_domain', 'API域名')
+                                ->help('可选，留空使用默认配置')
+                                ->placeholder('https://api.atg.com');
+
+                            $form->textarea('atg_limit_description', '限红说明')
+                                ->rows(3)
+                                ->help('描述该营运账号的限红设置')
+                                ->placeholder('例如：单注：100-10000，单日限额：100000');
+                        });
+                    }
+
+                    // ATG2平台配置（使用when实现条件显示）
+                    if ($atg2Platform) {
+                        $platformSelect->when($atg2Platform->id, function (Form $form) {
+                            $form->divider('ATG2 平台配置');
+
+                            $form->text('atg_operator', 'X-Operator')
+                                ->required()
+                                ->help('ATG2平台营运账号的Operator值')
+                                ->placeholder('请输入Operator');
+
+                            $form->password('atg_operator_key', 'X-Key')
+                                ->required()
+                                ->help('ATG2平台营运账号的Key值')
+                                ->placeholder('请输入Key');
+
+                            $form->text('atg_provider_id', 'Provider ID')
+                                ->default('5')
+                                ->help('ATG2提供商ID，默认为5');
+
+                            $form->text('atg_api_domain', 'API域名')
+                                ->help('可选，留空使用默认配置')
+                                ->placeholder('https://api.atg.com');
+
+                            $form->textarea('atg_limit_description', '限红说明')
+                                ->rows(3)
+                                ->help('描述该营运账号的限红设置')
+                                ->placeholder('例如：单注：100-10000，单日限额：100000');
+                        });
+                    }
+
+                    // ATG3平台配置（使用when实现条件显示）
+                    if ($atg3Platform) {
+                        $platformSelect->when($atg3Platform->id, function (Form $form) {
+                            $form->divider('ATG3 平台配置');
+
+                            $form->text('atg_operator', 'X-Operator')
+                                ->required()
+                                ->help('ATG3平台营运账号的Operator值')
+                                ->placeholder('请输入Operator');
+
+                            $form->password('atg_operator_key', 'X-Key')
+                                ->required()
+                                ->help('ATG3平台营运账号的Key值')
+                                ->placeholder('请输入Key');
+
+                            $form->text('atg_provider_id', 'Provider ID')
+                                ->default('6')
+                                ->help('ATG3提供商ID，默认为6');
 
                             $form->text('atg_api_domain', 'API域名')
                                 ->help('可选，留空使用默认配置')
@@ -437,7 +506,8 @@ class PlatformLimitGroupController
 
                 // 根据平台类型组织config_data
                 $configData = [];
-                if ($platform->code === 'ATG') {
+                if (in_array($platform->code, ['ATG', 'ATG2', 'ATG3'])) {
+                    // ATG/ATG2/ATG3使用相同的配置字段
                     $configData = [
                         'operator' => $data['atg_operator'] ?? '',
                         'operator_key' => $data['atg_operator_key'] ?? '',
