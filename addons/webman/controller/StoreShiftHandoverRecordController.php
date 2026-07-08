@@ -65,6 +65,14 @@ class StoreShiftHandoverRecordController
             $grid->column('lottery_ticket_reward_amount', admin_trans('shift_handover.auto.lottery_ticket_reward_amount'))->width(120)->align('center');
             $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.record.electronic_game_bet_amount'))->width(120)->align('center');
             $grid->column('machine_bet_amount', admin_trans('shift_handover.record.machine_bet_amount'))->width(120)->align('center');
+            $grid->column('ticket_record_total_score', admin_trans('shift_handover.record.ticket_record_total_score'))->width(120)->align('center');
+            $grid->column('ticket_redeem_backend_used_score', admin_trans('shift_handover.record.ticket_redeem_backend_used_score'))->width(120)->align('center');
+            $grid->column('ticket_subtotal', admin_trans('shift_handover.record.ticket_subtotal'))->width(100)->align('center')
+                ->display(function ($val, $data) {
+                    $subtotal = bcsub($data['ticket_record_total_score'] ?? 0, $data['ticket_redeem_backend_used_score'] ?? 0, 2);
+                    $color = floatval($subtotal) >= 0 ? '#3f8600' : '#cf1322';
+                    return Html::create(number_format(floatval($subtotal), 2))->style(['color' => $color]);
+                });
             $grid->column('total_profit_amount', admin_trans('shift_handover.record.total_profit'))->width(100)->align('center')
                 ->display(function ($value) {
                     $color = $value >= 0 ? '#3f8600' : '#cf1322';
@@ -150,16 +158,35 @@ class StoreShiftHandoverRecordController
                                     Html::create(number_format($row['machine_bet_amount'], 2))
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
-                            // 第6行
+                            // 第6行 - 出票核销
                             Html::div()->content([
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.ticket_record_total_score'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($row['ticket_record_total_score'] ?? 0, 2))->style(['color' => '#3f8600'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.ticket_redeem_backend_used_score'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($row['ticket_redeem_backend_used_score'] ?? 0, 2))->style(['color' => '#cf1322'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第7行
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.ticket_subtotal'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    $ticketSubtotal = bcsub($row['ticket_record_total_score'] ?? 0, $row['ticket_redeem_backend_used_score'] ?? 0, 2),
+                                    Html::create(number_format(floatval($ticketSubtotal), 2))->style(['color' => floatval($ticketSubtotal) >= 0 ? '#3f8600' : '#cf1322'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.total_profit'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
                                     Html::create($row['total_profit_amount'])->style(['color' => $profitColor])
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第8行
+                            Html::div()->content([
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.created_at'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
                                     Html::create($row['created_at'])
-                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '100%'])
                             ])
                         ])
                     ])->style(['padding' => '20px'])

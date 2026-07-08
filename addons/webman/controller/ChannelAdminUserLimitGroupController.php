@@ -7,6 +7,7 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\AdminUserLimitGroup;
 use addons\webman\model\PlatformLimitGroup;
 use addons\webman\model\PlatformLimitGroupConfig;
+use Carbon\Carbon;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
@@ -82,7 +83,12 @@ class ChannelAdminUserLimitGroupController
 
             $grid->column('assignedBy.username', '分配人')->align('center');
 
-            $grid->column('assigned_at', '分配时间')->align('center');
+            $grid->column('assigned_at', '分配时间')->align('center')->display(function ($value) {
+                if (empty($value)) {
+                    return '-';
+                }
+                return Carbon::parse($value)->timezone('Asia/Shanghai')->format('Y-m-d H:i:s');
+            });
 
             $grid->column('remark', '备注')->align('center');
 
@@ -155,7 +161,7 @@ class ChannelAdminUserLimitGroupController
             $form->saving(function (Form $form) {
                 if (!$form->isEdit()) {
                     $form->input('assigned_by', Admin::id());
-                    $form->input('assigned_at', date('Y-m-d H:i:s'));
+                    $form->input('assigned_at', Carbon::now('Asia/Shanghai')->format('Y-m-d H:i:s'));
                 }
 
                 // 从限红组配置中自动获取游戏平台信息
