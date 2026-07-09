@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
 use addons\webman\model\Player;
 use ExAdmin\ui\component\common\Button;
@@ -57,6 +58,26 @@ class StoreTicketRedeemController
                     . 'sum(IF(status = ' . TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
                 )
                 ->first();
+
+            // 获取当前班次统计（从上次交班时间到现在）
+            $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
+                ->where('bind_admin_user_id', $admin->id)
+                ->orderBy('id', 'desc')
+                ->first();
+            $lastShiftTime = $lastShiftRecord ? $lastShiftRecord->end_time : null;
+
+            $currentShiftQuery = TicketRecord::query()
+                ->where('store_admin_id', $admin->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                    $query->where('scanned_at', '>', $lastShiftTime);
+                });
+            $currentShiftData = $currentShiftQuery->selectRaw(
+                'sum(score) as total_score, count(*) as total_count, '
+                . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
+                . 'sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
+                . 'sum(IF(status = ' . TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
+            )->first();
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
@@ -157,6 +178,130 @@ class StoreTicketRedeemController
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 5);
             })->style(['background' => '#fff']);
+
+            // 当前班次统计
+            $layout->row(function (Row $row) use ($currentShiftData, $lastShiftTime) {
+                $row->gutter([10, 0]);
+                // 当前班次标题
+                $row->column(
+                    Card::create([
+                        Html::create(admin_trans('ticket_machine.redeem.current_shift') . ($lastShiftTime ? ' (' . $lastShiftTime . ')' : ''))
+                            ->style([
+                                'font-size' => '12px',
+                                'font-weight' => 'bold',
+                                'color' => '#67C23A',
+                                'text-align' => 'center'
+                            ]),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'justify-content' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px',
+                        'background' => '#f6ffed'
+                    ])->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                // 当前班次总核销金额
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($currentShiftData['total_score']) ? floatval($currentShiftData['total_score']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.total_score'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#1890ff'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px',
+                        'background' => '#f6ffed'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                // 当前班次总核销次数
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($currentShiftData['total_count']) ? intval($currentShiftData['total_count']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.total_count'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#52c41a'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px',
+                        'background' => '#f6ffed'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                // 当前班次已使用数量
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($currentShiftData['used_count']) ? intval($currentShiftData['used_count']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.used_count'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#faad14'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px',
+                        'background' => '#f6ffed'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                // 当前班次后台使用金额
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($currentShiftData['backend_used_score']) ? floatval($currentShiftData['backend_used_score']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.backend_used_score'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#f5222d'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px',
+                        'background' => '#f6ffed'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                // 当前班次机台使用金额
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($currentShiftData['machine_used_score']) ? floatval($currentShiftData['machine_used_score']) : 0)
+                            ->prefix(admin_trans('ticket_machine.redeem.machine_used_score'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#722ed1'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px',
+                        'background' => '#f6ffed'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+            })->style(['background' => '#f6ffed']);
 
             // 添加核销按钮和统计布局
             $grid->tools([

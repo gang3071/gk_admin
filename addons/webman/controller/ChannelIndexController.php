@@ -2264,7 +2264,7 @@ class ChannelIndexController
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
-                $query->where('created_at', '>', $lastShiftTime);
+                $query->where('scanned_at', '>', $lastShiftTime);
             })
             ->selectRaw('sum(score) as total_score')
             ->first();
@@ -2274,7 +2274,7 @@ class ChannelIndexController
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
-                $query->where('created_at', '>', $lastShiftTime);
+                $query->where('scanned_at', '>', $lastShiftTime);
             })
             ->selectRaw('sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
             ->first();
@@ -3433,8 +3433,8 @@ class ChannelIndexController
                     $ticketRecordTotalScore = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('created_at', '>', $startTime)
-                        ->where('created_at', '<=', $endTime)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.4 统计核销记录后台使用金额（洗分类型）
@@ -3442,8 +3442,8 @@ class ChannelIndexController
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
                         ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
-                        ->where('created_at', '>', $startTime)
-                        ->where('created_at', '<=', $endTime)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 7. 获取货币配置并验证（在事务外）

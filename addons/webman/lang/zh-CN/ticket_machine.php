@@ -259,6 +259,7 @@ return [
         'total_count' => '总出票：',
         'used_count' => '已使用：',
         'used_score' => '已使用金额：',
+        'current_shift' => '当前班次',
     ],
 
     // 核销记录
@@ -307,5 +308,6 @@ return [
         'used_count' => '已使用：',
         'backend_used_score' => '后台使用：',
         'machine_used_score' => '机台使用：',
+        'current_shift' => '当前班次',
     ],
 ];

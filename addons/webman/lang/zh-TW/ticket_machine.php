@@ -260,6 +260,7 @@ return [
         'total_count' => '總出票：',
         'used_count' => '已使用：',
         'used_score' => '已使用金額：',
+        'current_shift' => '當前班次',
     ],
 
     // 核銷記錄
@@ -308,5 +309,6 @@ return [
         'used_count' => '已使用：',
         'backend_used_score' => '後台使用：',
         'machine_used_score' => '機台使用：',
+        'current_shift' => '當前班次',
     ],
 ];
