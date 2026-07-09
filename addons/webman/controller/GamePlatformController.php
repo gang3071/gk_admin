@@ -107,8 +107,8 @@ class GamePlatformController
 
             // 默认限红组列
             $grid->column('default_limit_group', '默认限红组')->display(function ($value, GamePlatform $data) {
-                // 只有ATG、RSG和DG平台显示默认限红组
-                if (!in_array($data->code, ['ATG', 'RSG', 'DG'])) {
+                // 只有ATG、ATG2、ATG3、RSG和DG平台显示默认限红组
+                if (!in_array($data->code, ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'])) {
                     return '-';
                 }
 
@@ -224,7 +224,7 @@ class GamePlatformController
             if ($form->isEdit()) {
                 $platformId = $form->driver()->get('id');
                 $platformCode = $form->driver()->get('code');
-                if (in_array($platformCode, ['ATG', 'RSG', 'DG'])) {
+                if (in_array($platformCode, ['ATG', 'ATG2', 'ATG3', 'RSG', 'DG'])) {
                     $form->select('default_limit_group_id', '默认限红组')
                         ->options($this->getLimitGroupOptionsForPlatform($platformId))
                         ->help('为该平台设置默认限红组，当店家未配置限红时使用');
