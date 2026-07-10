@@ -181,12 +181,12 @@ class StoreSettingController
                             ->height(80)
                             ->src($data->content)
                             ->style(['border-radius' => '4px', 'objectFit' => 'cover'])
-                            ->modal([$this, 'editMenuImage'], ['data' => $data]);
+                            ->modal([$this, 'editMenuImage'], ['id' => $data->id]);
                     }
                     return \ExAdmin\ui\component\common\Button::create(admin_trans('store_setting.upload_menu'))
                         ->type('primary')
                         ->size('small')
-                        ->modal([$this, 'editMenuImage'], ['data' => $data]);
+                        ->modal([$this, 'editMenuImage'], ['id' => $data->id]);
                 })->align('center');
 
             // 状态列
@@ -223,11 +223,13 @@ class StoreSettingController
      * 编辑菜单图片
      * @group channel
      * @auth true
-     * @param StoreSetting $data
+     * @param int $id
      * @return Form
      */
-    public function editMenuImage(StoreSetting $data): Form
+    public function editMenuImage($id): Form
     {
+        $data = StoreSetting::query()->findOrFail($id);
+
         return Form::create($data, function (Form $form) use ($data) {
             $form->title(admin_trans('store_setting.edit_menu_image'));
             $form->image('content', admin_trans('store_setting.menu_image_label'))
@@ -235,7 +237,6 @@ class StoreSettingController
                 ->fileSize('5m')
                 ->help(admin_trans('store_setting.menu_image_help'))
                 ->required();
-            $form->layout('vertical');
         });
     }
 }
