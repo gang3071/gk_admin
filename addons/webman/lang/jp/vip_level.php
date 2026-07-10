@@ -48,4 +48,10 @@ return [
     'messages' => [
         'cashback_saved' => 'キャッシュバック率が保存されました',
     ],
+    'notification' => [
+        'upgrade_title' => 'VIPレベルアップ',
+        'upgrade_content' => 'おめでとうございます！VIPレベルが{old_level}から{new_level}にアップグレードしました',
+        'downgrade_title' => 'VIPレベルダウングレード',
+        'downgrade_content' => '残念ながら、VIPレベルが{old_level}から{new_level}にダウングレードしました',
+    ],
 ];

@@ -40,6 +40,13 @@ return [
         'constructor' => []
     ],
 
+    // VIP生日礼金定时任务
+    'vip_birthday_bonus' => [
+        'handler' => process\VipBirthdayBonusTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
     // ✅ 摸奖券队列消费者已迁移到标准 redis-queue 插件
     // 配置位置：config/plugin/webman/redis-queue/process.php
     // 消费者目录：app/queue/redis/
