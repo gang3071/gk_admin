@@ -82,6 +82,9 @@ return [
         'channel_coin_merchant_list' => 'Coin merchant list',
         'channel_coin_merchant_recharge_records' => 'Coin merchant open score records',
         'channel_coin_merchant_transaction_records' => 'Coin merchant transaction records',
+        //Device management
+        'channel_device_manage' => 'Device Management',
+        'channel_device_list' => 'Device List',
         //Player management
         'channel_player_manage' => 'Player management',
         'channel_player_list' => 'Player list',

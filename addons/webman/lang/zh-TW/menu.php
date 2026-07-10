@@ -82,9 +82,12 @@ return [
         'channel_coin_merchant_list' => '幣商清單',
         'channel_coin_merchant_recharge_records' => '幣商開分記錄',
         'channel_coin_merchant_transaction_records' => '幣商交易記錄',
+//设备管理
+        'channel_device_manage' => '設備管理',
+        'channel_device_list' => '設備列表',
 //玩家管理
         'channel_player_manage' => '玩家管理',
-        'channel_player_list' => '設備清單',
+        'channel_player_list' => '玩家列表',
         'channel_player_accounting_change_records' => '賬變記錄',
 //機台管理
         'channel_machine_manage' => '機台管理',

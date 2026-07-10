@@ -52,8 +52,8 @@ return [
         'player_tag' => '标签',
         'tag_name' => '标签名称',
         'uuid' => '玩家UID',
-        'device_uuid' => '设备UUID',
-        'device_name' => '设备名称',
+        'device_uuid' => '玩家UUID',
+        'device_name' => '玩家名称',
         'store_admin' => '所属店家',
         'type' => '玩家类型',
         'player_type_normal' => '普通玩家',
@@ -292,7 +292,7 @@ return [
 
     // 筛选器
     'filter' => [
-        'select_device' => '选择设备',
+        'select_device' => '选择玩家',
     ],
 
     // 爆机相关

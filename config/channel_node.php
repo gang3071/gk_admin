@@ -796,6 +796,70 @@ return [
         'title' => '删除开分配置',
     ],
 
+    //设备管理
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'channel',
+        'title' => '设备管理',
+        'children' => []
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\index',
+        'pid' => 'addons\webman\controller\ChannelDeviceController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/index',
+        'title' => '设备列表',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\form-post',
+        'pid' => 'addons\webman\controller\ChannelDeviceController\index',
+        'action' => 'form',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/form',
+        'title' => '添加设备',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\form-put',
+        'pid' => 'addons\webman\controller\ChannelDeviceController\index',
+        'action' => 'form',
+        'method' => 'put',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/form',
+        'title' => '编辑设备',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\index-delete',
+        'pid' => 'addons\webman\controller\ChannelDeviceController\index',
+        'action' => 'index',
+        'method' => 'delete',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/index',
+        'title' => '删除设备',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\getAgentOptions',
+        'pid' => 'addons\webman\controller\ChannelDeviceController\index',
+        'action' => 'getAgentOptions',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/getAgentOptions',
+        'title' => '获取代理选项',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\getStoreOptions',
+        'pid' => 'addons\webman\controller\ChannelDeviceController\index',
+        'action' => 'getStoreOptions',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/getStoreOptions',
+        'title' => '获取店家选项',
+    ],
+
     //玩家管理
     [
         'id' => 'addons\webman\controller\ChannelPlayerController-',
@@ -812,7 +876,7 @@ return [
         'method' => 'get',
         'group' => 'channel',
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/index',
-        'title' => '设备列表',
+        'title' => '玩家列表',
     ],
     [
         'id' => 'ex-admin\addons-webman-controller-ChannelPlayerController\playerGameWallet',

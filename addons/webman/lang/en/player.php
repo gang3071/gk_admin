@@ -52,8 +52,8 @@ return [
         'player_tag' => 'tag',
         'tag_name' => 'Tag Name',
         'uuid' => 'Player UID',
-        'device_uuid' => 'Device UUID',
-        'device_name' => 'Device Name',
+        'device_uuid' => 'Player UUID',
+        'device_name' => 'Player Name',
         'store_admin' => 'Store',
         'type' => 'Player type',
         'player_type_normal' => 'Normal Player',
@@ -291,7 +291,7 @@ return [
 
     // Filters
     'filter' => [
-        'select_device' => 'Select Device',
+        'select_device' => 'Select Player',
     ],
 
     // Machine Crash Related

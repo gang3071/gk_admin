@@ -52,8 +52,8 @@ return [
         'player_tag' => '標籤',
         'tag_name' => '標籤名稱',
         'uuid' => '玩家UID',
-        'device_uuid' => '設備UUID',
-        'device_name' => '設備名稱',
+        'device_uuid' => '玩家UUID',
+        'device_name' => '玩家名稱',
         'store_admin' => '所屬店家',
         'type' => '玩家類型',
         'player_type_normal' => '普通玩家',
@@ -292,7 +292,7 @@ return [
 
     // 篩選器
     'filter' => [
-        'select_device' => '選擇設備',
+        'select_device' => '選擇玩家',
     ],
 
     // 爆機相關

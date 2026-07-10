@@ -51,8 +51,8 @@ return [
         'player_tag' => 'タグ',
         'tag_name' => 'タグ名',
         'uuid' => 'プレイヤーUID',
-        'device_uuid' => 'デバイスUUID',
-        'device_name' => 'デバイス名',
+        'device_uuid' => 'プレイヤーUUID',
+        'device_name' => 'プレイヤー名',
         'store_admin' => '所属店舗',
         'type' => 'プレイヤータイプ',
         'player_type_normal' => '通常プレーヤー',
@@ -291,7 +291,7 @@ return [
 
     // フィルター
     'filter' => [
-        'select_device' => 'デバイスを選択',
+        'select_device' => 'プレイヤーを選択',
     ],
 
     // マシンクラッシュ関連

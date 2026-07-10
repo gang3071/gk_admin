@@ -82,6 +82,9 @@ return [
         'channel_coin_merchant_list' => 'コイン販売者リスト',
         'channel_coin_merchant_recharge_records' => 'コイン販売者の開分記録',
         'channel_coin_merchant_transaction_records' => 'コイン販売者の取引記録',
+        //デバイス管理
+        'channel_device_manage' => 'デバイス管理',
+        'channel_device_list' => 'デバイスリスト',
         //プレイヤー管理
         'channel_player_manage' => 'プレイヤー管理',
         'channel_player_list' => 'プレイヤーリスト',
