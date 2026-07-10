@@ -68,6 +68,7 @@ class StoreSettingController
             // - enable_physical_machine: 是否开启实体机台
             // - enable_live_baccarat: 是否开启真人百家
             // - machine_crash_amount: 爆机金额
+            // - menu_image: 点菜菜单图片
             $grid->column('feature', admin_trans('store_setting.fields.feature'))
                 ->display(function ($value, StoreSetting $data) {
                     return admin_trans('store_setting.fields.' . $data->feature);
@@ -169,6 +170,23 @@ class StoreSettingController
                         return number_format(floatval($data->num), 2);
                     }
                     return '0.00';
+                })->align('center')
+                // 点菜菜单图片
+                ->if(function ($value, StoreSetting $data) {
+                    return $data->feature === 'menu_image';
+                })->display(function ($value, StoreSetting $data) {
+                    if (!empty($data->content)) {
+                        return \ExAdmin\ui\component\grid\image\Image::create()
+                            ->width(80)
+                            ->height(80)
+                            ->src($data->content)
+                            ->style(['border-radius' => '4px', 'objectFit' => 'cover'])
+                            ->modal([$this, 'editMenuImage'], ['data' => $data]);
+                    }
+                    return \ExAdmin\ui\component\common\Button::create(admin_trans('store_setting.upload_menu'))
+                        ->type('primary')
+                        ->size('small')
+                        ->modal([$this, 'editMenuImage'], ['data' => $data]);
                 })->align('center');
 
             // 状态列
@@ -197,6 +215,25 @@ class StoreSettingController
             $form->title(admin_trans('store_setting.edit_business_hours'));
             $form->timeRange('date_start', 'date_end', admin_trans('store_setting.time_range'))
                 ->value([$data->date_start, $data->date_end])
+                ->required();
+        });
+    }
+
+    /**
+     * 编辑菜单图片
+     * @group channel
+     * @auth true
+     * @param StoreSetting $data
+     * @return Form
+     */
+    public function editMenuImage(StoreSetting $data): Form
+    {
+        return Form::create($data, function (Form $form) use ($data) {
+            $form->title(admin_trans('store_setting.edit_menu_image'));
+            $form->image('content', admin_trans('store_setting.menu_image_label'))
+                ->ext('jpg,png,jpeg')
+                ->fileSize('5m')
+                ->help(admin_trans('store_setting.menu_image_help'))
                 ->required();
         });
     }
