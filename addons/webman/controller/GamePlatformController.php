@@ -326,7 +326,7 @@ class GamePlatformController
             return notification_error(
                 admin_trans('admin.error'),
                 $e->getMessage()
-            );
+            )->redirect('');
         }
     }
 
