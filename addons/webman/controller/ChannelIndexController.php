@@ -2999,24 +2999,18 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->machine_point =
                         $playerDeliveryRecord['machine_put_point'] ?? 0;
 
-                    // 计算总收入（开分 + 投钞 + 后台加点）
+                    // 计算总收入（开分 + 投钞）
+                    // 注意：不再包含后台加点
                     $storeAgentShiftHandoverRecord->total_in = bcadd(
-                        bcadd(
-                            $playerDeliveryRecord['recharge_amount'] ?? 0,
-                            $playerDeliveryRecord['machine_put_point'] ?? 0,
-                            2
-                        ),
-                        $playerDeliveryRecord['modified_add_amount'] ?? 0,
+                        $playerDeliveryRecord['recharge_amount'] ?? 0,
+                        $playerDeliveryRecord['machine_put_point'] ?? 0,
                         2
                     );
 
-                    // 计算总支出（洗分 + 后台扣点）
-                    // 注意：洗分已包含彩金，不需要重复计算
-                    $storeAgentShiftHandoverRecord->total_out = bcadd(
-                        $playerDeliveryRecord['withdrawal_amount'] ?? 0,
-                        $playerDeliveryRecord['modified_deduct_amount'] ?? 0,
-                        2
-                    );
+                    // 计算总支出（洗分）
+                    // 注意：洗分已包含彩金，不需要重复计算；不再包含后台扣点
+                    $storeAgentShiftHandoverRecord->total_out =
+                        $playerDeliveryRecord['withdrawal_amount'] ?? 0;
 
                     // 存储彩金（仅用于展示，不参与支出计算）
                     $storeAgentShiftHandoverRecord->lottery_amount =

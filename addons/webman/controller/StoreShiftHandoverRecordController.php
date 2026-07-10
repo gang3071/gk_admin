@@ -267,9 +267,15 @@ class StoreShiftHandoverRecordController
                 });
 
             $grid->column('profit', admin_trans('shift_handover.profit'))->width(120)->align('center')
-                ->display(function ($value) {
-                    $color = $value >= 0 ? '#3f8600' : '#cf1322';
-                    $formatted = number_format($value, 2);
+                ->display(function ($value, $data) {
+                    // 重新计算利润：投钞点数 + 开分 - 洗分（不包含后台加点和扣点）
+                    $profit = bcadd(
+                        bcadd(strval($data['machine_point']), strval($data['recharge_amount']), 2),
+                        '-' . strval($data['withdrawal_amount']),
+                        2
+                    );
+                    $color = floatval($profit) >= 0 ? '#3f8600' : '#cf1322';
+                    $formatted = number_format($profit, 2);
                     return Html::create($formatted)->style(['color' => $color, 'fontWeight' => 'bold']);
                 });
 
