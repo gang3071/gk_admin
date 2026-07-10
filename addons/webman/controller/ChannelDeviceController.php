@@ -108,21 +108,30 @@ class ChannelDeviceController
             });
 
             // 筛选
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($departmentId) {
                 $filter->like()->text('device_name')->placeholder(admin_trans('device.fields.device_name'));
                 $filter->like()->text('device_no')->placeholder(admin_trans('device.fields.device_no'));
 
-                // 代理筛选
+                // 代理筛选（静态加载选项，与 AdminDeviceController 一致）
+                $agentOptions = [0 => admin_trans('device.no_agent')];
+                $agents = AdminUser::query()
+                    ->where('type', AdminUser::TYPE_AGENT)
+                    ->where('status', AdminUser::STATUS_ENABLED)
+                    ->where('department_id', $departmentId)
+                    ->get();
+                foreach ($agents as $agent) {
+                    $agentOptions[$agent->id] = $agent->nickname ?: $agent->username;
+                }
+
                 $agentFilter = $filter->eq()->select('agent_admin_id')
                     ->placeholder(admin_trans('device.fields.agent_name'))
                     ->showSearch()
-                    ->remoteOptions(admin_url(['addons-webman-controller-ChannelDeviceController', 'getAgentOptions']));
+                    ->options($agentOptions);
 
                 // 店家筛选（根据代理动态加载）
                 $storeFilter = $filter->eq()->select('store_admin_id')
                     ->placeholder(admin_trans('device.fields.store_name'))
-                    ->showSearch()
-                    ->remoteOptions(admin_url(['addons-webman-controller-ChannelDeviceController', 'getStoreOptions']));
+                    ->showSearch();
 
                 // 设置级联关系：代理 -> 店家
                 $agentFilter->load($storeFilter, admin_url(['addons-webman-controller-ChannelDeviceController', 'getStoreOptions']));
@@ -171,12 +180,30 @@ class ChannelDeviceController
                 ->maxlength(100)
                 ->help(admin_trans('device.device_no_help'));
 
+            // 渠道选择（当前渠道，只读）
+            $departmentField = $form->select('department_id', admin_trans('device.fields.channel_name'))
+                ->options([$departmentId => $channel->name ?? ''])
+                ->default($departmentId)
+                ->disabled()
+                ->help(admin_trans('device.select_channel_first'));
+
             // 线下渠道：显示代理和店家选择
             if ($channel && $channel->is_offline == 1) {
-                // 代理选择（remoteOptions 加载）
+                // 代理选项（静态加载，因为渠道固定且 department_id 是 disabled）
+                $agentOptions = [0 => admin_trans('device.no_agent')];
+                $agents = AdminUser::query()
+                    ->where('type', AdminUser::TYPE_AGENT)
+                    ->where('status', AdminUser::STATUS_ENABLED)
+                    ->where('department_id', $departmentId)
+                    ->get();
+                foreach ($agents as $agent) {
+                    $agentOptions[$agent->id] = $agent->nickname ?: $agent->username;
+                }
+
+                // 代理选择
                 $agentField = $form->select('agent_admin_id', admin_trans('device.fields.agent_name'))
                     ->showSearch()
-                    ->remoteOptions(admin_url(['addons-webman-controller-ChannelDeviceController', 'getAgentOptions']))
+                    ->options($agentOptions)
                     ->help(admin_trans('device.fields.agent_help'));
 
                 // 店家选择（根据代理动态加载）
@@ -186,9 +213,6 @@ class ChannelDeviceController
 
                 // 设置级联关系：代理 -> 店家
                 $agentField->load($storeField, admin_url(['addons-webman-controller-ChannelDeviceController', 'getStoreOptions']));
-
-                // 切换代理时清空店家
-                $agentField->event('change', ['store_admin_id' => null], 'variable');
             }
 
             $form->text('device_model', admin_trans('device.fields.device_model'))
@@ -244,29 +268,21 @@ class ChannelDeviceController
      */
     public function getAgentOptions(): Response
     {
-        $departmentId = Admin::user()->department_id;
+        $admin = Admin::user();
         $request = Request::input();
         $optionsField = $request['optionsField'] ?? 'agent_admin_id';
 
-        // 检查是否为线下渠道
-        $channel = Channel::where('department_id', $departmentId)->first();
-        if (!$channel || $channel->is_offline == 0) {
-            return Response::success([$optionsField => [
-                ['value' => 0, 'label' => admin_trans('device.no_agent')]
-            ]]);
-        }
-
-        // 获取当前渠道下的代理
-        $agents = AdminUser::where('type', AdminUser::TYPE_AGENT)
-            ->where('department_id', $departmentId)
+        $agents = AdminUser::query()
+            ->where('type', AdminUser::TYPE_AGENT)
             ->where('status', AdminUser::STATUS_ENABLED)
+            ->where('department_id', $admin->department_id)
             ->get();
 
         $options = [['value' => 0, 'label' => admin_trans('device.no_agent')]];
         foreach ($agents as $agent) {
             $options[] = [
                 'value' => $agent->id,
-                'label' => $agent->nickname,
+                'label' => $agent->nickname ?: $agent->username,
             ];
         }
 
@@ -290,7 +306,6 @@ class ChannelDeviceController
             ]]);
         }
 
-        // 获取该代理下的店家
         $stores = AdminUser::where('type', AdminUser::TYPE_STORE)
             ->where('parent_admin_id', $agentAdminId)
             ->where('status', AdminUser::STATUS_ENABLED)
@@ -300,7 +315,7 @@ class ChannelDeviceController
         foreach ($stores as $store) {
             $options[] = [
                 'value' => $store->id,
-                'label' => $store->nickname,
+                'label' => $store->nickname ?: $store->username,
             ];
         }
 

@@ -14,6 +14,8 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => 'Abnormal notification of prize redemption times (pressure rotation) in the machine hole',
         Notice::TYPE_MACHINE_LOCK => 'Machine abnormal locking notification',
         Notice::TYPE_MACHINE_CRASH => 'Device Crash Notification',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP Level Upgraded',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP Level Downgraded',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => 'New open score order pending review, player: {player_name}, open score game points: {point} open score amount: {money}!',
@@ -26,5 +28,7 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => 'Steel ball machine equipment {machine_code}, Discovered the number of times the prize has been redeemed in the middle hole (pressure conversion), please have maintenance personnel investigate the problem in a timely manner!',
         Notice::TYPE_MACHINE_LOCK => 'The machine equipment {machine_code} has experienced a vertical separation abnormality (the machine is locked). Please have maintenance personnel investigate the problem in a timely manner!！',
         Notice::TYPE_MACHINE_CRASH => 'Device crashed: Player {player_name} (UID:{player_uuid}) balance reached {current_amount}, exceeded crash amount {crash_amount}, please contact administrator!',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'Congratulations! Your VIP level has been upgraded from {old_level} to {new_level}',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'Unfortunately, your VIP level has been downgraded from {old_level} to {new_level}',
     ],
 ];

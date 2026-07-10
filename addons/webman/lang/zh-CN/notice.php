@@ -12,7 +12,10 @@ return [
         Notice::TYPE_MACHINE_BET => '机台设备bet(压分)数据异常',
         Notice::TYPE_MACHINE_WIN => '机台设备win(得分)数据异常',
         Notice::TYPE_MACHINE_WIN_NUMBER => '機台中洞兑奖次数（压转）异常通知',
-        Notice::TYPE_MACHINE_LOCK => '机台异常锁定通知',Notice::TYPE_MACHINE_CRASH => '设备爆机通知',
+        Notice::TYPE_MACHINE_LOCK => '机台异常锁定通知',
+        Notice::TYPE_MACHINE_CRASH => '设备爆机通知',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP等级升级',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP等级降级',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新的开分订单待审核, 玩家: {player_name}, 开分游戏点: {point} 开分金额: {money}!',
@@ -25,5 +28,7 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => '钢珠机台设备{machine_code}, 发现中洞兑奖次数（压转）, 请维护人员及时排查问题!',
         Notice::TYPE_MACHINE_LOCK => '机台设备{machine_code}，发生上下分异常（机台已锁），请维护人员及时排查问题！',
         Notice::TYPE_MACHINE_CRASH => '设备已爆机：玩家 {player_name} (UID:{player_uuid}) 余额达到 {current_amount}，超过爆机金额 {crash_amount}，请联系管理员处理！',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => '恭喜！您的VIP等级已从 {old_level} 升级至 {new_level}',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => '很遗憾，您的VIP等级已从 {old_level} 降级至 {new_level}',
     ],
 ];

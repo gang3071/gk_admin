@@ -14,6 +14,8 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => 'テーブル中のホール当選回数（圧転）異常通知',
         Notice::TYPE_MACHINE_LOCK => 'テーブル異常ロック通知',
         Notice::TYPE_MACHINE_CRASH => 'デバイスクラッシュ通知',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIPレベルアップ',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIPレベルダウングレード',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新しい開分注文は審査待ちです、プレイヤー: {player_name}、開分 ゲーム ポイント: {point} 開分金額: {money}!',
@@ -26,5 +28,7 @@ return [
         Notice::TYPE_MACHINE_WIN_NUMBER => 'パチンコ台設備{machine _ code}、中洞の授賞回数（圧転）を発見した場合、メンテナンススタッフは直ちに問題を調査してください！',
         Notice::TYPE_MACHINE_LOCK => '机台設備{machine _ code}、上下分異常（机台がロックされている）が発生しました。メンテナンス担当者は直ちに問題を調査してください！',
         Notice::TYPE_MACHINE_CRASH => 'デバイスがクラッシュしました: プレイヤー {player_name} (UID:{player_uuid}) の残高が {current_amount} に達し、クラッシュ金額 {crash_amount} を超えました。管理者に連絡してください!',
+        Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'おめでとうございます！VIPレベルが{old_level}から{new_level}にアップグレードしました',
+        Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => '残念ながら、VIPレベルが{old_level}から{new_level}にダウングレードしました',
     ],
 ];
