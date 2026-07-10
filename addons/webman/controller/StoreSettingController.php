@@ -235,6 +235,7 @@ class StoreSettingController
                 ->fileSize('5m')
                 ->help(admin_trans('store_setting.menu_image_help'))
                 ->required();
+            $form->layout('vertical');
         });
     }
 }
