@@ -112,7 +112,7 @@ class ChannelDeviceController
                 $filter->like()->text('device_name')->placeholder(admin_trans('device.fields.device_name'));
                 $filter->like()->text('device_no')->placeholder(admin_trans('device.fields.device_no'));
 
-                // 代理筛选（仅当前渠道的代理）
+                // 代理筛选
                 $agentFilter = $filter->eq()->select('agent_admin_id')
                     ->placeholder(admin_trans('device.fields.agent_name'))
                     ->showSearch()
@@ -124,7 +124,7 @@ class ChannelDeviceController
                     ->showSearch()
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelDeviceController', 'getStoreOptions']));
 
-                // 设置级联关系
+                // 设置级联关系：代理 -> 店家
                 $agentFilter->load($storeFilter, admin_url(['addons-webman-controller-ChannelDeviceController', 'getStoreOptions']));
 
                 $filter->eq()->select('status')
@@ -173,7 +173,7 @@ class ChannelDeviceController
 
             // 线下渠道：显示代理和店家选择
             if ($channel && $channel->is_offline == 1) {
-                // 代理选择（仅当前渠道的代理）
+                // 代理选择（remoteOptions 加载）
                 $agentField = $form->select('agent_admin_id', admin_trans('device.fields.agent_name'))
                     ->showSearch()
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelDeviceController', 'getAgentOptions']))
@@ -184,7 +184,7 @@ class ChannelDeviceController
                     ->showSearch()
                     ->help(admin_trans('device.fields.store_help'));
 
-                // 设置级联关系
+                // 设置级联关系：代理 -> 店家
                 $agentField->load($storeField, admin_url(['addons-webman-controller-ChannelDeviceController', 'getStoreOptions']));
 
                 // 切换代理时清空店家

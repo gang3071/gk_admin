@@ -31,7 +31,7 @@ return [
         'jackpot_screen_domain' => 'Jackpot Screen Domain',
         'turn_relay_ip' => 'TURN Relay IP',
         'high_score_broadcast_threshold' => 'High Score Broadcast Threshold',
-        'device_collect' => 'Device Collection Switch',
+        'device_collect' => 'Store Cross-Store Login',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',
