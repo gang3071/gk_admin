@@ -3251,10 +3251,10 @@ class ChannelIndexController
                 'modified_deduct_amount' => 0,
             ];
 
-            // 计算总收入、总支出、利润
-            $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
-            $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
-            $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut,2);
+            // 计算总收入、总支出、利润（不包含后台加点和扣点）
+            $totalIn = $data['recharge_amount'];
+            $totalOut = $data['withdrawal_amount'];
+            $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
             if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||

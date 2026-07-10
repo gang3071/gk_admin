@@ -67,6 +67,7 @@ phinx.php
 !composer.json
 !package.json
 .env.gateway.example
+/tests
 
 # Scripts directory
 scripts/
