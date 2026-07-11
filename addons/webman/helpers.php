@@ -2223,20 +2223,36 @@ if (!function_exists('addPlayerExtend')) {
      */
     function addPlayerExtend(Player $player): void
     {
-        $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
-
-        PlayerPlatformCash::query()->firstOrCreate([
+        // 强制创建钱包记录，余额为 0（防止复制数据库导致的金额残留）
+        $wallet = PlayerPlatformCash::query()->firstOrCreate([
             'player_id' => $player->id,
             'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
-            'money' => $registerPresent,
+        ], [
+            'money' => 0,
         ]);
+
+        // 如果是已存在的记录（复制数据库场景），强制重置为 0
+        if ($wallet->money != 0) {
+            $wallet->withoutEvents(function () use ($wallet) {
+                $wallet->update(['money' => 0]);
+            });
+        }
+
+        // 清除 Redis 缓存，确保余额为 0
+        \addons\webman\service\WalletService::clearCache($player->id);
 
         PlayerExtend::query()->firstOrCreate([
             'player_id' => $player->id,
         ]);
 
-        if (isset($registerPresent) && $registerPresent > 0) {
-            //添加玩家钱包日志
+        // 注册赠送（仅在启用时执行）
+        $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
+
+        if ($registerPresent > 0) {
+            // 使用 WalletService 原子加款
+            $afterAmount = \addons\webman\service\WalletService::add($player->id, $registerPresent);
+
+            // 添加玩家钱包日志
             $playerMoneyEditLog = new PlayerMoneyEditLog;
             $playerMoneyEditLog->player_id = $player->id;
             $playerMoneyEditLog->department_id = $player->department_id;
@@ -2251,7 +2267,7 @@ if (!function_exists('addPlayerExtend')) {
             $playerMoneyEditLog->user_name = '系统自动';
             $playerMoneyEditLog->save();
 
-            //寫入金流明細
+            // 寫入金流明細
             $playerDeliveryRecord = new PlayerDeliveryRecord;
             $playerDeliveryRecord->player_id = $player->id;
             $playerDeliveryRecord->department_id = $player->department_id;
@@ -2259,9 +2275,9 @@ if (!function_exists('addPlayerExtend')) {
             $playerDeliveryRecord->target_id = $playerMoneyEditLog->id;
             $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_REGISTER_PRESENT;
             $playerDeliveryRecord->source = 'register_present';
-            $playerDeliveryRecord->amount = $playerMoneyEditLog->money;
+            $playerDeliveryRecord->amount = $registerPresent;
             $playerDeliveryRecord->amount_before = 0;
-            $playerDeliveryRecord->amount_after = $registerPresent;
+            $playerDeliveryRecord->amount_after = $afterAmount;
             $playerDeliveryRecord->tradeno = $playerMoneyEditLog->tradeno ?? '';
             $playerDeliveryRecord->remark = $playerMoneyEditLog->remark ?? '';
             $playerDeliveryRecord->save();
