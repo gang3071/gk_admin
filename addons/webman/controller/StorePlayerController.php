@@ -947,11 +947,8 @@ class StorePlayerController
                         $player->recommend_code = createCode();
                         $player->save();
 
-                        // 创建玩家扩展信息
-                        addPlayerExtend($player);
-
-                        // 更新扩展信息
-                        PlayerExtend::query()->where('player_id', $player->id)->update([
+                        // 创建玩家扩展信息（一次性传入扩展数据，避免二次更新）
+                        addPlayerExtend($player, [
                             'id_number' => $form->input('id_number'),
                             'id_card_front' => $form->input('id_card_front'),
                             'id_card_back' => $form->input('id_card_back'),

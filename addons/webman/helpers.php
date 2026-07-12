@@ -2218,10 +2218,11 @@ if (!function_exists('decrypt_sensitive')) {
 if (!function_exists('addPlayerExtend')) {
     /**
      * 创建玩家扩展信息
-     * @param Player $player
+     * @param Player $player 玩家对象
+     * @param array $extendData 扩展信息（可选）
      * @return void
      */
-    function addPlayerExtend(Player $player): void
+    function addPlayerExtend(Player $player, array $extendData = []): void
     {
         // 第一步：强制创建钱包记录，初始余额为 0（防止复制数据库导致的金额残留）
         $wallet = PlayerPlatformCash::query()->firstOrCreate([
@@ -2241,10 +2242,22 @@ if (!function_exists('addPlayerExtend')) {
         // 第三步：设置 Redis 钱包余额为 0（确保缓存与数据库一致）
         \addons\webman\service\WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
 
-        // 第四步：创建玩家扩展信息
-        PlayerExtend::query()->firstOrCreate([
-            'player_id' => $player->id,
-        ]);
+        // 第四步：创建玩家扩展信息（支持传入初始数据，避免二次更新）
+        $defaultData = ['player_id' => $player->id];
+
+        // 如果传入了扩展信息，合并到创建数据中
+        if (!empty($extendData)) {
+            // 过滤掉空值，保留有意义的数据
+            $filteredData = array_filter($extendData, function ($value) {
+                return $value !== null && $value !== '';
+            });
+            $defaultData = array_merge($defaultData, $filteredData);
+        }
+
+        PlayerExtend::query()->firstOrCreate(
+            ['player_id' => $player->id],
+            $defaultData
+        );
 
         // 第五步：处理注册赠送（如果启用）
         $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
