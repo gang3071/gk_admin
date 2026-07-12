@@ -251,56 +251,8 @@
                 {{ trans.edit }}
               </a-button>
 
-              <!-- 進行中：發放獎勵按鈕 -->
-              <a-button
-                  v-if="activity.status === 1 && activity.pending_count > 0"
-                  block
-                  type="primary"
-                  @click.stop="showDistributeForm(activity)"
-              >
-                <template #icon>
-                  <gift-outlined/>
-                </template>
-                {{ trans.distributeAllPending || '發放獎勵' }}
-                <a-badge
-                    :count="activity.pending_count"
-                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
-                />
-              </a-button>
-
-              <!-- ⭐ 開獎中：發放獎勵按鈕 -->
-              <a-button
-                  v-if="activity.status === 6 && activity.pending_count > 0"
-                  block
-                  type="primary"
-                  @click.stop="showDistributeForm(activity)"
-              >
-                <template #icon>
-                  <gift-outlined/>
-                </template>
-                {{ trans.distributeAllPending || '發放獎勵' }}
-                <a-badge
-                    :count="activity.pending_count"
-                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
-                />
-              </a-button>
-
-              <!-- ⭐ 已結束：發放獎勵按鈕 -->
-              <a-button
-                  v-if="activity.status === 2 && activity.pending_count > 0"
-                  block
-                  type="primary"
-                  @click.stop="showDistributeForm(activity)"
-              >
-                <template #icon>
-                  <gift-outlined/>
-                </template>
-                {{ trans.distributeAllPending || '發放獎勵' }}
-                <a-badge
-                    :count="activity.pending_count"
-                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
-                />
-              </a-button>
+              <!-- ⭐ 發放獎勵按鈕已隱藏：錄入中獎時自動發放，不需要單獨發放按鈕 -->
+              <!-- 如果有歷史待發放記錄，請使用下拉菜單中的"發放獎勵"選項 -->
 
               <!-- 查看發放列表（所有狀態） -->
               <a-button
@@ -319,7 +271,7 @@
                   type="primary"
                   block
                   :disabled="activity.status === 0 || activity.status === 2 || activity.status === 3"
-                  @click.stop="showRecordForm(activity)"
+                  @click.stop="showRecordModal(activity)"
               >
                 <template #icon>
                   <edit-outlined/>
