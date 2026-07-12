@@ -2724,7 +2724,7 @@ class ChannelLotteryTicketActivityController
                 'department_id' => $ticket->department_id,
                 'ticket_id' => $ticket->id,
                 'ticket_no' => $ticketNo,
-                'prize_type' => $prizeLevel->prize_type,
+                'prize_type' => \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH,  // ⭐ 固定为现金类型
                 'prize_name' => $prizeLevel->level_name,  // ⭐ 使用 prize_name 存储奖品等级名称
                 'prize_amount' => $prizeLevel->prize_amount,
                 'status' => \addons\webman\model\LotteryTicketRecord::STATUS_PENDING
