@@ -1377,9 +1377,14 @@ export default {
           }
         });
 
+        // ⭐ 调试：打印完整响应
+        console.log('API Response:', res);
+        console.log('Response data:', res.data);
+
         if (res.code === 200 && res.data) {
           this.singleRecord.player_info = res.data;
           this.singleRecord.error = null;
+          console.log('Player info set:', this.singleRecord.player_info);
         } else {
           this.singleRecord.error = res.msg || '未找到該券號對應的玩家';
           this.singleRecord.player_info = null;
@@ -1387,7 +1392,7 @@ export default {
       } catch (error) {
         this.singleRecord.error = '查詢玩家信息失敗';
         this.singleRecord.player_info = null;
-        console.error(error);
+        console.error('Query error:', error);
       } finally {
         this.singleRecord.loading = false;
       }
