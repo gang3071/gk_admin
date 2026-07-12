@@ -195,12 +195,10 @@ class ChannelLotteryTicketRecordController
                 $actions->hideDel();
             });
 
-            // ⭐ 工具栏按钮 - 移除批量发放按钮
+            // ⭐ 工具栏按钮 - 批量发放功能已移除
+            // 录入中奖号码时会自动发放，无需手动批量发放
             $grid->tools([
-                // 批量发放功能已移除，录入中奖号码时自动发放
-                    ->width('50%')
-                    ->title(admin_trans('lottery_ticket.modal.batch_distribute_title'))
-                    ->size('small'),
+                // 工具栏为空，可根据需要添加其他按钮
             ]);
 
             // ✅ 隐藏批量删除和回收站
