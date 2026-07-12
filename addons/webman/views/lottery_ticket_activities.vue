@@ -1411,11 +1411,20 @@ export default {
           }
         });
 
+        // ⭐ 调试日志
+        console.log('Response code:', res.code);
+        console.log('Response data:', res.data);
+        console.log('Code type:', typeof res.code);
+        console.log('Code === 80020?', res.code === 80020);
+        console.log('Code == 80020?', res.code == 80020);
+
         // ⭐ ExAdmin响应码：80020表示成功
-        if (res.code === 80020 && res.data) {
+        if (res.code == 80020 && res.data) {
           this.singleRecord.player_info = res.data;
           this.singleRecord.error = null;
+          console.log('Player info set successfully:', this.singleRecord.player_info);
         } else {
+          console.log('Failed condition check');
           this.singleRecord.error = res.data?.content || res.msg || '未找到該券號對應的玩家';
           this.singleRecord.player_info = null;
         }
