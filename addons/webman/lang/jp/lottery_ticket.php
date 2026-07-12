@@ -330,6 +330,13 @@ return [
         'prize_level_not_found_for_ticket' => 'チケット {ticket_no} の賞品レベルが存在しません',
         'invalid_ticket_format' => 'チケット {ticket_no} の形式が正しくありません。数字のみで6文字以内にしてください',
         'bet_progress_not_found' => 'ベット進捗記録が見つかりません',
+        // 単一入力プレイヤー照会
+        'activity_id_required' => 'アクティビティIDを入力してください',
+        'ticket_no_required' => 'チケット番号を入力してください',
+        'activity_not_exist' => 'アクティビティが存在しません',
+        'ticket_not_exist_or_not_belong' => 'チケットが存在しないか、このアクティビティに属していません',
+        'ticket_already_recorded' => 'このチケットは既に記録されています。重複入力はできません',
+        'player_not_found_for_ticket' => 'このチケットに対応するプレイヤーが見つかりません',
         // 抽選停止確認
         'stop_drawing_no_records_confirm' => '⚠️ まだ当選チケット番号が記録されていません！\n\n抽選を停止すると、当選チケット番号を記録できなくなります。アクティビティは終了ステータスになります。\n\n抽選を停止してもよろしいですか？',
         'stop_drawing_with_records_confirm' => '抽選停止を確認しますか？\n\n📊 当選統計：\n• 記録済チケット数：{count} 枚\n• 賞金総額：NT$ {amount}\n• 払い出し待ち：{pending} 件\n• 払い出し済：{granted} 件\n\n⚠️ 停止後はチケットを記録できません',
