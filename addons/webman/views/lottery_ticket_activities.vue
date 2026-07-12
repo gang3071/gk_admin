@@ -1481,8 +1481,15 @@ export default {
           }
         });
 
-        if (res.code === 200) {
-          this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
+        // ⭐ 调试日志
+        console.log('Submit response:', res);
+
+        // ⭐ 支持两种成功响应码：200 和 80020
+        const isSuccess = (res.code === 200 || res.code === 80020);
+        const isError = res.data?.type === 'error';
+
+        if (isSuccess && !isError) {
+          this.$message.success(res.data?.message || res.data?.content || '錄入成功並已自動發放獎勵');
 
           // ⭐ 刷新中奖记录列表
           await this.loadTicketList();
@@ -1496,7 +1503,7 @@ export default {
             error: null
           };
         } else {
-          this.$message.error(res.msg || '錄入失敗');
+          this.$message.error(res.data?.content || res.msg || '錄入失敗');
         }
       } catch (error) {
         this.$message.error('錄入失敗');
