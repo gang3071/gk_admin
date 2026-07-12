@@ -668,6 +668,30 @@
         width="600px"
         :body-style="{ paddingBottom: '80px' }"
     >
+      <!-- ⭐ 活动信息展示 -->
+      <a-alert
+          v-if="currentActivityInfo"
+          type="info"
+          show-icon
+          style="margin-bottom: 16px;"
+      >
+        <template #message>
+          <div style="font-weight: bold; font-size: 14px;">{{ currentActivityInfo.name }}</div>
+        </template>
+        <template #description>
+          <div style="margin-top: 8px;">
+            <div style="margin-bottom: 4px;">
+              <span style="color: #666;">活動時間：</span>
+              <span>{{ currentActivityInfo.start_time }} ~ {{ currentActivityInfo.end_time }}</span>
+            </div>
+            <div>
+              <span style="color: #666;">當前最大券號：</span>
+              <a-tag color="orange" style="font-size: 13px;">{{ currentActivityInfo.max_ticket_no || '尚未派發' }}</a-tag>
+            </div>
+          </div>
+        </template>
+      </a-alert>
+
       <a-form layout="vertical">
         <!-- 选择奖品等级 -->
         <a-form-item label="選擇獎品等級" required>
@@ -1047,7 +1071,9 @@ export default {
         player_info: null,         // 查询到的玩家信息
         loading: false,            // 查询loading状态
         error: null                // 错误信息
-      }
+      },
+      // ⭐ 当前活动信息（用于录入表单顶部展示）
+      currentActivityInfo: null
     };
   },
   computed: {
@@ -1308,6 +1334,14 @@ export default {
           // ⭐ 存储奖品等级列表（供下拉选择使用）
           this.recordPrizeLevels = prizeLevels;
 
+          // ⭐ 存储活动信息（用于表单顶部展示）
+          this.currentActivityInfo = {
+            name: activity.name,
+            start_time: activity.start_time,
+            end_time: activity.end_time,
+            max_ticket_no: activity.max_ticket_no || res.data.max_ticket_no
+          };
+
           // ⭐ 重置单个录入数据
           this.singleRecord = {
             prize_level_id: null,
@@ -1474,6 +1508,8 @@ export default {
         loading: false,
         error: null
       };
+      // ⭐ 清空活动信息
+      this.currentActivityInfo = null;
     },
 
     // 顯示直播地址彈窗
