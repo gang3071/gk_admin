@@ -333,7 +333,7 @@ class ChannelLotteryTicketActivityController
             $file = Request::file('file');
 
             if (!$file) {
-                return Response::fail(admin_trans('lottery_ticket.error.invalid_file'));
+                return message_error(admin_trans('lottery_ticket.error.invalid_file'));
             }
 
             // 验证文件类型
@@ -341,19 +341,19 @@ class ChannelLotteryTicketActivityController
             $allowedTypes = ['jpg', 'jpeg', 'png'];
 
             if (!in_array($extension, $allowedTypes)) {
-                return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
+                return message_error(admin_trans('lottery_ticket.error.invalid_image_type'));
             }
 
             // 获取MIME类型
             $mimeType = $file->getMimeType();
             $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
             if (!in_array($mimeType, $allowedMimes)) {
-                return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
+                return message_error(admin_trans('lottery_ticket.error.invalid_image_type'));
             }
 
             // 验证文件大小 (2MB)
             if ($file->getSize() > 2 * 1024 * 1024) {
-                return Response::fail(admin_trans('lottery_ticket.error.file_too_large'));
+                return message_error(admin_trans('lottery_ticket.error.file_too_large'));
             }
 
             // 生成唯一文件名
@@ -381,12 +381,12 @@ class ChannelLotteryTicketActivityController
                 return Response::success(['url' => $url]);
             } else {
                 Log::error('活动封面上传失败，存储返回 false');
-                return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
+                return message_error(admin_trans('lottery_ticket.error.upload_failed'));
             }
 
         } catch (\Exception $e) {
             Log::error('活动封面上传异常: ' . $e->getMessage());
-            return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
+            return message_error(admin_trans('lottery_ticket.error.upload_failed'));
         }
     }
 
@@ -2669,7 +2669,7 @@ class ChannelLotteryTicketActivityController
 
         // 验证参数
         if (!$activityId || !$prizeLevelId || !$ticketNo) {
-            return Response::fail(admin_trans('lottery_ticket.error.invalid_params'));
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
         }
 
         // 格式化券号（补齐6位）
@@ -2685,14 +2685,14 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity) {
                 Db::rollBack();
-                return Response::fail(admin_trans('lottery_ticket.error.activity_not_exist'));
+                return message_error(admin_trans('lottery_ticket.error.activity_not_exist'));
             }
 
             // 验证奖品等级
             $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
             if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
                 Db::rollBack();
-                return Response::fail(admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]));
+                return message_error(admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]));
             }
 
             // 查找券号（必须是未使用状态）
@@ -2704,7 +2704,7 @@ class ChannelLotteryTicketActivityController
 
             if (!$ticket) {
                 Db::rollBack();
-                return Response::fail(admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]));
+                return message_error(admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]));
             }
 
             // 双重检查：防止重复录入
@@ -2714,7 +2714,7 @@ class ChannelLotteryTicketActivityController
 
             if ($existingRecord) {
                 Db::rollBack();
-                return Response::fail(admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]));
+                return message_error(admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]));
             }
 
             // 创建中奖记录
@@ -2795,7 +2795,7 @@ class ChannelLotteryTicketActivityController
                 $record->save();
 
                 Db::rollBack();
-                return Response::fail(admin_trans('lottery_ticket.error.distribute_failed', null, [
+                return message_error(admin_trans('lottery_ticket.error.distribute_failed', null, [
                     'ticket_no' => $ticketNo,
                     'reason' => $e->getMessage()
                 ]));
@@ -2816,7 +2816,7 @@ class ChannelLotteryTicketActivityController
                 'ticket_no' => $ticketNo,
                 'error' => $e->getMessage()
             ]);
-            return Response::fail($e->getMessage());
+            return message_error($e->getMessage());
         }
     }
 }
