@@ -217,20 +217,23 @@ class LotteryBetProgressScanTask
             $this->logSlowQuery('机台游戏打码统计', $machineDuration);
         }
 
-        // 2. 统计电子游戏打码量
+        // 2. 统计电子游戏打码量（只统计电子游戏平台，排除真人/体育平台）
         if ($config['include_online_game']) {
             $onlineStart = microtime(true);
 
-            // ⭐ 使用原生SQL + FORCE INDEX
+            // ⭐ 使用原生SQL + FORCE INDEX + 平台过滤
+            // ✅ 剔除真人/体育平台，只保留电子游戏平台的下注计入打码量
             $onlineSql = "
-                SELECT player_id, SUM(bet) as total_bet
-                FROM play_game_record
-                WHERE department_id = ?
-                  AND created_at >= ?
-                  AND created_at < ?
-                  AND bet > 0
-                  AND settlement_status = 1
-                GROUP BY player_id
+                SELECT pgr.player_id, SUM(pgr.bet) as total_bet
+                FROM play_game_record pgr
+                INNER JOIN game_platform gp ON pgr.platform_id = gp.id
+                WHERE pgr.department_id = ?
+                  AND pgr.created_at >= ?
+                  AND pgr.created_at < ?
+                  AND pgr.bet > 0
+                  AND pgr.settlement_status = 1
+                  AND gp.code NOT IN ('WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE', 'KY', 'KYS', 'OB', 'SPS', 'SPS_DY')
+                GROUP BY pgr.player_id
             ";
 
             $onlineResults = Db::select($onlineSql, [$departmentId, $startTime, $endTime]);
