@@ -2721,15 +2721,13 @@ class ChannelLotteryTicketActivityController
             $record = \addons\webman\model\LotteryTicketRecord::create([
                 'activity_id' => $activityId,
                 'player_id' => $ticket->player_id,
+                'department_id' => $ticket->department_id,
                 'ticket_id' => $ticket->id,
                 'ticket_no' => $ticketNo,
-                'prize_level_id' => $prizeLevelId,
-                'prize_level_name' => $prizeLevel->level_name,
                 'prize_type' => $prizeLevel->prize_type,
+                'prize_name' => $prizeLevel->level_name,  // ⭐ 使用 prize_name 存储奖品等级名称
                 'prize_amount' => $prizeLevel->prize_amount,
-                'status' => \addons\webman\model\LotteryTicketRecord::STATUS_PENDING,
-                'source' => 'manual',
-                'created_at' => date('Y-m-d H:i:s')
+                'status' => \addons\webman\model\LotteryTicketRecord::STATUS_PENDING
             ]);
 
             // 更新券状态为已使用
