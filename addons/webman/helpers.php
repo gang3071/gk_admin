@@ -2221,6 +2221,7 @@ if (!function_exists('addPlayerExtend')) {
      * @param Player $player 玩家对象
      * @param array $extendData 扩展信息（可选）
      * @return void
+     * @throws Exception
      */
     function addPlayerExtend(Player $player, array $extendData = []): void
     {
