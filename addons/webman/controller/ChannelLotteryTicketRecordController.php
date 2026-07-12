@@ -180,12 +180,13 @@ class ChannelLotteryTicketRecordController
 
             // 操作按钮
             $grid->actions(function (Actions $actions, $data) {
-                // ✅ 发放按钮始终显示（未中奖的除外），点击时在方法内判断状态
-                if ($data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
+                // ✅ 单个发放按钮（作为补救措施，仅当自动发放失败时使用）
+                // 仅显示发放失败状态的记录，其他状态不显示发放按钮
+                if ($data['status'] == LotteryTicketRecord::STATUS_FAILED && $data['prize_type'] != LotteryTicketRecord::PRIZE_TYPE_EMPTY) {
                     $actions->prepend(
-                        Button::create(admin_trans('lottery_ticket.action.distribute'))
-                            ->type('primary')
-                            ->confirm(admin_trans('lottery_ticket.confirm.distribute'), [$this, 'distribute'], ['id' => $data['id']])
+                        Button::create(admin_trans('lottery_ticket.action.retry_distribute'))
+                            ->type('warning')
+                            ->confirm(admin_trans('lottery_ticket.confirm.retry_distribute'), [$this, 'distribute'], ['id' => $data['id']])
                     );
                 }
 
@@ -194,10 +195,9 @@ class ChannelLotteryTicketRecordController
                 $actions->hideDel();
             });
 
-            // ⭐ 工具栏按钮
+            // ⭐ 工具栏按钮 - 移除批量发放按钮
             $grid->tools([
-                Button::create(admin_trans('lottery_ticket.action.batch_distribute'))
-                    ->modal([$this, 'batchDistributeForm'])
+                // 批量发放功能已移除，录入中奖号码时自动发放
                     ->width('50%')
                     ->title(admin_trans('lottery_ticket.modal.batch_distribute_title'))
                     ->size('small'),

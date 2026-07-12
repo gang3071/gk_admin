@@ -1159,10 +1159,86 @@ class ChannelLotteryTicketActivityController
                 $ticket->status = LotteryTicket::STATUS_USED;
                 $ticket->save();
 
-                // 发送中奖推送通知
-                \addons\webman\service\LotteryTicketPushService::pushWinNotification($record);
+                // ⭐ 核心改动：录入后立即发放奖励
+                try {
+                    // 锁定玩家
+                    $player = \addons\webman\model\Player::query()->lockForUpdate()->find($ticket->player_id);
+                    if (!$player) {
+                        throw new \Exception('玩家不存在');
+                    }
 
-                $successCount++;
+                    // 检查玩家状态
+                    if (isset($player->status) && $player->status != \addons\webman\model\Player::STATUS_ENABLE) {
+                        throw new \Exception('玩家已停用，无法发放奖励');
+                    }
+
+                    // 更新状态为发放中
+                    $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_PROCESSING;
+                    $record->save();
+
+                    // 发放奖励到玩家钱包
+                    $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+                    $newBalance = \addons\webman\service\WalletService::add($player->id, $prizeLevel->prize_amount, 1);
+
+                    // 记录金流明细
+                    $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                    $playerDeliveryRecord->player_id = $player->id;
+                    $playerDeliveryRecord->department_id = $player->department_id;
+                    $playerDeliveryRecord->target = $record->getTable();
+                    $playerDeliveryRecord->target_id = $record->id;
+                    $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+                    $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                    $playerDeliveryRecord->amount = $prizeLevel->prize_amount;
+                    $playerDeliveryRecord->amount_before = $oldBalance;
+                    $playerDeliveryRecord->amount_after = $newBalance;
+                    $playerDeliveryRecord->tradeno = $ticketNo;
+                    $playerDeliveryRecord->remark = sprintf(
+                        '摸奖券中奖自动发放：%s - %s',
+                        $activity->name,
+                        $prizeLevel->level_name
+                    );
+                    $playerDeliveryRecord->save();
+
+                    // 更新中奖记录状态为已发放
+                    $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_CLAIMED;
+                    $record->distributed_by = Admin::user()->id;
+                    $record->distributed_at = date('Y-m-d H:i:s');
+                    $record->distribution_note = '录入中奖号码自动发放';
+                    $record->save();
+
+                    // 更新活动已发放金额
+                    $activity->distributed_prize_amount = ($activity->distributed_prize_amount ?? 0) + $prizeLevel->prize_amount;
+                    $activity->save();
+
+                    // 发送发放成功推送通知
+                    \addons\webman\service\LotteryTicketPushService::pushPrizeDistributed(
+                        $player->id,
+                        $activity,
+                        $ticketNo,
+                        $prizeLevel->level_name,
+                        $prizeLevel->prize_amount
+                    );
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    // 发放失败，标记记录状态
+                    $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_FAILED;
+                    $record->distribution_note = '自动发放失败: ' . $e->getMessage();
+                    $record->save();
+
+                    $errors[] = admin_trans('lottery_ticket.error.distribute_failed', null, [
+                        'ticket_no' => $ticketNo,
+                        'reason' => $e->getMessage()
+                    ]);
+
+                    \support\Log::error('[摸奖券] 录入后自动发放失败', [
+                        'activity_id' => $activityId,
+                        'ticket_no' => $ticketNo,
+                        'player_id' => $ticket->player_id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             Db::commit();

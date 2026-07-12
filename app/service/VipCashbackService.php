@@ -198,9 +198,13 @@ class VipCashbackService
     }
 
     /**
-     * 获取百家平台ID列表（cate_id包含3），带缓存
-     * cate_id 存储格式为 JSON 数组：[3,2,4,5,6,7,8]
-     * @return array
+     * 获取排除的平台ID列表（真人视讯和体育平台）
+     *
+     * 使用配置文件统一管理平台过滤规则，替代原来的 JSON_CONTAINS 查询
+     * 原逻辑：whereRaw('JSON_CONTAINS(cate_id, CAST(? AS JSON))', [3])
+     * 新逻辑：whereIn('code', config('platform_filter.excluded_platforms'))
+     *
+     * @return array 平台ID数组
      */
     private function getBaccaratPlatformIds(): array
     {
@@ -209,8 +213,16 @@ class VipCashbackService
             return $cache;
         }
 
+        // 从配置文件读取排除的平台代码
+        $excludedCodes = config('platform_filter.excluded_platforms', [
+            // 默认值（防止配置文件不存在）
+            'WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE',
+            'KY', 'KYS', 'OB', 'SPS', 'SPS_DY'
+        ]);
+
+        // 根据平台代码查询平台ID
         $cache = GamePlatform::query()
-            ->whereRaw('JSON_CONTAINS(cate_id, CAST(? AS JSON))', [3])
+            ->whereIn('code', $excludedCodes)
             ->pluck('id')
             ->toArray();
 

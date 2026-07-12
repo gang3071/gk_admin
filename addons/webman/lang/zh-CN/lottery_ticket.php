@@ -215,14 +215,16 @@ return [
         'expand' => '展开',
         'collapse' => '收起',
         'distribute' => '发放',
-        'batch_distribute' => '批量发放',
-        'batch_distribute_selected' => '批量派奖选中',
+        'retry_distribute' => '重新发放',  // ⭐ 新增：针对失败记录的补救措施
+        'batch_distribute' => '批量发放',  // ⭐ 已弃用
+        'batch_distribute_selected' => '批量派奖选中',  // ⭐ 已弃用
         'distribute_by_ticket' => '录入券号派奖',
         'distribute_all_pending' => '派奖',  // ⭐ 新增:批量派奖所有待派奖记录
         'view_ticket_list' => '查看发放列表',
         'add_ticket' => '添加券号',
         'select_image' => '选择图片',
         'confirm_distribute' => '确认发放',
+        'retry_distribute_confirm' => '确认重新发放',  // ⭐ 新增：确认重新发放
     ],
 
     // 统计
@@ -330,6 +332,7 @@ return [
         'ticket_already_won' => '券号 {ticket_no} 已录入过中奖记录，不能重复录入',
         'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',
         'invalid_ticket_format' => '券号 {ticket_no} 格式错误，只能包含数字且不超过6位',
+        'distribute_failed' => '券号 {ticket_no} 派奖失败：{reason}',  // ⭐ 新增：录入自动派奖失败提示
         'bet_progress_not_found' => '未找到打码进度记录',
         // 停止开奖确认
         'stop_drawing_no_records_confirm' => '⚠️ 尚未录入任何中奖券号！\n\n停止开奖后将无法再录入中奖券号，活动将进入已结束状态。\n\n确定要停止开奖吗？',
@@ -395,6 +398,7 @@ return [
     // 确认对话框
     'confirm' => [
         'distribute' => '确认派奖此奖品到玩家賬戶？',
+        'retry_distribute' => '此记录之前派奖失败，确认要重新派奖吗？',  // ⭐ 新增：针对失败记录的重试确认
         'distribute_all_pending' => '确认派奖该活动所有已录入但未派奖的奖励？\n此操作将批量派奖所有待派奖记录,请谨慎操作。',  // ⭐ 新增
     ],
 
