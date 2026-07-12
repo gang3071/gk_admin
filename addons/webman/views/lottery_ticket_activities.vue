@@ -1472,10 +1472,10 @@ export default {
           method: 'post',
           data: {
             activity_id: this.recordData.activity_id,
-            prize_records: [
+            records: [
               {
                 prize_level_id: this.singleRecord.prize_level_id,
-                ticket_nos: [this.singleRecord.ticket_no]
+                ticket_no: this.singleRecord.ticket_no
               }
             ]
           }
