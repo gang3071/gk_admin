@@ -1411,15 +1411,12 @@ export default {
           }
         }).catch(err => {
           // ⭐ 捕获Promise rejection，转换为普通响应对象
-          console.log('Request rejected with:', err);
           return {
-            code: -1,
-            msg: err?.msg || err?.message || '請求失敗',
+            code: err?.code || -1,
+            msg: err?.msg || err?.message || err?.data?.content || '請求失敗',
             data: err?.data || null
           };
         });
-
-        console.log('Query response:', res);
 
         // ⭐ 检查成功响应
         if (res.code === 200 || res.code === 80020) {
