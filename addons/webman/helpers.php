@@ -2223,7 +2223,7 @@ if (!function_exists('addPlayerExtend')) {
      */
     function addPlayerExtend(Player $player): void
     {
-        // 强制创建钱包记录，余额为 0（防止复制数据库导致的金额残留）
+        // 第一步：强制创建钱包记录，初始余额为 0（防止复制数据库导致的金额残留）
         $wallet = PlayerPlatformCash::query()->firstOrCreate([
             'player_id' => $player->id,
             'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
@@ -2231,25 +2231,26 @@ if (!function_exists('addPlayerExtend')) {
             'money' => 0,
         ]);
 
-        // 如果是已存在的记录（复制数据库场景），强制重置为 0
+        // 第二步：如果是已存在的记录（复制数据库场景），强制重置为 0
         if ($wallet->money != 0) {
             $wallet->withoutEvents(function () use ($wallet) {
                 $wallet->update(['money' => 0]);
             });
         }
 
-        // 清除 Redis 缓存，确保余额为 0
-        \addons\webman\service\WalletService::clearCache($player->id);
+        // 第三步：设置 Redis 钱包余额为 0（确保缓存与数据库一致）
+        \addons\webman\service\WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
 
+        // 第四步：创建玩家扩展信息
         PlayerExtend::query()->firstOrCreate([
             'player_id' => $player->id,
         ]);
 
-        // 注册赠送（仅在启用时执行）
+        // 第五步：处理注册赠送（如果启用）
         $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
 
         if ($registerPresent > 0) {
-            // 使用 WalletService 原子加款
+            // 使用 WalletService 原子加款（同时更新数据库和 Redis）
             $afterAmount = \addons\webman\service\WalletService::add($player->id, $registerPresent);
 
             // 添加玩家钱包日志
@@ -2262,7 +2263,7 @@ if (!function_exists('addPlayerExtend')) {
             $playerMoneyEditLog->currency = $player->currency;
             $playerMoneyEditLog->money = $registerPresent;
             $playerMoneyEditLog->inmoney = $registerPresent;
-            $playerMoneyEditLog->remark = '';
+            $playerMoneyEditLog->remark = '注册赠送';
             $playerMoneyEditLog->user_id = 0;
             $playerMoneyEditLog->user_name = '系统自动';
             $playerMoneyEditLog->save();
