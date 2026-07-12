@@ -1467,39 +1467,26 @@ export default {
       this.recordSubmitting = true;
 
       try {
+        // ⭐ 使用单个录入专用API
         const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWinByTickets',
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordSingleWinTicket',
           method: 'post',
           data: {
             activity_id: this.recordData.activity_id,
-            records: [
-              {
-                prize_level_id: this.singleRecord.prize_level_id,
-                ticket_no: this.singleRecord.ticket_no
-              }
-            ]
+            prize_level_id: this.singleRecord.prize_level_id,
+            ticket_no: this.singleRecord.ticket_no
           }
         });
 
-        // ⭐ 调试日志
-        console.log('Submit response:', res);
+        // ⭐ 简单清晰的响应处理
+        if (res.code === 200) {
+          // ✅ 成功
+          this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
 
-        // ⭐ 支持两种成功响应码：200 和 80020
-        const isSuccess = (res.code === 200 || res.code === 80020);
-        const isError = res.data?.type === 'error';
-
-        // ⭐ 处理批量接口返回格式：{success_count, error_count, errors}
-        const hasErrors = res.data?.error_count > 0 || (res.data?.errors && res.data.errors.length > 0);
-        const successCount = res.data?.success_count || 0;
-
-        if (isSuccess && !isError && !hasErrors && successCount > 0) {
-          // ✅ 成功录入
-          this.$message.success('錄入成功並已自動發放獎勵');
-
-          // ⭐ 刷新中奖记录列表
+          // 刷新中奖记录列表
           await this.loadTicketList();
 
-          // ⭐ 重置单个录入表单，保持抽屉打开，方便继续录入下一条
+          // 重置单个录入表单，保持抽屉打开
           this.singleRecord = {
             prize_level_id: this.singleRecord.prize_level_id,  // 保留奖品等级选择
             ticket_no: '',
@@ -1507,13 +1494,9 @@ export default {
             loading: false,
             error: null
           };
-        } else if (hasErrors) {
-          // ❌ 有错误
-          const errorMsg = res.data?.errors?.[0] || res.data?.content || res.msg || '錄入失敗';
-          this.$message.error(errorMsg);
         } else {
-          // ❌ 其他错误情况
-          this.$message.error(res.data?.content || res.msg || '錄入失敗');
+          // ❌ 失败
+          this.$message.error(res.msg || res.message || '錄入失敗');
         }
       } catch (error) {
         this.$message.error('錄入失敗');
