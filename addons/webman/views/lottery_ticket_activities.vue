@@ -313,6 +313,19 @@
                 </template>
                 {{ trans.viewTicketList || '查看發放列表' }}
               </a-button>
+
+              <!-- ⭐ 錄入中獎（僅進行中活動） -->
+              <a-button
+                  v-if="activity.status === 1"
+                  type="primary"
+                  block
+                  @click.stop="showRecordForm(activity)"
+              >
+                <template #icon>
+                  <edit-outlined/>
+                </template>
+                {{ trans.recordWinTicket || '錄入中獎' }}
+              </a-button>
             </a-space>
 
             <a-alert
