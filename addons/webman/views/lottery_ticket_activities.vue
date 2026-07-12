@@ -1402,20 +1402,16 @@ export default {
       this.singleRecord.player_info = null;
 
       try {
-        // ⭐ 使用 fetch 原生请求，完全绕过 ExAdmin 的拦截器
-        const response = await fetch('/ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPlayerByTicketNo', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          credentials: 'include',  // ⭐ 携带认证信息（Cookie/Session）
-          body: JSON.stringify({
+        // ⭐ 使用 this.$request（和 getActivityDetail 一样）
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPlayerByTicketNo',
+          method: 'post',
+          data: {
             activity_id: this.recordData.activity_id,
             ticket_no: this.singleRecord.ticket_no
-          })
+          }
         });
 
-        const res = await response.json();
         console.log('📡 Query response:', res);
 
         // ⭐ 统一响应格式判断：通过 code 区分成功和失败
