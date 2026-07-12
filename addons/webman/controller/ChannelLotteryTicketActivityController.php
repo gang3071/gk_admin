@@ -2793,19 +2793,20 @@ class ChannelLotteryTicketActivityController
                 $record->save();
 
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.distribute_failed', null, [
+                return Response::success([], admin_trans('lottery_ticket.error.distribute_failed', null, [
                     'ticket_no' => $ticketNo,
                     'reason' => $e->getMessage()
-                ]));
+                ]), 500);
             }
 
             Db::commit();
 
+            // ✅ 成功返回
             return Response::success([
                 'message' => admin_trans('lottery_ticket.message.record_success'),
                 'record_id' => $record->id,
                 'prize_amount' => $prizeLevel->prize_amount
-            ]);
+            ], '', 200);
 
         } catch (\Exception $e) {
             Db::rollBack();
@@ -2814,7 +2815,7 @@ class ChannelLotteryTicketActivityController
                 'ticket_no' => $ticketNo,
                 'error' => $e->getMessage()
             ]);
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 }
