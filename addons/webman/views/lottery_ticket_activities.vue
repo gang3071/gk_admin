@@ -1402,18 +1402,20 @@ export default {
       this.singleRecord.player_info = null;
 
       try {
-        // ⭐ 使用 axios 原生请求，绕过 ExAdmin 的拦截器
-        const response = await this.$axios({
-          url: '/ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPlayerByTicketNo',
-          method: 'post',
-          data: {
+        // ⭐ 使用 fetch 原生请求，完全绕过 ExAdmin 的拦截器
+        const response = await fetch('/ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPlayerByTicketNo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             activity_id: this.recordData.activity_id,
             ticket_no: this.singleRecord.ticket_no
-          }
+          })
         });
 
-        const res = response.data;
-        console.log('📡 Raw axios response:', res);
+        const res = await response.json();
+        console.log('📡 Fetch response:', res);
 
         console.log('📡 Query response:', res);
         console.log('📊 res.code:', res.code);
