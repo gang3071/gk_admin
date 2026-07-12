@@ -1409,33 +1409,37 @@ export default {
             activity_id: this.recordData.activity_id,
             ticket_no: this.singleRecord.ticket_no
           }
+        }).catch(err => {
+          // ⭐ 捕获Promise rejection，转换为普通响应对象
+          console.log('Request rejected with:', err);
+          return {
+            code: -1,
+            msg: err?.msg || err?.message || '請求失敗',
+            data: err?.data || null
+          };
         });
 
-        // ⭐ 调试日志
-        console.log('Full response:', res);
+        console.log('Query response:', res);
 
-        // ⭐ 支持两种响应格式：
-        // 1. ExAdmin标准响应：{code: 80020, data: {...}}
-        // 2. Response::success响应：{code: 200, data: {...}}
-        const isSuccess = (res.code === 200 || res.code === 80020);
-        const hasData = res.data && (Array.isArray(res.data) ? res.data.length > 0 : Object.keys(res.data).length > 0);
-
-        console.log('isSuccess:', isSuccess);
-        console.log('hasData:', hasData);
-
-        if (isSuccess && hasData) {
-          this.singleRecord.player_info = res.data;
-          this.singleRecord.error = null;
-          console.log('✅ Player info set:', this.singleRecord.player_info);
+        // ⭐ 检查成功响应
+        if (res.code === 200 || res.code === 80020) {
+          if (res.data && Object.keys(res.data).length > 0) {
+            this.singleRecord.player_info = res.data;
+            this.singleRecord.error = null;
+          } else {
+            this.singleRecord.error = '未找到該券號對應的玩家';
+            this.singleRecord.player_info = null;
+          }
         } else {
-          console.log('❌ Failed - showing error');
-          this.singleRecord.error = res.data?.content || res.msg || '未找到該券號對應的玩家';
+          // 错误响应
+          this.singleRecord.error = res.data?.content || res.msg || '查詢失敗';
           this.singleRecord.player_info = null;
         }
       } catch (error) {
-        this.singleRecord.error = '查詢玩家信息失敗';
+        // 极端异常情况（不应该到达这里）
+        console.error('Unexpected error:', error);
+        this.singleRecord.error = '系統錯誤，請聯繫管理員';
         this.singleRecord.player_info = null;
-        console.error('Query error:', error);
       } finally {
         this.singleRecord.loading = false;
       }
