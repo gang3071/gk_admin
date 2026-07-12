@@ -1408,6 +1408,7 @@ export default {
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include',  // ⭐ 携带认证信息（Cookie/Session）
           body: JSON.stringify({
             activity_id: this.recordData.activity_id,
             ticket_no: this.singleRecord.ticket_no
