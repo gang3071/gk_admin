@@ -2591,11 +2591,11 @@ class ChannelLotteryTicketActivityController
 
         // 验证参数
         if (empty($activityId)) {
-            return message_error(admin_trans('lottery_ticket.error.activity_id_required'));
+            return Response::success([], admin_trans('lottery_ticket.error.activity_id_required'), 400);
         }
 
         if (empty($ticketNo)) {
-            return message_error(admin_trans('lottery_ticket.error.ticket_no_required'));
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_no_required'), 400);
         }
 
         // 格式化券号（补齐6位）
@@ -2608,22 +2608,22 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.error.activity_not_exist'));
+            return Response::success([], admin_trans('lottery_ticket.error.activity_not_exist'), 404);
         }
 
-        // 查询该券号对应的摸奖券记录（必须是未使用状态）
+        // 查询该券号对应的摸奖券记录
         $ticket = LotteryTicket::query()
             ->where('activity_id', $activityId)
             ->where('ticket_no', $ticketNo)
             ->first();
 
         if (!$ticket) {
-            return message_error(admin_trans('lottery_ticket.error.ticket_not_exist_or_not_belong'));
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_not_exist_or_not_belong'), 404);
         }
 
         // ⭐ 检查券号状态：必须是未使用状态
         if ($ticket->status != LotteryTicket::STATUS_UNUSED) {
-            return message_error(admin_trans('lottery_ticket.error.ticket_already_used'));
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_already_used'), 409);
         }
 
         // 检查券号是否已经被使用（已录入中奖记录）
@@ -2633,7 +2633,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if ($existingRecord) {
-            return message_error(admin_trans('lottery_ticket.error.ticket_already_recorded'));
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_already_recorded'), 409);
         }
 
         // 查询玩家信息
@@ -2642,10 +2642,10 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$player) {
-            return message_error(admin_trans('lottery_ticket.error.player_not_found_for_ticket'));
+            return Response::success([], admin_trans('lottery_ticket.error.player_not_found_for_ticket'), 404);
         }
 
-        // 返回玩家信息
+        // ✅ 成功：返回玩家信息
         return Response::success([
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
@@ -2653,7 +2653,7 @@ class ChannelLotteryTicketActivityController
             'player_phone' => $player->phone ?? null,
             'ticket_no' => $ticketNo,
             'ticket_id' => $ticket->id
-        ]);
+        ], '', 200);
     }
 
     /**

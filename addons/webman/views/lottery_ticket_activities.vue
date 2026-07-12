@@ -1415,34 +1415,19 @@ export default {
         });
 
         const res = await response.json();
-        console.log('📡 Fetch response:', res);
-
         console.log('📡 Query response:', res);
-        console.log('📊 res.code:', res.code);
-        console.log('📦 res.data:', res.data);
 
-        // ⭐ 检查成功响应
-        if (res.code === 200 || res.code === 80020) {
-          if (res.data && Object.keys(res.data).length > 0 && !res.data.type) {
-            // 成功：data是玩家信息对象（没有type字段）
-            this.singleRecord.player_info = res.data;
-            this.singleRecord.error = null;
-            console.log('✅ Player found');
-          } else if (res.data?.type === 'error') {
-            // 错误：data.type = 'error'
-            this.singleRecord.error = res.data.content || '查詢失敗';
-            this.singleRecord.player_info = null;
-            console.log('❌ Error in data:', res.data.content);
-          } else {
-            this.singleRecord.error = '未找到該券號對應的玩家';
-            this.singleRecord.player_info = null;
-            console.log('⚠️ Empty data');
-          }
+        // ⭐ 统一响应格式判断：通过 code 区分成功和失败
+        if (res.code === 200) {
+          // ✅ 成功：数据在 res.data
+          this.singleRecord.player_info = res.data;
+          this.singleRecord.error = null;
+          console.log('✅ Player found:', res.data);
         } else {
-          // 其他错误码
-          this.singleRecord.error = res.data?.content || res.msg || '查詢失敗';
+          // ❌ 失败：错误消息在 res.message
+          this.singleRecord.error = res.message || '查詢失敗';
           this.singleRecord.player_info = null;
-          console.log('❌ Error code:', res.code);
+          console.log('❌ Error:', res.message, '(code:', res.code + ')');
         }
       } catch (error) {
         // 极端异常情况（不应该到达这里）
