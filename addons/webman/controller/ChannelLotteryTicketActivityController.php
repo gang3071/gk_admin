@@ -108,6 +108,8 @@ class ChannelLotteryTicketActivityController
             'ticketNo' => admin_trans('lottery_ticket.fields.ticket_no'),
             'ticketNoInput' => admin_trans('lottery_ticket.fields.ticket_no_input'),
             'playerName' => admin_trans('lottery_ticket.fields.player_name'),
+            'playerUuid' => admin_trans('lottery_ticket.fields.player_uuid'),  // ⭐ 新增：玩家UUID
+            'playerPhone' => admin_trans('lottery_ticket.fields.player_username'),  // ⭐ 新增：玩家手机号
             'source' => admin_trans('lottery_ticket.fields.source'),
             'createdAt' => admin_trans('lottery_ticket.fields.created_at'),
             'usedAt' => admin_trans('lottery_ticket.fields.used_at'),
