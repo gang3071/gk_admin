@@ -1478,13 +1478,15 @@ export default {
           }
         });
 
+        // ⭐ 调试日志
+        console.log('Submit response:', res);
+        console.log('res.code:', res.code);
+        console.log('res.code === 200:', res.code === 200);
+
         // ⭐ 简单清晰的响应处理
         if (res.code === 200) {
           // ✅ 成功
           this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
-
-          // 刷新中奖记录列表
-          await this.loadTicketList();
 
           // 重置单个录入表单，保持抽屉打开
           this.singleRecord = {
