@@ -2576,4 +2576,76 @@ class ChannelLotteryTicketActivityController
 
         return $query->first();
     }
+
+    /**
+     * 根据券号查询玩家信息（单个录入模式）
+     * @group channel
+     * @auth true
+     */
+    public function getPlayerByTicketNo()
+    {
+        $activityId = Request::input('activity_id');
+        $ticketNo = Request::input('ticket_no');
+
+        // 验证参数
+        if (empty($activityId)) {
+            return message_error('活动ID不能为空');
+        }
+
+        if (empty($ticketNo)) {
+            return message_error('券号不能为空');
+        }
+
+        // 格式化券号（补齐6位）
+        $ticketNo = str_pad($ticketNo, 6, '0', STR_PAD_LEFT);
+
+        // 验证活动是否存在
+        $activity = LotteryTicketActivity::query()
+            ->where('id', $activityId)
+            ->where('department_id', Admin::user()->department_id)
+            ->first();
+
+        if (!$activity) {
+            return message_error('活动不存在');
+        }
+
+        // 查询该券号对应的摸奖券记录
+        $ticket = LotteryTicket::query()
+            ->where('activity_id', $activityId)
+            ->where('ticket_no', $ticketNo)
+            ->first();
+
+        if (!$ticket) {
+            return message_error('券号不存在或不属于该活动');
+        }
+
+        // 检查券号是否已经被使用（已录入中奖记录）
+        $existingRecord = LotteryTicketRecord::query()
+            ->where('activity_id', $activityId)
+            ->where('ticket_no', $ticketNo)
+            ->first();
+
+        if ($existingRecord) {
+            return message_error('该券号已录入中奖记录，请勿重复录入');
+        }
+
+        // 查询玩家信息
+        $player = Player::query()
+            ->where('id', $ticket->player_id)
+            ->first();
+
+        if (!$player) {
+            return message_error('未找到该券号对应的玩家');
+        }
+
+        // 返回玩家信息
+        return message_success('查询成功', [
+            'player_id' => $player->id,
+            'player_uuid' => $player->uuid,
+            'player_name' => $player->name,
+            'player_phone' => $player->phone ?? null,
+            'ticket_no' => $ticketNo,
+            'ticket_id' => $ticket->id
+        ]);
+    }
 }

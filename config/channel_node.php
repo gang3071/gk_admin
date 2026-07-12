@@ -2013,6 +2013,16 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWinByTickets',
                 'title' => '录入中奖记录',
             ],
+            // ⭐ 新增：根据券号查询玩家信息（单个录入模式）
+            [
+                'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\getPlayerByTicketNo',
+                'pid' => 'addons\webman\controller\ChannelLotteryTicketActivityController\index',
+                'action' => 'getPlayerByTicketNo',
+                'method' => 'post',
+                'group' => 'channel',
+                'url' => 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPlayerByTicketNo',
+                'title' => '查询玩家信息',
+            ],
             // ⭐ 新增：按券号发放奖励
             [
                 'id' => 'addons\webman\controller\ChannelLotteryTicketActivityController\distributeByTicketNo',
