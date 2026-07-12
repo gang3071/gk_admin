@@ -339,6 +339,7 @@ return [
         'ticket_no_required' => '券号不能为空',
         'activity_not_exist' => '活动不存在',
         'ticket_not_exist_or_not_belong' => '券号不存在或不属于该活动',
+        'ticket_already_used' => '该券号已使用，无法录入中奖',
         'ticket_already_recorded' => '该券号已录入中奖记录，请勿重复录入',
         'player_not_found_for_ticket' => '未找到该券号对应的玩家',
         // 停止开奖确认

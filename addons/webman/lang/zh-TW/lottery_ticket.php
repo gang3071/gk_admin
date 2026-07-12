@@ -338,6 +338,7 @@ return [
         'ticket_no_required' => '券號不能為空',
         'activity_not_exist' => '活動不存在',
         'ticket_not_exist_or_not_belong' => '券號不存在或不屬於該活動',
+        'ticket_already_used' => '該券號已使用，無法錄入中獎',
         'ticket_already_recorded' => '該券號已錄入中獎記錄，請勿重複錄入',
         'player_not_found_for_ticket' => '未找到該券號對應的玩家',
         // 停止開獎確認

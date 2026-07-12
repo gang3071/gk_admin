@@ -335,6 +335,7 @@ return [
         'ticket_no_required' => 'チケット番号を入力してください',
         'activity_not_exist' => 'アクティビティが存在しません',
         'ticket_not_exist_or_not_belong' => 'チケットが存在しないか、このアクティビティに属していません',
+        'ticket_already_used' => 'このチケットは既に使用されており、当選記録できません',
         'ticket_already_recorded' => 'このチケットは既に記録されています。重複入力はできません',
         'player_not_found_for_ticket' => 'このチケットに対応するプレイヤーが見つかりません',
         // 抽選停止確認

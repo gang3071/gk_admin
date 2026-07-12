@@ -2611,7 +2611,7 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('lottery_ticket.error.activity_not_exist'));
         }
 
-        // 查询该券号对应的摸奖券记录
+        // 查询该券号对应的摸奖券记录（必须是未使用状态）
         $ticket = LotteryTicket::query()
             ->where('activity_id', $activityId)
             ->where('ticket_no', $ticketNo)
@@ -2619,6 +2619,11 @@ class ChannelLotteryTicketActivityController
 
         if (!$ticket) {
             return message_error(admin_trans('lottery_ticket.error.ticket_not_exist_or_not_belong'));
+        }
+
+        // ⭐ 检查券号状态：必须是未使用状态
+        if ($ticket->status != LotteryTicket::STATUS_UNUSED) {
+            return message_error(admin_trans('lottery_ticket.error.ticket_already_used'));
         }
 
         // 检查券号是否已经被使用（已录入中奖记录）

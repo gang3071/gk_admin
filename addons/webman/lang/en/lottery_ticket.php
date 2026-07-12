@@ -336,6 +336,7 @@ return [
         'ticket_no_required' => 'Ticket number is required',
         'activity_not_exist' => 'Activity does not exist',
         'ticket_not_exist_or_not_belong' => 'Ticket does not exist or does not belong to this activity',
+        'ticket_already_used' => 'This ticket has already been used and cannot be recorded as a winning ticket',
         'ticket_already_recorded' => 'This ticket has already been recorded, duplicate entry not allowed',
         'player_not_found_for_ticket' => 'Player not found for this ticket',
         // Stop drawing confirmation
