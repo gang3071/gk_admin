@@ -1488,8 +1488,13 @@ export default {
         const isSuccess = (res.code === 200 || res.code === 80020);
         const isError = res.data?.type === 'error';
 
-        if (isSuccess && !isError) {
-          this.$message.success(res.data?.message || res.data?.content || '錄入成功並已自動發放獎勵');
+        // ⭐ 处理批量接口返回格式：{success_count, error_count, errors}
+        const hasErrors = res.data?.error_count > 0 || (res.data?.errors && res.data.errors.length > 0);
+        const successCount = res.data?.success_count || 0;
+
+        if (isSuccess && !isError && !hasErrors && successCount > 0) {
+          // ✅ 成功录入
+          this.$message.success('錄入成功並已自動發放獎勵');
 
           // ⭐ 刷新中奖记录列表
           await this.loadTicketList();
@@ -1502,7 +1507,12 @@ export default {
             loading: false,
             error: null
           };
+        } else if (hasErrors) {
+          // ❌ 有错误
+          const errorMsg = res.data?.errors?.[0] || res.data?.content || res.msg || '錄入失敗';
+          this.$message.error(errorMsg);
         } else {
+          // ❌ 其他错误情况
           this.$message.error(res.data?.content || res.msg || '錄入失敗');
         }
       } catch (error) {
