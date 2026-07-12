@@ -2225,51 +2225,40 @@ if (!function_exists('addPlayerExtend')) {
      */
     function addPlayerExtend(Player $player, array $extendData = []): void
     {
-        try {
-            // 第一步：强制创建钱包记录，初始余额为 0（防止复制数据库导致的金额残留）
-            $wallet = PlayerPlatformCash::query()->firstOrCreate([
-                'player_id' => $player->id,
-                'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
-            ], [
-                'money' => 0,
-            ]);
+        // 第一步：强制创建钱包记录，初始余额为 0（防止复制数据库导致的金额残留）
+        $wallet = PlayerPlatformCash::query()->firstOrCreate([
+            'player_id' => $player->id,
+            'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
+        ], [
+            'money' => 0,
+        ]);
 
-            // 第二步：如果是已存在的记录（复制数据库场景），强制重置为 0
-            if ($wallet->money != 0) {
-                $wallet->withoutEvents(function () use ($wallet) {
-                    $wallet->update(['money' => 0]);
-                });
-            }
-
-            // 第三步：设置 Redis 钱包余额为 0（确保缓存与数据库一致）
-            \addons\webman\service\WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
-
-            // 第四步：创建/更新玩家扩展信息（支持传入初始数据，避免二次更新）
-            $extendAttributes = [];
-
-            // 如果传入了扩展信息，合并到创建/更新数据中
-            if (!empty($extendData)) {
-                // 过滤掉空值，保留有意义的数据
-                $extendAttributes = array_filter($extendData, function ($value) {
-                    return $value !== null && $value !== '';
-                });
-            }
-
-            // 使用 updateOrCreate 确保记录存在且数据正确（防止复制数据库导致的脏数据）
-            PlayerExtend::query()->updateOrCreate(
-                ['player_id' => $player->id],
-                $extendAttributes
-            );
-        } catch (\Exception $e) {
-            // 记录详细错误日志
-            Log::error('addPlayerExtend failed', [
-                'player_id' => $player->id,
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'extend_data' => $extendData,
-            ]);
-            throw $e;
+        // 第二步：如果是已存在的记录（复制数据库场景），强制重置为 0
+        if ($wallet->money != 0) {
+            $wallet->withoutEvents(function () use ($wallet) {
+                $wallet->update(['money' => 0]);
+            });
         }
+
+        // 第三步：设置 Redis 钱包余额为 0（确保缓存与数据库一致）
+        \addons\webman\service\WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
+
+        // 第四步：创建/更新玩家扩展信息（支持传入初始数据，避免二次更新）
+        $extendAttributes = [];
+
+        // 如果传入了扩展信息，合并到创建/更新数据中
+        if (!empty($extendData)) {
+            // 过滤掉空值，保留有意义的数据
+            $extendAttributes = array_filter($extendData, function ($value) {
+                return $value !== null && $value !== '';
+            });
+        }
+
+        // 使用 updateOrCreate 确保记录存在且数据正确（防止复制数据库导致的脏数据）
+        PlayerExtend::query()->updateOrCreate(
+            ['player_id' => $player->id],
+            $extendAttributes
+        );
 
         // 第五步：处理注册赠送（如果启用）
         $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
