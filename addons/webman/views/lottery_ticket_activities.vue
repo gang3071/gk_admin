@@ -1427,10 +1427,21 @@ export default {
           console.log('❌ Error:', res.message, '(code:', res.code + ')');
         }
       } catch (error) {
-        // 极端异常情况（不应该到达这里）
-        console.error('Unexpected error:', error);
-        this.singleRecord.error = '系統錯誤，請聯繫管理員';
-        this.singleRecord.player_info = null;
+        // ⭐ this.$request 在 code !== 200 时会 reject
+        // 但 reject 的对象就是响应数据本身！
+        console.log('❌ Request rejected:', error);
+
+        if (error && error.code && error.message) {
+          // 这是正常的业务错误响应
+          this.singleRecord.error = error.message || '查詢失敗';
+          this.singleRecord.player_info = null;
+          console.log('❌ Business error:', error.message, '(code:', error.code + ')');
+        } else {
+          // 真正的异常错误（网络错误等）
+          console.error('System error:', error);
+          this.singleRecord.error = '系統錯誤，請聯繫管理員';
+          this.singleRecord.player_info = null;
+        }
       } finally {
         this.singleRecord.loading = false;
       }
