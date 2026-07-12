@@ -333,6 +333,13 @@ return [
         'invalid_ticket_format' => '券號 {ticket_no} 格式錯誤，只能包含數字且不超過6位',
         'distribute_failed' => '券號 {ticket_no} 派獎失敗：{reason}',  // ⭐ 新增：錄入自動派獎失敗提示
         'bet_progress_not_found' => '未找到打碼進度記錄',
+        // ⭐ 单个录入查询玩家信息
+        'activity_id_required' => '活動ID不能為空',
+        'ticket_no_required' => '券號不能為空',
+        'activity_not_exist' => '活動不存在',
+        'ticket_not_exist_or_not_belong' => '券號不存在或不屬於該活動',
+        'ticket_already_recorded' => '該券號已錄入中獎記錄，請勿重複錄入',
+        'player_not_found_for_ticket' => '未找到該券號對應的玩家',
         // 停止開獎確認
         'stop_drawing_no_records_confirm' => '⚠️ 尚未錄入任何中獎券號！\n\n停止開獎後將無法再錄入中獎券號，活動將進入已結束狀態。\n\n確定要停止開獎嗎？',
         'stop_drawing_with_records_confirm' => '確認停止開獎？\n\n📊 中獎統計：\n• 已錄入券號數：{count} 張\n• 獎金總額：NT$ {amount}\n• 待派獎：{pending} 筆\n• 已派獎：{granted} 筆\n\n⚠️ 停止後將無法再錄入中獎券號',

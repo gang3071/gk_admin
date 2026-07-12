@@ -334,6 +334,13 @@ return [
         'invalid_ticket_format' => '券号 {ticket_no} 格式错误，只能包含数字且不超过6位',
         'distribute_failed' => '券号 {ticket_no} 派奖失败：{reason}',  // ⭐ 新增：录入自动派奖失败提示
         'bet_progress_not_found' => '未找到打码进度记录',
+        // ⭐ 单个录入查询玩家信息
+        'activity_id_required' => '活动ID不能为空',
+        'ticket_no_required' => '券号不能为空',
+        'activity_not_exist' => '活动不存在',
+        'ticket_not_exist_or_not_belong' => '券号不存在或不属于该活动',
+        'ticket_already_recorded' => '该券号已录入中奖记录，请勿重复录入',
+        'player_not_found_for_ticket' => '未找到该券号对应的玩家',
         // 停止开奖确认
         'stop_drawing_no_records_confirm' => '⚠️ 尚未录入任何中奖券号！\n\n停止开奖后将无法再录入中奖券号，活动将进入已结束状态。\n\n确定要停止开奖吗？',
         'stop_drawing_with_records_confirm' => '确认停止开奖？\n\n📊 中奖统计：\n• 已录入券号数：{count} 张\n• 奖金总额：NT$ {amount}\n• 待派奖：{pending} 笔\n• 已派奖：{granted} 笔\n\n⚠️ 停止后将无法再录入中奖券号',

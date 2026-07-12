@@ -2589,11 +2589,11 @@ class ChannelLotteryTicketActivityController
 
         // 验证参数
         if (empty($activityId)) {
-            return message_error('活动ID不能为空');
+            return message_error(admin_trans('lottery_ticket.error.activity_id_required'));
         }
 
         if (empty($ticketNo)) {
-            return message_error('券号不能为空');
+            return message_error(admin_trans('lottery_ticket.error.ticket_no_required'));
         }
 
         // 格式化券号（补齐6位）
@@ -2606,7 +2606,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$activity) {
-            return message_error('活动不存在');
+            return message_error(admin_trans('lottery_ticket.error.activity_not_exist'));
         }
 
         // 查询该券号对应的摸奖券记录
@@ -2616,7 +2616,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$ticket) {
-            return message_error('券号不存在或不属于该活动');
+            return message_error(admin_trans('lottery_ticket.error.ticket_not_exist_or_not_belong'));
         }
 
         // 检查券号是否已经被使用（已录入中奖记录）
@@ -2626,7 +2626,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if ($existingRecord) {
-            return message_error('该券号已录入中奖记录，请勿重复录入');
+            return message_error(admin_trans('lottery_ticket.error.ticket_already_recorded'));
         }
 
         // 查询玩家信息
@@ -2635,11 +2635,11 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$player) {
-            return message_error('未找到该券号对应的玩家');
+            return message_error(admin_trans('lottery_ticket.error.player_not_found_for_ticket'));
         }
 
         // 返回玩家信息
-        return message_success('查询成功', [
+        return message_success(admin_trans('common.query_success'), [
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
             'player_name' => $player->name,
