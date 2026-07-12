@@ -1412,19 +1412,23 @@ export default {
         });
 
         // ⭐ 调试日志
-        console.log('Response code:', res.code);
-        console.log('Response data:', res.data);
-        console.log('Code type:', typeof res.code);
-        console.log('Code === 80020?', res.code === 80020);
-        console.log('Code == 80020?', res.code == 80020);
+        console.log('Full response:', res);
 
-        // ⭐ ExAdmin响应码：80020表示成功
-        if (res.code == 80020 && res.data) {
+        // ⭐ 支持两种响应格式：
+        // 1. ExAdmin标准响应：{code: 80020, data: {...}}
+        // 2. Response::success响应：{code: 200, data: {...}}
+        const isSuccess = (res.code === 200 || res.code === 80020);
+        const hasData = res.data && (Array.isArray(res.data) ? res.data.length > 0 : Object.keys(res.data).length > 0);
+
+        console.log('isSuccess:', isSuccess);
+        console.log('hasData:', hasData);
+
+        if (isSuccess && hasData) {
           this.singleRecord.player_info = res.data;
           this.singleRecord.error = null;
-          console.log('Player info set successfully:', this.singleRecord.player_info);
+          console.log('✅ Player info set:', this.singleRecord.player_info);
         } else {
-          console.log('Failed condition check');
+          console.log('❌ Failed - showing error');
           this.singleRecord.error = res.data?.content || res.msg || '未找到該券號對應的玩家';
           this.singleRecord.player_info = null;
         }

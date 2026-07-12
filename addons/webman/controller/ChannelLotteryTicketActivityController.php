@@ -2641,7 +2641,7 @@ class ChannelLotteryTicketActivityController
         }
 
         // 返回玩家信息
-        return message_success(admin_trans('common.query_success'), [
+        return Response::success([
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
             'player_name' => $player->name,
