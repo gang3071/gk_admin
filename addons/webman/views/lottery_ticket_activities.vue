@@ -1377,16 +1377,12 @@ export default {
           }
         });
 
-        // ⭐ 调试：打印完整响应
-        console.log('API Response:', res);
-        console.log('Response data:', res.data);
-
-        if (res.code === 200 && res.data) {
+        // ⭐ ExAdmin响应码：80020表示成功
+        if (res.code === 80020 && res.data) {
           this.singleRecord.player_info = res.data;
           this.singleRecord.error = null;
-          console.log('Player info set:', this.singleRecord.player_info);
         } else {
-          this.singleRecord.error = res.msg || '未找到該券號對應的玩家';
+          this.singleRecord.error = res.data?.content || res.msg || '未找到該券號對應的玩家';
           this.singleRecord.player_info = null;
         }
       } catch (error) {
