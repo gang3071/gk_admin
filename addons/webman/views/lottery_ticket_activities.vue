@@ -314,7 +314,7 @@
                 {{ trans.viewTicketList || '查看發放列表' }}
               </a-button>
 
-              <!-- ⭐ 錄入中獎（僅進行中活動） -->
+              <!-- ⭐ 錄入中獎（進行中活動顯示） -->
               <a-button
                   v-if="activity.status === 1"
                   type="primary"
@@ -324,8 +324,13 @@
                 <template #icon>
                   <edit-outlined/>
                 </template>
-                {{ trans.recordWinTicket || '錄入中獎' }}
+                錄入中獎
               </a-button>
+
+              <!-- ⭐ 調試：顯示活動狀態（暫時顯示） -->
+              <a-tag color="blue">
+                狀態: {{ activity.status }} ({{ activity.status === 1 ? '進行中，顯示錄入按鈕' : '非進行中，隱藏錄入按鈕' }})
+              </a-tag>
             </a-space>
 
             <a-alert
