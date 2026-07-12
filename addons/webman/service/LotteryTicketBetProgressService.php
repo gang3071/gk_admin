@@ -449,21 +449,13 @@ class LotteryTicketBetProgressService
             ->where('created_at', '<=', $activity->end_time)
             ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算
             ->whereHas('gamePlatform', function($query) {
-                // ✅ 过滤真人视讯和体育平台（与彩金系统保持一致）
-                $query->whereNotIn('code', [
-                    'WM',      // WM真人
-                    'DG',      // DG真人
-                    'SA',      // SA真人
-                    'RSGLIVE', // GClub真人
-                    'MT',      // MT真人
-                    'O8',      // EEAI真人
-                    'TNINE',   // TNINE真人
-                    'KY',      // KY棋牌（混合平台，包含真人类别）
-                    'KYS',     // KYSport
-                    'OB',      // OB
-                    'SPS',     // SPSport
-                    'SPS_DY',  // SPSport单一钱包
+                // ✅ 过滤真人视讯和体育平台（从配置文件读取）
+                $excludedPlatforms = config('platform_filter.excluded_platforms', [
+                    // 默认值（防止配置文件不存在）
+                    'WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE',
+                    'KY', 'KYS', 'OB', 'SPS', 'SPS_DY'
                 ]);
+                $query->whereNotIn('code', $excludedPlatforms);
             })
             ->sum('bet') ?? 0;
 

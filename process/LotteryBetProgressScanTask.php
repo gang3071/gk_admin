@@ -222,7 +222,16 @@ class LotteryBetProgressScanTask
             $onlineStart = microtime(true);
 
             // ⭐ 使用原生SQL + FORCE INDEX + 平台过滤
-            // ✅ 剔除真人/体育平台，只保留电子游戏平台的下注计入打码量
+            // ✅ 剔除真人/体育平台，只保留电子游戏平台的下注计入打码量（从配置文件读取）
+            $excludedPlatforms = config('platform_filter.excluded_platforms', [
+                // 默认值（防止配置文件不存在）
+                'WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE',
+                'KY', 'KYS', 'OB', 'SPS', 'SPS_DY'
+            ]);
+
+            // 构建 NOT IN 子句的占位符
+            $placeholders = implode(',', array_fill(0, count($excludedPlatforms), '?'));
+
             $onlineSql = "
                 SELECT pgr.player_id, SUM(pgr.bet) as total_bet
                 FROM play_game_record pgr
@@ -232,11 +241,17 @@ class LotteryBetProgressScanTask
                   AND pgr.created_at < ?
                   AND pgr.bet > 0
                   AND pgr.settlement_status = 1
-                  AND gp.code NOT IN ('WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE', 'KY', 'KYS', 'OB', 'SPS', 'SPS_DY')
+                  AND gp.code NOT IN ({$placeholders})
                 GROUP BY pgr.player_id
             ";
 
-            $onlineResults = Db::select($onlineSql, [$departmentId, $startTime, $endTime]);
+            // 合并SQL参数：department_id, start_time, end_time, ...excluded_platforms
+            $params = array_merge(
+                [$departmentId, $startTime, $endTime],
+                $excludedPlatforms
+            );
+
+            $onlineResults = Db::select($onlineSql, $params);
 
             foreach ($onlineResults as $row) {
                 $playerId = $row->player_id;
