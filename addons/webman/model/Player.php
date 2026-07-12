@@ -307,8 +307,18 @@ class Player extends Model
     protected static function booted()
     {
         static::created(function (Player $player) {
-            // 注意：PlayerExtend 的创建已移至 addPlayerExtend() 函数统一处理
-            // 避免重复创建和数据冲突
+            // 创建玩家扩展信息（仅当不存在时）
+            // 注意：gk_admin 的控制器都会调用 addPlayerExtend() 统一处理
+            // 这里作为防御性代码，防止其他途径创建玩家时遗漏 PlayerExtend
+            $existingExtend = PlayerExtend::query()
+                ->where('player_id', $player->id)
+                ->exists();
+
+            if (!$existingExtend) {
+                $playerExtend = new PlayerExtend();
+                $playerExtend->player_id = $player->id;
+                $playerExtend->save();
+            }
 
             // 自动设置最低VIP等级（如果玩家没有设置VIP等级）
             if (empty($player->vip_level_id) || $player->vip_level_id == 0) {
