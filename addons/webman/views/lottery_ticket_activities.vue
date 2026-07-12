@@ -1408,14 +1408,23 @@ export default {
           data: {
             activity_id: this.recordData.activity_id,
             ticket_no: this.singleRecord.ticket_no
-          }
+          },
+          // ⭐ 禁用ExAdmin的自动错误处理，让我们自己处理响应
+          hideErrorMessage: true
         }).catch(err => {
-          // ⭐ 捕获Promise rejection，转换为普通响应对象
+          // ⭐ ExAdmin reject时err可能是undefined，尝试多种方式获取错误信息
           console.log('🔴 Query rejected:', err);
+          console.log('🔴 err全部属性:', err);
+          console.log('🔴 typeof err:', typeof err);
+
+          // 尝试从不同位置提取错误信息
+          const errorData = err?.response?.data || err?.data || err;
+          console.log('🔴 errorData:', errorData);
+
           return {
-            code: err?.code || -1,
-            msg: err?.msg || err?.message || err?.data?.content || '請求失敗',
-            data: err?.data || null
+            code: errorData?.code || err?.code || -1,
+            msg: errorData?.data?.content || errorData?.msg || err?.message || '請求失敗',
+            data: errorData?.data || null
           };
         });
 
