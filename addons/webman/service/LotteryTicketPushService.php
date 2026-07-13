@@ -187,64 +187,17 @@ class LotteryTicketPushService
     }
 
     /**
-     * 推送中奖通知
-     *
-     * @param LotteryTicketRecord $record 中奖记录
-     * @return bool
-     */
-    public static function pushWinNotification(LotteryTicketRecord $record): bool
-    {
-        try {
-            // ✅ 使用缓存获取活动
-            $activity = self::getActivity($record->activity_id);
-            if (!$activity) {
-                return false;
-            }
-
-            $message = [
-                'type' => 'lottery_win',
-                'title' => '🎉 恭喜中獎！',
-                'message' => sprintf(
-                    '您在活動「%s」中獲得 %s - %s 元！',
-                    $activity->name,
-                    $record->prize_name,
-                    number_format($record->prize_amount, 2)
-                ),
-                'data' => [
-                    'activity_id' => $record->activity_id,
-                    'activity_name' => $activity->name,
-                    'ticket_no' => $record->ticket_no,
-                    'prize_level' => $record->prize_name,
-                    'prize_type' => $record->prize_type,
-                    'prize_amount' => $record->prize_amount,
-                    'record_id' => $record->id,
-                ],
-            ];
-
-            // 推送给玩家
-            return self::pushToPlayer($record->player_id, 'lottery_win', $message);
-
-        } catch (\Exception $e) {
-            Log::error('中奖推送失败', [
-                'record_id' => $record->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
      * 推送活动状态变更通知
      *
      * @param LotteryTicketActivity $activity 活动对象
-     * @param string $event 事件类型 (preheat_start, betting_start, drawing_start, ended)
+     * @param string $event 事件类型 (activity_start, drawing_start, ended)
      * @return bool
      */
     public static function pushActivityStatusChange(LotteryTicketActivity $activity, string $event): bool
     {
         try {
             $messages = [
-                'activity_start' => [  // ⚠️ 修正：betting_start → activity_start
+                'activity_start' => [
                     'title' => '摸獎券活動開始',
                     'message' => sprintf('活動「%s」正式開始，快來參與打碼領券！', $activity->name),
                 ],
@@ -428,6 +381,90 @@ class LotteryTicketPushService
     }
 
     /**
+     * 推送中奖通知（奖励发放时推送）
+     *
+     * 使用场景：
+     * - 录入中奖时自动发放奖励
+     * - 批量发放历史待发放记录
+     * - 按券号单独发放奖励
+     *
+     * @param int $playerId 玩家ID
+     * @param LotteryTicketActivity $activity 活动对象
+     * @param string $ticketNo 券号
+     * @param string $prizeName 奖品名称
+     * @param float $prizeAmount 奖金金额
+     * @return bool
+     */
+    public static function pushPrizeDistributed(
+        int $playerId,
+        LotteryTicketActivity $activity,
+        string $ticketNo,
+        string $prizeName,
+        float $prizeAmount
+    ): bool
+    {
+        try {
+            // 频道名称格式: player-{player_id}（遵循系统规范）
+            $channelName = "player-{$playerId}";
+
+            // 构造推送内容 - 使用统一格式
+            $content = [
+                'type' => 'lottery_win',
+                'title' => '🎉 恭喜中獎！',
+                'message' => sprintf(
+                    '您在活動「%s」中獲得 %s - NT$%s！獎金已自動發放到您的錢包。',
+                    $activity->name,
+                    $prizeName,
+                    number_format($prizeAmount, 2)
+                ),
+                'data' => [
+                    'activity_id' => $activity->id,
+                    'activity_name' => $activity->name,
+                    'ticket_no' => $ticketNo,
+                    'prize_level' => $prizeName,
+                    'prize_type' => LotteryTicketRecord::PRIZE_TYPE_CASH,
+                    'prize_amount' => $prizeAmount,
+                ],
+                'show_notification' => true,
+                'priority' => 'high',
+                'timestamp' => time(),
+            ];
+
+            // 将推送任务加入队列
+            Client::send(
+                LotteryTicketPushQueue::QUEUE_NAME,
+                [
+                    'channels' => $channelName,
+                    'content' => $content,
+                    'from' => self::PUSH_FROM,
+                ],
+                self::QUEUE_DELAY
+            );
+
+            Log::info('[摸奖券] 推送中奖通知已入队', [
+                'player_id' => $playerId,
+                'activity_id' => $activity->id,
+                'ticket_no' => $ticketNo,
+                'prize_name' => $prizeName,
+                'prize_amount' => $prizeAmount
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('[摸奖券] 推送中奖通知失败', [
+                'player_id' => $playerId,
+                'activity_id' => $activity->id ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            // 不抛出异常，避免影响发放流程
+            return false;
+        }
+    }
+
+    /**
      * 推送给单个玩家（使用队列异步推送）
      *
      * @param int $playerId 玩家ID
@@ -563,187 +600,6 @@ class LotteryTicketPushService
                 'line' => $e->getLine(),
             ]);
             return false;
-        }
-    }
-
-    /**
-     * 批量推送中奖通知（使用队列，避免阻塞）
-     *
-     * @param array $winnerRecords 中奖记录数组
-     * @return int 成功入队数量
-     */
-    public static function batchPushWinNotifications(array $winnerRecords): int
-    {
-        // ✅ 按奖金额从大到小排序，大奖优先推送
-        usort($winnerRecords, function($a, $b) {
-            return $b->prize_amount <=> $a->prize_amount;
-        });
-
-        $successCount = 0;
-        $delay = 0; // 初始延迟0秒
-
-        foreach ($winnerRecords as $record) {
-            // ✅ 大奖（≥10000元）立即推送，小奖使用延迟
-            if ($record->prize_amount >= 10000) {
-                $pushDelay = 0;  // 立即推送大奖
-            } else {
-                $pushDelay = $delay;
-            }
-
-            // 每条推送入队
-            if (self::pushWinNotificationWithDelay($record, $pushDelay)) {
-                $successCount++;
-                // 只对小奖增加延迟，大奖不影响延迟计数
-                if ($record->prize_amount < 10000) {
-                    $delay = floor($successCount / 10);
-                }
-            }
-        }
-
-        // ✅ 简化日志：只记录总数和失败数（成功数可推算）
-        if ($successCount < count($winnerRecords)) {
-            Log::warning('批量中奖通知部分失败', [
-                'total' => count($winnerRecords),
-                'failed' => count($winnerRecords) - $successCount,
-            ]);
-        } else if (config('app.debug')) {
-            Log::info('批量中奖通知已入队', [
-                'count' => $successCount,
-                'max_delay' => $delay . 's',
-            ]);
-        }
-
-        return $successCount;
-    }
-
-    /**
-     * 推送中奖通知（带延迟入队）
-     *
-     * @param LotteryTicketRecord $record 中奖记录
-     * @param int $delay 延迟秒数
-     * @return bool
-     */
-    protected static function pushWinNotificationWithDelay(LotteryTicketRecord $record, int $delay = 0): bool
-    {
-        try {
-            $activity = LotteryTicketActivity::find($record->activity_id);
-            if (!$activity) {
-                return false;
-            }
-
-            $channelName = "player-{$record->player_id}";
-
-            $content = [
-                'type' => 'lottery_win',
-                'title' => '🎉 恭喜中獎！',
-                'message' => sprintf(
-                    '您在活動「%s」中獲得 %s - %s 元！',
-                    $activity->name,
-                    $record->prize_name,
-                    number_format($record->prize_amount, 2)
-                ),
-                'data' => [
-                    'activity_id' => $record->activity_id,
-                    'activity_name' => $activity->name,
-                    'ticket_no' => $record->ticket_no,
-                    'prize_level' => $record->prize_name,
-                    'prize_type' => $record->prize_type,
-                    'prize_amount' => $record->prize_amount,
-                    'record_id' => $record->id,
-                ],
-                'show_notification' => true,
-                'priority' => 'high',
-                'timestamp' => time(),
-            ];
-
-            // 使用延迟入队，平滑推送压力
-            Client::send(
-                LotteryTicketPushQueue::QUEUE_NAME,
-                [
-                    'channels' => $channelName,
-                    'content' => $content,
-                    'from' => self::PUSH_FROM,
-                ],
-                $delay
-            );
-
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('中奖推送入队失败', [
-                'record_id' => $record->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
-            return false;
-        }
-    }
-
-    /**
-     * 推送奖励已发放通知（发放时才推送）⭐ 新增方法
-     *
-     * 当管理员手动发放奖励后，推送中奖通知给玩家
-     * 与旧的pushDrawResult不同，这个方法在发放时才推送
-     *
-     * @param int $playerId 玩家ID
-     * @param LotteryTicketActivity $activity 活动
-     * @param string $ticketNo 券号
-     * @param string $prizeName 奖品名称
-     * @param float $prizeAmount 奖金金额
-     * @return bool
-     */
-    public static function pushPrizeDistributed(
-        int $playerId,
-        LotteryTicketActivity $activity,
-        string $ticketNo,
-        string $prizeName,
-        float $prizeAmount
-    ): bool
-    {
-        try {
-            $pushData = [
-                'event' => 'lottery_prize_distributed',  // 奖励已发放事件 ⭐ 新事件类型
-                'data' => [
-                    'activity_id' => $activity->id,
-                    'activity_name' => $activity->name,
-                    'ticket_no' => $ticketNo,
-                    'prize_level' => $prizeName,
-                    'prize_amount' => $prizeAmount,
-                    'message' => '恭喜中獎！',
-                    'timestamp' => time()
-                ]
-            ];
-
-            // 推送到指定玩家
-            Client::send(
-                'push',
-                [
-                    'type' => 'player',
-                    'player_id' => $playerId,
-                    'event' => 'lottery_prize_distributed',
-                    'data' => $pushData
-                ],
-                self::QUEUE_DELAY
-            );
-
-            Log::info('[摸奖券] 推送奖励发放通知', [
-                'player_id' => $playerId,
-                'activity_id' => $activity->id,
-                'ticket_no' => $ticketNo,
-                'prize_name' => $prizeName,
-                'prize_amount' => $prizeAmount
-            ]);
-
-            return true;
-
-        } catch (\Exception $e) {
-            Log::error('[摸奖券] 推送奖励发放通知失败', [
-                'player_id' => $playerId,
-                'activity_id' => $activity->id ?? null,
-                'error' => $e->getMessage(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
-            ]);
-            throw $e; // ⭐ 重新抛出异常，让调用方决定如何处理
         }
     }
 }
