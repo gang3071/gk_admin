@@ -196,32 +196,38 @@ class VipBirthdayBonusTask
      */
     private function sendBirthdayBonus(Player $player, VipLevel $vipLevel, float $bonusAmount): void
     {
-        // 构建推送消息
         $title = '生日禮金';
         $content = sprintf('祝您生日快樂！您的VIP%s生日禮金 %s 可領取', $vipLevel->name, number_format($bonusAmount, 2));
+
+        // 先创建 notice 记录获取 ID
+        $notice = Notice::query()->create([
+            'department_id' => $player->department_id,
+            'player_id' => $player->id,
+            'type' => Notice::TYPE_VIP_BIRTHDAY_BONUS,
+            'title' => $title,
+            'content' => '{}', // 临时占位
+            'status' => 0,
+            'receiver' => Notice::RECEIVER_PLAYER,
+            'is_private' => 1,
+        ]);
+
+        // 构建完整推送消息（包含 notice_id）
         $pushMessage = [
             'msg_type' => 'vip_birthday_bonus',
             'player_id' => $player->id,
+            'notice_id' => $notice->id,
             'title' => $title,
             'content' => $content,
             'amount' => $bonusAmount,
             'vip_level_name' => $vipLevel->name,
         ];
 
-        // 入库保存完整消息内容
-        $notice = Notice::query()->create([
-            'department_id' => $player->department_id,
-            'player_id' => $player->id,
-            'type' => Notice::TYPE_VIP_BIRTHDAY_BONUS,
-            'title' => $title,
+        // 更新 notice 的 content（包含完整消息）
+        $notice->update([
             'content' => json_encode($pushMessage, JSON_UNESCAPED_UNICODE),
-            'status' => 0,
-            'receiver' => Notice::RECEIVER_PLAYER,
-            'is_private' => 1,
         ]);
 
-        // 推送时补充 notice_id
-        $pushMessage['notice_id'] = $notice->id;
+        // 推送消息
         sendSocketMessage('player-' . $player->id, $pushMessage);
 
         $this->log->info('VipBirthdayBonusTask 通知已发送', [

@@ -321,11 +321,24 @@ class VipService
                 $content .= sprintf('，升級禮金 %s 元可領取', number_format($upgradeBonus, 2));
             }
 
-            // 构建推送消息
+            // 先创建 notice 记录获取 ID
+            $notice = Notice::query()->create([
+                'department_id' => $player->department_id,
+                'player_id' => $playerId,
+                'type' => Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE,
+                'title' => $title,
+                'content' => '{}', // 临时占位
+                'status' => 0,
+                'receiver' => Notice::RECEIVER_PLAYER,
+                'is_private' => 1,
+            ]);
+
+            // 构建完整推送消息（包含 notice_id）
             $pushMessage = [
                 'msg_type' => self::MSG_TYPE_VIP_LEVEL_CHANGE,
                 'change_type' => self::CHANGE_TYPE_UPGRADE,
                 'player_id' => $playerId,
+                'notice_id' => $notice->id,
                 'title' => $title,
                 'content' => $content,
                 'old_level_id' => $oldLevelId,
@@ -335,20 +348,12 @@ class VipService
                 'upgrade_bonus' => $upgradeBonus,
             ];
 
-            // 入库保存完整消息内容
-            $notice = Notice::query()->create([
-                'department_id' => $player->department_id,
-                'player_id' => $playerId,
-                'type' => Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE,
-                'title' => $title,
+            // 更新 notice 的 content（包含完整消息）
+            $notice->update([
                 'content' => json_encode($pushMessage, JSON_UNESCAPED_UNICODE),
-                'status' => 0,
-                'receiver' => Notice::RECEIVER_PLAYER,
-                'is_private' => 1,
             ]);
 
-            // 推送时补充 notice_id
-            $pushMessage['notice_id'] = $notice->id;
+            // 推送消息
             sendSocketMessage('player-' . $playerId, $pushMessage);
         } catch (\Throwable $e) {
             static::log('warning', 'VIP upgrade push failed', [
