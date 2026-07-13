@@ -151,6 +151,8 @@ return [
         'media_stream_url_error' => 'Media stream format error!',
         'media_stream_pull_error' => 'Video stream publishing failed!',
         'media_request_error' => 'Media server request failed!',
+        'media_stream_end_point_error' => 'Media stream endpoint creation failed!',
+        'delete_media_stream_end_point_error' => 'Media stream endpoint deletion failed!',
         'media_name_must' => 'Please set the machine name!',
         'media_url_must' => 'Please set the media image address!',
     ],

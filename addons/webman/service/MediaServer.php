@@ -61,7 +61,7 @@ class MediaServer
                     'endpointServiceId' => $endpointServiceId,
                 ]);
         } catch (\Exception) {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         
         $this->log->info('rtmpEndpoint', [
@@ -76,12 +76,12 @@ class MediaServer
             if (empty($response['success'])) {
                 $attempts++;
                 if ($attempts >= $maxRetries) {
-                    throw new Exception(trans('media.media_stream_end_point_error', [], 'message'));
+                    throw new Exception(admin_trans('message.media.media_stream_end_point_error'));
                 }
                 $this->rtmpEndpoint($rtmpUrl, $endpointServiceId, $streamName, $attempts);
             }
         } else {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         
         return true;
@@ -101,7 +101,7 @@ class MediaServer
         try {
             $response = Http::timeout(5)->delete($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint?endpointServiceId=' . $endpointServiceId);
         } catch (\Exception) {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         
         $this->log->info('deleteRtmpEndpoint', [$response, $endpointServiceId, $streamName]);
@@ -110,12 +110,12 @@ class MediaServer
             if (empty($response['success']) && !$response['success']) {
                 $attempts++;
                 if ($attempts >= $maxRetries) {
-                    throw new Exception(trans('media.delete_media_stream_end_point_error', [], 'message'));
+                    throw new Exception(admin_trans('message.media.delete_media_stream_end_point_error'));
                 }
                 $this->deleteRtmpEndpoint($endpointServiceId, $streamName, $attempts);
             }
         } else {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         
         return true;
@@ -185,7 +185,7 @@ class MediaServer
         try {
             $response = Http::timeout(5)->asJson()->delete($machineRecording->media->push_ip . '/' . $machineRecording->media->media_app . '/rest/v2/vods/' . $machineRecording->data_id);
         } catch (\Exception) {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         $this->log->info('deleteRecording', [$response]);
         if (!empty($response) && $response->status() == 200) {
@@ -232,7 +232,7 @@ class MediaServer
         try {
             $response = Http::timeout(5)->asJson()->put($media->push_ip . '/' . $media->media_app . '/rest/v2/broadcasts/' . $media->stream_name . '/recording/true?recordType=mp4&name=' . $media->stream_name . uniqid());
         } catch (\Exception) {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         if (!empty($response) && $response->status() == 200) {
             $response = json_decode($response, true);
@@ -265,7 +265,7 @@ class MediaServer
         try {
             $response = Http::timeout(5)->asJson()->put($media->push_ip . '/' . $media->media_app . '/rest/v2/broadcasts/' . $media->stream_name . '/recording/false?recordType=mp4');
         } catch (\Exception) {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         if (!empty($response) && $response->status() == 200) {
             $response = json_decode($response, true);
@@ -517,10 +517,10 @@ class MediaServer
             $this->deleteMachineStream($streamName);
         }
         if (empty($code)) {
-            throw new Exception(trans('media.media_name_must', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_name_must'));
         }
         if (empty($mediaIp)) {
-            throw new Exception(trans('media.media_url_must', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_url_must'));
         }
         if (!empty($newPushIp) && $oldPushIp != $newPushIp) {
             $this->domain = $newPushIp;
@@ -574,7 +574,7 @@ class MediaServer
     public function createMachineStream(string $name, string $stream_url, int $type, array $pushList = []): mixed
     {
         if (strpos($stream_url, 'rtsp') !== false) {
-            throw new Exception(trans('media.media_stream_url_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_stream_url_error'));
         }
         
         $stream_url = $type == GameType::TYPE_FISH ? str_replace('{ip}', $stream_url,
@@ -594,17 +594,17 @@ class MediaServer
                 ]);
         } catch (\Exception $e) {
             $this->log->info('createMachineStream', [$e->getMessage()]);
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         
         $this->log->info('createMachineStream', [$response]);
         if (!empty($response) && $response->status() == 200) {
             $response = json_decode($response, true);
             if (empty($response['success'])) {
-                throw new Exception(trans('media.media_stream_pull_error', [], 'message'));
+                throw new Exception(admin_trans('message.media.media_stream_pull_error'));
             }
         } else {
-            throw new Exception(trans('media.media_request_error', [], 'message'));
+            throw new Exception(admin_trans('message.media.media_request_error'));
         }
         
         return $response;
