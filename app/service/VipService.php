@@ -313,7 +313,13 @@ class VipService
         // 创建通知记录并推送升级通知
         try {
             $title = 'VIP等級升級';
+            $upgradeBonus = (float)($nextLevel->upgrade_bonus ?? 0);
+
+            // 构建推送消息内容
             $content = sprintf('恭喜！您的VIP等級已從 %s 升級至 %s', $currentLevel->name, $nextLevel->name);
+            if ($upgradeBonus > 0) {
+                $content .= sprintf('，升級禮金 %s 元可領取', number_format($upgradeBonus, 2));
+            }
 
             // 构建推送消息
             $pushMessage = [
@@ -326,6 +332,7 @@ class VipService
                 'old_level_name' => $currentLevel->name,
                 'new_level_id' => $newLevelId,
                 'new_level_name' => $nextLevel->name,
+                'upgrade_bonus' => $upgradeBonus,
             ];
 
             // 入库保存完整消息内容
