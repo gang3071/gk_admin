@@ -18,12 +18,11 @@ class MediaServerApiClient
 
     public function __construct()
     {
-        // 使用 config/app.php 中的配置（会自动复用 GAME_PLATFORM_PROXY_HOST）
-        $this->baseUrl = sprintf(
-            'http://%s:%d/api/admin/media-server',
-            config('app.media_proxy.host'),
-            config('app.media_proxy.port')
-        );
+        // 直接使用 gk_work 地址（复用游戏平台代理配置）
+        $host = env('GAME_PLATFORM_PROXY_HOST', '127.0.0.1');
+        $port = env('GAME_PLATFORM_PROXY_PORT', 8788);
+
+        $this->baseUrl = sprintf('http://%s:%d/api/admin/media-server', $host, $port);
         $this->timeout = 10;
         $this->log = Log::channel('media_recording');
     }
