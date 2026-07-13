@@ -1525,6 +1525,12 @@ class ChannelLotteryTicketActivityController
             // 推送活动结束通知
             \addons\webman\service\LotteryTicketPushService::pushActivityStatusChange($activity, 'ended');
 
+            // ⭐ 推送券数更新给所有参与玩家（券已过期，数量变为0）
+            \addons\webman\service\LotteryTicketPushService::pushActivityPlayersTicketsUpdate(
+                $activity->id,
+                sprintf('活動「%s」已結束，摸獎券已失效', $activity->name)
+            );
+
             Db::commit();
 
             Log::info('摸奖券活动手动结束', [
