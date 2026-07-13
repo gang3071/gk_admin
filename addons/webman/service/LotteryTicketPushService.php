@@ -412,7 +412,7 @@ class LotteryTicketPushService
                 'type' => 'lottery_win',
                 'title' => '🎉 恭喜中獎！',
                 'message' => sprintf(
-                    '您在活動「%s」中獲得 %s - NT$%s！獎金已自動發放到您的錢包。',
+                    '您在活動「%s」中獲得 %s - %s分！獎金已自動發放到您的錢包。',
                     $activity->name,
                     $prizeName,
                     number_format($prizeAmount, 2)

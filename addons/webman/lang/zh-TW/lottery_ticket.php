@@ -343,7 +343,7 @@ return [
         'player_not_found_for_ticket' => '未找到該券號對應的玩家',
         // 停止開獎確認
         'stop_drawing_no_records_confirm' => '⚠️ 尚未錄入任何中獎券號！\n\n停止開獎後將無法再錄入中獎券號，活動將進入已結束狀態。\n\n確定要停止開獎嗎？',
-        'stop_drawing_with_records_confirm' => '確認停止開獎？\n\n📊 中獎統計：\n• 已錄入券號數：{count} 張\n• 獎金總額：NT$ {amount}\n• 待派獎：{pending} 筆\n• 已派獎：{granted} 筆\n\n⚠️ 停止後將無法再錄入中獎券號',
+        'stop_drawing_with_records_confirm' => '確認停止開獎？\n\n📊 中獎統計：\n• 已錄入券號數：{count} 張\n• 獎金總額：{amount}分\n• 待派獎：{pending} 筆\n• 已派獎：{granted} 筆\n\n⚠️ 停止後將無法再錄入中獎券號',
         // 其他
         'too_many_levels' => '最多只能設置 {max} 個獎品等級',
         'no_prize_levels' => '請至少設置一個獎品等級',

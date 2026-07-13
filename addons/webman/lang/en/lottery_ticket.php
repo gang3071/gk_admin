@@ -341,7 +341,7 @@ return [
         'player_not_found_for_ticket' => 'Player not found for this ticket',
         // Stop drawing confirmation
         'stop_drawing_no_records_confirm' => '⚠️ No winning tickets recorded yet!\n\nAfter stopping drawing, you will not be able to record winning tickets. The activity will enter ENDED status.\n\nAre you sure to stop drawing?',
-        'stop_drawing_with_records_confirm' => 'Confirm to stop drawing?\n\n📊 Winning Statistics:\n• Recorded tickets: {count}\n• Total prize amount: NT$ {amount}\n• Pending awards: {pending}\n• Granted awards: {granted}\n\n⚠️ Cannot record more tickets after stopping',
+        'stop_drawing_with_records_confirm' => 'Confirm to stop drawing?\n\n📊 Winning Statistics:\n• Recorded tickets: {count}\n• Total prize amount: {amount} points\n• Pending awards: {pending}\n• Granted awards: {granted}\n\n⚠️ Cannot record more tickets after stopping',
         // 其他
         'too_many_levels' => 'Max {max} prize levels allowed',
         'no_prize_levels' => 'Please set at least one prize level',

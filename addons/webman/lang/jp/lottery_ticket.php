@@ -340,7 +340,7 @@ return [
         'player_not_found_for_ticket' => 'このチケットに対応するプレイヤーが見つかりません',
         // 抽選停止確認
         'stop_drawing_no_records_confirm' => '⚠️ まだ当選チケット番号が記録されていません！\n\n抽選を停止すると、当選チケット番号を記録できなくなります。アクティビティは終了ステータスになります。\n\n抽選を停止してもよろしいですか？',
-        'stop_drawing_with_records_confirm' => '抽選停止を確認しますか？\n\n📊 当選統計：\n• 記録済チケット数：{count} 枚\n• 賞金総額：NT$ {amount}\n• 払い出し待ち：{pending} 件\n• 払い出し済：{granted} 件\n\n⚠️ 停止後はチケットを記録できません',
+        'stop_drawing_with_records_confirm' => '抽選停止を確認しますか？\n\n📊 当選統計：\n• 記録済チケット数：{count} 枚\n• 賞金総額：{amount}ポイント\n• 払い出し待ち：{pending} 件\n• 払い出し済：{granted} 件\n\n⚠️ 停止後はチケットを記録できません',
         // 其他
         'too_many_levels' => '最大 {max} 個の賞品レベルまで設定可能',
         'no_prize_levels' => '少なくとも1つの賞品レベルを設定してください',
