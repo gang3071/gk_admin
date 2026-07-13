@@ -201,6 +201,10 @@ class LotteryTicketPushService
                     'title' => '摸獎券活動開始',
                     'message' => sprintf('活動「%s」正式開始，快來參與打碼領券！', $activity->name),
                 ],
+                'pending_draw' => [
+                    'title' => '活動待開獎',
+                    'message' => sprintf('活動「%s」打碼階段已結束，即將開獎，請耐心等待！', $activity->name),
+                ],
                 'drawing_start' => [
                     'title' => '開獎進行中',
                     'message' => sprintf('活動「%s」開獎中，快來查看中獎結果！', $activity->name),
