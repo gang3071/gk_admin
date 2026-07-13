@@ -332,4 +332,9 @@ return [
         'platform_not_found' => 'Platform not found',
         'platform_not_in_channel' => 'Platform not in channel scope',
     ],
+
+    // Help Text
+    'help' => [
+        'birthday_disabled' => 'Birthday bonus already issued this year, cannot modify birthday',
+    ],
 ];

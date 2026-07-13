@@ -332,4 +332,9 @@ return [
         'platform_not_found' => 'プラットフォームが見つかりません',
         'platform_not_in_channel' => 'プラットフォームはチャネル範囲内にありません',
     ],
+
+    // ヘルプテキスト
+    'help' => [
+        'birthday_disabled' => '今年の誕生日ボーナスは既に発行済み、誕生日を変更できません',
+    ],
 ];

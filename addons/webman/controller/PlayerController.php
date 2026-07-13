@@ -802,7 +802,20 @@ class PlayerController
                 $form->image('player_extend.id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m');
                 $form->image('player_extend.personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m');
                 $form->text('player_extend.address', admin_trans('player_extend.fields.address'))->maxlength(255)->required();
-                $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'))->required();
+
+                // 检查当年是否已发放生日礼金，已发放则禁止修改生日
+                $playerId = $form->getKey();
+                $hasBirthdayBonusThisYear = PlayerDeliveryRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('type', PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS)
+                    ->whereYear('created_at', date('Y'))
+                    ->exists();
+
+                $birthdayField = $form->date('player_extend.birthday', admin_trans('player_extend.fields.birthday'))->required();
+                if ($hasBirthdayBonusThisYear) {
+                    $birthdayField->disabled()->help(admin_trans('player.help.birthday_disabled'));
+                }
+
                 $form->text('player_extend.line', admin_trans('player_extend.fields.line'))->maxlength(50)->required();
                 $form->textarea('player_extend.remark', admin_trans('player_extend.fields.remark'))->maxlength(255)->required();
                 $form->switch('is_test', admin_trans('player.fields.is_test'));

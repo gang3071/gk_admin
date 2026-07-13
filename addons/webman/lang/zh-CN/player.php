@@ -333,4 +333,9 @@ return [
         'platform_not_found' => '平台不存在',
         'platform_not_in_channel' => '平台不在渠道范围内',
     ],
+
+    // 帮助文本
+    'help' => [
+        'birthday_disabled' => '当年已发放生日礼金，无法修改生日',
+    ],
 ];

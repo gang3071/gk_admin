@@ -6,8 +6,6 @@ use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\VipLevel;
-use addons\webman\service\WalletService;
-use support\Db;
 use support\Log;
 use Workerman\Crontab\Crontab;
 
@@ -92,19 +90,29 @@ class VipBirthdayBonusTask
                 ->whereNotNull('player.vip_level_id')
                 ->where('player.vip_level_id', '>', 0)
                 ->where('player.status', Player::STATUS_ENABLE)
+                ->whereNull('player.deleted_at') // 排除软删除
                 ->whereRaw("DATE_FORMAT(player_extend.birthday, '%m-%d') = ?", [$today])
                 ->select('player.*')
                 ->get();
 
-            // 批量预加载今天已发放的玩家ID（避免N+1查询）
+            if ($players->isEmpty()) {
+                $this->log->info('VipBirthdayBonusTask 今天无玩家生日', ['today' => $today]);
+                return;
+            }
+
+            // 批量预加载当年已发放生日礼金的玩家ID（避免N+1查询）
             $playerIds = $players->pluck('id')->toArray();
-            $sentPlayerIds = PlayerDeliveryRecord::query()
-                ->whereIn('player_id', $playerIds)
-                ->where('type', PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS)
-                ->whereDate('created_at', date('Y-m-d'))
-                ->pluck('player_id')
-                ->toArray();
-            $sentPlayerIds = array_flip($sentPlayerIds);
+            $sentPlayerIds = [];
+
+            if (!empty($playerIds)) {
+                $sentPlayerIds = PlayerDeliveryRecord::query()
+                    ->whereIn('player_id', $playerIds)
+                    ->where('type', PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS)
+                    ->whereYear('created_at', date('Y'))
+                    ->pluck('player_id')
+                    ->toArray();
+                $sentPlayerIds = array_flip($sentPlayerIds);
+            }
 
             $result = [
                 'total' => $players->count(),
@@ -127,7 +135,7 @@ class VipBirthdayBonusTask
                         continue;
                     }
 
-                    // 检查今天是否已经发放过（从预加载数据中判断）
+                    // 检查当年是否已经发放过（从预加载数据中判断）
                     if (isset($sentPlayerIds[$player->id])) {
                         $result['skipped']++;
                         continue;
@@ -180,7 +188,7 @@ class VipBirthdayBonusTask
     }
 
     /**
-     * 发放生日礼金
+     * 生成生日礼金通知（只创建notice和推送，不发放）
      *
      * @param Player $player
      * @param VipLevel $vipLevel
@@ -188,66 +196,39 @@ class VipBirthdayBonusTask
      */
     private function sendBirthdayBonus(Player $player, VipLevel $vipLevel, float $bonusAmount): void
     {
-        Db::beginTransaction();
-        try {
-            // 获取发放前余额
-            $balanceBefore = WalletService::getBalance($player->id);
+        // 构建推送消息
+        $title = '生日禮金';
+        $content = sprintf('祝您生日快樂！您的VIP%s生日禮金 %s 可領取', $vipLevel->name, number_format($bonusAmount, 2));
+        $pushMessage = [
+            'msg_type' => 'vip_birthday_bonus',
+            'player_id' => $player->id,
+            'title' => $title,
+            'content' => $content,
+            'amount' => $bonusAmount,
+            'vip_level_name' => $vipLevel->name,
+        ];
 
-            // 原子性增加余额
-            $balanceAfter = WalletService::add($player->id, $bonusAmount);
+        // 入库保存完整消息内容
+        $notice = Notice::query()->create([
+            'department_id' => $player->department_id,
+            'player_id' => $player->id,
+            'type' => Notice::TYPE_VIP_BIRTHDAY_BONUS,
+            'title' => $title,
+            'content' => json_encode($pushMessage, JSON_UNESCAPED_UNICODE),
+            'status' => 0,
+            'receiver' => Notice::RECEIVER_PLAYER,
+            'is_private' => 1,
+        ]);
 
-            // 记录到账单表
-            PlayerDeliveryRecord::query()->create([
-                'player_id' => $player->id,
-                'department_id' => $player->department_id,
-                'type' => PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
-                'source' => 'birthday_bonus',
-                'amount' => $bonusAmount,
-                'amount_before' => $balanceBefore,
-                'amount_after' => $balanceAfter,
-                'tradeno' => 'BD' . date('YmdHis') . mt_rand(1000, 9999),
-                'remark' => sprintf('VIP%s生日礼金', $vipLevel->name),
-            ]);
+        // 推送时补充 notice_id
+        $pushMessage['notice_id'] = $notice->id;
+        sendSocketMessage('player-' . $player->id, $pushMessage);
 
-            // 构建推送消息
-            $title = '生日禮金';
-            $content = sprintf('祝您生日快樂！您的VIP%s生日禮金 %s 已發放到您的帳戶', $vipLevel->name, number_format($bonusAmount, 2));
-            $pushMessage = [
-                'msg_type' => 'vip_birthday_bonus',
-                'player_id' => $player->id,
-                'title' => $title,
-                'content' => $content,
-                'amount' => $bonusAmount,
-                'vip_level_name' => $vipLevel->name,
-            ];
-
-            // 入库保存完整消息内容
-            $notice = Notice::query()->create([
-                'department_id' => $player->department_id,
-                'player_id' => $player->id,
-                'type' => Notice::TYPE_VIP_BIRTHDAY_BONUS,
-                'title' => $title,
-                'content' => json_encode($pushMessage, JSON_UNESCAPED_UNICODE),
-                'status' => 0,
-                'receiver' => Notice::RECEIVER_PLAYER,
-                'is_private' => 1,
-            ]);
-
-            // 推送时补充 notice_id
-            $pushMessage['notice_id'] = $notice->id;
-            sendSocketMessage('player-' . $player->id, $pushMessage);
-
-            Db::commit();
-
-            $this->log->info('VipBirthdayBonusTask 发放成功', [
-                'player_id' => $player->id,
-                'vip_level' => $vipLevel->name,
-                'amount' => $bonusAmount,
-            ]);
-
-        } catch (\Throwable $e) {
-            Db::rollBack();
-            throw $e;
-        }
+        $this->log->info('VipBirthdayBonusTask 通知已发送', [
+            'player_id' => $player->id,
+            'vip_level' => $vipLevel->name,
+            'amount' => $bonusAmount,
+            'notice_id' => $notice->id,
+        ]);
     }
 }
