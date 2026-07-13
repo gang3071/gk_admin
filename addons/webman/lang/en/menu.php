@@ -83,8 +83,8 @@ return [
         'channel_coin_merchant_recharge_records' => 'Coin merchant open score records',
         'channel_coin_merchant_transaction_records' => 'Coin merchant transaction records',
         //Device management
-        'channel_device_manage' => 'Device Management',
-        'channel_device_list' => 'Device List',
+        'channel_device_manage' => 'Player Management',
+        'channel_device_list' => 'Player List',
         //Player management
         'channel_player_manage' => 'Player management',
         'channel_player_list' => 'Player list',
@@ -271,8 +271,8 @@ return [
         'store_machine_manage' => 'Store Machine Management',
         'lottery_receive' => 'Lottery Receive',
         'financial_management' => 'Financial Management',
-        'device_manage' => 'Device Management',
-        'device_list' => 'Device List',
+        'device_manage' => 'Player Management',
+        'device_list' => 'Player List',
         'shift_handover_record' => 'Shift Handover Record',
         'limit_management' => 'Limit Management',
         'limit_group_management' => 'Limit Group Management',

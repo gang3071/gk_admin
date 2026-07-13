@@ -286,8 +286,8 @@ return [
     // Store Backend Specific
     'unnamed' => 'Unnamed',
     'game_id_label' => 'Game ID: ',
-    'device_list_query_log' => 'Device list query',
-    'no_device_data' => 'No device data available',
+    'device_list_query_log' => 'Player list query',
+    'no_device_data' => 'No player data available',
 
     // Filters
     'filter' => [

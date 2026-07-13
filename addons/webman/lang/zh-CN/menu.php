@@ -83,8 +83,8 @@ return [
         'channel_coin_merchant_recharge_records' => '币商开分记录',
         'channel_coin_merchant_transaction_records' => '币商交易记录',
         //设备管理
-        'channel_device_manage' => '设备管理',
-        'channel_device_list' => '设备列表',
+        'channel_device_manage' => '玩家管理',
+        'channel_device_list' => '玩家列表',
         //玩家管理
         'channel_player_manage' => '玩家管理',
         'channel_player_list' => '玩家列表',
@@ -203,8 +203,8 @@ return [
         'agent_settlement_records' => '结算记录',
         'agent_store_profit_report' => '店家分润报表',
         //店机后台设备管理
-        'store_player' => '设备管理',
-        'store_player_list' => '设备列表',
+        'store_player' => '玩家管理',
+        'store_player_list' => '玩家列表',
         //店机后台开分满赠管理
         'store_deposit_bonus_manage' => '开分满赠管理',
         'store_deposit_bonus_activity' => '活动管理',
@@ -271,8 +271,8 @@ return [
         'store_machine_manage' => '店机管理',
         'lottery_receive' => '彩金领取',
         'financial_management' => '财务管理',
-        'device_manage' => '设备管理',
-        'device_list' => '设备列表',
+        'device_manage' => '玩家管理',
+        'device_list' => '玩家列表',
         'shift_handover_record' => '交班记录',
         'limit_management' => '限红管理',
         'limit_group_management' => '限红组管理',

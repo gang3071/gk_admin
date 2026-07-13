@@ -83,8 +83,8 @@ return [
         'channel_coin_merchant_recharge_records' => '幣商開分記錄',
         'channel_coin_merchant_transaction_records' => '幣商交易記錄',
 //设备管理
-        'channel_device_manage' => '設備管理',
-        'channel_device_list' => '設備列表',
+        'channel_device_manage' => '玩家管理',
+        'channel_device_list' => '玩家列表',
 //玩家管理
         'channel_player_manage' => '玩家管理',
         'channel_player_list' => '玩家列表',
@@ -202,8 +202,8 @@ return [
         'agent_settlement_records' => '結算記錄',
         'agent_store_profit_report' => '店家分潤報表',
         //店機後台設備管理
-        'store_player' => '設備管理',
-        'store_player_list' => '設備列表',
+        'store_player' => '玩家管理',
+        'store_player_list' => '玩家列表',
         //店機後台開分滿贈管理
         'store_deposit_bonus_manage' => '開分滿贈管理',
         'store_deposit_bonus_activity' => '活動管理',
@@ -270,8 +270,8 @@ return [
         'store_machine_manage' => '店機管理',
         'lottery_receive' => '彩金領取',
         'financial_management' => '財務管理',
-        'device_manage' => '設備管理',
-        'device_list' => '設備列表',
+        'device_manage' => '玩家管理',
+        'device_list' => '玩家列表',
         'shift_handover_record' => '交班記錄',
         'limit_management' => '限紅管理',
         'limit_group_management' => '限紅組管理',

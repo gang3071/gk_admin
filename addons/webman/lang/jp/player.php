@@ -286,8 +286,8 @@ return [
     // ストアバックエンド専用
     'unnamed' => '未命名',
     'game_id_label' => 'ゲーム ID: ',
-    'device_list_query_log' => 'デバイスリストクエリ',
-    'no_device_data' => 'デバイスデータがありません',
+    'device_list_query_log' => 'プレイヤーリストクエリ',
+    'no_device_data' => 'プレイヤーデータがありません',
 
     // フィルター
     'filter' => [

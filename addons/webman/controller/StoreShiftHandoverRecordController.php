@@ -319,6 +319,16 @@ class StoreShiftHandoverRecordController
                     return number_format($value, 2);
                 });
 
+            $grid->column('birthday_bonus_amount', admin_trans('shift_handover.record.birthday_bonus_amount'))->width(120)->align('center')
+                ->display(function ($value) {
+                    return number_format($value ?? 0, 2);
+                });
+
+            $grid->column('upgrade_bonus_amount', admin_trans('shift_handover.record.upgrade_bonus_amount'))->width(120)->align('center')
+                ->display(function ($value) {
+                    return number_format($value ?? 0, 2);
+                });
+
             $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.device.electronic_game_bet_amount'))->width(120)->align('center')
                 ->display(function ($value) {
                     return number_format($value, 2);

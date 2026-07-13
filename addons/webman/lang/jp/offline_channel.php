@@ -102,7 +102,7 @@ return [
 
     // リストページ
     'store_list' => '店舗一覧',
-    'device_list' => 'デバイス一覧',
+    'device_list' => 'プレイヤー一覧',
     'store_name' => '店舗名',
     'bound_player' => '紐付けプレイヤー',
     'transfer_in' => '転入(クレジット)',
