@@ -18,10 +18,12 @@ class MediaServerApiClient
 
     public function __construct()
     {
-        // 直接使用 config/app.php 中的配置（会自动复用 GAME_PLATFORM_PROXY_HOST）
-        $proxyConfig = config('app.media_proxy');
-
-        $this->baseUrl = sprintf('http://%s:%d/api/admin/media-server', $proxyConfig['host'], $proxyConfig['port']);
+        // 使用 config/app.php 中的配置（会自动复用 GAME_PLATFORM_PROXY_HOST）
+        $this->baseUrl = sprintf(
+            'http://%s:%d/api/admin/media-server',
+            config('app.media_proxy.host'),
+            config('app.media_proxy.port')
+        );
         $this->timeout = 10;
         $this->log = Log::channel('media_recording');
     }
