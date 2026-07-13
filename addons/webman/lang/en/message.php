@@ -327,6 +327,8 @@ return [
         'lottery_ticket_reward' => 'Lottery Ticket Prize',
         'ticket_redeem' => 'Ticket Redeem',
         'ticket_open_score' => 'Scan Open Score',
+        'birthday_bonus' => 'VIP Birthday Bonus',
+        'upgrade_bonus' => 'VIP Upgrade Bonus',
     ],
     'source' => [
         'system' => 'system',
@@ -336,6 +338,8 @@ return [
         'machine_put_coins' => 'Deposit money',
         'agent_in' => 'Player (agent) transfer in',
         'agent_out' => 'Player (agent) transfers out',
+        'birthday_bonus' => 'VIP Birthday Bonus',
+        'upgrade_bonus' => 'VIP Upgrade Bonus',
     ],
     'machine' => [
         'present_in' => 'Machine opening',

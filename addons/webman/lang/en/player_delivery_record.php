@@ -55,6 +55,8 @@ return [
         PlayerDeliveryRecord::TYPE_PREPAY => 'Prepay Deduction',
         PlayerDeliveryRecord::TYPE_REFUND => 'Refund',
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => 'Lottery Ticket Reward',
+        PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => 'VIP Birthday Bonus',
+        PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIP Upgrade Bonus',
     ],
     'detail' => 'details',
     'chart' => 'chart',
