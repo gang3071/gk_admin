@@ -75,7 +75,9 @@ class ChannelIndexController
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . " THEN `amount` ELSE 0 END) AS birthday_bonus_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . " THEN `amount` ELSE 0 END) AS upgrade_bonus_amount
             ")
             ->first();
 
@@ -85,6 +87,8 @@ class ChannelIndexController
             'machine_put_point' => $operationStatisticsQuery->machine_put_point ?? 0,
             'activity_total' => $operationStatisticsQuery->activity_total ?? 0,
             'lottery_ticket_reward_amount' => $operationStatisticsQuery->lottery_ticket_reward_amount ?? 0,
+            'birthday_bonus_amount' => $operationStatisticsQuery->birthday_bonus_amount ?? 0,
+            'upgrade_bonus_amount' => $operationStatisticsQuery->upgrade_bonus_amount ?? 0,
         ];
 
         // ✅ 拉彩统计数据（使用子查询，channelIndex 使用 department_id）
@@ -1308,7 +1312,9 @@ class ChannelIndexController
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . " THEN `amount` ELSE 0 END) AS birthday_bonus_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . " THEN `amount` ELSE 0 END) AS upgrade_bonus_amount
             ")
             ->first();
 
@@ -1317,6 +1323,8 @@ class ChannelIndexController
         $machinePutPoint = $deliveryStatisticsQuery->machine_put_point ?? 0;
         $activityTotal = $deliveryStatisticsQuery->activity_total ?? 0;
         $lotteryTicketRewardAmount = $deliveryStatisticsQuery->lottery_ticket_reward_amount ?? 0;
+        $birthdayBonusAmount = $deliveryStatisticsQuery->birthday_bonus_amount ?? 0;
+        $upgradeBonusAmount = $deliveryStatisticsQuery->upgrade_bonus_amount ?? 0;
 
         // ✅ 查询电子游戏总押注（使用子查询）
         $electronicBetTotal = PlayGameRecord::query()
@@ -1384,6 +1392,8 @@ class ChannelIndexController
             'machine_put_point' => $machinePutPoint,
             'activity_total' => $activityTotal,
             'lottery_ticket_reward_amount' => $lotteryTicketRewardAmount,
+            'birthday_bonus_amount' => $birthdayBonusAmount,
+            'upgrade_bonus_amount' => $upgradeBonusAmount,
             'electronic_bet' => $electronicBetTotal,
             'steel_ball_bet' => $steelBallBetTotal,
             'slot_bet' => $slotBetTotal,
@@ -2241,7 +2251,9 @@ class ChannelIndexController
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . " THEN `amount` ELSE 0 END) AS birthday_bonus_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . " THEN `amount` ELSE 0 END) AS upgrade_bonus_amount
             ")
             ->first();
 
@@ -2294,6 +2306,8 @@ class ChannelIndexController
             'total_outcome' => $currentShiftDeliveryQuery->withdrawal_total ?? 0,
             'lottery_amount' => $currentShiftLotteryQuery->lottery_amount ?? 0,
             'lottery_ticket_reward_amount' => $currentShiftDeliveryQuery->lottery_ticket_reward_amount ?? 0,
+            'birthday_bonus_amount' => $currentShiftDeliveryQuery->birthday_bonus_amount ?? 0,
+            'upgrade_bonus_amount' => $currentShiftDeliveryQuery->upgrade_bonus_amount ?? 0,
             'ticket_record_total_score' => floatval($currentShiftTicketRecordQuery->total_score ?? 0),
             'ticket_redeem_backend_used_score' => floatval($currentShiftTicketRedeemQuery->backend_used_score ?? 0),
         ];
@@ -3090,6 +3104,50 @@ class ChannelIndexController
                 ])
             , 4);
 
+            // VIP生日礼金
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('shift_handover.record.birthday_bonus_amount'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format(floatval($currentShiftStats['birthday_bonus_amount'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#eb2f96',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 4);
+
+            // VIP升级礼金
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('shift_handover.record.upgrade_bonus_amount'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format(floatval($currentShiftStats['upgrade_bonus_amount'] ?? 0), 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#722ed1',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 4);
+
             // 总利润（高亮显示）
             $row->column(
                 Card::create([
@@ -3378,6 +3436,8 @@ class ChannelIndexController
                             PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT, // 后台扣点
                             PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,      // 活动奖励
                             PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // 摸奖券奖励
+                            PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,      // VIP生日礼金
+                            PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,   // VIP升级礼金
                         ])
                         ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
                         ->where('player_delivery_record.created_at', '<=', $endTime)
@@ -3390,6 +3450,10 @@ class ChannelIndexController
                                 THEN player_delivery_record.amount ELSE 0 END) AS activity_bonus_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS lottery_ticket_reward_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS birthday_bonus_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS upgrade_bonus_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . "
@@ -3450,6 +3514,24 @@ class ChannelIndexController
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
+
+                    // 5.5 统计VIP生日礼金金额
+                    $birthdayBonusAmount = (float)\addons\webman\model\PlayerDeliveryRecord::query()
+                        ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS)
+                        ->where('player_delivery_record.created_at', '>', $startTime)
+                        ->where('player_delivery_record.created_at', '<=', $endTime)
+                        ->sum('player_delivery_record.amount');
+
+                    // 5.6 统计VIP升级礼金金额
+                    $upgradeBonusAmount = (float)\addons\webman\model\PlayerDeliveryRecord::query()
+                        ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS)
+                        ->where('player_delivery_record.created_at', '>', $startTime)
+                        ->where('player_delivery_record.created_at', '<=', $endTime)
+                        ->sum('player_delivery_record.amount');
 
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
@@ -3534,6 +3616,10 @@ class ChannelIndexController
                         $playerDeliveryRecord['activity_bonus_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->lottery_ticket_reward_amount =
                         $playerDeliveryRecord['lottery_ticket_reward_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->birthday_bonus_amount =
+                        $birthdayBonusAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->upgrade_bonus_amount =
+                        $upgradeBonusAmount ?? 0;
                     $storeAgentShiftHandoverRecord->start_time = $startTime;
                     $storeAgentShiftHandoverRecord->end_time = $endTime;
                     $storeAgentShiftHandoverRecord->user_id = $admin->id;
@@ -3544,6 +3630,8 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->machine_bet_amount = (float)$machineBetAmount;
                     $storeAgentShiftHandoverRecord->ticket_record_total_score = $ticketRecordTotalScore;
                     $storeAgentShiftHandoverRecord->ticket_redeem_backend_used_score = $ticketRedeemBackendUsedScore;
+                    $storeAgentShiftHandoverRecord->birthday_bonus_amount = $birthdayBonusAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->upgrade_bonus_amount = $upgradeBonusAmount ?? 0;
 
                     // 计算利润（投钞 + 总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(bcadd($storeAgentShiftHandoverRecord->machine_point, $storeAgentShiftHandoverRecord->total_in, 2), $storeAgentShiftHandoverRecord->total_out, 2);
@@ -4013,6 +4101,8 @@ class ChannelIndexController
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_LOTTERY . ' THEN amount ELSE 0 END) as lottery_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . ' THEN amount ELSE 0 END) as activity_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ' THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . ' THEN amount ELSE 0 END) as birthday_bonus_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . ' THEN amount ELSE 0 END) as upgrade_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' THEN amount ELSE 0 END) as recharge_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' THEN amount ELSE 0 END) as withdrawal_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD . ' THEN amount ELSE 0 END) as modified_add_amount,
@@ -4028,6 +4118,8 @@ class ChannelIndexController
                 'lottery_amount' => 0,
                 'activity_bonus_amount' => 0,
                 'lottery_ticket_reward_amount' => 0,
+                'birthday_bonus_amount' => 0,
+                'upgrade_bonus_amount' => 0,
                 'recharge_amount' => 0,
                 'withdrawal_amount' => 0,
                 'modified_add_amount' => 0,
@@ -4064,6 +4156,8 @@ class ChannelIndexController
                     'lottery_amount' => (float)$data['lottery_amount'],
                     'activity_bonus_amount' => (float)$data['activity_bonus_amount'],
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
+                    'birthday_bonus_amount' => (float)($data['birthday_bonus_amount'] ?? 0),
+                    'upgrade_bonus_amount' => (float)($data['upgrade_bonus_amount'] ?? 0),
                     'electronic_game_bet_amount' => $electronicGameBet,
                     'machine_bet_amount' => $machineBet,
                     'total_in' => (float)$totalIn,
