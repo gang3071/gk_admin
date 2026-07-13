@@ -326,6 +326,8 @@ return [
         'lottery_ticket_reward' => '抽選券当選',
         'ticket_redeem' => '出票キャンセル',
         'ticket_open_score' => 'スキャン開分',
+        'vip_birthday' => 'VIP誕生日ボーナス',
+        'vip_upgrade' => 'VIPアップグレードボーナス',
     ],
     'source' => [
         'system' => 'システム',
@@ -335,6 +337,8 @@ return [
         'machine_put_coins' => '金を投ずる',
         'agent_in' => 'プレイヤー（エージェント）転入',
         'agent_out' => 'プレイヤー（エージェント）転出',
+        'birthday_bonus' => 'VIP誕生日ボーナス',
+        'upgrade_bonus' => 'VIPアップグレードボーナス',
     ],
     'machine' => [
         'present_in' => 'テーブル分割',

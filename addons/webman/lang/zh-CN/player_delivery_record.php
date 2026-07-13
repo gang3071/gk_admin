@@ -55,6 +55,8 @@ return [
         PlayerDeliveryRecord::TYPE_PREPAY => '预扣金额',
         PlayerDeliveryRecord::TYPE_REFUND => '退款',
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '摸奖券中奖奖励',
+        PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => 'VIP生日礼金',
+        PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIP升级礼金',
     ],
     'detail' => '详情',
     'chart' => '图表',
