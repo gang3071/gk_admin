@@ -51,6 +51,7 @@ class VipLevelController
             $grid->column('upgrade_bet_amount', admin_trans('vip_level.fields.upgrade_bet_amount'))->align('center');
             $grid->column('min_claim_amount', admin_trans('vip_level.fields.min_claim_amount'))->align('center');
             $grid->column('birthday_bonus', admin_trans('vip_level.fields.birthday_bonus'))->align('center');
+            $grid->column('upgrade_bonus', admin_trans('vip_level.fields.upgrade_bonus'))->align('center');
             $grid->column('sort', admin_trans('vip_level.fields.sort'))->sortable()->width(80)->align('center');
             $grid->actions(function (Actions $actions, $data) {
                 $actions->prepend(
@@ -114,6 +115,10 @@ class VipLevelController
                 ->min(0)
                 ->step(0.01)
                 ->help(admin_trans('vip_level.help.birthday_bonus'));
+            $form->number('upgrade_bonus', admin_trans('vip_level.fields.upgrade_bonus'))
+                ->min(0)
+                ->step(0.01)
+                ->help(admin_trans('vip_level.help.upgrade_bonus'));
             $form->number('sort', admin_trans('vip_level.fields.sort'))
                 ->min(0)
                 ->default(0)
