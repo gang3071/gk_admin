@@ -104,17 +104,17 @@ class StoreLotteryTicketActivityController
                     }
                 });
 
-            // ⭐ 待发放奖励数 - 统计有实际奖金的待发放中奖记录
+            // ⭐ 已派奖数量 - 统计已发放的中奖记录
             $grid->column('pending_count', admin_trans('lottery_ticket.fields.pending_count'))
                 ->width(100)->align('center')
                 ->display(function ($val, LotteryTicketActivity $data) {
-                    // 只统计有奖金的待发放记录（排除未中奖和0元奖）
+                    // 统计已发放的有奖金记录（排除未中奖和0元奖）
                     $count = LotteryTicketRecord::where('activity_id', $data->id)
-                        ->where('status', LotteryTicketRecord::STATUS_PENDING)
+                        ->where('status', LotteryTicketRecord::STATUS_CLAIMED)
                         ->where('prize_type', '!=', LotteryTicketRecord::PRIZE_TYPE_EMPTY)
                         ->where('prize_amount', '>', 0)
                         ->count();
-                    return $count > 0 ? Tag::create($count)->color('warning') : Tag::create('0')->color('success');
+                    return $count > 0 ? Tag::create($count)->color('success') : Tag::create('0')->color('default');
                 });
 
             $grid->column('created_at', admin_trans('lottery_ticket.fields.created_at'))
