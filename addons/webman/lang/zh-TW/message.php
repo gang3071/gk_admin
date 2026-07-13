@@ -151,6 +151,8 @@ return [
         'media_stream_url_error' => '媒體串流格式錯誤!',
         'media_stream_pull_error' => '視訊串流發布失敗!',
         'media_request_error' => '媒體伺服器請求失敗!',
+        'media_stream_end_point_error' => '媒體串流端點創建失敗!',
+        'delete_media_stream_end_point_error' => '媒體串流端點刪除失敗!',
         'media_name_must' => '請設定機器名稱!',
         'media_url_must' => '請設定媒體影像位址!',
     ],

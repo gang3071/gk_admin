@@ -151,6 +151,8 @@ return [
         'media_stream_url_error' => 'メディア ストリーム形式エラー!',
         'media_stream_pull_error' => 'ビデオ ストリームの公開に失敗しました!',
         'media_request_error' => 'メディアサーバーリクエストが失敗しました!',
+        'media_stream_end_point_error' => 'メディア ストリーム エンドポイントの作成に失敗しました!',
+        'delete_media_stream_end_point_error' => 'メディア ストリーム エンドポイントの削除に失敗しました!',
         'media_name_must' => 'マシン名を設定してください!',
         'media_url_must' => 'メディア画像アドレスを設定してください!',
     ],

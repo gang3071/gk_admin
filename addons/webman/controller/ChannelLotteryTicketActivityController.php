@@ -1023,6 +1023,7 @@ class ChannelLotteryTicketActivityController
                 'source' => $this->getSourceText($ticket->source),
                 'status' => $this->getTicketStatusText($ticket->status),
                 'status_color' => $this->getTicketStatusColor($ticket->status),
+                'winning_time' => $ticket->used_at ? date('Y-m-d H:i:s', strtotime($ticket->used_at)) : '-', // 中奖时间
                 'created_at' => $ticket->created_at ? date('Y-m-d H:i:s', strtotime($ticket->created_at)) : '-',
             ];
         });

@@ -151,6 +151,8 @@ return [
         'media_stream_url_error' => '媒体流格式错误!',
         'media_stream_pull_error' => '视频流发布失败!',
         'media_request_error' => '媒体服务器请求失败!',
+        'media_stream_end_point_error' => '媒体流端点创建失败!',
+        'delete_media_stream_end_point_error' => '媒体流端点删除失败!',
         'media_name_must' => '请设置机台名称!',
         'media_url_must' => '请设置媒体影像地址!',
     ],
