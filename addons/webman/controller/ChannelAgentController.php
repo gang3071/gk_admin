@@ -1799,6 +1799,9 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                     case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
                         return Tag::create(admin_trans('message.source.' . $val))->color('blue');
+                    case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
+                        return Tag::create($translatedText)->color('#eb2f96');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
                         return Tag::create(admin_trans('message.source.' . $val))->color('purple');
@@ -1917,6 +1920,15 @@ class ChannelAgentController
                             break;
                         case PlayerDeliveryRecord::TYPE_REFUND:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND))->color('#a0d911');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS))->color('#eb2f96');
+                            break;
+                        case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS))->color('#722ed1');
                             break;
                         default:
                             $tag = '';
