@@ -709,17 +709,18 @@ class MediaServer
             $this->log->info('createMachineStream', [$e->getMessage()]);
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        
+
         $this->log->info('createMachineStream', [$response]);
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
+
+        // 代理返回的已经是解析后的数组数据
+        if (!empty($response)) {
             if (empty($response['success'])) {
                 throw new Exception(admin_trans('message.media.media_stream_pull_error'));
             }
         } else {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        
+
         return $response;
     }
     
