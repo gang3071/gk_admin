@@ -243,6 +243,8 @@ class AutoShiftService
             $shiftRecord->total_out = $statistics['total_out'];
             $shiftRecord->lottery_amount = $statistics['lottery_amount'];
             $shiftRecord->lottery_ticket_reward_amount = $statistics['lottery_ticket_reward_amount'];
+            $shiftRecord->birthday_bonus_amount = $statistics['birthday_bonus_amount'];
+            $shiftRecord->upgrade_bonus_amount = $statistics['upgrade_bonus_amount'];
             $shiftRecord->total_profit_amount = $statistics['total_profit'];
             $shiftRecord->electronic_game_bet_amount = $statistics['electronic_game_bet_amount'];
             $shiftRecord->machine_bet_amount = $statistics['machine_bet_amount'];
@@ -450,6 +452,24 @@ class AutoShiftService
             ->where('scanned_at', '<=', $endTime)
             ->sum('score');
 
+        // 计算VIP生日礼金金额
+        $birthdayBonusAmount = (float)PlayerDeliveryRecord::query()
+            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS)
+            ->where('player_delivery_record.created_at', '>', $startTime)
+            ->where('player_delivery_record.created_at', '<=', $endTime)
+            ->sum('player_delivery_record.amount');
+
+        // 计算VIP升级礼金金额
+        $upgradeBonusAmount = (float)PlayerDeliveryRecord::query()
+            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS)
+            ->where('player_delivery_record.created_at', '>', $startTime)
+            ->where('player_delivery_record.created_at', '<=', $endTime)
+            ->sum('player_delivery_record.amount');
+
         return [
             'machine_amount' => (float)$machineAmount,
             'machine_point' => (int)$data['machine_put_point'],
@@ -457,6 +477,8 @@ class AutoShiftService
             'total_out' => (float)$totalOut,
             'lottery_amount' => (float)$data['lottery_amount'],
             'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
+            'birthday_bonus_amount' => $birthdayBonusAmount,
+            'upgrade_bonus_amount' => $upgradeBonusAmount,
             'total_profit' => (float)$totalProfit,
             'electronic_game_bet_amount' => (float)$electronicGameBetAmount,
             'machine_bet_amount' => (float)$machineBetAmount,

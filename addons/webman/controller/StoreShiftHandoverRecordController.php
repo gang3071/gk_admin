@@ -63,6 +63,8 @@ class StoreShiftHandoverRecordController
             $grid->column('lottery_amount', admin_trans('shift_handover.lottery_amount'))->width(100)->align('center');
             $grid->column('activity_bonus_amount', admin_trans('shift_handover.auto.activity_bonus_amount'))->width(100)->align('center');
             $grid->column('lottery_ticket_reward_amount', admin_trans('shift_handover.auto.lottery_ticket_reward_amount'))->width(120)->align('center');
+            $grid->column('birthday_bonus_amount', admin_trans('shift_handover.record.birthday_bonus_amount'))->width(120)->align('center');
+            $grid->column('upgrade_bonus_amount', admin_trans('shift_handover.record.upgrade_bonus_amount'))->width(120)->align('center');
             $grid->column('electronic_game_bet_amount', admin_trans('shift_handover.record.electronic_game_bet_amount'))->width(120)->align('center');
             $grid->column('machine_bet_amount', admin_trans('shift_handover.record.machine_bet_amount'))->width(120)->align('center');
             $grid->column('ticket_record_total_score', admin_trans('shift_handover.record.ticket_record_total_score'))->width(120)->align('center');
@@ -169,7 +171,18 @@ class StoreShiftHandoverRecordController
                                     Html::create(number_format($row['ticket_redeem_backend_used_score'] ?? 0, 2))->style(['color' => '#cf1322'])
                                 ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
                             ]),
-                            // 第7行
+                            // 第7行 - 礼金
+                            Html::div()->content([
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.birthday_bonus_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($row['birthday_bonus_amount'] ?? 0, 2))->style(['color' => '#eb2f96'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%']),
+                                Html::create()->content([
+                                    Html::create(admin_trans('shift_handover.label.upgrade_bonus_amount'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),
+                                    Html::create(number_format($row['upgrade_bonus_amount'] ?? 0, 2))->style(['color' => '#722ed1'])
+                                ])->style(['padding' => '8px', 'display' => 'inline-block', 'width' => '50%'])
+                            ]),
+                            // 第8行
                             Html::div()->content([
                                 Html::create()->content([
                                     Html::create(admin_trans('shift_handover.label.ticket_subtotal'))->style(['fontWeight' => 'bold', 'display' => 'inline-block', 'width' => '150px']),

@@ -80,15 +80,21 @@ class ShiftReportExporter extends Excel
                 $ticketRecordTotal = $originalRecord->ticket_record_total_score ?? 0;
                 $ticketRedeemBackendUsed = $originalRecord->ticket_redeem_backend_used_score ?? 0;
                 $ticketSubtotal = bcsub($ticketRecordTotal, $ticketRedeemBackendUsed, 2);
+                $birthdayBonusAmount = $originalRecord->birthday_bonus_amount ?? 0;
+                $upgradeBonusAmount = $originalRecord->upgrade_bonus_amount ?? 0;
 
                 $ticketSummaryText = sprintf(
-                    '%s: %s    %s: %s    %s: %s',
+                    '%s: %s    %s: %s    %s: %s    %s: %s    %s: %s',
                     admin_trans('shift_handover.record.ticket_record_total_score'),
                     number_format($ticketRecordTotal, 2),
                     admin_trans('shift_handover.record.ticket_redeem_backend_used_score'),
                     number_format($ticketRedeemBackendUsed, 2),
                     admin_trans('shift_handover.record.ticket_subtotal'),
-                    number_format(floatval($ticketSubtotal), 2)
+                    number_format(floatval($ticketSubtotal), 2),
+                    admin_trans('shift_handover.record.birthday_bonus_amount'),
+                    number_format($birthdayBonusAmount, 2),
+                    admin_trans('shift_handover.record.upgrade_bonus_amount'),
+                    number_format($upgradeBonusAmount, 2)
                 );
                 $this->sheet->setCellValue('A' . $this->currentRow, $ticketSummaryText);
                 $this->sheet->mergeCells('A' . $this->currentRow . ':R' . $this->currentRow);
