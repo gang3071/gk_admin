@@ -401,6 +401,7 @@
                   v-model:value="formData.start_time"
                   show-time
                   format="YYYY-MM-DD HH:mm:ss"
+                  value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%;"
                   :placeholder="trans.selectStartTime"
               />
@@ -412,6 +413,7 @@
                   v-model:value="formData.end_time"
                   show-time
                   format="YYYY-MM-DD HH:mm:ss"
+                  value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%;"
                   :placeholder="trans.selectEndTime"
               />
@@ -1767,17 +1769,14 @@ export default {
         return;
       }
 
-      // 使用 window.dayjs 或 dayjs（全局对象）
-      const dayjs = window.dayjs || window.moment;
-
       this.formMode = 'edit';
       this.formData = {
         id: data.id,
         name: data.name,
         description: data.description,
         cover_image: data.cover_image || '',
-        start_time: dayjs ? dayjs(data.start_time) : data.start_time,
-        end_time: dayjs ? dayjs(data.end_time) : data.end_time,
+        start_time: data.start_time, // DatePicker 使用 value-format 处理字符串
+        end_time: data.end_time,
         vip_configs: data.vip_configs || [],
         prize_levels: data.prize_levels || []
       };
@@ -1942,10 +1941,28 @@ export default {
       try {
         await this.$refs.formRef.validate();
 
-        // 驗證時間
-        if (this.formData.end_time.isBefore(this.formData.start_time)) {
-          this.$message.error('結束時間必須大於開始時間');
-          return;
+        // 格式化时间（兼容 dayjs 对象和字符串）
+        const formatTime = (time) => {
+          if (!time) return null;
+          if (typeof time === 'string') return time;
+          if (time.format) return time.format('YYYY-MM-DD HH:mm:ss');
+          return time;
+        };
+
+        const startTime = formatTime(this.formData.start_time);
+        const endTime = formatTime(this.formData.end_time);
+
+        // 驗證時間（兼容处理）
+        if (this.formData.end_time?.isBefore) {
+          if (this.formData.end_time.isBefore(this.formData.start_time)) {
+            this.$message.error('結束時間必須大於開始時間');
+            return;
+          }
+        } else if (startTime && endTime) {
+          if (new Date(endTime) <= new Date(startTime)) {
+            this.$message.error('結束時間必須大於開始時間');
+            return;
+          }
         }
 
         this.submitting = true;
@@ -1955,8 +1972,8 @@ export default {
           method: 'post',
           data: {
             ...this.formData,
-            start_time: this.formData.start_time.format('YYYY-MM-DD HH:mm:ss'),
-            end_time: this.formData.end_time.format('YYYY-MM-DD HH:mm:ss'),
+            start_time: startTime,
+            end_time: endTime,
           }
         });
 
