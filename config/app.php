@@ -32,4 +32,10 @@ return [
     'ip_domain' => env('IP_DOMAIN', 'http://47.243.153.122:5665/'),
     'agent_role' => 18,
     'store_role' => 19,
+
+    // 媒体服务器代理配置（通过 gk_work 代理访问）
+    'media_proxy' => [
+        'host' => env('MEDIA_PROXY_HOST', env('GAME_PLATFORM_PROXY_HOST', '127.0.0.1')),
+        'port' => env('MEDIA_PROXY_PORT', 8788), // 默认使用 gk_work 内网端口
+    ],
 ];

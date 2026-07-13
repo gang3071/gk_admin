@@ -24,14 +24,14 @@ use WebmanTech\LaravelHttpClient\Facades\Http;
 
 class MediaServer
 {
-    
+
     public $method = 'POST';
     public $log;
     private $domain = '';
     private $mediaApp = '';
     private $stream_url = 'rtsp://admin:ez88888888@stream_url/cam/realmonitor?channel=1&subtype=0';
     private $fish_stream_url = 'rtsp://{ip}/live/0';
-    
+
     /**
      */
     public function __construct($domain = '', $mediaApp = '')
@@ -39,6 +39,80 @@ class MediaServer
         $this->domain = $domain;
         $this->mediaApp = $mediaApp;
         $this->log = Log::channel('media_recording');
+    }
+
+    /**
+     * 获取媒体代理配置
+     *
+     * @return array{host: string, port: int}
+     */
+    private function getProxyConfig(): array
+    {
+        return config('app.media_proxy', [
+            'host' => '127.0.0.1',
+            'port' => 8788,
+        ]);
+    }
+
+    /**
+     * 通过 gk_work 代理发送媒体服务器请求
+     *
+     * @param string $method HTTP 方法 (GET|POST|PUT|DELETE)
+     * @param string $url 完整的媒体服务器 API URL
+     * @param array $body 请求体（可选）
+     * @param array $headers 额外头部（可选）
+     * @param int $timeout 超时时间（秒）
+     * @return mixed 响应对象或数据
+     * @throws Exception
+     */
+    private function proxyRequest(string $method, string $url, array $body = [], array $headers = [], int $timeout = 10): mixed
+    {
+        try {
+            // 获取代理配置
+            $proxyConfig = $this->getProxyConfig();
+            $proxyUrl = sprintf('http://%s:%d/api/admin/media-proxy', $proxyConfig['host'], $proxyConfig['port']);
+
+            // 构建代理请求参数
+            $proxyPayload = [
+                'method' => strtoupper($method),
+                'url' => $url,
+                'timeout' => $timeout,
+            ];
+
+            if (!empty($headers)) {
+                $proxyPayload['headers'] = $headers;
+            }
+
+            if (!empty($body)) {
+                $proxyPayload['body'] = $body;
+            }
+
+            // 发送代理请求（代理超时时间 = 实际超时 + 5秒缓冲）
+            $response = Http::timeout($timeout + 5)->post($proxyUrl, $proxyPayload);
+
+            if (!$response->successful()) {
+                throw new Exception('Media proxy request failed with status: ' . $response->status());
+            }
+
+            $result = $response->json();
+
+            // 检查代理响应格式
+            if (!isset($result['success']) || !$result['success']) {
+                $errorMsg = $result['message'] ?? 'Unknown media proxy error';
+                throw new Exception($errorMsg);
+            }
+
+            // 返回媒体服务器的实际响应
+            return $result['data'];
+
+        } catch (\Exception $e) {
+            $this->log->error('[媒体代理] 请求失败', [
+                'method' => $method,
+                'url' => $url,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
     }
     
     /**
@@ -54,25 +128,27 @@ class MediaServer
     {
         $maxRetries = 4;
         try {
-            $response = Http::timeout(5)->post($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint',
-                [
-                    'type' => 'generic',
-                    'rtmpUrl' => $rtmpUrl,
-                    'endpointServiceId' => $endpointServiceId,
-                ]);
+            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint';
+            $body = [
+                'type' => 'generic',
+                'rtmpUrl' => $rtmpUrl,
+                'endpointServiceId' => $endpointServiceId,
+            ];
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('POST', $url, $body, [], 5);
+
         } catch (\Exception) {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        
+
         $this->log->info('rtmpEndpoint', [
-            $response,
-            $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint',
-            'type' => 'generic',
-            'rtmpUrl' => $rtmpUrl,
-            'endpointServiceId' => $endpointServiceId,
+            'response' => $response,
+            'url' => $url,
+            'body' => $body,
         ]);
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
+
+        if (!empty($response) && isset($response['success'])) {
             if (empty($response['success'])) {
                 $attempts++;
                 if ($attempts >= $maxRetries) {
@@ -83,7 +159,7 @@ class MediaServer
         } else {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        
+
         return true;
     }
     
@@ -99,14 +175,22 @@ class MediaServer
     {
         $maxRetries = 4;
         try {
-            $response = Http::timeout(5)->delete($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint?endpointServiceId=' . $endpointServiceId);
+            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint?endpointServiceId=' . $endpointServiceId;
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('DELETE', $url, [], [], 5);
+
         } catch (\Exception) {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        
-        $this->log->info('deleteRtmpEndpoint', [$response, $endpointServiceId, $streamName]);
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
+
+        $this->log->info('deleteRtmpEndpoint', [
+            'response' => $response,
+            'endpointServiceId' => $endpointServiceId,
+            'streamName' => $streamName,
+        ]);
+
+        if (!empty($response) && isset($response['success'])) {
             if (empty($response['success']) && !$response['success']) {
                 $attempts++;
                 if ($attempts >= $maxRetries) {
@@ -117,7 +201,7 @@ class MediaServer
         } else {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        
+
         return true;
     }
     
@@ -129,19 +213,23 @@ class MediaServer
     public function getViewers($streamName): mixed
     {
         try {
-            $response = Http::timeout(5)->asJson()->get($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName);
+            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName;
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('GET', $url, [], ['Content-Type' => 'application/json'], 5);
+
         } catch (\Exception) {
             return false;
         }
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
+
+        if (!empty($response)) {
             if (empty($response['success'])) {
                 if (isset($response['webRTCViewerCount'])) {
                     return $response['webRTCViewerCount'];
                 }
             }
         }
-        
+
         return false;
     }
     
@@ -156,15 +244,18 @@ class MediaServer
         if (!empty($machineRecording->vod_name)) {
             return 'http://' . $machineRecording->media->pull_ip . '/' . $machineRecording->media->media_app . '/streams/' . $machineRecording->vod_name;
         }
-        $response = Http::timeout(5)->asJson()->get($machineRecording->media->push_ip . '/' . $machineRecording->media->media_app . '/rest/v2/vods/' . $machineRecording->data_id);
-        if (!empty($response) && $response->status() == 200) {
-            $orgData = $response;
-            $response = json_decode($response, true);
+
+        $url = $machineRecording->media->push_ip . '/' . $machineRecording->media->media_app . '/rest/v2/vods/' . $machineRecording->data_id;
+
+        // 通过 gk_work 代理调用
+        $response = $this->proxyRequest('GET', $url, [], ['Content-Type' => 'application/json'], 5);
+
+        if (!empty($response)) {
             $this->log->info('getRecording', [$response]);
             if (empty($response['vodName'])) {
                 throw new \Exception(trans('vod_file_not_found', [], 'message'));
             }
-            $machineRecording->org_data = $orgData;
+            $machineRecording->org_data = json_encode($response);
             $machineRecording->vod_name = $response['vodName'];
             $machineRecording->save();
         } else {
@@ -183,17 +274,22 @@ class MediaServer
     public function deleteRecording(MachineRecording $machineRecording): bool
     {
         try {
-            $response = Http::timeout(5)->asJson()->delete($machineRecording->media->push_ip . '/' . $machineRecording->media->media_app . '/rest/v2/vods/' . $machineRecording->data_id);
+            $url = $machineRecording->media->push_ip . '/' . $machineRecording->media->media_app . '/rest/v2/vods/' . $machineRecording->data_id;
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('DELETE', $url, [], ['Content-Type' => 'application/json'], 5);
+
         } catch (\Exception) {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
+
         $this->log->info('deleteRecording', [$response]);
-        if (!empty($response) && $response->status() == 200) {
+        if (!empty($response)) {
             $machineRecording->delete();
         } else {
             throw new \Exception(trans('vod_file_not_found', [], 'message'));
         }
-        
+
         return true;
     }
     
@@ -230,12 +326,16 @@ class MediaServer
         $machineRecording->player_game_log_id = $logId;
         $machineRecording->start_time = date('Y-m-d H:i:s');
         try {
-            $response = Http::timeout(5)->asJson()->put($media->push_ip . '/' . $media->media_app . '/rest/v2/broadcasts/' . $media->stream_name . '/recording/true?recordType=mp4&name=' . $media->stream_name . uniqid());
+            $url = $media->push_ip . '/' . $media->media_app . '/rest/v2/broadcasts/' . $media->stream_name . '/recording/true?recordType=mp4&name=' . $media->stream_name . uniqid();
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('PUT', $url, [], ['Content-Type' => 'application/json'], 5);
+
         } catch (\Exception) {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
+
+        if (!empty($response)) {
             $this->log->info('startRecording', [$response]);
             if (empty($response['success'])) {
                 $machineRecording->status = MachineRecording::STATUS_FAIL;
@@ -263,12 +363,16 @@ class MediaServer
     public function stopRecording(MachineMedia $media): bool
     {
         try {
-            $response = Http::timeout(5)->asJson()->put($media->push_ip . '/' . $media->media_app . '/rest/v2/broadcasts/' . $media->stream_name . '/recording/false?recordType=mp4');
+            $url = $media->push_ip . '/' . $media->media_app . '/rest/v2/broadcasts/' . $media->stream_name . '/recording/false?recordType=mp4';
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('PUT', $url, [], ['Content-Type' => 'application/json'], 5);
+
         } catch (\Exception) {
             throw new Exception(admin_trans('message.media.media_request_error'));
         }
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
+
+        if (!empty($response)) {
             $this->log->info('stopRecording', [$response]);
             /** @var MachineRecording $startRecording */
             $startRecording = MachineRecording::query()
@@ -543,16 +647,21 @@ class MediaServer
         $domain = !empty($domain) ? $domain : $this->domain;
         $mediaApp = !empty($oldMediaApp) ? $oldMediaApp : $this->mediaApp;
         try {
-            $response = Http::timeout(5)->asJson()->delete($domain . '/' . $mediaApp . '/rest/v2/broadcasts/' . $streamName);
+            $url = $domain . '/' . $mediaApp . '/rest/v2/broadcasts/' . $streamName;
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('DELETE', $url, [], ['Content-Type' => 'application/json'], 5);
+
         } catch (\Exception) {
             return false;
         }
-        $this->log->info('deleteMachineStream',
-            [$response, $domain . '/' . $mediaApp . '/rest/v2/broadcasts/' . $streamName]);
-        if (!empty($response) && $response->status() == 200) {
-            $response = json_decode($response, true);
-            $this->log->info('deleteMachineStream',
-                [$response, $domain . '/' . $mediaApp . '/rest/v2/broadcasts/' . $streamName]);
+
+        $this->log->info('deleteMachineStream', [
+            'response' => $response,
+            'url' => $url,
+        ]);
+
+        if (!empty($response)) {
             if (empty($response['success'])) {
                 return false;
             }
@@ -580,18 +689,22 @@ class MediaServer
         $stream_url = $type == GameType::TYPE_FISH ? str_replace('{ip}', $stream_url,
             $this->fish_stream_url) : str_replace('stream_url', $stream_url, $this->stream_url);
         try {
-            $response = Http::timeout(5)->asJson()->post($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/create?autoStart=true',
-                [
-                    'hlsViewerCount' => 0,
-                    'mp4Enabled' => 0,
-                    'name' => $name,
-                    'playListItemList' => [],
-                    'rtmpViewerCount' => 0,
-                    'streamUrl' => $stream_url,
-                    'type' => 'streamSource',
-                    'webRTCViewerCount' => 0,
-                    'endPointList' => $pushList
-                ]);
+            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/create?autoStart=true';
+            $body = [
+                'hlsViewerCount' => 0,
+                'mp4Enabled' => 0,
+                'name' => $name,
+                'playListItemList' => [],
+                'rtmpViewerCount' => 0,
+                'streamUrl' => $stream_url,
+                'type' => 'streamSource',
+                'webRTCViewerCount' => 0,
+                'endPointList' => $pushList
+            ];
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('POST', $url, $body, ['Content-Type' => 'application/json'], 5);
+
         } catch (\Exception $e) {
             $this->log->info('createMachineStream', [$e->getMessage()]);
             throw new Exception(admin_trans('message.media.media_request_error'));
@@ -686,14 +799,19 @@ class MediaServer
     public function getBroadcasts($streamName): mixed
     {
         try {
-            $response = Http::timeout(5)->get($this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName);
+            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName;
+
+            // 通过 gk_work 代理调用
+            $response = $this->proxyRequest('GET', $url, [], [], 5);
+
         } catch (\Exception) {
             throw new Exception(admin_trans('common.video_host_request_failed'));
         }
-        if (empty($response) || $response->status() != 200) {
+
+        if (empty($response)) {
             throw new Exception(admin_trans('common.get_stream_info_failed'));
         }
-        
-        return json_decode($response->body(), true);
+
+        return $response;
     }
 }
