@@ -24,6 +24,7 @@ class VipLevelService
             'upgrade_bet_amount' => 5000,
             'min_claim_amount' => 10,
             'birthday_bonus' => 50,
+            'upgrade_bonus' => 100,
         ],
         [
             'name' => 'VIP2',
@@ -33,6 +34,7 @@ class VipLevelService
             'upgrade_bet_amount' => 20000,
             'min_claim_amount' => 20,
             'birthday_bonus' => 100,
+            'upgrade_bonus' => 200,
         ],
         [
             'name' => 'VIP3',
@@ -42,6 +44,7 @@ class VipLevelService
             'upgrade_bet_amount' => 50000,
             'min_claim_amount' => 50,
             'birthday_bonus' => 200,
+            'upgrade_bonus' => 500,
         ],
         [
             'name' => 'VIP4',
@@ -51,6 +54,7 @@ class VipLevelService
             'upgrade_bet_amount' => 100000,
             'min_claim_amount' => 100,
             'birthday_bonus' => 500,
+            'upgrade_bonus' => 1000,
         ],
         [
             'name' => 'VIP5',
@@ -60,6 +64,7 @@ class VipLevelService
             'upgrade_bet_amount' => 200000,
             'min_claim_amount' => 200,
             'birthday_bonus' => 1000,
+            'upgrade_bonus' => 2000,
         ],
         [
             'name' => 'VIP6',
@@ -69,6 +74,7 @@ class VipLevelService
             'upgrade_bet_amount' => 500000,
             'min_claim_amount' => 500,
             'birthday_bonus' => 2000,
+            'upgrade_bonus' => 5000,
         ],
         [
             'name' => 'VIP7',
@@ -78,6 +84,7 @@ class VipLevelService
             'upgrade_bet_amount' => 1000000,
             'min_claim_amount' => 1000,
             'birthday_bonus' => 5000,
+            'upgrade_bonus' => 10000,
         ],
         [
             'name' => 'VIP8',
@@ -87,6 +94,7 @@ class VipLevelService
             'upgrade_bet_amount' => 2000000,
             'min_claim_amount' => 2000,
             'birthday_bonus' => 10000,
+            'upgrade_bonus' => 20000,
         ],
         [
             'name' => 'VIP9',
@@ -96,6 +104,7 @@ class VipLevelService
             'upgrade_bet_amount' => 5000000,
             'min_claim_amount' => 5000,
             'birthday_bonus' => 20000,
+            'upgrade_bonus' => 50000,
         ],
         [
             'name' => 'VIP10',
@@ -105,6 +114,7 @@ class VipLevelService
             'upgrade_bet_amount' => 0,
             'min_claim_amount' => 10000,
             'birthday_bonus' => 50000,
+            'upgrade_bonus' => 100000,
         ],
     ];
 

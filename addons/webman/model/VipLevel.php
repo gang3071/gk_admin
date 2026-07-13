@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property float upgrade_bet_amount 升级所需打码量
  * @property float min_claim_amount 最小领取额
  * @property float birthday_bonus 生日礼金
+ * @property float upgrade_bonus 升级礼金
  * @property int sort 排序
  * @property int status 状态
  * @property string created_at 创建时间
@@ -40,6 +41,7 @@ class VipLevel extends Model
         'upgrade_bet_amount',
         'min_claim_amount',
         'birthday_bonus',
+        'upgrade_bonus',
         'sort',
         'status',
     ];
