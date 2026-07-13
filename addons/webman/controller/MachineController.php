@@ -1352,7 +1352,7 @@ class MachineController
                     }
 
                     // 通过 API 更新保留时长
-                    MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds);
+                    MachineApiService::updateMachineState($machine->id, 'keep_seconds', $newKeepSeconds, 'zh_CN', Admin::id() ?? 0);
                 }
 
                 sendSocketMessage('player-' . $machine->gaming_user_id . '-' . $machine->id, [
@@ -2055,7 +2055,7 @@ class MachineController
         }
         try {
             // 通过 API 更新机台锁状态
-            MachineApiService::updateMachineState($machine->id, 'has_lock', $data['has_lock']);
+            MachineApiService::updateMachineState($machine->id, 'has_lock', $data['has_lock'], 'zh_CN', Admin::id() ?? 0);
 
             if ($data['has_lock'] == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
@@ -2128,14 +2128,16 @@ class MachineController
                     }
                 }
                 // 通过 API 更新保留状态
-                MachineApiService::updateMachineState($machine->id, 'keeping', 1);
-                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', $machine->gaming_user_id);
-                MachineApiService::updateMachineState($machine->id, 'last_keep_at', time());
+                $adminId = Admin::id() ?? 0;
+                MachineApiService::updateMachineState($machine->id, 'keeping', 1, 'zh_CN', $adminId);
+                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', $machine->gaming_user_id, 'zh_CN', $adminId);
+                MachineApiService::updateMachineState($machine->id, 'last_keep_at', time(), 'zh_CN', $adminId);
             } else {
-                MachineApiService::updateMachineState($machine->id, 'keeping', 0);
-                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', 0);
+                $adminId = Admin::id() ?? 0;
+                MachineApiService::updateMachineState($machine->id, 'keeping', 0, 'zh_CN', $adminId);
+                MachineApiService::updateMachineState($machine->id, 'keeping_user_id', 0, 'zh_CN', $adminId);
             }
-            MachineApiService::updateMachineState($machine->id, 'last_play_time', time());
+            MachineApiService::updateMachineState($machine->id, 'last_play_time', time(), 'zh_CN', Admin::id() ?? 0);
         } catch (\Exception $e) {
             return message_error($e->getMessage());
         }
@@ -2632,7 +2634,7 @@ class MachineController
     private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
     {
         try {
-            $result = MachineApiService::getMachineStatus($machine->id, $lang);
+            $result = MachineApiService::getMachineStatus($machine->id, $lang, Admin::id() ?? 0);
 
             // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
             $status = new \stdClass();
@@ -2673,7 +2675,7 @@ class MachineController
     private function checkMachineOnlineViaApi(Machine $machine): bool
     {
         try {
-            $result = MachineApiService::checkOnline($machine->id);
+            $result = MachineApiService::checkOnline($machine->id, Admin::id() ?? 0);
             return $result['online'] ?? false;
         } catch (Exception $e) {
             \support\Log::warning('Check machine online via API failed', [
@@ -2714,7 +2716,7 @@ class MachineController
                 return message_error(admin_trans('machine.no_machine_selected'));
             }
 
-            $results = MachineApiService::batchCheckOnline($machineIds);
+            $results = MachineApiService::batchCheckOnline($machineIds, Admin::id() ?? 0);
 
             $onlineCount = 0;
             $offlineCount = 0;
