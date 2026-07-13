@@ -1767,14 +1767,17 @@ export default {
         return;
       }
 
+      // 使用 window.dayjs 或 dayjs（全局对象）
+      const dayjs = window.dayjs || window.moment;
+
       this.formMode = 'edit';
       this.formData = {
         id: data.id,
         name: data.name,
         description: data.description,
         cover_image: data.cover_image || '',
-        start_time: this.$dayjs(data.start_time),
-        end_time: this.$dayjs(data.end_time),
+        start_time: dayjs ? dayjs(data.start_time) : data.start_time,
+        end_time: dayjs ? dayjs(data.end_time) : data.end_time,
         vip_configs: data.vip_configs || [],
         prize_levels: data.prize_levels || []
       };
