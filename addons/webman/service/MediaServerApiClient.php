@@ -5,6 +5,7 @@ namespace addons\webman\service;
 use WebmanTech\LaravelHttpClient\Facades\Http;
 use Exception;
 use support\Log;
+use Monolog\Logger;
 
 /**
  * 媒体服务器 API 客户端
@@ -14,7 +15,7 @@ class MediaServerApiClient
 {
     private string $baseUrl;
     private int $timeout;
-    private Log $log;
+    private Logger $log;
 
     public function __construct()
     {
