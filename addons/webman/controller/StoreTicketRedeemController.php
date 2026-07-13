@@ -47,10 +47,11 @@ class StoreTicketRedeemController
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
 
-            // 统计数据（使用独立查询，避免 join 和 group by 问题）
+            // 统计数据（使用独立查询，避免 join 和 group by 问题，排除禁用状态）
             $totalData = TicketRecord::query()
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->selectRaw(
                     'sum(score) as total_score, count(*) as total_count, '
                     . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
@@ -69,6 +70,7 @@ class StoreTicketRedeemController
             $currentShiftQuery = TicketRecord::query()
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('scanned_at', '>', $lastShiftTime);
                 });

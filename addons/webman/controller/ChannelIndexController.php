@@ -2169,10 +2169,11 @@ class ChannelIndexController
         ];
 
         // ========== 出票统计（支持时间筛选） ==========
-        // 出票记录统计（开分类型）
+        // 出票记录统计（开分类型，排除禁用状态）
         $ticketRecordQuery = \addons\webman\model\TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'created_at'));
             })
@@ -2190,10 +2191,11 @@ class ChannelIndexController
             'used_score' => floatval($ticketRecordQuery->used_score ?? 0),
         ];
 
-        // 核销记录统计（洗分类型）
+        // 核销记录统计（洗分类型，排除禁用状态）
         $ticketRedeemQuery = \addons\webman\model\TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'created_at'));
             })
@@ -2259,20 +2261,22 @@ class ChannelIndexController
             ->selectRaw("SUM(`amount`) as lottery_amount")
             ->first();
 
-        // ✅ 当前班次统计：出票记录（开分类型）
+        // ✅ 当前班次统计：出票记录（开分类型，排除禁用状态）
         $currentShiftTicketRecordQuery = \addons\webman\model\TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('scanned_at', '>', $lastShiftTime);
             })
             ->selectRaw('sum(score) as total_score')
             ->first();
 
-        // ✅ 当前班次统计：核销记录（洗分类型）- 后台使用金额
+        // ✅ 当前班次统计：核销记录（洗分类型）- 后台使用金额（排除禁用状态）
         $currentShiftTicketRedeemQuery = \addons\webman\model\TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('scanned_at', '>', $lastShiftTime);
             })
@@ -3429,10 +3433,11 @@ class ChannelIndexController
                         ->where('player_game_log.created_at', '<=', $endTime)
                         ->sum('player_game_log.chip_amount');
 
-                    // 5.3 统计出票记录（开分类型）
+                    // 5.3 统计出票记录（开分类型，排除禁用状态）
                     $ticketRecordTotalScore = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');

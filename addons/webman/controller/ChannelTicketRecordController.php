@@ -40,10 +40,12 @@ class ChannelTicketRecordController
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->orderBy('created_at', 'desc');
 
-            // 统计数据
-            $totalData = (clone $grid->model())->selectRaw(
-                'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
-            )->first();
+            // 统计数据（排除禁用状态）
+            $totalData = (clone $grid->model())
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->selectRaw(
+                    'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
+                )->first();
 
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {

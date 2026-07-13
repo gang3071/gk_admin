@@ -432,10 +432,11 @@ class AutoShiftService
             ->where('player_game_log.created_at', '<=', $endTime)
             ->sum('player_game_log.chip_amount');
 
-        // 计算出票记录总金额（开分类型）
+        // 计算出票记录总金额（开分类型，排除禁用状态）
         $ticketRecordTotalScore = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
             ->where('scanned_at', '>', $startTime)
             ->where('scanned_at', '<=', $endTime)
             ->sum('score');

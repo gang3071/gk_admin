@@ -41,9 +41,10 @@ class ChannelTicketRedeemController
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
 
-            // 统计数据
+            // 统计数据（排除禁用状态）
             $totalData = TicketRecord::query()
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->selectRaw(
                     'sum(score) as total_score, count(*) as total_count, '
                     . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '

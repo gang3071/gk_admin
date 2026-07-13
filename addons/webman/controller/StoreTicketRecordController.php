@@ -45,8 +45,9 @@ class StoreTicketRecordController
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->orderBy('created_at', 'desc');
 
-            // 统计数据（基于当前筛选条件）
+            // 统计数据（基于当前筛选条件，排除禁用状态）
             $query = clone $grid->model();
+            $query->where('status', '!=', TicketRecord::STATUS_DISABLED);
             $totalData = $query->selectRaw(
                 'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
             )->first();
@@ -61,6 +62,7 @@ class StoreTicketRecordController
             $currentShiftQuery = TicketRecord::query()
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('scanned_at', '>', $lastShiftTime);
                 });
