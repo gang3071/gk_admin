@@ -327,7 +327,7 @@ return [
         'ticket_redeem' => '出票キャンセル',
         'ticket_open_score' => 'スキャン開分',
         'birthday_bonus' => 'VIP誕生日ボーナス',
-        'upgrade_bonus' => 'VIPアップグレードボーナス',
+        'vip_upgrade_bonus' => 'VIPアップグレードボーナス',
     ],
     'source' => [
         'system' => 'システム',

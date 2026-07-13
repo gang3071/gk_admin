@@ -328,7 +328,7 @@ return [
         'ticket_redeem' => 'Ticket Redeem',
         'ticket_open_score' => 'Scan Open Score',
         'birthday_bonus' => 'VIP Birthday Bonus',
-        'upgrade_bonus' => 'VIP Upgrade Bonus',
+        'vip_upgrade_bonus' => 'VIP Upgrade Bonus',
     ],
     'source' => [
         'system' => 'system',
