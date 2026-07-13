@@ -43,6 +43,9 @@ class VipBirthdayBonusTask
 
         echo "VipBirthdayBonusTask: VIP生日礼金任务已启动，每天凌晨1点执行\n";
 
+        // 进程启动时先执行一次
+        $this->doWork();
+
         // 每天凌晨1点执行（Cron 表达式：秒 分 时 日 月 周）
         new Crontab('0 0 1 * * *', function () {
             $this->doWork();
