@@ -209,6 +209,7 @@ return [
         'restart_printer' => '正在重啟印表機...',
         'restart_sent' => '重啟指令已發送',
         'restart_failed' => '重啟失敗',
+        'waiting_printer_restart' => '等待印表機重啟完成...',
         'invalid_hex' => '無效的HEX格式',
         'hex_sent' => 'HEX已發送: {hex}',
 

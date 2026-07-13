@@ -209,6 +209,7 @@ return [
         'restart_printer' => 'Restarting printer...',
         'restart_sent' => 'Restart command sent',
         'restart_failed' => 'Restart failed',
+        'waiting_printer_restart' => 'Waiting for printer to restart...',
         'invalid_hex' => 'Invalid HEX format',
         'hex_sent' => 'HEX sent: {hex}',
 

@@ -209,6 +209,7 @@ return [
         'restart_printer' => 'プリンター再起動中...',
         'restart_sent' => '再起動コマンド送信完了',
         'restart_failed' => '再起動失敗',
+        'waiting_printer_restart' => 'プリンターの再起動を待っています...',
         'invalid_hex' => '無効なHEX形式',
         'hex_sent' => 'HEX送信完了: {hex}',
 

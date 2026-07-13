@@ -563,45 +563,7 @@ export default {
           await new Promise(r => setTimeout(r, 50)); // 延迟50ms
 
           // 4. 设置店名称（使用后端GBK编码）
-          this.addLog('info', this.t('setting_store_name', {name: this.config.storeName}));
-          if (this.config.storeName) {
-            let name = this.config.storeName || '';
-            let nameBytes = [];
-
-            // 通过后端API进行GBK编码
-            try {
-              const encodeRes = await this.$request({
-                url: 'ex-admin/addons-webman-controller-ChannelIndexController/ticketMachineApi',
-                method: 'get',
-                params: { action: 'encode_gbk', text: name },
-              });
-              if (encodeRes.success && encodeRes.bytes) {
-                nameBytes = encodeRes.bytes;
-                this.addLog('info', this.t('gbk_encoding', {hex: encodeRes.hex}));
-              } else {
-                this.addLog('warn', this.t('gbk_failed'));
-                const encoder = new TextEncoder();
-                nameBytes = Array.from(encoder.encode(name));
-              }
-            } catch (e) {
-              this.addLog('warn', this.t('gbk_failed') + ': ' + e.message);
-              const encoder = new TextEncoder();
-              nameBytes = Array.from(encoder.encode(name));
-            }
-
-            // 确保正好10个字节
-            if (nameBytes.length > 10) {
-              nameBytes = nameBytes.slice(0, 10);
-            } else {
-              while (nameBytes.length < 10) nameBytes.push(0x20); // 用空格填充
-            }
-            const nameHex = nameBytes.map(b => b.toString(16).padStart(2, '0')).join(' ');
-            this.addLog('info', this.t('send_store_name', {hex: nameHex, len: nameBytes.length}));
-            const nameResult = await this.sendCommand(0x01, 0x05, nameBytes);
-            this.addLog(nameResult ? 'success' : 'error', this.t(nameResult ? 'store_name_set_success' : 'store_name_set_failed', {name: name}));
-          } else {
-            this.addLog('warn', this.t('store_name_empty'));
-          }
+          await this.setStoreName();
 
           this.addLog('success', this.t('init_complete'));
         } else {
@@ -725,11 +687,8 @@ export default {
       await this.sendCommand(0x01, 0x04, [(no >> 8) & 0xFF, no & 0xFF]);
       this.addLog('success', this.t('machine_no_set'));
 
-      // 4. 设置店名称
-      let name = (this.config.storeName || '').padEnd(10, ' ').substring(0, 10);
-      const nameData = Array.from(name).map(c => c.charCodeAt(0));
-      await this.sendCommand(0x01, 0x05, nameData);
-      this.addLog('success', this.t('store_name_set_success', {name: name.trim()}));
+      // 4. 设置店名称（使用GBK编码）
+      await this.setStoreName();
 
       this.addLog('success', this.t('init_complete'));
     },
@@ -742,11 +701,63 @@ export default {
       this.addLog(r ? 'success' : 'error', r ? this.t('serial_set_success', {serial: no}) : this.t('serial_set_failed', {serial: no}));
     },
 
+    // 设置店名称（独立函数，支持GBK编码）
+    async setStoreName() {
+      if (!this.config.storeName) {
+        this.addLog('warn', this.t('store_name_empty'));
+        return false;
+      }
+
+      this.addLog('info', this.t('setting_store_name', {name: this.config.storeName}));
+      let name = this.config.storeName || '';
+      let nameBytes = [];
+
+      // 通过后端API进行GBK编码
+      try {
+        const encodeRes = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelIndexController/ticketMachineApi',
+          method: 'get',
+          params: { action: 'encode_gbk', text: name },
+        });
+        if (encodeRes.success && encodeRes.bytes) {
+          nameBytes = encodeRes.bytes;
+          this.addLog('info', this.t('gbk_encoding', {hex: encodeRes.hex}));
+        } else {
+          this.addLog('warn', this.t('gbk_failed'));
+          const encoder = new TextEncoder();
+          nameBytes = Array.from(encoder.encode(name));
+        }
+      } catch (e) {
+        this.addLog('warn', this.t('gbk_failed') + ': ' + e.message);
+        const encoder = new TextEncoder();
+        nameBytes = Array.from(encoder.encode(name));
+      }
+
+      // 确保正好10个字节
+      if (nameBytes.length > 10) {
+        nameBytes = nameBytes.slice(0, 10);
+      } else {
+        while (nameBytes.length < 10) nameBytes.push(0x20); // 用空格填充
+      }
+      const nameHex = nameBytes.map(b => b.toString(16).padStart(2, '0')).join(' ');
+      this.addLog('info', this.t('send_store_name', {hex: nameHex, len: nameBytes.length}));
+      const nameResult = await this.sendCommand(0x01, 0x05, nameBytes);
+      this.addLog(nameResult ? 'success' : 'error', this.t(nameResult ? 'store_name_set_success' : 'store_name_set_failed', {name: name}));
+      return nameResult;
+    },
+
     // 重启打印机
     async restartPrinter() {
       this.addLog('info', this.t('restart_printer'));
       const r = await this.sendCommand(0x01, 0x0A, [], false);
       this.addLog(r ? 'success' : 'error', r ? this.t('restart_sent') : this.t('restart_failed'));
+
+      // 重启后等待打印机初始化完成，然后重新设置店名
+      if (r) {
+        this.addLog('info', this.t('waiting_printer_restart'));
+        await new Promise(resolve => setTimeout(resolve, 3000)); // 等待3秒让打印机重启
+        await this.setStoreName();
+      }
     },
 
     // 复位
