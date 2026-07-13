@@ -2218,25 +2218,52 @@ if (!function_exists('decrypt_sensitive')) {
 if (!function_exists('addPlayerExtend')) {
     /**
      * 创建玩家扩展信息
-     * @param Player $player
+     * @param Player $player 玩家对象
+     * @param array $extendData 扩展信息（可选）
      * @return void
+     * @throws Exception
      */
-    function addPlayerExtend(Player $player): void
+    function addPlayerExtend(Player $player, array $extendData = []): void
     {
+        // 第一步：强制创建/更新钱包记录，初始余额为 0（一次性操作，防止复制数据库导致的金额残留）
+        PlayerPlatformCash::query()->updateOrCreate(
+            [
+                'player_id' => $player->id,
+                'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
+            ],
+            [
+                'money' => 0,
+            ]
+        );
+
+        // 第二步：设置 Redis 钱包余额为 0（确保缓存与数据库一致）
+        \addons\webman\service\WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
+
+        // 第三步：创建/更新玩家扩展信息（支持传入初始数据，避免二次更新）
+        $extendAttributes = [];
+
+        // 如果传入了扩展信息，合并到创建/更新数据中
+        if (!empty($extendData)) {
+            // 过滤掉空值，保留有意义的数据
+            $extendAttributes = array_filter($extendData, function ($value) {
+                return $value !== null && $value !== '';
+            });
+        }
+
+        // 使用 updateOrCreate 确保记录存在且数据正确（防止复制数据库导致的脏数据）
+        PlayerExtend::query()->updateOrCreate(
+            ['player_id' => $player->id],
+            $extendAttributes
+        );
+
+        // 第四步：处理注册赠送（如果启用）
         $registerPresent = SystemSetting::query()->where('feature', 'register_present')->where('status', 1)->value('num') ?? 0;
 
-        PlayerPlatformCash::query()->firstOrCreate([
-            'player_id' => $player->id,
-            'platform_id' => PlayerPlatformCash::PLATFORM_SELF,
-            'money' => $registerPresent,
-        ]);
+        if ($registerPresent > 0) {
+            // 使用 WalletService 原子加款（同时更新数据库和 Redis）
+            $afterAmount = \addons\webman\service\WalletService::add($player->id, $registerPresent);
 
-        PlayerExtend::query()->firstOrCreate([
-            'player_id' => $player->id,
-        ]);
-
-        if (isset($registerPresent) && $registerPresent > 0) {
-            //添加玩家钱包日志
+            // 添加玩家钱包日志
             $playerMoneyEditLog = new PlayerMoneyEditLog;
             $playerMoneyEditLog->player_id = $player->id;
             $playerMoneyEditLog->department_id = $player->department_id;
@@ -2246,12 +2273,12 @@ if (!function_exists('addPlayerExtend')) {
             $playerMoneyEditLog->currency = $player->currency;
             $playerMoneyEditLog->money = $registerPresent;
             $playerMoneyEditLog->inmoney = $registerPresent;
-            $playerMoneyEditLog->remark = '';
+            $playerMoneyEditLog->remark = '注册赠送';
             $playerMoneyEditLog->user_id = 0;
             $playerMoneyEditLog->user_name = '系统自动';
             $playerMoneyEditLog->save();
 
-            //寫入金流明細
+            // 寫入金流明細
             $playerDeliveryRecord = new PlayerDeliveryRecord;
             $playerDeliveryRecord->player_id = $player->id;
             $playerDeliveryRecord->department_id = $player->department_id;
@@ -2259,9 +2286,9 @@ if (!function_exists('addPlayerExtend')) {
             $playerDeliveryRecord->target_id = $playerMoneyEditLog->id;
             $playerDeliveryRecord->type = PlayerDeliveryRecord::TYPE_REGISTER_PRESENT;
             $playerDeliveryRecord->source = 'register_present';
-            $playerDeliveryRecord->amount = $playerMoneyEditLog->money;
+            $playerDeliveryRecord->amount = $registerPresent;
             $playerDeliveryRecord->amount_before = 0;
-            $playerDeliveryRecord->amount_after = $registerPresent;
+            $playerDeliveryRecord->amount_after = $afterAmount;
             $playerDeliveryRecord->tradeno = $playerMoneyEditLog->tradeno ?? '';
             $playerDeliveryRecord->remark = $playerMoneyEditLog->remark ?? '';
             $playerDeliveryRecord->save();

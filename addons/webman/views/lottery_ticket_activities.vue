@@ -251,56 +251,8 @@
                 {{ trans.edit }}
               </a-button>
 
-              <!-- 進行中：發放獎勵按鈕 -->
-              <a-button
-                  v-if="activity.status === 1 && activity.pending_count > 0"
-                  block
-                  type="primary"
-                  @click.stop="showDistributeForm(activity)"
-              >
-                <template #icon>
-                  <gift-outlined/>
-                </template>
-                {{ trans.distributeAllPending || '發放獎勵' }}
-                <a-badge
-                    :count="activity.pending_count"
-                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
-                />
-              </a-button>
-
-              <!-- ⭐ 開獎中：發放獎勵按鈕 -->
-              <a-button
-                  v-if="activity.status === 6 && activity.pending_count > 0"
-                  block
-                  type="primary"
-                  @click.stop="showDistributeForm(activity)"
-              >
-                <template #icon>
-                  <gift-outlined/>
-                </template>
-                {{ trans.distributeAllPending || '發放獎勵' }}
-                <a-badge
-                    :count="activity.pending_count"
-                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
-                />
-              </a-button>
-
-              <!-- ⭐ 已結束：發放獎勵按鈕 -->
-              <a-button
-                  v-if="activity.status === 2 && activity.pending_count > 0"
-                  block
-                  type="primary"
-                  @click.stop="showDistributeForm(activity)"
-              >
-                <template #icon>
-                  <gift-outlined/>
-                </template>
-                {{ trans.distributeAllPending || '發放獎勵' }}
-                <a-badge
-                    :count="activity.pending_count"
-                    :number-style="{ backgroundColor: '#52c41a', marginLeft: '8px' }"
-                />
-              </a-button>
+              <!-- ⭐ 發放獎勵按鈕已隱藏：錄入中獎時自動發放，不需要單獨發放按鈕 -->
+              <!-- 如果有歷史待發放記錄，請使用下拉菜單中的"發放獎勵"選項 -->
 
               <!-- 查看發放列表（所有狀態） -->
               <a-button
@@ -312,6 +264,19 @@
                   <unordered-list-outlined/>
                 </template>
                 {{ trans.viewTicketList || '查看發放列表' }}
+              </a-button>
+
+              <!-- ⭐ 錄入中獎（所有狀態顯示，但未開始/已結束/已關閉時置灰） -->
+              <a-button
+                  type="primary"
+                  block
+                  :disabled="activity.status === 0 || activity.status === 2 || activity.status === 3"
+                  @click.stop="showRecordModal(activity)"
+              >
+                <template #icon>
+                  <edit-outlined/>
+                </template>
+                錄入中獎
               </a-button>
             </a-space>
 
@@ -661,47 +626,125 @@
       </template>
     </a-drawer>
 
-    <!-- 錄入中獎抽屜 -->
+    <!-- 錄入中獎抽屜 - 单个录入模式 -->
     <a-drawer
         v-model:visible="recordVisible"
-        :title="trans.modalRecordWinTitle"
-        width="680px"
+        :title="trans.modalRecordWinTitle || '錄入中獎記錄'"
+        width="600px"
         :body-style="{ paddingBottom: '80px' }"
     >
-      <div v-for="(prizeLevel, index) in recordPrizeLevels" :key="prizeLevel.id">
-        <a-card size="small" :title="`${prizeLevel.level_name} - ${prizeLevel.prize_amount}元`" style="margin-bottom: 16px;">
-          <div v-for="(ticket, ticketIndex) in prizeLevel.tickets" :key="ticketIndex" style="margin-bottom: 8px;">
-            <a-space style="width: 100%; align-items: center;">
-              <span style="min-width: 80px; color: #666;">輸入券號:</span>
-              <a-input
-                  v-model:value="ticket.ticket_no"
-                  style="width: 200px;"
-                  :placeholder="trans.form?.input_ticket_hint || '輸入數字，如: 12 或 000012'"
-                  @blur="formatTicketNo(ticket)"
-                  @keyup.enter="formatTicketNo(ticket)"
-              />
-              <a-button
-                  type="text"
-                  danger
-                  size="small"
-                  @click="removeTicketInput(index, ticketIndex)"
-                  v-if="prizeLevel.tickets.length > 1"
-              >
-                <delete-outlined/>
-              </a-button>
-            </a-space>
+      <!-- ⭐ 活动信息展示 -->
+      <a-alert
+          v-if="currentActivityInfo"
+          type="info"
+          show-icon
+          style="margin-bottom: 16px;"
+      >
+        <template #message>
+          <div style="font-weight: bold; font-size: 14px;">{{ currentActivityInfo.name }}</div>
+        </template>
+        <template #description>
+          <div style="margin-top: 8px;">
+            <div style="margin-bottom: 4px;">
+              <span style="color: #666;">活動時間：</span>
+              <span>{{ currentActivityInfo.start_time }} ~ {{ currentActivityInfo.end_time }}</span>
+            </div>
+            <div>
+              <span style="color: #666;">當前最大券號：</span>
+              <a-tag color="orange" style="font-size: 13px;">{{ currentActivityInfo.max_ticket_no || '尚未派發' }}</a-tag>
+            </div>
           </div>
-          <a-button type="dashed" block @click="addTicketInput(index)" style="margin-top: 8px;">
-            <plus-outlined/>
-            {{ trans.form?.add_ticket_no || '添加券號' }}
-          </a-button>
-        </a-card>
-      </div>
+        </template>
+      </a-alert>
+
+      <a-form layout="vertical">
+        <!-- 选择奖品等级 -->
+        <a-form-item label="選擇獎品等級" required>
+          <a-select
+              v-model:value="singleRecord.prize_level_id"
+              placeholder="請選擇獎品等級"
+              style="width: 100%;"
+              @change="handlePrizeLevelChange"
+          >
+            <a-select-option
+                v-for="level in recordPrizeLevels"
+                :key="level.id"
+                :value="level.id"
+            >
+              {{ level.level_name }} - {{ level.prize_amount }}元
+            </a-select-option>
+          </a-select>
+        </a-form-item>
+
+        <!-- 输入券号 -->
+        <a-form-item label="中獎券號" required>
+          <a-input
+              v-model:value="singleRecord.ticket_no"
+              placeholder="輸入數字，如: 12 或 000012"
+              :loading="singleRecord.loading"
+              @blur="querySinglePlayerByTicketNo"
+              @keyup.enter="querySinglePlayerByTicketNo"
+              @input="clearSinglePlayerInfo"
+              style="width: 100%;"
+          />
+          <div style="margin-top: 4px; color: #999; font-size: 12px;">
+            輸入後按Enter或點擊其他地方自動查詢玩家信息
+          </div>
+        </a-form-item>
+
+        <!-- 玩家信息展示 -->
+        <a-form-item v-if="singleRecord.player_info" label="中獎玩家">
+          <div style="padding: 12px; background: #f0f5ff; border-radius: 4px; border: 1px solid #d6e4ff;">
+            <a-descriptions :column="1" size="small">
+              <a-descriptions-item label="玩家UUID">
+                <a-tag color="blue">
+                  <user-outlined /> {{ singleRecord.player_info.player_uuid }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="玩家名稱">
+                <a-tag color="green">
+                  <smile-outlined /> {{ singleRecord.player_info.player_name }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item v-if="singleRecord.player_info.player_phone" label="手機號">
+                <a-tag color="orange">
+                  <phone-outlined /> {{ singleRecord.player_info.player_phone }}
+                </a-tag>
+              </a-descriptions-item>
+            </a-descriptions>
+          </div>
+        </a-form-item>
+
+        <!-- 错误提示 -->
+        <a-alert
+            v-if="singleRecord.error"
+            :message="singleRecord.error"
+            type="error"
+            closable
+            @close="singleRecord.error = null"
+            style="margin-bottom: 16px;"
+        />
+
+        <!-- 提示信息 -->
+        <a-alert
+            message="溫馨提示"
+            description="錄入後將立即自動發放獎勵到玩家賬戶，請仔細核對券號和玩家信息。"
+            type="info"
+            show-icon
+        />
+      </a-form>
 
       <template #footer>
         <a-space>
           <a-button @click="handleRecordClose">取消</a-button>
-          <a-button type="primary" @click="submitWinRecord" :loading="recordSubmitting">提交</a-button>
+          <a-button
+              type="primary"
+              @click="submitSingleWinRecord"
+              :loading="recordSubmitting"
+              :disabled="!singleRecord.ticket_no || !singleRecord.prize_level_id || !singleRecord.player_info"
+          >
+            確認錄入並發放
+          </a-button>
         </a-space>
       </template>
     </a-drawer>
@@ -985,7 +1028,17 @@ export default {
       levelNames: [
         '', '特等獎', '一等獎', '二等獎', '三等獎', '四等獎',
         '五等獎', '六等獎', '七等獎', '八等獎', '九等獎'
-      ]
+      ],
+      // ⭐ 单个录入数据对象
+      singleRecord: {
+        prize_level_id: null,      // 选择的奖品等级ID
+        ticket_no: '',             // 输入的券号
+        player_info: null,         // 查询到的玩家信息
+        loading: false,            // 查询loading状态
+        error: null                // 错误信息
+      },
+      // ⭐ 当前活动信息（用于录入表单顶部展示）
+      currentActivityInfo: null
     };
   },
   computed: {
@@ -1225,7 +1278,7 @@ export default {
       }
     },
 
-    // 顯示錄入中獎抽屜
+    // 顯示錄入中獎抽屜 - 改为单个录入模式
     async showRecordModal(activity) {
       try {
         // 獲取活動詳情和獎品等級
@@ -1243,19 +1296,25 @@ export default {
             return;
           }
 
-          // 為每個獎品等級初始化券號輸入框
-          this.recordPrizeLevels = prizeLevels.map(level => {
-            // 根據獎品數量生成輸入框，如果數量為0則預設1個
-            const ticketCount = level.prize_count > 0 ? level.prize_count : 1;
-            const tickets = [];
-            for (let i = 0; i < ticketCount; i++) {
-              tickets.push({ ticket_no: null });
-            }
-            return {
-              ...level,
-              tickets: tickets
-            };
-          });
+          // ⭐ 存储奖品等级列表（供下拉选择使用）
+          this.recordPrizeLevels = prizeLevels;
+
+          // ⭐ 存储活动信息（用于表单顶部展示）
+          this.currentActivityInfo = {
+            name: activity.name,
+            start_time: activity.start_time,
+            end_time: activity.end_time,
+            max_ticket_no: activity.max_ticket_no || res.data.max_ticket_no
+          };
+
+          // ⭐ 重置单个录入数据
+          this.singleRecord = {
+            prize_level_id: null,
+            ticket_no: '',
+            player_info: null,
+            loading: false,
+            error: null
+          };
 
           this.recordData = {
             activity_id: activity.id
@@ -1271,87 +1330,146 @@ export default {
       }
     },
 
-    // 添加券號輸入框
-    addTicketInput(prizeLevelIndex) {
-      this.recordPrizeLevels[prizeLevelIndex].tickets.push({ ticket_no: null });
+    // ⭐ 奖品等级改变时
+    handlePrizeLevelChange(value) {
+      // 可以在这里添加额外逻辑（如果需要）
+      console.log('Selected prize level:', value);
     },
 
-    // 移除券號輸入框
-    removeTicketInput(prizeLevelIndex, ticketIndex) {
-      this.recordPrizeLevels[prizeLevelIndex].tickets.splice(ticketIndex, 1);
-    },
+    // ⭐ 查询单个玩家信息（单个录入模式）
+    async querySinglePlayerByTicketNo() {
+      const ticketNo = this.singleRecord.ticket_no?.trim();
 
-    // 格式化券號：前端驗證並自動補0
-    formatTicketNo(ticket) {
-      if (!ticket.ticket_no) {
+      if (!ticketNo) {
         return;
       }
 
-      // 去除首尾空格
-      let value = String(ticket.ticket_no).trim();
-
-      // 驗證：只能包含數字
-      if (!/^\d+$/.test(value)) {
-        this.$message.error('券號只能包含數字，請重新輸入');
-        ticket.ticket_no = '';
+      // 验证：只能包含数字
+      if (!/^\d+$/.test(ticketNo)) {
+        this.singleRecord.error = '券號只能包含數字，請重新輸入';
+        this.singleRecord.ticket_no = '';
         return;
       }
 
-      // 驗證：不能超過6位
-      if (value.length > 6) {
-        this.$message.error('券號不能超過6位數字');
-        ticket.ticket_no = '';
+      // 验证：不能超过6位
+      if (ticketNo.length > 6) {
+        this.singleRecord.error = '券號不能超過6位數字';
+        this.singleRecord.ticket_no = '';
         return;
       }
 
-      // 自動補0到6位
-      ticket.ticket_no = value.padStart(6, '0');
-    },
+      // 格式化：补齐6位（前面补0）
+      this.singleRecord.ticket_no = ticketNo.padStart(6, '0');
 
-    // 提交中獎記錄
-    async submitWinRecord() {
-      // 收集所有券號並驗證
-      const records = [];
-      for (const prizeLevel of this.recordPrizeLevels) {
-        for (const ticket of prizeLevel.tickets) {
-          if (ticket.ticket_no) {
-            // 二次驗證：確保券號格式正確
-            const ticketNo = String(ticket.ticket_no).trim();
-            if (!/^\d{1,6}$/.test(ticketNo)) {
-              this.$message.error(`券號 "${ticket.ticket_no}" 格式錯誤，請檢查`);
-              return;
-            }
+      // 查询玩家信息
+      this.singleRecord.loading = true;
+      this.singleRecord.error = null;
+      this.singleRecord.player_info = null;
 
-            records.push({
-              prize_level_id: prizeLevel.id,
-              ticket_no: ticketNo.padStart(6, '0')  // 确保补0到6位
-            });
+      try {
+        // ⭐ 使用 this.$request（和 getActivityDetail 一样）
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPlayerByTicketNo',
+          method: 'post',
+          data: {
+            activity_id: this.recordData.activity_id,
+            ticket_no: this.singleRecord.ticket_no
           }
+        });
+
+        console.log('📡 Query response:', res);
+
+        // ⭐ 统一响应格式判断：通过 code 区分成功和失败
+        if (res.code === 200) {
+          // ✅ 成功：数据在 res.data
+          this.singleRecord.player_info = res.data;
+          this.singleRecord.error = null;
+          console.log('✅ Player found:', res.data);
+        } else {
+          // ❌ 失败：错误消息在 res.message
+          this.singleRecord.error = res.message || '查詢失敗';
+          this.singleRecord.player_info = null;
+          console.log('❌ Error:', res.message, '(code:', res.code + ')');
         }
+      } catch (error) {
+        // ⭐ this.$request 在 code !== 200 时会 reject
+        // 但 reject 的对象就是响应数据本身！
+        console.log('❌ Request rejected:', error);
+
+        if (error && error.code && error.message) {
+          // 这是正常的业务错误响应
+          this.singleRecord.error = error.message || '查詢失敗';
+          this.singleRecord.player_info = null;
+          console.log('❌ Business error:', error.message, '(code:', error.code + ')');
+        } else {
+          // 真正的异常错误（网络错误等）
+          console.error('System error:', error);
+          this.singleRecord.error = '系統錯誤，請聯繫管理員';
+          this.singleRecord.player_info = null;
+        }
+      } finally {
+        this.singleRecord.loading = false;
+      }
+    },
+
+    // ⭐ 清除单个玩家信息
+    clearSinglePlayerInfo() {
+      this.singleRecord.player_info = null;
+      this.singleRecord.error = null;
+    },
+
+    // ⭐ 提交单个中奖记录（自动发放）
+    async submitSingleWinRecord() {
+      if (!this.singleRecord.prize_level_id) {
+        this.$message.warning('請選擇獎品等級');
+        return;
       }
 
-      if (records.length === 0) {
-        this.$message.warning(this.trans.form?.at_least_one_ticket || '請至少輸入一個券號');
+      if (!this.singleRecord.ticket_no) {
+        this.$message.warning('請輸入中獎券號');
+        return;
+      }
+
+      if (!this.singleRecord.player_info) {
+        this.$message.warning('請先查詢玩家信息');
         return;
       }
 
       this.recordSubmitting = true;
+
       try {
+        // ⭐ 使用单个录入专用API
         const res = await this.$request({
-          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordWinByTickets',
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/recordSingleWinTicket',
           method: 'post',
           data: {
             activity_id: this.recordData.activity_id,
-            records: records
+            prize_level_id: this.singleRecord.prize_level_id,
+            ticket_no: this.singleRecord.ticket_no
           }
         });
 
+        // ⭐ 调试日志
+        console.log('Submit response:', res);
+        console.log('res.code:', res.code);
+        console.log('res.code === 200:', res.code === 200);
+
+        // ⭐ 简单清晰的响应处理
         if (res.code === 200) {
-          this.$message.success(`成功錄入 ${res.data.success_count} 條中獎記錄`);
-          this.recordVisible = false;
-          this.fetchActivities();
+          // ✅ 成功
+          this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
+
+          // 重置单个录入表单，保持抽屉打开
+          this.singleRecord = {
+            prize_level_id: this.singleRecord.prize_level_id,  // 保留奖品等级选择
+            ticket_no: '',
+            player_info: null,
+            loading: false,
+            error: null
+          };
         } else {
-          this.$message.error(res.message || res.msg || '錄入失敗');
+          // ❌ 失败
+          this.$message.error(res.msg || res.message || '錄入失敗');
         }
       } catch (error) {
         this.$message.error('錄入失敗');
@@ -1363,11 +1481,21 @@ export default {
 
     // 關閉錄入抽屜
     handleRecordClose() {
-      this.recordVisible = false;  // ✅ 關閉抽屜
+      this.recordVisible = false;
       this.recordData = {
         activity_id: null
       };
       this.recordPrizeLevels = [];
+      // ⭐ 重置单个录入数据
+      this.singleRecord = {
+        prize_level_id: null,
+        ticket_no: '',
+        player_info: null,
+        loading: false,
+        error: null
+      };
+      // ⭐ 清空活动信息
+      this.currentActivityInfo = null;
     },
 
     // 顯示直播地址彈窗

@@ -71,6 +71,7 @@ class LotteryTicketPushQueue implements Consumer
         Log::info('摸奖券推送成功', [
             'type' => $content['type'] ?? 'unknown',
             'player_id' => $this->extractPlayerId($channels),
+            'content' => $content,
         ]);
     }
 

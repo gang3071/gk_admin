@@ -946,10 +946,8 @@ class PlayerController
                         $national_promoter->level = $level_min->id;
                         $national_promoter->save();
 
-                        addPlayerExtend($player);
-
-                        // 更新扩展信息
-                        PlayerExtend::query()->where('player_id', $player->id)->update([
+                        // 创建玩家扩展信息（一次性传入扩展数据，避免二次更新）
+                        addPlayerExtend($player, [
                             'id_number' => $form->input('player_extend.id_number'),
                             'id_card_front' => $form->input('player_extend.id_card_front'),
                             'id_card_back' => $form->input('player_extend.id_card_back'),

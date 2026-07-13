@@ -331,6 +331,14 @@ return [
         'prize_level_not_found_for_ticket' => 'Prize level not found for ticket {ticket_no}',
         'invalid_ticket_format' => 'Invalid format for ticket {ticket_no}, must contain only digits and not exceed 6 characters',
         'bet_progress_not_found' => 'Bet progress record not found',
+        // Single entry player query
+        'activity_id_required' => 'Activity ID is required',
+        'ticket_no_required' => 'Ticket number is required',
+        'activity_not_exist' => 'Activity does not exist',
+        'ticket_not_exist_or_not_belong' => 'Ticket does not exist or does not belong to this activity',
+        'ticket_already_used' => 'This ticket has already been used and cannot be recorded as a winning ticket',
+        'ticket_already_recorded' => 'This ticket has already been recorded, duplicate entry not allowed',
+        'player_not_found_for_ticket' => 'Player not found for this ticket',
         // Stop drawing confirmation
         'stop_drawing_no_records_confirm' => '⚠️ No winning tickets recorded yet!\n\nAfter stopping drawing, you will not be able to record winning tickets. The activity will enter ENDED status.\n\nAre you sure to stop drawing?',
         'stop_drawing_with_records_confirm' => 'Confirm to stop drawing?\n\n📊 Winning Statistics:\n• Recorded tickets: {count}\n• Total prize amount: NT$ {amount}\n• Pending awards: {pending}\n• Granted awards: {granted}\n\n⚠️ Cannot record more tickets after stopping',

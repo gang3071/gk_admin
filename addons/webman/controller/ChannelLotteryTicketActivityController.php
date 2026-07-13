@@ -7,7 +7,9 @@ use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\model\LotteryTicketPrizeLevel;
+use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\LotteryTicketVipConfig;
+use addons\webman\model\Player;
 use addons\webman\model\VipLevel;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\detail\Detail;
@@ -108,6 +110,8 @@ class ChannelLotteryTicketActivityController
             'ticketNo' => admin_trans('lottery_ticket.fields.ticket_no'),
             'ticketNoInput' => admin_trans('lottery_ticket.fields.ticket_no_input'),
             'playerName' => admin_trans('lottery_ticket.fields.player_name'),
+            'playerUuid' => admin_trans('lottery_ticket.fields.player_uuid'),  // ⭐ 新增：玩家UUID
+            'playerPhone' => admin_trans('lottery_ticket.fields.player_username'),  // ⭐ 新增：玩家手机号
             'source' => admin_trans('lottery_ticket.fields.source'),
             'createdAt' => admin_trans('lottery_ticket.fields.created_at'),
             'usedAt' => admin_trans('lottery_ticket.fields.used_at'),
@@ -329,7 +333,7 @@ class ChannelLotteryTicketActivityController
             $file = Request::file('file');
 
             if (!$file) {
-                return Response::fail(admin_trans('lottery_ticket.error.invalid_file'));
+                return message_error(admin_trans('lottery_ticket.error.invalid_file'));
             }
 
             // 验证文件类型
@@ -337,19 +341,19 @@ class ChannelLotteryTicketActivityController
             $allowedTypes = ['jpg', 'jpeg', 'png'];
 
             if (!in_array($extension, $allowedTypes)) {
-                return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
+                return message_error(admin_trans('lottery_ticket.error.invalid_image_type'));
             }
 
             // 获取MIME类型
             $mimeType = $file->getMimeType();
             $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
             if (!in_array($mimeType, $allowedMimes)) {
-                return Response::fail(admin_trans('lottery_ticket.error.invalid_image_type'));
+                return message_error(admin_trans('lottery_ticket.error.invalid_image_type'));
             }
 
             // 验证文件大小 (2MB)
             if ($file->getSize() > 2 * 1024 * 1024) {
-                return Response::fail(admin_trans('lottery_ticket.error.file_too_large'));
+                return message_error(admin_trans('lottery_ticket.error.file_too_large'));
             }
 
             // 生成唯一文件名
@@ -377,12 +381,12 @@ class ChannelLotteryTicketActivityController
                 return Response::success(['url' => $url]);
             } else {
                 Log::error('活动封面上传失败，存储返回 false');
-                return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
+                return message_error(admin_trans('lottery_ticket.error.upload_failed'));
             }
 
         } catch (\Exception $e) {
             Log::error('活动封面上传异常: ' . $e->getMessage());
-            return Response::fail(admin_trans('lottery_ticket.error.upload_failed'));
+            return message_error(admin_trans('lottery_ticket.error.upload_failed'));
         }
     }
 
@@ -1159,10 +1163,86 @@ class ChannelLotteryTicketActivityController
                 $ticket->status = LotteryTicket::STATUS_USED;
                 $ticket->save();
 
-                // 发送中奖推送通知
-                \addons\webman\service\LotteryTicketPushService::pushWinNotification($record);
+                // ⭐ 核心改动：录入后立即发放奖励
+                try {
+                    // 锁定玩家
+                    $player = \addons\webman\model\Player::query()->lockForUpdate()->find($ticket->player_id);
+                    if (!$player) {
+                        throw new \Exception('玩家不存在');
+                    }
 
-                $successCount++;
+                    // 检查玩家状态
+                    if (isset($player->status) && $player->status != \addons\webman\model\Player::STATUS_ENABLE) {
+                        throw new \Exception('玩家已停用，无法发放奖励');
+                    }
+
+                    // 更新状态为发放中
+                    $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_PROCESSING;
+                    $record->save();
+
+                    // 发放奖励到玩家钱包
+                    $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+                    $newBalance = \addons\webman\service\WalletService::add($player->id, $prizeLevel->prize_amount, 1);
+
+                    // 记录金流明细
+                    $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                    $playerDeliveryRecord->player_id = $player->id;
+                    $playerDeliveryRecord->department_id = $player->department_id;
+                    $playerDeliveryRecord->target = $record->getTable();
+                    $playerDeliveryRecord->target_id = $record->id;
+                    $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+                    $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                    $playerDeliveryRecord->amount = $prizeLevel->prize_amount;
+                    $playerDeliveryRecord->amount_before = $oldBalance;
+                    $playerDeliveryRecord->amount_after = $newBalance;
+                    $playerDeliveryRecord->tradeno = $ticketNo;
+                    $playerDeliveryRecord->remark = sprintf(
+                        '摸奖券中奖自动发放：%s - %s',
+                        $activity->name,
+                        $prizeLevel->level_name
+                    );
+                    $playerDeliveryRecord->save();
+
+                    // 更新中奖记录状态为已发放
+                    $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_CLAIMED;
+                    $record->distributed_by = Admin::user()->id;
+                    $record->distributed_at = date('Y-m-d H:i:s');
+                    $record->distribution_note = '录入中奖号码自动发放';
+                    $record->save();
+
+                    // 更新活动已发放金额
+                    $activity->distributed_prize_amount = ($activity->distributed_prize_amount ?? 0) + $prizeLevel->prize_amount;
+                    $activity->save();
+
+                    // 发送发放成功推送通知
+                    \addons\webman\service\LotteryTicketPushService::pushPrizeDistributed(
+                        $player->id,
+                        $activity,
+                        $ticketNo,
+                        $prizeLevel->level_name,
+                        $prizeLevel->prize_amount
+                    );
+
+                    $successCount++;
+
+                } catch (\Exception $e) {
+                    // 发放失败，标记记录状态
+                    $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_FAILED;
+                    $record->distribution_note = '自动发放失败: ' . $e->getMessage();
+                    $record->save();
+
+                    $errors[] = admin_trans('lottery_ticket.error.distribute_failed', null, [
+                        'ticket_no' => $ticketNo,
+                        'reason' => $e->getMessage()
+                    ]);
+
+                    \support\Log::error('[摸奖券] 录入后自动发放失败', [
+                        'activity_id' => $activityId,
+                        'ticket_no' => $ticketNo,
+                        'player_id' => $ticket->player_id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
             }
 
             Db::commit();
@@ -2497,5 +2577,245 @@ class ChannelLotteryTicketActivityController
         }
 
         return $query->first();
+    }
+
+    /**
+     * 根据券号查询玩家信息（单个录入模式）
+     * @group channel
+     * @auth true
+     */
+    public function getPlayerByTicketNo()
+    {
+        $activityId = Request::input('activity_id');
+        $ticketNo = Request::input('ticket_no');
+
+        // 验证参数
+        if (empty($activityId)) {
+            return Response::success([], admin_trans('lottery_ticket.error.activity_id_required'), 400);
+        }
+
+        if (empty($ticketNo)) {
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_no_required'), 400);
+        }
+
+        // 格式化券号（补齐6位）
+        $ticketNo = str_pad($ticketNo, 6, '0', STR_PAD_LEFT);
+
+        // 验证活动是否存在
+        $activity = LotteryTicketActivity::query()
+            ->where('id', $activityId)
+            ->where('department_id', Admin::user()->department_id)
+            ->first();
+
+        if (!$activity) {
+            return Response::success([], admin_trans('lottery_ticket.error.activity_not_exist'), 404);
+        }
+
+        // 查询该券号对应的摸奖券记录
+        $ticket = LotteryTicket::query()
+            ->where('activity_id', $activityId)
+            ->where('ticket_no', $ticketNo)
+            ->first();
+
+        if (!$ticket) {
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_not_exist_or_not_belong'), 404);
+        }
+
+        // ⭐ 检查券号状态：必须是未使用状态
+        if ($ticket->status != LotteryTicket::STATUS_UNUSED) {
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_already_used'), 409);
+        }
+
+        // 检查券号是否已经被使用（已录入中奖记录）
+        $existingRecord = LotteryTicketRecord::query()
+            ->where('activity_id', $activityId)
+            ->where('ticket_no', $ticketNo)
+            ->first();
+
+        if ($existingRecord) {
+            return Response::success([], admin_trans('lottery_ticket.error.ticket_already_recorded'), 409);
+        }
+
+        // 查询玩家信息
+        $player = Player::query()
+            ->where('id', $ticket->player_id)
+            ->first();
+
+        if (!$player) {
+            return Response::success([], admin_trans('lottery_ticket.error.player_not_found_for_ticket'), 404);
+        }
+
+        // ✅ 成功：返回玩家信息
+        return Response::success([
+            'player_id' => $player->id,
+            'player_uuid' => $player->uuid,
+            'player_name' => $player->name,
+            'player_phone' => $player->phone ?? null,
+            'ticket_no' => $ticketNo,
+            'ticket_id' => $ticket->id
+        ], '', 200);
+    }
+
+    /**
+     * 单个录入中奖记录并自动发放（单个录入模式专用API）
+     * @group channel
+     * @auth true
+     */
+    public function recordSingleWinTicket()
+    {
+        $activityId = Request::input('activity_id');
+        $prizeLevelId = Request::input('prize_level_id');
+        $ticketNo = Request::input('ticket_no');
+
+        // 验证参数
+        if (!$activityId || !$prizeLevelId || !$ticketNo) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+        }
+
+        // 格式化券号（补齐6位）
+        $ticketNo = str_pad($ticketNo, 6, '0', STR_PAD_LEFT);
+
+        Db::beginTransaction();
+        try {
+            // 验证活动
+            $activity = LotteryTicketActivity::where('id', $activityId)
+                ->where('department_id', Admin::user()->department_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$activity) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.activity_not_exist'));
+            }
+
+            // 验证奖品等级
+            $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
+            if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]));
+            }
+
+            // 查找券号（必须是未使用状态）
+            $ticket = LotteryTicket::where('ticket_no', $ticketNo)
+                ->where('activity_id', $activityId)
+                ->where('status', LotteryTicket::STATUS_UNUSED)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$ticket) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]));
+            }
+
+            // 双重检查：防止重复录入
+            $existingRecord = \addons\webman\model\LotteryTicketRecord::where('ticket_id', $ticket->id)
+                ->where('activity_id', $activityId)
+                ->first();
+
+            if ($existingRecord) {
+                Db::rollBack();
+                return message_error(admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]));
+            }
+
+            // 创建中奖记录
+            $record = \addons\webman\model\LotteryTicketRecord::create([
+                'activity_id' => $activityId,
+                'player_id' => $ticket->player_id,
+                'department_id' => $ticket->department_id,
+                'ticket_id' => $ticket->id,
+                'ticket_no' => $ticketNo,
+                'prize_type' => \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH,  // ⭐ 固定为现金类型
+                'prize_name' => $prizeLevel->level_name,  // ⭐ 使用 prize_name 存储奖品等级名称
+                'prize_amount' => $prizeLevel->prize_amount,
+                'status' => \addons\webman\model\LotteryTicketRecord::STATUS_PENDING
+            ]);
+
+            // 更新券状态为已使用
+            $ticket->status = LotteryTicket::STATUS_USED;
+            $ticket->used_at = date('Y-m-d H:i:s');
+            $ticket->save();
+
+            // ⭐ 自动发放奖励
+            try {
+                $player = \addons\webman\model\Player::query()->lockForUpdate()->find($ticket->player_id);
+
+                if (!$player) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.player_not_found'));
+                }
+
+                // 发放奖励到玩家钱包
+                $oldBalance = \addons\webman\service\WalletService::getBalance($player->id, 1);
+                $newBalance = \addons\webman\service\WalletService::add($player->id, $prizeLevel->prize_amount, 1);
+
+                // 记录金流明细
+                $playerDeliveryRecord = new \addons\webman\model\PlayerDeliveryRecord();
+                $playerDeliveryRecord->player_id = $player->id;
+                $playerDeliveryRecord->department_id = $player->department_id;
+                $playerDeliveryRecord->target = $record->getTable();
+                $playerDeliveryRecord->target_id = $record->id;
+                $playerDeliveryRecord->type = \addons\webman\model\PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD;
+                $playerDeliveryRecord->source = 'lottery_ticket_reward';
+                $playerDeliveryRecord->amount = $prizeLevel->prize_amount;
+                $playerDeliveryRecord->amount_before = $oldBalance;
+                $playerDeliveryRecord->amount_after = $newBalance;
+                $playerDeliveryRecord->tradeno = $ticketNo;
+                $playerDeliveryRecord->remark = sprintf(
+                    '摸奖券中奖自动发放：%s - %s',
+                    $activity->name,
+                    $prizeLevel->level_name
+                );
+                $playerDeliveryRecord->save();
+
+                // 更新中奖记录状态为已发放
+                $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_CLAIMED;
+                $record->distributed_by = Admin::user()->id;
+                $record->distributed_at = date('Y-m-d H:i:s');
+                $record->distribution_note = '录入中奖号码自动发放';
+                $record->save();
+
+                // 更新活动已发放金额
+                $activity->distributed_prize_amount = ($activity->distributed_prize_amount ?? 0) + $prizeLevel->prize_amount;
+                $activity->save();
+
+                // 发送发放成功推送通知
+                \addons\webman\service\LotteryTicketPushService::pushPrizeDistributed(
+                    $player->id,
+                    $activity,
+                    $ticketNo,
+                    $prizeLevel->level_name,
+                    $prizeLevel->prize_amount
+                );
+
+            } catch (\Exception $e) {
+                // 发放失败，标记记录状态
+                $record->status = \addons\webman\model\LotteryTicketRecord::STATUS_FAILED;
+                $record->distribution_note = '自动发放失败: ' . $e->getMessage();
+                $record->save();
+
+                Db::rollBack();
+                return Response::success([], admin_trans('lottery_ticket.error.distribute_failed', null, [
+                    'ticket_no' => $ticketNo,
+                    'reason' => $e->getMessage()
+                ]), 500);
+            }
+
+            Db::commit();
+
+            // ✅ 成功返回
+            return Response::success([
+                'message' => admin_trans('lottery_ticket.message.record_success'),
+                'record_id' => $record->id,
+                'prize_amount' => $prizeLevel->prize_amount
+            ], '', 200);
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            Log::error('单个录入中奖记录失败', [
+                'activity_id' => $activityId,
+                'ticket_no' => $ticketNo,
+                'error' => $e->getMessage()
+            ]);
+            return Response::success([], $e->getMessage(), 500);
+        }
     }
 }

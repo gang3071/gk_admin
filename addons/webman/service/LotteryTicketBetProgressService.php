@@ -440,13 +440,23 @@ class LotteryTicketBetProgressService
             ->where('created_at', '<=', $activity->end_time)
             ->sum('chip_amount') ?? 0;
 
-        // 2. 统计电子游戏打码量（只统计已结算，不包括未结算和已取消）
+        // 2. 统计电子游戏打码量（只统计已结算 + 只统计电子游戏平台）
+        // ✅ 剔除真人/体育平台，只保留电子游戏平台的下注计入打码量
         $onlineBet = PlayGameRecord::query()
             ->where('player_id', $playerId)
             ->where('department_id', $activity->department_id)
             ->where('created_at', '>=', $activity->start_time)
             ->where('created_at', '<=', $activity->end_time)
             ->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算
+            ->whereHas('gamePlatform', function($query) {
+                // ✅ 过滤真人视讯和体育平台（从配置文件读取）
+                $excludedPlatforms = config('platform_filter.excluded_platforms', [
+                    // 默认值（防止配置文件不存在）
+                    'WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE',
+                    'KY', 'KYS', 'OB', 'SPS', 'SPS_DY'
+                ]);
+                $query->whereNotIn('code', $excludedPlatforms);
+            })
             ->sum('bet') ?? 0;
 
         // 3. 返回总打码量
