@@ -535,9 +535,12 @@ class MediaServer
      */
     public function createMachineStream(string $name, string $stream_url, int $type, array $pushList = []): mixed
     {
-        // 参数验证和预处理（保持不变）
-        if (strpos($stream_url, 'rtsp') !== false) {
-            throw new Exception(admin_trans('message.media.media_stream_url_error'));
+        // 如果传入的是完整的 RTSP URL，自动提取 IP 部分
+        if (strpos($stream_url, 'rtsp://') !== false) {
+            // 提取 IP：rtsp://admin:password@192.168.1.100/path -> 192.168.1.100
+            if (preg_match('/rtsp:\/\/(?:[^@]+@)?([^\/]+)/', $stream_url, $matches)) {
+                $stream_url = $matches[1];
+            }
         }
 
         $stream_url = $type == GameType::TYPE_FISH
