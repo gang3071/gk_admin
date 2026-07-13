@@ -327,8 +327,8 @@ return [
         'lottery_ticket_reward' => '摸奖券中奖',
         'ticket_redeem' => '出票核销',
         'ticket_open_score' => '扫码开分',
-        'vip_birthday' => 'VIP生日礼金',
-        'vip_upgrade' => 'VIP升级礼金',
+        'birthday_bonus' => 'VIP生日礼金',
+        'upgrade_bonus' => 'VIP升级礼金',
     ],
     'source' => [
         'system' => '系统',

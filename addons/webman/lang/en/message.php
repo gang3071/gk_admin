@@ -327,8 +327,8 @@ return [
         'lottery_ticket_reward' => 'Lottery Ticket Prize',
         'ticket_redeem' => 'Ticket Redeem',
         'ticket_open_score' => 'Scan Open Score',
-        'vip_birthday' => 'VIP Birthday Bonus',
-        'vip_upgrade' => 'VIP Upgrade Bonus',
+        'birthday_bonus' => 'VIP Birthday Bonus',
+        'upgrade_bonus' => 'VIP Upgrade Bonus',
     ],
     'source' => [
         'system' => 'system',

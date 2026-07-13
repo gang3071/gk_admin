@@ -326,8 +326,8 @@ return [
         'lottery_ticket_reward' => '抽選券当選',
         'ticket_redeem' => '出票キャンセル',
         'ticket_open_score' => 'スキャン開分',
-        'vip_birthday' => 'VIP誕生日ボーナス',
-        'vip_upgrade' => 'VIPアップグレードボーナス',
+        'birthday_bonus' => 'VIP誕生日ボーナス',
+        'upgrade_bonus' => 'VIPアップグレードボーナス',
     ],
     'source' => [
         'system' => 'システム',
