@@ -31,6 +31,7 @@ class MediaServer
     private $mediaApp = '';
     private $stream_url = 'rtsp://admin:ez88888888@stream_url/cam/realmonitor?channel=1&subtype=0';
     private $fish_stream_url = 'rtsp://{ip}/live/0';
+    private MediaServerApiClient $apiClient;
 
     /**
      */
@@ -39,87 +40,10 @@ class MediaServer
         $this->domain = $domain;
         $this->mediaApp = $mediaApp;
         $this->log = Log::channel('media_recording');
+        // 创建媒体服务器 API 客户端（通过 gk_work）
+        $this->apiClient = new MediaServerApiClient();
     }
 
-    /**
-     * 获取媒体代理配置
-     *
-     * @return array{host: string, port: int}
-     */
-    private function getProxyConfig(): array
-    {
-        return config('app.media_proxy', [
-            'host' => '127.0.0.1',
-            'port' => 8788,
-        ]);
-    }
-
-    /**
-     * 通过 gk_work 代理发送媒体服务器请求
-     *
-     * @param string $method HTTP 方法 (GET|POST|PUT|DELETE)
-     * @param string $url 完整的媒体服务器 API URL
-     * @param array $body 请求体（可选）
-     * @param array $headers 额外头部（可选）
-     * @param int $timeout 超时时间（秒）
-     * @return mixed 响应对象或数据
-     * @throws Exception
-     */
-    private function proxyRequest(string $method, string $url, array $body = [], array $headers = [], int $timeout = 10): mixed
-    {
-        try {
-            // 获取代理配置
-            $proxyConfig = $this->getProxyConfig();
-            $proxyUrl = sprintf('http://%s:%d/api/admin/media-proxy', $proxyConfig['host'], $proxyConfig['port']);
-
-            // 确保 URL 包含协议前缀
-            if (!preg_match('/^https?:\/\//', $url)) {
-                $url = 'http://' . $url;
-            }
-
-            // 构建代理请求参数
-            $proxyPayload = [
-                'method' => strtoupper($method),
-                'url' => $url,
-                'timeout' => $timeout,
-            ];
-
-            if (!empty($headers)) {
-                $proxyPayload['headers'] = $headers;
-            }
-
-            if (!empty($body)) {
-                $proxyPayload['body'] = $body;
-            }
-
-            // 发送代理请求（代理超时时间 = 实际超时 + 5秒缓冲）
-            $response = Http::timeout($timeout + 5)->post($proxyUrl, $proxyPayload);
-
-            if (!$response->successful()) {
-                throw new Exception('Media proxy request failed with status: ' . $response->status());
-            }
-
-            $result = $response->json();
-
-            // 检查代理响应格式
-            if (!isset($result['success']) || !$result['success']) {
-                $errorMsg = $result['message'] ?? 'Unknown media proxy error';
-                throw new Exception($errorMsg);
-            }
-
-            // 返回媒体服务器的实际响应
-            return $result['data'];
-
-        } catch (\Exception $e) {
-            $this->log->error('[媒体代理] 请求失败', [
-                'method' => $method,
-                'url' => $url,
-                'error' => $e->getMessage(),
-            ]);
-            throw $e;
-        }
-    }
-    
     /**
      * 添加rtmp节点
      * @param $rtmpUrl
@@ -133,39 +57,17 @@ class MediaServer
     {
         $maxRetries = 4;
         try {
-            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint';
-            $body = [
-                'type' => 'generic',
-                'rtmpUrl' => $rtmpUrl,
-                'endpointServiceId' => $endpointServiceId,
-            ];
+            // 调用 gk_work API
+            return $this->apiClient->rtmpEndpoint($rtmpUrl, $endpointServiceId, $streamName, $this->domain, $this->mediaApp);
 
-            // 通过 gk_work 代理调用
-            $response = $this->proxyRequest('POST', $url, $body, [], 5);
-
-        } catch (\Exception) {
-            throw new Exception(admin_trans('message.media.media_request_error'));
-        }
-
-        $this->log->info('rtmpEndpoint', [
-            'response' => $response,
-            'url' => $url,
-            'body' => $body,
-        ]);
-
-        if (!empty($response) && isset($response['success'])) {
-            if (empty($response['success'])) {
-                $attempts++;
-                if ($attempts >= $maxRetries) {
-                    throw new Exception(admin_trans('message.media.media_stream_end_point_error'));
-                }
-                $this->rtmpEndpoint($rtmpUrl, $endpointServiceId, $streamName, $attempts);
+        } catch (\Exception $e) {
+            $attempts++;
+            if ($attempts >= $maxRetries) {
+                throw $e;
             }
-        } else {
-            throw new Exception(admin_trans('message.media.media_request_error'));
+            // 重试
+            return $this->rtmpEndpoint($rtmpUrl, $endpointServiceId, $streamName, $attempts);
         }
-
-        return true;
     }
     
     /**
@@ -180,34 +82,17 @@ class MediaServer
     {
         $maxRetries = 4;
         try {
-            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName . '/rtmp-endpoint?endpointServiceId=' . $endpointServiceId;
+            // 调用 gk_work API
+            return $this->apiClient->deleteRtmpEndpoint($endpointServiceId, $streamName, $this->domain, $this->mediaApp);
 
-            // 通过 gk_work 代理调用
-            $response = $this->proxyRequest('DELETE', $url, [], [], 5);
-
-        } catch (\Exception) {
-            throw new Exception(admin_trans('message.media.media_request_error'));
-        }
-
-        $this->log->info('deleteRtmpEndpoint', [
-            'response' => $response,
-            'endpointServiceId' => $endpointServiceId,
-            'streamName' => $streamName,
-        ]);
-
-        if (!empty($response) && isset($response['success'])) {
-            if (empty($response['success']) && !$response['success']) {
-                $attempts++;
-                if ($attempts >= $maxRetries) {
-                    throw new Exception(admin_trans('message.media.delete_media_stream_end_point_error'));
-                }
-                $this->deleteRtmpEndpoint($endpointServiceId, $streamName, $attempts);
+        } catch (\Exception $e) {
+            $attempts++;
+            if ($attempts >= $maxRetries) {
+                throw $e;
             }
-        } else {
-            throw new Exception(admin_trans('message.media.media_request_error'));
+            // 重试
+            return $this->deleteRtmpEndpoint($endpointServiceId, $streamName, $attempts);
         }
-
-        return true;
     }
     
     /**
@@ -217,25 +102,8 @@ class MediaServer
      */
     public function getViewers($streamName): mixed
     {
-        try {
-            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName;
-
-            // 通过 gk_work 代理调用
-            $response = $this->proxyRequest('GET', $url, [], ['Content-Type' => 'application/json'], 5);
-
-        } catch (\Exception) {
-            return false;
-        }
-
-        if (!empty($response)) {
-            if (empty($response['success'])) {
-                if (isset($response['webRTCViewerCount'])) {
-                    return $response['webRTCViewerCount'];
-                }
-            }
-        }
-
-        return false;
+        // 调用 gk_work API
+        return $this->apiClient->getViewers($streamName, $this->domain, $this->mediaApp);
     }
     
     /**
@@ -651,28 +519,9 @@ class MediaServer
     {
         $domain = !empty($domain) ? $domain : $this->domain;
         $mediaApp = !empty($oldMediaApp) ? $oldMediaApp : $this->mediaApp;
-        try {
-            $url = $domain . '/' . $mediaApp . '/rest/v2/broadcasts/' . $streamName;
 
-            // 通过 gk_work 代理调用
-            $response = $this->proxyRequest('DELETE', $url, [], ['Content-Type' => 'application/json'], 5);
-        } catch (\Exception) {
-            return false;
-        }
-
-        $this->log->info('deleteMachineStream', [
-            'response' => $response,
-            'url' => $url,
-        ]);
-
-        if (!empty($response)) {
-            if (empty($response['success'])) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-        return true;
+        // 调用 gk_work API
+        return $this->apiClient->deleteMachineStream($streamName, $domain, $mediaApp);
     }
     
     /**
@@ -686,47 +535,17 @@ class MediaServer
      */
     public function createMachineStream(string $name, string $stream_url, int $type, array $pushList = []): mixed
     {
+        // 参数验证和预处理（保持不变）
         if (strpos($stream_url, 'rtsp') !== false) {
             throw new Exception(admin_trans('message.media.media_stream_url_error'));
         }
 
-        $stream_url = $type == GameType::TYPE_FISH ? str_replace('{ip}', $stream_url,
-            $this->fish_stream_url) : str_replace('stream_url', $stream_url, $this->stream_url);
+        $stream_url = $type == GameType::TYPE_FISH
+            ? str_replace('{ip}', $stream_url, $this->fish_stream_url)
+            : str_replace('stream_url', $stream_url, $this->stream_url);
 
-        try {
-            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/create?autoStart=true';
-            $body = [
-                'hlsViewerCount' => 0,
-                'mp4Enabled' => 0,
-                'name' => $name,
-                'playListItemList' => [],
-                'rtmpViewerCount' => 0,
-                'streamUrl' => $stream_url,
-                'type' => 'streamSource',
-                'webRTCViewerCount' => 0,
-                'endPointList' => $pushList
-            ];
-
-            // 通过 gk_work 代理调用
-            $response = $this->proxyRequest('POST', $url, $body, ['Content-Type' => 'application/json'], 5);
-
-        } catch (\Exception $e) {
-            $this->log->info('createMachineStream', [$e->getMessage()]);
-            throw new Exception(admin_trans('message.media.media_request_error'));
-        }
-
-        $this->log->info('createMachineStream', [$response]);
-
-        // 代理返回的已经是解析后的数组数据
-        if (!empty($response)) {
-            if (empty($response['success'])) {
-                throw new Exception(admin_trans('message.media.media_stream_pull_error'));
-            }
-        } else {
-            throw new Exception(admin_trans('message.media.media_request_error'));
-        }
-
-        return $response;
+        // 调用 gk_work API
+        return $this->apiClient->createMachineStream($name, $stream_url, $type, $pushList, $this->domain, $this->mediaApp);
     }
     
     /**
@@ -804,20 +623,7 @@ class MediaServer
      */
     public function getBroadcasts($streamName): mixed
     {
-        try {
-            $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/' . $streamName;
-
-            // 通过 gk_work 代理调用
-            $response = $this->proxyRequest('GET', $url, [], [], 5);
-
-        } catch (\Exception) {
-            throw new Exception(admin_trans('common.video_host_request_failed'));
-        }
-
-        if (empty($response)) {
-            throw new Exception(admin_trans('common.get_stream_info_failed'));
-        }
-
-        return $response;
+        // 调用 gk_work API
+        return $this->apiClient->getBroadcasts($streamName, $this->domain, $this->mediaApp);
     }
 }
