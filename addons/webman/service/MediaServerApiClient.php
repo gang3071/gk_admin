@@ -18,10 +18,8 @@ class MediaServerApiClient
 
     public function __construct()
     {
-        $proxyConfig = config('app.media_proxy', [
-            'host' => '127.0.0.1',
-            'port' => 8788,
-        ]);
+        // 直接使用 config/app.php 中的配置（会自动复用 GAME_PLATFORM_PROXY_HOST）
+        $proxyConfig = config('app.media_proxy');
 
         $this->baseUrl = sprintf('http://%s:%d/api/admin/media-server', $proxyConfig['host'], $proxyConfig['port']);
         $this->timeout = 10;
