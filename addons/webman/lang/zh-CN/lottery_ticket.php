@@ -32,7 +32,7 @@ return [
         'total_tickets' => '总发放数量',
         'used_tickets' => '已使用数量',
         'usage_rate' => '使用率',
-        'pending_count' => '待派奖',
+        'pending_count' => '派奖数量',
         'max_ticket_no' => '已发最大券号',  // ⭐ 当前已发放的最大券号（如：000123）
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => '奖品配置',
@@ -234,8 +234,8 @@ return [
         'total_draws' => '总抽奖次数',
         'total_winners' => '总中奖人数',
         'total_prize_amount' => '总奖金金额',
-        'pending_count' => '待派奖记录',
-        'pending_amount' => '待派奖金额',
+        'pending_count' => '派奖记录',
+        'pending_amount' => '派奖金额',
         'claimed_count' => '已派奖记录',
         'claimed_amount' => '已派奖金额',
         'count_suffix' => '笔',

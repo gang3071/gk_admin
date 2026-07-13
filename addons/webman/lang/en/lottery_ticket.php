@@ -32,7 +32,7 @@ return [
         'total_tickets' => 'Total Tickets',
         'used_tickets' => 'Used Tickets',
         'usage_rate' => 'Usage Rate',
-        'pending_count' => 'Pending Award',
+        'pending_count' => 'Award Count',
         'max_ticket_no' => 'Max Issued Ticket',  // ⭐ Current maximum issued ticket number (e.g.: 000123)
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => 'Prize Config',
@@ -232,8 +232,8 @@ return [
         'total_draws' => 'Total Draws',
         'total_winners' => 'Total Winners',
         'total_prize_amount' => 'Total Prize Amount',
-        'pending_count' => 'Pending Records',
-        'pending_amount' => 'Pending Amount',
+        'pending_count' => 'Award Records',
+        'pending_amount' => 'Award Amount',
         'claimed_count' => 'Claimed Records',
         'claimed_amount' => 'Claimed Amount',
         'count_suffix' => '',

@@ -32,7 +32,7 @@ return [
         'total_tickets' => 'チケット総数',
         'used_tickets' => '使用済チケット数',
         'usage_rate' => '使用率',
-        'pending_count' => '未払い出し',
+        'pending_count' => '払い出し数',
         'max_ticket_no' => '発行済最大チケット番号',  // ⭐ 現在発行済の最大チケット番号（例：000123）
         'operation' => '操作',  // ⭐ 新增
         'prize_config' => '賞品設定',
@@ -231,8 +231,8 @@ return [
         'total_draws' => '総抽選回数',
         'total_winners' => '総当選者数',
         'total_prize_amount' => '総賞金額',
-        'pending_count' => '払い出し待ち記録',
-        'pending_amount' => '払い出し待ち金額',
+        'pending_count' => '払い出し記録',
+        'pending_amount' => '払い出し金額',
         'claimed_count' => '払い出し済記録',
         'claimed_amount' => '払い出し済金額',
         'count_suffix' => '件',
