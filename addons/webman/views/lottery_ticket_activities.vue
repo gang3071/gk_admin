@@ -108,17 +108,13 @@
                     {{ trans.startDrawing || '開始開獎' }}
                   </a-menu-item>
 
-                  <!-- ⭐ 錄入中獎（進行中/待開獎/開獎中） -->
-                  <a-menu-item v-if="activity.status === 1 || activity.status === 5 || activity.status === 6" key="record">
+                  <!-- ⭐ 錄入中獎（僅開獎中狀態可操作，錄入即發放） -->
+                  <a-menu-item v-if="activity.status === 6" key="record">
                     <trophy-outlined/>
                     {{ trans.recordWin }}
                   </a-menu-item>
 
-                  <!-- ⭐ 發放獎勵（進行中/待開獎/開獎中/已結束，且有待發放） -->
-                  <a-menu-item v-if="(activity.status === 1 || activity.status === 5 || activity.status === 6 || activity.status === 2) && activity.pending_count > 0" key="distribute">
-                    <gift-outlined/>
-                    {{ trans.distributeAllPending || '發放獎勵' }} ({{ activity.pending_count }})
-                  </a-menu-item>
+                  <!-- 發放獎勵已移除：現在錄入中獎時自動發放 -->
 
                   <!-- ⭐ 停止開獎（開獎中） -->
                   <a-menu-item key="stopDrawing" v-if="activity.status === 6">
@@ -1254,9 +1250,6 @@ export default {
         case 'record':
           this.showRecordModal(activity);
           break;
-        case 'distribute':
-          this.showDistributeForm(activity);
-          break;
         case 'stopDrawing':
           this.stopDrawing(activity);
           break;
@@ -1743,47 +1736,7 @@ export default {
     },
 
     // ⭐ 批量發放該活動所有已錄入未發放的獎勵
-    showDistributeForm(activity) {
-      this.$confirm({
-        title: this.trans.distributeAllPending || '發放獎勵',
-        content: this.trans.confirm?.distributeAllPending || '確認發放該活動所有已錄入但未發放的獎勵？\n此操作將批量發放所有待發放記錄,請謹慎操作。',
-        okText: this.trans.confirmDistribute || '確認發放',
-        cancelText: this.trans.cancel || '取消',
-        onOk: async () => {
-          try {
-            const loading = this.$message.loading('正在批量發放獎勵...', 0);
-            const res = await this.$request({
-              url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/batchDistributeActivity',
-              method: 'post',
-              data: {
-                activity_id: activity.id
-              }
-            });
-
-            loading();
-
-            if (res.code === 200) {
-              // 显示详细结果
-              if (res.data && res.data.fail_count > 0) {
-                this.$warning({
-                  title: '批量發放完成',
-                  content: res.data.message || res.message,
-                  okText: '知道了'
-                });
-              } else {
-                this.$message.success(res.message || '批量發放成功');
-              }
-              this.fetchActivities();
-            } else {
-              this.$message.error(res.message || res.msg || '批量發放失敗');
-            }
-          } catch (error) {
-            this.$message.error('批量發放失敗');
-            console.error(error);
-          }
-        }
-      });
-    },
+    // showDistributeForm 已移除：現在錄入中獎時自動發放，無需單獨操作
 
     // ⭐ 獲取活動詳情（通用方法）
     async getActivityDetail(activityId) {
