@@ -87,8 +87,21 @@ class MediaServer
                 $proxyPayload['body'] = $body;
             }
 
+            // 记录请求详情
+            $this->log->info('[媒体代理] 发送请求', [
+                'proxy_url' => $proxyUrl,
+                'target_method' => $method,
+                'target_url' => $url,
+                'payload' => $proxyPayload,
+            ]);
+
             // 发送代理请求（代理超时时间 = 实际超时 + 5秒缓冲）
             $response = Http::timeout($timeout + 5)->post($proxyUrl, $proxyPayload);
+
+            $this->log->info('[媒体代理] 收到响应', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
 
             if (!$response->successful()) {
                 throw new Exception('Media proxy request failed with status: ' . $response->status());
@@ -110,6 +123,7 @@ class MediaServer
                 'method' => $method,
                 'url' => $url,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         }
@@ -685,9 +699,19 @@ class MediaServer
         if (strpos($stream_url, 'rtsp') !== false) {
             throw new Exception(admin_trans('message.media.media_stream_url_error'));
         }
-        
+
         $stream_url = $type == GameType::TYPE_FISH ? str_replace('{ip}', $stream_url,
             $this->fish_stream_url) : str_replace('stream_url', $stream_url, $this->stream_url);
+
+        // 记录调试信息
+        $this->log->info('[createMachineStream] 开始创建', [
+            'domain' => $this->domain,
+            'mediaApp' => $this->mediaApp,
+            'name' => $name,
+            'stream_url' => $stream_url,
+            'type' => $type,
+        ]);
+
         try {
             $url = $this->domain . '/' . $this->mediaApp . '/rest/v2/broadcasts/create?autoStart=true';
             $body = [
