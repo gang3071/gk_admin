@@ -83,8 +83,8 @@ return [
         'channel_coin_merchant_recharge_records' => 'コイン販売者の開分記録',
         'channel_coin_merchant_transaction_records' => 'コイン販売者の取引記録',
         //デバイス管理
-        'channel_device_manage' => 'デバイス管理',
-        'channel_device_list' => 'デバイスリスト',
+        'channel_device_manage' => 'プレイヤー管理',
+        'channel_device_list' => 'プレイヤーリスト',
         //プレイヤー管理
         'channel_player_manage' => 'プレイヤー管理',
         'channel_player_list' => 'プレイヤーリスト',
@@ -271,8 +271,8 @@ return [
         'store_machine_manage' => '店舗マシン管理',
         'lottery_receive' => '宝くじ受取',
         'financial_management' => '財務管理',
-        'device_manage' => 'デバイス管理',
-        'device_list' => 'デバイスリスト',
+        'device_manage' => 'プレイヤー管理',
+        'device_list' => 'プレイヤーリスト',
         'shift_handover_record' => 'シフト引継ぎ記録',
         'limit_management' => '制限管理',
         'limit_group_management' => '制限グループ管理',

@@ -528,6 +528,8 @@ class AutoShiftService
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as machine_point,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as birthday_bonus_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as upgrade_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
@@ -536,6 +538,8 @@ class AutoShiftService
                 PlayerDeliveryRecord::TYPE_MACHINE,
                 PlayerDeliveryRecord::TYPE_LOTTERY,
                 PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
+                PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
+                PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
                 PlayerDeliveryRecord::TYPE_RECHARGE,
                 PlayerDeliveryRecord::TYPE_WITHDRAWAL,
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
@@ -594,7 +598,8 @@ class AutoShiftService
             // 只保存有数据的设备（至少有一项不为0）
             if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
                 $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
-                $data['lottery_ticket_reward_amount'] > 0 || $electronicGameBet > 0 || $machineBet > 0) {
+                $data['lottery_ticket_reward_amount'] > 0 || $data['birthday_bonus_amount'] > 0 || $data['upgrade_bonus_amount'] > 0 ||
+                $electronicGameBet > 0 || $machineBet > 0) {
 
                 $deviceDetails[] = [
                     'department_id' => $departmentId,
@@ -609,6 +614,8 @@ class AutoShiftService
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
+                    'birthday_bonus_amount' => (float)($data['birthday_bonus_amount'] ?? 0),
+                    'upgrade_bonus_amount' => (float)($data['upgrade_bonus_amount'] ?? 0),
                     'electronic_game_bet_amount' => $electronicGameBet,
                     'machine_bet_amount' => $machineBet,
                     'total_in' => (float)$totalIn,

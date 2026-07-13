@@ -287,8 +287,8 @@ return [
     // 店家后台专用
     'unnamed' => '未命名',
     'game_id_label' => '游戏 ID: ',
-    'device_list_query_log' => '设备列表查询',
-    'no_device_data' => '暂无设备数据',
+    'device_list_query_log' => '玩家列表查询',
+    'no_device_data' => '暂无玩家数据',
 
     // 筛选器
     'filter' => [

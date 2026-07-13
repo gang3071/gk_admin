@@ -194,15 +194,8 @@ class MenuController
                     return message_error(admin_trans('menu.error.create_disabled'));
                 }
 
-                // 编辑时：检查name是否被修改（通过hidden字段提交的是原始值）
-                $submittedName = $form->input('name');
-                $menuId = $form->input('id');
-                $menu = $this->model::find($menuId);
-
-                if ($menu && $submittedName !== $menu->name) {
-                    // name被修改了，拒绝保存
-                    return message_error(admin_trans('menu.error.name_readonly'));
-                }
+                // 编辑时：从提交数据中移除name字段，防止被修改
+                unset($_POST['name'], $_REQUEST['name']);
             });
 
             $form->saved(function(){

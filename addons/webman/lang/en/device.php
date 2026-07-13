@@ -2,11 +2,11 @@
 
 return [
     // Page Title
-    'title' => 'Device List',
-    'create' => 'Add Device',
-    'add_device' => 'Add Device',
-    'edit_device' => 'Edit Device',
-    'edit' => 'Edit Device',
+    'title' => 'Player List',
+    'create' => 'Add Player',
+    'add_device' => 'Add Player',
+    'edit_device' => 'Edit Player',
+    'edit' => 'Edit Player',
     'ip_list' => 'IP Binding List',
     'ip_management' => 'IP Management',
     'add_ip' => 'Add IP',

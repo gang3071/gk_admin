@@ -2,10 +2,10 @@
 
 return [
     // タイトル
-    'title' => '店舗/デバイス管理',
+    'title' => '店舗/プレイヤー管理',
     'store_list' => '店舗リスト',
     'store_management' => '店舗管理',
-    'device_list' => 'デバイスリスト',
+    'device_list' => 'プレイヤーリスト',
     'delivery_record' => '取引記録',
     'shift_handover_record' => '引継ぎ報告',
 
