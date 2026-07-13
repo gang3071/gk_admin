@@ -328,7 +328,7 @@ return [
         'ticket_redeem' => '出票核銷',
         'ticket_open_score' => '掃碼開分',
         'birthday_bonus' => 'VIP生日禮金',
-        'upgrade_bonus' => 'VIP升級禮金',
+        'vip_upgrade_bonus' => 'VIP升級禮金',
     ],
     'source' => [
         'system' => '系統',
