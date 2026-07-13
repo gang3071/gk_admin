@@ -3104,50 +3104,6 @@ class ChannelIndexController
                 ])
             , 4);
 
-            // VIP生日礼金
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('shift_handover.record.birthday_bonus_amount'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format(floatval($currentShiftStats['birthday_bonus_amount'] ?? 0), 2))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#eb2f96',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 4);
-
-            // VIP升级礼金
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('shift_handover.record.upgrade_bonus_amount'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format(floatval($currentShiftStats['upgrade_bonus_amount'] ?? 0), 2))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#722ed1',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 4);
-
             // 总利润（高亮显示）
             $row->column(
                 Card::create([
