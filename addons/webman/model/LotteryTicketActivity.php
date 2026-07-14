@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $name 活动名称
  * @property string|null $description 活动说明
  * @property string|null $cover_image 活动封面图片URL
- * @property string|null $live_url 直播流地址
+ * @property string|null $live_url 直播流地址(播放地址)
  * @property int $live_status 直播状态 0=未开播 1=直播中 2=已结束
  * @property string|null $status_history 状态变更历史(JSON)
  * @property string $start_time 活动开始时间

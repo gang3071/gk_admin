@@ -62,6 +62,9 @@ class ChannelLotteryTicketActivityController
             'startDrawing' => admin_trans('lottery_ticket.action.start_drawing'),
             'stopDrawing' => admin_trans('lottery_ticket.action.stop_drawing'),
             'addLiveUrl' => admin_trans('lottery_ticket.action.add_live_url'),
+            'generatePushUrl' => admin_trans('lottery_ticket.action.generate_push_url'),
+            'copyPushServer' => admin_trans('lottery_ticket.action.copy_push_server'),
+            'copyStreamKey' => admin_trans('lottery_ticket.action.copy_stream_key'),
             'expand' => admin_trans('lottery_ticket.action.expand'),
             'collapse' => admin_trans('lottery_ticket.action.collapse'),
             'distributeByTicket' => admin_trans('lottery_ticket.action.distribute_by_ticket'),
@@ -112,6 +115,10 @@ class ChannelLotteryTicketActivityController
             'playerName' => admin_trans('lottery_ticket.fields.player_name'),
             'playerUuid' => admin_trans('lottery_ticket.fields.player_uuid'),  // ⭐ 新增：玩家UUID
             'playerPhone' => admin_trans('lottery_ticket.fields.player_username'),  // ⭐ 新增：玩家手机号
+            'streamName' => admin_trans('lottery_ticket.fields.stream_name'),
+            'pushServer' => admin_trans('lottery_ticket.fields.push_server'),
+            'streamKey' => admin_trans('lottery_ticket.fields.stream_key'),
+            'expireTime' => admin_trans('lottery_ticket.fields.expire_time'),
             'source' => admin_trans('lottery_ticket.fields.source'),
             'createdAt' => admin_trans('lottery_ticket.fields.created_at'),
             'usedAt' => admin_trans('lottery_ticket.fields.used_at'),
@@ -121,6 +128,7 @@ class ChannelLotteryTicketActivityController
             'activityNamePlaceholder' => admin_trans('lottery_ticket.placeholder.name'),
             'descriptionPlaceholder' => admin_trans('lottery_ticket.placeholder.description'),
             'liveUrlPlaceholder' => admin_trans('lottery_ticket.placeholder.live_url'),
+            'streamNamePlaceholder' => admin_trans('lottery_ticket.placeholder.stream_name'),
             'ticketNoPlaceholder' => admin_trans('lottery_ticket.placeholder.ticket_no'),
             'distributeRemarkPlaceholder' => admin_trans('lottery_ticket.placeholder.distribute_remark'),
 
@@ -129,6 +137,8 @@ class ChannelLotteryTicketActivityController
             'modalLiveUrlTitle' => admin_trans('lottery_ticket.modal.live_url_title'),
             'modalLiveUrlPrompt' => admin_trans('lottery_ticket.modal.live_url_prompt'),
             'modalLiveUrlRequired' => admin_trans('lottery_ticket.modal.live_url_required'),
+            'modalGeneratePushUrlTitle' => admin_trans('lottery_ticket.modal.generate_push_url_title'),
+            'modalStreamNamePrompt' => admin_trans('lottery_ticket.modal.stream_name_prompt'),
             'modalDistributeTitle' => admin_trans('lottery_ticket.modal.distribute_by_ticket_title'),
             'modalTicketListTitle' => admin_trans('lottery_ticket.modal.ticket_list_title'),
 
@@ -139,6 +149,9 @@ class ChannelLotteryTicketActivityController
             'noPrizeLevel' => admin_trans('lottery_ticket.message.no_prize_level'),
             'activityDetail' => admin_trans('lottery_ticket.title.activity_detail'),
             'liveUrlUpdated' => admin_trans('lottery_ticket.message.live_url_updated'),
+            'pushUrlGenerated' => admin_trans('lottery_ticket.message.push_url_generated_success'),
+            'copySuccess' => admin_trans('lottery_ticket.message.copy_success'),
+            'copyFailed' => admin_trans('lottery_ticket.message.copy_failed'),
             'imageUploadSuccess' => admin_trans('lottery_ticket.message.image_upload_success'),
             'imageUploadFailed' => admin_trans('lottery_ticket.message.image_upload_failed'),
             'fetchFailed' => admin_trans('lottery_ticket.message.fetch_failed'),
@@ -1327,20 +1340,108 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
-     * 更新直播地址
+     * 根据流名称生成推流地址和推流key(供OBS使用)
+     * @auth true
+     * @group channel
+     * @return Msg|Response
+     */
+    public function generatePushUrl()
+    {
+        $streamName = Request::input('stream_name');
+
+        if (empty($streamName)) {
+            return message_error(admin_trans('lottery_ticket.error.stream_name_required'));
+        }
+
+        // 验证流名称格式(只允许字母、数字、下划线、中横线)
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/', $streamName)) {
+            return message_error(admin_trans('lottery_ticket.error.invalid_stream_name_format'));
+        }
+
+        try {
+            // 获取默认的腾讯云推流配置(从机台推流配置表读取第一条启用的配置)
+            $tencentConfig = \addons\webman\model\MachineTencentPlay::where('status', 1)
+                ->orderBy('id', 'asc')
+                ->first();
+
+            if (!$tencentConfig) {
+                return message_error(admin_trans('lottery_ticket.error.no_tencent_config'));
+            }
+
+            $pushDomain = $tencentConfig->push_domain;
+            $pushKey = $tencentConfig->push_key;
+
+            if (empty($pushDomain) || empty($pushKey)) {
+                return message_error(admin_trans('lottery_ticket.error.incomplete_tencent_config'));
+            }
+
+            // 生成推流地址(参考 getPushUrl 函数逻辑)
+            // 1. 生成过期时间(3天后过期)
+            $now = time();
+            $expireTime = $now + (24 * 60 * 60 * 3);  // 3天后过期
+            $txTime = strtoupper(base_convert($expireTime, 10, 16));
+
+            // 2. 生成鉴权串: MD5(key + streamName + txTime)
+            $txSecret = md5($pushKey . $streamName . $txTime);
+
+            // 3. OBS推流配置（正确的分割方式）
+            // 服务器：rtmp://213855.push.tlivecloud.com/live/（固定部分）
+            $pushServer = sprintf('rtmp://%s/live/', $pushDomain);
+
+            // 串流密钥：streamName?txSecret=xxx&txTime=xxx（动态生成部分）
+            $streamKey = sprintf('%s?txSecret=%s&txTime=%s', $streamName, $txSecret, $txTime);
+
+            // 完整推流地址（用于保存到数据库）
+            $pushUrl = $pushServer . $streamKey;
+
+            // 4. 生成拉流地址(播放地址)
+            $pullDomain = $tencentConfig->pull_domain;
+            $playUrl = '';
+            if (!empty($pullDomain)) {
+                $playUrl = sprintf('http://%s/live/%s.m3u8', $pullDomain, $streamName);
+            }
+
+            return Response::success([
+                'stream_name' => $streamName,
+                'push_url' => $pushUrl,        // 完整推流地址（保存用）
+                'push_server' => $pushServer,  // OBS服务器栏：rtmp://xxx/live/
+                'stream_key' => $streamKey,    // OBS串流密钥栏：streamName?txSecret=xxx&txTime=xxx
+                'expire_time' => date('Y-m-d H:i:s', $expireTime),
+                'play_url' => $playUrl,        // 播放地址（可选）
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('生成推流地址失败', [
+                'stream_name' => $streamName,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return message_error(admin_trans('lottery_ticket.error.generate_push_url_failed') . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 更新直播地址（仅播放地址，推流地址不保存）
+     * @auth true
+     * @group channel
      * @return Msg|Response
      */
     public function updateLiveUrl()
     {
         $id = Request::input('id');
-        $liveUrl = Request::input('live_url');
+        $liveUrl = Request::input('live_url');  // 播放地址
 
         $activity = LotteryTicketActivity::find($id);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
             return message_error(admin_trans('common.no_permission'));
         }
 
-        $activity->live_url = $liveUrl;
+        // 只更新直播播放地址（推流地址临时生成，不保存）
+        if (!empty($liveUrl)) {
+            $activity->live_url = $liveUrl;
+        }
+
         $activity->save();
 
         return message_success(admin_trans('lottery_ticket.message.live_url_updated'));

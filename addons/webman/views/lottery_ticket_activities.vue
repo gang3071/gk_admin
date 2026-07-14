@@ -829,28 +829,115 @@
         :title="trans.ui?.set_live_stream_title || '設置直播流名稱'"
         @ok="submitLiveUrl"
         @cancel="handleLiveModalClose"
+        width="700px"
     >
       <a-form layout="vertical">
         <a-alert
-            :message="trans.ui?.live_stream_hint || '💡 只需填寫流名稱，系統會自動生成騰訊雲直播地址'"
+            :message="trans.ui?.live_stream_hint || '💡 輸入流名稱後，可生成推流地址供OBS使用'"
             show-icon
             style="margin-bottom: 16px;"
             type="info"
         />
-        <a-form-item :label="trans.ui?.live_stream_label || '直播流名稱'">
+
+        <!-- 流名稱輸入 -->
+        <a-form-item :label="trans.streamName || '流名稱'">
           <a-input
               v-model:value="liveUrlInput"
-              :placeholder="trans.ui?.live_stream_placeholder || '例如：mojiangjuan'"
+              :placeholder="trans.streamNamePlaceholder || '例如：mojiangjuan'"
               allow-clear
+              @pressEnter="generatePushUrl"
           >
             <template #prefix>
               <video-camera-outlined style="color: #999;"/>
             </template>
+            <template #suffix>
+              <a-button
+                type="link"
+                size="small"
+                @click="generatePushUrl"
+                :loading="generatingPush"
+                :disabled="!liveUrlInput"
+              >
+                {{ trans.generatePushUrl || '生成推流地址' }}
+              </a-button>
+            </template>
           </a-input>
           <div style="margin-top: 8px; color: #999; font-size: 12px;">
-            {{ trans.ui?.live_stream_name_hint || '建議使用英文、數字、下劃線，此名稱需與OBS推流配置一致' }}
+            {{ trans.ui?.live_stream_name_hint || '建議使用英文、數字、下劃線、橫線' }}
           </div>
         </a-form-item>
+
+        <!-- ⭐ 推流地址展示區域（生成後顯示） -->
+        <div v-if="pushUrlResult" style="margin-top: 16px; padding: 16px; background: #f5f5f5; border-radius: 4px;">
+          <a-alert
+              :message="trans.pushUrlGenerated || '推流地址生成成功，有效期3天'"
+              type="success"
+              show-icon
+              style="margin-bottom: 16px;"
+          />
+
+          <!-- 推流服務器 -->
+          <a-form-item :label="trans.pushServer || '推流服務器（URL）'">
+            <a-input
+                :value="pushUrlResult.push_server"
+                readonly
+                style="font-family: monospace;"
+            >
+              <template #addonAfter>
+                <a-button
+                  type="link"
+                  size="small"
+                  @click="copyToClipboard(pushUrlResult.push_server)"
+                >
+                  <copy-outlined />
+                  {{ trans.copyPushServer || '複製' }}
+                </a-button>
+              </template>
+            </a-input>
+          </a-form-item>
+
+          <!-- 串流密鑰 -->
+          <a-form-item :label="trans.streamKey || '串流密鑰（Key）'">
+            <a-input
+                :value="pushUrlResult.stream_key"
+                readonly
+                style="font-family: monospace;"
+            >
+              <template #addonAfter>
+                <a-button
+                  type="link"
+                  size="small"
+                  @click="copyToClipboard(pushUrlResult.stream_key)"
+                >
+                  <copy-outlined />
+                  {{ trans.copyStreamKey || '複製' }}
+                </a-button>
+              </template>
+            </a-input>
+          </a-form-item>
+
+          <!-- 有效期提示 -->
+          <div style="margin-top: 8px; padding: 8px; background: #fff; border-radius: 4px; font-size: 12px; color: #666;">
+            <clock-circle-outlined style="margin-right: 4px;" />
+            {{ trans.expireTime || '有效期' }}: {{ pushUrlResult.expire_time }}
+          </div>
+
+          <!-- OBS配置提示 -->
+          <a-alert
+              style="margin-top: 12px;"
+              type="info"
+              show-icon
+          >
+            <template #message>
+              <div style="font-size: 12px;">
+                <strong>OBS 推流配置：</strong><br/>
+                1. 打開 OBS → 設置 → 推流<br/>
+                2. 服務器：複製上方"推流服務器"<br/>
+                3. 串流密鑰：複製上方"串流密鑰"
+              </div>
+            </template>
+          </a-alert>
+        </div>
       </a-form>
     </a-modal>
 
@@ -959,6 +1046,8 @@ export default {
       livePreviewVisible: false, // ⭐ 直播预览Modal
       livePreviewUrl: '', // ⭐ 当前预览的直播地址
       livePlayerConfig: null, // ⭐ 播放器配置（包含 License 信息）
+      generatingPush: false, // ⭐ 生成推流地址loading状态
+      pushUrlResult: null, // ⭐ 推流地址生成结果
       formMode: 'create',
       historyModalVisible: false,  // ⭐ 歷史活動選擇Modal
       historyActivities: [],        // ⭐ 歷史活動列表
@@ -1505,7 +1594,65 @@ export default {
     handleLiveModalClose() {
       this.liveModalVisible = false;
       this.liveUrlInput = '';
+      this.pushUrlResult = null; // ⭐ 清空推流地址结果
       this.currentActivity = null;
+    },
+
+    // ⭐ 生成推流地址（供OBS使用）
+    async generatePushUrl() {
+      if (!this.liveUrlInput || !this.liveUrlInput.trim()) {
+        this.$message.warning(this.trans.modalStreamNamePrompt || '請輸入流名稱');
+        return;
+      }
+
+      // 验证流名称格式（只允许字母、数字、下划线、横线）
+      if (!/^[a-zA-Z0-9_-]+$/.test(this.liveUrlInput.trim())) {
+        this.$message.error(this.trans.error?.invalid_stream_name_format || '流名稱格式錯誤，只能包含英文字母、數字、下劃線、橫線');
+        return;
+      }
+
+      this.generatingPush = true;
+
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/generatePushUrl',
+          method: 'post',
+          data: {
+            stream_name: this.liveUrlInput.trim()
+          }
+        });
+
+        if (res.code === 0 || res.code === 200) {
+          this.pushUrlResult = res.data;
+          this.$message.success(this.trans.pushUrlGenerated || '推流地址生成成功');
+        } else {
+          this.$message.error(res.message || (this.trans.error?.generate_push_url_failed || '生成推流地址失敗'));
+        }
+      } catch (error) {
+        console.error('生成推流地址失敗:', error);
+        this.$message.error(this.trans.error?.generate_push_url_failed || '生成推流地址失敗');
+      } finally {
+        this.generatingPush = false;
+      }
+    },
+
+    // ⭐ 複製到剪貼板
+    async copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        this.$message.success(this.trans.copySuccess || '複製成功');
+      } catch (err) {
+        // 兼容舊瀏覽器
+        const input = document.createElement('textarea');
+        input.value = text;
+        input.style.position = 'fixed';
+        input.style.opacity = 0;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        this.$message.success(this.trans.copySuccess || '複製成功');
+      }
     },
 
     // ⭐ 預覽直播
