@@ -176,7 +176,8 @@ class StorePlayerController
             // === 批量查询累计数据 ===
             if ($hasStatsTimeFilter) {
                 // 批量查询筛选时间段内的财务记录
-                $deliveryStatsQuery = PlayerDeliveryRecord::query()
+                // offDataAuth: 已通过 player_id 过滤，无需数据权限重复过滤
+                $deliveryStatsQuery = PlayerDeliveryRecord::offDataAuth()
                     ->whereIn('player_id', $playerIds);
 
                 if (!empty($requestFilter['stats_start_time'])) {
@@ -219,7 +220,7 @@ class StorePlayerController
                     ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
 
                 // 批量查询累计摸奖券
-                $lotteryTicketRewardByPlayer = PlayerDeliveryRecord::query()
+                $lotteryTicketRewardByPlayer = PlayerDeliveryRecord::offDataAuth()
                     ->whereIn('player_id', $playerIds)
                     ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
                     ->selectRaw('player_id, SUM(amount) as total_amount')
@@ -230,7 +231,8 @@ class StorePlayerController
 
             // === 批量查询当前未交班数据 ===
             // 批量查询当前班次财务数据
-            $currentShiftDeliveryQuery = PlayerDeliveryRecord::query()
+            // offDataAuth: 已通过 player_id 过滤，无需数据权限重复过滤
+            $currentShiftDeliveryQuery = PlayerDeliveryRecord::offDataAuth()
                 ->whereIn('player_id', $playerIds);
 
             if ($lastShiftTime) {
@@ -279,7 +281,7 @@ class StorePlayerController
                 ->groupBy('player_id')->pluck('total_chip', 'player_id')->toArray();
 
             // 批量查询当前班次摸奖券
-            $currentLotteryTicketRewardQuery = PlayerDeliveryRecord::query()
+            $currentLotteryTicketRewardQuery = PlayerDeliveryRecord::offDataAuth()
                 ->whereIn('player_id', $playerIds)
                 ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
