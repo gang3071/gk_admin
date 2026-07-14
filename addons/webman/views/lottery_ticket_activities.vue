@@ -1234,8 +1234,13 @@ export default {
 
           // language: 'zh_CN', // 暂时用英文测试
           height: 400,
+          min_height: 400,
           menubar: false,
           promotion: false, // 隐藏升级提示
+
+          // ⭐ 强制设置编辑区域高度（防止被 flex 布局挤压）
+          resize: true, // 允许手动调整大小
+          autoresize_bottom_margin: 0,
 
           // ⭐ 确保编辑器可编辑
           readonly: false,
@@ -1325,19 +1330,26 @@ export default {
                 editor.setContent(this.formData.description);
               }
 
+              // ⭐ 强制设置 iframe 高度（解决在 Drawer 中高度塌陷问题）
+              const iframe = container.querySelector('iframe');
+              if (iframe) {
+                iframe.style.height = '400px';
+                iframe.style.minHeight = '400px';
+                iframe.style.display = 'block';
+                console.log('TinyMCE: 强制设置 iframe 高度为 400px');
+              }
+
               // ⭐ 聚焦到编辑器
               setTimeout(() => {
-                // 检查 iframe
-                const iframe = container.querySelector('iframe');
                 console.log('TinyMCE: iframe元素', iframe);
-                console.log('TinyMCE: iframe样式', iframe ? window.getComputedStyle(iframe) : 'no iframe');
+                console.log('TinyMCE: iframe实际高度', iframe ? iframe.offsetHeight : 'no iframe');
 
                 editor.focus();
                 console.log('TinyMCE: 编辑器已聚焦');
                 console.log('TinyMCE: 当前焦点元素', document.activeElement);
 
                 // ⭐ 测试：直接在编辑器中插入文本（验证编辑器是否真的可编辑）
-                editor.execCommand('mceInsertContent', false, '测试：可以输入了吗？');
+                editor.execCommand('mceInsertContent', false, '<p>测试：可以输入了吗？点击这里试试...</p>');
               }, 100);
             });
 
