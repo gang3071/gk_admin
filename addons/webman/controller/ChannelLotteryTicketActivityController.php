@@ -1234,8 +1234,23 @@ class ChannelLotteryTicketActivityController
                         $activity,
                         $ticketNo,
                         $prizeLevel->level_name,
-                        $prizeLevel->prize_amount
+                        $prizeLevel->prize_amount,
+                        $prizeLevel->level_rank // 传入等级排名
                     );
+
+                    // ⭐ 特等奖和一等奖发送跑马灯广播
+                    if ($prizeLevel->level_rank == 1 || $prizeLevel->level_rank == 2) {
+                        // 脱敏玩家名称（显示前3个字符 + ***）
+                        $playerName = mb_substr($player->name, 0, 3) . '***';
+
+                        \addons\webman\service\LotteryTicketPushService::pushMarqueeAnnouncement(
+                            $activity->department_id,
+                            $activity,
+                            $playerName,
+                            $prizeLevel->level_name,
+                            $prizeLevel->prize_amount
+                        );
+                    }
 
                     $successCount++;
 
