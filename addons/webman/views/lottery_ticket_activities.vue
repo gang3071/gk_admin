@@ -360,7 +360,9 @@
 
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
-          <textarea ref="tinymceEditor" style="display: none;"></textarea>
+          <div ref="tinymceContainer">
+            <textarea ref="tinymceEditor"></textarea>
+          </div>
         </a-form-item>
 
         <a-form-item :label="trans.form?.cover_image || '活動封面圖片'">
@@ -1255,7 +1257,16 @@ export default {
 
             editor.on('init', () => {
               console.log('TinyMCE: 编辑器初始化完成！');
-              console.log('TinyMCE: 编辑器容器', editor.getContainer());
+
+              const container = editor.getContainer();
+              console.log('TinyMCE: 编辑器容器', container);
+
+              // ⭐ 强制显示编辑器容器
+              if (container) {
+                container.style.visibility = 'visible';
+                container.style.display = 'block';
+                console.log('TinyMCE: 强制显示编辑器容器');
+              }
 
               // 设置初始内容
               if (this.formData.description) {
