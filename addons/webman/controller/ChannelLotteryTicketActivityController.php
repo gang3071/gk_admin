@@ -176,6 +176,8 @@ class ChannelLotteryTicketActivityController
             'prizeConfigSection' => admin_trans('lottery_ticket.form.prize_config_section'),
             'noVipData' => admin_trans('lottery_ticket.form.no_vip_data'),
             'noVipConfig' => admin_trans('lottery_ticket.form.no_vip_config'),
+            'prizeNameLabel' => admin_trans('lottery_ticket.form.prize_name_label'),
+            'prizeNamePlaceholder' => admin_trans('lottery_ticket.form.prize_name_placeholder'),
 
             // 验证
             'nameRequired' => admin_trans('lottery_ticket.validation.name_required'),

@@ -459,6 +459,8 @@ return [
         'level_label' => '等級',
         'vip_config_hint' => '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量',
         'prize_config_hint' => '配置獎品等級和獎勵金額(僅現金獎勵)',
+        'prize_name_label' => '獎項名稱',
+        'prize_name_placeholder' => '例如：特等獎、一等獎',
         'input_ticket_hint' => '輸入數字，如: 12 或 000012',
         'add_ticket_no' => '添加券號',
         'cover_alt' => '活動封面',

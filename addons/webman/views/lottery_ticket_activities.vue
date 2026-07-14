@@ -483,12 +483,13 @@
 
             <a-row :gutter="12">
               <a-col :span="8">
-                <a-form-item :label="trans.levelRank">
-                  <a-select v-model:value="level.level_rank" :placeholder="trans.selectLevelRank" @change="handleLevelRankChange(index)">
-                    <a-select-option v-for="i in 10" :key="i" :value="i" :disabled="isLevelRankSelected(i, index)">
-                      {{ getLevelName(i) }}
-                    </a-select-option>
-                  </a-select>
+                <a-form-item :label="trans.form?.prize_name_label || '獎項名稱'" :required="true">
+                  <a-input
+                      v-model:value="level.level_name"
+                      :placeholder="trans.form?.prize_name_placeholder || '例如：特等獎、一等獎'"
+                      :maxlength="20"
+                      show-count
+                  />
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -2318,8 +2319,7 @@ export default {
       }
 
       this.formData.prize_levels.push({
-        level_rank: null,
-        level_name: '',
+        level_name: '',  // 用户自定义奖项名称（必填）
         prize_amount: 0,
         prize_count: 0
       });
@@ -2330,23 +2330,25 @@ export default {
       this.formData.prize_levels.splice(index, 1);
     },
 
-    // 等級排名變化時更新等級名稱
-    handleLevelRankChange(index) {
-      const rank = this.formData.prize_levels[index].level_rank;
-      this.formData.prize_levels[index].level_name = this.getLevelName(rank);
-    },
-
-    // 檢查等級排名是否已被選擇
-    isLevelRankSelected(rank, currentIndex) {
-      return this.formData.prize_levels.some((level, index) => {
-        return index !== currentIndex && level.level_rank === rank;
-      });
-    },
-
     // 表單提交
     async handleFormSubmit() {
       try {
         await this.$refs.formRef.validate();
+
+        // ⭐ 驗證獎品等級配置
+        if (this.formData.prize_levels.length === 0) {
+          this.$message.error('請至少添加一個獎品等級');
+          return;
+        }
+
+        // ⭐ 驗證每個獎品的名稱（必填）
+        for (let i = 0; i < this.formData.prize_levels.length; i++) {
+          const level = this.formData.prize_levels[i];
+          if (!level.level_name || level.level_name.trim() === '') {
+            this.$message.error(`第 ${i + 1} 個獎品的名稱不能為空`);
+            return;
+          }
+        }
 
         // 格式化时间（兼容 dayjs 对象和字符串）
         const formatTime = (time) => {
