@@ -1320,15 +1320,45 @@ export default {
               container.style.minHeight = '450px';
             }
 
+            // ⭐ 关键修复：确保编辑器 body 可编辑
+            const editorBody = editor.getBody();
+            if (editorBody) {
+              editorBody.setAttribute('contenteditable', 'true');
+              editorBody.style.pointerEvents = 'auto';
+              editorBody.style.userSelect = 'text';
+
+              console.log('TinyMCE: Body contenteditable =', editorBody.getAttribute('contenteditable'));
+              console.log('TinyMCE: Body 可编辑性已强制设置');
+            }
+
+            // 设置编辑模式
+            editor.mode.set('design');
+
             // 设置初始内容
             if (this.formData.description) {
               editor.setContent(this.formData.description);
             }
 
-            // 插入测试文本
+            // 插入测试文本并聚焦
             setTimeout(() => {
-              editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
+              if (!this.formData.description) {
+                editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
+              }
+
+              // 多次尝试聚焦，确保成功
               editor.focus();
+
+              setTimeout(() => {
+                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                const body = iframeDoc.body;
+
+                console.log('TinyMCE: 最终检查 - contenteditable =', body.getAttribute('contenteditable'));
+                console.log('TinyMCE: 最终检查 - 焦点元素 =', iframeDoc.activeElement);
+
+                // 尝试直接点击 body
+                body.click();
+                body.focus();
+              }, 100);
             }, 200);
           },
 
