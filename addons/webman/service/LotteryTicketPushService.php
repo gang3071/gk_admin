@@ -385,6 +385,75 @@ class LotteryTicketPushService
     }
 
     /**
+     * 推送跑马灯广播（特等奖和一等奖中奖公告）
+     *
+     * 使用场景：
+     * - 特等奖中奖（level_rank = 1）
+     * - 一等奖中奖（level_rank = 2）
+     *
+     * 参考：HighScoreBroadcastService（高分广播）
+     * 使用全局广播频道：group-lottery-pool
+     *
+     * @param int $departmentId 渠道ID
+     * @param LotteryTicketActivity $activity 活动对象
+     * @param string $playerName 玩家名称（脱敏后）
+     * @param string $prizeName 奖品名称
+     * @param float $prizeAmount 奖金金额
+     * @return bool
+     */
+    public static function pushMarqueeAnnouncement(
+        int $departmentId,
+        LotteryTicketActivity $activity,
+        string $playerName,
+        string $prizeName,
+        float $prizeAmount
+    ): bool {
+        try {
+            // 构造跑马灯消息（参考高分广播格式）
+            $content = sprintf(
+                '🎉 恭喜玩家 %s 在摸奖券活动「%s」中获得 %s，奖金 %s分！',
+                $playerName,
+                $activity->name,
+                $prizeName,
+                number_format($prizeAmount, 0) // 整数显示
+            );
+
+            $data = [
+                'msg_type' => 'high_score_broadcast', // 消息类型（与高分广播统一，客户端可复用同一套跑马灯逻辑）
+                'title' => '🎊 摸奖券中奖报喜',
+                'content' => $content,
+                'timestamp' => time(),
+                'department_id' => $departmentId,
+            ];
+
+            // 使用全局广播频道（与高分广播、彩金通知保持一致）
+            sendSocketMessage('group-lottery-pool', $data);
+
+            Log::info('[摸奖券] 跑马灯广播已发送', [
+                'channel' => 'group-lottery-pool',
+                'department_id' => $departmentId,
+                'activity_id' => $activity->id,
+                'player_name' => $playerName,
+                'prize_name' => $prizeName,
+                'prize_amount' => $prizeAmount,
+                'content' => $content
+            ]);
+
+            return true;
+
+        } catch (\Exception $e) {
+            Log::error('[摸奖券] 跑马灯广播失败', [
+                'department_id' => $departmentId,
+                'activity_id' => $activity->id ?? null,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]);
+            return false;
+        }
+    }
+
+    /**
      * 推送中奖通知（奖励发放时推送）
      *
      * 使用场景：
@@ -397,6 +466,7 @@ class LotteryTicketPushService
      * @param string $ticketNo 券号
      * @param string $prizeName 奖品名称
      * @param float $prizeAmount 奖金金额
+     * @param int|null $levelRank 奖品等级排名（1=特等奖，2=一等奖...），用于判断是否发送跑马灯
      * @return bool
      */
     public static function pushPrizeDistributed(
@@ -404,7 +474,8 @@ class LotteryTicketPushService
         LotteryTicketActivity $activity,
         string $ticketNo,
         string $prizeName,
-        float $prizeAmount
+        float $prizeAmount,
+        ?int $levelRank = null
     ): bool
     {
         try {
