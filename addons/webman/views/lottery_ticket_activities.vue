@@ -1238,6 +1238,18 @@ export default {
         return;
       }
 
+      // ⭐ 关键修复：确保元素已挂载到 DOM 树中
+      if (!this.$refs.tinymceEditor.parentNode) {
+        console.error('TinyMCE: textarea 元素未挂载到 DOM！');
+        return;
+      }
+
+      // ⭐ 关键修复：确保容器元素存在
+      if (!this.$refs.tinymceContainer || !this.$refs.tinymceContainer.parentNode) {
+        console.error('TinyMCE: 容器元素未挂载到 DOM！');
+        return;
+      }
+
       try {
         window.tinymce.init({
           target: this.$refs.tinymceEditor,
