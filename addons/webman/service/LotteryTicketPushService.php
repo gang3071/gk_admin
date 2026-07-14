@@ -419,18 +419,11 @@ class LotteryTicketPushService
             );
 
             $data = [
-                'msg_type' => 'lottery_ticket_win_broadcast', // 消息类型
+                'msg_type' => 'high_score_broadcast', // 消息类型（与高分广播统一，客户端可复用同一套跑马灯逻辑）
                 'title' => '🎊 摸奖券中奖报喜',
                 'content' => $content,
                 'timestamp' => time(),
                 'department_id' => $departmentId,
-                'data' => [
-                    'activity_id' => $activity->id,
-                    'activity_name' => $activity->name,
-                    'player_name' => $playerName,
-                    'prize_level' => $prizeName,
-                    'prize_amount' => $prizeAmount,
-                ],
             ];
 
             // 使用全局广播频道（与高分广播、彩金通知保持一致）
