@@ -166,15 +166,6 @@
               />
             </div>
 
-            <!-- 活動描述（富文本） -->
-            <div class="description" v-if="activity.description">
-              <div
-                  class="rich-text-content"
-                  style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6; max-height: 90px; overflow: hidden;"
-                  v-html="activity.description"
-              />
-            </div>
-
             <div class="time-info">
               <div class="time-item">
                 <clock-circle-outlined style="margin-right: 4px; color: #52c41a;"/>
