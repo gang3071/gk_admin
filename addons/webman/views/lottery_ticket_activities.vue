@@ -1172,10 +1172,11 @@ export default {
         return;
       }
 
-      // 加载 TinyMCE JS（使用 UNPKG CDN，完全免费，无需 API key 和域名验证）
+      //  使用 cdnjs（Cloudflare CDN，包含完整资源，路径自动处理）
       const script = document.createElement('script');
-      script.src = 'https://unpkg.com/tinymce@6.8.3/tinymce.min.js';
-      script.referrerPolicy = 'origin';
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js';
+      script.onload = () => console.log('✅ TinyMCE 加载成功');
+      script.onerror = () => console.error('❌ TinyMCE 加载失败');
       document.head.appendChild(script);
     },
 
@@ -1218,13 +1219,14 @@ export default {
         window.tinymce.init({
           target: this.$refs.tinymceEditor,
 
-          // ⭐ 必须配置：指定资源文件路径
-          base_url: 'https://unpkg.com/tinymce@6.8.3',
+          // ⭐ cdnjs 会自动处理资源路径，只需要这个配置
+          base_url: '/cdn-cgi/cdnjs/libs/tinymce/6.8.3',
           suffix: '.min',
 
-          // language: 'zh_CN', // 暂时用英文，避免语言包加载问题
+          // language: 'zh_CN', // 暂时用英文测试
           height: 400,
           menubar: false,
+          promotion: false, // 隐藏升级提示
           plugins: [
             'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
             'searchreplace', 'code', 'fullscreen',
