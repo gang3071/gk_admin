@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int is_new 是否新游戏(0:否,1:是)
  * @property int is_hot 是否热门游戏(0:否,1:是)
  * @property int is_ios 是否IOS平台展示(0:否,1:是)
+ * @property int enable_portrait_picture 是否开启竖图
  * @property int display_mode 展示模式
  * @property int enable_big_picture 是否启用大图(0:否,1:是)
  * @property string channel_hidden 渠道隐藏
