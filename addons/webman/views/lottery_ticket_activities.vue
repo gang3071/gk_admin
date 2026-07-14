@@ -1241,10 +1241,40 @@ export default {
           readonly: false,
           disabled: false,
 
+          // ⭐ 完整插件列表
           plugins: [
-            'lists', 'link', 'image', 'code', 'table'
+            'advlist',        // 高级列表（自定义列表样式）
+            'autolink',       // 自动链接识别
+            'lists',          // 列表功能
+            'link',           // 链接插入
+            'image',          // 图片插入
+            'charmap',        // 特殊字符
+            'preview',        // 预览
+            'anchor',         // 锚点
+            'searchreplace',  // 查找替换
+            'visualblocks',   // 可视化块
+            'code',           // 源代码编辑
+            'fullscreen',     // 全屏
+            'insertdatetime', // 插入日期时间
+            'media',          // 媒体（视频/音频）
+            'table',          // 表格
+            'help',           // 帮助
+            'wordcount'       // 字数统计
           ],
-          toolbar: 'undo redo | bold italic | alignleft aligncenter | bullist numlist | image link table | code',
+
+          // ⭐ 完整工具栏
+          toolbar: 'undo redo | blocks fontsize | ' +
+            'bold italic underline strikethrough | forecolor backcolor | ' +
+            'alignleft aligncenter alignright alignjustify | ' +
+            'bullist numlist outdent indent | ' +
+            'link image media table charmap | ' +
+            'code preview fullscreen | removeformat help',
+
+          // ⭐ 字体大小选项
+          fontsize_formats: '12px 14px 16px 18px 24px 36px 48px',
+
+          // ⭐ 块级元素样式
+          block_formats: '段落=p; 标题1=h1; 标题2=h2; 标题3=h3; 标题4=h4; 标题5=h5; 标题6=h6; 预格式化=pre',
 
           content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
 
