@@ -360,7 +360,7 @@
 
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
-          <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 450px;">
+          <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 250px;">
             <!-- ⭐ 初始隐藏 textarea，TinyMCE 初始化后会自动显示编辑器容器 -->
             <textarea ref="tinymceEditor" style="width: 100%; opacity: 0; height: 0; position: absolute;"></textarea>
           </div>
@@ -1234,8 +1234,8 @@ export default {
           suffix: '.min',
 
           // language: 'zh_CN', // 暂时用英文测试
-          height: 400,
-          min_height: 400,
+          height: 200,
+          min_height: 200,
           menubar: false,
           promotion: false, // 隐藏升级提示
 
@@ -1306,8 +1306,8 @@ export default {
 
             if (iframe) {
               // 强制设置高度
-              iframe.style.height = '400px !important';
-              iframe.style.minHeight = '400px';
+              iframe.style.height = '200px !important';
+              iframe.style.minHeight = '200px';
               iframe.style.maxHeight = 'none';
               iframe.style.display = 'block';
 
@@ -1318,7 +1318,7 @@ export default {
             // 强制容器也有高度
             if (container) {
               container.style.height = 'auto';
-              container.style.minHeight = '450px';
+              container.style.minHeight = '250px';
             }
 
             // ⭐ 关键修复：确保编辑器 body 可编辑
@@ -1340,26 +1340,9 @@ export default {
               editor.setContent(this.formData.description);
             }
 
-            // 插入测试文本并聚焦
+            // 聚焦编辑器
             setTimeout(() => {
-              if (!this.formData.description) {
-                editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
-              }
-
-              // 多次尝试聚焦，确保成功
               editor.focus();
-
-              setTimeout(() => {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                const body = iframeDoc.body;
-
-                console.log('TinyMCE: 最终检查 - contenteditable =', body.getAttribute('contenteditable'));
-                console.log('TinyMCE: 最终检查 - 焦点元素 =', iframeDoc.activeElement);
-
-                // 尝试直接点击 body
-                body.click();
-                body.focus();
-              }, 100);
             }, 200);
           },
 
