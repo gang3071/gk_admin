@@ -736,10 +736,20 @@
                   <smile-outlined /> {{ singleRecord.player_info.player_name }}
                 </a-tag>
               </a-descriptions-item>
-              <a-descriptions-item v-if="singleRecord.player_info.player_phone" label="手機號">
-                <a-tag color="orange">
-                  <phone-outlined /> {{ singleRecord.player_info.player_phone }}
-                </a-tag>
+              <a-descriptions-item label="玩家賬號">
+                <a-space>
+                  <a-tag color="purple">
+                    <safety-outlined /> {{ singleRecord.player_info.player_account }}
+                  </a-tag>
+                  <a-button
+                      type="link"
+                      size="small"
+                      @click="copyToClipboard(singleRecord.player_info.player_account)"
+                      style="padding: 0;"
+                  >
+                    <copy-outlined /> 複製
+                  </a-button>
+                </a-space>
               </a-descriptions-item>
             </a-descriptions>
           </div>
