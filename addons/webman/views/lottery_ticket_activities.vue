@@ -361,7 +361,8 @@
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
           <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 450px;">
-            <textarea ref="tinymceEditor" style="width: 100%;"></textarea>
+            <!-- ⭐ 初始隐藏 textarea，TinyMCE 初始化后会自动显示编辑器容器 -->
+            <textarea ref="tinymceEditor" style="width: 100%; opacity: 0; height: 0; position: absolute;"></textarea>
           </div>
         </a-form-item>
 
