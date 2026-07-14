@@ -1330,21 +1330,25 @@ export default {
             console.log('TinyMCE: 容器', container);
             console.log('TinyMCE: iframe', iframe);
 
+            // ⭐ 关键修复：强制显示编辑器容器
+            if (container) {
+              container.style.visibility = 'visible';
+              container.style.display = 'block';
+              container.style.height = 'auto';
+              container.style.minHeight = '450px';
+              console.log('TinyMCE: 容器可见性已设置');
+            }
+
             if (iframe) {
               // 强制设置高度
               iframe.style.height = '400px !important';
               iframe.style.minHeight = '400px';
               iframe.style.maxHeight = 'none';
               iframe.style.display = 'block';
+              iframe.style.visibility = 'visible';
 
               console.log('TinyMCE: iframe 实际高度', iframe.offsetHeight);
               console.log('TinyMCE: iframe 计算样式', window.getComputedStyle(iframe).height);
-            }
-
-            // 强制容器也有高度
-            if (container) {
-              container.style.height = 'auto';
-              container.style.minHeight = '450px';
             }
 
             // ⭐ 关键修复：确保编辑器 body 可编辑
@@ -1395,7 +1399,17 @@ export default {
           setup: (editor) => {
             console.log('TinyMCE: setup 回调执行');
 
-            // ⚠️ 移除 setup 中的 init 事件处理，改用 init_instance_callback
+            // ⭐ 关键修复：确保编辑器容器可见
+            editor.on('init', () => {
+              console.log('TinyMCE: setup.init 事件触发');
+              const container = editor.getContainer();
+              if (container) {
+                // 强制显示编辑器容器
+                container.style.visibility = 'visible';
+                container.style.display = 'block';
+                console.log('TinyMCE: 容器可见性已强制设置为 visible');
+              }
+            });
 
             editor.on('change keyup', () => {
               this.formData.description = editor.getContent();
