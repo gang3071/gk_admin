@@ -1237,12 +1237,19 @@ export default {
           menubar: false,
           promotion: false, // 隐藏升级提示
 
+          // ⭐ 确保编辑器可编辑
+          readonly: false,
+          disabled: false,
+
           plugins: [
             'lists', 'link', 'image', 'code', 'table'
           ],
           toolbar: 'undo redo | bold italic | alignleft aligncenter | bullist numlist | image link table | code',
 
           content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+
+          // ⭐ 允许内容编辑
+          inline: false,
 
           // ⭐ 自定义图片上传
           images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
@@ -1268,10 +1275,24 @@ export default {
                 console.log('TinyMCE: 强制显示编辑器容器');
               }
 
+              // ⭐ 检查编辑器状态
+              console.log('TinyMCE: 只读模式?', editor.mode.get());
+              console.log('TinyMCE: 是否禁用?', editor.getBody().getAttribute('contenteditable'));
+
+              // ⭐ 确保编辑器可编辑
+              editor.mode.set('design'); // 设置为设计模式（可编辑）
+              editor.getBody().setAttribute('contenteditable', 'true');
+
               // 设置初始内容
               if (this.formData.description) {
                 editor.setContent(this.formData.description);
               }
+
+              // ⭐ 聚焦到编辑器（让用户知道可以输入）
+              setTimeout(() => {
+                editor.focus();
+                console.log('TinyMCE: 编辑器已聚焦');
+              }, 100);
             });
 
             editor.on('change keyup', () => {
