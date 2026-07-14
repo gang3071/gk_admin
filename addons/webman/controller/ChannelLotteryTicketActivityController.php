@@ -1240,8 +1240,15 @@ class ChannelLotteryTicketActivityController
 
                     // ⭐ 特等奖和一等奖发送跑马灯广播
                     if ($prizeLevel->level_rank == 1 || $prizeLevel->level_rank == 2) {
-                        // 脱敏玩家名称（显示前3个字符 + ***）
-                        $playerName = mb_substr($player->name, 0, 3) . '***';
+                        // 脱敏玩家名称
+                        $nameLength = mb_strlen($player->name);
+                        if ($nameLength <= 2) {
+                            // 1-2个字：显示第1个字 + *，如 "张*"
+                            $playerName = mb_substr($player->name, 0, 1) . '*';
+                        } else {
+                            // 3个字及以上：显示第1个字 + ***，如 "张***"
+                            $playerName = mb_substr($player->name, 0, 1) . '***';
+                        }
 
                         \addons\webman\service\LotteryTicketPushService::pushMarqueeAnnouncement(
                             $activity->department_id,

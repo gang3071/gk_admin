@@ -166,15 +166,13 @@
               />
             </div>
 
-            <!-- 活動描述 -->
+            <!-- 活動描述（富文本） -->
             <div class="description" v-if="activity.description">
-              <div style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
-                <a-typography-paragraph
-                    :ellipsis="{ rows: 3, expandable: true, symbol: trans.expand }"
-                    :content="activity.description"
-                    style="margin-bottom: 0;"
-                />
-              </div>
+              <div
+                class="rich-text-content"
+                style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6; max-height: 90px; overflow: hidden;"
+                v-html="activity.description"
+              />
             </div>
 
             <div class="time-info">
@@ -348,6 +346,7 @@
         width="720"
         :body-style="{ paddingBottom: '80px' }"
         @close="handleFormClose"
+        @after-visible-change="handleDrawerVisibleChange"
     >
       <a-form
           :model="formData"
@@ -360,13 +359,10 @@
         </a-form-item>
 
         <a-form-item :label="trans.description" name="description">
-          <a-textarea
-              v-model:value="formData.description"
-              :placeholder="trans.descriptionPlaceholder"
-              :rows="4"
-              show-count
-              :maxlength="500"
-          />
+          <!-- 富文本编辑器（TinyMCE） -->
+          <div ref="tinymceContainer">
+            <textarea ref="tinymceEditor"></textarea>
+          </div>
         </a-form-item>
 
         <a-form-item :label="trans.form?.cover_image || '活動封面圖片'">
@@ -557,7 +553,12 @@
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item :label="trans.description">
-            {{ currentActivity.description || '-' }}
+            <div
+              v-if="currentActivity.description"
+              class="rich-text-content"
+              v-html="currentActivity.description"
+            />
+            <span v-else>-</span>
           </a-descriptions-item>
           <a-descriptions-item :label="trans.timeRange">
             {{ formatTime(currentActivity.start_time) }} ~ {{ formatTime(currentActivity.end_time) }}
@@ -1037,6 +1038,7 @@ export default {
       activities: [],
       statusFilter: 'all',
       formVisible: false,
+      tinymceInstance: null, // ⭐ TinyMCE 富文本编辑器实例
       detailVisible: false,
       recordVisible: false,
       ticketListVisible: false,
@@ -1156,8 +1158,138 @@ export default {
   },
   mounted() {
     this.fetchActivities();
+    this.loadTinyMCE();
+  },
+  beforeUnmount() {
+    // 销毁编辑器实例
+    if (this.tinymceInstance) {
+      this.tinymceInstance.destroy();
+      this.tinymceInstance = null;
+    }
   },
   methods: {
+    // 加载 TinyMCE 资源
+    loadTinyMCE() {
+      // 检查是否已加载
+      if (window.tinymce) {
+        return;
+      }
+
+      //  使用 cdnjs（Cloudflare CDN，包含完整资源，路径自动处理）
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js';
+      script.onload = () => console.log('✅ TinyMCE 加载成功');
+      script.onerror = () => console.error('❌ TinyMCE 加载失败');
+      document.head.appendChild(script);
+    },
+
+    // 初始化 TinyMCE 编辑器
+    initTinyMCE() {
+      if (!this.$refs.tinymceEditor) {
+        console.error('TinyMCE: 编辑器元素未找到');
+        return;
+      }
+
+      if (this.tinymceInstance) {
+        console.log('TinyMCE: 编辑器实例已存在');
+        return;
+      }
+
+      console.log('TinyMCE: 开始初始化...');
+
+      // 等待 TinyMCE 加载完成
+      let attempts = 0;
+      const checkTinyMCE = setInterval(() => {
+        attempts++;
+        if (window.tinymce) {
+          console.log('TinyMCE: 核心库已加载');
+          clearInterval(checkTinyMCE);
+
+          // 直接初始化，不加载语言包（先用英文界面测试）
+          this.initTinyMCEEditor();
+        } else if (attempts > 100) {
+          console.error('TinyMCE: 加载超时');
+          clearInterval(checkTinyMCE);
+        }
+      }, 100);
+    },
+
+    // 初始化编辑器实例
+    initTinyMCEEditor() {
+      console.log('TinyMCE: 开始初始化编辑器实例...');
+      console.log('TinyMCE: textarea元素', this.$refs.tinymceEditor);
+
+      if (!this.$refs.tinymceEditor) {
+        console.error('TinyMCE: textarea 元素不存在！');
+        return;
+      }
+
+      try {
+        window.tinymce.init({
+          target: this.$refs.tinymceEditor,
+
+          // ⭐ 必须使用完整的 HTTPS URL
+          base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3',
+          suffix: '.min',
+
+          // language: 'zh_CN', // 暂时用英文测试
+          height: 400,
+          menubar: false,
+          promotion: false, // 隐藏升级提示
+
+          plugins: [
+            'lists', 'link', 'image', 'code', 'table'
+          ],
+          toolbar: 'undo redo | bold italic | alignleft aligncenter | bullist numlist | image link table | code',
+
+          content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+
+          // ⭐ 自定义图片上传
+          images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+            this.handleTinyMCEImageUpload(blobInfo, progress)
+              .then(url => resolve(url))
+              .catch(err => reject(err));
+          }),
+
+          // 自动保存内容到 formData
+          setup: (editor) => {
+            console.log('TinyMCE: setup 回调执行');
+
+            editor.on('init', () => {
+              console.log('TinyMCE: 编辑器初始化完成！');
+
+              const container = editor.getContainer();
+              console.log('TinyMCE: 编辑器容器', container);
+
+              // ⭐ 强制显示编辑器容器
+              if (container) {
+                container.style.visibility = 'visible';
+                container.style.display = 'block';
+                console.log('TinyMCE: 强制显示编辑器容器');
+              }
+
+              // 设置初始内容
+              if (this.formData.description) {
+                editor.setContent(this.formData.description);
+              }
+            });
+
+            editor.on('change keyup', () => {
+              this.formData.description = editor.getContent();
+            });
+
+            // 保存实例引用
+            this.tinymceInstance = editor;
+          }
+        }).then((editors) => {
+          console.log('TinyMCE: init 完成，编辑器数量:', editors.length);
+        }).catch((error) => {
+          console.error('TinyMCE: init 失败', error);
+        });
+      } catch (error) {
+        console.error('TinyMCE: 初始化异常', error);
+      }
+    },
     // 獲取活動列表
     async fetchActivities() {
       this.loading = true;
@@ -1253,6 +1385,11 @@ export default {
       // 顯示創建表單
       this.formVisible = true;
       this.$message.success('已載入歷史活動資料，請設定活動時間並提交');
+
+      // ⚠️ 移除此处的初始化，改用 handleDrawerVisibleChange
+      // this.$nextTick(() => {
+      //   this.initTinyMCE();
+      // });
     },
 
     // 顯示創建表單
@@ -1277,6 +1414,11 @@ export default {
         prize_levels: []
       };
       this.formVisible = true;
+
+      // ⚠️ 移除此处的初始化，改用 handleDrawerVisibleChange
+      // this.$nextTick(() => {
+      //   this.initTinyMCE();
+      // });
     },
 
     // 上傳前驗證
@@ -1321,6 +1463,55 @@ export default {
         this.$message.error('圖片上傳失敗');
       } finally {
         this.uploading = false;
+      }
+    },
+
+    // ⭐ TinyMCE 图片上传处理
+    async handleTinyMCEImageUpload(blobInfo, progress) {
+      // 将 blob 转换为 File 对象
+      const file = blobInfo.blob();
+
+      // 验证文件类型
+      const isImage = /^image\/(jpeg|png|jpg|gif)$/.test(file.type);
+      if (!isImage) {
+        this.$message.error('只能上傳 JPG/PNG/GIF 格式的圖片！');
+        throw new Error('Invalid image format');
+      }
+
+      // 验证文件大小（2MB）
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        this.$message.error('圖片大小不能超過 2MB！');
+        throw new Error('Image size exceeds 2MB');
+      }
+
+      // 上传图片
+      const formData = new FormData();
+      formData.append('file', file, blobInfo.filename());
+
+      try {
+        // ⭐ 使用活动封面上传 API（支持 GCS 云存储）
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
+          method: 'post',
+          data: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        // 返回格式：{ code: 200, data: { url: '...' } }
+        if (res.code === 200 && res.data && res.data.url) {
+          this.$message.success('圖片上傳成功');
+          return res.data.url; // TinyMCE 需要返回图片 URL
+        } else {
+          this.$message.error(res.message || res.msg || '圖片上傳失敗');
+          throw new Error(res.message || 'Upload failed');
+        }
+      } catch (error) {
+        console.error('上傳失敗:', error);
+        this.$message.error('圖片上傳失敗');
+        throw error;
       }
     },
 
@@ -2138,10 +2329,34 @@ export default {
       }
     },
 
+    // ⭐ Drawer 可见性变化回调（完全打开后初始化编辑器）
+    handleDrawerVisibleChange(visible) {
+      console.log('TinyMCE: Drawer visible =', visible);
+
+      if (visible) {
+        // Drawer 完全打开后，延迟初始化编辑器
+        this.$nextTick(() => {
+          setTimeout(() => {
+            console.log('TinyMCE: Drawer 已完全打开，开始初始化编辑器');
+            this.initTinyMCE();
+          }, 300); // 给 Drawer 动画留足时间
+        });
+      } else {
+        // Drawer 关闭时销毁编辑器
+        if (this.tinymceInstance) {
+          console.log('TinyMCE: 销毁编辑器实例');
+          this.tinymceInstance.destroy();
+          this.tinymceInstance = null;
+        }
+      }
+    },
+
     // 關閉表單
     handleFormClose() {
       this.formVisible = false;
       this.$refs.formRef?.resetFields();
+
+      // 编辑器会在 handleDrawerVisibleChange(false) 中自动销毁
     },
 
     // 工具方法
@@ -2460,5 +2675,72 @@ export default {
 
 :deep(.ant-progress-text) {
   font-size: 12px;
+}
+
+/* 富文本内容样式 */
+.rich-text-content {
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+.rich-text-content p {
+  margin-bottom: 8px;
+}
+
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0;
+  border-radius: 4px;
+}
+
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.rich-text-content h1 {
+  font-size: 20px;
+}
+
+.rich-text-content h2 {
+  font-size: 18px;
+}
+
+.rich-text-content h3 {
+  font-size: 16px;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin-left: 20px;
+  margin-bottom: 8px;
+}
+
+.rich-text-content blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #666;
+}
+
+.rich-text-content code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.rich-text-content a {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.rich-text-content a:hover {
+  text-decoration: underline;
 }
 </style>
