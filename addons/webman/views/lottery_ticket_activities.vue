@@ -1446,9 +1446,9 @@ export default {
         const hide = this.$message.loading('圖片上傳中...', 0);
 
         try {
-          // ⭐ 使用系统统一上传 API
+          // ⭐ 使用活动封面上传 API（支持 GCS 云存储）
           const res = await this.$request({
-            url: 'ex-admin/addons-webman-controller-AttachmentController/upload',
+            url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
             method: 'post',
             data: formData,
             headers: {
@@ -1456,9 +1456,9 @@ export default {
             }
           });
 
-          // ⭐ 系统上传 API 返回格式：{ code: 200, data: [{ url: '...' }] }
-          if (res.code === 200 && res.data && res.data.length > 0 && res.data[0].url) {
-            const imageUrl = res.data[0].url;
+          // 返回格式：{ code: 200, data: { url: '...' } }
+          if (res.code === 200 && res.data && res.data.url) {
+            const imageUrl = res.data.url;
 
             // 获取当前光标位置
             const range = this.quillInstance.getSelection(true);
@@ -1468,7 +1468,7 @@ export default {
             this.quillInstance.setSelection(range.index + 1);
             this.$message.success('圖片上傳成功');
           } else {
-            this.$message.error(res.message || '圖片上傳失敗');
+            this.$message.error(res.message || res.msg || '圖片上傳失敗');
           }
         } catch (error) {
           console.error('上傳失敗:', error);
