@@ -1172,9 +1172,9 @@ export default {
         return;
       }
 
-      // 加载 TinyMCE JS（使用官方 CDN）
+      // 加载 TinyMCE JS（使用免费的 jsDelivr CDN，无需 API key）
       const script = document.createElement('script');
-      script.src = 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js';
+      script.src = 'https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js';
       script.referrerPolicy = 'origin';
       document.head.appendChild(script);
     },
@@ -1190,51 +1190,17 @@ export default {
         if (window.tinymce) {
           clearInterval(checkTinyMCE);
 
-          window.tinymce.init({
-            target: this.$refs.tinymceEditor,
-            language: 'zh_CN',
-            height: 400,
-            menubar: false,
-            plugins: [
-              'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-              'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-              'insertdatetime', 'media', 'table', 'help', 'wordcount'
-            ],
-            toolbar: 'undo redo | blocks | ' +
-              'bold italic underline strikethrough | forecolor backcolor | ' +
-              'alignleft aligncenter alignright alignjustify | ' +
-              'bullist numlist outdent indent | ' +
-              'table image link | removeformat code fullscreen',
-            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-            placeholder: this.trans.descriptionPlaceholder || '請輸入活動說明...',
-
-            // ⭐ 自定义图片上传
-            images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
-              this.handleTinyMCEImageUpload(blobInfo, progress)
-                .then(url => resolve(url))
-                .catch(err => reject(err));
-            }),
-
-            // 图片上传前验证
-            file_picker_types: 'image',
-
-            // 自动保存内容到 formData
-            setup: (editor) => {
-              editor.on('init', () => {
-                // 设置初始内容
-                if (this.formData.description) {
-                  editor.setContent(this.formData.description);
-                }
-              });
-
-              editor.on('change keyup', () => {
-                this.formData.description = editor.getContent();
-              });
-
-              // 保存实例引用
-              this.tinymceInstance = editor;
-            }
-          });
+          // ⭐ 先加载中文语言包
+          if (!window.tinymce.i18n || !window.tinymce.i18n.getData()['zh_CN']) {
+            const langScript = document.createElement('script');
+            langScript.src = 'https://cdn.jsdelivr.net/npm/tinymce-lang@6.8.3/langs6/zh_CN.js';
+            langScript.onload = () => {
+              this.initTinyMCEEditor();
+            };
+            document.head.appendChild(langScript);
+          } else {
+            this.initTinyMCEEditor();
+          }
         }
       }, 100);
 
@@ -1242,6 +1208,55 @@ export default {
       setTimeout(() => {
         clearInterval(checkTinyMCE);
       }, 10000);
+    },
+
+    // 初始化编辑器实例
+    initTinyMCEEditor() {
+      window.tinymce.init({
+        target: this.$refs.tinymceEditor,
+        language: 'zh_CN',
+        height: 400,
+        menubar: false,
+        plugins: [
+          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+          'insertdatetime', 'media', 'table', 'help', 'wordcount'
+        ],
+        toolbar: 'undo redo | blocks | ' +
+          'bold italic underline strikethrough | forecolor backcolor | ' +
+          'alignleft aligncenter alignright alignjustify | ' +
+          'bullist numlist outdent indent | ' +
+          'table image link | removeformat code fullscreen',
+        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+        placeholder: this.trans.descriptionPlaceholder || '請輸入活動說明...',
+
+        // ⭐ 自定义图片上传
+        images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+          this.handleTinyMCEImageUpload(blobInfo, progress)
+            .then(url => resolve(url))
+            .catch(err => reject(err));
+        }),
+
+        // 图片上传前验证
+        file_picker_types: 'image',
+
+        // 自动保存内容到 formData
+        setup: (editor) => {
+          editor.on('init', () => {
+            // 设置初始内容
+            if (this.formData.description) {
+              editor.setContent(this.formData.description);
+            }
+          });
+
+          editor.on('change keyup', () => {
+            this.formData.description = editor.getContent();
+          });
+
+          // 保存实例引用
+          this.tinymceInstance = editor;
+        }
+      });
     },
     // 獲取活動列表
     async fetchActivities() {
