@@ -170,6 +170,15 @@ class ChannelLotteryTicketActivityController
             'vipConfigHint' => admin_trans('lottery_ticket.help.vip_config_hint'),
             'prizeConfigHint' => admin_trans('lottery_ticket.help.prize_config_hint'),
             'inputTicketNo' => admin_trans('lottery_ticket.help.input_ticket_no'),
+            'activityNameHint' => admin_trans('lottery_ticket.help.activity_name_hint'),
+            'descriptionHint' => admin_trans('lottery_ticket.help.description_hint'),
+            'startTimeHint' => admin_trans('lottery_ticket.help.start_time_hint'),
+            'endTimeHint' => admin_trans('lottery_ticket.help.end_time_hint'),
+            'vipConfigDetail' => admin_trans('lottery_ticket.help.vip_config_detail'),
+            'prizeConfigDetail' => admin_trans('lottery_ticket.help.prize_config_detail'),
+            'prizeNameHint' => admin_trans('lottery_ticket.help.prize_name_hint'),
+            'prizeAmountHint' => admin_trans('lottery_ticket.help.prize_amount_hint'),
+            'prizeCountHint' => admin_trans('lottery_ticket.help.prize_count_hint'),
 
             // 表单
             'vipConfigSection' => admin_trans('lottery_ticket.form.vip_config_section'),

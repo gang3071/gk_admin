@@ -400,6 +400,15 @@ return [
         'vip_config_hint' => '為每個VIP等級配置達到指定打碼量後派獎的摸獎券數量',
         'prize_config_hint' => '配置獎品等級和獎勵金額(僅現金獎勵)',
         'input_ticket_no' => '輸入券號:',
+        'activity_name_hint' => '活動名稱將顯示在玩家端，請簡潔明了',
+        'description_hint' => '活動說明支持富文本格式，可添加圖片、表格等內容',
+        'start_time_hint' => '玩家可開始打碼獲取摸獎券的時間',
+        'end_time_hint' => '活動結束後自動進入待開獎狀態',
+        'vip_config_detail' => '玩家在活動期間累計達到指定打碼量後，系統將自動發放對應數量的摸獎券',
+        'prize_config_detail' => '可添加最多10個獎項，開獎時將從所有中獎券號中抽取對應數量的獎品發放給玩家',
+        'prize_name_hint' => '自定義獎項名稱，最多20字',
+        'prize_amount_hint' => '中獎玩家將獲得的現金獎勵',
+        'prize_count_hint' => '此獎項的獎品總數量',
     ],
 
     // 详情视图标签

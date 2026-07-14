@@ -346,7 +346,15 @@
           ref="formRef"
       >
         <a-form-item :label="trans.activityName" name="name">
-          <a-input v-model:value="formData.name" :placeholder="trans.activityNamePlaceholder"/>
+          <a-input
+              v-model:value="formData.name"
+              :placeholder="trans.activityNamePlaceholder"
+              :maxlength="20"
+              show-count
+          />
+          <div style="margin-top: 4px; color: #999; font-size: 12px;">
+            {{ trans.help?.activity_name_hint || '活動名稱將顯示在玩家端，請簡潔明了' }}
+          </div>
         </a-form-item>
 
         <a-form-item :label="trans.description" name="description">
@@ -354,6 +362,9 @@
           <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 250px;">
             <!-- ⭐ 初始隐藏 textarea，TinyMCE 初始化后会自动显示编辑器容器 -->
             <textarea ref="tinymceEditor" style="width: 100%; opacity: 0; height: 0; position: absolute;"></textarea>
+          </div>
+          <div style="margin-top: 4px; color: #999; font-size: 12px;">
+            {{ trans.help?.description_hint || '活動說明支持富文本格式，可添加圖片、表格等內容' }}
           </div>
         </a-form-item>
 
@@ -393,6 +404,9 @@
                   style="width: 100%;"
                   :placeholder="trans.selectStartTime"
               />
+              <div style="margin-top: 4px; color: #999; font-size: 12px;">
+                {{ trans.help?.start_time_hint || '玩家可開始打碼獲取摸獎券的時間' }}
+              </div>
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -405,6 +419,9 @@
                   style="width: 100%;"
                   :placeholder="trans.selectEndTime"
               />
+              <div style="margin-top: 4px; color: #999; font-size: 12px;">
+                {{ trans.help?.end_time_hint || '活動結束後自動進入待開獎狀態' }}
+              </div>
             </a-form-item>
           </a-col>
         </a-row>
@@ -413,11 +430,17 @@
         <a-divider>VIP等級打碼量配置</a-divider>
 
         <a-alert
-            :message="trans.form?.vip_config_hint || '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量'"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
-        />
+        >
+          <template #message>
+            <div>{{ trans.form?.vip_config_hint || '為每個VIP等級配置達到指定打碼量後發放的摸獎券數量' }}</div>
+            <div style="margin-top: 4px; font-size: 12px; color: #666;">
+              {{ trans.help?.vip_config_detail || '玩家在活動期間累計達到指定打碼量後，系統將自動發放對應數量的摸獎券' }}
+            </div>
+          </template>
+        </a-alert>
 
         <div v-if="formData.vip_configs && formData.vip_configs.length > 0">
           <div v-for="(config, index) in formData.vip_configs" :key="config.vip_level_id || index" class="vip-config-item">
@@ -460,11 +483,17 @@
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
-            :message="trans.form?.prize_config_hint || '配置獎品等級和獎勵金額(僅現金獎勵)'"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
-        />
+        >
+          <template #message>
+            <div>{{ trans.form?.prize_config_hint || '配置獎品等級和獎勵金額(僅現金獎勵)' }}</div>
+            <div style="margin-top: 4px; font-size: 12px; color: #666;">
+              {{ trans.help?.prize_config_detail || '可添加最多10個獎項，開獎時將從所有中獎券號中抽取對應數量的獎品發放給玩家' }}
+            </div>
+          </template>
+        </a-alert>
 
         <a-form-item>
           <a-button type="dashed" block @click="addPrizeLevel">
@@ -490,6 +519,9 @@
                       :maxlength="20"
                       show-count
                   />
+                  <div style="margin-top: 4px; color: #999; font-size: 12px;">
+                    {{ trans.help?.prize_name_hint || '自定義獎項名稱，最多20字' }}
+                  </div>
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -501,6 +533,9 @@
                       style="width: 100%;"
                       placeholder="0.00"
                   />
+                  <div style="margin-top: 4px; color: #999; font-size: 12px;">
+                    {{ trans.help?.prize_amount_hint || '中獎玩家將獲得的現金獎勵' }}
+                  </div>
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -512,6 +547,9 @@
                       style="width: 100%;"
                       placeholder="0"
                   />
+                  <div style="margin-top: 4px; color: #999; font-size: 12px;">
+                    {{ trans.help?.prize_count_hint || '此獎項的獎品總數量' }}
+                  </div>
                 </a-form-item>
               </a-col>
             </a-row>
