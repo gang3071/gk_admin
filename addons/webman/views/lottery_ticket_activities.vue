@@ -166,15 +166,13 @@
               />
             </div>
 
-            <!-- 活動描述 -->
+            <!-- 活動描述（富文本） -->
             <div class="description" v-if="activity.description">
-              <div style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6;">
-                <a-typography-paragraph
-                    :ellipsis="{ rows: 3, expandable: true, symbol: trans.expand }"
-                    :content="activity.description"
-                    style="margin-bottom: 0;"
-                />
-              </div>
+              <div
+                class="rich-text-content"
+                style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6; max-height: 90px; overflow: hidden;"
+                v-html="activity.description"
+              />
             </div>
 
             <div class="time-info">
@@ -360,13 +358,8 @@
         </a-form-item>
 
         <a-form-item :label="trans.description" name="description">
-          <a-textarea
-              v-model:value="formData.description"
-              :placeholder="trans.descriptionPlaceholder"
-              :rows="4"
-              show-count
-              :maxlength="500"
-          />
+          <!-- 富文本编辑器（Quill） -->
+          <div ref="quillEditor" style="background-color: white;"></div>
         </a-form-item>
 
         <a-form-item :label="trans.form?.cover_image || '活動封面圖片'">
@@ -557,7 +550,12 @@
             </a-tag>
           </a-descriptions-item>
           <a-descriptions-item :label="trans.description">
-            {{ currentActivity.description || '-' }}
+            <div
+              v-if="currentActivity.description"
+              class="rich-text-content"
+              v-html="currentActivity.description"
+            />
+            <span v-else>-</span>
           </a-descriptions-item>
           <a-descriptions-item :label="trans.timeRange">
             {{ formatTime(currentActivity.start_time) }} ~ {{ formatTime(currentActivity.end_time) }}
@@ -1037,6 +1035,7 @@ export default {
       activities: [],
       statusFilter: 'all',
       formVisible: false,
+      quillInstance: null, // ⭐ Quill 富文本编辑器实例
       detailVisible: false,
       recordVisible: false,
       ticketListVisible: false,
@@ -1156,8 +1155,80 @@ export default {
   },
   mounted() {
     this.fetchActivities();
+    this.loadQuillResources();
+  },
+  beforeUnmount() {
+    // 销毁编辑器实例
+    if (this.quillInstance) {
+      this.quillInstance = null;
+    }
   },
   methods: {
+    // 加载 Quill 富文本编辑器资源
+    loadQuillResources() {
+      // 检查是否已加载
+      if (window.Quill) {
+        return;
+      }
+
+      // 加载 Quill CSS
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
+      document.head.appendChild(cssLink);
+
+      // 加载 Quill JS
+      const script = document.createElement('script');
+      script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
+      script.async = true;
+      document.head.appendChild(script);
+    },
+
+    // 初始化 Quill 编辑器
+    initQuillEditor() {
+      if (!this.$refs.quillEditor || this.quillInstance) {
+        return;
+      }
+
+      // 等待 Quill 加载完成
+      const checkQuill = setInterval(() => {
+        if (window.Quill) {
+          clearInterval(checkQuill);
+
+          this.quillInstance = new window.Quill(this.$refs.quillEditor, {
+            theme: 'snow',
+            placeholder: this.trans.descriptionPlaceholder || '請輸入活動說明...',
+            modules: {
+              toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                ['blockquote', 'code-block'],
+                [{ 'header': 1 }, { 'header': 2 }],
+                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                [{ 'color': [] }, { 'background': [] }],
+                [{ 'align': [] }],
+                ['link'],
+                ['clean']
+              ]
+            }
+          });
+
+          // 同步内容到 formData
+          this.quillInstance.on('text-change', () => {
+            this.formData.description = this.quillInstance.root.innerHTML;
+          });
+
+          // 如果有初始内容，设置到编辑器
+          if (this.formData.description) {
+            this.quillInstance.root.innerHTML = this.formData.description;
+          }
+        }
+      }, 100);
+
+      // 10秒超时
+      setTimeout(() => {
+        clearInterval(checkQuill);
+      }, 10000);
+    },
     // 獲取活動列表
     async fetchActivities() {
       this.loading = true;
@@ -1253,6 +1324,11 @@ export default {
       // 顯示創建表單
       this.formVisible = true;
       this.$message.success('已載入歷史活動資料，請設定活動時間並提交');
+
+      // 初始化富文本编辑器
+      this.$nextTick(() => {
+        this.initQuillEditor();
+      });
     },
 
     // 顯示創建表單
@@ -1277,6 +1353,11 @@ export default {
         prize_levels: []
       };
       this.formVisible = true;
+
+      // 初始化富文本编辑器
+      this.$nextTick(() => {
+        this.initQuillEditor();
+      });
     },
 
     // 上傳前驗證
@@ -2142,6 +2223,11 @@ export default {
     handleFormClose() {
       this.formVisible = false;
       this.$refs.formRef?.resetFields();
+
+      // 销毁富文本编辑器
+      if (this.quillInstance) {
+        this.quillInstance = null;
+      }
     },
 
     // 工具方法
@@ -2460,5 +2546,64 @@ export default {
 
 :deep(.ant-progress-text) {
   font-size: 12px;
+}
+
+/* 富文本内容样式 */
+.rich-text-content {
+  line-height: 1.8;
+  word-break: break-word;
+}
+
+.rich-text-content p {
+  margin-bottom: 8px;
+}
+
+.rich-text-content h1,
+.rich-text-content h2,
+.rich-text-content h3 {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.rich-text-content h1 {
+  font-size: 20px;
+}
+
+.rich-text-content h2 {
+  font-size: 18px;
+}
+
+.rich-text-content h3 {
+  font-size: 16px;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin-left: 20px;
+  margin-bottom: 8px;
+}
+
+.rich-text-content blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 12px;
+  margin: 8px 0;
+  color: #666;
+}
+
+.rich-text-content code {
+  background-color: #f5f5f5;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+}
+
+.rich-text-content a {
+  color: #1890ff;
+  text-decoration: none;
+}
+
+.rich-text-content a:hover {
+  text-decoration: underline;
 }
 </style>
