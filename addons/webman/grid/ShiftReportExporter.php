@@ -194,6 +194,26 @@ class ShiftReportExporter extends Excel
                         $totalOut = $detail ? $detail->total_out : 0;
                         $profit = $detail ? $detail->profit : 0;
 
+                        // 过滤全部为0的明细行（使用 bccomp 精确比较小数）
+                        $allZero = (bccomp($machinePoint, '0', 2) === 0
+                            && bccomp($rechargeAmount, '0', 2) === 0
+                            && bccomp($withdrawalAmount, '0', 2) === 0
+                            && bccomp($modifiedAddAmount, '0', 2) === 0
+                            && bccomp($modifiedDeductAmount, '0', 2) === 0
+                            && bccomp($lotteryAmount, '0', 2) === 0
+                            && bccomp($activityBonusAmount, '0', 2) === 0
+                            && bccomp($lotteryTicketRewardAmount, '0', 2) === 0
+                            && bccomp($birthdayBonusAmount, '0', 2) === 0
+                            && bccomp($upgradeBonusAmount, '0', 2) === 0
+                            && bccomp($electronicGameBetAmount, '0', 2) === 0
+                            && bccomp($machineBetAmount, '0', 2) === 0
+                            && bccomp($totalIn, '0', 2) === 0
+                            && bccomp($totalOut, '0', 2) === 0
+                            && bccomp($profit, '0', 2) === 0);
+                        if ($allZero) {
+                            continue;
+                        }
+
                         $this->sheet->setCellValue('A' . $this->currentRow, $deviceInfo['player_name']);
                         $this->sheet->setCellValue('B' . $this->currentRow, $deviceInfo['player_phone']);
                         $this->sheet->setCellValue('C' . $this->currentRow, number_format($machinePoint, 0));
