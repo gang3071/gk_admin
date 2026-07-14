@@ -1322,6 +1322,7 @@ export default {
           // ⭐ 编辑器完全初始化后的回调（比 setup 的 init 事件更晚）
           init_instance_callback: (editor) => {
             console.log('TinyMCE: init_instance_callback 执行');
+            console.log('TinyMCE: formData.description =', this.formData.description); // ⭐ 调试日志
 
             const container = editor.getContainer();
             const iframe = container.querySelector('iframe');
@@ -1360,15 +1361,16 @@ export default {
             // 设置编辑模式
             editor.mode.set('design');
 
-            // 设置初始内容
-            if (this.formData.description) {
-              editor.setContent(this.formData.description);
-            }
-
-            // 插入测试文本并聚焦
+            // ⭐ 关键修复：延迟设置内容，确保 formData 已更新
             setTimeout(() => {
-              if (!this.formData.description) {
+              console.log('TinyMCE: 准备设置内容，formData.description =', this.formData.description);
+
+              if (this.formData.description) {
+                editor.setContent(this.formData.description);
+                console.log('TinyMCE: 已设置表单内容');
+              } else {
                 editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
+                console.log('TinyMCE: 已设置默认提示文本');
               }
 
               // 多次尝试聚焦，确保成功
@@ -1380,12 +1382,13 @@ export default {
 
                 console.log('TinyMCE: 最终检查 - contenteditable =', body.getAttribute('contenteditable'));
                 console.log('TinyMCE: 最终检查 - 焦点元素 =', iframeDoc.activeElement);
+                console.log('TinyMCE: 最终内容 =', editor.getContent()); // ⭐ 调试日志
 
                 // 尝试直接点击 body
                 body.click();
                 body.focus();
               }, 100);
-            }, 200);
+            }, 100); // ⭐ 增加延迟，确保 formData 已完全更新
           },
 
           // 自动保存内容到 formData
@@ -2452,12 +2455,14 @@ export default {
     // ⭐ Drawer 可见性变化回调（完全打开后初始化编辑器）
     handleDrawerVisibleChange(visible) {
       console.log('TinyMCE: Drawer visible =', visible);
+      console.log('TinyMCE: formData.description (Drawer打开时) =', this.formData.description); // ⭐ 调试日志
 
       if (visible) {
         // Drawer 完全打开后，延迟初始化编辑器
         this.$nextTick(() => {
           setTimeout(() => {
             console.log('TinyMCE: Drawer 已完全打开，开始初始化编辑器');
+            console.log('TinyMCE: formData.description (初始化前) =', this.formData.description); // ⭐ 调试日志
             this.initTinyMCE();
           }, 300); // 给 Drawer 动画留足时间
         });
