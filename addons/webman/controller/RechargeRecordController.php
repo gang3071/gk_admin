@@ -337,12 +337,6 @@ class RechargeRecordController
                 $actions->hideEdit();
             });
             $grid->filter(function (Filter $filter) {
-                $filter->eq()->select('player_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_recharge_record.fields.player_id'))
-                    ->remoteOptions(admin_url([$this, 'getPlayerOptions']));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('recommend_uuid')->placeholder(admin_trans('player.recommend_uuid'));
                 $filter->select('search_type')
@@ -632,6 +626,11 @@ class RechargeRecordController
                         $query->where('is_test', $exAdminFilter['search_type']);
                     });
                 }
+                if (!empty($exAdminFilter['player']['uuid'])) {
+                    $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('uuid', 'like', '%' . $exAdminFilter['player']['uuid'] . '%');
+                    });
+                }
             }
 
             $query = clone $grid->model();
@@ -737,12 +736,7 @@ class RechargeRecordController
                 $actions->hideEdit();
             });
             $grid->filter(function (Filter $filter) {
-                $filter->eq()->select('player_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_recharge_record.fields.player_id'))
-                    ->remoteOptions(admin_url([$this, 'getPlayerOptions']));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->select('search_type')
                     ->showSearch()
                     ->style(['width' => '200px'])

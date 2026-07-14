@@ -414,12 +414,7 @@ class ChannelRechargeRecordController
                 $actions->hideEdit();
             });
             $grid->filter(function (Filter $filter) {
-                $filter->eq()->select('player_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_recharge_record.fields.player_id'))
-                    ->remoteOptions(admin_url([$this, 'getPlayerOptions']));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('recommend_uuid')->placeholder(admin_trans('player.recommend_uuid'));
                 $filter->select('search_type')
                     ->showSearch()
@@ -603,6 +598,11 @@ class ChannelRechargeRecordController
             }
             if (!empty($requestFilter['created_at_end'])) {
                 $grid->model()->where('created_at', '<=', $requestFilter['created_at_end']);
+            }
+            if (!empty($requestFilter['player']['uuid'])) {
+                $grid->model()->whereHas('player', function ($query) use ($requestFilter) {
+                    $query->where('uuid', 'like', '%' . $requestFilter['player']['uuid'] . '%');
+                });
             }
             $grid->column('id', admin_trans('player_recharge_record.fields.id'))->align('center');
             $grid->column('tradeno', admin_trans('player_recharge_record.fields.tradeno'))->copy();
@@ -788,12 +788,7 @@ class ChannelRechargeRecordController
                 );
             });
             $grid->filter(function (Filter $filter) {
-                $filter->eq()->select('player_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_recharge_record.fields.player_id'))
-                    ->remoteOptions(admin_url([$this, 'getPlayerOptions']));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->eq()->select('status')
                     ->showSearch()
                     ->style(['width' => '200px'])
@@ -1170,6 +1165,14 @@ class ChannelRechargeRecordController
             $grid->autoHeight();
             $grid->model()->with(['player'])->where('type', PlayerRechargeRecord::TYPE_THIRD)->orderBy('created_at',
                 'desc');
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+            if (!empty($exAdminFilter)) {
+                if (!empty($exAdminFilter['player']['uuid'])) {
+                    $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('uuid', 'like', '%' . $exAdminFilter['player']['uuid'] . '%');
+                    });
+                }
+            }
             $query = clone $grid->model();
             $totalData = $query->selectRaw('sum(point) as total_point')->first();
             $layout = Layout::create();
@@ -1257,12 +1260,7 @@ class ChannelRechargeRecordController
                 $actions->hideEdit();
             });
             $grid->filter(function (Filter $filter) {
-                $filter->eq()->select('player_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_recharge_record.fields.player_id'))
-                    ->remoteOptions(admin_url([$this, 'getPlayerOptions']));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->eq()->select('status')
                     ->showSearch()
                     ->style(['width' => '200px'])
@@ -1346,6 +1344,11 @@ class ChannelRechargeRecordController
                 if (isset($exAdminFilter['search_type'])) {
                     $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
                         $query->where('is_test', $exAdminFilter['search_type']);
+                    });
+                }
+                if (!empty($exAdminFilter['player']['uuid'])) {
+                    $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('uuid', 'like', '%' . $exAdminFilter['player']['uuid'] . '%');
                     });
                 }
             }
@@ -1451,12 +1454,7 @@ class ChannelRechargeRecordController
                 $actions->hideEdit();
             });
             $grid->filter(function (Filter $filter) {
-                $filter->eq()->select('player_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('player_recharge_record.fields.player_id'))
-                    ->remoteOptions(admin_url([$this, 'getPlayerOptions']));
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->select('search_type')
                     ->showSearch()
                     ->style(['width' => '200px'])
