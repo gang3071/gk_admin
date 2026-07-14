@@ -2792,7 +2792,7 @@ class ChannelLotteryTicketActivityController
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
             'player_name' => $player->name,
-            'player_account' => $player->account ?? '-',  // 玩家账号
+            'player_account' => $player->phone ?? '-',  // 玩家账号（phone字段）
             'ticket_no' => $ticketNo,
             'ticket_id' => $ticket->id
         ], '', 200);

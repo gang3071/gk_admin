@@ -727,14 +727,34 @@
           <div style="padding: 12px; background: #f0f5ff; border-radius: 4px; border: 1px solid #d6e4ff;">
             <a-descriptions :column="1" size="small">
               <a-descriptions-item label="玩家UID">
-                <a-tag color="blue">
-                  <user-outlined /> {{ singleRecord.player_info.player_uuid }}
-                </a-tag>
+                <a-space>
+                  <a-tag color="blue">
+                    <user-outlined /> {{ singleRecord.player_info.player_uuid }}
+                  </a-tag>
+                  <a-button
+                      type="link"
+                      size="small"
+                      @click="copyToClipboard(singleRecord.player_info.player_uuid)"
+                      style="padding: 0;"
+                  >
+                    <copy-outlined /> 複製
+                  </a-button>
+                </a-space>
               </a-descriptions-item>
               <a-descriptions-item label="玩家真實名稱">
-                <a-tag color="green">
-                  <smile-outlined /> {{ singleRecord.player_info.player_name }}
-                </a-tag>
+                <a-space>
+                  <a-tag color="green">
+                    <smile-outlined /> {{ singleRecord.player_info.player_name }}
+                  </a-tag>
+                  <a-button
+                      type="link"
+                      size="small"
+                      @click="copyToClipboard(singleRecord.player_info.player_name)"
+                      style="padding: 0;"
+                  >
+                    <copy-outlined /> 複製
+                  </a-button>
+                </a-space>
               </a-descriptions-item>
               <a-descriptions-item label="玩家賬號">
                 <a-space>
