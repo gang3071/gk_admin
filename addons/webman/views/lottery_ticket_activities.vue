@@ -360,8 +360,8 @@
 
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
-          <div ref="tinymceContainer" style="position: relative; z-index: 1;">
-            <textarea ref="tinymceEditor"></textarea>
+          <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 450px;">
+            <textarea ref="tinymceEditor" style="width: 100%;"></textarea>
           </div>
         </a-form-item>
 
@@ -1293,65 +1293,50 @@ export default {
               .catch(err => reject(err));
           }),
 
+          // ⭐ 编辑器完全初始化后的回调（比 setup 的 init 事件更晚）
+          init_instance_callback: (editor) => {
+            console.log('TinyMCE: init_instance_callback 执行');
+
+            const container = editor.getContainer();
+            const iframe = container.querySelector('iframe');
+
+            console.log('TinyMCE: 容器', container);
+            console.log('TinyMCE: iframe', iframe);
+
+            if (iframe) {
+              // 强制设置高度
+              iframe.style.height = '400px !important';
+              iframe.style.minHeight = '400px';
+              iframe.style.maxHeight = 'none';
+              iframe.style.display = 'block';
+
+              console.log('TinyMCE: iframe 实际高度', iframe.offsetHeight);
+              console.log('TinyMCE: iframe 计算样式', window.getComputedStyle(iframe).height);
+            }
+
+            // 强制容器也有高度
+            if (container) {
+              container.style.height = 'auto';
+              container.style.minHeight = '450px';
+            }
+
+            // 设置初始内容
+            if (this.formData.description) {
+              editor.setContent(this.formData.description);
+            }
+
+            // 插入测试文本
+            setTimeout(() => {
+              editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
+              editor.focus();
+            }, 200);
+          },
+
           // 自动保存内容到 formData
           setup: (editor) => {
             console.log('TinyMCE: setup 回调执行');
 
-            editor.on('init', () => {
-              console.log('TinyMCE: 编辑器初始化完成！');
-
-              const container = editor.getContainer();
-              console.log('TinyMCE: 编辑器容器', container);
-
-              // ⭐ 强制显示编辑器容器
-              if (container) {
-                container.style.visibility = 'visible';
-                container.style.display = 'block';
-                console.log('TinyMCE: 强制显示编辑器容器');
-              }
-
-              // ⭐ 检查编辑器状态
-              console.log('TinyMCE: 只读模式?', editor.mode.get());
-              const editorBody = editor.getBody();
-              console.log('TinyMCE: 编辑器Body元素', editorBody);
-              console.log('TinyMCE: contenteditable属性', editorBody.getAttribute('contenteditable'));
-              console.log('TinyMCE: Body样式', window.getComputedStyle(editorBody));
-
-              // ⭐ 确保编辑器可编辑
-              editor.mode.set('design'); // 设置为设计模式（可编辑）
-              editorBody.setAttribute('contenteditable', 'true');
-
-              // ⭐ 移除可能干扰的CSS
-              editorBody.style.pointerEvents = 'auto';
-              editorBody.style.userSelect = 'text';
-
-              // 设置初始内容
-              if (this.formData.description) {
-                editor.setContent(this.formData.description);
-              }
-
-              // ⭐ 强制设置 iframe 高度（解决在 Drawer 中高度塌陷问题）
-              const iframe = container.querySelector('iframe');
-              if (iframe) {
-                iframe.style.height = '400px';
-                iframe.style.minHeight = '400px';
-                iframe.style.display = 'block';
-                console.log('TinyMCE: 强制设置 iframe 高度为 400px');
-              }
-
-              // ⭐ 聚焦到编辑器
-              setTimeout(() => {
-                console.log('TinyMCE: iframe元素', iframe);
-                console.log('TinyMCE: iframe实际高度', iframe ? iframe.offsetHeight : 'no iframe');
-
-                editor.focus();
-                console.log('TinyMCE: 编辑器已聚焦');
-                console.log('TinyMCE: 当前焦点元素', document.activeElement);
-
-                // ⭐ 测试：直接在编辑器中插入文本（验证编辑器是否真的可编辑）
-                editor.execCommand('mceInsertContent', false, '<p>测试：可以输入了吗？点击这里试试...</p>');
-              }, 100);
-            });
+            // ⚠️ 移除 setup 中的 init 事件处理，改用 init_instance_callback
 
             editor.on('change keyup', () => {
               this.formData.description = editor.getContent();
