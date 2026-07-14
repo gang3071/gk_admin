@@ -1214,6 +1214,12 @@ export default {
     // 初始化编辑器实例
     initTinyMCEEditor() {
       console.log('TinyMCE: 开始初始化编辑器实例...');
+      console.log('TinyMCE: textarea元素', this.$refs.tinymceEditor);
+
+      if (!this.$refs.tinymceEditor) {
+        console.error('TinyMCE: textarea 元素不存在！');
+        return;
+      }
 
       try {
         window.tinymce.init({
@@ -1227,18 +1233,13 @@ export default {
           height: 400,
           menubar: false,
           promotion: false, // 隐藏升级提示
+
           plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'searchreplace', 'code', 'fullscreen',
-            'table', 'wordcount'
+            'lists', 'link', 'image', 'code', 'table'
           ],
-          toolbar: 'undo redo | blocks | ' +
-            'bold italic underline strikethrough | forecolor backcolor | ' +
-            'alignleft aligncenter alignright alignjustify | ' +
-            'bullist numlist | ' +
-            'table image link | code fullscreen',
+          toolbar: 'undo redo | bold italic | alignleft aligncenter | bullist numlist | image link table | code',
+
           content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-          placeholder: this.trans.descriptionPlaceholder || '請輸入活動說明...',
 
           // ⭐ 自定义图片上传
           images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
@@ -1247,15 +1248,14 @@ export default {
               .catch(err => reject(err));
           }),
 
-          // 图片上传前验证
-          file_picker_types: 'image',
-
           // 自动保存内容到 formData
           setup: (editor) => {
             console.log('TinyMCE: setup 回调执行');
 
             editor.on('init', () => {
-              console.log('TinyMCE: 编辑器初始化完成');
+              console.log('TinyMCE: 编辑器初始化完成！');
+              console.log('TinyMCE: 编辑器容器', editor.getContainer());
+
               // 设置初始内容
               if (this.formData.description) {
                 editor.setContent(this.formData.description);
@@ -1269,9 +1269,13 @@ export default {
             // 保存实例引用
             this.tinymceInstance = editor;
           }
+        }).then((editors) => {
+          console.log('TinyMCE: init 完成，编辑器数量:', editors.length);
+        }).catch((error) => {
+          console.error('TinyMCE: init 失败', error);
         });
       } catch (error) {
-        console.error('TinyMCE: 初始化失败', error);
+        console.error('TinyMCE: 初始化异常', error);
       }
     },
     // 獲取活動列表
