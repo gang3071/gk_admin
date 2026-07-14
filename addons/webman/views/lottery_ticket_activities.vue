@@ -723,15 +723,15 @@
         </a-form-item>
 
         <!-- 玩家信息展示 -->
-        <a-form-item v-if="singleRecord.player_info" label="中獎玩家">
+        <a-form-item v-if="singleRecord.player_info" label="中獎玩家資訊">
           <div style="padding: 12px; background: #f0f5ff; border-radius: 4px; border: 1px solid #d6e4ff;">
             <a-descriptions :column="1" size="small">
-              <a-descriptions-item label="玩家UUID">
+              <a-descriptions-item label="玩家UID">
                 <a-tag color="blue">
                   <user-outlined /> {{ singleRecord.player_info.player_uuid }}
                 </a-tag>
               </a-descriptions-item>
-              <a-descriptions-item label="玩家名稱">
+              <a-descriptions-item label="玩家真實名稱">
                 <a-tag color="green">
                   <smile-outlined /> {{ singleRecord.player_info.player_name }}
                 </a-tag>
