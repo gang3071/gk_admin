@@ -361,7 +361,8 @@
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
           <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 450px;">
-            <textarea ref="tinymceEditor" style="width: 100%;"></textarea>
+            <!-- ⚠️ textarea 默认隐藏，防止一闪而过 -->
+            <textarea ref="tinymceEditor" style="display: none; width: 100%;"></textarea>
           </div>
         </a-form-item>
 
@@ -1190,9 +1191,22 @@ export default {
         return;
       }
 
+      // ⭐ 如果实例已存在，先销毁再重建
       if (this.tinymceInstance) {
-        console.log('TinyMCE: 编辑器实例已存在');
-        return;
+        console.log('TinyMCE: 销毁旧实例');
+        try {
+          this.tinymceInstance.destroy();
+          this.tinymceInstance = null;
+        } catch (e) {
+          console.error('TinyMCE: 销毁失败', e);
+        }
+      }
+
+      // ⭐ 清理可能残留的编辑器实例
+      const editorId = this.$refs.tinymceEditor.id;
+      if (editorId && window.tinymce && window.tinymce.get(editorId)) {
+        console.log('TinyMCE: 移除残留实例', editorId);
+        window.tinymce.get(editorId).remove();
       }
 
       console.log('TinyMCE: 开始初始化...');
@@ -2436,12 +2450,38 @@ export default {
           }, 300); // 给 Drawer 动画留足时间
         });
       } else {
-        // Drawer 关闭时销毁编辑器
+        // ⭐ Drawer 关闭时彻底清理编辑器
+        console.log('TinyMCE: Drawer 关闭，开始清理编辑器');
+
+        // 1. 销毁实例引用
         if (this.tinymceInstance) {
-          console.log('TinyMCE: 销毁编辑器实例');
-          this.tinymceInstance.destroy();
+          try {
+            this.tinymceInstance.destroy();
+            console.log('TinyMCE: 实例已销毁');
+          } catch (e) {
+            console.error('TinyMCE: 销毁实例失败', e);
+          }
           this.tinymceInstance = null;
         }
+
+        // 2. 移除所有可能残留的 TinyMCE DOM 元素
+        if (this.$refs.tinymceContainer) {
+          const container = this.$refs.tinymceContainer;
+
+          // 移除所有 tox-tinymce 容器
+          const editors = container.querySelectorAll('.tox-tinymce');
+          editors.forEach(editor => {
+            console.log('TinyMCE: 移除残留编辑器 DOM');
+            editor.remove();
+          });
+
+          // 确保 textarea 可见（为下次初始化准备）
+          if (this.$refs.tinymceEditor) {
+            this.$refs.tinymceEditor.style.display = 'none';
+          }
+        }
+
+        console.log('TinyMCE: 清理完成');
       }
     },
 
