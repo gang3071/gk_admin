@@ -358,8 +358,8 @@
         </a-form-item>
 
         <a-form-item :label="trans.description" name="description">
-          <!-- 富文本编辑器（Quill） -->
-          <div ref="quillEditor" style="background-color: white;"></div>
+          <!-- 富文本编辑器（TinyMCE） -->
+          <textarea ref="tinymceEditor" style="display: none;"></textarea>
         </a-form-item>
 
         <a-form-item :label="trans.form?.cover_image || '活動封面圖片'">
@@ -1035,7 +1035,7 @@ export default {
       activities: [],
       statusFilter: 'all',
       formVisible: false,
-      quillInstance: null, // ⭐ Quill 富文本编辑器实例
+      tinymceInstance: null, // ⭐ TinyMCE 富文本编辑器实例
       detailVisible: false,
       recordVisible: false,
       ticketListVisible: false,
@@ -1155,83 +1155,92 @@ export default {
   },
   mounted() {
     this.fetchActivities();
-    this.loadQuillResources();
+    this.loadTinyMCE();
   },
   beforeUnmount() {
     // 销毁编辑器实例
-    if (this.quillInstance) {
-      this.quillInstance = null;
+    if (this.tinymceInstance) {
+      this.tinymceInstance.destroy();
+      this.tinymceInstance = null;
     }
   },
   methods: {
-    // 加载 Quill 富文本编辑器资源
-    loadQuillResources() {
+    // 加载 TinyMCE 资源
+    loadTinyMCE() {
       // 检查是否已加载
-      if (window.Quill) {
+      if (window.tinymce) {
         return;
       }
 
-      // 加载 Quill CSS
-      const cssLink = document.createElement('link');
-      cssLink.rel = 'stylesheet';
-      cssLink.href = 'https://cdn.quilljs.com/1.3.6/quill.snow.css';
-      document.head.appendChild(cssLink);
-
-      // 加载 Quill JS
+      // 加载 TinyMCE JS（使用官方 CDN）
       const script = document.createElement('script');
-      script.src = 'https://cdn.quilljs.com/1.3.6/quill.js';
-      script.async = true;
+      script.src = 'https://cdn.tiny.cloud/1/no-api-key/tinymce/6/tinymce.min.js';
+      script.referrerPolicy = 'origin';
       document.head.appendChild(script);
     },
 
-    // 初始化 Quill 编辑器
-    initQuillEditor() {
-      if (!this.$refs.quillEditor || this.quillInstance) {
+    // 初始化 TinyMCE 编辑器
+    initTinyMCE() {
+      if (!this.$refs.tinymceEditor || this.tinymceInstance) {
         return;
       }
 
-      // 等待 Quill 加载完成
-      const checkQuill = setInterval(() => {
-        if (window.Quill) {
-          clearInterval(checkQuill);
+      // 等待 TinyMCE 加载完成
+      const checkTinyMCE = setInterval(() => {
+        if (window.tinymce) {
+          clearInterval(checkTinyMCE);
 
-          this.quillInstance = new window.Quill(this.$refs.quillEditor, {
-            theme: 'snow',
+          window.tinymce.init({
+            target: this.$refs.tinymceEditor,
+            language: 'zh_CN',
+            height: 400,
+            menubar: false,
+            plugins: [
+              'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+              'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+              'insertdatetime', 'media', 'table', 'help', 'wordcount'
+            ],
+            toolbar: 'undo redo | blocks | ' +
+              'bold italic underline strikethrough | forecolor backcolor | ' +
+              'alignleft aligncenter alignright alignjustify | ' +
+              'bullist numlist outdent indent | ' +
+              'table image link | removeformat code fullscreen',
+            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
             placeholder: this.trans.descriptionPlaceholder || '請輸入活動說明...',
-            modules: {
-              toolbar: {
-                container: [
-                  ['bold', 'italic', 'underline', 'strike'],
-                  ['blockquote', 'code-block'],
-                  [{ 'header': 1 }, { 'header': 2 }],
-                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                  [{ 'color': [] }, { 'background': [] }],
-                  [{ 'align': [] }],
-                  ['link', 'image'],  // ⭐ 添加图片按钮
-                  ['clean']
-                ],
-                handlers: {
-                  image: this.handleQuillImageUpload  // ⭐ 自定义图片上传处理
+
+            // ⭐ 自定义图片上传
+            images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+              this.handleTinyMCEImageUpload(blobInfo, progress)
+                .then(url => resolve(url))
+                .catch(err => reject(err));
+            }),
+
+            // 图片上传前验证
+            file_picker_types: 'image',
+
+            // 自动保存内容到 formData
+            setup: (editor) => {
+              editor.on('init', () => {
+                // 设置初始内容
+                if (this.formData.description) {
+                  editor.setContent(this.formData.description);
                 }
-              }
+              });
+
+              editor.on('change keyup', () => {
+                this.formData.description = editor.getContent();
+              });
+
+              // 保存实例引用
+              this.tinymceInstance = editor;
             }
           });
-
-          // 同步内容到 formData
-          this.quillInstance.on('text-change', () => {
-            this.formData.description = this.quillInstance.root.innerHTML;
-          });
-
-          // 如果有初始内容，设置到编辑器
-          if (this.formData.description) {
-            this.quillInstance.root.innerHTML = this.formData.description;
-          }
         }
       }, 100);
 
       // 10秒超时
       setTimeout(() => {
-        clearInterval(checkQuill);
+        clearInterval(checkTinyMCE);
       }, 10000);
     },
     // 獲取活動列表
@@ -1332,7 +1341,7 @@ export default {
 
       // 初始化富文本编辑器
       this.$nextTick(() => {
-        this.initQuillEditor();
+        this.initTinyMCE();
       });
     },
 
@@ -1361,7 +1370,7 @@ export default {
 
       // 初始化富文本编辑器
       this.$nextTick(() => {
-        this.initQuillEditor();
+        this.initTinyMCE();
       });
     },
 
@@ -1410,73 +1419,53 @@ export default {
       }
     },
 
-    // ⭐ Quill 富文本编辑器图片上传
-    handleQuillImageUpload() {
-      // 创建隐藏的 file input
-      const input = document.createElement('input');
-      input.setAttribute('type', 'file');
-      input.setAttribute('accept', 'image/jpeg,image/png,image/jpg,image/gif');
-      input.click();
+    // ⭐ TinyMCE 图片上传处理
+    async handleTinyMCEImageUpload(blobInfo, progress) {
+      // 将 blob 转换为 File 对象
+      const file = blobInfo.blob();
 
-      input.onchange = async () => {
-        const file = input.files[0];
-        if (!file) {
-          return;
-        }
+      // 验证文件类型
+      const isImage = /^image\/(jpeg|png|jpg|gif)$/.test(file.type);
+      if (!isImage) {
+        this.$message.error('只能上傳 JPG/PNG/GIF 格式的圖片！');
+        throw new Error('Invalid image format');
+      }
 
-        // 验证文件类型
-        const isImage = /^image\/(jpeg|png|jpg|gif)$/.test(file.type);
-        if (!isImage) {
-          this.$message.error('只能上傳 JPG/PNG/GIF 格式的圖片！');
-          return;
-        }
+      // 验证文件大小（2MB）
+      const isLt2M = file.size / 1024 / 1024 < 2;
+      if (!isLt2M) {
+        this.$message.error('圖片大小不能超過 2MB！');
+        throw new Error('Image size exceeds 2MB');
+      }
 
-        // 验证文件大小（2MB）
-        const isLt2M = file.size / 1024 / 1024 < 2;
-        if (!isLt2M) {
-          this.$message.error('圖片大小不能超過 2MB！');
-          return;
-        }
+      // 上传图片
+      const formData = new FormData();
+      formData.append('file', file, blobInfo.filename());
 
-        // 上传图片
-        const formData = new FormData();
-        formData.append('file', file);
-
-        // 显示加载提示
-        const hide = this.$message.loading('圖片上傳中...', 0);
-
-        try {
-          // ⭐ 使用活动封面上传 API（支持 GCS 云存储）
-          const res = await this.$request({
-            url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
-            method: 'post',
-            data: formData,
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-
-          // 返回格式：{ code: 200, data: { url: '...' } }
-          if (res.code === 200 && res.data && res.data.url) {
-            const imageUrl = res.data.url;
-
-            // 获取当前光标位置
-            const range = this.quillInstance.getSelection(true);
-            // 插入图片到编辑器
-            this.quillInstance.insertEmbed(range.index, 'image', imageUrl);
-            // 光标移动到图片后面
-            this.quillInstance.setSelection(range.index + 1);
-            this.$message.success('圖片上傳成功');
-          } else {
-            this.$message.error(res.message || res.msg || '圖片上傳失敗');
+      try {
+        // ⭐ 使用活动封面上传 API（支持 GCS 云存储）
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
+          method: 'post',
+          data: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data'
           }
-        } catch (error) {
-          console.error('上傳失敗:', error);
-          this.$message.error('圖片上傳失敗');
-        } finally {
-          hide();
+        });
+
+        // 返回格式：{ code: 200, data: { url: '...' } }
+        if (res.code === 200 && res.data && res.data.url) {
+          this.$message.success('圖片上傳成功');
+          return res.data.url; // TinyMCE 需要返回图片 URL
+        } else {
+          this.$message.error(res.message || res.msg || '圖片上傳失敗');
+          throw new Error(res.message || 'Upload failed');
         }
-      };
+      } catch (error) {
+        console.error('上傳失敗:', error);
+        this.$message.error('圖片上傳失敗');
+        throw error;
+      }
     },
 
     // 選單點擊
@@ -2299,8 +2288,9 @@ export default {
       this.$refs.formRef?.resetFields();
 
       // 销毁富文本编辑器
-      if (this.quillInstance) {
-        this.quillInstance = null;
+      if (this.tinymceInstance) {
+        this.tinymceInstance.destroy();
+        this.tinymceInstance = null;
       }
     },
 
