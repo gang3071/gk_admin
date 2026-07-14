@@ -1040,7 +1040,6 @@ export default {
       statusFilter: 'all',
       formVisible: false,
       tinymceInstance: null, // ⭐ TinyMCE 富文本编辑器实例
-      tinymceWatchdog: null, // ⭐ contenteditable 监控定时器
       detailVisible: false,
       recordVisible: false,
       ticketListVisible: false,
@@ -1239,18 +1238,6 @@ export default {
         return;
       }
 
-      // ⭐ 关键修复：确保元素已挂载到 DOM 树中
-      if (!this.$refs.tinymceEditor.parentNode) {
-        console.error('TinyMCE: textarea 元素未挂载到 DOM！');
-        return;
-      }
-
-      // ⭐ 关键修复：确保容器元素存在
-      if (!this.$refs.tinymceContainer || !this.$refs.tinymceContainer.parentNode) {
-        console.error('TinyMCE: 容器元素未挂载到 DOM！');
-        return;
-      }
-
       try {
         window.tinymce.init({
           target: this.$refs.tinymceEditor,
@@ -1323,7 +1310,6 @@ export default {
           // ⭐ 编辑器完全初始化后的回调（比 setup 的 init 事件更晚）
           init_instance_callback: (editor) => {
             console.log('TinyMCE: init_instance_callback 执行');
-            console.log('TinyMCE: formData.description =', this.formData.description); // ⭐ 调试日志
 
             const container = editor.getContainer();
             const iframe = container.querySelector('iframe');
@@ -1331,25 +1317,21 @@ export default {
             console.log('TinyMCE: 容器', container);
             console.log('TinyMCE: iframe', iframe);
 
-            // ⭐ 关键修复：强制显示编辑器容器
-            if (container) {
-              container.style.visibility = 'visible';
-              container.style.display = 'block';
-              container.style.height = 'auto';
-              container.style.minHeight = '450px';
-              console.log('TinyMCE: 容器可见性已设置');
-            }
-
             if (iframe) {
               // 强制设置高度
               iframe.style.height = '400px !important';
               iframe.style.minHeight = '400px';
               iframe.style.maxHeight = 'none';
               iframe.style.display = 'block';
-              iframe.style.visibility = 'visible';
 
               console.log('TinyMCE: iframe 实际高度', iframe.offsetHeight);
               console.log('TinyMCE: iframe 计算样式', window.getComputedStyle(iframe).height);
+            }
+
+            // 强制容器也有高度
+            if (container) {
+              container.style.height = 'auto';
+              container.style.minHeight = '450px';
             }
 
             // ⭐ 关键修复：确保编辑器 body 可编辑
@@ -1366,31 +1348,16 @@ export default {
             // 设置编辑模式
             editor.mode.set('design');
 
-            // ⭐ 关键修复：延迟设置内容，确保 formData 已更新
+            // 设置初始内容
+            if (this.formData.description) {
+              editor.setContent(this.formData.description);
+            }
+
+            // 插入测试文本并聚焦
             setTimeout(() => {
-              console.log('TinyMCE: 准备设置内容，formData.description =', this.formData.description);
-
-              if (this.formData.description) {
-                editor.setContent(this.formData.description);
-                console.log('TinyMCE: 已设置表单内容');
-              } else {
+              if (!this.formData.description) {
                 editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
-                console.log('TinyMCE: 已设置默认提示文本');
               }
-
-              // ⭐ 关键修复：setContent 后再次强制设置 contenteditable
-              // TinyMCE 在某些情况下会在 setContent 后重置 contenteditable 属性
-              const editorBody = editor.getBody();
-              if (editorBody) {
-                editorBody.setAttribute('contenteditable', 'true');
-                editorBody.style.pointerEvents = 'auto';
-                editorBody.style.userSelect = 'text';
-                console.log('TinyMCE: setContent 后重新强制设置 contenteditable');
-              }
-
-              // ⭐ 终极解决方案：启动持续监控机制
-              // 每 500ms 检查一次，如果被改成 false 就强制改回 true
-              this.startContentEditableWatchdog(editor);
 
               // 多次尝试聚焦，确保成功
               editor.focus();
@@ -1399,40 +1366,21 @@ export default {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                 const body = iframeDoc.body;
 
-                // ⭐ 最终检查：如果 contenteditable 仍然不是 true，再次强制设置
-                if (body.getAttribute('contenteditable') !== 'true') {
-                  console.warn('TinyMCE: 警告 - contenteditable 不是 true，最后一次强制设置');
-                  body.setAttribute('contenteditable', 'true');
-                  body.style.pointerEvents = 'auto';
-                  body.style.userSelect = 'text';
-                }
-
                 console.log('TinyMCE: 最终检查 - contenteditable =', body.getAttribute('contenteditable'));
                 console.log('TinyMCE: 最终检查 - 焦点元素 =', iframeDoc.activeElement);
-                console.log('TinyMCE: 最终内容 =', editor.getContent()); // ⭐ 调试日志
 
                 // 尝试直接点击 body
                 body.click();
                 body.focus();
               }, 100);
-            }, 100); // ⭐ 增加延迟，确保 formData 已完全更新
+            }, 200);
           },
 
           // 自动保存内容到 formData
           setup: (editor) => {
             console.log('TinyMCE: setup 回调执行');
 
-            // ⭐ 关键修复：确保编辑器容器可见
-            editor.on('init', () => {
-              console.log('TinyMCE: setup.init 事件触发');
-              const container = editor.getContainer();
-              if (container) {
-                // 强制显示编辑器容器
-                container.style.visibility = 'visible';
-                container.style.display = 'block';
-                console.log('TinyMCE: 容器可见性已强制设置为 visible');
-              }
-            });
+            // ⚠️ 移除 setup 中的 init 事件处理，改用 init_instance_callback
 
             editor.on('change keyup', () => {
               this.formData.description = editor.getContent();
@@ -2492,27 +2440,18 @@ export default {
     // ⭐ Drawer 可见性变化回调（完全打开后初始化编辑器）
     handleDrawerVisibleChange(visible) {
       console.log('TinyMCE: Drawer visible =', visible);
-      console.log('TinyMCE: formData.description (Drawer打开时) =', this.formData.description); // ⭐ 调试日志
 
       if (visible) {
         // Drawer 完全打开后，延迟初始化编辑器
         this.$nextTick(() => {
           setTimeout(() => {
             console.log('TinyMCE: Drawer 已完全打开，开始初始化编辑器');
-            console.log('TinyMCE: formData.description (初始化前) =', this.formData.description); // ⭐ 调试日志
             this.initTinyMCE();
           }, 300); // 给 Drawer 动画留足时间
         });
       } else {
         // ⭐ Drawer 关闭时彻底清理编辑器
         console.log('TinyMCE: Drawer 关闭，开始清理编辑器');
-
-        // 0. ⭐ 停止监控定时器
-        if (this.tinymceWatchdog) {
-          clearInterval(this.tinymceWatchdog);
-          this.tinymceWatchdog = null;
-          console.log('TinyMCE: contenteditable 监控已停止');
-        }
 
         // 1. 销毁实例引用
         if (this.tinymceInstance) {
@@ -2544,45 +2483,6 @@ export default {
 
         console.log('TinyMCE: 清理完成');
       }
-    },
-
-    // ⭐ 启动 contenteditable 监控（持续检查并修复）
-    startContentEditableWatchdog(editor) {
-      // 清除旧的监控定时器
-      if (this.tinymceWatchdog) {
-        clearInterval(this.tinymceWatchdog);
-        this.tinymceWatchdog = null;
-      }
-
-      console.log('TinyMCE: 启动 contenteditable 监控机制');
-
-      // 每 500ms 检查一次
-      this.tinymceWatchdog = setInterval(() => {
-        try {
-          const body = editor.getBody();
-          if (!body) {
-            console.warn('TinyMCE: 监控发现 body 不存在，停止监控');
-            clearInterval(this.tinymceWatchdog);
-            this.tinymceWatchdog = null;
-            return;
-          }
-
-          const currentValue = body.getAttribute('contenteditable');
-
-          // 如果被改成了 false 或其他值，强制改回 true
-          if (currentValue !== 'true') {
-            console.warn('TinyMCE: 监控发现 contenteditable 被改为', currentValue, '，立即修复');
-            body.setAttribute('contenteditable', 'true');
-            body.style.pointerEvents = 'auto';
-            body.style.userSelect = 'text';
-
-            // 重新设置编辑模式
-            editor.mode.set('design');
-          }
-        } catch (error) {
-          console.error('TinyMCE: 监控异常', error);
-        }
-      }, 500);
     },
 
     // 關閉表單
