@@ -1172,9 +1172,9 @@ export default {
         return;
       }
 
-      // 加载 TinyMCE JS（使用官方 CDN + API key）
+      // 加载 TinyMCE JS（使用 UNPKG CDN，完全免费，无需 API key 和域名验证）
       const script = document.createElement('script');
-      script.src = 'https://cdn.tiny.cloud/1/eicorihisctx5gyr7sc4of3t4igwclewss0i4xntt5u2nn84/tinymce/6/tinymce.min.js';
+      script.src = 'https://unpkg.com/tinymce@6.8.3/tinymce.min.js';
       script.referrerPolicy = 'origin';
       document.head.appendChild(script);
     },
