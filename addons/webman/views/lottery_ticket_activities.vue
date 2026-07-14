@@ -360,7 +360,7 @@
 
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
-          <div ref="tinymceContainer">
+          <div ref="tinymceContainer" style="position: relative; z-index: 1;">
             <textarea ref="tinymceEditor"></textarea>
           </div>
         </a-form-item>
@@ -1277,21 +1277,37 @@ export default {
 
               // ⭐ 检查编辑器状态
               console.log('TinyMCE: 只读模式?', editor.mode.get());
-              console.log('TinyMCE: 是否禁用?', editor.getBody().getAttribute('contenteditable'));
+              const editorBody = editor.getBody();
+              console.log('TinyMCE: 编辑器Body元素', editorBody);
+              console.log('TinyMCE: contenteditable属性', editorBody.getAttribute('contenteditable'));
+              console.log('TinyMCE: Body样式', window.getComputedStyle(editorBody));
 
               // ⭐ 确保编辑器可编辑
               editor.mode.set('design'); // 设置为设计模式（可编辑）
-              editor.getBody().setAttribute('contenteditable', 'true');
+              editorBody.setAttribute('contenteditable', 'true');
+
+              // ⭐ 移除可能干扰的CSS
+              editorBody.style.pointerEvents = 'auto';
+              editorBody.style.userSelect = 'text';
 
               // 设置初始内容
               if (this.formData.description) {
                 editor.setContent(this.formData.description);
               }
 
-              // ⭐ 聚焦到编辑器（让用户知道可以输入）
+              // ⭐ 聚焦到编辑器
               setTimeout(() => {
+                // 检查 iframe
+                const iframe = container.querySelector('iframe');
+                console.log('TinyMCE: iframe元素', iframe);
+                console.log('TinyMCE: iframe样式', iframe ? window.getComputedStyle(iframe) : 'no iframe');
+
                 editor.focus();
                 console.log('TinyMCE: 编辑器已聚焦');
+                console.log('TinyMCE: 当前焦点元素', document.activeElement);
+
+                // ⭐ 测试：直接在编辑器中插入文本（验证编辑器是否真的可编辑）
+                editor.execCommand('mceInsertContent', false, '测试：可以输入了吗？');
               }, 100);
             });
 
