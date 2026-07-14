@@ -1377,12 +1377,30 @@ export default {
                 console.log('TinyMCE: 已设置默认提示文本');
               }
 
+              // ⭐ 关键修复：setContent 后再次强制设置 contenteditable
+              // TinyMCE 在某些情况下会在 setContent 后重置 contenteditable 属性
+              const editorBody = editor.getBody();
+              if (editorBody) {
+                editorBody.setAttribute('contenteditable', 'true');
+                editorBody.style.pointerEvents = 'auto';
+                editorBody.style.userSelect = 'text';
+                console.log('TinyMCE: setContent 后重新强制设置 contenteditable');
+              }
+
               // 多次尝试聚焦，确保成功
               editor.focus();
 
               setTimeout(() => {
                 const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
                 const body = iframeDoc.body;
+
+                // ⭐ 最终检查：如果 contenteditable 仍然不是 true，再次强制设置
+                if (body.getAttribute('contenteditable') !== 'true') {
+                  console.warn('TinyMCE: 警告 - contenteditable 不是 true，最后一次强制设置');
+                  body.setAttribute('contenteditable', 'true');
+                  body.style.pointerEvents = 'auto';
+                  body.style.userSelect = 'text';
+                }
 
                 console.log('TinyMCE: 最终检查 - contenteditable =', body.getAttribute('contenteditable'));
                 console.log('TinyMCE: 最终检查 - 焦点元素 =', iframeDoc.activeElement);
