@@ -169,9 +169,9 @@
             <!-- 活動描述（富文本） -->
             <div class="description" v-if="activity.description">
               <div
-                class="rich-text-content"
-                style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6; max-height: 90px; overflow: hidden;"
-                v-html="activity.description"
+                  class="rich-text-content"
+                  style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6; max-height: 90px; overflow: hidden;"
+                  v-html="activity.description"
               />
             </div>
 
@@ -361,8 +361,7 @@
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
           <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 450px;">
-            <!-- ⚠️ textarea 默认隐藏，防止一闪而过 -->
-            <textarea ref="tinymceEditor" style="display: none; width: 100%;"></textarea>
+            <textarea ref="tinymceEditor" style="width: 100%;"></textarea>
           </div>
         </a-form-item>
 
@@ -555,9 +554,9 @@
           </a-descriptions-item>
           <a-descriptions-item :label="trans.description">
             <div
-              v-if="currentActivity.description"
-              class="rich-text-content"
-              v-html="currentActivity.description"
+                v-if="currentActivity.description"
+                class="rich-text-content"
+                v-html="currentActivity.description"
             />
             <span v-else>-</span>
           </a-descriptions-item>
@@ -854,11 +853,11 @@
             </template>
             <template #suffix>
               <a-button
-                type="link"
-                size="small"
-                @click="generatePushUrl"
-                :loading="generatingPush"
-                :disabled="!liveUrlInput"
+                  type="link"
+                  size="small"
+                  @click="generatePushUrl"
+                  :loading="generatingPush"
+                  :disabled="!liveUrlInput"
               >
                 {{ trans.generatePushUrl || '生成推流地址' }}
               </a-button>
@@ -887,9 +886,9 @@
             >
               <template #addonAfter>
                 <a-button
-                  type="link"
-                  size="small"
-                  @click="copyToClipboard(pushUrlResult.push_server)"
+                    type="link"
+                    size="small"
+                    @click="copyToClipboard(pushUrlResult.push_server)"
                 >
                   <copy-outlined />
                   {{ trans.copyPushServer || '複製' }}
@@ -907,9 +906,9 @@
             >
               <template #addonAfter>
                 <a-button
-                  type="link"
-                  size="small"
-                  @click="copyToClipboard(pushUrlResult.stream_key)"
+                    type="link"
+                    size="small"
+                    @click="copyToClipboard(pushUrlResult.stream_key)"
                 >
                   <copy-outlined />
                   {{ trans.copyStreamKey || '複製' }}
@@ -1191,22 +1190,9 @@ export default {
         return;
       }
 
-      // ⭐ 如果实例已存在，先销毁再重建
       if (this.tinymceInstance) {
-        console.log('TinyMCE: 销毁旧实例');
-        try {
-          this.tinymceInstance.destroy();
-          this.tinymceInstance = null;
-        } catch (e) {
-          console.error('TinyMCE: 销毁失败', e);
-        }
-      }
-
-      // ⭐ 清理可能残留的编辑器实例
-      const editorId = this.$refs.tinymceEditor.id;
-      if (editorId && window.tinymce && window.tinymce.get(editorId)) {
-        console.log('TinyMCE: 移除残留实例', editorId);
-        window.tinymce.get(editorId).remove();
+        console.log('TinyMCE: 编辑器实例已存在');
+        return;
       }
 
       console.log('TinyMCE: 开始初始化...');
@@ -1283,11 +1269,11 @@ export default {
 
           // ⭐ 完整工具栏
           toolbar: 'undo redo | blocks fontsize | ' +
-            'bold italic underline strikethrough | forecolor backcolor | ' +
-            'alignleft aligncenter alignright alignjustify | ' +
-            'bullist numlist outdent indent | ' +
-            'link image media table charmap | ' +
-            'code preview fullscreen | removeformat help',
+              'bold italic underline strikethrough | forecolor backcolor | ' +
+              'alignleft aligncenter alignright alignjustify | ' +
+              'bullist numlist outdent indent | ' +
+              'link image media table charmap | ' +
+              'code preview fullscreen | removeformat help',
 
           // ⭐ 字体大小选项
           fontsize_formats: '12px 14px 16px 18px 24px 36px 48px',
@@ -1303,8 +1289,8 @@ export default {
           // ⭐ 自定义图片上传
           images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
             this.handleTinyMCEImageUpload(blobInfo, progress)
-              .then(url => resolve(url))
-              .catch(err => reject(err));
+                .then(url => resolve(url))
+                .catch(err => reject(err));
           }),
 
           // ⭐ 编辑器完全初始化后的回调（比 setup 的 init 事件更晚）
@@ -1357,15 +1343,6 @@ export default {
             setTimeout(() => {
               if (!this.formData.description) {
                 editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
-              }
-
-              // ⭐ 精准修复：setContent 后可能重置 contenteditable，再次确保
-              const body = editor.getBody();
-              if (body && body.getAttribute('contenteditable') !== 'true') {
-                body.setAttribute('contenteditable', 'true');
-                body.style.pointerEvents = 'auto';
-                body.style.userSelect = 'text';
-                console.log('TinyMCE: setContent 后修正 contenteditable');
               }
 
               // 多次尝试聚焦，确保成功
@@ -2459,38 +2436,39 @@ export default {
           }, 300); // 给 Drawer 动画留足时间
         });
       } else {
-        // ⭐ Drawer 关闭时彻底清理编辑器
-        console.log('TinyMCE: Drawer 关闭，开始清理编辑器');
+        // Drawer 关闭时彻底销毁编辑器
+        console.log('TinyMCE: 开始销毁编辑器...');
 
-        // 1. 销毁实例引用
+        // 方法1：使用实例销毁
         if (this.tinymceInstance) {
           try {
             this.tinymceInstance.destroy();
-            console.log('TinyMCE: 实例已销毁');
-          } catch (e) {
-            console.error('TinyMCE: 销毁实例失败', e);
+            console.log('TinyMCE: 实例销毁成功');
+          } catch (error) {
+            console.error('TinyMCE: 实例销毁失败', error);
           }
           this.tinymceInstance = null;
         }
 
-        // 2. 移除所有可能残留的 TinyMCE DOM 元素
-        if (this.$refs.tinymceContainer) {
-          const container = this.$refs.tinymceContainer;
-
-          // 移除所有 tox-tinymce 容器
-          const editors = container.querySelectorAll('.tox-tinymce');
-          editors.forEach(editor => {
-            console.log('TinyMCE: 移除残留编辑器 DOM');
-            editor.remove();
-          });
-
-          // 确保 textarea 可见（为下次初始化准备）
-          if (this.$refs.tinymceEditor) {
-            this.$refs.tinymceEditor.style.display = 'none';
+        // 方法2：使用 tinymce.remove() 清理所有编辑器
+        if (window.tinymce && this.$refs.tinymceEditor) {
+          try {
+            // 根据 textarea 的 ID 移除编辑器
+            const editors = window.tinymce.get();
+            if (editors && editors.length > 0) {
+              editors.forEach(editor => {
+                if (editor.targetElm === this.$refs.tinymceEditor) {
+                  window.tinymce.remove(editor);
+                  console.log('TinyMCE: 通过 tinymce.remove() 清理成功');
+                }
+              });
+            }
+          } catch (error) {
+            console.error('TinyMCE: tinymce.remove() 清理失败', error);
           }
         }
 
-        console.log('TinyMCE: 清理完成');
+        console.log('TinyMCE: 销毁完成');
       }
     },
 
