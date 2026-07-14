@@ -1359,6 +1359,15 @@ export default {
                 editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
               }
 
+              // ⭐ 精准修复：setContent 后可能重置 contenteditable，再次确保
+              const body = editor.getBody();
+              if (body && body.getAttribute('contenteditable') !== 'true') {
+                body.setAttribute('contenteditable', 'true');
+                body.style.pointerEvents = 'auto';
+                body.style.userSelect = 'text';
+                console.log('TinyMCE: setContent 后修正 contenteditable');
+              }
+
               // 多次尝试聚焦，确保成功
               editor.focus();
 
