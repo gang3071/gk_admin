@@ -166,15 +166,6 @@
               />
             </div>
 
-            <!-- 活動描述（富文本） -->
-            <div class="description" v-if="activity.description">
-              <div
-                class="rich-text-content"
-                style="margin-bottom: 12px; color: #666; font-size: 13px; line-height: 1.6; max-height: 90px; overflow: hidden;"
-                v-html="activity.description"
-              />
-            </div>
-
             <div class="time-info">
               <div class="time-item">
                 <clock-circle-outlined style="margin-right: 4px; color: #52c41a;"/>
@@ -360,9 +351,9 @@
 
         <a-form-item :label="trans.description" name="description">
           <!-- 富文本编辑器（TinyMCE） -->
-          <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 450px;">
-            <!-- ⚠️ textarea 默认隐藏，防止一闪而过 -->
-            <textarea ref="tinymceEditor" style="display: none; width: 100%;"></textarea>
+          <div ref="tinymceContainer" style="position: relative; z-index: 1; min-height: 250px;">
+            <!-- ⭐ 初始隐藏 textarea，TinyMCE 初始化后会自动显示编辑器容器 -->
+            <textarea ref="tinymceEditor" style="width: 100%; opacity: 0; height: 0; position: absolute;"></textarea>
           </div>
         </a-form-item>
 
@@ -492,12 +483,13 @@
 
             <a-row :gutter="12">
               <a-col :span="8">
-                <a-form-item :label="trans.levelRank">
-                  <a-select v-model:value="level.level_rank" :placeholder="trans.selectLevelRank" @change="handleLevelRankChange(index)">
-                    <a-select-option v-for="i in 10" :key="i" :value="i" :disabled="isLevelRankSelected(i, index)">
-                      {{ getLevelName(i) }}
-                    </a-select-option>
-                  </a-select>
+                <a-form-item :label="trans.form?.prize_name_label || '獎項名稱'" :required="true">
+                  <a-input
+                      v-model:value="level.level_name"
+                      :placeholder="trans.form?.prize_name_placeholder || '例如：特等獎、一等獎'"
+                      :maxlength="20"
+                      show-count
+                  />
                 </a-form-item>
               </a-col>
               <a-col :span="8">
@@ -555,9 +547,9 @@
           </a-descriptions-item>
           <a-descriptions-item :label="trans.description">
             <div
-              v-if="currentActivity.description"
-              class="rich-text-content"
-              v-html="currentActivity.description"
+                v-if="currentActivity.description"
+                class="rich-text-content"
+                v-html="currentActivity.description"
             />
             <span v-else>-</span>
           </a-descriptions-item>
@@ -854,11 +846,11 @@
             </template>
             <template #suffix>
               <a-button
-                type="link"
-                size="small"
-                @click="generatePushUrl"
-                :loading="generatingPush"
-                :disabled="!liveUrlInput"
+                  type="link"
+                  size="small"
+                  @click="generatePushUrl"
+                  :loading="generatingPush"
+                  :disabled="!liveUrlInput"
               >
                 {{ trans.generatePushUrl || '生成推流地址' }}
               </a-button>
@@ -887,9 +879,9 @@
             >
               <template #addonAfter>
                 <a-button
-                  type="link"
-                  size="small"
-                  @click="copyToClipboard(pushUrlResult.push_server)"
+                    type="link"
+                    size="small"
+                    @click="copyToClipboard(pushUrlResult.push_server)"
                 >
                   <copy-outlined />
                   {{ trans.copyPushServer || '複製' }}
@@ -907,9 +899,9 @@
             >
               <template #addonAfter>
                 <a-button
-                  type="link"
-                  size="small"
-                  @click="copyToClipboard(pushUrlResult.stream_key)"
+                    type="link"
+                    size="small"
+                    @click="copyToClipboard(pushUrlResult.stream_key)"
                 >
                   <copy-outlined />
                   {{ trans.copyStreamKey || '複製' }}
@@ -1191,22 +1183,9 @@ export default {
         return;
       }
 
-      // ⭐ 如果实例已存在，先销毁再重建
       if (this.tinymceInstance) {
-        console.log('TinyMCE: 销毁旧实例');
-        try {
-          this.tinymceInstance.destroy();
-          this.tinymceInstance = null;
-        } catch (e) {
-          console.error('TinyMCE: 销毁失败', e);
-        }
-      }
-
-      // ⭐ 清理可能残留的编辑器实例
-      const editorId = this.$refs.tinymceEditor.id;
-      if (editorId && window.tinymce && window.tinymce.get(editorId)) {
-        console.log('TinyMCE: 移除残留实例', editorId);
-        window.tinymce.get(editorId).remove();
+        console.log('TinyMCE: 编辑器实例已存在');
+        return;
       }
 
       console.log('TinyMCE: 开始初始化...');
@@ -1247,8 +1226,8 @@ export default {
           suffix: '.min',
 
           // language: 'zh_CN', // 暂时用英文测试
-          height: 400,
-          min_height: 400,
+          height: 200,
+          min_height: 200,
           menubar: false,
           promotion: false, // 隐藏升级提示
 
@@ -1283,11 +1262,11 @@ export default {
 
           // ⭐ 完整工具栏
           toolbar: 'undo redo | blocks fontsize | ' +
-            'bold italic underline strikethrough | forecolor backcolor | ' +
-            'alignleft aligncenter alignright alignjustify | ' +
-            'bullist numlist outdent indent | ' +
-            'link image media table charmap | ' +
-            'code preview fullscreen | removeformat help',
+              'bold italic underline strikethrough | forecolor backcolor | ' +
+              'alignleft aligncenter alignright alignjustify | ' +
+              'bullist numlist outdent indent | ' +
+              'link image media table charmap | ' +
+              'code preview fullscreen | removeformat help',
 
           // ⭐ 字体大小选项
           fontsize_formats: '12px 14px 16px 18px 24px 36px 48px',
@@ -1303,8 +1282,8 @@ export default {
           // ⭐ 自定义图片上传
           images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
             this.handleTinyMCEImageUpload(blobInfo, progress)
-              .then(url => resolve(url))
-              .catch(err => reject(err));
+                .then(url => resolve(url))
+                .catch(err => reject(err));
           }),
 
           // ⭐ 编辑器完全初始化后的回调（比 setup 的 init 事件更晚）
@@ -1319,8 +1298,8 @@ export default {
 
             if (iframe) {
               // 强制设置高度
-              iframe.style.height = '400px !important';
-              iframe.style.minHeight = '400px';
+              iframe.style.height = '200px !important';
+              iframe.style.minHeight = '200px';
               iframe.style.maxHeight = 'none';
               iframe.style.display = 'block';
 
@@ -1331,7 +1310,7 @@ export default {
             // 强制容器也有高度
             if (container) {
               container.style.height = 'auto';
-              container.style.minHeight = '450px';
+              container.style.minHeight = '250px';
             }
 
             // ⭐ 关键修复：确保编辑器 body 可编辑
@@ -1353,26 +1332,9 @@ export default {
               editor.setContent(this.formData.description);
             }
 
-            // 插入测试文本并聚焦
+            // 聚焦编辑器
             setTimeout(() => {
-              if (!this.formData.description) {
-                editor.setContent('<p>✅ 编辑器已就绪，请点击这里开始输入...</p>');
-              }
-
-              // 多次尝试聚焦，确保成功
               editor.focus();
-
-              setTimeout(() => {
-                const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                const body = iframeDoc.body;
-
-                console.log('TinyMCE: 最终检查 - contenteditable =', body.getAttribute('contenteditable'));
-                console.log('TinyMCE: 最终检查 - 焦点元素 =', iframeDoc.activeElement);
-
-                // 尝试直接点击 body
-                body.click();
-                body.focus();
-              }, 100);
             }, 200);
           },
 
@@ -2357,8 +2319,7 @@ export default {
       }
 
       this.formData.prize_levels.push({
-        level_rank: null,
-        level_name: '',
+        level_name: '',  // 用户自定义奖项名称（必填）
         prize_amount: 0,
         prize_count: 0
       });
@@ -2369,23 +2330,25 @@ export default {
       this.formData.prize_levels.splice(index, 1);
     },
 
-    // 等級排名變化時更新等級名稱
-    handleLevelRankChange(index) {
-      const rank = this.formData.prize_levels[index].level_rank;
-      this.formData.prize_levels[index].level_name = this.getLevelName(rank);
-    },
-
-    // 檢查等級排名是否已被選擇
-    isLevelRankSelected(rank, currentIndex) {
-      return this.formData.prize_levels.some((level, index) => {
-        return index !== currentIndex && level.level_rank === rank;
-      });
-    },
-
     // 表單提交
     async handleFormSubmit() {
       try {
         await this.$refs.formRef.validate();
+
+        // ⭐ 驗證獎品等級配置
+        if (this.formData.prize_levels.length === 0) {
+          this.$message.error('請至少添加一個獎品等級');
+          return;
+        }
+
+        // ⭐ 驗證每個獎品的名稱（必填）
+        for (let i = 0; i < this.formData.prize_levels.length; i++) {
+          const level = this.formData.prize_levels[i];
+          if (!level.level_name || level.level_name.trim() === '') {
+            this.$message.error(`第 ${i + 1} 個獎品的名稱不能為空`);
+            return;
+          }
+        }
 
         // 格式化时间（兼容 dayjs 对象和字符串）
         const formatTime = (time) => {
@@ -2450,38 +2413,67 @@ export default {
           }, 300); // 给 Drawer 动画留足时间
         });
       } else {
-        // ⭐ Drawer 关闭时彻底清理编辑器
-        console.log('TinyMCE: Drawer 关闭，开始清理编辑器');
+        // Drawer 关闭时彻底销毁编辑器
+        console.log('TinyMCE: 开始销毁编辑器...');
 
-        // 1. 销毁实例引用
+        // 方法1：使用实例销毁
         if (this.tinymceInstance) {
           try {
             this.tinymceInstance.destroy();
-            console.log('TinyMCE: 实例已销毁');
-          } catch (e) {
-            console.error('TinyMCE: 销毁实例失败', e);
+            console.log('TinyMCE: 实例销毁成功');
+          } catch (error) {
+            console.error('TinyMCE: 实例销毁失败', error);
           }
           this.tinymceInstance = null;
         }
 
-        // 2. 移除所有可能残留的 TinyMCE DOM 元素
-        if (this.$refs.tinymceContainer) {
-          const container = this.$refs.tinymceContainer;
+        // 方法2：使用 tinymce.remove() 清理所有编辑器
+        if (window.tinymce && this.$refs.tinymceEditor) {
+          try {
+            // 获取 textarea 的 ID（如果有）
+            const textareaId = this.$refs.tinymceEditor.id;
 
-          // 移除所有 tox-tinymce 容器
-          const editors = container.querySelectorAll('.tox-tinymce');
-          editors.forEach(editor => {
-            console.log('TinyMCE: 移除残留编辑器 DOM');
-            editor.remove();
-          });
+            // 方法2.1：通过 ID 精准移除
+            if (textareaId) {
+              window.tinymce.remove('#' + textareaId);
+              console.log('TinyMCE: 通过 ID 移除成功 (#' + textareaId + ')');
+            }
 
-          // 确保 textarea 可见（为下次初始化准备）
-          if (this.$refs.tinymceEditor) {
-            this.$refs.tinymceEditor.style.display = 'none';
+            // 方法2.2：遍历所有编辑器，确保彻底清理
+            const editors = window.tinymce.get();
+            if (editors && editors.length > 0) {
+              editors.forEach(editor => {
+                if (editor.targetElm === this.$refs.tinymceEditor) {
+                  window.tinymce.remove(editor);
+                  console.log('TinyMCE: 通过遍历移除成功');
+                }
+              });
+            }
+          } catch (error) {
+            console.error('TinyMCE: tinymce.remove() 清理失败', error);
           }
         }
 
-        console.log('TinyMCE: 清理完成');
+        // 方法3：清理 textarea 的所有 TinyMCE 标记
+        if (this.$refs.tinymceEditor) {
+          try {
+            // 移除 ID（避免 TinyMCE 缓存旧引用）
+            this.$refs.tinymceEditor.removeAttribute('id');
+
+            // 移除所有 data-mce-* 属性
+            Array.from(this.$refs.tinymceEditor.attributes).forEach(attr => {
+              if (attr.name.startsWith('data-mce-') || attr.name.startsWith('aria-')) {
+                this.$refs.tinymceEditor.removeAttribute(attr.name);
+              }
+            });
+
+            console.log('TinyMCE: textarea 标记清理成功');
+          } catch (error) {
+            console.error('TinyMCE: textarea 清理失败', error);
+          }
+        }
+
+        console.log('TinyMCE: 销毁完成');
       }
     },
 

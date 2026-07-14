@@ -460,6 +460,8 @@ return [
         'level_label' => '等级',
         'vip_config_hint' => '为每个VIP等级配置达到指定打码量后发放的摸奖券数量',
         'prize_config_hint' => '配置奖品等级和奖励金额(仅现金奖励)',
+        'prize_name_label' => '奖项名称',
+        'prize_name_placeholder' => '例如：特等奖、一等奖',
         'input_ticket_hint' => '输入数字，如: 12 或 000012',
         'add_ticket_no' => '添加券号',
         'cover_alt' => '活动封面',
