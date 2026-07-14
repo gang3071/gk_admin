@@ -455,6 +455,8 @@ return [
         'level_label' => 'Level',
         'vip_config_hint' => 'Configure ticket count for each VIP level upon reaching specified bet amount',
         'prize_config_hint' => 'Configure prize levels and reward amounts (cash only)',
+        'prize_name_label' => 'Prize Name',
+        'prize_name_placeholder' => 'e.g.: Grand Prize, First Prize',
         'input_ticket_hint' => 'Enter numbers, e.g.: 12 or 000012',
         'add_ticket_no' => 'Add Ticket Number',
         'cover_alt' => 'Activity Cover',

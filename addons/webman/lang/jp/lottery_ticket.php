@@ -438,6 +438,8 @@ return [
         'level_label' => 'レベル',
         'vip_config_hint' => '各VIPレベルで指定ベット額に達した後に発行するくじチケット数を設定',
         'prize_config_hint' => '賞品レベルと賞金額を設定（現金のみ）',
+        'prize_name_label' => '賞品名',
+        'prize_name_placeholder' => '例：特等賞、一等賞',
         'input_ticket_hint' => '数字を入力、例：12 または 000012',
         'add_ticket_no' => 'チケット番号を追加',
         'cover_alt' => 'アクティビティカバー',
