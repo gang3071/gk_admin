@@ -346,6 +346,7 @@
         width="720"
         :body-style="{ paddingBottom: '80px' }"
         @close="handleFormClose"
+        @after-visible-change="handleDrawerVisibleChange"
     >
       <a-form
           :model="formData"
@@ -1374,10 +1375,10 @@ export default {
       this.formVisible = true;
       this.$message.success('已載入歷史活動資料，請設定活動時間並提交');
 
-      // 初始化富文本编辑器
-      this.$nextTick(() => {
-        this.initTinyMCE();
-      });
+      // ⚠️ 移除此处的初始化，改用 handleDrawerVisibleChange
+      // this.$nextTick(() => {
+      //   this.initTinyMCE();
+      // });
     },
 
     // 顯示創建表單
@@ -1403,10 +1404,10 @@ export default {
       };
       this.formVisible = true;
 
-      // 初始化富文本编辑器
-      this.$nextTick(() => {
-        this.initTinyMCE();
-      });
+      // ⚠️ 移除此处的初始化，改用 handleDrawerVisibleChange
+      // this.$nextTick(() => {
+      //   this.initTinyMCE();
+      // });
     },
 
     // 上傳前驗證
@@ -2317,16 +2318,34 @@ export default {
       }
     },
 
+    // ⭐ Drawer 可见性变化回调（完全打开后初始化编辑器）
+    handleDrawerVisibleChange(visible) {
+      console.log('TinyMCE: Drawer visible =', visible);
+
+      if (visible) {
+        // Drawer 完全打开后，延迟初始化编辑器
+        this.$nextTick(() => {
+          setTimeout(() => {
+            console.log('TinyMCE: Drawer 已完全打开，开始初始化编辑器');
+            this.initTinyMCE();
+          }, 300); // 给 Drawer 动画留足时间
+        });
+      } else {
+        // Drawer 关闭时销毁编辑器
+        if (this.tinymceInstance) {
+          console.log('TinyMCE: 销毁编辑器实例');
+          this.tinymceInstance.destroy();
+          this.tinymceInstance = null;
+        }
+      }
+    },
+
     // 關閉表單
     handleFormClose() {
       this.formVisible = false;
       this.$refs.formRef?.resetFields();
 
-      // 销毁富文本编辑器
-      if (this.tinymceInstance) {
-        this.tinymceInstance.destroy();
-        this.tinymceInstance = null;
-      }
+      // 编辑器会在 handleDrawerVisibleChange(false) 中自动销毁
     },
 
     // 工具方法
