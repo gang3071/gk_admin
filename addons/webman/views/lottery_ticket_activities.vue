@@ -2453,18 +2453,46 @@ export default {
         // 方法2：使用 tinymce.remove() 清理所有编辑器
         if (window.tinymce && this.$refs.tinymceEditor) {
           try {
-            // 根据 textarea 的 ID 移除编辑器
+            // 获取 textarea 的 ID（如果有）
+            const textareaId = this.$refs.tinymceEditor.id;
+
+            // 方法2.1：通过 ID 精准移除
+            if (textareaId) {
+              window.tinymce.remove('#' + textareaId);
+              console.log('TinyMCE: 通过 ID 移除成功 (#' + textareaId + ')');
+            }
+
+            // 方法2.2：遍历所有编辑器，确保彻底清理
             const editors = window.tinymce.get();
             if (editors && editors.length > 0) {
               editors.forEach(editor => {
                 if (editor.targetElm === this.$refs.tinymceEditor) {
                   window.tinymce.remove(editor);
-                  console.log('TinyMCE: 通过 tinymce.remove() 清理成功');
+                  console.log('TinyMCE: 通过遍历移除成功');
                 }
               });
             }
           } catch (error) {
             console.error('TinyMCE: tinymce.remove() 清理失败', error);
+          }
+        }
+
+        // 方法3：清理 textarea 的所有 TinyMCE 标记
+        if (this.$refs.tinymceEditor) {
+          try {
+            // 移除 ID（避免 TinyMCE 缓存旧引用）
+            this.$refs.tinymceEditor.removeAttribute('id');
+
+            // 移除所有 data-mce-* 属性
+            Array.from(this.$refs.tinymceEditor.attributes).forEach(attr => {
+              if (attr.name.startsWith('data-mce-') || attr.name.startsWith('aria-')) {
+                this.$refs.tinymceEditor.removeAttribute(attr.name);
+              }
+            });
+
+            console.log('TinyMCE: textarea 标记清理成功');
+          } catch (error) {
+            console.error('TinyMCE: textarea 清理失败', error);
           }
         }
 
