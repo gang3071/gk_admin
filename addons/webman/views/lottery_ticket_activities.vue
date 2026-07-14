@@ -1219,8 +1219,8 @@ export default {
         window.tinymce.init({
           target: this.$refs.tinymceEditor,
 
-          // ⭐ cdnjs 会自动处理资源路径，只需要这个配置
-          base_url: '/cdn-cgi/cdnjs/libs/tinymce/6.8.3',
+          // ⭐ 必须使用完整的 HTTPS URL
+          base_url: 'https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3',
           suffix: '.min',
 
           // language: 'zh_CN', // 暂时用英文测试
