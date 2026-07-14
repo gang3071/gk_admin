@@ -1446,8 +1446,9 @@ export default {
         const hide = this.$message.loading('圖片上傳中...', 0);
 
         try {
+          // ⭐ 使用系统统一上传 API
           const res = await this.$request({
-            url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
+            url: 'ex-admin/addons-webman-controller-AttachmentController/upload',
             method: 'post',
             data: formData,
             headers: {
@@ -1455,11 +1456,14 @@ export default {
             }
           });
 
-          if (res.code === 200 && res.data && res.data.url) {
+          // ⭐ 系统上传 API 返回格式：{ code: 200, data: [{ url: '...' }] }
+          if (res.code === 200 && res.data && res.data.length > 0 && res.data[0].url) {
+            const imageUrl = res.data[0].url;
+
             // 获取当前光标位置
             const range = this.quillInstance.getSelection(true);
             // 插入图片到编辑器
-            this.quillInstance.insertEmbed(range.index, 'image', res.data.url);
+            this.quillInstance.insertEmbed(range.index, 'image', imageUrl);
             // 光标移动到图片后面
             this.quillInstance.setSelection(range.index + 1);
             this.$message.success('圖片上傳成功');
