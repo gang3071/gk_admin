@@ -1199,16 +1199,21 @@ export default {
             theme: 'snow',
             placeholder: this.trans.descriptionPlaceholder || '請輸入活動說明...',
             modules: {
-              toolbar: [
-                ['bold', 'italic', 'underline', 'strike'],
-                ['blockquote', 'code-block'],
-                [{ 'header': 1 }, { 'header': 2 }],
-                [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                [{ 'color': [] }, { 'background': [] }],
-                [{ 'align': [] }],
-                ['link'],
-                ['clean']
-              ]
+              toolbar: {
+                container: [
+                  ['bold', 'italic', 'underline', 'strike'],
+                  ['blockquote', 'code-block'],
+                  [{ 'header': 1 }, { 'header': 2 }],
+                  [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                  [{ 'color': [] }, { 'background': [] }],
+                  [{ 'align': [] }],
+                  ['link', 'image'],  // ⭐ 添加图片按钮
+                  ['clean']
+                ],
+                handlers: {
+                  image: this.handleQuillImageUpload  // ⭐ 自定义图片上传处理
+                }
+              }
             }
           });
 
@@ -1403,6 +1408,71 @@ export default {
       } finally {
         this.uploading = false;
       }
+    },
+
+    // ⭐ Quill 富文本编辑器图片上传
+    handleQuillImageUpload() {
+      // 创建隐藏的 file input
+      const input = document.createElement('input');
+      input.setAttribute('type', 'file');
+      input.setAttribute('accept', 'image/jpeg,image/png,image/jpg,image/gif');
+      input.click();
+
+      input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) {
+          return;
+        }
+
+        // 验证文件类型
+        const isImage = /^image\/(jpeg|png|jpg|gif)$/.test(file.type);
+        if (!isImage) {
+          this.$message.error('只能上傳 JPG/PNG/GIF 格式的圖片！');
+          return;
+        }
+
+        // 验证文件大小（2MB）
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isLt2M) {
+          this.$message.error('圖片大小不能超過 2MB！');
+          return;
+        }
+
+        // 上传图片
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // 显示加载提示
+        const hide = this.$message.loading('圖片上傳中...', 0);
+
+        try {
+          const res = await this.$request({
+            url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/uploadCover',
+            method: 'post',
+            data: formData,
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+
+          if (res.code === 200 && res.data && res.data.url) {
+            // 获取当前光标位置
+            const range = this.quillInstance.getSelection(true);
+            // 插入图片到编辑器
+            this.quillInstance.insertEmbed(range.index, 'image', res.data.url);
+            // 光标移动到图片后面
+            this.quillInstance.setSelection(range.index + 1);
+            this.$message.success('圖片上傳成功');
+          } else {
+            this.$message.error(res.message || '圖片上傳失敗');
+          }
+        } catch (error) {
+          console.error('上傳失敗:', error);
+          this.$message.error('圖片上傳失敗');
+        } finally {
+          hide();
+        }
+      };
     },
 
     // 選單點擊
@@ -2556,6 +2626,14 @@ export default {
 
 .rich-text-content p {
   margin-bottom: 8px;
+}
+
+.rich-text-content img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 12px 0;
+  border-radius: 4px;
 }
 
 .rich-text-content h1,
