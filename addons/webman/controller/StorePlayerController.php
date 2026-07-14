@@ -90,20 +90,34 @@ class StorePlayerController
         // 应用筛选条件
         if (!empty($requestFilter)) {
             if (isset($requestFilter['player_id']) && $requestFilter['player_id'] !== '') {
-                $query->where('player.id', $requestFilter['player_id']);
+                $query->where('player.id', intval($requestFilter['player_id']));
             }
             // VIP等级筛选
             if (isset($requestFilter['vip_level_id']) && $requestFilter['vip_level_id'] !== '') {
-                $query->where('player.vip_level_id', $requestFilter['vip_level_id']);
+                $query->where('player.vip_level_id', intval($requestFilter['vip_level_id']));
             }
-            if (isset($requestFilter['status'])) {
-                $query->where('player.status', $requestFilter['status']);
+            if (isset($requestFilter['status']) && $requestFilter['status'] !== '') {
+                $query->where('player.status', intval($requestFilter['status']));
+            }
+            // 爆机状态筛选
+            if (isset($requestFilter['is_crashed']) && $requestFilter['is_crashed'] !== '') {
+                $crashedPlayerIds = PlayerPlatformCash::query()
+                    ->where('platform', PlayerPlatformCash::PLATFORM_SELF)
+                    ->where('is_crashed', intval($requestFilter['is_crashed']))
+                    ->pluck('player_id')
+                    ->toArray();
+                if (!empty($crashedPlayerIds)) {
+                    $query->whereIn('player.id', $crashedPlayerIds);
+                } else {
+                    // 无匹配结果，返回空
+                    $query->whereRaw('1 = 0');
+                }
             }
             if (!empty($requestFilter['phone'])) {
-                $query->where('player.phone', 'like', '%' . $requestFilter['phone'] . '%');
+                $query->where('player.phone', 'like', '%' . addcslashes($requestFilter['phone'], '%_') . '%');
             }
             if (!empty($requestFilter['name'])) {
-                $query->where('player.name', 'like', '%' . $requestFilter['name'] . '%');
+                $query->where('player.name', 'like', '%' . addcslashes($requestFilter['name'], '%_') . '%');
             }
             if (!empty($requestFilter['created_at_start'])) {
                 $query->where('player.created_at', '>=', $requestFilter['created_at_start']);
@@ -112,10 +126,6 @@ class StorePlayerController
                 $query->where('player.created_at', '<=', $requestFilter['created_at_end']);
             }
         }
-
-        // 计算筛选后的总数
-        $totalQuery = clone $query;
-        $playerCount = $totalQuery->count();
 
         $list = $query->select([
             'player.*',
@@ -140,6 +150,9 @@ class StorePlayerController
             ->orderBy('player.id', 'desc')
             ->get()
             ->toArray();
+
+        // 计算筛选后的总数（在 select/join 之后）
+        $playerCount = count($list);
 
         // 🚀 批量从 Redis 获取余额和爆机状态（优化性能）
         if (!empty($list)) {
@@ -283,10 +296,10 @@ class StorePlayerController
                 // 累计数据
                 if ($hasStatsTimeFilter) {
                     $stats = $deliveryStatsByPlayer[$playerId] ?? null;
-                    $item['machine_put_point'] = floatval($stats->machine_put_point ?? 0);
-                    $item['recharge_amount'] = floatval($stats->recharge_amount ?? 0);
-                    $item['withdraw_amount'] = floatval($stats->withdraw_amount ?? 0);
-                    $item['lottery_ticket_reward_amount'] = floatval($stats->lottery_ticket_reward_amount ?? 0);
+                    $item['machine_put_point'] = floatval($stats['machine_put_point'] ?? 0);
+                    $item['recharge_amount'] = floatval($stats['recharge_amount'] ?? 0);
+                    $item['withdraw_amount'] = floatval($stats['withdraw_amount'] ?? 0);
+                    $item['lottery_ticket_reward_amount'] = floatval($stats['lottery_ticket_reward_amount'] ?? 0);
                 } else {
                     $item['lottery_ticket_reward_amount'] = floatval($lotteryTicketRewardByPlayer[$playerId] ?? 0);
                 }
@@ -314,9 +327,9 @@ class StorePlayerController
 
                 // 当前未交班数据
                 $currentStats = $currentShiftDeliveryByPlayer[$playerId] ?? null;
-                $item['current_machine_put_point'] = floatval($currentStats->current_machine_put_point ?? 0);
-                $item['current_total_income'] = floatval($currentStats->current_total_income ?? 0);
-                $item['current_total_outcome'] = floatval($currentStats->current_total_outcome ?? 0);
+                $item['current_machine_put_point'] = floatval($currentStats['current_machine_put_point'] ?? 0);
+                $item['current_total_income'] = floatval($currentStats['current_total_income'] ?? 0);
+                $item['current_total_outcome'] = floatval($currentStats['current_total_outcome'] ?? 0);
                 $item['current_lottery_amount'] = floatval($currentShiftLotteryByPlayer[$playerId] ?? 0);
                 $item['current_lottery_ticket_reward'] = floatval($currentLotteryTicketRewardByPlayer[$playerId] ?? 0);
                 $item['current_electronic_game_bet'] = floatval($currentElectronicGameBetByPlayer[$playerId] ?? 0);
@@ -767,11 +780,6 @@ class StorePlayerController
 
             // 如果没有数据，显示提示信息
             if ($playerCount == 0) {
-                $totalPlayers = Player::query()
-                    ->where('department_id', $departmentId)
-                    ->where('is_promoter', 0)
-                    ->count();
-
                 $grid->emptyText(admin_trans('player.no_device_data'));
             }
         });
