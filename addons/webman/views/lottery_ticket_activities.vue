@@ -1217,7 +1217,12 @@ export default {
       try {
         window.tinymce.init({
           target: this.$refs.tinymceEditor,
-          language: 'zh_CN', // ⭐ 恢复中文
+
+          // ⭐ 必须配置：指定资源文件路径
+          base_url: 'https://unpkg.com/tinymce@6.8.3',
+          suffix: '.min',
+
+          // language: 'zh_CN', // 暂时用英文，避免语言包加载问题
           height: 400,
           menubar: false,
           plugins: [
