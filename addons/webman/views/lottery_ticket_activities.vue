@@ -1040,6 +1040,7 @@ export default {
       statusFilter: 'all',
       formVisible: false,
       tinymceInstance: null, // ⭐ TinyMCE 富文本编辑器实例
+      tinymceWatchdog: null, // ⭐ contenteditable 监控定时器
       detailVisible: false,
       recordVisible: false,
       ticketListVisible: false,
@@ -1386,6 +1387,10 @@ export default {
                 editorBody.style.userSelect = 'text';
                 console.log('TinyMCE: setContent 后重新强制设置 contenteditable');
               }
+
+              // ⭐ 终极解决方案：启动持续监控机制
+              // 每 500ms 检查一次，如果被改成 false 就强制改回 true
+              this.startContentEditableWatchdog(editor);
 
               // 多次尝试聚焦，确保成功
               editor.focus();
@@ -2502,6 +2507,13 @@ export default {
         // ⭐ Drawer 关闭时彻底清理编辑器
         console.log('TinyMCE: Drawer 关闭，开始清理编辑器');
 
+        // 0. ⭐ 停止监控定时器
+        if (this.tinymceWatchdog) {
+          clearInterval(this.tinymceWatchdog);
+          this.tinymceWatchdog = null;
+          console.log('TinyMCE: contenteditable 监控已停止');
+        }
+
         // 1. 销毁实例引用
         if (this.tinymceInstance) {
           try {
@@ -2532,6 +2544,45 @@ export default {
 
         console.log('TinyMCE: 清理完成');
       }
+    },
+
+    // ⭐ 启动 contenteditable 监控（持续检查并修复）
+    startContentEditableWatchdog(editor) {
+      // 清除旧的监控定时器
+      if (this.tinymceWatchdog) {
+        clearInterval(this.tinymceWatchdog);
+        this.tinymceWatchdog = null;
+      }
+
+      console.log('TinyMCE: 启动 contenteditable 监控机制');
+
+      // 每 500ms 检查一次
+      this.tinymceWatchdog = setInterval(() => {
+        try {
+          const body = editor.getBody();
+          if (!body) {
+            console.warn('TinyMCE: 监控发现 body 不存在，停止监控');
+            clearInterval(this.tinymceWatchdog);
+            this.tinymceWatchdog = null;
+            return;
+          }
+
+          const currentValue = body.getAttribute('contenteditable');
+
+          // 如果被改成了 false 或其他值，强制改回 true
+          if (currentValue !== 'true') {
+            console.warn('TinyMCE: 监控发现 contenteditable 被改为', currentValue, '，立即修复');
+            body.setAttribute('contenteditable', 'true');
+            body.style.pointerEvents = 'auto';
+            body.style.userSelect = 'text';
+
+            // 重新设置编辑模式
+            editor.mode.set('design');
+          }
+        } catch (error) {
+          console.error('TinyMCE: 监控异常', error);
+        }
+      }, 500);
     },
 
     // 關閉表單
