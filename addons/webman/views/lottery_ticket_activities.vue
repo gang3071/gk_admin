@@ -626,7 +626,7 @@
               {{ record.level_name }}
             </template>
             <template v-if="column.key === 'prize_amount'">
-              {{ record.prize_amount }}
+              {{ formatAmount(record.prize_amount) }}
             </template>
           </template>
         </a-table>
@@ -701,7 +701,7 @@
                 :key="level.id"
                 :value="level.id"
             >
-              {{ level.level_name }} - {{ level.prize_amount }}元
+              {{ level.level_name }} - {{ formatAmount(level.prize_amount) }}元
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -2591,6 +2591,20 @@ export default {
     getUsageRate(activity) {
       if (activity.total_tickets === 0) return '0.00';
       return ((activity.used_tickets / activity.total_tickets) * 100).toFixed(2);
+    },
+
+    // 格式化金额显示（整数不显示小数位）
+    formatAmount(amount) {
+      if (!amount && amount !== 0) return '0';
+      const num = parseFloat(amount);
+      // 判断是否为整数
+      if (Math.floor(num) === num) {
+        // 整数：不显示小数位
+        return num.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+      } else {
+        // 小数：显示两位小数
+        return num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      }
     },
 
     getProgressStatus(activity) {
