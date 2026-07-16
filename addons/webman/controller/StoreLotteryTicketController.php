@@ -93,9 +93,9 @@ class StoreLotteryTicketController
                 ->width(100)->align('center')
                 ->display(function ($val) {
                     $statusMap = [
-                        LotteryTicket::STATUS_UNUSED => ['text' => admin_trans('lottery_ticket.status.unused'), 'color' => 'processing'],
-                        LotteryTicket::STATUS_USED => ['text' => admin_trans('lottery_ticket.status.used'), 'color' => 'success'],
-                        LotteryTicket::STATUS_EXPIRED => ['text' => admin_trans('lottery_ticket.status.expired'), 'color' => 'default'],
+                        LotteryTicket::STATUS_UNUSED => ['text' => admin_trans('lottery_ticket.ticket_status.unused'), 'color' => 'processing'],
+                        LotteryTicket::STATUS_USED => ['text' => admin_trans('lottery_ticket.ticket_status.used'), 'color' => 'success'],
+                        LotteryTicket::STATUS_EXPIRED => ['text' => admin_trans('lottery_ticket.ticket_status.expired'), 'color' => 'default'],
                     ];
                     $config = $statusMap[$val] ?? ['text' => $val, 'color' => 'default'];
                     return Tag::create($config['text'])->color($config['color']);
@@ -136,9 +136,9 @@ class StoreLotteryTicketController
                 $filter->eq()->select('status')
                     ->placeholder(admin_trans('lottery_ticket.fields.status'))
                     ->options([
-                        LotteryTicket::STATUS_UNUSED => admin_trans('lottery_ticket.status.unused'),
-                        LotteryTicket::STATUS_USED => admin_trans('lottery_ticket.status.used'),
-                        LotteryTicket::STATUS_EXPIRED => admin_trans('lottery_ticket.status.expired'),
+                        LotteryTicket::STATUS_UNUSED => admin_trans('lottery_ticket.ticket_status.unused'),
+                        LotteryTicket::STATUS_USED => admin_trans('lottery_ticket.ticket_status.used'),
+                        LotteryTicket::STATUS_EXPIRED => admin_trans('lottery_ticket.ticket_status.expired'),
                     ]);
 
                 $filter->eq()->select('source')
