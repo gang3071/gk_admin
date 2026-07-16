@@ -33,6 +33,15 @@ return [
         'time_range' => '期間',
         'start_time' => '開始時間',
         'end_time' => '終了時間',
+        'select_shift' => 'シフト選択',
+        'all_shifts' => '全シフト',
+    ],
+
+    // Shifts
+    'shift' => [
+        'morning' => '朝番 (08:00-16:00)',
+        'afternoon' => '午番 (16:00-00:00)',
+        'night' => '夜番 (00:00-08:00)',
     ],
 
     // Statistics
