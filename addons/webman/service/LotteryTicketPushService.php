@@ -518,8 +518,13 @@ class LotteryTicketPushService
     ): bool
     {
         try {
-            // 频道名称格式: player-{player_id}（遵循系统规范）
-            $channelName = "player-{$playerId}";
+            // ⭐ 推送到多个频道：
+            // 1. player-{playerId} - 推送给该玩家（客户端接收）
+            // 2. player-channel-{department_id} - 推送给整个渠道的所有玩家（广播）
+            $channels = [
+                "player-{$playerId}",                           // 玩家个人频道
+                "player-channel-{$activity->department_id}",   // 渠道广播频道
+            ];
 
             // 构造推送内容 - 使用统一格式
             $content = [
@@ -544,19 +549,23 @@ class LotteryTicketPushService
                 'timestamp' => time(),
             ];
 
-            // 将推送任务加入队列
-            Client::send(
-                LotteryTicketPushQueue::QUEUE_NAME,
-                [
-                    'channels' => $channelName,
-                    'content' => $content,
-                    'from' => self::PUSH_FROM,
-                ],
-                self::QUEUE_DELAY
-            );
+            // ⭐ 将推送任务加入队列（推送到多个频道）
+            foreach ($channels as $channel) {
+                Client::send(
+                    LotteryTicketPushQueue::QUEUE_NAME,
+                    [
+                        'channels' => $channel,
+                        'content' => $content,
+                        'from' => self::PUSH_FROM,
+                    ],
+                    self::QUEUE_DELAY
+                );
+            }
 
             Log::info('[摸奖券] 推送中奖通知已入队', [
                 'player_id' => $playerId,
+                'department_id' => $activity->department_id,
+                'channels' => $channels,
                 'activity_id' => $activity->id,
                 'ticket_no' => $ticketNo,
                 'prize_name' => $prizeName,
