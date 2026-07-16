@@ -433,7 +433,7 @@ class LotteryTicketPushService
             if (!empty($storeName)) {
                 // 有店家：显示店名
                 $content = sprintf(
-                    '🎉 摸獎大報喜！狂賀【%s】玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
+                    '🎊 摸獎大報喜！狂賀【%s】玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
                     $storeName,
                     $playerName,
                     $prizeName,
@@ -442,7 +442,7 @@ class LotteryTicketPushService
             } else {
                 // 无店家：不显示店名
                 $content = sprintf(
-                    '🎉 摸獎大報喜！狂賀玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
+                    '🎊 摸獎大報喜！狂賀玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
                     $playerName,
                     $prizeName,
                     self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
@@ -451,7 +451,7 @@ class LotteryTicketPushService
 
             $data = [
                 'msg_type' => 'high_score_broadcast', // 消息类型（与高分广播统一，客户端可复用同一套跑马灯逻辑）
-                'title' => '🎉 摸獎大報喜',
+                'title' => '🎊 摸獎大報喜',
                 'content' => $content,
                 'timestamp' => time(),
                 'department_id' => $departmentId,
