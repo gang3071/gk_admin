@@ -467,7 +467,8 @@ class PlayerMoneyEditLogController
                         PlayerMoneyEditLog::COIN_WITHDRAWAL => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::COIN_WITHDRAWAL),
                     ]);
                 
-                $list = ActivityContent::query()->where('lang', Str::replace('_', '-', locale()))->pluck('name',
+                $lang = request()->cookie('ex_admin_lang', 'zh-TW');
+                $list = ActivityContent::query()->where('lang', $lang)->pluck('name',
                     'id')
                     ->toArray();
                 $filter->eq()->select('activity')
