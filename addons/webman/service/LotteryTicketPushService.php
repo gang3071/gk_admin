@@ -429,19 +429,18 @@ class LotteryTicketPushService
         float $prizeAmount
     ): bool {
         try {
-            // 构造跑马灯消息（与高分广播风格统一）
+            // 构造跑马灯消息（活泼热闹风格）
             $content = sprintf(
-                '摸獎券中獎報喜：讓我們恭喜【%s】的優秀玩家（%s），在《%s》活動中榮獲 %s %s 分的佳績！',
+                '🎉 摸獎大報喜！狂賀【%s】玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
                 $storeName,
                 $playerName,
-                $activity->name,
                 $prizeName,
                 self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
             );
 
             $data = [
                 'msg_type' => 'high_score_broadcast', // 消息类型（与高分广播统一，客户端可复用同一套跑马灯逻辑）
-                'title' => '🎊 摸獎券中獎報喜',
+                'title' => '🎉 摸獎大報喜',
                 'content' => $content,
                 'timestamp' => time(),
                 'department_id' => $departmentId,
