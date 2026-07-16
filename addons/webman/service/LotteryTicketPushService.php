@@ -257,8 +257,10 @@ class LotteryTicketPushService
             $playUrls = null;
             if (!empty($activity->live_url)) {
                 try {
-                    // 使用固定配置ID=1，生成30天有效期的播放地址
-                    $urls = generateLotteryLiveUrls(1, $activity->live_url, 30);
+                    // ⭐ 自动根据 APP_ENV 选择线路（传 null）
+                    // - APP_ENV=pro: 走海外线路（useCnDomain=false）
+                    // - APP_ENV=其他: 走大陆线路（useCnDomain=true）
+                    $urls = generateLotteryLiveUrls(1, $activity->live_url, 30, null);
                     $playUrls = [
                         'webrtc' => $urls['webrtc'], // 推荐：超低延迟 <1秒
                         'flv' => $urls['flv'],       // 备选：HTTP-FLV

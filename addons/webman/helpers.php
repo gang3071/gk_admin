@@ -2643,17 +2643,27 @@ if (!function_exists('clearMachineCrashCache')) {
      * @param int $configId machine_tencent_play.id
      * @param string $streamName 流名称（如：mojiangjuan）
      * @param int $expireDays 有效天数（默认30天）
-     * @param bool $useCnDomain 是否使用大陆域名（默认true，优先使用大陆加速域名）
+     * @param bool|null $useCnDomain 是否使用大陆域名（null=自动根据APP_ENV选择，true=强制大陆，false=强制海外）
      * @return array 返回4种播放地址：RTMP、FLV、HLS、WebRTC
      * @throws \Exception
      */
-    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30, bool $useCnDomain = true, string $preferProtocol = 'webrtc'): array
+    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30, ?bool $useCnDomain = null, string $preferProtocol = 'webrtc'): array
     {
         /** @var \addons\webman\model\MachineTencentPlay $config */
         $config = \addons\webman\model\MachineTencentPlay::query()->find($configId);
 
         if (!$config) {
             throw new \Exception('腾讯云配置不存在');
+        }
+
+        // ⭐ 自动选择线路：根据 APP_ENV 环境变量
+        // - null（默认）: 根据 config('app.env') 自动判断（pro=海外，其他=大陆）
+        // - true: 强制使用大陆域名
+        // - false: 强制使用海外域名
+        if ($useCnDomain === null) {
+            // 自动模式：根据 APP_ENV 选择
+            $appEnv = config('app.env', 'pro');
+            $useCnDomain = ($appEnv !== 'pro'); // pro环境走海外，其他环境走大陆
         }
 
         // ⭐ 优先使用海外域名（全球用户访问更稳定）
