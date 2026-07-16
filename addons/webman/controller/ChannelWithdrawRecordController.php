@@ -76,10 +76,9 @@ class ChannelWithdrawRecordController
             // 修复前：4层嵌套 player->national_promoter->level_list->national_level
             // 修复后：限制必要字段，减少对象加载
             $grid->model()->with([
-                'player:id,uuid,name,phone,department_id,national_promoter_id',  // 限制玩家字段
-                'player.national_promoter:id,player_id,level_id',                 // 限制推广员字段
-                'player.national_promoter.level_list:id,player_id,level_id',     // 限制等级列表字段
-                'player.national_promoter.level_list.national_level:id,name',    // 只加载等级名称
+                'player:id,uuid,name,phone,department_id',  // 限制玩家字段（national_promoter_id 列不存在）
+                'player.national_promoter:id,uid,level',                 // 限制推广员字段（uid 关联玩家）
+                'player.national_promoter.level_list:id,name',     // 限制等级字段
             ])->whereIn('type',
                 [PlayerWithdrawRecord::TYPE_SELF, PlayerWithdrawRecord::TYPE_GB])->orderBy('created_at',
                 'desc')->orderBy('status', 'asc');
