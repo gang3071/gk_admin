@@ -1190,15 +1190,8 @@ class StoreMachineController
                 // 是否开启实体机台
                 ->if(function ($value, StoreSetting $data) {
                     return $data->feature === 'enable_physical_machine';
-                })->editable(
-                    (new \ExAdmin\ui\component\grid\grid\Editable)->select('num')
-                        ->options([
-                            1 => admin_trans('store_setting.enable'),
-                            0 => admin_trans('store_setting.disable'),
-                        ])
-                        
-                )->display(function ($val, StoreSetting $data) {
-                    if ($data->num == 1) {
+                })->display(function ($val, StoreSetting $data) {
+                    if ($data->status == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
                     } else {
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
@@ -1207,15 +1200,8 @@ class StoreMachineController
                 // 是否开启真人百家
                 ->if(function ($value, StoreSetting $data) {
                     return $data->feature === 'enable_live_baccarat';
-                })->editable(
-                    (new \ExAdmin\ui\component\grid\grid\Editable)->select('num')
-                        ->options([
-                            1 => admin_trans('store_setting.enable'),
-                            0 => admin_trans('store_setting.disable'),
-                        ])
-                        
-                )->display(function ($val, StoreSetting $data) {
-                    if ($data->num == 1) {
+                })->display(function ($val, StoreSetting $data) {
+                    if ($data->status == 1) {
                         return Tag::create(admin_trans('store_setting.enable'))->color('green');
                     } else {
                         return Tag::create(admin_trans('store_setting.disable'))->color('red');
