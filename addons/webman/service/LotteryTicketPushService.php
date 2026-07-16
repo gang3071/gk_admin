@@ -430,13 +430,24 @@ class LotteryTicketPushService
     ): bool {
         try {
             // 构造跑马灯消息（活泼热闹风格）
-            $content = sprintf(
-                '🎉 摸獎大報喜！狂賀【%s】玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
-                $storeName,
-                $playerName,
-                $prizeName,
-                self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
-            );
+            if (!empty($storeName)) {
+                // 有店家：显示店名
+                $content = sprintf(
+                    '🎉 摸獎大報喜！狂賀【%s】玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
+                    $storeName,
+                    $playerName,
+                    $prizeName,
+                    self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
+                );
+            } else {
+                // 无店家：不显示店名
+                $content = sprintf(
+                    '🎉 摸獎大報喜！狂賀玩家（%s）手氣大爆發，幸運抱走《%s》，狂得 %s 分！',
+                    $playerName,
+                    $prizeName,
+                    self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
+                );
+            }
 
             $data = [
                 'msg_type' => 'high_score_broadcast', // 消息类型（与高分广播统一，客户端可复用同一套跑马灯逻辑）
