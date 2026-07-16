@@ -42,7 +42,7 @@ class AgentPlayerGameLogController
             // 修复后：只加载必要的关联，并严格限制字段
             $grid->model()->with([
                 'player:id,uuid,name,department_id,store_admin_id',  // 只加载需要的字段
-                'machine:id,code,name,label_id,producer_id',         // 只加载需要的字段
+                'machine:id,code,label_id,producer_id',         // 只加载需要的字段（name 通过 machineLabel 访问器获取）
                 'machine.machineLabel:id,name',                       // 嵌套加载但限制字段
                 'machine.producer:id,name',                           // 嵌套加载但限制字段
                 'player.storeAdmin:id,username,nickname',             // 限制店家管理员字段
