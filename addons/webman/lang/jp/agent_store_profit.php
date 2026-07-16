@@ -25,9 +25,18 @@ return [
     'filter' => [
         'select_store' => '店舗を選択',
         'all_stores' => '全店舗',
+        'select_shift' => 'シフト選択',
+        'all_shifts' => '全シフト',
         'time_range' => '時間範囲',
         'start_time' => '開始時間',
         'end_time' => '終了時間',
+    ],
+
+    // シフト
+    'shift' => [
+        'morning' => '朝番 (08:00-16:00)',
+        'afternoon' => '午番 (16:00-00:00)',
+        'night' => '夜番 (00:00-08:00)',
     ],
 
     // 統計データ

@@ -25,9 +25,18 @@ return [
     'filter' => [
         'select_store' => '选择店家',
         'all_stores' => '全部店家',
+        'select_shift' => '选择班次',
+        'all_shifts' => '全部班次',
         'time_range' => '时间范围',
         'start_time' => '开始时间',
         'end_time' => '结束时间',
+    ],
+
+    // 班次
+    'shift' => [
+        'morning' => '早班 (08:00-16:00)',
+        'afternoon' => '中班 (16:00-00:00)',
+        'night' => '晚班 (00:00-08:00)',
     ],
 
     // 统计数据

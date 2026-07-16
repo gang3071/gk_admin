@@ -24,6 +24,18 @@ use ExAdmin\ui\support\Request;
 class AgentStoreProfitReportController
 {
     /**
+     * 班次时间范围定义
+     * 早班: 08:00-16:00
+     * 中班: 16:00-00:00
+     * 晚班: 00:00-08:00
+     */
+    private const SHIFT_RANGES = [
+        'morning' => ['start' => 8, 'end' => 16],
+        'afternoon' => ['start' => 16, 'end' => 24],
+        'night' => ['start' => 0, 'end' => 8],
+    ];
+
+    /**
      * 店家分润报表列表
      * @group agent
      * @auth true
@@ -39,6 +51,7 @@ class AgentStoreProfitReportController
         $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
         $dateType = $exAdminFilter['date_type'] ?? null;
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
+        $selectedShift = $exAdminFilter['shift'] ?? null;
 
         // 获取代理下的所有店家
         $allStoresQuery = $admin->childStores()
@@ -109,6 +122,11 @@ class AgentStoreProfitReportController
                 }
             }
 
+            // 班次筛选
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($deliveryQuery, $selectedShift);
+            }
+
             $deliveryData = $deliveryQuery->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
@@ -131,6 +149,11 @@ class AgentStoreProfitReportController
                 if (!empty($createdAtEnd)) {
                     $lotteryQuery->where('created_at', '<=', $createdAtEnd);
                 }
+            }
+
+            // 班次筛选
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($lotteryQuery, $selectedShift);
             }
 
             $lotteryData = $lotteryQuery->selectRaw("
@@ -433,6 +456,17 @@ class AgentStoreProfitReportController
                     ->options(['' => admin_trans('agent_store_profit.filter.all_stores')] + $storeOptions)
                     ->style(['width' => '300px']);
 
+                // 班次下拉选择
+                $filter->eq()->select('shift')
+                    ->placeholder(admin_trans('agent_store_profit.filter.select_shift'))
+                    ->options([
+                        '' => admin_trans('agent_store_profit.filter.all_shifts'),
+                        'morning' => admin_trans('agent_store_profit.shift.morning'),
+                        'afternoon' => admin_trans('agent_store_profit.shift.afternoon'),
+                        'night' => admin_trans('agent_store_profit.shift.night'),
+                    ])
+                    ->style(['width' => '200px']);
+
                 // 结算周期下拉选择
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
@@ -471,6 +505,25 @@ class AgentStoreProfitReportController
             $grid->export(new \addons\webman\grid\AgentStoreProfitMonthlyExporter())
                 ->filename('monthly_business_report_' . date('YmdHis'));
         });
+    }
+
+    /**
+     * 应用班次筛选条件
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $shift 班次类型: morning/afternoon/night
+     * @return void
+     */
+    private function applyShiftFilter($query, string $shift): void
+    {
+        if (!isset(self::SHIFT_RANGES[$shift])) {
+            return;
+        }
+
+        $range = self::SHIFT_RANGES[$shift];
+        $startHour = $range['start'];
+        $endHour = $range['end'];
+
+        $query->whereRaw('HOUR(created_at) >= ? AND HOUR(created_at) < ?', [$startHour, $endHour]);
     }
 
     /**

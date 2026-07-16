@@ -57,14 +57,14 @@ class StoreTicketRecordController
                 ->where('bind_admin_user_id', $admin->id)
                 ->orderBy('id', 'desc')
                 ->first();
-            $lastShiftTime = $lastShiftRecord ? $lastShiftRecord->end_time : null;
+            $lastShiftTime = $lastShiftRecord?->end_time;
 
             $currentShiftQuery = TicketRecord::query()
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
-                    $query->where('scanned_at', '>', $lastShiftTime);
+                    $query->where('created_at', '>', $lastShiftTime);
                 });
             $currentShiftData = $currentShiftQuery->selectRaw(
                 'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'

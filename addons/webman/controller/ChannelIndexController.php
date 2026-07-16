@@ -2279,7 +2279,7 @@ class ChannelIndexController
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
             ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
-                $query->where('scanned_at', '>', $lastShiftTime);
+                $query->where('created_at', '>', $lastShiftTime);
             })
             ->selectRaw('sum(score) as total_score')
             ->first();
@@ -3458,8 +3458,8 @@ class ChannelIndexController
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                         ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-                        ->where('scanned_at', '>', $startTime)
-                        ->where('scanned_at', '<=', $endTime)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.4 统计核销记录后台使用金额（洗分类型）

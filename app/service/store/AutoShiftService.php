@@ -439,8 +439,8 @@ class AutoShiftService
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
             ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-            ->where('scanned_at', '>', $startTime)
-            ->where('scanned_at', '<=', $endTime)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
             ->sum('score');
 
         // 计算核销记录后台使用金额（洗分类型 + 后台使用状态）
