@@ -240,6 +240,7 @@ export default {
     };
   },
   created() {
+    console.log('[在线玩家] 组件创建', {
       wsUrl: this.wsUrl,
       appKey: this.appKey,
       hasScript: typeof this.$script
@@ -418,6 +419,7 @@ export default {
           return;
         }
 
+        console.log('[在线玩家] 连接WebSocket', {
           wsUrl: this.wsUrl,
           appKey: this.appKey
         });
@@ -587,6 +589,7 @@ export default {
       }
 
       if (beforeMachineCount !== this.machinePlayers.length) {
+        console.log('[在线玩家] 清理实体机台离线玩家', {
           before: beforeMachineCount,
           after: this.machinePlayers.length,
           removed: beforeMachineCount - this.machinePlayers.length
@@ -607,6 +610,7 @@ export default {
       }
 
       if (beforeGameCount !== this.gamePlayers.length) {
+        console.log('[在线玩家] 清理电子游戏离线玩家', {
           before: beforeGameCount,
           after: this.gamePlayers.length,
           removed: beforeGameCount - this.gamePlayers.length
