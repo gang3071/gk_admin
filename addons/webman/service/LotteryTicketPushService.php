@@ -415,6 +415,7 @@ class LotteryTicketPushService
      * @param int $departmentId 渠道ID
      * @param LotteryTicketActivity $activity 活动对象
      * @param string $playerName 玩家名称（脱敏后）
+     * @param string $storeName 店家名称
      * @param string $prizeName 奖品名称
      * @param float $prizeAmount 奖金金额
      * @return bool
@@ -423,13 +424,15 @@ class LotteryTicketPushService
         int $departmentId,
         LotteryTicketActivity $activity,
         string $playerName,
+        string $storeName,
         string $prizeName,
         float $prizeAmount
     ): bool {
         try {
-            // 构造跑马灯消息（参考高分广播格式）
+            // 构造跑马灯消息（与高分广播风格统一）
             $content = sprintf(
-                '🎉 恭喜玩家 %s 在摸奖券活动「%s」中获得 %s，奖金 %s分！',
+                '摸獎券中獎報喜：讓我們恭喜【%s】的優秀玩家（%s），在《%s》活動中榮獲 %s %s 分的佳績！',
+                $storeName,
                 $playerName,
                 $activity->name,
                 $prizeName,
@@ -438,10 +441,15 @@ class LotteryTicketPushService
 
             $data = [
                 'msg_type' => 'high_score_broadcast', // 消息类型（与高分广播统一，客户端可复用同一套跑马灯逻辑）
-                'title' => '🎊 摸奖券中奖报喜',
+                'title' => '🎊 摸獎券中獎報喜',
                 'content' => $content,
                 'timestamp' => time(),
                 'department_id' => $departmentId,
+                'store_name' => $storeName,
+                'player_name' => $playerName,
+                'activity_name' => $activity->name,
+                'prize_name' => $prizeName,
+                'prize_amount' => $prizeAmount,
             ];
 
             // 使用全局广播频道（与高分广播、彩金通知保持一致）
@@ -452,6 +460,7 @@ class LotteryTicketPushService
                 'department_id' => $departmentId,
                 'activity_id' => $activity->id,
                 'player_name' => $playerName,
+                'store_name' => $storeName,
                 'prize_name' => $prizeName,
                 'prize_amount' => $prizeAmount,
                 'content' => $content

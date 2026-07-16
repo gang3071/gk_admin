@@ -1279,10 +1279,20 @@ class ChannelLotteryTicketActivityController
                             $playerName = mb_substr($player->name, 0, 1) . '***';
                         }
 
+                        // 获取店家名称
+                        $storeName = '未知店家';
+                        if (!$player->relationLoaded('storeAdmin')) {
+                            $player->load('storeAdmin');
+                        }
+                        if ($player->storeAdmin) {
+                            $storeName = $player->storeAdmin->nickname ?? ($player->storeAdmin->username ?? '未知店家');
+                        }
+
                         \addons\webman\service\LotteryTicketPushService::pushMarqueeAnnouncement(
                             $activity->department_id,
                             $activity,
                             $playerName,
+                            $storeName,
                             $prizeLevel->level_name,
                             $prizeLevel->prize_amount
                         );
