@@ -25,6 +25,18 @@ use ExAdmin\ui\support\Request;
 class ChannelStoreProfitReportController
 {
     /**
+     * 班次时间范围定义
+     * 早班: 08:00-16:00
+     * 中班: 16:00-00:00
+     * 晚班: 00:00-08:00
+     */
+    private const SHIFT_RANGES = [
+        'morning' => ['start' => 8, 'end' => 16],
+        'afternoon' => ['start' => 16, 'end' => 24],
+        'night' => ['start' => 0, 'end' => 8],
+    ];
+
+    /**
      * 店家分润报表列表
      * @group channel
      * @auth true
@@ -42,6 +54,7 @@ class ChannelStoreProfitReportController
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
         $selectedAgentId = $exAdminFilter['agent_id'] ?? null;
         $remarkKeyword = $exAdminFilter['remark'] ?? null;
+        $selectedShift = $exAdminFilter['shift'] ?? null;
 
         // 获取渠道下的所有店家
         // 渠道可以看到自己的直属店家 + 下属代理的店家
@@ -131,6 +144,11 @@ class ChannelStoreProfitReportController
                 }
             }
 
+            // 班次筛选
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($deliveryQuery, $selectedShift);
+            }
+
             $deliveryData = $deliveryQuery->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
@@ -153,6 +171,11 @@ class ChannelStoreProfitReportController
                 if (!empty($createdAtEnd)) {
                     $lotteryQuery->where('created_at', '<=', $createdAtEnd);
                 }
+            }
+
+            // 班次筛选
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($lotteryQuery, $selectedShift);
             }
 
             $lotteryData = $lotteryQuery->selectRaw("
@@ -490,6 +513,17 @@ class ChannelStoreProfitReportController
                     ->options(['' => admin_trans('channel_store_profit.filter.all_stores')] + $storeOptions)
                     ->style(['width' => '300px']);
 
+                // 班次下拉选择
+                $filter->eq()->select('shift')
+                    ->placeholder(admin_trans('channel_store_profit.filter.select_shift'))
+                    ->options([
+                        '' => admin_trans('channel_store_profit.filter.all_shifts'),
+                        'morning' => admin_trans('channel_store_profit.shift.morning'),
+                        'afternoon' => admin_trans('channel_store_profit.shift.afternoon'),
+                        'night' => admin_trans('channel_store_profit.shift.night'),
+                    ])
+                    ->style(['width' => '200px']);
+
                 // 备注模糊搜索
                 $filter->like()->text('remark')
                     ->placeholder(admin_trans('channel_store_profit.filter.remark_placeholder'))
@@ -536,5 +570,31 @@ class ChannelStoreProfitReportController
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);
         });
+    }
+
+    /**
+     * 应用班次筛选条件
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param string $shift 班次类型: morning/afternoon/night
+     * @return void
+     */
+    private function applyShiftFilter($query, string $shift): void
+    {
+        if (!isset(self::SHIFT_RANGES[$shift])) {
+            return;
+        }
+
+        $range = self::SHIFT_RANGES[$shift];
+        $startHour = $range['start'];
+        $endHour = $range['end'];
+
+        if ($startHour < $endHour) {
+            // 正常时间范围（如早班 08-16）
+            $query->whereRaw('HOUR(created_at) >= ? AND HOUR(created_at) < ?', [$startHour, $endHour]);
+        } else {
+            // 跨午夜时间范围（如晚班 00-08，实际是 0-8）
+            // 这里 startHour=0, endHour=8，所以是正常范围
+            $query->whereRaw('HOUR(created_at) >= ? AND HOUR(created_at) < ?', [$startHour, $endHour]);
+        }
     }
 }

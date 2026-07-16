@@ -33,6 +33,15 @@ return [
         'time_range' => 'Time Range',
         'start_time' => 'Start Time',
         'end_time' => 'End Time',
+        'select_shift' => 'Select Shift',
+        'all_shifts' => 'All Shifts',
+    ],
+
+    // Shifts
+    'shift' => [
+        'morning' => 'Morning (08:00-16:00)',
+        'afternoon' => 'Afternoon (16:00-00:00)',
+        'night' => 'Night (00:00-08:00)',
     ],
 
     // Statistics
