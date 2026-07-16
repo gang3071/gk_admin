@@ -29,6 +29,24 @@ use support\Log;
 class ChannelLotteryTicketActivityController
 {
     /**
+     * 格式化金额显示（整数不显示小数位）
+     *
+     * @param float $amount 金额
+     * @return string
+     */
+    protected function formatAmount(float $amount): string
+    {
+        // 判断是否为整数
+        if (floor($amount) == $amount) {
+            // 整数：不显示小数位
+            return number_format($amount, 0, '.', ',');
+        } else {
+            // 小数：显示两位小数
+            return number_format($amount, 2, '.', ',');
+        }
+    }
+
+    /**
      * 进行中的活动列表 - 使用 Vue 组件展示
      * @auth true
      * @group channel
@@ -170,6 +188,15 @@ class ChannelLotteryTicketActivityController
             'vipConfigHint' => admin_trans('lottery_ticket.help.vip_config_hint'),
             'prizeConfigHint' => admin_trans('lottery_ticket.help.prize_config_hint'),
             'inputTicketNo' => admin_trans('lottery_ticket.help.input_ticket_no'),
+            'activityNameHint' => admin_trans('lottery_ticket.help.activity_name_hint'),
+            'descriptionHint' => admin_trans('lottery_ticket.help.description_hint'),
+            'startTimeHint' => admin_trans('lottery_ticket.help.start_time_hint'),
+            'endTimeHint' => admin_trans('lottery_ticket.help.end_time_hint'),
+            'vipConfigDetail' => admin_trans('lottery_ticket.help.vip_config_detail'),
+            'prizeConfigDetail' => admin_trans('lottery_ticket.help.prize_config_detail'),
+            'prizeNameHint' => admin_trans('lottery_ticket.help.prize_name_hint'),
+            'prizeAmountHint' => admin_trans('lottery_ticket.help.prize_amount_hint'),
+            'prizeCountHint' => admin_trans('lottery_ticket.help.prize_count_hint'),
 
             // 表单
             'vipConfigSection' => admin_trans('lottery_ticket.form.vip_config_section'),
@@ -791,7 +818,7 @@ class ChannelLotteryTicketActivityController
                     $lines = [];
                     foreach ($data->prizeLevels->sortBy('level_rank') as $level) {
                         $remaining = $level->prize_count - $level->won_count;
-                        $lines[] = $level->level_name . '：NT$' . number_format($level->prize_amount, 2) . '（剩余' . $remaining . '/' . $level->prize_count . '）';
+                        $lines[] = $level->level_name . '：NT$' . $this->formatAmount($level->prize_amount) . '（剩余' . $remaining . '/' . $level->prize_count . '）';
                     }
                     return implode("\n", $lines);
                 });
@@ -2783,7 +2810,7 @@ class ChannelLotteryTicketActivityController
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
             'player_name' => $player->name,
-            'player_phone' => $player->phone ?? null,
+            'player_account' => $player->phone ?? '-',  // 玩家账号（phone字段）
             'ticket_no' => $ticketNo,
             'ticket_id' => $ticket->id
         ], '', 200);

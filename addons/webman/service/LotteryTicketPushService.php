@@ -385,6 +385,24 @@ class LotteryTicketPushService
     }
 
     /**
+     * 格式化金额显示（整数不显示小数位）
+     *
+     * @param float $amount 金额
+     * @return string
+     */
+    protected static function formatAmount(float $amount): string
+    {
+        // 判断是否为整数
+        if (floor($amount) == $amount) {
+            // 整数：不显示小数位
+            return number_format($amount, 0, '.', ',');
+        } else {
+            // 小数：显示两位小数
+            return number_format($amount, 2, '.', ',');
+        }
+    }
+
+    /**
      * 推送跑马灯广播（特等奖和一等奖中奖公告）
      *
      * 使用场景：
@@ -415,7 +433,7 @@ class LotteryTicketPushService
                 $playerName,
                 $activity->name,
                 $prizeName,
-                number_format($prizeAmount, 0) // 整数显示
+                self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
             );
 
             $data = [
@@ -487,10 +505,10 @@ class LotteryTicketPushService
                 'type' => 'lottery_win',
                 'title' => '🎉 恭喜中獎！',
                 'message' => sprintf(
-                    '您在活動「%s」中獲得 %s - %s分！獎金已自動發放到您的錢包。',
+                    '您在活動「%s」中獲得%s-%s分！獎金已自動發放到您的錢包。',
                     $activity->name,
                     $prizeName,
-                    number_format($prizeAmount, 2)
+                    self::formatAmount($prizeAmount) // 智能格式化：整数不显示小数位
                 ),
                 'data' => [
                     'activity_id' => $activity->id,

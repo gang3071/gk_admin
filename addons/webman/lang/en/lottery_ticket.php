@@ -397,6 +397,15 @@ return [
         'vip_config_hint' => 'Configure ticket count for each VIP level upon reaching bet amount',
         'prize_config_hint' => 'Configure prize levels and amounts (cash only)',
         'input_ticket_no' => 'Enter ticket number:',
+        'activity_name_hint' => 'Activity name will be displayed to players, keep it concise',
+        'description_hint' => 'Activity description supports rich text format, images, tables, etc.',
+        'start_time_hint' => 'When players can start earning lottery tickets through betting',
+        'end_time_hint' => 'Activity will automatically enter pending draw status after end time',
+        'vip_config_detail' => 'System will automatically issue tickets when players reach specified bet amount during activity',
+        'prize_config_detail' => 'Up to 10 prize levels, prizes will be drawn from all winning tickets and distributed to players',
+        'prize_name_hint' => 'Custom prize name, max 20 characters',
+        'prize_amount_hint' => 'Cash reward for winners',
+        'prize_count_hint' => 'Total quantity of this prize level',
     ],
 
     // 详情视图标签
