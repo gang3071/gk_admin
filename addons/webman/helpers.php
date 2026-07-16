@@ -2647,7 +2647,7 @@ if (!function_exists('clearMachineCrashCache')) {
      * @return array 返回4种播放地址：RTMP、FLV、HLS、WebRTC
      * @throws \Exception
      */
-    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30, ?bool $useCnDomain = null, string $preferProtocol = 'webrtc'): array
+    function generateLotteryLiveUrls(int $configId, string $streamName, int $expireDays = 30, ?bool $useCnDomain = null): array
     {
         /** @var \addons\webman\model\MachineTencentPlay $config */
         $config = \addons\webman\model\MachineTencentPlay::query()->find($configId);
