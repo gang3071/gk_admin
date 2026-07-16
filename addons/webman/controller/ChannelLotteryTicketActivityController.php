@@ -2662,8 +2662,10 @@ class ChannelLotteryTicketActivityController
             }
 
             // 生成播放地址（支持自定义有效期，默认 30 天）
-            // ⭐ 第4个参数：false = 优先使用海外域名，true = 优先使用大陆域名
-            $urls = generateLotteryLiveUrls(1, $streamName, $expireDays, false);
+            // ⭐ 自动根据 APP_ENV 选择线路（传 null）
+            // - APP_ENV=pro: 走海外线路（useCnDomain=false）
+            // - APP_ENV=其他: 走大陆线路（useCnDomain=true）
+            $urls = generateLotteryLiveUrls(1, $streamName, $expireDays, null);
 
             // 返回播放器配置
             return Response::success([
