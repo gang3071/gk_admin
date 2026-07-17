@@ -1505,10 +1505,24 @@ class MachineController
 
             switch ($action) {
                 case 'open_custom': // 开分自定(斯洛+钢珠)
-                    machineOpenAnyFree($player, $machine, $params['open']);
+                    // ✅ 通过 API 调用 gk_work
+                    \app\service\MachineApiService::customOpenScore(
+                        $machine->id,
+                        $player->id,
+                        $params['open'],
+                        Admin::id(),
+                        Container::getInstance()->translator->getLocale()
+                    );
                     break;
                 case 'down': // 下分(斯洛+钢珠)
-                    machineWash($player, $machine, 'down');
+                    // ✅ 通过 API 调用 gk_work
+                    \app\service\MachineApiService::kickPlayer(
+                        $machine->id,
+                        $player->id,
+                        'down',
+                        Admin::id(),
+                        Container::getInstance()->translator->getLocale()
+                    );
                     break;
                 case 'plc_push_5hz': // PUSH AUTO 啟動
                     $machine->push_auto = 1;
@@ -1523,10 +1537,23 @@ class MachineController
                     $machine->save();
                     break;
                 case 'kick_player': // 踢除遊戲中的玩家
-                    machineWash($player, $machine);
+                    // ✅ 通过 API 调用 gk_work
+                    \app\service\MachineApiService::kickPlayer(
+                        $machine->id,
+                        $player->id,
+                        'leave',
+                        Admin::id(),
+                        Container::getInstance()->translator->getLocale()
+                    );
                     break;
                 case 'kick_force': // 強制踢出(分數將不會返回玩家)
-                    resetMachineTrans($machine, $player);
+                    // ✅ 通过 API 调用 gk_work
+                    \app\service\MachineApiService::forceKickPlayer(
+                        $machine->id,
+                        $player->id,
+                        Admin::id(),
+                        Container::getInstance()->translator->getLocale()
+                    );
                     break;
                 case 'start': // 開始(斯洛)
                     if (($services->auto ?? 0) == 1) {

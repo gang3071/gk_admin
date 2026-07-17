@@ -508,4 +508,139 @@ class MachineApiService
             throw $e;
         }
     }
+
+    /**
+     * 踢出玩家（洗分）
+     *
+     * @param int $machineId 机台ID
+     * @param int $playerId 玩家ID
+     * @param string $path 路径 (leave/down)
+     * @param int $adminId 管理员ID
+     * @param string $lang 语言
+     * @return array
+     * @throws Exception
+     */
+    public static function kickPlayer(int $machineId, int $playerId, string $path = 'leave', int $adminId = 0, string $lang = 'zh_CN'): array
+    {
+        try {
+            $client = self::createClient($adminId);
+            $response = $client->post('/api/admin/machine/kick-player', [
+                'json' => [
+                    'machine_id' => $machineId,
+                    'player_id' => $playerId,
+                    'path' => $path,
+                    'lang' => $lang,
+                ]
+            ]);
+
+            return self::handleResponse($response, '踢出玩家');
+
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::kickPlayer failed', [
+                'machine_id' => $machineId,
+                'player_id' => $playerId,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            Log::error('MachineApiService::kickPlayer failed', [
+                'machine_id' => $machineId,
+                'player_id' => $playerId,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * 强制踢出玩家（不返还分数）
+     *
+     * @param int $machineId 机台ID
+     * @param int $playerId 玩家ID
+     * @param int $adminId 管理员ID
+     * @param string $lang 语言
+     * @return array
+     * @throws Exception
+     */
+    public static function forceKickPlayer(int $machineId, int $playerId, int $adminId = 0, string $lang = 'zh_CN'): array
+    {
+        try {
+            $client = self::createClient($adminId);
+            $response = $client->post('/api/admin/machine/force-kick-player', [
+                'json' => [
+                    'machine_id' => $machineId,
+                    'player_id' => $playerId,
+                    'lang' => $lang,
+                ]
+            ]);
+
+            return self::handleResponse($response, '强制踢出玩家');
+
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::forceKickPlayer failed', [
+                'machine_id' => $machineId,
+                'player_id' => $playerId,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            Log::error('MachineApiService::forceKickPlayer failed', [
+                'machine_id' => $machineId,
+                'player_id' => $playerId,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * 自定义开分
+     *
+     * @param int $machineId 机台ID
+     * @param int $playerId 玩家ID
+     * @param int $openScore 开分数值
+     * @param int $adminId 管理员ID
+     * @param string $lang 语言
+     * @return array
+     * @throws Exception
+     */
+    public static function customOpenScore(int $machineId, int $playerId, int $openScore, int $adminId = 0, string $lang = 'zh_CN'): array
+    {
+        try {
+            $client = self::createClient($adminId);
+            $response = $client->post('/api/admin/machine/custom-open-score', [
+                'json' => [
+                    'machine_id' => $machineId,
+                    'player_id' => $playerId,
+                    'open_score' => $openScore,
+                    'lang' => $lang,
+                ]
+            ]);
+
+            return self::handleResponse($response, '自定义开分');
+
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::customOpenScore failed', [
+                'machine_id' => $machineId,
+                'player_id' => $playerId,
+                'open_score' => $openScore,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            Log::error('MachineApiService::customOpenScore failed', [
+                'machine_id' => $machineId,
+                'player_id' => $playerId,
+                'open_score' => $openScore,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
 }

@@ -416,14 +416,27 @@ class ChannelMachineController
             switch ($action) {
                 case 'kick_player': // 踢除遊戲中的玩家
                     if ($player) {
-                        machineWash($player, $machine);
+                        // ✅ 通过 API 调用 gk_work
+                        \app\service\MachineApiService::kickPlayer(
+                            $machine->id,
+                            $player->id,
+                            'leave',
+                            Admin::id(),
+                            \ExAdmin\ui\support\Container::getInstance()->translator->getLocale()
+                        );
                     } else {
                         throw new Exception(admin_trans('machine.action.no_fount_player'));
                     }
                     break;
                 case 'kick_force': // 強制踢出(分數將不會返回玩家)
                     if ($player) {
-                        resetMachineTrans($machine, $player);
+                        // ✅ 通过 API 调用 gk_work
+                        \app\service\MachineApiService::forceKickPlayer(
+                            $machine->id,
+                            $player->id,
+                            Admin::id(),
+                            \ExAdmin\ui\support\Container::getInstance()->translator->getLocale()
+                        );
                     } else {
                         throw new Exception(admin_trans('machine.action.no_fount_player'));
                     }
