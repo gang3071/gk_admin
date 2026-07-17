@@ -522,7 +522,6 @@
                       :placeholder="trans.form?.prize_name_placeholder || '例如：特等獎、一等獎'"
                       :maxlength="20"
                       show-count
-                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_name_hint || '自定義獎項名稱，最多20字' }}
