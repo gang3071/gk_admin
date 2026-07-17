@@ -506,28 +506,43 @@ class ChannelLotteryTicketActivityController
                     throw new \Exception(admin_trans('common.no_permission'));
                 }
 
-                // 只能编辑未开始的活动
-                if ($activity->status != LotteryTicketActivity::STATUS_NOT_STARTED) {
+                // ⭐ 已结束、待开奖、开奖中、已关闭的活动不能编辑
+                if (in_array($activity->status, [
+                    LotteryTicketActivity::STATUS_ENDED,
+                    LotteryTicketActivity::STATUS_PENDING_DRAW,
+                    LotteryTicketActivity::STATUS_DRAWING,
+                    LotteryTicketActivity::STATUS_CLOSED
+                ])) {
                     throw new \Exception(admin_trans('lottery_ticket.error.cannot_edit_started'));
                 }
 
-                // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
-                $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
-                if ($conflictActivity) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
-                        'name' => $conflictActivity->name,
-                        'start_time' => $conflictActivity->start_time,
-                        'end_time' => $conflictActivity->end_time,
-                    ]));
-                }
+                // ⭐ 进行中的活动只能编辑名称、说明、封面图
+                if ($activity->status == LotteryTicketActivity::STATUS_ONGOING) {
+                    $activity->update([
+                        'name' => $data['name'],
+                        'description' => $data['description'] ?? '',
+                        'cover_image' => $data['cover_image'] ?? '',
+                    ]);
+                } else {
+                    // ⭐ 未开始的活动可以编辑所有字段
+                    // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
+                    $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
+                    if ($conflictActivity) {
+                        throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
+                            'name' => $conflictActivity->name,
+                            'start_time' => $conflictActivity->start_time,
+                            'end_time' => $conflictActivity->end_time,
+                        ]));
+                    }
 
-                $activity->update([
-                    'name' => $data['name'],
-                    'description' => $data['description'] ?? '',
-                    'cover_image' => $data['cover_image'] ?? '',
-                    'start_time' => $data['start_time'],
-                    'end_time' => $data['end_time'],
-                ]);
+                    $activity->update([
+                        'name' => $data['name'],
+                        'description' => $data['description'] ?? '',
+                        'cover_image' => $data['cover_image'] ?? '',
+                        'start_time' => $data['start_time'],
+                        'end_time' => $data['end_time'],
+                    ]);
+                }
 
                 // ⭐ 防御性初始化：如果 Redis key 不存在，则初始化
                 // 这是为了修复老活动（修复代码前创建的）
@@ -573,38 +588,41 @@ class ChannelLotteryTicketActivityController
                 ]);
             }
 
-            // 保存 VIP 配置
-            if (!empty($data['vip_configs'])) {
-                // 删除旧配置
-                LotteryTicketVipConfig::where('activity_id', $activity->id)->delete();
+            // ⭐ 进行中的活动不更新 VIP 配置和奖品等级（只能更新名称、说明、封面图）
+            if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
+                // 保存 VIP 配置
+                if (!empty($data['vip_configs'])) {
+                    // 删除旧配置
+                    LotteryTicketVipConfig::where('activity_id', $activity->id)->delete();
 
-                // 插入新配置
-                foreach ($data['vip_configs'] as $config) {
-                    if ($config['bet_amount_required'] > 0 && $config['ticket_count'] > 0) {
-                        LotteryTicketVipConfig::create([
-                            'activity_id' => $activity->id,
-                            'vip_level_id' => $config['vip_level_id'],
-                            'bet_amount_required' => $config['bet_amount_required'],
-                            'ticket_count' => $config['ticket_count'],
-                            'status' => LotteryTicketVipConfig::STATUS_ENABLED,
-                        ]);
+                    // 插入新配置
+                    foreach ($data['vip_configs'] as $config) {
+                        if ($config['bet_amount_required'] > 0 && $config['ticket_count'] > 0) {
+                            LotteryTicketVipConfig::create([
+                                'activity_id' => $activity->id,
+                                'vip_level_id' => $config['vip_level_id'],
+                                'bet_amount_required' => $config['bet_amount_required'],
+                                'ticket_count' => $config['ticket_count'],
+                                'status' => LotteryTicketVipConfig::STATUS_ENABLED,
+                            ]);
+                        }
                     }
                 }
-            }
 
-            // 保存奖品等级
-            // 删除旧等级
-            LotteryTicketPrizeLevel::where('activity_id', $activity->id)->delete();
+                // 保存奖品等级
+                // 删除旧等级
+                LotteryTicketPrizeLevel::where('activity_id', $activity->id)->delete();
 
-            // 插入新等级
-            foreach ($prizeLevels as $level) {
-                LotteryTicketPrizeLevel::create([
-                    'activity_id' => $activity->id,
-                    'level_rank' => $level['level_rank'],
-                    'level_name' => $level['level_name'],
-                    'prize_amount' => $level['prize_amount'],
-                    'prize_count' => $level['prize_count'] ?? 0,
-                ]);
+                // 插入新等级
+                foreach ($prizeLevels as $level) {
+                    LotteryTicketPrizeLevel::create([
+                        'activity_id' => $activity->id,
+                        'level_rank' => $level['level_rank'],
+                        'level_name' => $level['level_name'],
+                        'prize_amount' => $level['prize_amount'],
+                        'prize_count' => $level['prize_count'] ?? 0,
+                    ]);
+                }
             }
 
             Db::commit();
