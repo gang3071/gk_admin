@@ -1506,7 +1506,7 @@ class ChannelLotteryTicketActivityController
 
         $activity->save();
 
-        return message_success(admin_trans('lottery_ticket.message.live_url_updated'));
+        return Response::success([], admin_trans('lottery_ticket.message.live_url_updated'));
     }
 
     /**
@@ -1573,7 +1573,7 @@ class ChannelLotteryTicketActivityController
                 'admin_id' => Admin::user()->id,
             ]);
 
-            return message_success(admin_trans('lottery_ticket.message.drawing_started'));
+            return Response::success([], admin_trans('lottery_ticket.message.drawing_started'));
 
         } catch (\Exception $e) {
             Db::rollBack();
@@ -1703,7 +1703,7 @@ class ChannelLotteryTicketActivityController
                 'admin_id' => Admin::user()->id,
             ]);
 
-            return message_success(admin_trans('lottery_ticket.message.activity_ended'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_ended'));
 
         } catch (\Exception $e) {
             Db::rollBack();
@@ -2342,7 +2342,7 @@ class ChannelLotteryTicketActivityController
                 return message_error($message . ' ' . implode('; ', $failReasons));
             }
 
-            return message_success($message);
+            return Response::success([], $message);
 
         } catch (\Exception $e) {
             Db::rollBack();
