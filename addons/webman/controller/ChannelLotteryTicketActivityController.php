@@ -588,8 +588,26 @@ class ChannelLotteryTicketActivityController
                 ]);
             }
 
-            // ⭐ 进行中的活动不更新 VIP 配置和奖品等级（只能更新名称、说明、封面图）
-            if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
+            // ⭐ 编辑进行中的活动：只能更新奖项名称，不能修改金额、数量等
+            // ⭐ 创建新活动：无论状态如何，都允许保存完整配置（因为是新建，不存在已发券的情况）
+            $isEditingOngoingActivity = !empty($data['id']) && $activity->status == LotteryTicketActivity::STATUS_ONGOING;
+
+            if ($isEditingOngoingActivity) {
+                // 只更新奖项名称
+                foreach ($prizeLevels as $level) {
+                    if (isset($level['id'])) {
+                        $prizeLevel = LotteryTicketPrizeLevel::where('id', $level['id'])
+                            ->where('activity_id', $activity->id)
+                            ->first();
+
+                        if ($prizeLevel) {
+                            $prizeLevel->level_name = $level['level_name'];
+                            $prizeLevel->save();
+                        }
+                    }
+                }
+            } else {
+                // 创建新活动 或 编辑未开始的活动：可以完全更新配置
                 // 保存 VIP 配置
                 if (!empty($data['vip_configs'])) {
                     // 删除旧配置
