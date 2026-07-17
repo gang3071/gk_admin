@@ -972,7 +972,14 @@ class ChannelLotteryTicketActivityController
             $newActivity->cover_image = $sourceActivity->cover_image;
             $newActivity->status = LotteryTicketActivity::STATUS_NOT_STARTED;
             $newActivity->current_ticket_no = 1; // 重置券号
-            // 不复制时间，让用户设置
+
+            // ⭐ 设置默认时间：从当前时间+1小时开始，持续7天
+            $now = time();
+            $defaultStartTime = $now + 3600; // 1小时后
+            $defaultEndTime = $defaultStartTime + (7 * 24 * 3600); // 7天后
+            $newActivity->start_time = date('Y-m-d H:i:s', $defaultStartTime);
+            $newActivity->end_time = date('Y-m-d H:i:s', $defaultEndTime);
+
             $newActivity->save();
 
             // ⭐ 初始化 Redis 序列号
