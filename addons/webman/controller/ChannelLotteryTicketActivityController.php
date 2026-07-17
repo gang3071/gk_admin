@@ -631,11 +631,11 @@ class ChannelLotteryTicketActivityController
                 // 删除旧等级
                 LotteryTicketPrizeLevel::where('activity_id', $activity->id)->delete();
 
-                // 插入新等级
-                foreach ($prizeLevels as $level) {
+                // 插入新等级（自动根据数组顺序生成 level_rank）
+                foreach ($prizeLevels as $index => $level) {
                     LotteryTicketPrizeLevel::create([
                         'activity_id' => $activity->id,
-                        'level_rank' => $level['level_rank'],
+                        'level_rank' => $level['level_rank'] ?? ($index + 1), // ⭐ 如果前端未传递，则根据索引自动生成
                         'level_name' => $level['level_name'],
                         'prize_amount' => $level['prize_amount'],
                         'prize_count' => $level['prize_count'] ?? 0,
