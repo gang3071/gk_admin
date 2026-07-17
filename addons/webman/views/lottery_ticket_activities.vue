@@ -1762,7 +1762,6 @@ export default {
     // ⭐ 奖品等级改变时
     handlePrizeLevelChange(value) {
       // 可以在这里添加额外逻辑（如果需要）
-      console.log('Selected prize level:', value);
     },
 
     // ⭐ 查询单个玩家信息（单个录入模式）
@@ -1806,30 +1805,23 @@ export default {
           }
         });
 
-        console.log('📡 Query response:', res);
-
         // ⭐ 统一响应格式判断：通过 code 区分成功和失败
         if (res.code === 200) {
           // ✅ 成功：数据在 res.data
           this.singleRecord.player_info = res.data;
           this.singleRecord.error = null;
-          console.log('✅ Player found:', res.data);
         } else {
           // ❌ 失败：错误消息在 res.message
           this.singleRecord.error = res.message || '查詢失敗';
           this.singleRecord.player_info = null;
-          console.log('❌ Error:', res.message, '(code:', res.code + ')');
         }
       } catch (error) {
         // ⭐ this.$request 在 code !== 200 时会 reject
         // 但 reject 的对象就是响应数据本身！
-        console.log('❌ Request rejected:', error);
-
         if (error && error.code && error.message) {
           // 这是正常的业务错误响应
           this.singleRecord.error = error.message || '查詢失敗';
           this.singleRecord.player_info = null;
-          console.log('❌ Business error:', error.message, '(code:', error.code + ')');
         } else {
           // 真正的异常错误（网络错误等）
           console.error('System error:', error);
@@ -1879,10 +1871,6 @@ export default {
         });
 
         // ⭐ 调试日志
-        console.log('Submit response:', res);
-        console.log('res.code:', res.code);
-        console.log('res.code === 200:', res.code === 200);
-
         // ⭐ 简单清晰的响应处理
         if (res.code === 200) {
           // ✅ 成功
@@ -2334,10 +2322,6 @@ export default {
       } catch (error) {
         // ⭐ ExAdmin 的 $request 会将非200响应作为错误抛出
         // 我们需要从错误中提取响应数据
-        console.log('Caught error:', error);
-        console.log('error.response:', error.response);
-        console.log('error.data:', error.data);
-
         // 嘗試多種方式獲取回應資料
         if (error.response?.data) {
           res = error.response.data;
@@ -2351,13 +2335,6 @@ export default {
           return;
         }
       }
-
-      // ⭐ 詳細偵錯日誌
-      console.log('stopDrawing response:', res);
-      console.log('res.code:', res.code, 'type:', typeof res.code);
-      console.log('res.message:', res.message);
-      console.log('res.data:', res.data);
-      console.log('res.data?.need_confirm:', res.data?.need_confirm);
 
       // ⭐ 检查是否需要二次确认（使用 need_confirm 标记而非 40001）
       if (res.code === 200 && res.data?.need_confirm) {
