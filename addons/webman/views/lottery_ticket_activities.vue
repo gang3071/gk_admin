@@ -2297,10 +2297,13 @@ export default {
               this.$message.success('活動已關閉');
               this.fetchActivities();
             } else {
-              this.$message.error(res.message || res.msg || '關閉活動失敗');
+              // 显示后端返回的具体错误信息
+              this.$message.error(res.message || res.msg || res.data?.message || '關閉活動失敗');
             }
           } catch (error) {
-            this.$message.error('關閉活動失敗');
+            // catch 块只处理网络错误等异常，不显示业务错误
+            console.error('关闭活动异常:', error);
+            this.$message.error('網絡異常，請稍後重試');
           }
         }
       });
