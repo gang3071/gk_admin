@@ -1485,11 +1485,31 @@ class MachineController
         if (empty($machine)) {
             return message_error(admin_trans('machine.not_fount'));
         }
-        /** @var Player $player */
-        $player = Player::find($machine->gaming_user_id);
-        if (empty($player)) {
-            return message_error(admin_trans('machine.not_fount'));
+        // 获取玩家（如果存在）
+        $player = null;
+        if ($machine->gaming_user_id > 0) {
+            $player = Player::find($machine->gaming_user_id);
         }
+
+        // 需要玩家的操作列表
+        $requiresPlayer = [
+            'kick_player', 'kick_force', 'down', 'open_custom',
+            'start', 'auto', 'stop_1', 'stop_2', 'stop_3',
+            'plc_up_turn_100', 'plc_down_turn', 'plc_sub_point',
+            'all_up_turn', 'all_down_turn', 'plc_start_or_stop'
+        ];
+
+        // 检查是否需要玩家
+        if (in_array($action, $requiresPlayer)) {
+            if (empty($player)) {
+                return message_error(admin_trans('machine.no_player_gaming'));
+            }
+            // 验证玩家归属
+            if ($player->id != $machine->gaming_user_id) {
+                return message_error(admin_trans('machine.player_not_on_this_machine'));
+            }
+        }
+
         try {
             // 通过 API 获取机台状态
             $services = $this->getMachineStatusViaApi($machine, Container::getInstance()->translator->getLocale());
@@ -1588,18 +1608,36 @@ class MachineController
                                 '{result}' => $action == 'pressure' ? ($services->bet ?? 0) : ($services->win ?? 0)
                             ]))->style(['color' => 'red']),
                     ]), ['duration' => 5])->refreshMenu();
-                case 'plc_up_turn_100': // 上轉(钢珠)
+                case 'plc_up_turn_100': // 上轉100颗珠(钢珠)
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::TURN_UP_ALL, 100, Admin::id());
+                    break;
+
                 case 'plc_down_turn': // 下轉(钢珠)
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::TURN_DOWN_ALL, 0, Admin::id());
+                    break;
+
                 case 'plc_sub_point': // 下珠(钢珠)
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::TURN_TO_POINT, 0, Admin::id());
+                    break;
+
                 case 'all_up_turn': // 全部上轉(钢珠)
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::TURN_UP_ALL, 0, Admin::id());
+                    break;
+
                 case 'all_down_turn': // 全部下轉(钢珠)
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::TURN_DOWN_ALL, 0, Admin::id());
+                    break;
+
                 case 'plc_start_or_stop': // 自動開始/暫停(钢珠)
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::AUTO_UP_TURN, 0, Admin::id());
+                    break;
+
                 case 'stop_1': // A(斯洛)
-                if (($services->auto ?? 0) == 1) {
-                    throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
-                }
-                $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_ONE, 0, Admin::id());
-                break;
+                    if (($services->auto ?? 0) == 1) {
+                        throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                    }
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_ONE, 0, Admin::id());
+                    break;
                 case 'stop_2': // B(斯洛)
                     if (($services->auto ?? 0) == 1) {
                         throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
@@ -1625,7 +1663,34 @@ class MachineController
                     throw new Exception(admin_trans('machine.action.action_error'));
 
             }
+
+            // 记录操作日志
+            Log::info('【机台操作】执行成功', [
+                'operator_type' => 'admin',
+                'admin_id' => Admin::id(),
+                'admin_username' => Admin::user()->username ?? '',
+                'machine_id' => $machine->id,
+                'machine_code' => $machine->code,
+                'machine_type' => $machine->type == GameType::TYPE_SLOT ? '斯洛' : '钢珠',
+                'control_type' => $machine->control_type == Machine::CONTROL_TYPE_MEI ? '双美' : '小淞',
+                'player_id' => $player->id ?? 0,
+                'player_name' => $player->name ?? '',
+                'action' => $action,
+                'params' => $params
+            ]);
+
         } catch (\Exception $e) {
+            // 记录失败日志
+            Log::error('【机台操作】执行失败', [
+                'operator_type' => 'admin',
+                'admin_id' => Admin::id() ?? 0,
+                'admin_username' => Admin::user()->username ?? '',
+                'machine_id' => $machine->id ?? 0,
+                'machine_code' => $machine->code ?? '',
+                'action' => $action,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return message_error($e->getMessage());
         }
 
