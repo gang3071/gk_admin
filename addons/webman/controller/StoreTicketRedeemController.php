@@ -12,6 +12,7 @@ use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\card\Card;
@@ -350,6 +351,16 @@ class StoreTicketRedeemController
             });
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
 
+            // 备注（可编辑）
+            $grid->column('remark', admin_trans('ticket_machine.redeem.remark'))
+                ->display(function ($value) {
+                    return $value ?: '-';
+                })
+                ->editable(
+                    (new Editable)->text('remark')->maxlength(255)
+                )
+                ->width(150)->ellipsis(true);
+
             // 筛选器（默认展开）
             $adminId = $admin->id;
 
@@ -370,6 +381,7 @@ class StoreTicketRedeemController
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
                 $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.redeem.qr_code_no'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.redeem.machine_no'));
+                $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.redeem.remark'));
                 $filter->eq()->select('store_name')
                     ->placeholder(admin_trans('ticket_machine.redeem.store_name'))
                     ->options($storeOptions)
@@ -387,6 +399,32 @@ class StoreTicketRedeemController
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');
                 $filter->form()->dateTimeRange('created_at_start', 'created_at_end');
+            });
+
+            // 处理可编辑列的保存
+            $grid->updateing(function ($ids, $data) {
+                try {
+                    if (isset($ids[0])) {
+                        $admin = Admin::user();
+                        $record = TicketRecord::query()
+                            ->where('id', $ids[0])
+                            ->where('store_admin_id', $admin->id)
+                            ->first();
+
+                        if (!$record) {
+                            return message_error(admin_trans('common.data_not_found'));
+                        }
+
+                        if (array_key_exists('remark', $data)) {
+                            $record->remark = $data['remark'];
+                            $record->save();
+                            return message_success(admin_trans('form.save_success'));
+                        }
+                    }
+                    return message_error(admin_trans('form.save_fail'));
+                } catch (\Exception $e) {
+                    return message_error(admin_trans('form.save_fail') . ': ' . $e->getMessage());
+                }
             });
 
             // 隐藏清空数据按钮

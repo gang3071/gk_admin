@@ -175,6 +175,9 @@ class AgentTicketRecordController
                 };
             });
             $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
+            $grid->column('remark', admin_trans('ticket_machine.record.remark'))->display(function ($value) {
+                return $value ?: '-';
+            })->width(150)->ellipsis(true);
 
             // 获取店名下拉选项
             $storeOptions = ['' => admin_trans('public_msg.all')];
@@ -194,6 +197,7 @@ class AgentTicketRecordController
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));
                 $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.record.qr_code_no'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.record.machine_no'));
+                $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.record.remark'));
                 $filter->eq()->select('store_name')
                     ->placeholder(admin_trans('ticket_machine.record.store_name'))
                     ->options($storeOptions)
