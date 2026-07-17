@@ -185,6 +185,9 @@ class ChannelTicketRedeemController
                 };
             });
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
+            $grid->column('remark', admin_trans('ticket_machine.redeem.remark'))->display(function ($value) {
+                return $value ?: '-';
+            })->width(150)->ellipsis(true);
 
             // 获取店名下拉选项
             $storeOptions = ['' => admin_trans('public_msg.all')];
@@ -203,6 +206,7 @@ class ChannelTicketRedeemController
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
                 $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.redeem.qr_code_no'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.redeem.machine_no'));
+                $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.redeem.remark'));
                 $filter->eq()->select('store_name')
                     ->placeholder(admin_trans('ticket_machine.redeem.store_name'))
                     ->options($storeOptions)
