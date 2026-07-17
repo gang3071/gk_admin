@@ -2294,7 +2294,8 @@ export default {
             });
 
             if (res.code === 200) {
-              this.$message.success('活動已關閉');
+              // ⭐ 优先显示后端返回的成功消息，避免硬编码
+              this.$message.success(res.data?.content || res.message || res.msg || '活動已關閉');
               this.fetchActivities();
             } else {
               // ⭐ 显示后端返回的具体错误信息（优先从 data.content 获取）
