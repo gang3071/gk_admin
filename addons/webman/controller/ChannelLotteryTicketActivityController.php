@@ -337,12 +337,12 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::with(['prizeLevels', 'vipConfigs'])->find($id);
 
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_not_found'), 404);
         }
 
         // 检查权限
         if ($activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         $activityArray = $activity->toArray();
@@ -375,7 +375,7 @@ class ChannelLotteryTicketActivityController
             $file = Request::file('file');
 
             if (!$file) {
-                return message_error(admin_trans('lottery_ticket.error.invalid_file'));
+                return Response::success([], admin_trans('lottery_ticket.error.invalid_file'), 400);
             }
 
             // 验证文件类型
@@ -383,19 +383,19 @@ class ChannelLotteryTicketActivityController
             $allowedTypes = ['jpg', 'jpeg', 'png'];
 
             if (!in_array($extension, $allowedTypes)) {
-                return message_error(admin_trans('lottery_ticket.error.invalid_image_type'));
+                return Response::success([], admin_trans('lottery_ticket.error.invalid_image_type'), 400);
             }
 
             // 获取MIME类型
             $mimeType = $file->getMimeType();
             $allowedMimes = ['image/jpeg', 'image/jpg', 'image/png'];
             if (!in_array($mimeType, $allowedMimes)) {
-                return message_error(admin_trans('lottery_ticket.error.invalid_image_type'));
+                return Response::success([], admin_trans('lottery_ticket.error.invalid_image_type'), 400);
             }
 
             // 验证文件大小 (2MB)
             if ($file->getSize() > 2 * 1024 * 1024) {
-                return message_error(admin_trans('lottery_ticket.error.file_too_large'));
+                return Response::success([], admin_trans('lottery_ticket.error.file_too_large'), 400);
             }
 
             // 生成唯一文件名
@@ -423,12 +423,12 @@ class ChannelLotteryTicketActivityController
                 return Response::success(['url' => $url]);
             } else {
                 Log::error('活动封面上传失败，存储返回 false');
-                return message_error(admin_trans('lottery_ticket.error.upload_failed'));
+                return Response::success([], admin_trans('lottery_ticket.error.upload_failed'), 400);
             }
 
         } catch (\Exception $e) {
             Log::error('活动封面上传异常: ' . $e->getMessage());
-            return message_error(admin_trans('lottery_ticket.error.upload_failed'));
+            return Response::success([], admin_trans('lottery_ticket.error.upload_failed'), 400);
         }
     }
 
@@ -613,7 +613,7 @@ class ChannelLotteryTicketActivityController
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -740,7 +740,7 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_not_found'), 404);
         }
 
         // ✅ 修复：使用模型类而不是集合
@@ -849,18 +849,18 @@ class ChannelLotteryTicketActivityController
         $activity = LotteryTicketActivity::find($id);
 
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_not_found'), 404);
         }
 
         // 检查权限
         if ($activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // 只能关闭未开始或进行中的活动
         if ($activity->status != LotteryTicketActivity::STATUS_NOT_STARTED
             && $activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return message_error(admin_trans('lottery_ticket.message.cannot_close_activity'));
+            return Response::success([], admin_trans('lottery_ticket.message.cannot_close_activity'), 400);
         }
 
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
@@ -930,7 +930,7 @@ class ChannelLotteryTicketActivityController
         $sourceId = Request::input('source_id');
 
         if (!$sourceId || !is_numeric($sourceId)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_activity_id'), 400);
         }
 
         $departmentId = Admin::user()->department_id;
@@ -1001,7 +1001,7 @@ class ChannelLotteryTicketActivityController
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -1025,7 +1025,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         $query = LotteryTicket::where('activity_id', $activityId)
@@ -1103,12 +1103,12 @@ class ChannelLotteryTicketActivityController
         $records = $data['records'] ?? [];
 
         if (!$activityId || empty($records)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         // ⭐ 验证ID参数
         if (!is_numeric($activityId)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_activity_id'), 400);
         }
 
         $successCount = 0;
@@ -1123,7 +1123,7 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity || $activity->department_id != Admin::user()->department_id) {
                 Db::rollBack();
-                return message_error(admin_trans('common.no_permission'));
+                return Response::success([], admin_trans('common.no_permission'), 403);
             }
 
             // ⭐ 核心业务：线下摇球后录入中奖券号
@@ -1140,7 +1140,7 @@ class ChannelLotteryTicketActivityController
 
             if (!in_array($activity->status, $allowedStatuses)) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.cannot_record_win_in_current_status'));
+                return Response::success([], admin_trans('lottery_ticket.error.cannot_record_win_in_current_status'), 400);
             }
 
             foreach ($records as $record) {
@@ -1331,7 +1331,7 @@ class ChannelLotteryTicketActivityController
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -1348,12 +1348,12 @@ class ChannelLotteryTicketActivityController
         $remark = $data['remark'] ?? '';
 
         if (!$activityId || !$playerAccount || !$prizeLevelId) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // 查找玩家
@@ -1366,13 +1366,13 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$player) {
-            return message_error(admin_trans('lottery_ticket.error.player_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.error.player_not_found'), 400);
         }
 
         // 查找奖品等级
         $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
         if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
-            return message_error(admin_trans('lottery_ticket.error.prize_level_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.error.prize_level_not_found'), 400);
         }
 
         Db::beginTransaction();
@@ -1397,7 +1397,7 @@ class ChannelLotteryTicketActivityController
 
         } catch (\Exception $e) {
             Db::rollBack();
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -1412,12 +1412,12 @@ class ChannelLotteryTicketActivityController
         $streamName = Request::input('stream_name');
 
         if (empty($streamName)) {
-            return message_error(admin_trans('lottery_ticket.error.stream_name_required'));
+            return Response::success([], admin_trans('lottery_ticket.error.stream_name_required'), 400);
         }
 
         // 验证流名称格式(只允许字母、数字、下划线、中横线)
         if (!preg_match('/^[a-zA-Z0-9_-]+$/', $streamName)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_stream_name_format'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_stream_name_format'), 400);
         }
 
         try {
@@ -1427,14 +1427,14 @@ class ChannelLotteryTicketActivityController
                 ->first();
 
             if (!$tencentConfig) {
-                return message_error(admin_trans('lottery_ticket.error.no_tencent_config'));
+                return Response::success([], admin_trans('lottery_ticket.error.no_tencent_config'), 400);
             }
 
             $pushDomain = $tencentConfig->push_domain;
             $pushKey = $tencentConfig->push_key;
 
             if (empty($pushDomain) || empty($pushKey)) {
-                return message_error(admin_trans('lottery_ticket.error.incomplete_tencent_config'));
+                return Response::success([], admin_trans('lottery_ticket.error.incomplete_tencent_config'), 400);
             }
 
             // 生成推流地址(参考 getPushUrl 函数逻辑)
@@ -1479,7 +1479,7 @@ class ChannelLotteryTicketActivityController
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
-            return message_error(admin_trans('lottery_ticket.error.generate_push_url_failed') . ': ' . $e->getMessage());
+            return Response::success([], admin_trans('lottery_ticket.error.generate_push_url_failed') . ': ' . $e->getMessage(), 400);
         }
     }
 
@@ -1496,7 +1496,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($id);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // 只更新直播播放地址（推流地址临时生成，不保存）
@@ -1522,16 +1522,16 @@ class ChannelLotteryTicketActivityController
 
         // ⭐ 验证ID参数
         if (!$id || !is_numeric($id)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_activity_id'), 400);
         }
 
         // 验证直播地址
         if (empty($liveUrl)) {
-            return message_error(admin_trans('lottery_ticket.error.live_url_required'));
+            return Response::success([], admin_trans('lottery_ticket.error.live_url_required'), 400);
         }
 
         if (strlen($liveUrl) > 500) {
-            return message_error(admin_trans('lottery_ticket.error.live_url_too_long'));
+            return Response::success([], admin_trans('lottery_ticket.error.live_url_too_long'), 400);
         }
 
         Db::beginTransaction();
@@ -1543,13 +1543,13 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity || $activity->department_id != Admin::user()->department_id) {
                 Db::rollBack();
-                return message_error(admin_trans('common.no_permission'));
+                return Response::success([], admin_trans('common.no_permission'), 403);
             }
 
             // 检查是否可以开奖
             if (!$activity->canStartDrawing()) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.cannot_start_drawing'));
+                return Response::success([], admin_trans('lottery_ticket.error.cannot_start_drawing'), 400);
             }
 
             // 更新状态和直播地址
@@ -1583,7 +1583,7 @@ class ChannelLotteryTicketActivityController
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -1600,7 +1600,7 @@ class ChannelLotteryTicketActivityController
 
         // ⭐ 验证ID参数
         if (!$id || !is_numeric($id)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_activity_id'), 400);
         }
 
         Db::beginTransaction();
@@ -1612,13 +1612,13 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity || $activity->department_id != Admin::user()->department_id) {
                 Db::rollBack();
-                return message_error(admin_trans('common.no_permission'));
+                return Response::success([], admin_trans('common.no_permission'), 403);
             }
 
             // 检查是否可以停止开奖
             if (!$activity->canStopDrawing()) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.cannot_stop_drawing'));
+                return Response::success([], admin_trans('lottery_ticket.error.cannot_stop_drawing'), 400);
             }
 
             // ⭐ 二次确认机制：停止开奖前必须确认
@@ -1713,7 +1713,7 @@ class ChannelLotteryTicketActivityController
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
             ]);
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -1785,7 +1785,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // 查询所有中奖记录
@@ -1825,12 +1825,12 @@ class ChannelLotteryTicketActivityController
         $playerId = Request::input('player_id');
 
         if (!$activityId || !$playerId) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_not_found'), 404);
         }
 
         // 查询打码进度
@@ -1840,7 +1840,7 @@ class ChannelLotteryTicketActivityController
             ->first();
 
         if (!$progress) {
-            return message_error(admin_trans('lottery_ticket.error.bet_progress_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.error.bet_progress_not_found'), 400);
         }
 
         // 获取VIP等级名称
@@ -1874,7 +1874,7 @@ class ChannelLotteryTicketActivityController
         $status = Request::input('status'); // unused, used, expired
 
         if (!$activityId || !$playerId) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         $query = LotteryTicket::where('activity_id', $activityId)
@@ -1924,12 +1924,12 @@ class ChannelLotteryTicketActivityController
         $playerId = Request::input('player_id');
 
         if (!$activityId || !$playerId) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_not_found'), 404);
         }
 
         // 查询玩家的所有券
@@ -1979,21 +1979,21 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // 检查直播地址
         if (empty($activity->live_url)) {
-            return message_error(admin_trans('lottery_ticket.error.live_url_required'));
+            return Response::success([], admin_trans('lottery_ticket.error.live_url_required'), 400);
         }
 
         // ✅ 验证直播状态
         if ($activity->live_status === LotteryTicketActivity::LIVE_STATUS_ONGOING) {
-            return message_error(admin_trans('lottery_ticket.error.live_already_started'));
+            return Response::success([], admin_trans('lottery_ticket.error.live_already_started'), 400);
         }
 
         if ($activity->live_status === LotteryTicketActivity::LIVE_STATUS_ENDED) {
-            return message_error(admin_trans('lottery_ticket.error.live_already_ended'));
+            return Response::success([], admin_trans('lottery_ticket.error.live_already_ended'), 400);
         }
 
         // 更新直播状态
@@ -2020,12 +2020,12 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // ✅ 验证直播状态
         if ($activity->live_status !== LotteryTicketActivity::LIVE_STATUS_ONGOING) {
-            return message_error(admin_trans('lottery_ticket.error.live_not_started'));
+            return Response::success([], admin_trans('lottery_ticket.error.live_not_started'), 400);
         }
 
         // 更新直播状态
@@ -2051,7 +2051,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_found'));
+            return Response::success([], admin_trans('lottery_ticket.message.activity_not_found'), 404);
         }
 
         return Response::success([
@@ -2075,7 +2075,7 @@ class ChannelLotteryTicketActivityController
 
         $activity = LotteryTicketActivity::find($activityId);
         if (!$activity || $activity->department_id != Admin::user()->department_id) {
-            return message_error(admin_trans('common.no_permission'));
+            return Response::success([], admin_trans('common.no_permission'), 403);
         }
 
         // 验证状态值（仅允许核心状态）
@@ -2088,7 +2088,7 @@ class ChannelLotteryTicketActivityController
         ];
 
         if (!in_array($newStatus, $validStatuses)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_status'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_status'), 400);
         }
 
         // 记录状态变更
@@ -2124,7 +2124,7 @@ class ChannelLotteryTicketActivityController
 
         // ⭐ 1. 参数验证
         if (!$activityId || !is_numeric($activityId)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_activity_id'), 400);
         }
 
         Db::beginTransaction();
@@ -2339,7 +2339,7 @@ class ChannelLotteryTicketActivityController
                     'fail_count' => $failCount
                 ]);
             } elseif ($failCount > 0 && $successCount === 0) {
-                return message_error($message . ' ' . implode('; ', $failReasons));
+                return Response::success([], $message . ' ' . implode('; ', $failReasons), 400);
             }
 
             return Response::success([], $message);
@@ -2355,7 +2355,7 @@ class ChannelLotteryTicketActivityController
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -2375,11 +2375,11 @@ class ChannelLotteryTicketActivityController
 
         // ⭐ 1. 参数验证
         if (!$activityId || !is_numeric($activityId)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_activity_id'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_activity_id'), 400);
         }
 
         if (empty($ticketNo)) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         // 去除首尾空格
@@ -2387,11 +2387,11 @@ class ChannelLotteryTicketActivityController
 
         // 券号格式验证：必须是纯数字且1-6位
         if (!preg_match('/^\d{1,6}$/', $ticketNo)) {
-            return message_error(admin_trans('lottery_ticket.message.ticket_format_error'));
+            return Response::success([], admin_trans('lottery_ticket.message.ticket_format_error'), 400);
         }
 
         if (strlen($remark) > 255) {
-            return message_error(admin_trans('lottery_ticket.error.note_too_long'));
+            return Response::success([], admin_trans('lottery_ticket.error.note_too_long'), 400);
         }
 
         Db::beginTransaction();
@@ -2605,7 +2605,7 @@ class ChannelLotteryTicketActivityController
                 'trace' => $e->getTraceAsString()
             ]);
 
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -2621,7 +2621,7 @@ class ChannelLotteryTicketActivityController
             $expireDays = Request::input('expire_days', 30);
 
             if (empty($configId)) {
-                return message_error(admin_trans('lottery_ticket.message.select_tencent_config'));
+                return Response::success([], admin_trans('lottery_ticket.message.select_tencent_config'), 400);
             }
 
             // 调用辅助函数生成地址
@@ -2636,7 +2636,7 @@ class ChannelLotteryTicketActivityController
                 'line' => $e->getLine()
             ]);
 
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -2651,7 +2651,7 @@ class ChannelLotteryTicketActivityController
             $expireDays = Request::input('expire_days', 30); // ✅ 允许前端指定有效期，默认 30 天
 
             if (empty($streamName)) {
-                return message_error(admin_trans('lottery_ticket.message.stream_name_required'));
+                return Response::success([], admin_trans('lottery_ticket.message.stream_name_required'), 400);
             }
 
             // 获取腾讯云配置（包含license信息）
@@ -2659,7 +2659,7 @@ class ChannelLotteryTicketActivityController
             $config = \addons\webman\model\MachineTencentPlay::query()->find(1);
 
             if (!$config) {
-                return message_error(admin_trans('lottery_ticket.message.tencent_config_not_found'));
+                return Response::success([], admin_trans('lottery_ticket.message.tencent_config_not_found'), 400);
             }
 
             // 生成播放地址（支持自定义有效期，默认 30 天）
@@ -2706,7 +2706,7 @@ class ChannelLotteryTicketActivityController
                 'line' => $e->getLine()
             ]);
 
-            return message_error($e->getMessage());
+            return Response::success([], $e->getMessage(), 500);
         }
     }
 
@@ -2842,7 +2842,7 @@ class ChannelLotteryTicketActivityController
 
         // 验证参数
         if (!$activityId || !$prizeLevelId || !$ticketNo) {
-            return message_error(admin_trans('lottery_ticket.error.invalid_params'));
+            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
         }
 
         // 格式化券号（补齐6位）
@@ -2858,14 +2858,14 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.activity_not_exist'));
+                return Response::success([], admin_trans('lottery_ticket.error.activity_not_exist'), 400);
             }
 
             // 验证奖品等级
             $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
             if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]));
+                return Response::success([], admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]), 400);
             }
 
             // 查找券号（必须是未使用状态）
@@ -2877,7 +2877,7 @@ class ChannelLotteryTicketActivityController
 
             if (!$ticket) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]));
+                return Response::success([], admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]), 400);
             }
 
             // 双重检查：防止重复录入
@@ -2887,7 +2887,7 @@ class ChannelLotteryTicketActivityController
 
             if ($existingRecord) {
                 Db::rollBack();
-                return message_error(admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]));
+                return Response::success([], admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]), 400);
             }
 
             // 创建中奖记录
