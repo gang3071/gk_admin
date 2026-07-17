@@ -206,7 +206,7 @@ class Slot extends AbstractMachineService implements BaseMachine
      */
     protected function initializeLogger(): \Psr\Log\LoggerInterface
     {
-        return Log::channel('slot_machine');
+        return Log::channel('slot_machine') ?? Log::channel('default');
     }
     
     // ✅ __get 方法已删除 - 使用 AbstractMachineService 的优化实现
