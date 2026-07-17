@@ -53,6 +53,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Db;
+use support\Log;
 
 /**
  * 机台
@@ -2786,12 +2787,12 @@ class MachineController
      * @param int $data 数据
      * @param int $adminId 管理员ID
      * @param string $lang 语言
-     * @return array
+     * @return void
      * @throws Exception
      */
-    private function sendMachineCmdViaApi(Machine $machine, string $cmd, int $data = 0, int $adminId = 0, string $lang = 'zh_CN'): array
+    private function sendMachineCmdViaApi(Machine $machine, string $cmd, int $data = 0, int $adminId = 0, string $lang = 'zh_CN'): void
     {
-        return MachineApiService::sendCmd($machine->id, $cmd, $data, $adminId, $lang);
+        MachineApiService::sendCmd($machine->id, $cmd, $data, $adminId, $lang);
     }
 
     /**
@@ -2824,7 +2825,7 @@ class MachineController
                 '{total}' => count($results),
                 '{online}' => $onlineCount,
                 '{offline}' => $offlineCount,
-            ]))->refreshGrid();
+            ]))->refresh();
 
         } catch (Exception $e) {
             return message_error($e->getMessage());
@@ -2834,9 +2835,9 @@ class MachineController
     /**
      * 获取机台在线统计
      * @auth true
-     * @return Msg
+     * @return Msg|Notification
      */
-    public function getOnlineStatistics(): Msg
+    public function getOnlineStatistics()
     {
         try {
             $statistics = MachineApiService::getOnlineStatistics();
