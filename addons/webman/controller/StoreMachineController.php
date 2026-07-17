@@ -143,20 +143,30 @@ class StoreMachineController
             $grid->column('parent_agent_name', admin_trans('admin.agent'))->width(120)->align('center');
             $grid->column('department_name', admin_trans('store_machine.fields.department_name'))->width(150)->ellipsis(true);
 
-            // 分润比例
+            // 分润比例（可编辑）
             $grid->column('agent_commission', admin_trans('store_machine.fields.agent_commission'))->display(function ($value) {
                 if (is_null($value) || $value === '') {
                     return Tag::create(admin_trans('store_machine.status.not_set'))->color('default');
                 }
                 return Tag::create($value . '%')->color('orange');
-            })->width(100)->align('center');
+            })->editable(
+                (new Editable)->number('agent_commission')
+                    ->min(0)
+                    ->max(100)
+                    ->precision(2)
+            )->width(100)->align('center');
 
             $grid->column('channel_commission', admin_trans('store_machine.fields.channel_commission'))->display(function ($value) {
                 if (is_null($value) || $value === '') {
                     return Tag::create(admin_trans('store_machine.status.not_set'))->color('default');
                 }
                 return Tag::create($value . '%')->color('blue');
-            })->width(100)->align('center');
+            })->editable(
+                (new Editable)->number('channel_commission')
+                    ->min(0)
+                    ->max(100)
+                    ->precision(2)
+            )->width(100)->align('center');
 
             // 洗分配置
             $grid->column('wash_point_config', admin_trans('store_machine.fields.wash_point_config'))
@@ -369,9 +379,16 @@ class StoreMachineController
                             return message_error(admin_trans('admin.not_found'));
                         }
 
-                        // 更新洗分配置
-                        if (isset($data['wash_point_config'])) {
-                            $storeUser->wash_point_config = $data['wash_point_config'];
+                        // 更新可编辑字段
+                        $updateableFields = ['wash_point_config', 'agent_commission', 'channel_commission'];
+                        $updated = false;
+                        foreach ($updateableFields as $field) {
+                            if (array_key_exists($field, $data)) {
+                                $storeUser->$field = $data[$field];
+                                $updated = true;
+                            }
+                        }
+                        if ($updated) {
                             $storeUser->save();
                             return message_success(admin_trans('form.save_success'));
                         }
