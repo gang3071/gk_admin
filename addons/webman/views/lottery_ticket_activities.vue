@@ -1458,7 +1458,7 @@ export default {
         if (res.code === 200) {
           this.activities = res.data;
         } else {
-          this.$message.error(res.message || res.msg || '獲取活動列表失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '獲取活動列表失敗');
         }
       } catch (error) {
         this.$message.error('獲取活動列表失敗');
@@ -1496,7 +1496,7 @@ export default {
         if (res.code === 200) {
           this.historyActivities = res.data.activities || [];
         } else {
-          this.$message.error(res.message || '獲取歷史活動失敗');
+          this.$message.error(res.data?.content || res.message || '獲取歷史活動失敗');
         }
       } catch (error) {
         this.$message.error('獲取歷史活動失敗');
@@ -1610,7 +1610,7 @@ export default {
           this.formData.cover_image = res.data.url;
           this.$message.success('圖片上傳成功');
         } else {
-          this.$message.error(res.message || '圖片上傳失敗');
+          this.$message.error(res.data?.content || res.message || '圖片上傳失敗');
         }
       } catch (error) {
         console.error('上傳失敗:', error);
@@ -1659,8 +1659,8 @@ export default {
           this.$message.success('圖片上傳成功');
           return res.data.url; // TinyMCE 需要返回图片 URL
         } else {
-          this.$message.error(res.message || res.msg || '圖片上傳失敗');
-          throw new Error(res.message || 'Upload failed');
+          this.$message.error(res.data?.content || res.message || res.msg || '圖片上傳失敗');
+          throw new Error(res.data?.content || res.message || 'Upload failed');
         }
       } catch (error) {
         console.error('上傳失敗:', error);
@@ -1751,7 +1751,7 @@ export default {
 
           this.recordVisible = true;
         } else {
-          this.$message.error('獲取活動詳情失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '獲取活動詳情失敗');
         }
       } catch (error) {
         this.$message.error('獲取活動詳情失敗');
@@ -1898,7 +1898,7 @@ export default {
           };
         } else {
           // ❌ 失败
-          this.$message.error(res.msg || res.message || '錄入失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '錄入失敗');
         }
       } catch (error) {
         this.$message.error('錄入失敗');
@@ -1971,7 +1971,7 @@ export default {
           this.pushUrlResult = res.data;
           this.$message.success(this.trans.pushUrlGenerated || '推流地址生成成功');
         } else {
-          this.$message.error(res.message || (this.trans.error?.generate_push_url_failed || '生成推流地址失敗'));
+          this.$message.error(res.data?.content || res.message || (this.trans.error?.generate_push_url_failed || '生成推流地址失敗'));
         }
       } catch (error) {
         console.error('生成推流地址失敗:', error);
@@ -2029,7 +2029,7 @@ export default {
           this.livePreviewVisible = true;
 
         } else {
-          this.$message.error(res.message || (this.trans.ui?.generate_live_url_failed || '生成直播地址失敗'));
+          this.$message.error(res.data?.content || res.message || (this.trans.ui?.generate_live_url_failed || '生成直播地址失敗'));
         }
       } catch (error) {
         console.error('生成直播地址失敗:', error);
@@ -2060,7 +2060,7 @@ export default {
           this.$message.success(res.data.message || '直播已開始，已通知所有玩家');
           this.fetchActivities(); // 刷新活动列表
         } else {
-          this.$message.error(res.message || res.msg || '開始直播失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '開始直播失敗');
         }
       } catch (error) {
         console.error('開始直播失敗:', error);
@@ -2092,7 +2092,7 @@ export default {
               this.$message.success(res.data.message || '直播已結束');
               this.fetchActivities(); // 刷新活动列表
             } else {
-              this.$message.error(res.message || res.msg || '結束直播失敗');
+              this.$message.error(res.data?.content || res.message || res.msg || '結束直播失敗');
             }
           } catch (error) {
             console.error('結束直播失敗:', error);
@@ -2243,7 +2243,7 @@ export default {
         if (res.code === 200) {
           return res.data;
         } else {
-          this.$message.error(res.message || '獲取活動詳情失敗');
+          this.$message.error(res.data?.content || res.message || '獲取活動詳情失敗');
           return null;
         }
       } catch (error) {
@@ -2481,7 +2481,7 @@ export default {
           this.formVisible = false;
           this.fetchActivities();
         } else {
-          this.$message.error(res.message || res.msg || '操作失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '操作失敗');
         }
       } catch (error) {
         console.error(error);
@@ -2710,7 +2710,7 @@ export default {
           this.ticketPagination.total = res.data.total || 0;
           this.ticketPagination.current = page;
         } else {
-          this.$message.error(res.message || res.msg || '獲取列表失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '獲取列表失敗');
         }
       } catch (error) {
         this.$message.error('獲取列表失敗');
