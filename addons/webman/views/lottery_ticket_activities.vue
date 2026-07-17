@@ -146,8 +146,8 @@
                     {{ trans.endLive || '結束直播' }}
                   </a-menu-item>
 
-                  <!-- 關閉活動（僅進行中可關閉） -->
-                  <a-menu-item key="close" danger v-if="activity.status === 1">
+                  <!-- 關閉活動（未開始、進行中可關閉） -->
+                  <a-menu-item key="close" danger v-if="activity.status === 0 || activity.status === 1">
                     <stop-outlined/>
                     {{ trans.closeActivity }}
                   </a-menu-item>
