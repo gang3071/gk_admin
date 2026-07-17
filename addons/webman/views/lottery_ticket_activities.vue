@@ -96,8 +96,8 @@
                     {{ trans.viewDetail }}
                   </a-menu-item>
 
-                  <!-- ⭐ 編輯（所有狀態都可編輯） -->
-                  <a-menu-item key="edit">
+                  <!-- ⭐ 編輯（已關閉活動不顯示編輯按鈕） -->
+                  <a-menu-item v-if="activity.status !== 3" key="edit">
                     <edit-outlined/>
                     {{ trans.edit }}
                   </a-menu-item>
