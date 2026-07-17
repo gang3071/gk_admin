@@ -118,6 +118,35 @@ class MachineApiService
     }
 
     /**
+     * 获取当前管理员用户名
+     * @return string
+     */
+    private static function getAdminUsername(): string
+    {
+        try {
+            // 优先使用 Admin facade（ExAdmin环境）
+            if (class_exists('\addons\webman\Admin')) {
+                $admin = \addons\webman\Admin::user();
+                if ($admin && isset($admin->username)) {
+                    return $admin->username;
+                }
+            }
+
+            // Fallback: 从session获取
+            $session = request()->session();
+            $username = $session->get('admin.username', '');
+
+            return $username ?: '';
+
+        } catch (\Exception $e) {
+            Log::warning('[MachineApiService] 获取admin username失败', [
+                'error' => $e->getMessage()
+            ]);
+            return '';
+        }
+    }
+
+    /**
      * 初始化配置
      */
     private static function init(): void
@@ -530,6 +559,7 @@ class MachineApiService
                     'player_id' => $playerId,
                     'path' => $path,
                     'lang' => $lang,
+                    'admin_username' => self::getAdminUsername(),
                 ]
             ]);
 
@@ -573,6 +603,7 @@ class MachineApiService
                     'machine_id' => $machineId,
                     'player_id' => $playerId,
                     'lang' => $lang,
+                    'admin_username' => self::getAdminUsername(),
                 ]
             ]);
 
@@ -618,6 +649,7 @@ class MachineApiService
                     'player_id' => $playerId,
                     'open_score' => $openScore,
                     'lang' => $lang,
+                    'admin_username' => self::getAdminUsername(),
                 ]
             ]);
 
