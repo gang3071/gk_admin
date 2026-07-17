@@ -3767,6 +3767,8 @@ class ChannelIndexController
         $logLabels['field_port'] = admin_trans('ticket_machine.field.port');
         $logLabels['field_baud_rate'] = admin_trans('ticket_machine.field.baud_rate');
         $logLabels['field_serial_no'] = admin_trans('ticket_machine.field.serial_no');
+        $logLabels['field_remark'] = admin_trans('ticket_machine.field.remark');
+        $logLabels['remark_placeholder'] = admin_trans('ticket_machine.field.remark_placeholder');
 
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
@@ -3893,6 +3895,8 @@ class ChannelIndexController
                 }
             }
 
+            $remark = request()->input('remark', '');
+
             $record = \addons\webman\model\TicketRecord::create([
                 'order_id'           => $orderId,
                 'department_id'      => $departmentId,
@@ -3907,6 +3911,7 @@ class ChannelIndexController
                 'encrypted_content'  => $orderId,
                 'ticket_type'        => $ticketType,
                 'status'             => \addons\webman\model\TicketRecord::STATUS_NORMAL,
+                'remark'             => $remark,
             ]);
 
             return json([

@@ -83,6 +83,8 @@ return [
         'number' => 'Number',
         'qr_code' => 'QR Code Content',
         'hex_command' => 'HEX Command',
+        'remark' => 'Remark',
+        'remark_placeholder' => 'Optional remark for ticket',
     ],
 
     // Help text
