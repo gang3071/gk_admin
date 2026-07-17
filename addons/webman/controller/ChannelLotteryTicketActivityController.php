@@ -857,9 +857,10 @@ class ChannelLotteryTicketActivityController
             return message_error(admin_trans('common.no_permission'));
         }
 
-        // 只能关闭进行中的活动
-        if ($activity->status != LotteryTicketActivity::STATUS_ONGOING) {
-            return message_error(admin_trans('lottery_ticket.message.activity_not_ongoing'));
+        // 只能关闭未开始或进行中的活动
+        if ($activity->status != LotteryTicketActivity::STATUS_NOT_STARTED
+            && $activity->status != LotteryTicketActivity::STATUS_ONGOING) {
+            return message_error(admin_trans('lottery_ticket.message.cannot_close_activity'));
         }
 
         $activity->status = LotteryTicketActivity::STATUS_CLOSED;
