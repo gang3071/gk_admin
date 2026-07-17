@@ -96,8 +96,8 @@
                     {{ trans.viewDetail }}
                   </a-menu-item>
 
-                  <!-- 編輯（未開始） -->
-                  <a-menu-item key="edit" v-if="activity.status === 0">
+                  <!-- ⭐ 編輯（所有狀態都可編輯） -->
+                  <a-menu-item key="edit">
                     <edit-outlined/>
                     {{ trans.edit }}
                   </a-menu-item>
@@ -403,6 +403,7 @@
                   value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%;"
                   :placeholder="trans.selectStartTime"
+                  :disabled="isRestrictedEdit"
               />
               <div style="margin-top: 4px; color: #999; font-size: 12px;">
                 {{ trans.help?.start_time_hint || '玩家可開始打碼獲取摸獎券的時間' }}
@@ -418,6 +419,7 @@
                   value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%;"
                   :placeholder="trans.selectEndTime"
+                  :disabled="isRestrictedEdit"
               />
               <div style="margin-top: 4px; color: #999; font-size: 12px;">
                 {{ trans.help?.end_time_hint || '活動結束後自動進入待開獎狀態' }}
@@ -429,7 +431,17 @@
         <!-- VIP等級打碼量配置 -->
         <a-divider>VIP等級打碼量配置</a-divider>
 
+        <!-- ⭐ 非未開始狀態顯示提示 -->
         <a-alert
+            v-if="isRestrictedEdit"
+            type="warning"
+            show-icon
+            style="margin-bottom: 16px;"
+            message="活動已開始後，VIP配置和獎品等級配置不可修改"
+        />
+
+        <a-alert
+            v-else
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -460,6 +472,7 @@
                       :precision="2"
                       style="width: 100%;"
                       placeholder="0.00"
+                      :disabled="isRestrictedEdit"
                   />
                 </a-form-item>
               </a-col>
@@ -471,6 +484,7 @@
                       :precision="0"
                       style="width: 100%;"
                       placeholder="1"
+                      :disabled="isRestrictedEdit"
                   />
                 </a-form-item>
               </a-col>
@@ -483,6 +497,7 @@
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
+            v-if="!isRestrictedEdit"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -495,7 +510,7 @@
           </template>
         </a-alert>
 
-        <a-form-item>
+        <a-form-item v-if="!isRestrictedEdit">
           <a-button type="dashed" block @click="addPrizeLevel">
             <plus-outlined/>
             {{ trans.addPrizeLevel }}
@@ -505,7 +520,7 @@
         <div v-for="(level, index) in formData.prize_levels" :key="index" class="prize-level-item">
           <a-card size="small" :title="`${trans.level} ${index + 1}`" style="margin-bottom: 12px;">
             <template #extra>
-              <a-button type="text" danger size="small" @click="removePrizeLevel(index)">
+              <a-button v-if="!isRestrictedEdit" type="text" danger size="small" @click="removePrizeLevel(index)">
                 <delete-outlined/>
               </a-button>
             </template>
@@ -518,6 +533,7 @@
                       :placeholder="trans.form?.prize_name_placeholder || '例如：特等獎、一等獎'"
                       :maxlength="20"
                       show-count
+                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_name_hint || '自定義獎項名稱，最多20字' }}
@@ -532,6 +548,7 @@
                       :precision="2"
                       style="width: 100%;"
                       placeholder="0.00"
+                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_amount_hint || '中獎玩家將獲得的現金獎勵' }}
@@ -546,6 +563,7 @@
                       :precision="0"
                       style="width: 100%;"
                       placeholder="0"
+                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_count_hint || '此獎項的獎品總數量' }}
@@ -1112,6 +1130,7 @@ export default {
       generatingPush: false, // ⭐ 生成推流地址loading状态
       pushUrlResult: null, // ⭐ 推流地址生成结果
       formMode: 'create',
+      editingActivityStatus: null,  // ⭐ 当前编辑的活动状态（用于控制字段可编辑性）
       historyModalVisible: false,  // ⭐ 歷史活動選擇Modal
       historyActivities: [],        // ⭐ 歷史活動列表
       historyLoading: false,        // ⭐ 歷史活動載入狀態
@@ -1192,6 +1211,13 @@ export default {
     };
   },
   computed: {
+    // ⭐ 判断是否只能编辑基础信息（活动名称、说明、封面图）
+    isRestrictedEdit() {
+      // 只有未开始状态(0)可以编辑所有字段
+      // 其他状态只能编辑：活动名称、说明、封面图
+      return this.formMode === 'edit' && this.editingActivityStatus !== 0;
+    },
+
     statusOptions() {
       return [
         {label: this.trans.allStatus, value: 'all'},
@@ -1533,6 +1559,7 @@ export default {
     // 顯示創建表單
     showCreateForm() {
       this.formMode = 'create';
+      this.editingActivityStatus = null; // ⭐ 重置编辑状态
 
       // 初始化VIP配置
       const vipConfigs = this.vip_levels.map(vipLevel => ({
@@ -2246,6 +2273,9 @@ export default {
       }
 
       this.formMode = 'edit';
+      // ⭐ 保存活动状态，用于控制表单字段的可编辑性
+      this.editingActivityStatus = data.status;
+
       this.formData = {
         id: data.id,
         name: data.name,
