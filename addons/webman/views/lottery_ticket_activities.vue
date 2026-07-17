@@ -2169,16 +2169,14 @@ export default {
       }
 
       try {
-        let url, successMsg;
+        let url;
 
         if (this.liveModalMode === 'startDrawing') {
           // ⭐ 开始开奖模式
           url = 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/startDrawing';
-          successMsg = '開獎已開始';
         } else {
           // 普通更新直播地址模式
           url = 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl';
-          successMsg = this.trans.liveUrlUpdated || '直播地址設置成功';
         }
 
         const res = await this.$request({
@@ -2191,14 +2189,15 @@ export default {
         });
 
         if (res.code === 200) {
-          this.$message.success(successMsg);
+          // ⭐ 使用后端返回的消息
+          this.$message.success(res.data?.content || res.message || res.msg || '操作成功');
           this.liveModalVisible = false;
           this.liveUrlInput = '';
           this.liveModalMode = 'update';
           this.currentActivity = null;
           this.fetchActivities();
         } else {
-          this.$message.error(res.message || res.msg || '操作失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '操作失敗');
         }
       } catch (error) {
         console.error('操作失敗:', error);
@@ -2395,10 +2394,10 @@ export default {
         });
       } else if (res.code === 200) {
         // ⭐ 真正的成功（已确认并停止开奖）
-        this.$message.success('開獎已停止');
+        this.$message.success(res.data?.content || res.message || res.msg || '開獎已停止');
         this.fetchActivities();
       } else {
-        this.$message.error(res.message || res.msg || '停止開獎失敗');
+        this.$message.error(res.data?.content || res.message || res.msg || '停止開獎失敗');
       }
     },
 
