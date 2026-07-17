@@ -2462,14 +2462,8 @@ export default {
         }
       } catch (error) {
         console.error(error);
-        // ⭐ 捕获错误响应并显示错误信息
-        if (error && error.data?.content) {
-          this.$message.error(error.data.content);
-        } else if (error && error.message) {
-          this.$message.error(error.message);
-        } else {
-          this.$message.error('操作失敗');
-        }
+        // ⭐ $request 抛出的 error 本身就是响应对象
+        this.$message.error(error?.message || '操作失敗');
       } finally {
         this.submitting = false;
       }
