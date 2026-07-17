@@ -146,8 +146,8 @@
                     {{ trans.endLive || '結束直播' }}
                   </a-menu-item>
 
-                  <!-- 關閉活動（進行中） -->
-                  <a-menu-item key="close" danger v-if="activity.status === 1">
+                  <!-- ⭐ 關閉活動（未開始、進行中） -->
+                  <a-menu-item key="close" danger v-if="activity.status === 0 || activity.status === 1">
                     <stop-outlined/>
                     {{ trans.closeActivity }}
                   </a-menu-item>
@@ -223,18 +223,7 @@
 
             <!-- 操作按鈕 -->
             <a-space direction="vertical" style="width: 100%; margin-top: 12px;">
-              <!-- 未開始：編輯按鈕 -->
-              <a-button
-                  v-if="activity.status === 0"
-                  type="primary"
-                  block
-                  @click.stop="editActivity(activity)"
-              >
-                <template #icon>
-                  <edit-outlined/>
-                </template>
-                {{ trans.edit }}
-              </a-button>
+              <!-- ⭐ 編輯按鈕已移至下拉菜單 -->
 
               <!-- ⭐ 發放獎勵按鈕已隱藏：錄入中獎時自動發放，不需要單獨發放按鈕 -->
               <!-- 如果有歷史待發放記錄，請使用下拉菜單中的"發放獎勵"選項 -->
