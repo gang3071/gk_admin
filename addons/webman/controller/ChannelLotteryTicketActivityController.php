@@ -891,7 +891,7 @@ class ChannelLotteryTicketActivityController
             sprintf('活動「%s」已關閉', $activity->name)
         );
 
-        return message_success(admin_trans('lottery_ticket.message.close_success'));
+        return Response::success([], admin_trans('lottery_ticket.message.close_success'));
     }
 
     /**
