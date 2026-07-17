@@ -96,8 +96,8 @@
                     {{ trans.viewDetail }}
                   </a-menu-item>
 
-                  <!-- 編輯（未開始） -->
-                  <a-menu-item key="edit" v-if="activity.status === 0">
+                  <!-- ⭐ 編輯（已關閉活動不顯示編輯按鈕） -->
+                  <a-menu-item v-if="activity.status !== 3" key="edit">
                     <edit-outlined/>
                     {{ trans.edit }}
                   </a-menu-item>
@@ -146,8 +146,8 @@
                     {{ trans.endLive || '結束直播' }}
                   </a-menu-item>
 
-                  <!-- 關閉活動（進行中） -->
-                  <a-menu-item key="close" danger v-if="activity.status === 1">
+                  <!-- 關閉活動（未開始、進行中可關閉） -->
+                  <a-menu-item key="close" danger v-if="activity.status === 0 || activity.status === 1">
                     <stop-outlined/>
                     {{ trans.closeActivity }}
                   </a-menu-item>
@@ -223,18 +223,7 @@
 
             <!-- 操作按鈕 -->
             <a-space direction="vertical" style="width: 100%; margin-top: 12px;">
-              <!-- 未開始：編輯按鈕 -->
-              <a-button
-                  v-if="activity.status === 0"
-                  type="primary"
-                  block
-                  @click.stop="editActivity(activity)"
-              >
-                <template #icon>
-                  <edit-outlined/>
-                </template>
-                {{ trans.edit }}
-              </a-button>
+              <!-- ⭐ 編輯按鈕已移至下拉菜單 -->
 
               <!-- ⭐ 發放獎勵按鈕已隱藏：錄入中獎時自動發放，不需要單獨發放按鈕 -->
               <!-- 如果有歷史待發放記錄，請使用下拉菜單中的"發放獎勵"選項 -->
@@ -403,6 +392,7 @@
                   value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%;"
                   :placeholder="trans.selectStartTime"
+                  :disabled="isRestrictedEdit"
               />
               <div style="margin-top: 4px; color: #999; font-size: 12px;">
                 {{ trans.help?.start_time_hint || '玩家可開始打碼獲取摸獎券的時間' }}
@@ -418,6 +408,7 @@
                   value-format="YYYY-MM-DD HH:mm:ss"
                   style="width: 100%;"
                   :placeholder="trans.selectEndTime"
+                  :disabled="isRestrictedEdit"
               />
               <div style="margin-top: 4px; color: #999; font-size: 12px;">
                 {{ trans.help?.end_time_hint || '活動結束後自動進入待開獎狀態' }}
@@ -429,7 +420,17 @@
         <!-- VIP等級打碼量配置 -->
         <a-divider>VIP等級打碼量配置</a-divider>
 
+        <!-- ⭐ 非未開始狀態顯示提示 -->
         <a-alert
+            v-if="isRestrictedEdit"
+            type="warning"
+            show-icon
+            style="margin-bottom: 16px;"
+            message="活動已開始後，VIP配置和獎品等級配置不可修改"
+        />
+
+        <a-alert
+            v-else
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -460,6 +461,7 @@
                       :precision="2"
                       style="width: 100%;"
                       placeholder="0.00"
+                      :disabled="isRestrictedEdit"
                   />
                 </a-form-item>
               </a-col>
@@ -471,6 +473,7 @@
                       :precision="0"
                       style="width: 100%;"
                       placeholder="1"
+                      :disabled="isRestrictedEdit"
                   />
                 </a-form-item>
               </a-col>
@@ -483,6 +486,7 @@
         <a-divider>{{ trans.prizeLevelConfig }}</a-divider>
 
         <a-alert
+            v-if="!isRestrictedEdit"
             type="info"
             show-icon
             style="margin-bottom: 16px;"
@@ -495,7 +499,7 @@
           </template>
         </a-alert>
 
-        <a-form-item>
+        <a-form-item v-if="!isRestrictedEdit">
           <a-button type="dashed" block @click="addPrizeLevel">
             <plus-outlined/>
             {{ trans.addPrizeLevel }}
@@ -505,7 +509,7 @@
         <div v-for="(level, index) in formData.prize_levels" :key="index" class="prize-level-item">
           <a-card size="small" :title="`${trans.level} ${index + 1}`" style="margin-bottom: 12px;">
             <template #extra>
-              <a-button type="text" danger size="small" @click="removePrizeLevel(index)">
+              <a-button v-if="!isRestrictedEdit" type="text" danger size="small" @click="removePrizeLevel(index)">
                 <delete-outlined/>
               </a-button>
             </template>
@@ -532,6 +536,7 @@
                       :precision="2"
                       style="width: 100%;"
                       placeholder="0.00"
+                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_amount_hint || '中獎玩家將獲得的現金獎勵' }}
@@ -546,6 +551,7 @@
                       :precision="0"
                       style="width: 100%;"
                       placeholder="0"
+                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_count_hint || '此獎項的獎品總數量' }}
@@ -1112,6 +1118,7 @@ export default {
       generatingPush: false, // ⭐ 生成推流地址loading状态
       pushUrlResult: null, // ⭐ 推流地址生成结果
       formMode: 'create',
+      editingActivityStatus: null,  // ⭐ 当前编辑的活动状态（用于控制字段可编辑性）
       historyModalVisible: false,  // ⭐ 歷史活動選擇Modal
       historyActivities: [],        // ⭐ 歷史活動列表
       historyLoading: false,        // ⭐ 歷史活動載入狀態
@@ -1192,6 +1199,13 @@ export default {
     };
   },
   computed: {
+    // ⭐ 判断是否只能编辑基础信息（活动名称、说明、封面图）
+    isRestrictedEdit() {
+      // 只有未开始状态(0)可以编辑所有字段
+      // 其他状态只能编辑：活动名称、说明、封面图
+      return this.formMode === 'edit' && this.editingActivityStatus !== 0;
+    },
+
     statusOptions() {
       return [
         {label: this.trans.allStatus, value: 'all'},
@@ -1443,7 +1457,7 @@ export default {
         if (res.code === 200) {
           this.activities = res.data;
         } else {
-          this.$message.error(res.message || res.msg || '獲取活動列表失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '獲取活動列表失敗');
         }
       } catch (error) {
         this.$message.error('獲取活動列表失敗');
@@ -1481,7 +1495,7 @@ export default {
         if (res.code === 200) {
           this.historyActivities = res.data.activities || [];
         } else {
-          this.$message.error(res.message || '獲取歷史活動失敗');
+          this.$message.error(res.data?.content || res.message || '獲取歷史活動失敗');
         }
       } catch (error) {
         this.$message.error('獲取歷史活動失敗');
@@ -1533,6 +1547,7 @@ export default {
     // 顯示創建表單
     showCreateForm() {
       this.formMode = 'create';
+      this.editingActivityStatus = null; // ⭐ 重置编辑状态
 
       // 初始化VIP配置
       const vipConfigs = this.vip_levels.map(vipLevel => ({
@@ -1594,7 +1609,7 @@ export default {
           this.formData.cover_image = res.data.url;
           this.$message.success('圖片上傳成功');
         } else {
-          this.$message.error(res.message || '圖片上傳失敗');
+          this.$message.error(res.data?.content || res.message || '圖片上傳失敗');
         }
       } catch (error) {
         console.error('上傳失敗:', error);
@@ -1643,8 +1658,8 @@ export default {
           this.$message.success('圖片上傳成功');
           return res.data.url; // TinyMCE 需要返回图片 URL
         } else {
-          this.$message.error(res.message || res.msg || '圖片上傳失敗');
-          throw new Error(res.message || 'Upload failed');
+          this.$message.error(res.data?.content || res.message || res.msg || '圖片上傳失敗');
+          throw new Error(res.data?.content || res.message || 'Upload failed');
         }
       } catch (error) {
         console.error('上傳失敗:', error);
@@ -1735,7 +1750,7 @@ export default {
 
           this.recordVisible = true;
         } else {
-          this.$message.error('獲取活動詳情失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '獲取活動詳情失敗');
         }
       } catch (error) {
         this.$message.error('獲取活動詳情失敗');
@@ -1746,7 +1761,6 @@ export default {
     // ⭐ 奖品等级改变时
     handlePrizeLevelChange(value) {
       // 可以在这里添加额外逻辑（如果需要）
-      console.log('Selected prize level:', value);
     },
 
     // ⭐ 查询单个玩家信息（单个录入模式）
@@ -1790,30 +1804,23 @@ export default {
           }
         });
 
-        console.log('📡 Query response:', res);
-
         // ⭐ 统一响应格式判断：通过 code 区分成功和失败
         if (res.code === 200) {
           // ✅ 成功：数据在 res.data
           this.singleRecord.player_info = res.data;
           this.singleRecord.error = null;
-          console.log('✅ Player found:', res.data);
         } else {
           // ❌ 失败：错误消息在 res.message
           this.singleRecord.error = res.message || '查詢失敗';
           this.singleRecord.player_info = null;
-          console.log('❌ Error:', res.message, '(code:', res.code + ')');
         }
       } catch (error) {
         // ⭐ this.$request 在 code !== 200 时会 reject
         // 但 reject 的对象就是响应数据本身！
-        console.log('❌ Request rejected:', error);
-
         if (error && error.code && error.message) {
           // 这是正常的业务错误响应
           this.singleRecord.error = error.message || '查詢失敗';
           this.singleRecord.player_info = null;
-          console.log('❌ Business error:', error.message, '(code:', error.code + ')');
         } else {
           // 真正的异常错误（网络错误等）
           console.error('System error:', error);
@@ -1863,10 +1870,6 @@ export default {
         });
 
         // ⭐ 调试日志
-        console.log('Submit response:', res);
-        console.log('res.code:', res.code);
-        console.log('res.code === 200:', res.code === 200);
-
         // ⭐ 简单清晰的响应处理
         if (res.code === 200) {
           // ✅ 成功
@@ -1882,7 +1885,7 @@ export default {
           };
         } else {
           // ❌ 失败
-          this.$message.error(res.msg || res.message || '錄入失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '錄入失敗');
         }
       } catch (error) {
         this.$message.error('錄入失敗');
@@ -1955,7 +1958,7 @@ export default {
           this.pushUrlResult = res.data;
           this.$message.success(this.trans.pushUrlGenerated || '推流地址生成成功');
         } else {
-          this.$message.error(res.message || (this.trans.error?.generate_push_url_failed || '生成推流地址失敗'));
+          this.$message.error(res.data?.content || res.message || (this.trans.error?.generate_push_url_failed || '生成推流地址失敗'));
         }
       } catch (error) {
         console.error('生成推流地址失敗:', error);
@@ -2013,7 +2016,7 @@ export default {
           this.livePreviewVisible = true;
 
         } else {
-          this.$message.error(res.message || (this.trans.ui?.generate_live_url_failed || '生成直播地址失敗'));
+          this.$message.error(res.data?.content || res.message || (this.trans.ui?.generate_live_url_failed || '生成直播地址失敗'));
         }
       } catch (error) {
         console.error('生成直播地址失敗:', error);
@@ -2044,7 +2047,7 @@ export default {
           this.$message.success(res.data.message || '直播已開始，已通知所有玩家');
           this.fetchActivities(); // 刷新活动列表
         } else {
-          this.$message.error(res.message || res.msg || '開始直播失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '開始直播失敗');
         }
       } catch (error) {
         console.error('開始直播失敗:', error);
@@ -2076,7 +2079,7 @@ export default {
               this.$message.success(res.data.message || '直播已結束');
               this.fetchActivities(); // 刷新活动列表
             } else {
-              this.$message.error(res.message || res.msg || '結束直播失敗');
+              this.$message.error(res.data?.content || res.message || res.msg || '結束直播失敗');
             }
           } catch (error) {
             console.error('結束直播失敗:', error);
@@ -2153,16 +2156,14 @@ export default {
       }
 
       try {
-        let url, successMsg;
+        let url;
 
         if (this.liveModalMode === 'startDrawing') {
           // ⭐ 开始开奖模式
           url = 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/startDrawing';
-          successMsg = '開獎已開始';
         } else {
           // 普通更新直播地址模式
           url = 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/updateLiveUrl';
-          successMsg = this.trans.liveUrlUpdated || '直播地址設置成功';
         }
 
         const res = await this.$request({
@@ -2175,14 +2176,15 @@ export default {
         });
 
         if (res.code === 200) {
-          this.$message.success(successMsg);
+          // ⭐ 使用后端返回的消息
+          this.$message.success(res.data?.content || res.message || res.msg || '操作成功');
           this.liveModalVisible = false;
           this.liveUrlInput = '';
           this.liveModalMode = 'update';
           this.currentActivity = null;
           this.fetchActivities();
         } else {
-          this.$message.error(res.message || res.msg || '操作失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '操作失敗');
         }
       } catch (error) {
         console.error('操作失敗:', error);
@@ -2228,7 +2230,7 @@ export default {
         if (res.code === 200) {
           return res.data;
         } else {
-          this.$message.error(res.message || '獲取活動詳情失敗');
+          this.$message.error(res.data?.content || res.message || '獲取活動詳情失敗');
           return null;
         }
       } catch (error) {
@@ -2246,6 +2248,9 @@ export default {
       }
 
       this.formMode = 'edit';
+      // ⭐ 保存活动状态，用于控制表单字段的可编辑性
+      this.editingActivityStatus = data.status;
+
       this.formData = {
         id: data.id,
         name: data.name,
@@ -2275,13 +2280,17 @@ export default {
             });
 
             if (res.code === 200) {
-              this.$message.success('活動已關閉');
+              // ⭐ 优先显示后端返回的成功消息，避免硬编码
+              this.$message.success(res.data?.content || res.message || res.msg || '活動已關閉');
               this.fetchActivities();
             } else {
-              this.$message.error(res.message || res.msg || '關閉活動失敗');
+              // ⭐ 显示后端返回的具体错误信息（优先从 data.content 获取）
+              this.$message.error(res.data?.content || res.message || res.msg || res.data?.message || '關閉活動失敗');
             }
           } catch (error) {
-            this.$message.error('關閉活動失敗');
+            // catch 块只处理网络错误等异常，不显示业务错误
+            console.error('关闭活动异常:', error);
+            this.$message.error('網絡異常，請稍後重試');
           }
         }
       });
@@ -2312,10 +2321,6 @@ export default {
       } catch (error) {
         // ⭐ ExAdmin 的 $request 会将非200响应作为错误抛出
         // 我们需要从错误中提取响应数据
-        console.log('Caught error:', error);
-        console.log('error.response:', error.response);
-        console.log('error.data:', error.data);
-
         // 嘗試多種方式獲取回應資料
         if (error.response?.data) {
           res = error.response.data;
@@ -2329,13 +2334,6 @@ export default {
           return;
         }
       }
-
-      // ⭐ 詳細偵錯日誌
-      console.log('stopDrawing response:', res);
-      console.log('res.code:', res.code, 'type:', typeof res.code);
-      console.log('res.message:', res.message);
-      console.log('res.data:', res.data);
-      console.log('res.data?.need_confirm:', res.data?.need_confirm);
 
       // ⭐ 检查是否需要二次确认（使用 need_confirm 标记而非 40001）
       if (res.code === 200 && res.data?.need_confirm) {
@@ -2372,10 +2370,10 @@ export default {
         });
       } else if (res.code === 200) {
         // ⭐ 真正的成功（已确认并停止开奖）
-        this.$message.success('開獎已停止');
+        this.$message.success(res.data?.content || res.message || res.msg || '開獎已停止');
         this.fetchActivities();
       } else {
-        this.$message.error(res.message || res.msg || '停止開獎失敗');
+        this.$message.error(res.data?.content || res.message || res.msg || '停止開獎失敗');
       }
     },
 
@@ -2459,10 +2457,12 @@ export default {
           this.formVisible = false;
           this.fetchActivities();
         } else {
-          this.$message.error(res.message || res.msg || '操作失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '操作失敗');
         }
       } catch (error) {
         console.error(error);
+        // ⭐ $request 抛出的 error 本身就是响应对象
+        this.$message.error(error?.message || '操作失敗');
       } finally {
         this.submitting = false;
       }
@@ -2688,7 +2688,7 @@ export default {
           this.ticketPagination.total = res.data.total || 0;
           this.ticketPagination.current = page;
         } else {
-          this.$message.error(res.message || res.msg || '獲取列表失敗');
+          this.$message.error(res.data?.content || res.message || res.msg || '獲取列表失敗');
         }
       } catch (error) {
         this.$message.error('獲取列表失敗');

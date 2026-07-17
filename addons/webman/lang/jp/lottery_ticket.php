@@ -258,6 +258,7 @@ return [
         'activity_not_found' => 'アクティビティが存在しません',
         'activity_closed' => 'アクティビティはクローズ済',
         'activity_not_ongoing' => '進行中のアクティビティのみクローズ可能',
+        'cannot_close_activity' => '未開始または進行中のアクティビティのみクローズ可能',
         'time_conflict' => 'アクティビティ時間が衝突',
         'prize_level_saved' => '賞品レベル保存成功',
         'prize_level_deleted' => '賞品レベル削除成功',

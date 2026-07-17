@@ -266,6 +266,7 @@ return [
         'activity_not_found' => '活動不存在',
         'activity_closed' => '活動已關閉',
         'activity_not_ongoing' => '只能關閉進行中的活動',
+        'cannot_close_activity' => '只能關閉未開始或進行中的活動',
         'time_conflict' => '活動時間衝突',
         'prize_level_saved' => '獎品等級保存成功',
         'prize_level_deleted' => '獎品等級刪除成功',
