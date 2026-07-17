@@ -2297,8 +2297,8 @@ export default {
               this.$message.success('活動已關閉');
               this.fetchActivities();
             } else {
-              // 显示后端返回的具体错误信息
-              this.$message.error(res.message || res.msg || res.data?.message || '關閉活動失敗');
+              // ⭐ 显示后端返回的具体错误信息（优先从 data.content 获取）
+              this.$message.error(res.data?.content || res.message || res.msg || res.data?.message || '關閉活動失敗');
             }
           } catch (error) {
             // catch 块只处理网络错误等异常，不显示业务错误
