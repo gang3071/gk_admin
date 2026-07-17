@@ -57,6 +57,10 @@
             <a-input-number v-model:value="config.serialNo" :min="0" :max="9999999" placeholder="0-9999999" style="width: 100%;" />
           </div>
           <a-button block @click="setSerialNo" style="margin-bottom: 16px;" :disabled="!isConnected">{{ labels.set_serial_no || '設置序列號' }}</a-button>
+          <div style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_remark || '備註' }}</div>
+            <a-input v-model:value="remark" :placeholder="labels.remark_placeholder || '選填，出票時備註'" allow-clear style="width: 100%;" />
+          </div>
           <a-row :gutter="8" style="margin-bottom: 8px;">
             <a-col :span="12">
               <a-button block @click="syncDatetime" :disabled="!isConnected">{{ labels.sync_datetime || '同步時間' }}</a-button>
@@ -188,6 +192,7 @@ export default {
       playerHasMore: true,
       playerKeyword: '',
       hexCommand: '',
+      remark: '',
       logExpanded: false,
       logs: [],
       receiveBuffer: [],
@@ -841,11 +846,13 @@ export default {
             player_id: this.selectedPlayerId || 0,
             store_admin_id: this.store_admin_id,
             department_id: this.department_id,
+            remark: this.remark || '',
           },
         });
 
         if (saveRes.code === 200) {
           orderId = saveRes.data?.order_id || '';
+          this.remark = '';
           this.addLog('success', this.t('ticket_saved', {order_id: orderId}));
         } else {
           this.addLog('error', this.t('ticket_save_failed', {error: (saveRes.message || '')}));

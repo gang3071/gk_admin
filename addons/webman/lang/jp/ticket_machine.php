@@ -83,6 +83,8 @@ return [
         'number' => '数',
         'qr_code' => 'QRコード内容',
         'hex_command' => 'HEXコマンド',
+        'remark' => '備考',
+        'remark_placeholder' => '任意、出票時の備考',
     ],
 
     // ヘルプテキスト

@@ -83,6 +83,8 @@ return [
         'number' => '数',
         'qr_code' => 'QR码内容',
         'hex_command' => 'HEX指令',
+        'remark' => '备注',
+        'remark_placeholder' => '选填，出票时备注',
     ],
 
     // 帮助文本
