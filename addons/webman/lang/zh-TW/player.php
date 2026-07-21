@@ -287,7 +287,7 @@ return [
     // 店家後台專用
     'unnamed' => '未命名',
     'game_id_label' => '遊戲 ID: ',
-    'device_list_query_log' => '玩家列表查詢',
+    'device_list_query_log' => '設備列表查詢',
     'no_device_data' => '暫無玩家數據',
 
     // 篩選器

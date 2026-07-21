@@ -5,7 +5,7 @@ return [
     'title' => '店舗/プレイヤー管理',
     'store_list' => '店舗リスト',
     'store_management' => '店舗管理',
-    'device_list' => 'プレイヤーリスト',
+    'device_list' => 'デバイスリスト',
     'delivery_record' => '取引記録',
     'shift_handover_record' => '引継ぎ報告',
 

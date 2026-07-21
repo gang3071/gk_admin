@@ -102,7 +102,7 @@ return [
 
     // 列表页面
     'store_list' => '店家列表',
-    'device_list' => '玩家列表',
+    'device_list' => '设备列表',
     'store_name' => '店家名称',
     'bound_player' => '绑定玩家',
     'transfer_in' => '转入(开分)',

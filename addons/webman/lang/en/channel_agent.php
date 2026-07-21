@@ -5,7 +5,7 @@ return [
     'title' => 'Store/Player Management',
     'store_list' => 'Store List',
     'store_management' => 'Store Management',
-    'device_list' => 'Player List',
+    'device_list' => 'Device List',
     'delivery_record' => 'Transaction Record',
     'shift_handover_record' => 'Shift Handover Report',
 

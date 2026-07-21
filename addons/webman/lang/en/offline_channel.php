@@ -102,7 +102,7 @@ return [
 
     // List Pages
     'store_list' => 'Store List',
-    'device_list' => 'Player List',
+    'device_list' => 'Device List',
     'store_name' => 'Store Name',
     'bound_player' => 'Bound Player',
     'transfer_in' => 'Transfer In (Credit)',

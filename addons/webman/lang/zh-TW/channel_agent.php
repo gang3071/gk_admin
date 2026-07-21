@@ -5,7 +5,7 @@ return [
     'title' => '店家/玩家管理',
     'store_list' => '玩家列表',
     'store_management' => '店家管理',
-    'device_list' => '玩家列表',
+    'device_list' => '設備列表',
     'delivery_record' => '賬變記錄',
     'shift_handover_record' => '交班報表',
 
