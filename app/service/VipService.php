@@ -290,7 +290,7 @@ class VipService
         $oldLevelId = $currentLevel->id;
         $newLevelId = $nextLevel->id;
 
-        Db::transaction(function () use ($currentPeriod, $player, $nextLevel, $newStartBetAmount) {
+        Db::transaction(function () use ($currentPeriod, $player, $nextLevel, $newStartBetAmount, $oldLevelId, $newLevelId) {
             $currentPeriod->status = PlayerVipPeriod::STATUS_COMPLETED;
             $currentPeriod->save();
 
@@ -298,6 +298,9 @@ class VipService
             $player->save();
 
             static::createRetainPeriod($player, $nextLevel, $newStartBetAmount);
+
+            // ⭐ 同步更新摸奖券打码进度的 VIP 等级和配置
+            static::updateLotteryBetProgressOnUpgrade($player, $oldLevelId, $newLevelId);
         });
 
         static::log('info', 'VIP upgrade success', [
@@ -428,7 +431,7 @@ class VipService
         $newLevelId = $prevLevel->id;
         $totalBetBefore = $player->total_bet_amount;
 
-        Db::transaction(function () use ($period, $player, $prevLevel) {
+        Db::transaction(function () use ($period, $player, $prevLevel, $oldLevelId, $newLevelId) {
             $period->status = PlayerVipPeriod::STATUS_EXPIRED;
             $period->save();
 
@@ -436,6 +439,9 @@ class VipService
             $player->save();
 
             static::createRetainPeriod($player, $prevLevel);
+
+            // ⭐ 同步更新摸奖券打码进度的 VIP 等级和配置
+            static::updateLotteryBetProgressOnDowngrade($player, $oldLevelId, $newLevelId);
         });
 
         static::log('info', 'VIP downgrade', [
@@ -468,6 +474,259 @@ class VipService
             'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
+    }
+
+    /**
+     * VIP 升级时更新摸奖券打码进度
+     * ⭐ 保留原有打码量，只更新 VIP 配置
+     *
+     * @param Player $player 玩家对象
+     * @param int $oldLevelId 旧 VIP 等级 ID
+     * @param int $newLevelId 新 VIP 等级 ID
+     * @return void
+     */
+    private static function updateLotteryBetProgressOnUpgrade(Player $player, int $oldLevelId, int $newLevelId): void
+    {
+        try {
+            // 查找所有进行中的摸奖券活动
+            $activeActivities = \addons\webman\model\LotteryTicketActivity::query()
+                ->where('department_id', $player->department_id)
+                ->where('status', \addons\webman\model\LotteryTicketActivity::STATUS_ONGOING)
+                ->where('start_time', '<=', date('Y-m-d H:i:s'))
+                ->where('end_time', '>=', date('Y-m-d H:i:s'))
+                ->pluck('id');
+
+            if ($activeActivities->isEmpty()) {
+                return;
+            }
+
+            foreach ($activeActivities as $activityId) {
+                // 查找新 VIP 等级的配置
+                $newConfig = \addons\webman\model\LotteryTicketVipConfig::query()
+                    ->where('activity_id', $activityId)
+                    ->where('vip_level_id', $newLevelId)
+                    ->where('status', \addons\webman\model\LotteryTicketVipConfig::STATUS_ENABLED)
+                    ->first();
+
+                // 查找旧的打码进度记录
+                $progress = \addons\webman\model\LotteryTicketBetProgress::query()
+                    ->where('player_id', $player->id)
+                    ->where('activity_id', $activityId)
+                    ->where('vip_level_id', $oldLevelId)
+                    ->where('status', \addons\webman\model\LotteryTicketBetProgress::STATUS_ACTIVE)
+                    ->first();
+
+                if (!$progress) {
+                    continue; // 该活动没有旧进度记录，跳过
+                }
+
+                if (!$newConfig) {
+                    // 新 VIP 等级没有配置，标记旧进度为结束状态（不删除，保留历史数据）
+                    $progress->update([
+                        'status' => \addons\webman\model\LotteryTicketBetProgress::STATUS_ENDED,
+                    ]);
+
+                    static::log('info', 'VIP 升级后无新配置，结束打码进度', [
+                        'player_id' => $player->id,
+                        'activity_id' => $activityId,
+                        'old_level_id' => $oldLevelId,
+                        'new_level_id' => $newLevelId,
+                        'old_bet_amount' => $progress->current_bet_amount,
+                    ]);
+                    continue;
+                }
+
+                // ⭐ 保留原有打码量，只更新 VIP 配置
+                $oldBetAmount = $progress->current_bet_amount;
+
+                // 根据新配置重新计算已完成的周期数
+                $newCycles = $newConfig->bet_amount_required > 0
+                    ? floor($oldBetAmount / $newConfig->bet_amount_required)
+                    : 0;
+
+                // 计算升级后应补发的券数（如果新配置更优惠）
+                $oldCycles = $progress->cycles_completed;
+                $cyclesToIssue = max(0, $newCycles - $oldCycles);
+
+                $progress->update([
+                    'vip_level_id' => $newLevelId,
+                    'bet_amount_required' => $newConfig->bet_amount_required,
+                    'ticket_count_per_cycle' => $newConfig->ticket_count,
+                    'cycles_completed' => $newCycles,
+                    // current_bet_amount 保持不变！
+                ]);
+
+                static::log('info', 'VIP 升级更新打码进度', [
+                    'player_id' => $player->id,
+                    'activity_id' => $activityId,
+                    'old_level_id' => $oldLevelId,
+                    'new_level_id' => $newLevelId,
+                    'preserved_bet_amount' => $oldBetAmount,
+                    'old_bet_required' => $progress->bet_amount_required,
+                    'new_bet_required' => $newConfig->bet_amount_required,
+                    'old_cycles' => $oldCycles,
+                    'new_cycles' => $newCycles,
+                    'cycles_to_issue' => $cyclesToIssue,
+                ]);
+
+                // ⭐ 如果升级后有应补发的券，立即发放
+                if ($cyclesToIssue > 0) {
+                    try {
+                        $ticketsToIssue = $cyclesToIssue * $newConfig->ticket_count;
+                        $issueService = new \addons\webman\service\LotteryTicketIssueService();
+
+                        $result = $issueService->issueTicketsBatch(
+                            $activityId,
+                            $player->id,
+                            $ticketsToIssue,
+                            \addons\webman\model\LotteryTicket::SOURCE_VIP_UPGRADE
+                        );
+
+                        $issuedCount = $result['count'];
+
+                        // 更新已发券数
+                        $progress->increment('total_tickets_issued', $issuedCount);
+                        $progress->update(['last_issued_at' => date('Y-m-d H:i:s')]);
+
+                        static::log('info', 'VIP 升级补发摸奖券', [
+                            'player_id' => $player->id,
+                            'activity_id' => $activityId,
+                            'tickets_issued' => $issuedCount,
+                        ]);
+
+                        // 推送通知
+                        $activity = \addons\webman\model\LotteryTicketActivity::find($activityId);
+                        if ($activity) {
+                            $message = sprintf(
+                                'VIP升級獎勵：您在活動「%s」中獲得了 %d 張摸獎券！',
+                                $activity->name,
+                                $issuedCount
+                            );
+                            \addons\webman\service\LotteryTicketPushService::pushPlayerTicketsUpdate($player->id, $message);
+                        }
+
+                    } catch (\Throwable $e) {
+                        static::log('error', 'VIP 升级补发券失败', [
+                            'player_id' => $player->id,
+                            'activity_id' => $activityId,
+                            'tickets_to_issue' => $ticketsToIssue,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+
+        } catch (\Throwable $e) {
+            static::log('error', 'VIP 升级更新打码进度失败', [
+                'player_id' => $player->id,
+                'old_level_id' => $oldLevelId,
+                'new_level_id' => $newLevelId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
+     * VIP 降级时更新摸奖券打码进度
+     * ⭐ 保留原有打码量，只更新 VIP 配置
+     *
+     * @param Player $player 玩家对象
+     * @param int $oldLevelId 旧 VIP 等级 ID
+     * @param int $newLevelId 新 VIP 等级 ID
+     * @return void
+     */
+    private static function updateLotteryBetProgressOnDowngrade(Player $player, int $oldLevelId, int $newLevelId): void
+    {
+        try {
+            // 查找所有进行中的摸奖券活动
+            $activeActivities = \addons\webman\model\LotteryTicketActivity::query()
+                ->where('department_id', $player->department_id)
+                ->where('status', \addons\webman\model\LotteryTicketActivity::STATUS_ONGOING)
+                ->where('start_time', '<=', date('Y-m-d H:i:s'))
+                ->where('end_time', '>=', date('Y-m-d H:i:s'))
+                ->pluck('id');
+
+            if ($activeActivities->isEmpty()) {
+                return;
+            }
+
+            foreach ($activeActivities as $activityId) {
+                // 查找新 VIP 等级的配置
+                $newConfig = \addons\webman\model\LotteryTicketVipConfig::query()
+                    ->where('activity_id', $activityId)
+                    ->where('vip_level_id', $newLevelId)
+                    ->where('status', \addons\webman\model\LotteryTicketVipConfig::STATUS_ENABLED)
+                    ->first();
+
+                // 查找旧的打码进度记录
+                $progress = \addons\webman\model\LotteryTicketBetProgress::query()
+                    ->where('player_id', $player->id)
+                    ->where('activity_id', $activityId)
+                    ->where('vip_level_id', $oldLevelId)
+                    ->where('status', \addons\webman\model\LotteryTicketBetProgress::STATUS_ACTIVE)
+                    ->first();
+
+                if (!$progress) {
+                    continue; // 该活动没有旧进度记录，跳过
+                }
+
+                if (!$newConfig) {
+                    // 新 VIP 等级没有配置，标记旧进度为结束状态
+                    $progress->update([
+                        'status' => \addons\webman\model\LotteryTicketBetProgress::STATUS_ENDED,
+                    ]);
+
+                    static::log('info', 'VIP 降级后无新配置，结束打码进度', [
+                        'player_id' => $player->id,
+                        'activity_id' => $activityId,
+                        'old_level_id' => $oldLevelId,
+                        'new_level_id' => $newLevelId,
+                        'old_bet_amount' => $progress->current_bet_amount,
+                    ]);
+                    continue;
+                }
+
+                // ⭐ 保留原有打码量，只更新 VIP 配置
+                $oldBetAmount = $progress->current_bet_amount;
+
+                // 根据新配置重新计算已完成的周期数（降级后要求可能更高）
+                $newCycles = $newConfig->bet_amount_required > 0
+                    ? floor($oldBetAmount / $newConfig->bet_amount_required)
+                    : 0;
+
+                $oldCycles = $progress->cycles_completed;
+
+                $progress->update([
+                    'vip_level_id' => $newLevelId,
+                    'bet_amount_required' => $newConfig->bet_amount_required,
+                    'ticket_count_per_cycle' => $newConfig->ticket_count,
+                    'cycles_completed' => $newCycles,
+                    // current_bet_amount 保持不变！
+                ]);
+
+                static::log('info', 'VIP 降级更新打码进度', [
+                    'player_id' => $player->id,
+                    'activity_id' => $activityId,
+                    'old_level_id' => $oldLevelId,
+                    'new_level_id' => $newLevelId,
+                    'preserved_bet_amount' => $oldBetAmount,
+                    'old_bet_required' => $progress->bet_amount_required,
+                    'new_bet_required' => $newConfig->bet_amount_required,
+                    'old_cycles' => $oldCycles,
+                    'new_cycles' => $newCycles,
+                ]);
+            }
+
+        } catch (\Throwable $e) {
+            static::log('error', 'VIP 降级更新打码进度失败', [
+                'player_id' => $player->id,
+                'old_level_id' => $oldLevelId,
+                'new_level_id' => $newLevelId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
     }
 
     /**

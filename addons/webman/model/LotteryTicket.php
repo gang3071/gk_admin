@@ -38,10 +38,11 @@ class LotteryTicket extends Model
     const STATUS_EXPIRED = 2;   // 已过期
 
     // 来源常量
-    const SOURCE_BETTING = 'betting';    // 打码获得
-    const SOURCE_RECHARGE = 'recharge';  // 充值赠送
-    const SOURCE_ACTIVITY = 'activity';  // 活动赠送
-    const SOURCE_MANUAL = 'manual';      // 手动发放
+    const SOURCE_BETTING = 'betting';      // 打码获得
+    const SOURCE_RECHARGE = 'recharge';    // 充值赠送
+    const SOURCE_ACTIVITY = 'activity';    // 活动赠送
+    const SOURCE_MANUAL = 'manual';        // 手动发放
+    const SOURCE_VIP_UPGRADE = 'vip_upgrade'; // VIP升级补发
 
     protected $table = 'lottery_ticket';
 
