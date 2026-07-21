@@ -622,9 +622,17 @@ class LotteryBetProgressScanTask
                     // 同一周期内，计算真实进度变化
                     $oldPercent = ($oldCycleAmount / $progress->bet_amount_required) * 100;
                     $newPercent = ($newCycleAmount / $progress->bet_amount_required) * 100;
+                    $percentChange = abs($newPercent - $oldPercent);
 
-                    // 进度变化 ≥ 5% 时才推送
-                    if (abs($newPercent - $oldPercent) >= 5) {
+                    // ⭐ 智能推送策略：
+                    // 1. 单次打码 ≥ 10元，或
+                    // 2. 进度变化 ≥ 5%
+                    $shouldPush = (
+                        $chipAmount >= 10 ||   // 单次打码超过10元
+                        $percentChange >= 5    // 进度变化≥5%
+                    );
+
+                    if ($shouldPush) {
                         LotteryTicketPushService::pushBetProgressUpdate(
                             $progress->player_id,
                             $activityId,
