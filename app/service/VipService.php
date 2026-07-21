@@ -538,41 +538,35 @@ class VipService
 
                 // ⭐ 保留原有打码量，只更新 VIP 配置
                 $oldBetAmount = $progress->current_bet_amount;
+                $oldBetRequired = $progress->bet_amount_required;
+                $oldTicketPerCycle = $progress->ticket_count_per_cycle;
+                $oldCycles = $progress->cycles_completed;
+                $alreadyIssued = $progress->total_tickets_issued;
 
                 // 根据新配置重新计算已完成的周期数
                 $newCycles = $newConfig->bet_amount_required > 0
                     ? floor($oldBetAmount / $newConfig->bet_amount_required)
                     : 0;
 
-                // 计算升级后应补发的券数（如果新配置更优惠）
-                $oldCycles = $progress->cycles_completed;
-                $cyclesToIssue = max(0, $newCycles - $oldCycles);
+                // ⭐ 修复：正确计算应补发的券数
+                // 应该发放的总券数（按新配置）
+                $shouldIssueTotal = $newCycles * $newConfig->ticket_count;
+                // 应补发券数 = 应发总数 - 已发数量
+                $ticketsToIssue = max(0, $shouldIssueTotal - $alreadyIssued);
 
-                $progress->update([
+                // 准备更新数据（先不执行，等发券后一起更新）
+                $updateData = [
                     'vip_level_id' => $newLevelId,
                     'bet_amount_required' => $newConfig->bet_amount_required,
                     'ticket_count_per_cycle' => $newConfig->ticket_count,
                     'cycles_completed' => $newCycles,
                     // current_bet_amount 保持不变！
-                ]);
+                ];
 
-                static::log('info', 'VIP 升级更新打码进度', [
-                    'player_id' => $player->id,
-                    'activity_id' => $activityId,
-                    'old_level_id' => $oldLevelId,
-                    'new_level_id' => $newLevelId,
-                    'preserved_bet_amount' => $oldBetAmount,
-                    'old_bet_required' => $progress->bet_amount_required,
-                    'new_bet_required' => $newConfig->bet_amount_required,
-                    'old_cycles' => $oldCycles,
-                    'new_cycles' => $newCycles,
-                    'cycles_to_issue' => $cyclesToIssue,
-                ]);
-
-                // ⭐ 如果升级后有应补发的券，立即发放
-                if ($cyclesToIssue > 0) {
+                // ⭐ 如果应补发券数 > 0，先发放券（在更新进度之前）
+                $issuedCount = 0;
+                if ($ticketsToIssue > 0) {
                     try {
-                        $ticketsToIssue = $cyclesToIssue * $newConfig->ticket_count;
                         $issueService = new \addons\webman\service\LotteryTicketIssueService();
 
                         $result = $issueService->issueTicketsBatch(
@@ -584,17 +578,52 @@ class VipService
 
                         $issuedCount = $result['count'];
 
-                        // 更新已发券数
-                        $progress->increment('total_tickets_issued', $issuedCount);
-                        $progress->update(['last_issued_at' => date('Y-m-d H:i:s')]);
+                        // 更新数据中包含发券信息
+                        $updateData['total_tickets_issued'] = $alreadyIssued + $issuedCount;
+                        $updateData['last_issued_at'] = date('Y-m-d H:i:s');
 
                         static::log('info', 'VIP 升级补发摸奖券', [
                             'player_id' => $player->id,
                             'activity_id' => $activityId,
+                            'tickets_to_issue' => $ticketsToIssue,
                             'tickets_issued' => $issuedCount,
                         ]);
 
-                        // 推送通知
+                    } catch (\Throwable $e) {
+                        // 发券失败不影响配置更新，继续执行
+                        static::log('error', 'VIP 升级补发券失败', [
+                            'player_id' => $player->id,
+                            'activity_id' => $activityId,
+                            'tickets_to_issue' => $ticketsToIssue,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+
+                // ⭐ 修复：统一更新（避免重复更新）
+                $progress->update($updateData);
+
+                static::log('info', 'VIP 升级更新打码进度', [
+                    'player_id' => $player->id,
+                    'activity_id' => $activityId,
+                    'old_level_id' => $oldLevelId,
+                    'new_level_id' => $newLevelId,
+                    'preserved_bet_amount' => $oldBetAmount,
+                    'old_bet_required' => $oldBetRequired,
+                    'new_bet_required' => $newConfig->bet_amount_required,
+                    'old_ticket_per_cycle' => $oldTicketPerCycle,
+                    'new_ticket_per_cycle' => $newConfig->ticket_count,
+                    'old_cycles' => $oldCycles,
+                    'new_cycles' => $newCycles,
+                    'already_issued' => $alreadyIssued,
+                    'should_issue_total' => $shouldIssueTotal,
+                    'tickets_to_issue' => $ticketsToIssue,
+                    'actual_issued' => $issuedCount,
+                ]);
+
+                // ⭐ 推送通知（在事务外，失败不影响主流程）
+                if ($issuedCount > 0) {
+                    try {
                         $activity = \addons\webman\model\LotteryTicketActivity::find($activityId);
                         if ($activity) {
                             $message = sprintf(
@@ -604,12 +633,9 @@ class VipService
                             );
                             \addons\webman\service\LotteryTicketPushService::pushPlayerTicketsUpdate($player->id, $message);
                         }
-
                     } catch (\Throwable $e) {
-                        static::log('error', 'VIP 升级补发券失败', [
+                        static::log('warning', 'VIP 升级推送通知失败', [
                             'player_id' => $player->id,
-                            'activity_id' => $activityId,
-                            'tickets_to_issue' => $ticketsToIssue,
                             'error' => $e->getMessage(),
                         ]);
                     }
@@ -689,20 +715,24 @@ class VipService
 
                 // ⭐ 保留原有打码量，只更新 VIP 配置
                 $oldBetAmount = $progress->current_bet_amount;
+                $oldBetRequired = $progress->bet_amount_required;
+                $oldTicketPerCycle = $progress->ticket_count_per_cycle;
+                $oldCycles = $progress->cycles_completed;
+                $alreadyIssued = $progress->total_tickets_issued;
 
                 // 根据新配置重新计算已完成的周期数（降级后要求可能更高）
                 $newCycles = $newConfig->bet_amount_required > 0
                     ? floor($oldBetAmount / $newConfig->bet_amount_required)
                     : 0;
 
-                $oldCycles = $progress->cycles_completed;
-
+                // ⭐ 降级：保留 total_tickets_issued（不重新计算，保留历史真实值）
                 $progress->update([
                     'vip_level_id' => $newLevelId,
                     'bet_amount_required' => $newConfig->bet_amount_required,
                     'ticket_count_per_cycle' => $newConfig->ticket_count,
                     'cycles_completed' => $newCycles,
                     // current_bet_amount 保持不变！
+                    // total_tickets_issued 保持不变！（保留历史真实发券数）
                 ]);
 
                 static::log('info', 'VIP 降级更新打码进度', [
@@ -711,10 +741,13 @@ class VipService
                     'old_level_id' => $oldLevelId,
                     'new_level_id' => $newLevelId,
                     'preserved_bet_amount' => $oldBetAmount,
-                    'old_bet_required' => $progress->bet_amount_required,
+                    'old_bet_required' => $oldBetRequired,
                     'new_bet_required' => $newConfig->bet_amount_required,
+                    'old_ticket_per_cycle' => $oldTicketPerCycle,
+                    'new_ticket_per_cycle' => $newConfig->ticket_count,
                     'old_cycles' => $oldCycles,
                     'new_cycles' => $newCycles,
+                    'total_tickets_issued' => $alreadyIssued,
                 ]);
             }
 
