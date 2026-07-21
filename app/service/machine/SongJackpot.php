@@ -132,7 +132,7 @@ class SongJackpot extends MachineServices implements BaseMachine
         ];
         $this->lang = $lang;
         $this->cacheData = $this->getMachineCache();
-        $this->log = Log::channel('song_jackpot_machine');
+        $this->log = Log::channel('song_jackpot_machine') ?? Log::channel('default');
     }
 
     /**
