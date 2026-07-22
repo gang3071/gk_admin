@@ -281,19 +281,22 @@ class MachineController
                     // 获取当前页所有机台ID
                     $allMachines = $this->model::query()
                         ->where('type', $data->type)
-                        ->get(['id']);
-                    $machineIds = $allMachines->pluck('id')->toArray();
+                        ->get();
 
-                    // 批量从 Redis 获取 has_lock 状态
-                    if (!empty($machineIds)) {
-                        $redis = \support\Redis::connection();
-                        foreach ($machineIds as $machineId) {
-                            $redisKey = 'machine_tcp_data_cache_' . $machineId . '_has_lock';
-                            $hasLockCache[$machineId] = (int)($redis->get($redisKey) ?? 0);
+                    // 批量通过服务类获取 has_lock 状态
+                    foreach ($allMachines as $machine) {
+                        try {
+                            $service = \app\service\machine\MachineServices::createServices(
+                                $machine,
+                                Container::getInstance()->translator->getLocale()
+                            );
+                            $hasLockCache[$machine->id] = (int)($service->has_lock ?? 0);
+                        } catch (\Exception $e) {
+                            $hasLockCache[$machine->id] = 0;
                         }
                     }
                 } catch (\Exception $e) {
-                    \support\Log::warning('Batch get machine has_lock from Redis failed', [
+                    \support\Log::warning('Batch get machine has_lock via service failed', [
                         'error' => $e->getMessage()
                     ]);
                 }
