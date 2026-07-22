@@ -273,9 +273,35 @@ class MachineController
         $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
             $val,
             Machine $data
-        ) {
-            $services = $this->getMachineStatusViaApi($data);
-            return Switches::create(null, $services->has_lock ?? 0)
+        ) use (&$hasLockCache) {
+            // ✅ 首次调用时批量获取所有机台的 has_lock 状态
+            if ($hasLockCache === null) {
+                $hasLockCache = [];
+                try {
+                    // 获取当前页所有机台ID
+                    $allMachines = $this->model::query()
+                        ->where('type', $data->type)
+                        ->get(['id']);
+                    $machineIds = $allMachines->pluck('id')->toArray();
+
+                    // 批量从 Redis 获取 has_lock 状态
+                    if (!empty($machineIds)) {
+                        $redis = \support\Redis::connection();
+                        foreach ($machineIds as $machineId) {
+                            $redisKey = 'machine_tcp_data_cache_' . $machineId . '_has_lock';
+                            $hasLockCache[$machineId] = (int)($redis->get($redisKey) ?? 0);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    \support\Log::warning('Batch get machine has_lock from Redis failed', [
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+
+            // ✅ 从缓存中读取 has_lock 状态
+            $hasLock = $hasLockCache[$data->id] ?? 0;
+            return Switches::create(null, $hasLock)
                 ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
                 ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
                 ->field('has_lock')
