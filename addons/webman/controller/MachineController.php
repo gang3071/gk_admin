@@ -214,7 +214,12 @@ class MachineController
 
                         // 批量检查在线状态
                         if (!empty($machineIds)) {
-                            $result = MachineApiService::getAllOnlineStatus($machineIds);
+                            $result = MachineApiService::getAllOnlineStatus(
+                                departmentId: Admin::user()->department_id,
+                                type: $data->type,
+                                adminId: Admin::id(),
+                                machineIds: $machineIds
+                            );
                             if (isset($result['data']) && is_array($result['data'])) {
                                 foreach ($result['data'] as $item) {
                                     $onlineStatusCache[$item['id']] = $item['online'] ?? false;
