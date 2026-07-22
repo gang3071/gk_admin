@@ -184,7 +184,15 @@ class MachineApiService
             throw new Exception("{$action}失败: {$msg}");
         }
 
-        return $data['data'] ?? [];
+        // 确保返回值始终是数组类型
+        $result = $data['data'] ?? [];
+
+        // 如果 data 是 bool/null 等非数组类型，包装成数组
+        if (!is_array($result)) {
+            $result = ['result' => $result];
+        }
+
+        return $result;
     }
 
     /**
