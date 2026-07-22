@@ -2191,6 +2191,10 @@ class MachineController
             // 通过 API 更新机台锁状态
             MachineApiService::updateMachineState($machine->id, 'has_lock', $hasLock, 'zh_CN', Admin::id() ?? 0);
 
+            // 同步更新 Redis 缓存（确保前端立即显示）
+            $redisKey = \app\service\machine\MachineServices::MACHINE_DATA_PREFIX . $machine->id . '_has_lock';
+            \support\Redis::set($redisKey, $hasLock);
+
             if ($hasLock == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
             }
