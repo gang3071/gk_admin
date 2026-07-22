@@ -2171,18 +2171,27 @@ class MachineController
      * @param $data
      * @return Msg
      */
-    public function changeLock($id, $data): Msg
+    public function changeLock($id): Msg
     {
         /** @var Machine $machine */
         $machine = Machine::query()->where('id', $id['0'])->first();
         if (empty($machine)) {
             return message_error(admin_trans('machine.not_fount'));
         }
+
+        // 从 Request 获取 has_lock 值
+        $requestData = Request::input();
+        $hasLock = $requestData['has_lock'] ?? null;
+
+        if ($hasLock === null) {
+            return message_error('缺少 has_lock 参数');
+        }
+
         try {
             // 通过 API 更新机台锁状态
-            MachineApiService::updateMachineState($machine->id, 'has_lock', $data['has_lock'], 'zh_CN', Admin::id() ?? 0);
+            MachineApiService::updateMachineState($machine->id, 'has_lock', $hasLock, 'zh_CN', Admin::id() ?? 0);
 
-            if ($data['has_lock'] == 1) {
+            if ($hasLock == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
             }
         } catch (\Exception $e) {
