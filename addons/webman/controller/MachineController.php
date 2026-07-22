@@ -2171,7 +2171,7 @@ class MachineController
      * @param $data
      * @return Msg
      */
-    public function changeLock($id): Msg
+    public function changeLock($id, $data): Msg
     {
         /** @var Machine $machine */
         $machine = Machine::query()->where('id', $id['0'])->first();
@@ -2179,9 +2179,8 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
 
-        // 从 Request 获取 has_lock 值
-        $requestData = Request::input();
-        $hasLock = $requestData['has_lock'] ?? null;
+        // Switches 组件会将新值放在 $data 参数中
+        $hasLock = $data['has_lock'] ?? null;
 
         if ($hasLock === null) {
             return message_error('缺少 has_lock 参数');
