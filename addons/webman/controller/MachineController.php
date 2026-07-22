@@ -2194,33 +2194,6 @@ class MachineController
             $redisKey = \app\service\machine\MachineServices::MACHINE_DATA_PREFIX . $machine->id . '_has_lock';
             \support\Redis::set($redisKey, $hasLock);
 
-            // ✅ 小淞机器解锁时需要发送故障排除指令
-            if ($hasLock == 0 && $machine->control_type == Machine::CONTROL_TYPE_SONG) {
-                // 根据机台类型获取故障排除指令
-                $checkCmd = match($machine->type) {
-                    GameType::TYPE_SLOT => SongSlot::CHECK,        // 斯洛：afcfb4
-                    GameType::TYPE_STEEL_BALL => SongJackpot::CHECK, // 钢珠：46cfb4
-                    default => null,
-                };
-
-                if ($checkCmd) {
-                    try {
-                        $this->sendMachineCmdViaApi($machine, $checkCmd, 0, Admin::id());
-                        \support\Log::info('Song machine unlock with CHECK command', [
-                            'machine_id' => $machine->id,
-                            'type' => $machine->type,
-                            'cmd' => $checkCmd,
-                        ]);
-                    } catch (\Exception $e) {
-                        \support\Log::warning('Failed to send CHECK command for SONG machine', [
-                            'machine_id' => $machine->id,
-                            'error' => $e->getMessage(),
-                        ]);
-                        // 不阻断主流程，继续返回成功
-                    }
-                }
-            }
-
             if ($hasLock == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
             }
