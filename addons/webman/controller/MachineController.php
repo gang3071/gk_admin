@@ -119,6 +119,9 @@ class MachineController
      */
     protected function getList(Grid $grid, $type)
     {
+        // ✅ 批量获取机台在线状态（避免 N+1 查询）
+        static $onlineStatusCache = null;
+
         $grid->driver()->setPk('id');
         $grid->autoHeight();
         $grid->bordered(true);
@@ -198,20 +201,35 @@ class MachineController
             )
             ->align('left');
         $grid->column('now_status', admin_trans('machine.fields.now_status'))
-            ->display(function ($val, Machine $data) {
-                $machineStatus = 'offline';
-                try {
-                    // 通过 API 检查机台在线状态
-                    if ($this->checkMachineOnlineViaApi($data)) {
-                        $machineStatus = 'online';
+            ->display(function ($val, Machine $data) use (&$onlineStatusCache) {
+                // ✅ 首次调用时批量获取所有机台在线状态
+                if ($onlineStatusCache === null) {
+                    $onlineStatusCache = [];
+                    try {
+                        // 获取当前页所有机台ID
+                        $allMachines = $this->model::query()
+                            ->where('type', $data->type)
+                            ->get(['id']);
+                        $machineIds = $allMachines->pluck('id')->toArray();
+
+                        // 批量检查在线状态
+                        if (!empty($machineIds)) {
+                            $result = MachineApiService::getAllOnlineStatus($machineIds);
+                            if (isset($result['data']) && is_array($result['data'])) {
+                                foreach ($result['data'] as $item) {
+                                    $onlineStatusCache[$item['id']] = $item['online'] ?? false;
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \support\Log::warning('Batch check machine online via API failed', [
+                            'error' => $e->getMessage()
+                        ]);
                     }
-                } catch (\Exception $e) {
-                    // API 服务不可用时默认显示离线
-                    \support\Log::warning('Check machine online via API failed', [
-                        'machine_id' => $data->id,
-                        'error' => $e->getMessage()
-                    ]);
                 }
+
+                // ✅ 从缓存中读取在线状态
+                $machineStatus = ($onlineStatusCache[$data->id] ?? false) ? 'online' : 'offline';
                 return admin_view(plugin()->webman->getPath() . '/views/machine_status.vue')->attrs([
                     'id' => $data->id,
                     'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
