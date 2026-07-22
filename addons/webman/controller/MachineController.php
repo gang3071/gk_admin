@@ -2549,8 +2549,7 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            // 通过 API 获取机台状态
-            $services = $this->getMachineStatusViaApi($machine);
+            $adminId = Admin::id() ?? 0;
 
             // 根据机台类型获取常量类
             $cmdClass = match([$machine->type, $machine->control_type]) {
@@ -2563,15 +2562,22 @@ class MachineController
 
             switch ($machine->type) {
                 case GameType::TYPE_SLOT:
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::ALL_DOWN, 0, Admin::id());
-                    $services->bet = 0;
-                    $services->score = 0;
-                    $services->player_pressure = 0;
+                    // 发送清理指令
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::ALL_DOWN, 0, $adminId);
+
+                    // ✅ 通过 API 更新状态（修复：不再直接修改只读对象）
+                    MachineApiService::updateMachineState($machine->id, 'bet', 0, 'zh_CN', $adminId);
+                    MachineApiService::updateMachineState($machine->id, 'score', 0, 'zh_CN', $adminId);
+                    MachineApiService::updateMachineState($machine->id, 'player_pressure', 0, 'zh_CN', $adminId);
                     break;
+
                 case GameType::TYPE_STEEL_BALL:
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::CLEAR_LOG, 0, Admin::id());
-                    $services->win_number = 0;
-                    $services->player_win_number = 0;
+                    // 发送清理指令
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::CLEAR_LOG, 0, $adminId);
+
+                    // ✅ 通过 API 更新状态（修复：不再直接修改只读对象）
+                    MachineApiService::updateMachineState($machine->id, 'win_number', 0, 'zh_CN', $adminId);
+                    MachineApiService::updateMachineState($machine->id, 'player_win_number', 0, 'zh_CN', $adminId);
                     break;
             }
         } catch (Exception $e) {
