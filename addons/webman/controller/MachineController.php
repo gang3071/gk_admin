@@ -273,37 +273,17 @@ class MachineController
         $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
             $val,
             Machine $data
-        ) use (&$hasLockCache) {
-            // ✅ 首次调用时批量获取所有机台的 has_lock 状态
-            if ($hasLockCache === null) {
-                $hasLockCache = [];
-                try {
-                    // 获取当前页所有机台ID
-                    $allMachines = $this->model::query()
-                        ->where('type', $data->type)
-                        ->get();
-
-                    // 批量通过服务类获取 has_lock 状态
-                    foreach ($allMachines as $machine) {
-                        try {
-                            $service = \app\service\machine\MachineServices::createServices(
-                                $machine,
-                                Container::getInstance()->translator->getLocale()
-                            );
-                            $hasLockCache[$machine->id] = (int)($service->has_lock ?? 0);
-                        } catch (\Exception $e) {
-                            $hasLockCache[$machine->id] = 0;
-                        }
-                    }
-                } catch (\Exception $e) {
-                    \support\Log::warning('Batch get machine has_lock via service failed', [
-                        'error' => $e->getMessage()
-                    ]);
-                }
+        ) {
+            try {
+                $service = \app\service\machine\MachineServices::createServices(
+                    $data,
+                    Container::getInstance()->translator->getLocale()
+                );
+                $hasLock = (int)($service->has_lock ?? 0);
+            } catch (\Exception $e) {
+                $hasLock = 0;
             }
 
-            // ✅ 从缓存中读取 has_lock 状态
-            $hasLock = $hasLockCache[$data->id] ?? 0;
             return Switches::create(null, $hasLock)
                 ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
                 ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
