@@ -17,6 +17,7 @@ return [
         GameType::TYPE_SLOT => 'SLOT',
         GameType::TYPE_STEEL_BALL => 'Steel Ball',
         GameType::TYPE_FISH => 'Fish Machine',
+        GameType::TYPE_POKEMON_BALL => 'Pokemon Ball',
     ],
     'game_type_cate' => [
         GameType::CATE_PHYSICAL_MACHINE => 'Physical Machine',

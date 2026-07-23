@@ -17,6 +17,7 @@ return [
         GameType::TYPE_SLOT => '斯洛',
         GameType::TYPE_STEEL_BALL => '鋼珠',
         GameType::TYPE_FISH => '魚機',
+        GameType::TYPE_POKEMON_BALL => '精靈球',
     ],
     'game_type_cate' => [
         GameType::CATE_PHYSICAL_MACHINE => '實體平臺',

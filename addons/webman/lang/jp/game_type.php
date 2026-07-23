@@ -17,6 +17,7 @@ return [
         GameType::TYPE_SLOT => 'スロット',
         GameType::TYPE_STEEL_BALL => 'パチンコ',
         GameType::TYPE_FISH => 'フィッシュマシン',
+        GameType::TYPE_POKEMON_BALL => 'モンスターボール',
     ],
     'game_type_cate' => [
         GameType::CATE_PHYSICAL_MACHINE => 'ロボット',
