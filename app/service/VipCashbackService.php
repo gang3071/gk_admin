@@ -7,6 +7,7 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\model\SystemSetting;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
 use support\Log;
@@ -32,6 +33,16 @@ class VipCashbackService
      * @var string|null 起始日期（只查询该时间之后的记录）
      */
     private $sinceDate = null;
+
+    /**
+     * @var bool|null 电子游戏反水开关状态缓存
+     */
+    private $electronicGameRebateEnabled = null;
+
+    /**
+     * @var array 电子游戏平台ID缓存
+     */
+    private $electronicGamePlatformIds = [];
 
     /**
      * 设置日志回调
@@ -123,6 +134,16 @@ class VipCashbackService
                 ->toArray();
             $cashbackMap = $this->preloadCashbackRatios($allVipLevelIds, $platformIds);
 
+            // 检查电子游戏反水开关
+            $electronicGameRebateEnabled = $this->isElectronicGameRebateEnabled();
+            $electronicGamePlatformIds = $this->getElectronicGamePlatformIds();
+
+            if (!$electronicGameRebateEnabled) {
+                $this->log('info', '电子游戏反水开关已关闭，将跳过电子游戏平台的反水计算', [
+                    'electronic_platform_ids' => $electronicGamePlatformIds,
+                ]);
+            }
+
             // 逐条处理
             foreach ($records as $record) {
                 try {
@@ -153,6 +174,28 @@ class VipCashbackService
                             ]);
                             continue;
                         }
+                    }
+
+                    // 检查是否为电子游戏平台
+                    $isElectronicGame = in_array($record->platform_id, $electronicGamePlatformIds);
+
+                    // 如果电子游戏反水开关关闭，且是电子游戏平台，则跳过反水计算
+                    if (!$electronicGameRebateEnabled && $isElectronicGame) {
+                        // 标记记录已处理（设置vip_level_id，但不计算反水）
+                        $record->vip_level_id = $vipLevelId;
+                        $record->cashback_ratio = null;
+                        $record->cashback_amount = null;
+                        $record->save();
+
+                        // 仍需触发VIP升降级检查（打码量仍需统计）
+                        $this->triggerVipUpgradeCheck($player, $record->bet);
+
+                        $result['skipped']++;
+                        $this->log('debug', '跳过电子游戏反水：反水开关已关闭', [
+                            'record_id' => $record->id,
+                            'platform_id' => $record->platform_id,
+                        ]);
+                        continue;
                     }
 
                     // 计算反水（从预加载缓存获取）
@@ -390,5 +433,64 @@ class VipCashbackService
                 'error' => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * 检查电子游戏反水开关是否启用
+     *
+     * @return bool
+     */
+    protected function isElectronicGameRebateEnabled(): bool
+    {
+        if ($this->electronicGameRebateEnabled !== null) {
+            return $this->electronicGameRebateEnabled;
+        }
+
+        try {
+            $setting = SystemSetting::query()
+                ->where('feature', 'electronic_game_rebate')
+                ->where('status', 1)
+                ->first();
+
+            $this->electronicGameRebateEnabled = (bool) $setting;
+        } catch (\Throwable $e) {
+            // 查询失败时默认开启，避免影响正常业务
+            $this->electronicGameRebateEnabled = true;
+            $this->log('warning', '查询电子游戏反水开关失败，默认开启', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $this->electronicGameRebateEnabled;
+    }
+
+    /**
+     * 获取电子游戏平台ID列表
+     *
+     * @return array
+     */
+    protected function getElectronicGamePlatformIds(): array
+    {
+        if (!empty($this->electronicGamePlatformIds)) {
+            return $this->electronicGamePlatformIds;
+        }
+
+        try {
+            // 从配置文件获取电子游戏平台代码
+            $includedCodes = config('platform_filter.included_platforms', []);
+
+            if (!empty($includedCodes)) {
+                $this->electronicGamePlatformIds = GamePlatform::query()
+                    ->whereIn('code', $includedCodes)
+                    ->pluck('id')
+                    ->toArray();
+            }
+        } catch (\Throwable $e) {
+            $this->log('warning', '获取电子游戏平台ID失败', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $this->electronicGamePlatformIds;
     }
 }
