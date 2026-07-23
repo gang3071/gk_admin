@@ -223,6 +223,12 @@ return [
         'no_device_data' => 'No Device Details',
         'device_detail_note' => 'Note: This report is a device detail export, export time: {time}',
         'subtotal_devices' => 'Subtotal ({count} Devices)',
+        // Column Selection
+        'select_columns' => 'Select Export Columns',
+        'columns' => 'Export Columns',
+        'select_columns_help' => 'Select the columns to export. Unselected columns will not appear in the exported Excel file',
+        'no_column_selected' => 'Please select at least one export column',
+        'config_saved' => 'Column configuration saved',
     ],
 
     // Transaction Details

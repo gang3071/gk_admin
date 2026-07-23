@@ -282,6 +282,12 @@ return [
         'no_device_data' => '暂无设备明细数据',
         'device_detail_note' => '说明：本报表为设备明细导出，导出时间：{time}',
         'subtotal_devices' => '小计 ({count}台设备)',
+        // 列选择
+        'select_columns' => '选择导出栏目',
+        'columns' => '导出栏目',
+        'select_columns_help' => '选择需要导出的栏目，未选择的栏目将不会出现在导出的 Excel 中',
+        'no_column_selected' => '请至少选择一个导出栏目',
+        'config_saved' => '栏目配置已保存',
     ],
 
     // 交易明细

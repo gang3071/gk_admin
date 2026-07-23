@@ -222,6 +222,12 @@ return [
         'no_device_data' => '暫無設備明細數據',
         'device_detail_note' => '說明：本報表為設備明細導出，導出時間：{time}',
         'subtotal_devices' => '小計 ({count}台設備)',
+        // 列選擇
+        'select_columns' => '選擇導出欄位',
+        'columns' => '導出欄位',
+        'select_columns_help' => '選擇需要導出的欄位，未選擇的欄位將不會出現在導出的 Excel 中',
+        'no_column_selected' => '請至少選擇一個導出欄位',
+        'config_saved' => '欄位配置已儲存',
     ],
 
     // 交易明細

@@ -223,6 +223,12 @@ return [
         'no_device_data' => 'デバイス詳細なし',
         'device_detail_note' => '注：このレポートはデバイス詳細のエクスポートです。エクスポート時間：{time}',
         'subtotal_devices' => '小計 ({count}台のデバイス)',
+        // カラム選択
+        'select_columns' => 'エクスポート列を選択',
+        'columns' => 'エクスポート列',
+        'select_columns_help' => 'エクスポートする列を選択してください。選択されていない列はエクスポートされたExcelファイルに表示されません',
+        'no_column_selected' => '少なくとも1つのエクスポート列を選択してください',
+        'config_saved' => '列設定が保存されました',
     ],
 
     // 取引明細
