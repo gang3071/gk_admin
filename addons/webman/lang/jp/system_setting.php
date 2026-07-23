@@ -32,6 +32,8 @@ return [
         'turn_relay_ip' => 'TURNリレーIP',
         'high_score_broadcast_threshold' => 'ハイスコア放送しきい値',
         'device_collect' => '店舗クロスストアログイン',
+        'electronic_game_rebate' => '電子ゲームリベート',
+        'machine_rebate' => '物理マシンリベート',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
@@ -55,5 +57,14 @@ return [
     'time_range' => '日付範囲',
     'master' => '全体構成',
     'points' => 'ポイント',
-    'disabled' => '無効'
+    'disabled' => '無効',
+    // リベート設定
+    'rebate' => [
+        'electronic_game_rebate' => '電子ゲームリベート',
+        'machine_rebate' => '物理マシンリベート',
+        'enabled' => '有効',
+        'disabled' => '無効',
+        'electronic_game_rebate_help' => '電子ゲームリベートを有効にするかどうかを制御',
+        'machine_rebate_help' => '物理マシンリベートを有効にするかどうかを制御',
+    ],
 ];
