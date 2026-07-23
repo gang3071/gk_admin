@@ -221,21 +221,19 @@ class StoreShiftHandoverRecordController
                     ->placeholder([admin_trans('shift_handover.filter.start_time'), admin_trans('shift_handover.filter.end_time')]);
             });
 
-            // 工具栏 - 添加导出配置按钮
-            $grid->toolbar(function ($toolbar) {
-                $toolbar->prepend(
-                    Button::create(admin_trans('shift_handover.export.select_columns'))
-                        ->type('default')
-                        ->icon('el-icon-setting')
-                        ->modal(
-                            admin_url([
-                                'addons-webman-controller-StoreShiftHandoverRecordController',
-                                'exportConfig'
-                            ])
-                        )
-                        ->width('50%')
-                );
-            });
+            // 工具栏 - 添加导出列设置按钮
+            $grid->tools([
+                Button::create(admin_trans('shift_handover.export.select_columns'))
+                    ->type('warning')
+                    ->icon('el-icon-setting')
+                    ->modal(
+                        admin_url([
+                            'addons-webman-controller-StoreShiftHandoverRecordController',
+                            'exportConfig'
+                        ])
+                    )
+                    ->width('50%'),
+            ]);
 
             // 操作列
             $grid->actions(function (Actions $actions) {
@@ -247,7 +245,7 @@ class StoreShiftHandoverRecordController
             $grid->expandFilter();
             $grid->hideDeleteSelection();
 
-            // 导出功能（权限通过 store_node.php 和 @auth true 控制）
+            // 导出功能 - 使用自定义导出器支持列选择
             $exporter = new \addons\webman\grid\ShiftReportExporter();
 
             // 从缓存获取用户选择的导出列
@@ -312,6 +310,61 @@ class StoreShiftHandoverRecordController
                 \support\Cache::set($cacheKey, $selectedColumns, 300);
 
                 return \ExAdmin\ui\response\Response::success(admin_trans('shift_handover.export.config_saved'));
+            });
+        });
+    }
+
+    /**
+     * 导出交班记录 - 选择列后导出
+     * @group store
+     * @auth true
+     */
+    public function exportWithColumns(): \ExAdmin\ui\component\form\Form
+    {
+        return \ExAdmin\ui\component\form\Form::create([], function (\ExAdmin\ui\component\form\Form $form) {
+            $form->title(admin_trans('shift_handover.export.export_with_columns'));
+
+            // 获取所有可导出的列
+            $exporter = new \addons\webman\grid\ShiftReportExporter();
+            $columns = $exporter->getAvailableColumns();
+
+            // 获取用户之前的选择（默认全选）
+            $adminId = \addons\webman\Admin::id();
+            $cacheKey = "export_columns_{$adminId}";
+            $selectedColumns = \support\Cache::get($cacheKey, array_keys($columns));
+
+            // 复选框组选择列
+            $form->checkbox('columns', admin_trans('shift_handover.export.columns'))
+                ->options($columns)
+                ->default($selectedColumns)
+                ->required()
+                ->help(admin_trans('shift_handover.export.select_columns_help'));
+
+            // 导出类型选择
+            $form->radio('export_type', admin_trans('shift_handover.export.export_type'))
+                ->options([
+                    'current' => admin_trans('shift_handover.export.current_page'),
+                    'all' => admin_trans('shift_handover.export.all_pages'),
+                ])
+                ->default('all')
+                ->required();
+
+            $form->action(function ($values) use ($cacheKey) {
+                $selectedColumns = $values['columns'] ?? [];
+
+                if (empty($selectedColumns)) {
+                    return \ExAdmin\ui\response\Response::error(admin_trans('shift_handover.export.no_column_selected'));
+                }
+
+                // 将选中的列存储到缓存中
+                \support\Cache::set($cacheKey, $selectedColumns, 300);
+
+                // 返回成功，并触发导出
+                return \ExAdmin\ui\response\Response::success(admin_trans('shift_handover.export.start_export'))
+                    ->event('ex-admin:export', [
+                        'columns' => $selectedColumns,
+                        'export_type' => $values['export_type'] ?? 'all',
+                    ]);
             });
         });
     }

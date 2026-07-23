@@ -284,10 +284,15 @@ return [
         'subtotal_devices' => '小计 ({count}台设备)',
         // 列选择
         'select_columns' => '选择导出栏目',
+        'export_with_columns' => '自定义导出',
         'columns' => '导出栏目',
         'select_columns_help' => '选择需要导出的栏目，未选择的栏目将不会出现在导出的 Excel 中',
         'no_column_selected' => '请至少选择一个导出栏目',
         'config_saved' => '栏目配置已保存',
+        'start_export' => '开始导出...',
+        'export_type' => '导出范围',
+        'current_page' => '当前页',
+        'all_pages' => '所有页',
     ],
 
     // 交易明细

@@ -224,10 +224,15 @@ return [
         'subtotal_devices' => '小計 ({count}台設備)',
         // 列選擇
         'select_columns' => '選擇導出欄位',
+        'export_with_columns' => '自定義導出',
         'columns' => '導出欄位',
         'select_columns_help' => '選擇需要導出的欄位，未選擇的欄位將不會出現在導出的 Excel 中',
         'no_column_selected' => '請至少選擇一個導出欄位',
         'config_saved' => '欄位配置已儲存',
+        'start_export' => '開始導出...',
+        'export_type' => '導出範圍',
+        'current_page' => '當前頁',
+        'all_pages' => '所有頁',
     ],
 
     // 交易明細
