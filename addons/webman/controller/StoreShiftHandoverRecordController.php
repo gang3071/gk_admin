@@ -8,6 +8,7 @@ use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -225,7 +226,7 @@ class StoreShiftHandoverRecordController
             $grid->tools([
                 Button::create(admin_trans('shift_handover.export.select_columns'))
                     ->type('warning')
-                    ->icon('el-icon-setting')
+                    ->icon(Icon::create('SettingOutlined'))
                     ->modal(
                         admin_url([
                             'addons-webman-controller-StoreShiftHandoverRecordController',

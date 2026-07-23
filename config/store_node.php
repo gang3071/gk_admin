@@ -568,16 +568,6 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/export',
                 'title' => '导出交班记录',
             ],
-            // 导出配置（选择导出列）
-            [
-                'id' => 'addons\webman\controller\StoreShiftHandoverRecordController\exportConfig',
-                'pid' => 'addons\webman\controller\StoreShiftHandoverRecordController\index',
-                'action' => 'exportConfig',
-                'method' => 'get',
-                'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-StoreShiftHandoverRecordController/exportConfig',
-                'title' => '导出配置',
-            ],
         ]
     ],
 
