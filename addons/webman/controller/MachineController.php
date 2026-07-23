@@ -119,6 +119,9 @@ class MachineController
      */
     protected function getList(Grid $grid, $type)
     {
+        // ✅ 批量获取机台在线状态（避免 N+1 查询）
+        static $onlineStatusCache = null;
+
         $grid->driver()->setPk('id');
         $grid->autoHeight();
         $grid->bordered(true);
@@ -198,20 +201,40 @@ class MachineController
             )
             ->align('left');
         $grid->column('now_status', admin_trans('machine.fields.now_status'))
-            ->display(function ($val, Machine $data) {
-                $machineStatus = 'offline';
-                try {
-                    // 通过 API 检查机台在线状态
-                    if ($this->checkMachineOnlineViaApi($data)) {
-                        $machineStatus = 'online';
+            ->display(function ($val, Machine $data) use (&$onlineStatusCache) {
+                // ✅ 首次调用时批量获取所有机台在线状态
+                if ($onlineStatusCache === null) {
+                    $onlineStatusCache = [];
+                    try {
+                        // 获取当前页所有机台ID
+                        $allMachines = $this->model::query()
+                            ->where('type', $data->type)
+                            ->get(['id']);
+                        $machineIds = $allMachines->pluck('id')->toArray();
+
+                        // 批量检查在线状态
+                        if (!empty($machineIds)) {
+                            $result = MachineApiService::getAllOnlineStatus(
+                                departmentId: Admin::user()->department_id,
+                                type: $data->type,
+                                adminId: Admin::id(),
+                                machineIds: $machineIds
+                            );
+                            if (isset($result['data']) && is_array($result['data'])) {
+                                foreach ($result['data'] as $item) {
+                                    $onlineStatusCache[$item['id']] = $item['online'] ?? false;
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \support\Log::warning('Batch check machine online via API failed', [
+                            'error' => $e->getMessage()
+                        ]);
                     }
-                } catch (\Exception $e) {
-                    // API 服务不可用时默认显示离线
-                    \support\Log::warning('Check machine online via API failed', [
-                        'machine_id' => $data->id,
-                        'error' => $e->getMessage()
-                    ]);
                 }
+
+                // ✅ 从缓存中读取在线状态
+                $machineStatus = ($onlineStatusCache[$data->id] ?? false) ? 'online' : 'offline';
                 return admin_view(plugin()->webman->getPath() . '/views/machine_status.vue')->attrs([
                     'id' => $data->id,
                     'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
@@ -251,8 +274,17 @@ class MachineController
             $val,
             Machine $data
         ) {
-            $services = $this->getMachineStatusViaApi($data);
-            return Switches::create(null, $services->has_lock ?? 0)
+            try {
+                $service = \app\service\machine\MachineServices::createServices(
+                    $data,
+                    Container::getInstance()->translator->getLocale()
+                );
+                $hasLock = (int)($service->has_lock ?? 0);
+            } catch (\Exception $e) {
+                $hasLock = 0;
+            }
+
+            return Switches::create(null, $hasLock)
                 ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
                 ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
                 ->field('has_lock')
@@ -2146,11 +2178,26 @@ class MachineController
         if (empty($machine)) {
             return message_error(admin_trans('machine.not_fount'));
         }
+
+        // Switches 组件会将新值放在 $data 参数中
+        $hasLock = $data['has_lock'] ?? null;
+
+        if ($hasLock === null) {
+            return message_error('缺少 has_lock 参数');
+        }
+
         try {
             // 通过 API 更新机台锁状态
-            MachineApiService::updateMachineState($machine->id, 'has_lock', $data['has_lock'], 'zh_CN', Admin::id() ?? 0);
+            MachineApiService::updateMachineState($machine->id, 'has_lock', $hasLock, 'zh_CN', Admin::id() ?? 0);
 
-            if ($data['has_lock'] == 1) {
+            // 同步更新本地 Redis 缓存（确保前端立即显示）
+            $services = \app\service\machine\MachineServices::createServices(
+                $machine,
+                Container::getInstance()->translator->getLocale()
+            );
+            $services->has_lock = $hasLock;
+
+            if ($hasLock == 1) {
                 sendMachineException($machine, Notice::TYPE_MACHINE_LOCK, $machine->gaming_user_id);
             }
         } catch (\Exception $e) {
@@ -2549,8 +2596,7 @@ class MachineController
             return message_error(admin_trans('machine.not_fount'));
         }
         try {
-            // 通过 API 获取机台状态
-            $services = $this->getMachineStatusViaApi($machine);
+            $adminId = Admin::id() ?? 0;
 
             // 根据机台类型获取常量类
             $cmdClass = match([$machine->type, $machine->control_type]) {
@@ -2563,15 +2609,22 @@ class MachineController
 
             switch ($machine->type) {
                 case GameType::TYPE_SLOT:
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::ALL_DOWN, 0, Admin::id());
-                    $services->bet = 0;
-                    $services->score = 0;
-                    $services->player_pressure = 0;
+                    // 发送清理指令
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::ALL_DOWN, 0, $adminId);
+
+                    // ✅ 通过 API 更新状态（修复：不再直接修改只读对象）
+                    MachineApiService::updateMachineState($machine->id, 'bet', 0, 'zh_CN', $adminId);
+                    MachineApiService::updateMachineState($machine->id, 'score', 0, 'zh_CN', $adminId);
+                    MachineApiService::updateMachineState($machine->id, 'player_pressure', 0, 'zh_CN', $adminId);
                     break;
+
                 case GameType::TYPE_STEEL_BALL:
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::CLEAR_LOG, 0, Admin::id());
-                    $services->win_number = 0;
-                    $services->player_win_number = 0;
+                    // 发送清理指令
+                    $this->sendMachineCmdViaApi($machine, $cmdClass::CLEAR_LOG, 0, $adminId);
+
+                    // ✅ 通过 API 更新状态（修复：不再直接修改只读对象）
+                    MachineApiService::updateMachineState($machine->id, 'win_number', 0, 'zh_CN', $adminId);
+                    MachineApiService::updateMachineState($machine->id, 'player_win_number', 0, 'zh_CN', $adminId);
                     break;
             }
         } catch (Exception $e) {

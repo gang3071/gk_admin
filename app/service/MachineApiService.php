@@ -184,7 +184,15 @@ class MachineApiService
             throw new Exception("{$action}失败: {$msg}");
         }
 
-        return $data['data'] ?? [];
+        // 确保返回值始终是数组类型
+        $result = $data['data'] ?? [];
+
+        // 如果 data 是 bool/null 等非数组类型，包装成数组
+        if (!is_array($result)) {
+            $result = ['result' => $result];
+        }
+
+        return $result;
     }
 
     /**
@@ -264,8 +272,9 @@ class MachineApiService
     }
 
     /**
-     * 批量检查机台在线状态
+     * 批量检查机台在线状态（兼容旧方法）
      *
+     * @deprecated 使用 getAllOnlineStatus 替代
      * @param array $machineIds 机台ID列表
      * @param int $adminId 管理员ID（可选，用于日志追踪）
      * @return array
@@ -273,31 +282,7 @@ class MachineApiService
      */
     public static function batchCheckOnline(array $machineIds, int $adminId = 0): array
     {
-        try {
-            $client = self::createClient($adminId);
-            $response = $client->post('/api/admin/machine/batch-check-online', [
-                'json' => [
-                    'machine_ids' => $machineIds,
-                ]
-            ]);
-
-            return self::handleResponse($response, '批量检查机台在线');
-
-        } catch (GuzzleException $e) {
-            Log::error('MachineApiService::batchCheckOnline failed', [
-                'machine_ids' => $machineIds,
-                'admin_id' => $adminId,
-                'error' => $e->getMessage()
-            ]);
-            throw new Exception($e->getMessage(), $e->getCode(), $e);
-        } catch (Exception $e) {
-            Log::error('MachineApiService::batchCheckOnline failed', [
-                'machine_ids' => $machineIds,
-                'admin_id' => $adminId,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
+        return self::getAllOnlineStatus(0, null, $adminId, $machineIds);
     }
 
     /**
@@ -399,15 +384,22 @@ class MachineApiService
      * @return array
      * @throws Exception
      */
-    public static function getAllOnlineStatus(int $departmentId = 0, ?string $type = null, int $adminId = 0): array
+    public static function getAllOnlineStatus(int $departmentId = 0, ?string $type = null, int $adminId = 0, array $machineIds = []): array
     {
         try {
             $client = self::createClient($adminId);
+
+            // ✅ 支持 machine_ids 参数（批量查询优化）
+            $payload = [
+                'department_id' => $departmentId,
+                'type' => $type,
+            ];
+            if (!empty($machineIds)) {
+                $payload['machine_ids'] = $machineIds;
+            }
+
             $response = $client->post('/api/admin/machine/all-online-status', [
-                'json' => [
-                    'department_id' => $departmentId,
-                    'type' => $type,
-                ]
+                'json' => $payload
             ]);
 
             return self::handleResponse($response, '获取所有机台在线状态');
