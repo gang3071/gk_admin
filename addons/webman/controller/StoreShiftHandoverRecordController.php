@@ -253,7 +253,7 @@ class StoreShiftHandoverRecordController
             // 从缓存获取用户选择的导出列
             $adminId = \addons\webman\Admin::id();
             $cacheKey = "export_columns_{$adminId}";
-            $selectedColumns = \Illuminate\Support\Facades\Cache::get($cacheKey);
+            $selectedColumns = \support\Cache::get($cacheKey);
             if (!empty($selectedColumns)) {
                 $exporter->setSelectedColumns($selectedColumns);
             }
@@ -292,7 +292,7 @@ class StoreShiftHandoverRecordController
             // 获取用户之前的选择（默认全选）
             $adminId = \addons\webman\Admin::id();
             $cacheKey = "export_columns_{$adminId}";
-            $selectedColumns = \Illuminate\Support\Facades\Cache::get($cacheKey, array_keys($columns));
+            $selectedColumns = \support\Cache::get($cacheKey, array_keys($columns));
 
             // 复选框组选择列
             $form->checkbox('columns', admin_trans('shift_handover.export.columns'))
@@ -309,7 +309,7 @@ class StoreShiftHandoverRecordController
                 }
 
                 // 将选中的列存储到缓存中，供导出时使用（5分钟过期）
-                \Illuminate\Support\Facades\Cache::put($cacheKey, $selectedColumns, 300);
+                \support\Cache::set($cacheKey, $selectedColumns, 300);
 
                 return \ExAdmin\ui\response\Response::success(admin_trans('shift_handover.export.config_saved'));
             });
