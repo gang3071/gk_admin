@@ -9,6 +9,7 @@ use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
+use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -312,23 +313,30 @@ class StoreShiftHandoverRecordController
                 ->default($selectedColumns)
                 ->required();
 
-            $form->action(function ($values) use ($cacheKey) {
-                \support\Log::info('exportConfig action 开始执行', ['values' => $values]);
-                $selectedColumns = $values['columns'] ?? [];
+            // 使用 saving 回调处理表单提交
+            $form->saving(function (Form $form) use ($cacheKey) {
+                \support\Log::info('exportConfig saving 开始执行');
+
+                // ExAdmin 表单数据在 data 里面
+                $data = request()->post('data', []);
+                $selectedColumns = $data['columns'] ?? [];
+                \support\Log::info('exportConfig saving 参数', ['data' => $data, 'columns' => $selectedColumns]);
+
                 if (empty($selectedColumns)) {
-                    return \ExAdmin\ui\response\Response::error(admin_trans('shift_handover.export.no_column_selected'));
+                    return message_error(admin_trans('shift_handover.export.no_column_selected'));
                 }
+
                 // 保存到缓存，5分钟过期
                 $result = \support\Cache::set($cacheKey, $selectedColumns, 300);
 
-                // 调试日志
                 \support\Log::info('导出列配置保存', [
                     'cache_key' => $cacheKey,
                     'selected_columns' => $selectedColumns,
                     'set_result' => $result,
                     'cache_verify' => \support\Cache::get($cacheKey),
                 ]);
-                return \ExAdmin\ui\response\Response::success(admin_trans('shift_handover.export.config_saved'));
+
+                return message_success(admin_trans('shift_handover.export.config_saved'));
             });
         });
     }
