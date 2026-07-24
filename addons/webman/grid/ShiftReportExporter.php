@@ -61,6 +61,7 @@ class ShiftReportExporter extends Excel
     public function setSelectedColumns(array $columns): static
     {
         $this->selectedColumns = $columns;
+        \support\Log::info('ShiftReportExporter: setSelectedColumns', ['columns' => $columns]);
         return $this;
     }
 
@@ -83,6 +84,10 @@ class ShiftReportExporter extends Excel
      */
     protected function getActiveColumns(): array
     {
+        \support\Log::info('ShiftReportExporter: getActiveColumns', [
+            'selectedColumns' => $this->selectedColumns,
+            'isEmpty' => empty($this->selectedColumns),
+        ]);
         if (empty($this->selectedColumns)) {
             return array_keys($this->availableColumns);
         }
