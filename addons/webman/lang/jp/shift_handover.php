@@ -224,16 +224,19 @@ return [
         'device_detail_note' => '注：このレポートはデバイス詳細のエクスポートです。エクスポート時間：{time}',
         'subtotal_devices' => '小計 ({count}台のデバイス)',
         // カラム選択
+        'export_settings' => 'エクスポート設定',
         'select_columns' => 'エクスポート列を選択',
         'export_with_columns' => 'カスタムエクスポート',
         'columns' => 'エクスポート列',
         'select_columns_help' => 'エクスポートする列を選択してください。選択されていない列はエクスポートされたExcelファイルに表示されません',
         'no_column_selected' => '少なくとも1つのエクスポート列を選択してください',
         'config_saved' => '列設定が保存されました',
-        'start_export' => 'エクスポート開始...',
+        'start_export' => '設定が保存されました。エクスポートボタンをクリックしてエクスポートしてください',
         'export_type' => 'エクスポート範囲',
         'current_page' => '現在のページ',
-        'all_pages' => 'すべてのページ',
+        'selected_rows' => '選択行',
+        'all_pages' => 'すべてエクスポート',
+        'export_hint' => '設定保存後、エクスポートボタンをクリックしてエクスポートしてください',
     ],
 
     // 取引明細

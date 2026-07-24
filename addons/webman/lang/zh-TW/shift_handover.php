@@ -223,6 +223,7 @@ return [
         'device_detail_note' => '說明：本報表為設備明細導出，導出時間：{time}',
         'subtotal_devices' => '小計 ({count}台設備)',
         // 列選擇
+        'export_settings' => '導出設置',
         'select_columns' => '選擇導出欄位',
         'export_with_columns' => '自定義導出',
         'columns' => '導出欄位',
@@ -232,7 +233,9 @@ return [
         'start_export' => '開始導出...',
         'export_type' => '導出範圍',
         'current_page' => '當前頁',
-        'all_pages' => '所有頁',
+        'selected_rows' => '選中行',
+        'all_pages' => '導出全部',
+        'export_hint' => '設置完成後，請點擊導出按鈕進行導出',
     ],
 
     // 交易明細

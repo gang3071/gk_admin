@@ -224,16 +224,19 @@ return [
         'device_detail_note' => 'Note: This report is a device detail export, export time: {time}',
         'subtotal_devices' => 'Subtotal ({count} Devices)',
         // Column Selection
+        'export_settings' => 'Export Settings',
         'select_columns' => 'Select Export Columns',
         'export_with_columns' => 'Custom Export',
         'columns' => 'Export Columns',
         'select_columns_help' => 'Select the columns to export. Unselected columns will not appear in the exported Excel file',
         'no_column_selected' => 'Please select at least one export column',
         'config_saved' => 'Column configuration saved',
-        'start_export' => 'Starting export...',
+        'start_export' => 'Settings saved. Please click the export button to export',
         'export_type' => 'Export Range',
         'current_page' => 'Current Page',
-        'all_pages' => 'All Pages',
+        'selected_rows' => 'Selected Rows',
+        'all_pages' => 'Export All',
+        'export_hint' => 'After settings are saved, please click the export button to export',
     ],
 
     // Transaction Details
