@@ -287,6 +287,7 @@ class StoreShiftHandoverRecordController
      */
     public function exportConfig(): \ExAdmin\ui\component\form\Form
     {
+        \support\Log::info('exportConfig 方法被调用');
         return \ExAdmin\ui\component\form\Form::create([], function (\ExAdmin\ui\component\form\Form $form) {
             $form->title(admin_trans('shift_handover.export.select_columns'));
 
@@ -299,6 +300,12 @@ class StoreShiftHandoverRecordController
             $cacheKey = "export_columns_{$adminId}";
             $selectedColumns = \support\Cache::get($cacheKey, array_keys($columns));
 
+            \support\Log::info('exportConfig 表单初始化', [
+                'admin_id' => $adminId,
+                'cache_key' => $cacheKey,
+                'current_cache' => \support\Cache::get($cacheKey),
+            ]);
+
             // 复选框组选择列
             $form->checkbox('columns', admin_trans('shift_handover.export.columns'))
                 ->options($columns)
@@ -306,17 +313,19 @@ class StoreShiftHandoverRecordController
                 ->required();
 
             $form->action(function ($values) use ($cacheKey) {
+                \support\Log::info('exportConfig action 开始执行', ['values' => $values]);
                 $selectedColumns = $values['columns'] ?? [];
                 if (empty($selectedColumns)) {
                     return \ExAdmin\ui\response\Response::error(admin_trans('shift_handover.export.no_column_selected'));
                 }
                 // 保存到缓存，5分钟过期
-                \support\Cache::set($cacheKey, $selectedColumns, 300);
+                $result = \support\Cache::set($cacheKey, $selectedColumns, 300);
 
                 // 调试日志
                 \support\Log::info('导出列配置保存', [
                     'cache_key' => $cacheKey,
                     'selected_columns' => $selectedColumns,
+                    'set_result' => $result,
                     'cache_verify' => \support\Cache::get($cacheKey),
                 ]);
                 return \ExAdmin\ui\response\Response::success(admin_trans('shift_handover.export.config_saved'));
