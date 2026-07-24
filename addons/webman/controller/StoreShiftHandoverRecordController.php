@@ -326,8 +326,8 @@ class StoreShiftHandoverRecordController
                     return message_error(admin_trans('shift_handover.export.no_column_selected'));
                 }
 
-                // 保存到缓存，5分钟过期
-                $result = \support\Cache::set($cacheKey, $selectedColumns, 300);
+                // 保存到缓存（永久）
+                $result = \support\Cache::set($cacheKey, $selectedColumns);
 
                 \support\Log::info('导出列配置保存', [
                     'cache_key' => $cacheKey,
