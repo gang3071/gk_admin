@@ -35,9 +35,9 @@ class VipCashbackService
     private $sinceDate = null;
 
     /**
-     * @var bool|null 电子游戏反水开关状态缓存
+     * @var array 电子游戏反水开关状态缓存 [cacheKey => bool]
      */
-    private $electronicGameRebateEnabled = null;
+    private $electronicGameRebateEnabled = [];
 
     /**
      * @var array 电子游戏平台ID缓存
@@ -134,15 +134,8 @@ class VipCashbackService
                 ->toArray();
             $cashbackMap = $this->preloadCashbackRatios($allVipLevelIds, $platformIds);
 
-            // 检查电子游戏反水开关
-            $electronicGameRebateEnabled = $this->isElectronicGameRebateEnabled();
+            // 获取电子游戏平台ID列表
             $electronicGamePlatformIds = $this->getElectronicGamePlatformIds();
-
-            if (!$electronicGameRebateEnabled) {
-                $this->log('info', '电子游戏反水开关已关闭，将跳过电子游戏平台的反水计算', [
-                    'electronic_platform_ids' => $electronicGamePlatformIds,
-                ]);
-            }
 
             // 逐条处理
             foreach ($records as $record) {
@@ -159,6 +152,10 @@ class VipCashbackService
                         ]);
                         continue;
                     }
+
+                    // 获取玩家所属渠道的电子游戏反水开关状态
+                    $departmentId = $player->department_id ?? 0;
+                    $electronicGameRebateEnabled = $this->isElectronicGameRebateEnabled($departmentId);
 
                     // 获取玩家VIP等级，如果没有则使用默认等级
                     $vipLevelId = $player->vip_level_id ?? null;
@@ -438,30 +435,35 @@ class VipCashbackService
     /**
      * 检查电子游戏反水开关是否启用
      *
+     * @param int $departmentId 渠道部门ID
      * @return bool
      */
-    protected function isElectronicGameRebateEnabled(): bool
+    protected function isElectronicGameRebateEnabled(int $departmentId): bool
     {
-        if ($this->electronicGameRebateEnabled !== null) {
-            return $this->electronicGameRebateEnabled;
+        // 使用部门ID作为缓存键
+        $cacheKey = "electronic_game_rebate_{$departmentId}";
+        if (isset($this->electronicGameRebateEnabled[$cacheKey])) {
+            return $this->electronicGameRebateEnabled[$cacheKey];
         }
 
         try {
             $setting = SystemSetting::query()
                 ->where('feature', 'electronic_game_rebate')
+                ->where('department_id', $departmentId)
                 ->where('status', 1)
                 ->first();
 
-            $this->electronicGameRebateEnabled = (bool) $setting;
+            $this->electronicGameRebateEnabled[$cacheKey] = (bool) $setting;
         } catch (\Throwable $e) {
             // 查询失败时默认开启，避免影响正常业务
-            $this->electronicGameRebateEnabled = true;
+            $this->electronicGameRebateEnabled[$cacheKey] = true;
             $this->log('warning', '查询电子游戏反水开关失败，默认开启', [
+                'department_id' => $departmentId,
                 'error' => $e->getMessage(),
             ]);
         }
 
-        return $this->electronicGameRebateEnabled;
+        return $this->electronicGameRebateEnabled[$cacheKey];
     }
 
     /**
