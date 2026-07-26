@@ -1014,4 +1014,55 @@ class LotteryController
             });
         });
     }
+
+    /**
+     * 切换彩金状态（启用/禁用）
+     * @auth true
+     * @group channel
+     */
+    public function changeStatus(int $id, array $data)
+    {
+        $status = $data['status'] ?? 0;
+
+        /** @var Lottery $lottery */
+        $lottery = Lottery::query()->where('id', $id)->first();
+        if (!$lottery) {
+            return message_error(admin_trans('lottery.error.not_found'));
+        }
+
+        $lottery->status = $status;
+        if ($lottery->save()) {
+            return message_success(admin_trans('common.save_success'));
+        }
+
+        return message_error(admin_trans('common.save_failed'));
+    }
+
+    /**
+     * 切换爆彩状态
+     * @auth true
+     * @group channel
+     */
+    public function changeBurstStatus(int $id, array $data)
+    {
+        $burstStatus = $data['burst_status'] ?? 0;
+
+        /** @var Lottery $lottery */
+        $lottery = Lottery::query()->where('id', $id)->first();
+        if (!$lottery) {
+            return message_error(admin_trans('lottery.error.not_found'));
+        }
+
+        // 只有随机彩金才支持爆彩
+        if ($lottery->lottery_type != Lottery::LOTTERY_TYPE_RANDOM) {
+            return message_error(admin_trans('lottery.error.only_random_support_burst'));
+        }
+
+        $lottery->burst_status = $burstStatus;
+        if ($lottery->save()) {
+            return message_success(admin_trans('common.save_success'));
+        }
+
+        return message_error(admin_trans('common.save_failed'));
+    }
 }

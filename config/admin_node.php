@@ -1072,6 +1072,15 @@ return [
         'title' => '(开启/关闭)彩金',
     ],
     [
+        'id' => 'addons\webman\controller\LotteryController\changeBurstStatus',
+        'pid' => 'addons\webman\controller\LotteryController\index',
+        'action' => 'changeBurstStatus',
+        'method' => '',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-LotteryController/changeBurstStatus',
+        'title' => '(开启/关闭)爆彩',
+    ],
+    [
         'id' => 'addons\webman\controller\LotteryController\editLotteryPool',
         'pid' => 'addons\webman\controller\LotteryController\index',
         'action' => 'editLotteryPool',

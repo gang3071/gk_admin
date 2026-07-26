@@ -308,4 +308,10 @@ return [
         'win_ratio_label' => '中奖概率',
         'minutes_suffix' => '分钟',
     ],
+
+    // 错误信息
+    'error' => [
+        'not_found' => '彩金不存在',
+        'only_random_support_burst' => '只有随机彩金才支持爆彩功能',
+    ],
 ];

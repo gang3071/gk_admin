@@ -289,4 +289,10 @@ return [
         'win_ratio_label' => 'Win Probability',
         'minutes_suffix' => 'minutes',
     ],
+
+    // Error Messages
+    'error' => [
+        'not_found' => 'Lottery not found',
+        'only_random_support_burst' => 'Only random lottery supports burst feature',
+    ],
 ];

@@ -290,4 +290,10 @@ return [
         'win_ratio_label' => '当選確率',
         'minutes_suffix' => '分',
     ],
+
+    // エラーメッセージ
+    'error' => [
+        'not_found' => 'ジャックポットが見つかりません',
+        'only_random_support_burst' => 'ランダムジャックポットのみがバースト機能をサポートしています',
+    ],
 ];
