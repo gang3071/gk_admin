@@ -3,7 +3,6 @@
 namespace process;
 
 use app\service\VipCashbackService;
-use app\service\MachineRebateCashbackService;
 use support\Log;
 use Workerman\Crontab\Crontab;
 
@@ -11,9 +10,8 @@ use Workerman\Crontab\Crontab;
  * VIP反水补算定时任务
  *
  * 功能：
- * - 每5分钟检查一次已结算但未计算反水的游戏记录
+ * - 每1分钟检查一次已结算但未计算反水的游戏记录
  * - 自动补算VIP反水金额（三方游戏）
- * - 自动补算机台反水金额（实体机台）
  * - 更新玩家总打码量
  */
 class VipCashbackTask
@@ -64,15 +62,11 @@ class VipCashbackTask
                 'memory' => memory_get_usage(true),
             ]);
 
-            // 1. 处理三方游戏反水
+            // 处理三方游戏反水
             $this->log->info('开始处理三方游戏反水');
             $service = new VipCashbackService();
             $service->setSinceDate($sinceDate);
             $result = $service->execute();
-
-            // 2. 处理实体机台反水
-            $this->log->info('开始处理实体机台反水');
-            $machineResult = MachineRebateCashbackService::batchProcess(2000);
 
             $elapsed = round(microtime(true) - $startTime, 3);
 
@@ -83,30 +77,22 @@ class VipCashbackTask
                     'skipped' => $result['skipped'],
                     'errors' => $result['errors'],
                 ],
-                '实体机台' => [
-                    'processed' => $machineResult['processed'],
-                    'updated' => $machineResult['updated'],
-                    'skipped' => $machineResult['skipped'],
-                    'errors' => $machineResult['errors'],
-                ],
                 'elapsed_seconds' => $elapsed,
                 'memory_peak' => memory_get_peak_usage(true),
             ]);
 
-            if ($result['errors'] > 0 || $machineResult['errors'] > 0) {
+            if ($result['errors'] > 0) {
                 $this->log->warning('VipCashbackTask 存在错误', [
                     '三方游戏_errors' => $result['errors'],
-                    '实体机台_errors' => $machineResult['errors'],
                 ]);
             }
 
-            if ($result['processed'] > 0 || $machineResult['processed'] > 0) {
+            if ($result['processed'] > 0) {
                 echo "[VipCashback] 三方游戏: processed={$result['processed']}, updated={$result['updated']}, errors={$result['errors']}\n";
-                echo "[VipCashback] 实体机台: processed={$machineResult['processed']}, updated={$machineResult['updated']}, errors={$machineResult['errors']}\n";
                 echo "[VipCashback] 总耗时: {$elapsed}s\n";
             }
 
-            unset($service, $result, $machineResult);
+            unset($service, $result);
             gc_collect_cycles();
 
         } catch (\Throwable $e) {
