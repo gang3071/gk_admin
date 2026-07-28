@@ -189,6 +189,8 @@ class PlayerController
                 'player_extend.present_in_amount',
                 'player_extend.third_recharge_amount',
                 'player_extend.third_withdraw_amount',
+                'player_extend.pending_cashback_amount',
+                'player_extend.total_cashback_amount',
                 'channel.name as channel_name',
                 'recommend_promoter.uuid as recommend_promoter_uuid',
                 'recommend_promoter.phone as recommend_promoter_phone',
@@ -574,6 +576,14 @@ class PlayerController
                 admin_trans('player_extend.fields.third_recharge_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('third_withdraw_amount',
                 admin_trans('player_extend.fields.third_withdraw_amount'))->ellipsis(true)->sortable()->align('center');
+            $grid->column('pending_cashback_amount',
+                admin_trans('player_extend.fields.pending_cashback_amount'))->display(function ($val) {
+                return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => '#fa8c16']) : '0.0000';
+            })->sortable()->align('center');
+            $grid->column('total_cashback_amount',
+                admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
+                return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => 'green']) : '0.0000';
+            })->sortable()->align('center');
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.uuid'));

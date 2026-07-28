@@ -132,6 +132,8 @@ class StorePlayerController
             'player_extend.recharge_amount',
             'player_extend.withdraw_amount',
             'player_extend.machine_put_point',
+            'player_extend.pending_cashback_amount',
+            'player_extend.total_cashback_amount',
             // VIP等级字段
             'vip_level.name as vip_level_name',
             'vip_level.sort as vip_level_sort',
@@ -533,6 +535,24 @@ class StorePlayerController
                 return Html::create(number_format(floatval($value), 2))->style([
                     'fontSize' => '13px',
                     'fontWeight' => '500'
+                ]);
+            })->width(110)->align('center');
+
+            $grid->column('pending_cashback_amount',
+                admin_trans('player_extend.fields.pending_cashback_amount'))->display(function ($val) {
+                return Html::create(number_format(floatval($val ?? 0), 4))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500',
+                    'color' => '#fa8c16'
+                ]);
+            })->width(110)->align('center');
+
+            $grid->column('total_cashback_amount',
+                admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
+                return Html::create(number_format(floatval($val ?? 0), 4))->style([
+                    'fontSize' => '13px',
+                    'fontWeight' => '500',
+                    'color' => 'green'
                 ]);
             })->width(110)->align('center');
 

@@ -198,6 +198,8 @@ class ChannelPlayerController
             'player_extend.withdraw_amount',
             'player_extend.machine_put_point',
             'player_extend.remark',
+            'player_extend.pending_cashback_amount',
+            'player_extend.total_cashback_amount',
             'channel.name as channel_name',
             'recommend_promoter.uuid as recommend_promoter_uuid',
             'recommend_promoter.phone as recommend_promoter_phone',
@@ -546,6 +548,14 @@ class ChannelPlayerController
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
+            $grid->column('pending_cashback_amount',
+                admin_trans('player_extend.fields.pending_cashback_amount'))->display(function ($val) {
+                return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => '#fa8c16']) : '0.0000';
+            })->sortable()->align('center');
+            $grid->column('total_cashback_amount',
+                admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
+                return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => 'green']) : '0.0000';
+            })->sortable()->align('center');
             $grid->column('remark', admin_trans('player_extend.fields.remark'))->display(function ($value) {
                 return ToolTip::create(Str::of($value)->limit(30, ' (...)'))->title($value);
             })->editable(
