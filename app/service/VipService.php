@@ -456,12 +456,33 @@ class VipService
 
     /**
      * 创建保级周期记录
+     *
+     * @param Player $player 玩家
+     * @param VipLevel $level VIP等级
+     * @param float|null $startBetAmount 周期开始时的打码量
      */
     private static function createRetainPeriod(
         Player $player,
         VipLevel $level,
         ?float $startBetAmount = null
-    ): PlayerVipPeriod {
+    ){
+        // 检查是否已存在相同 vip_level_id 的活跃记录，避免重复创建
+        $existingPeriod = PlayerVipPeriod::query()
+            ->where('player_id', $player->id)
+            ->where('vip_level_id', $level->id)
+            ->where('period_type', PlayerVipPeriod::PERIOD_TYPE_RETAIN)
+            ->where('status', PlayerVipPeriod::STATUS_ACTIVE)
+            ->first();
+
+        if ($existingPeriod) {
+            static::log('info', 'VIP retain period already exists, skip creation', [
+                'player_id' => $player->id,
+                'vip_level_id' => $level->id,
+                'existing_period_id' => $existingPeriod->id,
+            ]);
+            return $existingPeriod;
+        }
+
         $startBetAmount = $startBetAmount ?? $player->total_bet_amount;
         $periodBetAmount = max(0, $player->total_bet_amount - $startBetAmount);
 
