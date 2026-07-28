@@ -58,6 +58,24 @@ class System extends SystemAbstract
      */
     public function logoHref(): ?string
     {
+        // 根据当前用户类型返回不同的首页路径
+        $user = Admin::user();
+        if ($user) {
+            // 渠道管理员 -> /channel
+            if ($user->isChannel()) {
+                return '/channel';
+            }
+            // 代理管理员 -> /agent
+            if ($user->isAgent()) {
+                return '/agent';
+            }
+            // 店家管理员 -> /store
+            if ($user->isStore()) {
+                return '/store';
+            }
+        }
+
+        // 超级管理员或其他类型 -> /admin
         return plugin()->webman->config('route.prefix');
     }
     
