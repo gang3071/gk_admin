@@ -307,6 +307,7 @@ return [
         'player_recharge_record' => '首充獎勵',
         'damage_rebate' => '客損返傭',
         'reverse_water' => '电子游戏反水',
+        'reverse_water_pool' => '反水池反水領取',
         'gb_recharge' => '購寶錢包開分',
         'gb_withdrawal' => '購寶錢包洗分',
         'wallet_transfer_out' => '平臺轉出{name}',

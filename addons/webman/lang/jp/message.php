@@ -306,6 +306,7 @@ return [
         'player_recharge_record' => '初回ボーナス',
         'damage_rebate' => '客損返奉',
         'reverse_water' => '電子ゲームの反水',
+        'reverse_water_pool' => 'キャッシュバックプール受取',
         'gb_recharge' => '宝の財布のチャージ',
         'gb_withdrawal' => '宝の財布を買って現金を引き出す',
         'wallet_transfer_out' => 'プラットフォーム転出{name}',

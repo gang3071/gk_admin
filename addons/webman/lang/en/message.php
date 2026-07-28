@@ -307,6 +307,7 @@ return [
         'player_recharge_record' => 'First Charge Reward',
         'damage_rebate' => 'Customer Loss Rebate',
         'reverse_water' => 'Reverse water',
+        'reverse_water_pool' => 'Cashback Pool Claim',
         'gb_recharge' => 'Open Score with Goubao Wallet',
         'gb_withdrawal' => 'Wash Score from Goubao Wallet',
         'wallet_transfer_out' => 'Platform transfer out {name}',
