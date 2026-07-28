@@ -78,7 +78,8 @@ class MachineApiService
 
         return new Client([
             'base_uri' => self::$baseUrl,
-            'timeout' => 30,
+            'connect_timeout' => 1,  // 连接超时1秒
+            'timeout' => 2,  // 本地开发环境减少超时时间，避免页面卡死
             'headers' => [
                 'X-Admin-Id' => $adminId,
                 'Content-Type' => 'application/json',

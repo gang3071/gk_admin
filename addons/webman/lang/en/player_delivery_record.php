@@ -57,6 +57,7 @@ return [
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => 'Lottery Ticket Reward',
         PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => 'VIP Birthday Bonus',
         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIP Upgrade Bonus',
+        PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => 'Cashback Pool Claim',
     ],
     'detail' => 'details',
     'chart' => 'chart',

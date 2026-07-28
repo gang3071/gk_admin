@@ -1027,11 +1027,37 @@ class MachineController
      */
     public function infoList(): Card
     {
+        \support\Log::info('[infoList] === START ===', ['time' => date('Y-m-d H:i:s')]);
+        $infoListStart = microtime(true);
+
+        \support\Log::info('[infoList] calling slotInfoList...');
+        $slotStart = microtime(true);
+        $slotGrid = $this->slotInfoList();
+        \support\Log::info('[infoList] slotInfoList done', ['elapsed_ms' => round((microtime(true) - $slotStart) * 1000, 2)]);
+
+        \support\Log::info('[infoList] calling steelBallInfoList...');
+        $steelStart = microtime(true);
+        $steelGrid = $this->steelBallInfoList();
+        \support\Log::info('[infoList] steelBallInfoList done', ['elapsed_ms' => round((microtime(true) - $steelStart) * 1000, 2)]);
+
+        \support\Log::info('[infoList] calling fishInfoList...');
+        $fishStart = microtime(true);
+        $fishGrid = $this->fishInfoList();
+        \support\Log::info('[infoList] fishInfoList done', ['elapsed_ms' => round((microtime(true) - $fishStart) * 1000, 2)]);
+
+        \support\Log::info('[infoList] calling pokemonBallInfoList...');
+        $pokemonStart = microtime(true);
+        $pokemonGrid = $this->pokemonBallInfoList();
+        \support\Log::info('[infoList] pokemonBallInfoList done', ['elapsed_ms' => round((microtime(true) - $pokemonStart) * 1000, 2)]);
+
+        $totalElapsed = round((microtime(true) - $infoListStart) * 1000, 2);
+        \support\Log::info('[infoList] === END ===', ['total_elapsed_ms' => $totalElapsed]);
+
         return Card::create(Tabs::create()
-            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_SLOT), $this->slotInfoList())
-            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL), $this->steelBallInfoList())
-            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_FISH), $this->fishInfoList())
-            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL), $this->pokemonBallInfoList())
+            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_SLOT), $slotGrid)
+            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL), $steelGrid)
+            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_FISH), $fishGrid)
+            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL), $pokemonGrid)
             ->type('card')
             ->destroyInactiveTabPane()
         );
@@ -1043,7 +1069,10 @@ class MachineController
      */
     public function slotInfoList(): Grid
     {
-        return Grid::create(new $this->model(), function (Grid $grid) {
+        \support\Log::info('[slotInfoList] === START ===', ['time' => date('Y-m-d H:i:s')]);
+        $startTime = microtime(true);
+
+        return Grid::create(new $this->model(), function (Grid $grid) use ($startTime) {
             $grid->model()->with(['gamingPlayer.channel', 'machine_media'])->where('type',
                 GameType::TYPE_SLOT)->where('gaming_user_id', '!=', 0)->orderBy('sort', 'asc');
             $requestFilter = Request::input('ex_admin_filter', []);
@@ -1303,6 +1332,9 @@ class MachineController
                     $dropdown
                 );
             });
+
+            $elapsed = round((microtime(true) - $startTime) * 1000, 2);
+            \support\Log::info('[slotInfoList] === END ===', ['elapsed_ms' => $elapsed]);
         });
     }
 
@@ -3040,8 +3072,23 @@ class MachineController
      */
     private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
     {
+        // 使用静态缓存避免同页面重复请求同一机台状态
+        static $statusCache = [];
+
+        $cacheKey = $machine->id . '_' . $lang;
+        if (isset($statusCache[$cacheKey])) {
+            \support\Log::info('[getMachineStatusViaApi] CACHE HIT', ['machine_id' => $machine->id]);
+            return $statusCache[$cacheKey];
+        }
+
+        \support\Log::info('[getMachineStatusViaApi] API CALL START', ['machine_id' => $machine->id, 'lang' => $lang]);
+        $apiStart = microtime(true);
+
         try {
             $result = MachineApiService::getMachineStatus($machine->id, $lang, Admin::id() ?? 0);
+
+            $apiElapsed = round((microtime(true) - $apiStart) * 1000, 2);
+            \support\Log::info('[getMachineStatusViaApi] API CALL END', ['machine_id' => $machine->id, 'elapsed_ms' => $apiElapsed]);
 
             // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
             $status = new \stdClass();
@@ -3062,6 +3109,7 @@ class MachineController
                 }
             }
 
+            $statusCache[$cacheKey] = $status;
             return $status;
         } catch (Exception $e) {
             \support\Log::error('Get machine status via API failed', [
@@ -3069,7 +3117,9 @@ class MachineController
                 'error' => $e->getMessage()
             ]);
             // 返回一个空对象，避免后续代码报错
-            return new \stdClass();
+            $emptyStatus = new \stdClass();
+            $statusCache[$cacheKey] = $emptyStatus;
+            return $emptyStatus;
         }
     }
 
