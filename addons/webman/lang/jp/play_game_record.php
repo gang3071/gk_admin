@@ -20,6 +20,9 @@ return [
         'platform_action_at' => '決済時間（ゲームプラットフォーム）',
         'action_at' => '決済時間',
         'create_at' => '作成時間',
+        'vip_level_id' => 'VIPレベル',
+        'cashback_ratio' => 'キャッシュバック率',
+        'cashback_amount' => 'キャッシュバック額',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分潤',

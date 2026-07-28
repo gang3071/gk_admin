@@ -34,6 +34,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int type 订单类型 1-下注 2-打赏 3-预扣 4-退款
  * @property int national_promoter_action 全民代理反润结算,0-未结算，1-已结算
  * @property float national_damage_ratio 全民代理返佣比例
+ * @property int vip_level_id VIP等级ID
+ * @property float cashback_ratio 反水比例
+ * @property float cashback_amount 反水金额
  *
  * @property Channel channel 渠道
  * @property Player player 玩家

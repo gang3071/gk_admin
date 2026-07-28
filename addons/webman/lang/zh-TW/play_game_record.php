@@ -20,6 +20,9 @@ return [
         'platform_action_at' => '結算時間（遊戲平臺）',
         'action_at' => '結算時間',
         'create_at' => '創建時間',
+        'vip_level_id' => 'VIP等級',
+        'cashback_ratio' => '反水比例',
+        'cashback_amount' => '反水金額',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分潤',

@@ -20,6 +20,9 @@ return [
         'platform_action_at' => 'settlement time (game platform)',
         'action_at' => 'settlement time',
         'create_at' => 'creation time',
+        'vip_level_id' => 'VIP Level',
+        'cashback_ratio' => 'Cashback Ratio',
+        'cashback_amount' => 'Cashback Amount',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => 'Undistributed',
