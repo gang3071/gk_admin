@@ -57,6 +57,7 @@ return [
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '抽選券当選報酬',
         PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => 'VIP誕生日ボーナス',
         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIPアップグレードボーナス',
+        PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => 'キャッシュバックプール受取',
     ],
     'detail' => '詳細',
     'chart' => 'チャート',

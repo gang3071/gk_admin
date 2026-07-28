@@ -57,6 +57,7 @@ return [
         PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => '摸獎券中獎獎勵',
         PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => 'VIP生日禮金',
         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIP升級禮金',
+        PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => '反水池反水領取',
     ],
     'detail' => '詳情',
     'chart' => '圖表',
