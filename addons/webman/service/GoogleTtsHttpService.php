@@ -22,6 +22,11 @@ class GoogleTtsHttpService
     private const API_ENDPOINT = 'https://texttospeech.googleapis.com/v1/text:synthesize';
 
     /**
+     * Gemini TTS API 端点（预览版）
+     */
+    private const GEMINI_TTS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent';
+
+    /**
      * 语音文件存储目录（相对于 public）
      */
     private const VOICE_DIR = 'voice/device';
@@ -31,6 +36,12 @@ class GoogleTtsHttpService
      */
     private const TW_LANGUAGE_CODE = 'cmn-TW';
     private const TW_VOICE_NAME = 'cmn-TW-Wavenet-A';
+
+    /**
+     * Gemini TTS 语音参数
+     */
+    private const GEMINI_VOICE = 'Achernar'; // 可选：Achernar, Betelgeuse 等
+    private const GEMINI_LANGUAGE = 'zh-TW'; // zh-TW(繁体) 或 zh-CN(简体)
 
     /**
      * 生成设备呼叫服务语音文件
@@ -80,10 +91,92 @@ class GoogleTtsHttpService
      */
     private static function synthesizeSpeech(string $text, int $deviceId): array
     {
-        // 1. 获取 API Key（从凭证文件中提取）
+        // 1. 获取 API Key
         $apiKey = self::getApiKey();
 
-        // 2. 构建请求体
+        // 2. 检查是否启用 Gemini TTS（优先使用，音质更好）
+        $useGemini = config('google.tts.use_gemini', true);
+
+        if ($useGemini) {
+            return self::synthesizeSpeechWithGemini($text, $deviceId, $apiKey);
+        } else {
+            return self::synthesizeSpeechWithWavenet($text, $deviceId, $apiKey);
+        }
+    }
+
+    /**
+     * 使用 Gemini TTS 合成语音（推荐）
+     *
+     * @param string $text 要合成的文本
+     * @param int $deviceId 设备ID
+     * @param string $apiKey API Key
+     * @return array
+     * @throws \Exception
+     */
+    private static function synthesizeSpeechWithGemini(string $text, int $deviceId, string $apiKey): array
+    {
+        // 1. 获取风格指令（可配置）
+        $styleInstructions = config(
+            'google.tts.gemini_style',
+            'Read aloud in a clear, professional customer service voice, warm and attentive, as if a waitress is politely announcing a customer request.'
+        );
+
+        // 2. 构建 Gemini TTS 请求体
+        $requestBody = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $text]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'voice' => config('google.tts.gemini_voice', self::GEMINI_VOICE),
+                'language' => config('google.tts.gemini_language', self::GEMINI_LANGUAGE),
+                'styleInstructions' => $styleInstructions
+            ]
+        ];
+
+        // 3. 调用 Gemini TTS API
+        $response = Http::timeout(30)
+            ->withHeaders([
+                'Content-Type' => 'application/json',
+                'x-goog-api-key' => $apiKey
+            ])
+            ->post(self::GEMINI_TTS_ENDPOINT, $requestBody);
+
+        if (!$response->successful()) {
+            $error = $response->json('error.message', 'Unknown error');
+            throw new \Exception("Gemini TTS API 错误: {$error}");
+        }
+
+        // 4. 获取音频内容（Base64 编码）
+        $result = $response->json();
+        $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
+
+        if (empty($audioContentBase64)) {
+            throw new \Exception('Gemini TTS API 返回空音频内容');
+        }
+
+        // 5. 解码音频内容
+        $audioContent = base64_decode($audioContentBase64);
+
+        // 6. 保存音频文件
+        return self::saveVoiceFile($audioContent, $deviceId);
+    }
+
+    /**
+     * 使用传统 Wavenet TTS 合成语音（备用方案）
+     *
+     * @param string $text 要合成的文本
+     * @param int $deviceId 设备ID
+     * @param string $apiKey API Key
+     * @return array
+     * @throws \Exception
+     */
+    private static function synthesizeSpeechWithWavenet(string $text, int $deviceId, string $apiKey): array
+    {
+        // 构建请求体
         $requestBody = [
             'input' => [
                 'text' => $text
@@ -101,7 +194,7 @@ class GoogleTtsHttpService
             ]
         ];
 
-        // 3. 调用 Google TTS API
+        // 调用 Google TTS API
         $response = Http::timeout(30)
             ->post(self::API_ENDPOINT . '?key=' . $apiKey, $requestBody);
 
@@ -110,16 +203,16 @@ class GoogleTtsHttpService
             throw new \Exception("Google TTS API 错误: {$error}");
         }
 
-        // 4. 获取音频内容（Base64 编码）
+        // 获取音频内容（Base64 编码）
         $audioContentBase64 = $response->json('audioContent');
         if (empty($audioContentBase64)) {
             throw new \Exception('Google TTS API 返回空音频内容');
         }
 
-        // 5. 解码音频内容
+        // 解码音频内容
         $audioContent = base64_decode($audioContentBase64);
 
-        // 6. 保存音频文件
+        // 保存音频文件
         return self::saveVoiceFile($audioContent, $deviceId);
     }
 
