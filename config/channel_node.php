@@ -859,6 +859,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/getStoreOptions',
         'title' => '获取店家选项',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelDeviceController\regenerateVoice',
+        'pid' => 'addons\webman\controller\ChannelDeviceController\index',
+        'action' => 'regenerateVoice',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDeviceController/regenerateVoice',
+        'title' => '重新生成语音',
+    ],
 
     //玩家管理
     [
