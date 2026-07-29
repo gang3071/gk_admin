@@ -856,6 +856,15 @@ return [
         'title' => '获取店家选项',
     ],
     [
+        'id' => 'addons\webman\controller\AdminDeviceController\regenerateVoice',
+        'pid' => 'addons\webman\controller\AdminDeviceController\index',
+        'action' => 'regenerateVoice',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminDeviceController/regenerateVoice',
+        'title' => '重新生成语音',
+    ],
+    [
         'id' => 'ex-admin\addons-webman-controller-PlayerController\playerGameWallet',
         'pid' => 'addons\webman\controller\PlayerController\index',
         'action' => 'playerGameWallet',

@@ -19,6 +19,7 @@ return [
         'device_no' => '設備號',
         'device_no_help' => '安卓設備的唯一標識符（如：Android ID、IMEI等）',
         'device_model' => '設備型號',
+        'voice_url' => '語音播報',
         'channel_name' => '所屬渠道',
         'department_name' => '所屬部門',
         'agent_name' => '所屬代理',
@@ -63,9 +64,21 @@ return [
     'batch_disable_failed' => '批量關閉設備失敗',
     'no_device_selected' => '請先選擇要關閉的設備',
 
+    // 語音播報
+    'voice' => [
+        'not_generated' => '未生成',
+        'generated' => '語音已生成',
+        'generate_failed' => '語音生成失敗',
+        'generate_error' => '語音生成異常',
+        'regenerate' => '重新生成語音',
+        'regenerate_confirm' => '確定要重新生成語音播報文件嗎？',
+        'regenerate_success' => '語音重新生成成功',
+    ],
+
     // 消息提示
     'device_no_exists' => '設備號已存在',
     'device_no_help' => '設備的唯一編號，不可重複',
+    'device_not_found' => '設備不存在',
     'invalid_ip_address' => 'IP地址格式不正確',
     'ip_already_exists' => 'IP地址已存在',
     'delete_confirm' => '確定要刪除該設備嗎？刪除後將同時刪除所有綁定的IP地址。',

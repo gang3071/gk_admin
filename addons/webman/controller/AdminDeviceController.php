@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\model\AdminUser;
 use addons\webman\model\Channel;
 use addons\webman\model\AdminDevice;
+use addons\webman\service\GoogleTtsHttpService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -13,6 +14,7 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
 use support\Db;
@@ -49,6 +51,19 @@ class AdminDeviceController
                 ->align('center')
                 ->copyable();
 
+            $grid->column('voice_url', admin_trans('device.fields.voice_url'))
+                ->display(function ($value, $data) {
+                    if (empty($value)) {
+                        return Tag::create(admin_trans('device.voice.not_generated'))->color('default');
+                    }
+                    // 使用 Html::markdown 渲染 HTML（不会被转义）
+                    // 设置音频播放器固定宽度，防止撑开列
+                    $audioHtml = '<audio controls style="width:180px;height:32px;"><source src="' . $value . '" type="audio/mpeg">您的浏览器不支持音频播放</audio>';
+                    return Html::markdown($audioHtml);
+                })
+                ->width(200)
+                ->align('center');
+
             $grid->column('channel.name', admin_trans('device.fields.channel_name'))
                 ->display(function ($value, $data) {
                     return $value ?: '-';
@@ -75,6 +90,16 @@ class AdminDeviceController
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDetail();
                 $actions->edit()->modal($this->form())->width('60%');
+
+                // 重新生成语音按钮
+                if (!empty($data['device_name'])) {
+                    $actions->prepend(
+                        Button::create(admin_trans('device.voice.regenerate'))
+                            ->icon(Icon::create('SoundOutlined'))
+                            ->confirm(admin_trans('device.voice.regenerate_confirm'), [$this, 'regenerateVoice'], ['id' => $data['id']])
+                            ->gridRefresh()
+                    );
+                }
             });
 
             // 筛选
@@ -220,7 +245,48 @@ class AdminDeviceController
                 }
             });
 
-            $form->saved(function () {
+            $form->saved(function (Form $form) {
+                $id = $form->input('id');
+                $deviceName = $form->input('device_name');
+
+                // 检查是否需要生成语音
+                $needGenerateVoice = false;
+
+                if (!empty($deviceName)) {
+                    if ($form->isEdit()) {
+                        // 编辑设备：检查设备名称是否有变化
+                        $oldDevice = AdminDevice::find($id);
+                        if ($oldDevice && $oldDevice->device_name !== $deviceName) {
+                            $needGenerateVoice = true;
+                        }
+                    } else {
+                        // 新增设备：有设备名称就生成
+                        $needGenerateVoice = true;
+                    }
+                }
+
+                // 自动生成语音播报文件
+                if ($needGenerateVoice && !empty($id)) {
+                    try {
+                        $result = GoogleTtsHttpService::generateDeviceCallServiceVoice($deviceName, $id);
+
+                        if ($result['success']) {
+                            // 更新语音URL到数据库
+                            AdminDevice::where('id', $id)->update([
+                                'voice_url' => $result['url']
+                            ]);
+
+                            return message_success(admin_trans('device.save_success') . '，' . admin_trans('device.voice.generated'));
+                        } else {
+                            // 语音生成失败，但设备保存成功
+                            return message_warning(admin_trans('device.save_success') . '，' . admin_trans('device.voice.generate_failed') . '：' . $result['error']);
+                        }
+                    } catch (\Exception $e) {
+                        // 异常处理，不影响设备保存
+                        return message_warning(admin_trans('device.save_success') . '，' . admin_trans('device.voice.generate_error') . '：' . $e->getMessage());
+                    }
+                }
+
                 return message_success(admin_trans('device.save_success'));
             });
         });
@@ -300,5 +366,39 @@ class AdminDeviceController
         }
 
         return Response::success([$optionsField => $options]);
+    }
+
+    /**
+     * 重新生成语音文件
+     * @auth true
+     */
+    public function regenerateVoice(): Msg
+    {
+        $id = Request::input('id');
+
+        if (empty($id)) {
+            return message_error(admin_trans('device.device_not_found'));
+        }
+
+        $device = AdminDevice::find($id);
+        if (!$device) {
+            return message_error(admin_trans('device.device_not_found'));
+        }
+
+        try {
+            $result = GoogleTtsHttpService::generateDeviceCallServiceVoice($device->device_name, $device->id);
+
+            if ($result['success']) {
+                // 更新语音URL
+                $device->voice_url = $result['url'];
+                $device->save();
+
+                return message_success(admin_trans('device.voice.regenerate_success'));
+            } else {
+                return message_error(admin_trans('device.voice.generate_failed') . '：' . $result['error']);
+            }
+        } catch (\Exception $e) {
+            return message_error(admin_trans('device.voice.generate_error') . '：' . $e->getMessage());
+        }
     }
 }

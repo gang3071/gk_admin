@@ -19,6 +19,7 @@ return [
         'device_no' => 'デバイス番号',
         'device_no_help' => 'Androidデバイスの一意識別子（例：Android ID、IMEIなど）',
         'device_model' => 'デバイスモデル',
+        'voice_url' => '音声アナウンス',
         'channel_name' => '所属チャネル',
         'department_name' => '所属部門',
         'agent_name' => '所属エージェント',
@@ -63,9 +64,21 @@ return [
     'batch_disable_failed' => 'デバイスの一括無効化に失敗しました',
     'no_device_selected' => '無効化するデバイスを選択してください',
 
+    // 音声アナウンス
+    'voice' => [
+        'not_generated' => '未生成',
+        'generated' => '音声生成済み',
+        'generate_failed' => '音声生成失敗',
+        'generate_error' => '音声生成エラー',
+        'regenerate' => '音声を再生成',
+        'regenerate_confirm' => '音声アナウンスファイルを再生成してもよろしいですか？',
+        'regenerate_success' => '音声の再生成に成功しました',
+    ],
+
     // メッセージ
     'device_no_exists' => 'デバイス番号が既に存在します',
     'device_no_help' => '一意のデバイス番号、重複不可',
+    'device_not_found' => 'デバイスが見つかりません',
     'invalid_ip_address' => 'IPアドレスの形式が正しくありません',
     'ip_already_exists' => 'IPアドレスが既に存在します',
     'delete_confirm' => 'このデバイスを削除してもよろしいですか？削除すると、バインドされたすべてのIPアドレスも削除されます。',

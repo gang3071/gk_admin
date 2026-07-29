@@ -16,6 +16,7 @@ return [
         Notice::TYPE_MACHINE_CRASH => '设备爆机通知',
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP等级升级',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP等级降级',
+        Notice::TYPE_SERVICE_CALL => '设备服务铃呼叫',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新的开分订单待审核, 玩家: {player_name}, 开分游戏点: {point} 开分金额: {money}!',
@@ -30,5 +31,6 @@ return [
         Notice::TYPE_MACHINE_CRASH => '设备已爆机：玩家 {player_name} (UID:{player_uuid}) 余额达到 {current_amount}，超过爆机金额 {crash_amount}，请联系管理员处理！',
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => '恭喜！您的VIP等级已从 {old_level} 升级至 {new_level}',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => '很遗憾，您的VIP等级已从 {old_level} 降级至 {new_level}',
+        Notice::TYPE_SERVICE_CALL => '设备 {device_name} 呼叫服务',
     ],
 ];
