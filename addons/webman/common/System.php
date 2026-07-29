@@ -99,6 +99,9 @@ class System extends SystemAbstract
             $socketType = 'channel';
         }
 
+        // 店家和代理后台需要实时接收服务铃消息，始终启用机台推送
+        $isStoreOrAgent = $user->isStore() || $user->isAgent();
+
         return [
             admin_view(plugin()->webman->getPath() . '/views/socket.vue')->attrs([
                 'id' => Admin::id(),
@@ -109,11 +112,9 @@ class System extends SystemAbstract
                 'ws' => $ws,
                 'title' => admin_trans('admin.system_messages'),
                 'examine_withdraw' => Admin::check(ChannelWithdrawRecordController::class, 'reject', '')
-                        || Admin::check(ChannelWithdrawRecordController::class, 'pass', '')
-                        || Admin::check(\addons\webman\controller\StorePlayerWithdrawRecordController::class, 'index', ''),
+                        || Admin::check(ChannelWithdrawRecordController::class, 'pass', ''),
                 'examine_recharge' => Admin::check(ChannelRechargeRecordController::class, 'reject', '')
-                        || Admin::check(ChannelRechargeRecordController::class, 'pass', '')
-                        || Admin::check(\addons\webman\controller\StorePlayerRechargeRecordController::class, 'index', ''),
+                        || Admin::check(ChannelRechargeRecordController::class, 'pass', ''),
                 'examine_activity' => Admin::check(PlayerActivityRecordController::class, 'reject', '')
                         || Admin::check(PlayerActivityRecordController::class, 'pass', '')
                         || Admin::check(PlayerActivityRecordController::class, 'bathPass', '')
@@ -129,11 +130,10 @@ class System extends SystemAbstract
                         || Admin::check(ChannelPlayerLotteryRecordController::class, 'reject', '')
                         || Admin::check(ChannelPlayerLotteryRecordController::class, 'pass', '')
                         || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathPass', '')
-                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', '')
-                        || Admin::check(\addons\webman\controller\StoreLotteryController::class, 'index', ''),
-                'machine' => Admin::check(MachineController::class, 'form', 'post')
-                        || Admin::check(MachineController::class, 'form', 'put')
-                        || Admin::check(\addons\webman\controller\StoreMachineController::class, 'index', ''),
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', ''),
+                'machine' => $isStoreOrAgent  // 店家和代理始终启用（用于接收服务铃消息）
+                        || Admin::check(MachineController::class, 'form', 'post')
+                        || Admin::check(MachineController::class, 'form', 'put'),
             ])
         ];
     }
