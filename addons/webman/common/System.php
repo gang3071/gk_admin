@@ -256,6 +256,12 @@ class System extends SystemAbstract
             $typeArr[] = Notice::TYPE_MACHINE_LOCK;
             $typeArr[] = Notice::TYPE_MACHINE_CRASH;
         }
+
+        // 店家后台：显示服务铃消息
+        if (Admin::user()->isStore()) {
+            $typeArr[] = Notice::TYPE_SERVICE_CALL;
+        }
+
         $list = [];
         if (Admin::user()->type == AdminDepartment::TYPE_DEPARTMENT && !empty($typeArr)) {
             $list = Notice::where('receiver', Notice::RECEIVER_ADMIN)->whereIN('type', $typeArr)
@@ -265,6 +271,14 @@ class System extends SystemAbstract
         }
         if (Admin::user()->type == AdminDepartment::TYPE_CHANNEL && !empty($typeArr)) {
             $list = Notice::whereIN('type', $typeArr)
+                ->latest()
+                ->forPage($page, $size)
+                ->get();
+        }
+        // 店家后台：查询当前店家管理员的消息
+        if (Admin::user()->isStore() && !empty($typeArr)) {
+            $list = Notice::where('admin_id', Admin::id())
+                ->whereIN('type', $typeArr)
                 ->latest()
                 ->forPage($page, $size)
                 ->get();
@@ -413,6 +427,25 @@ class System extends SystemAbstract
                         'machine_status' => $hasLock,
                         'url' => admin_url([MachineController::class, 'infoList'])
                     ];
+                    break;
+                case Notice::TYPE_SERVICE_CALL:
+                    /** @var \addons\webman\model\AdminDevice $device */
+                    $device = \addons\webman\model\AdminDevice::find($item->source_id);
+                    if ($device) {
+                        $content = admin_trans('notice.content.' . $item->type, '', [
+                            '{device_name}' => $device->device_name,
+                        ]);
+                        $data[] = [
+                            'id' => $item->id,
+                            'source_id' => $item->source_id,
+                            'title' => $title,
+                            'content' => $content,
+                            'type' => $item->type,
+                            'created_at' => $createTime,
+                            'status' => true, // 服务铃消息始终显示为活跃
+                            'url' => '' // 服务铃消息不需要跳转
+                        ];
+                    }
                     break;
                 case Notice::TYPE_MACHINE_CRASH:
                     // 爆机通知直接使用保存的 content，因为已经包含了所有必要信息
