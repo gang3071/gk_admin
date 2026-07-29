@@ -86,10 +86,23 @@ class System extends SystemAbstract
     public function navbarRight(): array
     {
         $ws = env('WS_URL', '');
+
+        // 根据用户类型确定 WebSocket 频道类型
+        $user = Admin::user();
+        if ($user->isStore()) {
+            $socketType = 'store';
+        } elseif ($user->isAgent()) {
+            $socketType = 'agent';
+        } elseif ($user->type == 1) {
+            $socketType = 'admin';
+        } else {
+            $socketType = 'channel';
+        }
+
         return [
             admin_view(plugin()->webman->getPath() . '/views/socket.vue')->attrs([
                 'id' => Admin::id(),
-                'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
+                'type' => $socketType,
                 'department_id' => Admin::user()->department_id,
                 'count' => 0,
                 'lang' => Container::getInstance()->translator->getLocale(),
