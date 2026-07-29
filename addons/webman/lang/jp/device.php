@@ -2,11 +2,11 @@
 
 return [
     // ページタイトル
-    'title' => 'プレイヤーリスト',
-    'create' => 'プレイヤー追加',
-    'add_device' => 'プレイヤー追加',
-    'edit_device' => 'プレイヤー編集',
-    'edit' => 'プレイヤー編集',
+    'title' => 'デバイスリスト',
+    'create' => 'デバイス追加',
+    'add_device' => 'デバイス追加',
+    'edit_device' => 'デバイス編集',
+    'edit' => 'デバイス編集',
     'ip_list' => 'IPバインドリスト',
     'ip_management' => 'IP管理',
     'add_ip' => 'IP追加',

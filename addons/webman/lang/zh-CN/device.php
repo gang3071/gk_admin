@@ -2,11 +2,11 @@
 
 return [
     // 页面标题
-    'title' => '玩家列表',
-    'create' => '新增玩家',
-    'add_device' => '添加玩家',
-    'edit_device' => '编辑玩家',
-    'edit' => '编辑玩家',
+    'title' => '设备列表',
+    'create' => '新增设备',
+    'add_device' => '添加设备',
+    'edit_device' => '编辑设备',
+    'edit' => '编辑设备',
     'ip_list' => 'IP绑定列表',
     'ip_management' => 'IP管理',
     'add_ip' => '添加IP',

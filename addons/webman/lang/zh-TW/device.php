@@ -2,11 +2,11 @@
 
 return [
     // 頁面標題
-    'title' => '玩家列表',
-    'create' => '新增玩家',
-    'add_device' => '添加玩家',
-    'edit_device' => '編輯玩家',
-    'edit' => '編輯玩家',
+    'title' => '設備列表',
+    'create' => '新增設備',
+    'add_device' => '添加設備',
+    'edit_device' => '編輯設備',
+    'edit' => '編輯設備',
     'ip_list' => 'IP綁定列表',
     'ip_management' => 'IP管理',
     'add_ip' => '添加IP',

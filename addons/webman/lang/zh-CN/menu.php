@@ -83,7 +83,7 @@ return [
         'channel_coin_merchant_recharge_records' => '币商开分记录',
         'channel_coin_merchant_transaction_records' => '币商交易记录',
         //设备管理
-        'channel_device_manage' => '玩家管理',
+        'channel_device_manage' => '设备管理',
         'channel_device_list' => '设备列表',
         //玩家管理
         'channel_player_manage' => '玩家管理',
@@ -271,7 +271,7 @@ return [
         'store_machine_manage' => '店机管理',
         'lottery_receive' => '彩金领取',
         'financial_management' => '财务管理',
-        'device_manage' => '玩家管理',
+        'device_manage' => '设备管理',
         'device_list' => '设备列表',
         'shift_handover_record' => '交班记录',
         'limit_management' => '限红管理',
