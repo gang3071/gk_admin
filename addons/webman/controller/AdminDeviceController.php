@@ -14,6 +14,7 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
 use support\Db;
@@ -371,7 +372,7 @@ class AdminDeviceController
      * 重新生成语音文件
      * @auth true
      */
-    public function regenerateVoice(): Response
+    public function regenerateVoice(): Msg
     {
         $id = Request::input('id');
 
