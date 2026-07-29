@@ -89,14 +89,16 @@ class AdminDeviceController
                 $actions->edit()->modal($this->form())->width('60%');
 
                 // 重新生成语音按钮
-                $actions->prepend(
-                    Button::create(admin_trans('device.voice.regenerate'))
-                        ->icon(Icon::create('SoundOutlined'))
-                        ->type('link')
-                        ->size('small')
-                        ->handler('request', admin_url(['addons-webman-controller-AdminDeviceController', 'regenerateVoice']), ['id' => $data['id']])
-                        ->confirm(admin_trans('device.voice.regenerate_confirm'))
-                );
+                if (!empty($data['device_name'])) {
+                    $actions->prepend(
+                        Button::create(admin_trans('device.voice.regenerate'))
+                            ->icon(Icon::create('SoundOutlined'))
+                            ->type('link')
+                            ->size('small')
+                            ->confirm(admin_trans('device.voice.regenerate_confirm'), [$this, 'regenerateVoice'], ['id' => $data['id']])
+                            ->gridRefresh()
+                    );
+                }
             });
 
             // 筛选
