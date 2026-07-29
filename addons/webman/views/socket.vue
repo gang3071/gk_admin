@@ -86,6 +86,8 @@ const messages = {
       online_machine_info: '机台信息',
       lock: '锁定',
       open: '开启',
+      service_bell_call: '服务铃呼叫',
+      device_call_service: '呼叫服务',
     }
   },
   //英文
@@ -105,6 +107,8 @@ const messages = {
       online_machine_info: 'Machine information',
       lock: 'Lock',
       open: 'Open',
+      service_bell_call: 'Service Bell Call',
+      device_call_service: 'Call Service',
     }
   },
   jp: {
@@ -123,6 +127,8 @@ const messages = {
       online_machine_info: 'きょくだいじょうほう',
       lock: 'Lock',
       open: 'Open',
+      service_bell_call: 'サービスベル呼び出し',
+      device_call_service: 'サービスを呼び出す',
     }
   },
   // 繁体中文
@@ -142,6 +148,8 @@ const messages = {
       online_machine_info: '機台信息',
       lock: '鎖定',
       open: '開啟',
+      service_bell_call: '服務鈴呼叫',
+      device_call_service: '呼叫服務',
     }
   }
 }
@@ -290,10 +298,12 @@ export default {
      * 处理服务铃消息
      */
     handleServiceCall(content) {
+      const lang = this.lang;
+
       // 显示桌面通知
       this.$notification.warning({
-        message: '服务铃呼叫',
-        description: `${content.device_name}呼叫服务`,
+        message: messages[lang].message.service_bell_call,
+        description: `${content.device_name}${messages[lang].message.device_call_service}`,
         duration: 5,
       });
 
