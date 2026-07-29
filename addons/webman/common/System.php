@@ -278,6 +278,7 @@ class System extends SystemAbstract
         // 店家后台：查询当前店家管理员的消息
         if (Admin::user()->isStore() && !empty($typeArr)) {
             $list = Notice::where('admin_id', Admin::id())
+                ->where('department_id', Admin::user()->department_id)  // 二次校验：防止串消息
                 ->whereIN('type', $typeArr)
                 ->latest()
                 ->forPage($page, $size)
