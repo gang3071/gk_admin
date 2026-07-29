@@ -94,8 +94,6 @@ class AdminDeviceController
                     $actions->prepend(
                         Button::create(admin_trans('device.voice.regenerate'))
                             ->icon(Icon::create('SoundOutlined'))
-                            ->type('link')
-                            ->size('small')
                             ->confirm(admin_trans('device.voice.regenerate_confirm'), [$this, 'regenerateVoice'], ['id' => $data['id']])
                             ->gridRefresh()
                     );
