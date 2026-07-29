@@ -23,6 +23,8 @@ class GoogleTtsHttpService
 
     /**
      * Gemini TTS API 端点（预览版）
+     *
+     * 使用非流式 generateContent 端点获取完整音频
      */
     private const GEMINI_TTS_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-tts-preview:generateContent';
 
@@ -160,14 +162,36 @@ class GoogleTtsHttpService
 
         // 5. 获取音频内容（Base64 编码）
         $result = $response->json();
+
+        // 调试：记录完整响应
+        Log::info('Gemini TTS API 响应', [
+            'device_id' => $deviceId,
+            'response_keys' => array_keys($result),
+            'has_candidates' => isset($result['candidates']),
+            'response_sample' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+        ]);
+
         $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
 
         if (empty($audioContentBase64)) {
-            throw new \Exception('Gemini TTS API 返回空音频内容');
+            // 尝试其他可能的路径
+            $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+            if (empty($audioContentBase64)) {
+                throw new \Exception('Gemini TTS API 返回空音频内容。响应结构：' . json_encode($result));
+            }
         }
 
         // 6. 解码音频内容
         $audioContent = base64_decode($audioContentBase64);
+
+        // 调试：检查音频大小
+        Log::info('Gemini TTS 音频解码', [
+            'device_id' => $deviceId,
+            'base64_length' => strlen($audioContentBase64),
+            'audio_size' => strlen($audioContent),
+            'audio_size_kb' => round(strlen($audioContent) / 1024, 2)
+        ]);
 
         // 7. 保存音频文件
         return self::saveVoiceFile($audioContent, $deviceId);
