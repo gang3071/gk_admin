@@ -40,8 +40,7 @@ class GoogleTtsHttpService
     /**
      * Gemini TTS 语音参数
      */
-    private const GEMINI_VOICE = 'Achernar'; // 可选：Achernar, Betelgeuse 等
-    private const GEMINI_LANGUAGE = 'zh-TW'; // zh-TW(繁体) 或 zh-CN(简体)
+    private const GEMINI_VOICE = 'Kore'; // 可选：Kore, Puck, Charon, Achernar 等
 
     /**
      * 生成设备呼叫服务语音文件
@@ -121,23 +120,31 @@ class GoogleTtsHttpService
             'Read aloud in a clear, professional customer service voice, warm and attentive, as if a waitress is politely announcing a customer request.'
         );
 
-        // 2. 构建 Gemini TTS 请求体
+        // 2. 获取语音配置
+        $voiceName = config('google.tts.gemini_voice', self::GEMINI_VOICE);
+
+        // 3. 构建 Gemini TTS 请求体（正确格式）
         $requestBody = [
             'contents' => [
                 [
                     'parts' => [
-                        ['text' => $text]
+                        ['text' => $styleInstructions . ' ' . $text]  // 风格指令前置
                     ]
                 ]
             ],
             'generationConfig' => [
-                'voice' => config('google.tts.gemini_voice', self::GEMINI_VOICE),
-                'language' => config('google.tts.gemini_language', self::GEMINI_LANGUAGE),
-                'styleInstructions' => $styleInstructions
+                'responseModalities' => ['AUDIO'],
+                'speechConfig' => [
+                    'voiceConfig' => [
+                        'prebuiltVoiceConfig' => [
+                            'voiceName' => $voiceName
+                        ]
+                    ]
+                ]
             ]
         ];
 
-        // 3. 调用 Gemini TTS API
+        // 4. 调用 Gemini TTS API
         $response = Http::timeout(30)
             ->withHeaders([
                 'Content-Type' => 'application/json',
@@ -150,7 +157,7 @@ class GoogleTtsHttpService
             throw new \Exception("Gemini TTS API 错误: {$error}");
         }
 
-        // 4. 获取音频内容（Base64 编码）
+        // 5. 获取音频内容（Base64 编码）
         $result = $response->json();
         $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
 
@@ -158,10 +165,10 @@ class GoogleTtsHttpService
             throw new \Exception('Gemini TTS API 返回空音频内容');
         }
 
-        // 5. 解码音频内容
+        // 6. 解码音频内容
         $audioContent = base64_decode($audioContentBase64);
 
-        // 6. 保存音频文件
+        // 7. 保存音频文件
         return self::saveVoiceFile($audioContent, $deviceId);
     }
 

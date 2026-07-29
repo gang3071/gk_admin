@@ -34,8 +34,7 @@ return [
         /**
          * Gemini TTS 配置（新版，推荐）
          */
-        'gemini_voice' => env('GOOGLE_TTS_GEMINI_VOICE', 'Achernar'), // 可选：Achernar, Betelgeuse
-        'gemini_language' => env('GOOGLE_TTS_GEMINI_LANGUAGE', 'zh-TW'), // zh-TW(繁体) 或 zh-CN(简体)
+        'gemini_voice' => env('GOOGLE_TTS_GEMINI_VOICE', 'Kore'), // 可选：Kore, Puck, Charon, Achernar 等
 
         /**
          * Gemini TTS 风格指令（自然语言描述）
