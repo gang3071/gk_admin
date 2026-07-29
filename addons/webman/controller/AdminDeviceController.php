@@ -7,7 +7,6 @@ use addons\webman\model\Channel;
 use addons\webman\model\AdminDevice;
 use addons\webman\service\GoogleTtsHttpService;
 use ExAdmin\ui\component\common\Button;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -55,9 +54,8 @@ class AdminDeviceController
                     if (empty($value)) {
                         return Tag::create(admin_trans('device.voice.not_generated'))->color('default');
                     }
-                    return Html::div()->content([
-                        Html::create('<audio controls style="height:32px;"><source src="' . $value . '" type="audio/mpeg">您的浏览器不支持音频播放</audio>'),
-                    ]);
+                    // 直接返回 HTML 字符串
+                    return '<audio controls style="height:32px;"><source src="' . $value . '" type="audio/mpeg">您的浏览器不支持音频播放</audio>';
                 })
                 ->align('center');
 
