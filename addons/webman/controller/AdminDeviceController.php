@@ -89,7 +89,7 @@ class AdminDeviceController
                 $actions->edit()->modal($this->form())->width('60%');
 
                 // 重新生成语音按钮
-                $actions->push(
+                $actions->prepend(
                     Button::create(admin_trans('device.voice.regenerate'))
                         ->icon(Icon::create('SoundOutlined'))
                         ->type('link')
