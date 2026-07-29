@@ -293,7 +293,7 @@ export default {
       // 显示桌面通知
       this.$notification.warning({
         message: '服务铃呼叫',
-        description: content.message || `${content.device_name}呼叫服务`,
+        description: `${content.device_name}呼叫服务`,
         duration: 5,
       });
 
