@@ -108,28 +108,32 @@ class System extends SystemAbstract
                 'lang' => Container::getInstance()->translator->getLocale(),
                 'ws' => $ws,
                 'title' => admin_trans('admin.system_messages'),
-                'examine_withdraw' => Admin::check(ChannelWithdrawRecordController::class, 'reject',
-                        '') || Admin::check(ChannelWithdrawRecordController::class, 'pass', ''),
-                'examine_recharge' => Admin::check(ChannelRechargeRecordController::class, 'reject',
-                        '') || Admin::check(ChannelRechargeRecordController::class, 'pass', ''),
-                'examine_activity' => Admin::check(PlayerActivityRecordController::class, 'reject',
-                        '') || Admin::check(PlayerActivityRecordController::class, 'pass',
-                        '') || Admin::check(PlayerActivityRecordController::class, 'bathPass',
-                        '') || Admin::check(PlayerActivityRecordController::class, 'bathReject',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'reject',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'pass',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'bathReject',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'bathPass', ''),
-                'examine_lottery' => Admin::check(PlayerLotteryRecordController::class, 'reject',
-                        '') || Admin::check(PlayerLotteryRecordController::class, 'pass',
-                        '') || Admin::check(PlayerLotteryRecordController::class, 'bathPass',
-                        '') || Admin::check(PlayerLotteryRecordController::class, 'bathReject',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'reject',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'pass',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathPass',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', ''),
-                'machine' => Admin::check(MachineController::class, 'form',
-                        'post') || Admin::check(MachineController::class, 'form', 'put'),
+                'examine_withdraw' => Admin::check(ChannelWithdrawRecordController::class, 'reject', '')
+                        || Admin::check(ChannelWithdrawRecordController::class, 'pass', '')
+                        || Admin::check(\addons\webman\controller\StorePlayerWithdrawRecordController::class, 'index', ''),
+                'examine_recharge' => Admin::check(ChannelRechargeRecordController::class, 'reject', '')
+                        || Admin::check(ChannelRechargeRecordController::class, 'pass', '')
+                        || Admin::check(\addons\webman\controller\StorePlayerRechargeRecordController::class, 'index', ''),
+                'examine_activity' => Admin::check(PlayerActivityRecordController::class, 'reject', '')
+                        || Admin::check(PlayerActivityRecordController::class, 'pass', '')
+                        || Admin::check(PlayerActivityRecordController::class, 'bathPass', '')
+                        || Admin::check(PlayerActivityRecordController::class, 'bathReject', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'reject', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'pass', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'bathReject', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'bathPass', ''),
+                'examine_lottery' => Admin::check(PlayerLotteryRecordController::class, 'reject', '')
+                        || Admin::check(PlayerLotteryRecordController::class, 'pass', '')
+                        || Admin::check(PlayerLotteryRecordController::class, 'bathPass', '')
+                        || Admin::check(PlayerLotteryRecordController::class, 'bathReject', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'reject', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'pass', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathPass', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', '')
+                        || Admin::check(\addons\webman\controller\StoreLotteryController::class, 'index', ''),
+                'machine' => Admin::check(MachineController::class, 'form', 'post')
+                        || Admin::check(MachineController::class, 'form', 'put')
+                        || Admin::check(\addons\webman\controller\StoreMachineController::class, 'index', ''),
             ])
         ];
     }
