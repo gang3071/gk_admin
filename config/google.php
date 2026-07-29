@@ -60,28 +60,31 @@ return [
         /**
          * Gemini TTS 配置（新版，推荐）
          */
-        'gemini_voice' => env('GOOGLE_TTS_GEMINI_VOICE', 'Kore'), // 可选：Kore, Puck, Charon, Achernar 等
+        'gemini_voice' => env('GOOGLE_TTS_GEMINI_VOICE', 'Zephyr'), // 推荐：Zephyr（适合中文），Kore, Puck, Charon 等
 
         /**
          * Gemini TTS 风格指令（自然语言描述）
          *
          * 预设风格模板：
          *
-         * 1. 专业客服（默认，推荐）
+         * 1. 温暖友好（推荐，适合服务铃）
+         *    'Read aloud in a warm, welcoming tone.'
+         *
+         * 2. 专业客服
          *    'Read aloud in a clear, professional customer service voice, warm and attentive, as if a waitress is politely announcing a customer request.'
          *
-         * 2. 紧急提醒
+         * 3. 紧急提醒
          *    'Read aloud in an urgent, alerting tone, emphasizing the device name clearly and loudly, like an important notification.'
          *
-         * 3. 温柔提醒
+         * 4. 温柔提醒
          *    'Read aloud in a gentle, soft female voice, calm and soothing, like a friendly reminder.'
          *
-         * 4. 中性播报
+         * 5. 中性播报
          *    'Read aloud in a neutral, clear announcer voice, straightforward and easy to understand.'
          */
         'gemini_style' => env(
             'GOOGLE_TTS_GEMINI_STYLE',
-            'Read aloud in a clear, professional customer service voice, warm and attentive, as if a waitress is politely announcing a customer request.'
+            'Read aloud in a warm, welcoming tone.'
         ),
 
         /**

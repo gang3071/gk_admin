@@ -42,7 +42,7 @@ class GoogleTtsHttpService
     /**
      * Gemini TTS 语音参数
      */
-    private const GEMINI_VOICE = 'Kore'; // 可选：Kore, Puck, Charon, Achernar 等
+    private const GEMINI_VOICE = 'Zephyr'; // 可选：Zephyr, Kore, Puck, Charon 等
 
     /**
      * 生成设备呼叫服务语音文件
