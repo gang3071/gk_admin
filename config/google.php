@@ -32,6 +32,32 @@ return [
         'use_gemini' => env('GOOGLE_TTS_USE_GEMINI', true),
 
         /**
+         * Gemini TTS API Key（Gemini TTS 专用）
+         *
+         * 创建步骤：
+         * 1. 访问 https://console.cloud.google.com/apis/credentials
+         * 2. CREATE CREDENTIALS → API key
+         * 3. 编辑 Key，设置 API restrictions：
+         *    ☑️ Generative Language API
+         *    ☑️ Cloud Storage API
+         * 4. 设置 IP restrictions（推荐）
+         */
+        'gemini_api_key' => env('GOOGLE_TTS_GEMINI_API_KEY'),
+
+        /**
+         * Wavenet TTS API Key（传统 TTS 专用）
+         *
+         * 创建步骤：
+         * 1. 访问 https://console.cloud.google.com/apis/credentials
+         * 2. CREATE CREDENTIALS → API key
+         * 3. 编辑 Key，设置 API restrictions：
+         *    ☑️ Cloud Text-to-Speech API
+         *    ☑️ Cloud Storage API
+         * 4. 设置 IP restrictions（推荐）
+         */
+        'wavenet_api_key' => env('GOOGLE_TTS_WAVENET_API_KEY'),
+
+        /**
          * Gemini TTS 配置（新版，推荐）
          */
         'gemini_voice' => env('GOOGLE_TTS_GEMINI_VOICE', 'Kore'), // 可选：Kore, Puck, Charon, Achernar 等

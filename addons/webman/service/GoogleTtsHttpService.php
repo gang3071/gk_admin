@@ -90,12 +90,13 @@ class GoogleTtsHttpService
      */
     private static function synthesizeSpeech(string $text, int $deviceId): array
     {
-        // 1. 获取 API Key
-        $apiKey = self::getApiKey();
-
-        // 2. 检查是否启用 Gemini TTS（优先使用，音质更好）
+        // 1. 检查是否启用 Gemini TTS（优先使用，音质更好）
         $useGemini = config('google.tts.use_gemini', true);
 
+        // 2. 根据 TTS 模式获取对应的 API Key
+        $apiKey = self::getApiKey($useGemini);
+
+        // 3. 调用对应的 TTS 服务
         if ($useGemini) {
             return self::synthesizeSpeechWithGemini($text, $deviceId, $apiKey);
         } else {
@@ -224,37 +225,57 @@ class GoogleTtsHttpService
     }
 
     /**
-     * 获取 API Key
+     * 获取 API Key（根据 TTS 模式选择对应的 Key）
      *
+     * @param bool $useGemini 是否使用 Gemini TTS
      * @return string
      * @throws \Exception
      */
-    private static function getApiKey(): string
+    private static function getApiKey(bool $useGemini = false): string
     {
-        // 方式 1：直接从环境变量读取 API Key
-        $apiKey = env('GOOGLE_TTS_API_KEY');
-        if (!empty($apiKey)) {
+        // 根据 TTS 模式选择对应的 Key
+        if ($useGemini) {
+            // Gemini TTS 专用 Key
+            $apiKey = config('google.tts.gemini_api_key', env('GOOGLE_TTS_GEMINI_API_KEY'));
+
+            if (empty($apiKey)) {
+                throw new \Exception(
+                    "Gemini TTS API Key 未配置，请在 .env 中设置：\n" .
+                    "GOOGLE_TTS_GEMINI_API_KEY=你的Gemini_API_KEY\n\n" .
+                    "创建步骤：\n" .
+                    "1. 访问 https://console.cloud.google.com/apis/credentials\n" .
+                    "2. CREATE CREDENTIALS → API key\n" .
+                    "3. 编辑 Key，设置 API restrictions：\n" .
+                    "   ☑️ Generative Language API\n" .
+                    "   ☑️ Cloud Storage API"
+                );
+            }
+
+            return $apiKey;
+        } else {
+            // Wavenet TTS 专用 Key（传统 TTS）
+            $apiKey = config('google.tts.wavenet_api_key', env('GOOGLE_TTS_WAVENET_API_KEY'));
+
+            // 兼容旧配置（GOOGLE_TTS_API_KEY）
+            if (empty($apiKey)) {
+                $apiKey = env('GOOGLE_TTS_API_KEY');
+            }
+
+            if (empty($apiKey)) {
+                throw new \Exception(
+                    "Wavenet TTS API Key 未配置，请在 .env 中设置：\n" .
+                    "GOOGLE_TTS_WAVENET_API_KEY=你的Wavenet_API_KEY\n\n" .
+                    "创建步骤：\n" .
+                    "1. 访问 https://console.cloud.google.com/apis/credentials\n" .
+                    "2. CREATE CREDENTIALS → API key\n" .
+                    "3. 编辑 Key，设置 API restrictions：\n" .
+                    "   ☑️ Cloud Text-to-Speech API\n" .
+                    "   ☑️ Cloud Storage API"
+                );
+            }
+
             return $apiKey;
         }
-
-        // 方式 2：从服务账号凭证文件中提取（需要额外步骤生成 API Key）
-        $credentialsPath = config('google.credentials', env('GOOGLE_APPLICATION_CREDENTIALS'));
-
-        if (empty($credentialsPath) || !file_exists($credentialsPath)) {
-            throw new \Exception('Google Cloud 凭证文件不存在，请配置 GOOGLE_TTS_API_KEY 环境变量');
-        }
-
-        // 读取凭证文件获取 project_id，然后需要用户手动创建 API Key
-        $credentials = json_decode(file_get_contents($credentialsPath), true);
-        $projectId = $credentials['project_id'] ?? '';
-
-        throw new \Exception(
-            "请在 Google Cloud Console 创建 API Key：\n" .
-            "1. 访问 https://console.cloud.google.com/apis/credentials?project={$projectId}\n" .
-            "2. 点击 'CREATE CREDENTIALS' → 'API key'\n" .
-            "3. 复制 API Key 并添加到 .env：GOOGLE_TTS_API_KEY=你的API_KEY\n" .
-            "4. 限制 API Key 仅用于 Cloud Text-to-Speech API"
-        );
     }
 
     /**
