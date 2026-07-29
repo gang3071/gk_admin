@@ -270,7 +270,8 @@ class System extends SystemAbstract
                 ->get();
         }
         if (Admin::user()->type == AdminDepartment::TYPE_CHANNEL && !empty($typeArr)) {
-            $list = Notice::whereIN('type', $typeArr)
+            $list = Notice::where('department_id', Admin::user()->department_id)  // 筛选当前渠道
+                ->whereIN('type', $typeArr)
                 ->latest()
                 ->forPage($page, $size)
                 ->get();
