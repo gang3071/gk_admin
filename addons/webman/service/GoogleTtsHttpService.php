@@ -162,39 +162,29 @@ class GoogleTtsHttpService
 
         // 5. 获取音频内容（Base64 编码）
         $result = $response->json();
-
-        // 调试：记录完整响应
-        Log::info('Gemini TTS API 响应', [
-            'device_id' => $deviceId,
-            'response_keys' => array_keys($result),
-            'has_candidates' => isset($result['candidates']),
-            'response_sample' => json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
-        ]);
-
         $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
+        $mimeType = $result['candidates'][0]['content']['parts'][0]['inlineData']['mimeType'] ?? 'unknown';
 
         if (empty($audioContentBase64)) {
-            // 尝试其他可能的路径
-            $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
-
-            if (empty($audioContentBase64)) {
-                throw new \Exception('Gemini TTS API 返回空音频内容。响应结构：' . json_encode($result));
-            }
+            throw new \Exception('Gemini TTS API 返回空音频内容');
         }
 
-        // 6. 解码音频内容
-        $audioContent = base64_decode($audioContentBase64);
+        // 6. 解码音频内容（PCM 格式）
+        $pcmData = base64_decode($audioContentBase64);
 
-        // 调试：检查音频大小
-        Log::info('Gemini TTS 音频解码', [
+        Log::info('Gemini TTS 音频信息', [
             'device_id' => $deviceId,
-            'base64_length' => strlen($audioContentBase64),
-            'audio_size' => strlen($audioContent),
-            'audio_size_kb' => round(strlen($audioContent) / 1024, 2)
+            'mime_type' => $mimeType,
+            'pcm_size' => strlen($pcmData),
+            'pcm_size_kb' => round(strlen($pcmData) / 1024, 2)
         ]);
 
-        // 7. 保存音频文件
-        return self::saveVoiceFile($audioContent, $deviceId);
+        // 7. 转换 PCM 为 WAV 格式（添加 WAV 头）
+        // Gemini 返回：audio/l16; rate=24000; channels=1
+        $wavData = self::convertPcmToWav($pcmData, 24000, 1, 16);
+
+        // 8. 保存音频文件（WAV 格式）
+        return self::saveVoiceFile($wavData, $deviceId, 'wav');
     }
 
     /**
@@ -303,18 +293,55 @@ class GoogleTtsHttpService
     }
 
     /**
+     * 转换 PCM 数据为 WAV 格式
+     *
+     * @param string $pcmData PCM 音频数据
+     * @param int $sampleRate 采样率（Hz）
+     * @param int $channels 声道数
+     * @param int $bitsPerSample 位深度
+     * @return string WAV 格式音频数据
+     */
+    private static function convertPcmToWav(string $pcmData, int $sampleRate, int $channels, int $bitsPerSample): string
+    {
+        $dataSize = strlen($pcmData);
+        $byteRate = $sampleRate * $channels * ($bitsPerSample / 8);
+        $blockAlign = $channels * ($bitsPerSample / 8);
+
+        // WAV 文件头（44 字节）
+        $header = pack(
+            'A4VA4A4VvvVVvvA4V',
+            'RIFF',                             // ChunkID
+            36 + $dataSize,                     // ChunkSize
+            'WAVE',                             // Format
+            'fmt ',                             // Subchunk1ID
+            16,                                 // Subchunk1Size (PCM = 16)
+            1,                                  // AudioFormat (PCM = 1)
+            $channels,                          // NumChannels
+            $sampleRate,                        // SampleRate
+            $byteRate,                          // ByteRate
+            $blockAlign,                        // BlockAlign
+            $bitsPerSample,                     // BitsPerSample
+            'data',                             // Subchunk2ID
+            $dataSize                           // Subchunk2Size
+        );
+
+        return $header . $pcmData;
+    }
+
+    /**
      * 保存语音文件到 Google Cloud Storage
      *
      * @param string $audioContent 音频二进制内容
      * @param int $deviceId 设备ID
+     * @param string $format 文件格式（mp3 或 wav）
      * @return array
      * @throws \Exception
      */
-    private static function saveVoiceFile(string $audioContent, int $deviceId): array
+    private static function saveVoiceFile(string $audioContent, int $deviceId, string $format = 'mp3'): array
     {
         // 1. 生成文件名和路径
         $timestamp = time();
-        $filename = "device_{$deviceId}_{$timestamp}.mp3";
+        $filename = "device_{$deviceId}_{$timestamp}.{$format}";
         $ossPath = self::VOICE_DIR . '/' . $filename;
 
         // 2. 上传到 Google Cloud Storage
@@ -322,11 +349,14 @@ class GoogleTtsHttpService
             $storageClient = self::getStorageClient();
             $bucket = $storageClient->bucket(config('plugin.rockys.ex-admin-webman.filesystems.disks.google_oss.bucket'));
 
+            // 根据格式设置 MIME 类型
+            $mimeType = $format === 'wav' ? 'audio/wav' : 'audio/mpeg';
+
             // 直接从内存上传（不写入本地文件）
             $object = $bucket->upload($audioContent, [
                 'name' => $ossPath,
                 'metadata' => [
-                    'contentType' => 'audio/mpeg',
+                    'contentType' => $mimeType,
                     'cacheControl' => 'public, max-age=31536000', // 缓存1年
                 ],
                 'predefinedAcl' => 'publicRead', // 设置公开访问
