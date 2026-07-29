@@ -59,6 +59,7 @@ class AdminDeviceController
                     $audioHtml = '<audio controls style="height:32px;"><source src="' . $value . '" type="audio/mpeg">您的浏览器不支持音频播放</audio>';
                     return Html::markdown($audioHtml);
                 })
+                ->width(180)
                 ->align('center');
 
             $grid->column('channel.name', admin_trans('device.fields.channel_name'))
