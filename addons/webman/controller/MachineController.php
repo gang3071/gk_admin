@@ -220,13 +220,18 @@ class MachineController
                                 adminId: Admin::id(),
                                 machineIds: $machineIds
                             );
-                            \support\Log::warning('获取机台状态日志', [
-                                'error' => $result
-                            ]);
-                            if (isset($result['data']) && is_array($result['data'])) {
-                                foreach ($result['data'] as $item) {
-                                    $onlineStatusCache[$item['id']] = $item['online'] ?? false;
+                            // ✅ 修复：MachineApiService::handleResponse 已经提取了 data，直接使用返回的数组
+                            if (is_array($result)) {
+                                foreach ($result as $item) {
+                                    if (isset($item['id']) && isset($item['online'])) {
+                                        $onlineStatusCache[$item['id']] = $item['online'];
+                                    }
                                 }
+                                \support\Log::info('批量获取机台在线状态成功', [
+                                    'type' => $data->type,
+                                    'total_machines' => count($machineIds),
+                                    'online_count' => count(array_filter($onlineStatusCache))
+                                ]);
                             }
                         }
                     } catch (\Exception $e) {
