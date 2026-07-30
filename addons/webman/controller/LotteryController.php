@@ -250,12 +250,12 @@ class LotteryController
                     $winNeedsClear = ($clearTime && $winVersion !== $clearTime);
 
                     // 获取总统计（如果需要清除则显示 0）
-                    $totalChecks = $totalNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_TOTAL . $data->id) ?: 0);
-                    $totalWins = $winNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_WIN . $data->id) ?: 0);
+                    $totalChecks = $totalNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:total:' . $data->id) ?: 0);
+                    $totalWins = $winNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:win:' . $data->id) ?: 0);
 
                     // 获取今日统计（如果需要清除则显示 0）
-                    $dailyChecks = $totalNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_DAILY_TOTAL . $data->id . ':' . $today) ?: 0);
-                    $dailyWins = $winNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_DAILY_WIN . $data->id . ':' . $today) ?: 0);
+                    $dailyChecks = $totalNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:daily:total:' . $data->id . ':' . $today) ?: 0);
+                    $dailyWins = $winNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:daily:win:' . $data->id . ':' . $today) ?: 0);
 
                     // 计算中奖率（保留8位小数以显示极低概率）
                     $totalWinRate = $totalChecks > 0 ? round(($totalWins / $totalChecks) * 100, 8) : 0;
@@ -1175,8 +1175,8 @@ class LotteryController
 
             // 记录清除前的统计值
             foreach ($lotteries as $id) {
-                $totalKey = LotteryServices::REDIS_KEY_LOTTERY_STATS_TOTAL . $id;
-                $winKey = LotteryServices::REDIS_KEY_LOTTERY_STATS_WIN . $id;
+                $totalKey = 'machine_lottery_stats:total:' . $id;
+                $winKey = 'machine_lottery_stats:win:' . $id;
 
                 $beforeTotal = $redis->get($totalKey) ?: 0;
                 $beforeWin = $redis->get($winKey) ?: 0;
