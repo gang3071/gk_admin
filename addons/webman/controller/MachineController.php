@@ -220,6 +220,9 @@ class MachineController
                                 adminId: Admin::id(),
                                 machineIds: $machineIds
                             );
+                            \support\Log::warning('获取机台状态日志', [
+                                'error' => $result
+                            ]);
                             if (isset($result['data']) && is_array($result['data'])) {
                                 foreach ($result['data'] as $item) {
                                     $onlineStatusCache[$item['id']] = $item['online'] ?? false;
