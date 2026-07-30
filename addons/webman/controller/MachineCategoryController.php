@@ -168,6 +168,7 @@ class MachineCategoryController
                 ]);
             })->align('center');
             $grid->column('name', admin_trans('machine_category.fields.name'))->align('center');
+            $grid->column('turn_used_point', admin_trans('machine_category.fields.turn_used_point'))->align('center');
             $grid->column('picture_url', admin_trans('machine_category.fields.picture_url'))->display(function ($val, $data) {
                 $image = Image::create()
                     ->width(50)

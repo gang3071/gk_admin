@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\model\GameType;
 use addons\webman\model\Lottery;
 use app\service\LotteryServices;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\field\Switches;
@@ -216,6 +217,77 @@ class LotteryController
                 return $val > 0 ? $val : '';
             })->align('center');
             $grid->column('lottery_times', admin_trans('lottery.fields.lottery_times'))->align('center');
+
+            // 开奖统计（仅随机彩金）
+            $grid->column('lottery_stats', admin_trans('lottery.lottery_stats'))->display(function ($val, Lottery $data) {
+                // 固定彩金不显示统计
+                if ($data->lottery_type != Lottery::LOTTERY_TYPE_RANDOM) {
+                    return '-';
+                }
+
+                try {
+                    $redis = \support\Redis::connection()->client();
+                    $today = date('Y-m-d');
+
+                    // 获取清除时间（用于版本检查）
+                    $clearTimeKey = 'machine_lottery_stats:clear_time:' . $data->id;
+                    $clearTime = $redis->get($clearTimeKey);
+                    if (!$clearTime) {
+                        $clearTime = $redis->get('machine_lottery_stats:last_clear_time');
+                    }
+
+                    // 显示用的清除时间（可能包含翻译文本）
+                    $displayClearTime = $clearTime ?: admin_trans('lottery.stats_no_clear_time');
+
+                    // 惰性清理检查：读取版本键，如果不匹配清除时间，说明数据已过期
+                    $totalVersionKey = 'machine_lottery_stats:total:' . $data->id . ':version';
+                    $winVersionKey = 'machine_lottery_stats:win:' . $data->id . ':version';
+                    $totalVersion = $redis->get($totalVersionKey) ?: '';
+                    $winVersion = $redis->get($winVersionKey) ?: '';
+
+                    // 如果版本不匹配（且有清除时间），说明统计已清除但未重新累加，应显示为 0
+                    $totalNeedsClear = ($clearTime && $totalVersion !== $clearTime);
+                    $winNeedsClear = ($clearTime && $winVersion !== $clearTime);
+
+                    // 获取总统计（如果需要清除则显示 0）
+                    $totalChecks = $totalNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_TOTAL . $data->id) ?: 0);
+                    $totalWins = $winNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_WIN . $data->id) ?: 0);
+
+                    // 获取今日统计（如果需要清除则显示 0）
+                    $dailyChecks = $totalNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_DAILY_TOTAL . $data->id . ':' . $today) ?: 0);
+                    $dailyWins = $winNeedsClear ? 0 : ((int)$redis->get(LotteryServices::REDIS_KEY_LOTTERY_STATS_DAILY_WIN . $data->id . ':' . $today) ?: 0);
+
+                    // 计算中奖率（保留8位小数以显示极低概率）
+                    $totalWinRate = $totalChecks > 0 ? round(($totalWins / $totalChecks) * 100, 8) : 0;
+                    $dailyWinRate = $dailyChecks > 0 ? round(($dailyWins / $dailyChecks) * 100, 8) : 0;
+
+                    $content = [
+                        // 统计开始时间
+                        Html::div()->content(admin_trans('lottery.stats_start_time') . ': ' . $displayClearTime)
+                            ->style(['font-size' => '11px', 'color' => '#999', 'margin-bottom' => '4px']),
+                    ];
+
+                    // 如果需要清除，显示提示
+                    if ($totalNeedsClear || $winNeedsClear) {
+                        $content[] = Html::div()->content('⏳ 待更新（下次抽奖时自动重置）')
+                            ->style(['font-size' => '11px', 'color' => '#fa8c16', 'margin-bottom' => '4px']);
+                    }
+
+                    $content[] = Html::div()->content(admin_trans('lottery.stats_total') . ': ' . number_format($totalChecks) . admin_trans('lottery.stats_times') . ' / ' . number_format($totalWins) . admin_trans('lottery.stats_win') . ' (' . $totalWinRate . '%)')
+                        ->style(['font-size' => '12px', 'color' => '#1890ff']);
+
+                    $content[] = Html::div()->content(admin_trans('lottery.stats_today') . ': ' . number_format($dailyChecks) . admin_trans('lottery.stats_times') . ' / ' . number_format($dailyWins) . admin_trans('lottery.stats_win') . ' (' . $dailyWinRate . '%)')
+                        ->style(['font-size' => '12px', 'color' => '#52c41a', 'margin-top' => '4px']);
+
+                    return Html::create()->content($content);
+                } catch (\Exception $e) {
+                    return Html::create()->content([
+                        Html::div()->content(admin_trans('lottery.stats_error'))
+                            ->style(['color' => '#ff4d4f', 'font-size' => '12px'])
+                    ]);
+                }
+            })->align('center');
+
             $grid->column('status', admin_trans('lottery.fields.status'))->display(function ($val, Lottery $data) use ($type) {
                 return Switches::create(null, $val)
                     ->options([[1 => admin_trans('admin.open')], [0 => admin_trans('admin.close')]])
@@ -229,6 +301,18 @@ class LotteryController
             $grid->column('created_at', admin_trans('lottery.fields.created_at'))->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
+
+            // 添加工具按钮（仅随机彩金类型显示）
+            if ($type == Lottery::LOTTERY_TYPE_RANDOM) {
+                $grid->tools([
+                    Button::create(admin_trans('lottery.clear_stats'))
+                        ->icon(Icon::create('DeleteOutlined'))
+                        ->type('danger')
+                        ->confirm(admin_trans('lottery.clear_stats_confirm'), [$this, 'clearStats'])
+                        ->gridRefresh()
+                ]);
+            }
+
             $grid->setForm()->drawer($this->form($type));
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('lottery.fields.name'));
@@ -1064,5 +1148,87 @@ class LotteryController
         }
 
         return message_error(admin_trans('common.save_failed'));
+    }
+
+    /**
+     * 清理统计数据（惰性清理方案 - 只设置清除时间标记）
+     * 仅清除随机彩金的统计
+     * @auth true
+     * @return \ExAdmin\ui\support\Notification
+     */
+    public function clearStats(): \ExAdmin\ui\support\Notification
+    {
+        try {
+            $redis = \support\Redis::connection()->client();
+            $clearTime = date('Y-m-d H:i:s'); // 记录清除时间
+
+            // 获取所有启用的随机彩金ID
+            $lotteries = Lottery::query()
+                ->where('lottery_type', Lottery::LOTTERY_TYPE_RANDOM)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->pluck('id')
+                ->toArray();
+
+            $clearedCount = 0;
+            $details = [];
+
+            // 记录清除前的统计值
+            foreach ($lotteries as $id) {
+                $totalKey = LotteryServices::REDIS_KEY_LOTTERY_STATS_TOTAL . $id;
+                $winKey = LotteryServices::REDIS_KEY_LOTTERY_STATS_WIN . $id;
+
+                $beforeTotal = $redis->get($totalKey) ?: 0;
+                $beforeWin = $redis->get($winKey) ?: 0;
+
+                $details[] = [
+                    'lottery_id' => $id,
+                    'before_total' => $beforeTotal,
+                    'before_win' => $beforeWin,
+                ];
+
+                // 核心：只设置清除时间标记（惰性清理）
+                // 实际清理会在下次 incrementLotteryStats 时自动执行
+                $clearTimeKey = 'machine_lottery_stats:clear_time:' . $id;
+                $redis->set($clearTimeKey, $clearTime);
+
+                $clearedCount++;
+            }
+
+            // 记录全局清除时间（用于整体验证）
+            $redis->set('machine_lottery_stats:last_clear_time', $clearTime);
+
+            \support\Log::info(admin_trans('lottery.log.clear_stats_success'), [
+                'clear_time' => $clearTime,
+                'cleared_count' => $clearedCount,
+                'lazy_clear' => true, // 标记为惰性清理
+                'details' => $details
+            ]);
+
+            // 构建详细的清除信息
+            $detailsMessage = "\n\n清除详情:\n";
+            foreach ($details as $detail) {
+                $lottery = Lottery::find($detail['lottery_id']);
+                $lotteryName = $lottery ? $lottery->name : "ID:{$detail['lottery_id']}";
+                $detailsMessage .= "• {$lotteryName}:\n";
+                $detailsMessage .= "  清除前 - Total: " . number_format($detail['before_total']) . ", Win: " . number_format($detail['before_win']) . "\n";
+                $detailsMessage .= "  清除方式: 惰性清理（下次统计时自动重置为0）\n";
+            }
+
+            $detailsMessage .= "\n✅ 已设置清除标记（惰性清理模式）\n";
+            $detailsMessage .= "\n💡 说明: 统计值将在下次抽奖时自动重置为0，无需遍历大量键";
+
+            return notification_success(
+                admin_trans('lottery.clear_stats_success_title'),
+                admin_trans('lottery.clear_stats_success_message', null, ['{count}' => $clearedCount]) . "\n\n" . admin_trans('lottery.clear_stats_details') . "\n清除时间: {$clearTime}" . $detailsMessage
+            );
+
+        } catch (\Exception $e) {
+            \support\Log::error(admin_trans('lottery.log.clear_stats_error'), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return notification_error(admin_trans('lottery.clear_stats_error_title'), $e->getMessage());
+        }
     }
 }
