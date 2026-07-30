@@ -85,7 +85,7 @@ class System extends SystemAbstract
      */
     public function navbarRight(): array
     {
-        $ws = env('WS_URL', '');
+        $ws = config('app.ws_url', ''); // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
 
         // 根据用户类型确定 WebSocket 频道类型
         $user = Admin::user();

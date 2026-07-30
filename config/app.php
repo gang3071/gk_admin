@@ -30,6 +30,7 @@ return [
     'profit' => 'task', // 分润结算模式(task任务模式每天结算前天, event事件模式实时结算)
     'api_domain' => env('API_DOMAIN', 'https://yjb-test-api.qtalk666.top/'),
     'ip_domain' => env('IP_DOMAIN', 'http://47.243.153.122:5665/'),
+    'ws_url' => env('WS_URL', ''), // WebSocket 连接地址（用于服务铃播报等实时通信）
     'agent_role' => 18,
     'store_role' => 19,
 ];

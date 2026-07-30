@@ -247,7 +247,7 @@ class MachineController
                     'id' => $data->id,
                     'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
                     'department_id' => Admin::user()->department_id,
-                    'ws' => env('WS_URL', ''),
+                    'ws' => config('app.ws_url', ''), // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
                     'machine_status' => $machineStatus,
                 ]);
             })

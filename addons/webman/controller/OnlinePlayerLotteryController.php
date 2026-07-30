@@ -29,7 +29,7 @@ class OnlinePlayerLotteryController
         return Space::create()
             ->content(admin_view(plugin()->webman->getPath() . '/views/online_players.vue')->attrs([
                 'lotteryOptions' => $this->getLotteryOptions(),
-                'wsUrl' => env('WS_URL', ''),
+                'wsUrl' => config('app.ws_url', ''), // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
                 'appKey' => config('plugin.webman.push.app.app_key'),
             ]))->style(['width' => '100%', 'display' => 'block']);
     }
