@@ -302,16 +302,14 @@ class LotteryController
             $grid->hideDelete();
             $grid->hideSelection();
 
-            // 添加工具按钮（仅随机彩金类型显示）
-            if ($type == Lottery::LOTTERY_TYPE_RANDOM) {
-                $grid->tools([
-                    Button::create(admin_trans('lottery.clear_stats'))
-                        ->icon(Icon::create('DeleteOutlined'))
-                        ->type('danger')
-                        ->confirm(admin_trans('lottery.clear_stats_confirm'), [$this, 'clearStats'])
-                        ->gridRefresh()
-                ]);
-            }
+            // 添加工具按钮（清除随机彩金统计）
+            $grid->tools([
+                Button::create(admin_trans('lottery.clear_stats'))
+                    ->icon(Icon::create('DeleteOutlined'))
+                    ->type('danger')
+                    ->confirm(admin_trans('lottery.clear_stats_confirm'), [$this, 'clearStats'])
+                    ->gridRefresh()
+            ]);
 
             $grid->setForm()->drawer($this->form($type));
             $grid->filter(function (Filter $filter) {
