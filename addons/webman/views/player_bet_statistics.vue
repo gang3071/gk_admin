@@ -83,80 +83,68 @@
 </template>
 
 <script>
-import { defineComponent, ref, onMounted, nextTick } from 'vue';
-import { Card, Row, Col, Statistic, message } from 'ant-design-vue';
-import {
-  TrophyOutlined,
-  CalendarOutlined,
-  RiseOutlined
-} from '@ant-design/icons-vue';
-import * as echarts from 'echarts';
-import axios from 'axios';
-
-export default defineComponent({
+export default {
   name: 'PlayerBetStatistics',
-  components: {
-    ACard: Card,
-    ARow: Row,
-    ACol: Col,
-    AStatistic: Statistic,
-    TrophyOutlined,
-    CalendarOutlined,
-    RiseOutlined,
-  },
   props: {
     playerId: {
       type: Number,
       required: true,
     },
   },
-  setup(props) {
-    const lineChart = ref(null);
-    const pieChart = ref(null);
-    const stats = ref({
-      today: { machine: 0, game: 0, total: 0 },
-      week: { machine: 0, game: 0, total: 0 },
-      month: { machine: 0, game: 0, total: 0 },
-    });
-    const dailyTrend = ref({
-      dates: [],
-      machine: [],
-      game: [],
-    });
-
-    // 加载数据
-    const loadData = async () => {
+  data() {
+    return {
+      stats: {
+        today: { machine: 0, game: 0, total: 0 },
+        week: { machine: 0, game: 0, total: 0 },
+        month: { machine: 0, game: 0, total: 0 },
+      },
+      dailyTrend: {
+        dates: [],
+        machine: [],
+        game: [],
+      },
+    };
+  },
+  mounted() {
+    this.loadData();
+  },
+  methods: {
+    async loadData() {
       try {
-        const response = await axios.post('/admin/player/getBetStatisticsData', {
-          playerId: props.playerId,
+        const response = await this.$request({
+          url: 'ex-admin/addons-webman-controller-PlayerController/getBetStatisticsData',
+          method: 'post',
+          data: {
+            playerId: this.playerId,
+          }
         });
 
-        if (response.data.code === 0) {
-          stats.value = response.data.data.today ? {
-            today: response.data.data.today,
-            week: response.data.data.week,
-            month: response.data.data.month,
-          } : stats.value;
+        if (response.code === 0) {
+          if (response.data.today) {
+            this.stats.today = response.data.today;
+            this.stats.week = response.data.week;
+            this.stats.month = response.data.month;
+          }
 
-          dailyTrend.value = response.data.data.dailyTrend;
+          this.dailyTrend = response.data.dailyTrend;
 
           // 渲染图表
-          await nextTick();
-          renderLineChart();
-          renderPieChart();
+          this.$nextTick(() => {
+            this.renderLineChart();
+            this.renderPieChart();
+          });
         } else {
-          message.error('加载数据失败: ' + response.data.msg);
+          this.$message.error('加载数据失败: ' + response.msg);
         }
       } catch (error) {
-        message.error('加载数据失败: ' + error.message);
+        this.$message.error('加载数据失败: ' + error.message);
       }
-    };
+    },
 
-    // 渲染曲线图
-    const renderLineChart = () => {
-      if (!lineChart.value) return;
+    renderLineChart() {
+      if (!this.$refs.lineChart) return;
 
-      const chart = echarts.init(lineChart.value);
+      const chart = echarts.init(this.$refs.lineChart);
       const option = {
         tooltip: {
           trigger: 'axis',
@@ -177,7 +165,7 @@ export default defineComponent({
         xAxis: {
           type: 'category',
           boundaryGap: false,
-          data: dailyTrend.value.dates,
+          data: this.dailyTrend.dates,
           axisLabel: {
             rotate: 45,
           },
@@ -194,7 +182,7 @@ export default defineComponent({
             name: '实体机台',
             type: 'line',
             smooth: true,
-            data: dailyTrend.value.machine,
+            data: this.dailyTrend.machine,
             itemStyle: {
               color: '#5470c6',
             },
@@ -216,7 +204,7 @@ export default defineComponent({
             name: '电子游戏',
             type: 'line',
             smooth: true,
-            data: dailyTrend.value.game,
+            data: this.dailyTrend.game,
             itemStyle: {
               color: '#91cc75',
             },
@@ -243,13 +231,12 @@ export default defineComponent({
       window.addEventListener('resize', () => {
         chart.resize();
       });
-    };
+    },
 
-    // 渲染饼图
-    const renderPieChart = () => {
-      if (!pieChart.value) return;
+    renderPieChart() {
+      if (!this.$refs.pieChart) return;
 
-      const chart = echarts.init(pieChart.value);
+      const chart = echarts.init(this.$refs.pieChart);
       const option = {
         tooltip: {
           trigger: 'item',
@@ -284,12 +271,12 @@ export default defineComponent({
             },
             data: [
               {
-                value: stats.value.month.machine,
+                value: this.stats.month.machine,
                 name: '实体机台',
                 itemStyle: { color: '#5470c6' },
               },
               {
-                value: stats.value.month.game,
+                value: this.stats.month.game,
                 name: '电子游戏',
                 itemStyle: { color: '#91cc75' },
               },
@@ -304,19 +291,9 @@ export default defineComponent({
       window.addEventListener('resize', () => {
         chart.resize();
       });
-    };
-
-    onMounted(() => {
-      loadData();
-    });
-
-    return {
-      lineChart,
-      pieChart,
-      stats,
-    };
+    },
   },
-});
+};
 </script>
 
 <style scoped>
@@ -325,17 +302,17 @@ export default defineComponent({
   background: #f0f2f5;
 }
 
-:deep(.ant-card) {
+.bet-statistics-container :deep(.ant-card) {
   border-radius: 8px;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
 }
 
-:deep(.ant-statistic-title) {
+.bet-statistics-container :deep(.ant-statistic-title) {
   font-size: 14px;
   font-weight: 500;
 }
 
-:deep(.ant-statistic-content) {
+.bet-statistics-container :deep(.ant-statistic-content) {
   font-size: 24px;
   font-weight: 600;
 }
