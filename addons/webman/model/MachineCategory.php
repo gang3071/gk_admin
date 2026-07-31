@@ -50,9 +50,28 @@ class MachineCategory extends Model
      */
     protected static function booted()
     {
-        // 当 keep_minutes 更新时，清除对应的缓存
+        // 当 keep_minutes 或 turn_used_point 更新时，清除对应的缓存
         static::updated(function (MachineCategory $category) {
+            $changed = [];
+
+            // 检查 keep_minutes 变化
             if ($category->wasChanged('keep_minutes')) {
+                $changed[] = 'keep_minutes';
+                // 清理 keep_minutes 缓存
+                $keepMinutesCacheKey = "machine_category:{$category->id}:keep_minutes";
+                Cache::delete($keepMinutesCacheKey);
+            }
+
+            // 检查 turn_used_point 变化
+            if ($category->wasChanged('turn_used_point')) {
+                $changed[] = 'turn_used_point';
+                // 清理 turn_used_point 缓存
+                $turnUsedPointCacheKey = "machine_category:{$category->id}:turn_used_point";
+                Cache::delete($turnUsedPointCacheKey);
+            }
+
+            // 如果有变化，清理机台 TCP 数据缓存
+            if (!empty($changed)) {
                 // 清理该分类下所有机台的缓存
                 $machineIds = Machine::query()
                     ->where('cate_id', $category->id)
@@ -66,7 +85,9 @@ class MachineCategory extends Model
 
                 \support\Log::info('MachineCategory: 已清理机台缓存', [
                     'category_id' => $category->id,
+                    'changed_fields' => $changed,
                     'keep_minutes' => $category->keep_minutes,
+                    'turn_used_point' => $category->turn_used_point,
                     'machine_ids' => $machineIds,
                     'count' => count($machineIds),
                 ]);
