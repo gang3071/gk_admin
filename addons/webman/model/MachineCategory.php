@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use support\Cache;
 
 /**
  * Class MachineCategory
@@ -43,6 +44,37 @@ class MachineCategory extends Model
     }
 
     /**
+     * 模型的 "booted" 方法
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        // 当 keep_minutes 更新时，清除对应的缓存
+        static::updated(function (MachineCategory $category) {
+            if ($category->wasChanged('keep_minutes')) {
+                // 清理该分类下所有机台的缓存
+                $machineIds = Machine::query()
+                    ->where('cate_id', $category->id)
+                    ->pluck('id')
+                    ->toArray();
+
+                foreach ($machineIds as $machineId) {
+                    $machineCacheKey = "machine_tcp_data_cache_{$machineId}";
+                    Cache::delete($machineCacheKey);
+                }
+
+                \support\Log::info('MachineCategory: 已清理机台缓存', [
+                    'category_id' => $category->id,
+                    'keep_minutes' => $category->keep_minutes,
+                    'machine_ids' => $machineIds,
+                    'count' => count($machineIds),
+                ]);
+            }
+        });
+    }
+
+    /**
      * 游戏类别
      * @return BelongsTo
      */
@@ -59,7 +91,7 @@ class MachineCategory extends Model
     {
         return $this->hasMany(plugin()->webman->config('database.machine_category_give_rule_model'), 'machine_category_id');
     }
-    
+
     /**
      * 分类扩展信息
      * @return hasMany
