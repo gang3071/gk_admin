@@ -4106,7 +4106,8 @@ class PlayerController
      */
     public function betStatistics(int $playerId)
     {
-        return \ExAdmin\ui\component\layout\Content::create()
+        return \ExAdmin\ui\component\layout\Space::create()
+            ->style(['width' => '100%', 'display' => 'block'])
             ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
                 'player-id' => $playerId,
             ]));
