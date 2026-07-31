@@ -7,6 +7,7 @@ return [
     'url' => '不是有效的URL地址',
     'number' => '必须是数字',
     'integer' => '必须是整数',
+    'numeric' => '必须是数字（支持小数）',
     'float' => '必须是浮点数',
     'mobile' => '格式不符',
     'leng' => '长度不符合要求 ',
