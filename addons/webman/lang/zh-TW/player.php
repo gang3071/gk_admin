@@ -33,9 +33,9 @@ return [
     'month_bet' => '本月打碼量',
     'machine_bet' => '實體機台',
     'game_bet' => '電子遊戲',
-    'bet_trend_30days' => '近30天打碼量趨勢',
+    'bet_trend_15days' => '近15天打碼量趨勢',
     'month_bet_distribution' => '本月打碼量分佈',
-    'bet_amount_unit' => '元',
+    'bet_amount_unit' => 'NT$',
     'loading' => '加載中...',
     'load_failed' => '加載數據失敗',
 

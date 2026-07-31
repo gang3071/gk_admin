@@ -33,9 +33,9 @@ return [
     'month_bet' => 'This Month\'s Bets',
     'machine_bet' => 'Physical Machines',
     'game_bet' => 'Electronic Games',
-    'bet_trend_30days' => '30-Day Bet Trend',
+    'bet_trend_15days' => '15-Day Bet Trend',
     'month_bet_distribution' => 'Monthly Bet Distribution',
-    'bet_amount_unit' => 'USD',
+    'bet_amount_unit' => 'NT$',
     'loading' => 'Loading...',
     'load_failed' => 'Failed to load data',
 

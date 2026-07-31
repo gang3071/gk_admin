@@ -32,9 +32,9 @@ return [
     'month_bet' => '今月のベット',
     'machine_bet' => '実機',
     'game_bet' => '電子ゲーム',
-    'bet_trend_30days' => '30日間のベット推移',
+    'bet_trend_15days' => '15日間のベット推移',
     'month_bet_distribution' => '今月のベット分布',
-    'bet_amount_unit' => '円',
+    'bet_amount_unit' => 'NT$',
     'loading' => '読み込み中...',
     'load_failed' => 'データの読み込みに失敗しました',
 

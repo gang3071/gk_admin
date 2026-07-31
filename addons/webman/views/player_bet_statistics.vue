@@ -66,15 +66,15 @@
 
       <!-- 图表 -->
       <a-row :gutter="16" style="padding: 0 16px 16px 16px">
-        <!-- 近30天打码量曲线图 -->
-        <a-col :span="16">
-          <a-card :title="$t('player.bet_trend_30days')" :bordered="false">
+        <!-- 近15天打码量曲线图 -->
+        <a-col :span="14">
+          <a-card :title="$t('player.bet_trend_15days')" :bordered="false">
             <div ref="lineChart" style="width: 100%; height: 400px"></div>
           </a-card>
         </a-col>
 
         <!-- 本月打码量饼图 -->
-        <a-col :span="8">
+        <a-col :span="10">
           <a-card :title="$t('player.month_bet_distribution')" :bordered="false">
             <div ref="pieChart" style="width: 100%; height: 400px"></div>
           </a-card>

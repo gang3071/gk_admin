@@ -6128,7 +6128,7 @@ class ChannelPlayerController
             $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
             $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
 
-            // ✅ 获取最近30天每日打码量（用于曲线图）
+            // ✅ 获取最近15天每日打码量（用于曲线图）
             // 策略：今日从Redis，历史从数据库
             $dailyTrend = [
                 'dates' => [],
@@ -6137,13 +6137,13 @@ class ChannelPlayerController
             ];
 
             // 准备日期列表
-            $last30Days = [];
-            for ($i = 29; $i >= 0; $i--) {
-                $last30Days[] = date('Y-m-d', strtotime("-{$i} days"));
+            $last15Days = [];
+            for ($i = 14; $i >= 0; $i--) {
+                $last15Days[] = date('Y-m-d', strtotime("-{$i} days"));
             }
 
             // 从数据库批量查询历史数据（排除今天）
-            $historyDates = array_filter($last30Days, fn($date) => $date !== $today);
+            $historyDates = array_filter($last15Days, fn($date) => $date !== $today);
             $historyData = $this->playerBetStatistics::where('player_id', $playerId)
                 ->where('dimension', 'daily')
                 ->whereIn('stat_date', $historyDates)
@@ -6153,7 +6153,7 @@ class ChannelPlayerController
                 });
 
             // 构建曲线图数据
-            foreach ($last30Days as $date) {
+            foreach ($last15Days as $date) {
                 $dailyTrend['dates'][] = date('m-d', strtotime($date));
 
                 if ($date === $today) {
