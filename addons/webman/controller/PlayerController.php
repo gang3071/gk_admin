@@ -4148,26 +4148,45 @@ class PlayerController
             $monthMachineData = $redis->hGetAll($monthMachineKey);
             $monthGameData = $redis->hGetAll($monthGameKey);
 
-            // 获取最近30天每日打码量（用于曲线图）
+            // ✅ 获取最近30天每日打码量（用于曲线图）
+            // 策略：今日从Redis，历史从数据库
             $dailyTrend = [
                 'dates' => [],
                 'machine' => [],
                 'game' => [],
             ];
 
+            // 准备日期列表
+            $last30Days = [];
             for ($i = 29; $i >= 0; $i--) {
-                $date = date('Y-m-d', strtotime("-{$i} days"));
+                $last30Days[] = date('Y-m-d', strtotime("-{$i} days"));
+            }
+
+            // 从数据库批量查询历史数据（排除今天）
+            $historyDates = array_filter($last30Days, fn($date) => $date !== $today);
+            $historyData = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->whereIn('stat_date', $historyDates)
+                ->get()
+                ->keyBy(function($item) {
+                    return $item->stat_date . '_' . $item->stat_type;
+                });
+
+            // 构建曲线图数据
+            foreach ($last30Days as $date) {
                 $dailyTrend['dates'][] = date('m-d', strtotime($date));
 
-                // 从 Redis 读取每日数据
-                $dateMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$date}";
-                $dateGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$date}";
-                $dateMachineData = $redis->hGetAll($dateMachineKey);
-                $dateGameData = $redis->hGetAll($dateGameKey);
-
-                // Redis 存储的是"分"，需要除以100转为"元"
-                $dailyTrend['machine'][] = isset($dateMachineData['bet_amount']) ? floatval($dateMachineData['bet_amount']) / 100 : 0;
-                $dailyTrend['game'][] = isset($dateGameData['bet_amount']) ? floatval($dateGameData['bet_amount']) / 100 : 0;
+                if ($date === $today) {
+                    // ✅ 今日数据从 Redis 读取（实时）
+                    $dailyTrend['machine'][] = $todayMachineAmount;
+                    $dailyTrend['game'][] = $todayGameAmount;
+                } else {
+                    // ✅ 历史数据从数据库读取
+                    $machineKey = $date . '_machine';
+                    $gameKey = $date . '_game';
+                    $dailyTrend['machine'][] = isset($historyData[$machineKey]) ? floatval($historyData[$machineKey]->bet_amount) : 0;
+                    $dailyTrend['game'][] = isset($historyData[$gameKey]) ? floatval($historyData[$gameKey]->bet_amount) : 0;
+                }
             }
 
             // ✅ Redis 存储的是"分"，需要除以100转为"元"
