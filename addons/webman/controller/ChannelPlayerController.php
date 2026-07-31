@@ -6120,6 +6120,14 @@ class ChannelPlayerController
             $monthMachineData = $redis->hGetAll($monthMachineKey);
             $monthGameData = $redis->hGetAll($monthGameKey);
 
+            // ✅ Redis 存储的是"分"，需要除以100转为"元"
+            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
+            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
+            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
+            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
+            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
+            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
+
             // ✅ 获取最近30天每日打码量（用于曲线图）
             // 策略：今日从Redis，历史从数据库
             $dailyTrend = [
@@ -6160,14 +6168,6 @@ class ChannelPlayerController
                     $dailyTrend['game'][] = isset($historyData[$gameKey]) ? floatval($historyData[$gameKey]->bet_amount) : 0;
                 }
             }
-
-            // ✅ Redis 存储的是"分"，需要除以100转为"元"
-            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
-            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
-            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
-            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
-            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
-            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
 
             return json([
                 'code' => 0,
