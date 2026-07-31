@@ -190,7 +190,7 @@ class ChannelStoreProfitReportController
             $shiftTable = (new StoreAgentShiftHandoverRecord())->getTable();
             $betQuery = StoreShiftDeviceDetail::query()
                 ->join($shiftTable, 'store_shift_device_detail.shift_record_id', '=', $shiftTable . '.id')
-                ->where($shiftTable . '.store_admin_id', $storeId);
+                ->where($shiftTable . '.bind_admin_user_id', $storeId);
 
             // 时间筛选：优先使用结算周期，否则使用手动时间范围
             if (!empty($dateType)) {
