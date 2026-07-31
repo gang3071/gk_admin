@@ -4103,113 +4103,164 @@ class PlayerController
      * 查看打码统计
      * @auth true
      * @param int $playerId
-     * @return \ExAdmin\ui\component\layout\Space
+     * @return \ExAdmin\ui\component\layout\Layout
      */
     public function betStatistics(int $playerId)
     {
-        return \ExAdmin\ui\component\layout\Space::create()
-            ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
-                'player-id' => $playerId,
-            ]));
-    }
+        $today = date('Y-m-d');
+        $thisWeek = date('o-\WW');
+        $thisMonth = date('Y-m');
 
-    /**
-     * 获取玩家打码统计数据
-     * @auth true
-     * @param int $playerId
-     * @return \support\Response
-     */
-    public function getBetStatisticsData(int $playerId): \support\Response
-    {
-        try {
-            $today = date('Y-m-d');
-            $thisWeek = date('o-\WW');
-            $thisMonth = date('Y-m');
+        // 获取统计数据
+        $dailyStats = $this->playerBetStatistics::where('player_id', $playerId)
+            ->where('dimension', 'daily')
+            ->where('stat_date', $today)
+            ->get();
 
-            // 获取今日打码量
-            $dailyStats = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'daily')
-                ->where('stat_date', $today)
-                ->get();
+        $weeklyStats = $this->playerBetStatistics::where('player_id', $playerId)
+            ->where('dimension', 'weekly')
+            ->where('stat_date', $thisWeek)
+            ->get();
 
-            // 获取本周打码量
-            $weeklyStats = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'weekly')
-                ->where('stat_date', $thisWeek)
-                ->get();
+        $monthlyStats = $this->playerBetStatistics::where('player_id', $playerId)
+            ->where('dimension', 'monthly')
+            ->where('stat_date', $thisMonth)
+            ->get();
 
-            // 获取本月打码量
-            $monthlyStats = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'monthly')
-                ->where('stat_date', $thisMonth)
-                ->get();
+        // 获取最近30天数据
+        $last30Days = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $last30Days[] = date('Y-m-d', strtotime("-{$i} days"));
+        }
 
-            // 获取最近30天每日打码量（用于曲线图）
-            $last30Days = [];
-            for ($i = 29; $i >= 0; $i--) {
-                $last30Days[] = date('Y-m-d', strtotime("-{$i} days"));
-            }
+        $dailyTrendData = $this->playerBetStatistics::where('player_id', $playerId)
+            ->where('dimension', 'daily')
+            ->whereIn('stat_date', $last30Days)
+            ->orderBy('stat_date', 'asc')
+            ->get()
+            ->keyBy('stat_date');
 
-            $dailyTrendData = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'daily')
-                ->whereIn('stat_date', $last30Days)
-                ->orderBy('stat_date', 'asc')
-                ->get()
-                ->keyBy('stat_date');
+        // 汇总数据
+        $todayMachine = $dailyStats->where('stat_type', 'machine')->first();
+        $todayGame = $dailyStats->where('stat_type', 'game')->first();
+        $weekMachine = $weeklyStats->where('stat_type', 'machine')->first();
+        $weekGame = $weeklyStats->where('stat_type', 'game')->first();
+        $monthMachine = $monthlyStats->where('stat_type', 'machine')->first();
+        $monthGame = $monthlyStats->where('stat_type', 'game')->first();
 
-            // 构建曲线图数据
-            $dailyTrend = [
-                'dates' => [],
-                'machine' => [],
-                'game' => [],
-            ];
+        $layout = \ExAdmin\ui\component\layout\Layout::create();
+
+        // 统计卡片行
+        $layout->row(function (\ExAdmin\ui\component\layout\Row $row) use ($todayMachine, $todayGame, $weekMachine, $weekGame, $monthMachine, $monthGame) {
+            $row->gutter([16, 16]);
+
+            // 今日打码量
+            $row->column(\ExAdmin\ui\component\grid\card\Card::create()
+                ->bodyStyle(['padding' => '20px'])
+                ->content([
+                    \ExAdmin\ui\component\grid\statistic\Statistic::create()
+                        ->value(($todayMachine ? floatval($todayMachine->bet_amount) : 0) + ($todayGame ? floatval($todayGame->bet_amount) : 0))
+                        ->precision(2)
+                        ->suffix('元')
+                        ->prefix('今日打码量')
+                        ->valueStyle(['color' => '#3f8600', 'fontSize' => '24px']),
+                    \ExAdmin\ui\component\common\Html::create()->content(
+                        '<div style="margin-top: 12px; font-size: 12px; color: rgba(0,0,0,0.45)">' .
+                        '实体机台：' . number_format($todayMachine ? floatval($todayMachine->bet_amount) : 0, 2) . ' 元<br/>' .
+                        '电子游戏：' . number_format($todayGame ? floatval($todayGame->bet_amount) : 0, 2) . ' 元' .
+                        '</div>'
+                    )
+                ])
+            )->span(8);
+
+            // 本周打码量
+            $row->column(\ExAdmin\ui\component\grid\card\Card::create()
+                ->bodyStyle(['padding' => '20px'])
+                ->content([
+                    \ExAdmin\ui\component\grid\statistic\Statistic::create()
+                        ->value(($weekMachine ? floatval($weekMachine->bet_amount) : 0) + ($weekGame ? floatval($weekGame->bet_amount) : 0))
+                        ->precision(2)
+                        ->suffix('元')
+                        ->prefix('本周打码量')
+                        ->valueStyle(['color' => '#1890ff', 'fontSize' => '24px']),
+                    \ExAdmin\ui\component\common\Html::create()->content(
+                        '<div style="margin-top: 12px; font-size: 12px; color: rgba(0,0,0,0.45)">' .
+                        '实体机台：' . number_format($weekMachine ? floatval($weekMachine->bet_amount) : 0, 2) . ' 元<br/>' .
+                        '电子游戏：' . number_format($weekGame ? floatval($weekGame->bet_amount) : 0, 2) . ' 元' .
+                        '</div>'
+                    )
+                ])
+            )->span(8);
+
+            // 本月打码量
+            $row->column(\ExAdmin\ui\component\grid\card\Card::create()
+                ->bodyStyle(['padding' => '20px'])
+                ->content([
+                    \ExAdmin\ui\component\grid\statistic\Statistic::create()
+                        ->value(($monthMachine ? floatval($monthMachine->bet_amount) : 0) + ($monthGame ? floatval($monthGame->bet_amount) : 0))
+                        ->precision(2)
+                        ->suffix('元')
+                        ->prefix('本月打码量')
+                        ->valueStyle(['color' => '#cf1322', 'fontSize' => '24px']),
+                    \ExAdmin\ui\component\common\Html::create()->content(
+                        '<div style="margin-top: 12px; font-size: 12px; color: rgba(0,0,0,0.45)">' .
+                        '实体机台：' . number_format($monthMachine ? floatval($monthMachine->bet_amount) : 0, 2) . ' 元<br/>' .
+                        '电子游戏：' . number_format($monthGame ? floatval($monthGame->bet_amount) : 0, 2) . ' 元' .
+                        '</div>'
+                    )
+                ])
+            )->span(8);
+        });
+
+        // 图表行
+        $layout->row(function (\ExAdmin\ui\component\layout\Row $row) use ($last30Days, $dailyTrendData, $monthMachine, $monthGame) {
+            $row->gutter([16, 16]);
+
+            // 近30天打码量趋势（折线图）
+            $lineChart = \ExAdmin\ui\component\echart\LineChart::create();
+            $lineChart->title('近30天打码量趋势');
+
+            // 设置 X 轴数据
+            $xAxisData = [];
+            $machineData = [];
+            $gameData = [];
 
             foreach ($last30Days as $date) {
-                $dailyTrend['dates'][] = date('m-d', strtotime($date));
+                $xAxisData[] = [
+                    'value' => [$date . ' 00:00:00', $date . ' 23:59:59'],
+                    'label' => date('m-d', strtotime($date))
+                ];
 
-                $machineData = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'machine')->first();
-                $gameData = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'game')->first();
+                $machineRecord = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'machine')->first();
+                $gameRecord = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'game')->first();
 
-                $dailyTrend['machine'][] = $machineData ? floatval($machineData->bet_amount) : 0;
-                $dailyTrend['game'][] = $gameData ? floatval($gameData->bet_amount) : 0;
+                $machineData[] = $machineRecord ? floatval($machineRecord->bet_amount) : 0;
+                $gameData[] = $gameRecord ? floatval($gameRecord->bet_amount) : 0;
             }
 
-            // 计算汇总数据
-            $todayMachine = $dailyStats->where('stat_type', 'machine')->first();
-            $todayGame = $dailyStats->where('stat_type', 'game')->first();
-            $weekMachine = $weeklyStats->where('stat_type', 'machine')->first();
-            $weekGame = $weeklyStats->where('stat_type', 'game')->first();
-            $monthMachine = $monthlyStats->where('stat_type', 'machine')->first();
-            $monthGame = $monthlyStats->where('stat_type', 'game')->first();
+            $lineChart->xAxisData = $xAxisData;
+            $lineChart->series('实体机台', $machineData);
+            $lineChart->series('电子游戏', $gameData);
 
-            return json([
-                'code' => 0,
-                'msg' => 'success',
-                'data' => [
-                    'today' => [
-                        'machine' => $todayMachine ? floatval($todayMachine->bet_amount) : 0,
-                        'game' => $todayGame ? floatval($todayGame->bet_amount) : 0,
-                        'total' => ($todayMachine ? floatval($todayMachine->bet_amount) : 0) + ($todayGame ? floatval($todayGame->bet_amount) : 0),
-                    ],
-                    'week' => [
-                        'machine' => $weekMachine ? floatval($weekMachine->bet_amount) : 0,
-                        'game' => $weekGame ? floatval($weekGame->bet_amount) : 0,
-                        'total' => ($weekMachine ? floatval($weekMachine->bet_amount) : 0) + ($weekGame ? floatval($weekGame->bet_amount) : 0),
-                    ],
-                    'month' => [
-                        'machine' => $monthMachine ? floatval($monthMachine->bet_amount) : 0,
-                        'game' => $monthGame ? floatval($monthGame->bet_amount) : 0,
-                        'total' => ($monthMachine ? floatval($monthMachine->bet_amount) : 0) + ($monthGame ? floatval($monthGame->bet_amount) : 0),
-                    ],
-                    'dailyTrend' => $dailyTrend,
-                ],
-            ]);
-        } catch (\Exception $e) {
-            return json([
-                'code' => 1,
-                'msg' => $e->getMessage(),
-                'data' => null,
-            ]);
-        }
+            $row->column(\ExAdmin\ui\component\grid\card\Card::create()
+                ->bodyStyle(['padding' => '20px'])
+                ->content($lineChart)
+            )->span(16);
+
+            // 本月打码量分布（饼图）
+            $pieChart = \ExAdmin\ui\component\echart\PieChart::create('打码量分布');
+            $pieChart->title('本月打码量分布');
+            $pieChart->ring(); // 环形图
+            $pieChart->data('实体机台', $monthMachine ? floatval($monthMachine->bet_amount) : 0);
+            $pieChart->data('电子游戏', $monthGame ? floatval($monthGame->bet_amount) : 0);
+
+            $row->column(\ExAdmin\ui\component\grid\card\Card::create()
+                ->bodyStyle(['padding' => '20px'])
+                ->content($pieChart)
+            )->span(8);
+        });
+
+        return $layout;
     }
+
 }
