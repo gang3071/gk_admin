@@ -4148,7 +4148,8 @@ class PlayerController
             $monthMachineData = $redis->hGetAll($monthMachineKey);
             $monthGameData = $redis->hGetAll($monthGameKey);
 
-            // ✅ Redis 存储的是"分"，需要除以100转为"元"
+            // ✅ Redis 存储的是"分"（精度设计），需要除以100转为"元"显示
+            // 注意：如果显示异常（如3元显示0.03），说明 gk_work 写入时没有乘以100，需修复 gk_work
             $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
             $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
             $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
