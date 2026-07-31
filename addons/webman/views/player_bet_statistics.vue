@@ -2,7 +2,7 @@
   <div class="bet-statistics-container">
     <a-spin :spinning="loading" tip="加载中...">
       <!-- 统计卡片 -->
-      <a-row :gutter="16" style="margin-bottom: 24px">
+      <a-row :gutter="16" style="margin-bottom: 16px; padding: 0 16px">
         <a-col :span="8">
           <a-card>
             <a-statistic
@@ -65,7 +65,7 @@
       </a-row>
 
       <!-- 图表 -->
-      <a-row :gutter="16">
+      <a-row :gutter="16" style="padding: 0 16px">
         <!-- 近30天打码量曲线图 -->
         <a-col :span="16">
           <a-card title="近30天打码量趋势" :bordered="false">
@@ -356,18 +356,35 @@ export default {
 
 <style scoped>
 .bet-statistics-container {
-  padding: 24px;
-  background: #f0f2f5;
+  width: 100%;
+  min-height: 600px;
+  padding: 0;
+  background: #f5f5f5;
+}
+
+.bet-statistics-container :deep(.ant-spin-container) {
+  width: 100%;
+}
+
+.bet-statistics-container :deep(.ant-row) {
+  width: 100%;
+  margin: 0 !important;
 }
 
 .bet-statistics-container :deep(.ant-card) {
   border-radius: 8px;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  height: 100%;
+}
+
+.bet-statistics-container :deep(.ant-card-body) {
+  padding: 20px;
 }
 
 .bet-statistics-container :deep(.ant-statistic-title) {
   font-size: 14px;
   font-weight: 500;
+  margin-bottom: 8px;
 }
 
 .bet-statistics-container :deep(.ant-statistic-content) {
