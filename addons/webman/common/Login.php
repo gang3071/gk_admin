@@ -1877,24 +1877,54 @@ class Login extends LoginAbstract
                 // 克隆基础查询用于基础统计（会应用所有筛选条件）
                 $query = clone $baseQuery;
 
-                // 应用筛选条件
+                // 应用筛选条件（与 PlayerLotteryRecordController/index 保持一致）
                 if (!empty($exAdminFilter['created_at_start'])) {
                     $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
                 }
                 if (!empty($exAdminFilter['created_at_end'])) {
                     $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
                 }
-                if (!empty($exAdminFilter['status'])) {
-                    $query->where('status', $exAdminFilter['status']);
+                if (!empty($exAdminFilter['amount'])) {
+                    $query->where('amount', $exAdminFilter['amount']);
+                }
+                if (!empty($exAdminFilter['lottery_name'])) {
+                    $query->where('lottery_name', 'like', '%' . $exAdminFilter['lottery_name'] . '%');
                 }
                 if (!empty($exAdminFilter['lottery_type'])) {
                     $query->where('lottery_type', $exAdminFilter['lottery_type']);
                 }
-                if (isset($exAdminFilter['date_type'])) {
-                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+                if (!empty($exAdminFilter['machine_code'])) {
+                    $query->where('machine_code', 'like', '%' . $exAdminFilter['machine_code'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_name'])) {
+                    $query->where('machine_name', 'like', '%' . $exAdminFilter['machine_name'] . '%');
+                }
+                if (!empty($exAdminFilter['player_phone'])) {
+                    $query->where('player_phone', 'like', '%' . $exAdminFilter['player_phone'] . '%');
+                }
+                if (!empty($exAdminFilter['status'])) {
+                    $query->where('status', $exAdminFilter['status']);
+                }
+                if (!empty($exAdminFilter['uuid'])) {
+                    $query->where('uuid', $exAdminFilter['uuid']);
                 }
                 if (!empty($exAdminFilter['search_type'])) {
                     $query->where('is_test', $exAdminFilter['search_type']);
+                }
+                if (!empty($exAdminFilter['search_is_promoter'])) {
+                    $query->where('is_promoter', $exAdminFilter['search_is_promoter']);
+                }
+                if (!empty($exAdminFilter['cate_id'])) {
+                    $cate_id = $exAdminFilter['cate_id'];
+                    $query->whereHas('machine', function ($q) use ($cate_id) {
+                        $q->whereIn('cate_id', $cate_id);
+                    });
+                }
+                if (isset($exAdminFilter['date_type'])) {
+                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+                }
+                if (!empty($exAdminFilter['department_id'])) {
+                    $query->where('department_id', $exAdminFilter['department_id']);
                 }
 
                 // 统计数据（应用所有筛选条件）
@@ -1906,20 +1936,50 @@ class Login extends LoginAbstract
                     COUNT(*) as total_count
                 ')->first();
 
-                // 按游戏类型分组统计（只保留权限过滤和时间范围，不受其他筛选影响）
+                // 按游戏类型分组统计（保留权限过滤和时间范围等筛选）
                 $jpQuery = clone $baseQuery;
-                // 只应用时间范围筛选，不应用status、lottery_type等筛选
+                // 应用与主查询一致的筛选条件（排除 status 和 lottery_type，因为分组统计固定只看已完成状态）
                 if (!empty($exAdminFilter['created_at_start'])) {
                     $jpQuery->where('created_at', '>=', $exAdminFilter['created_at_start']);
                 }
                 if (!empty($exAdminFilter['created_at_end'])) {
                     $jpQuery->where('created_at', '<=', $exAdminFilter['created_at_end']);
                 }
-                if (isset($exAdminFilter['date_type'])) {
-                    $jpQuery->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+                if (!empty($exAdminFilter['amount'])) {
+                    $jpQuery->where('amount', $exAdminFilter['amount']);
+                }
+                if (!empty($exAdminFilter['lottery_name'])) {
+                    $jpQuery->where('lottery_name', 'like', '%' . $exAdminFilter['lottery_name'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_code'])) {
+                    $jpQuery->where('machine_code', 'like', '%' . $exAdminFilter['machine_code'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_name'])) {
+                    $jpQuery->where('machine_name', 'like', '%' . $exAdminFilter['machine_name'] . '%');
+                }
+                if (!empty($exAdminFilter['player_phone'])) {
+                    $jpQuery->where('player_phone', 'like', '%' . $exAdminFilter['player_phone'] . '%');
+                }
+                if (!empty($exAdminFilter['uuid'])) {
+                    $jpQuery->where('uuid', $exAdminFilter['uuid']);
                 }
                 if (!empty($exAdminFilter['search_type'])) {
                     $jpQuery->where('is_test', $exAdminFilter['search_type']);
+                }
+                if (!empty($exAdminFilter['search_is_promoter'])) {
+                    $jpQuery->where('is_promoter', $exAdminFilter['search_is_promoter']);
+                }
+                if (!empty($exAdminFilter['cate_id'])) {
+                    $cate_id = $exAdminFilter['cate_id'];
+                    $jpQuery->whereHas('machine', function ($q) use ($cate_id) {
+                        $q->whereIn('cate_id', $cate_id);
+                    });
+                }
+                if (isset($exAdminFilter['date_type'])) {
+                    $jpQuery->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+                }
+                if (!empty($exAdminFilter['department_id'])) {
+                    $jpQuery->where('department_id', $exAdminFilter['department_id']);
                 }
 
                 $jpTotalData = $jpQuery->selectRaw('IFNULL(SUM(amount), 0) as total_amount, game_type, lottery_id, lottery_name, lottery_type, lottery_sort')
