@@ -14,6 +14,8 @@ return [
         'machine_put_point' => '投鈔',
         'lottery_amount' => '彩金',
         'activity_total' => '活動獎勵',
+        'electronic_game_bet_amount' => '電子遊戲打碼量',
+        'machine_bet_amount' => '機器打碼量',
         'subtotal' => '小計',
         'agent_commission' => '代理抽成比例',
         'agent_profit' => '代理分潤',

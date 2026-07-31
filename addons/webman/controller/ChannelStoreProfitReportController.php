@@ -8,6 +8,8 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerWithdrawRecord;
+use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Editable;
@@ -121,6 +123,8 @@ class ChannelStoreProfitReportController
                     'machine_put_point' => 0,
                     'lottery_amount' => 0,
                     'activity_total' => 0,
+                    'electronic_game_bet_amount' => 0,
+                    'machine_bet_amount' => 0,
                     'subtotal' => 0,
                     'agent_profit' => 0,
                     'channel_profit' => 0,
@@ -182,12 +186,42 @@ class ChannelStoreProfitReportController
                 SUM(`amount`) as lottery_amount
             ")->first();
 
+            // 查询电子游戏打码量和机器打码量
+            $shiftTable = (new StoreAgentShiftHandoverRecord())->getTable();
+            $betQuery = StoreShiftDeviceDetail::query()
+                ->join($shiftTable, 'store_shift_device_detail.shift_record_id', '=', $shiftTable . '.id')
+                ->where($shiftTable . '.store_admin_id', $storeId);
+
+            // 时间筛选：优先使用结算周期，否则使用手动时间范围
+            if (!empty($dateType)) {
+                $betQuery->where(getDateWhere($dateType, $shiftTable . '.created_at'));
+            } else {
+                if (!empty($createdAtStart)) {
+                    $betQuery->where($shiftTable . '.created_at', '>=', $createdAtStart);
+                }
+                if (!empty($createdAtEnd)) {
+                    $betQuery->where($shiftTable . '.created_at', '<=', $createdAtEnd);
+                }
+            }
+
+            // 班次筛选
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($betQuery, $selectedShift, $shiftTable);
+            }
+
+            $betData = $betQuery->selectRaw("
+                SUM(store_shift_device_detail.electronic_game_bet_amount) as electronic_game_bet_amount,
+                SUM(store_shift_device_detail.machine_bet_amount) as machine_bet_amount
+            ")->first();
+
             // 提取数据
             $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
             $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
+            $electronicGameBetAmount = floatval($betData->electronic_game_bet_amount ?? 0);
+            $machineBetAmount = floatval($betData->machine_bet_amount ?? 0);
 
             // 计算小计 = (开分 + 投钞) - 洗分
             // 注意：洗分中不包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
@@ -216,6 +250,8 @@ class ChannelStoreProfitReportController
                 'machine_put_point' => $machinePutPoint,
                 'lottery_amount' => $lotteryAmount,
                 'activity_total' => $activityTotal,
+                'electronic_game_bet_amount' => $electronicGameBetAmount,
+                'machine_bet_amount' => $machineBetAmount,
                 'subtotal' => $subtotal,
                 'agent_profit' => $agentProfit,
                 'channel_profit' => $channelProfit,
@@ -229,6 +265,8 @@ class ChannelStoreProfitReportController
             'total_machine_put' => 0,
             'total_lottery' => 0,
             'total_activity' => 0,
+            'total_electronic_game_bet' => 0,
+            'total_machine_bet' => 0,
             'total_subtotal' => 0,
             'total_agent_profit' => 0,
             'total_channel_profit' => 0,
@@ -240,6 +278,8 @@ class ChannelStoreProfitReportController
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'], 2);
             $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'], 2);
             $totalStats['total_activity'] = bcadd($totalStats['total_activity'] ?? 0, $item['activity_total'], 2);
+            $totalStats['total_electronic_game_bet'] = bcadd($totalStats['total_electronic_game_bet'], $item['electronic_game_bet_amount'], 2);
+            $totalStats['total_machine_bet'] = bcadd($totalStats['total_machine_bet'], $item['machine_bet_amount'], 2);
             $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
             $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
@@ -467,6 +507,14 @@ class ChannelStoreProfitReportController
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            $grid->column('electronic_game_bet_amount', admin_trans('channel_store_profit.fields.electronic_game_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            $grid->column('machine_bet_amount', admin_trans('channel_store_profit.fields.machine_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
             $grid->column('subtotal', admin_trans('channel_store_profit.fields.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
@@ -578,7 +626,7 @@ class ChannelStoreProfitReportController
      * @param string $shift 班次类型: morning/afternoon/night
      * @return void
      */
-    private function applyShiftFilter($query, string $shift): void
+    private function applyShiftFilter($query, string $shift, string $tablePrefix = ''): void
     {
         if (!isset(self::SHIFT_RANGES[$shift])) {
             return;
@@ -587,14 +635,15 @@ class ChannelStoreProfitReportController
         $range = self::SHIFT_RANGES[$shift];
         $startHour = $range['start'];
         $endHour = $range['end'];
+        $column = $tablePrefix ? $tablePrefix . '.created_at' : 'created_at';
 
         if ($startHour < $endHour) {
             // 正常时间范围（如早班 08-16）
-            $query->whereRaw('HOUR(created_at) >= ? AND HOUR(created_at) < ?', [$startHour, $endHour]);
+            $query->whereRaw("HOUR({$column}) >= ? AND HOUR({$column}) < ?", [$startHour, $endHour]);
         } else {
             // 跨午夜时间范围（如晚班 00-08，实际是 0-8）
             // 这里 startHour=0, endHour=8，所以是正常范围
-            $query->whereRaw('HOUR(created_at) >= ? AND HOUR(created_at) < ?', [$startHour, $endHour]);
+            $query->whereRaw("HOUR({$column}) >= ? AND HOUR({$column}) < ?", [$startHour, $endHour]);
         }
     }
 }
