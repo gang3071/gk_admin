@@ -63,19 +63,63 @@
       </a-col>
     </a-row>
 
-    <!-- 图表 -->
+    <!-- 数据表格 -->
     <a-row :gutter="16">
-      <!-- 每日打码量曲线图 -->
+      <!-- 近30天打码量列表 -->
       <a-col :span="16">
-        <a-card title="近30天打码量趋势" :bordered="false">
-          <div ref="lineChart" style="width: 100%; height: 400px"></div>
+        <a-card title="近30天打码量详情" :bordered="false">
+          <a-table
+            :columns="columns"
+            :data-source="tableData"
+            :pagination="{ pageSize: 10 }"
+            size="small"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'machine'">
+                <a-tag color="blue">{{ record.machine }} 元</a-tag>
+              </template>
+              <template v-if="column.key === 'game'">
+                <a-tag color="green">{{ record.game }} 元</a-tag>
+              </template>
+              <template v-if="column.key === 'total'">
+                <a-tag color="orange">{{ record.total }} 元</a-tag>
+              </template>
+            </template>
+          </a-table>
         </a-card>
       </a-col>
 
-      <!-- 本月打码量饼图 -->
+      <!-- 本月打码量占比 -->
       <a-col :span="8">
-        <a-card title="本月打码量分布" :bordered="false">
-          <div ref="pieChart" style="width: 100%; height: 400px"></div>
+        <a-card title="本月打码量占比" :bordered="false">
+          <div style="padding: 20px 0">
+            <a-progress
+              :percent="machinePercent"
+              :format="() => '实体机台 ' + machinePercent + '%'"
+              stroke-color="#5470c6"
+              style="margin-bottom: 30px"
+            />
+            <a-statistic
+              title="实体机台"
+              :value="stats.month.machine"
+              :precision="2"
+              suffix="元"
+              style="margin-bottom: 30px"
+            />
+
+            <a-progress
+              :percent="gamePercent"
+              :format="() => '电子游戏 ' + gamePercent + '%'"
+              stroke-color="#91cc75"
+              style="margin-bottom: 30px"
+            />
+            <a-statistic
+              title="电子游戏"
+              :value="stats.month.game"
+              :precision="2"
+              suffix="元"
+            />
+          </div>
         </a-card>
       </a-col>
     </a-row>
@@ -103,7 +147,60 @@ export default {
         machine: [],
         game: [],
       },
+      columns: [
+        {
+          title: '日期',
+          dataIndex: 'date',
+          key: 'date',
+          align: 'center',
+        },
+        {
+          title: '实体机台',
+          dataIndex: 'machine',
+          key: 'machine',
+          align: 'center',
+        },
+        {
+          title: '电子游戏',
+          dataIndex: 'game',
+          key: 'game',
+          align: 'center',
+        },
+        {
+          title: '合计',
+          dataIndex: 'total',
+          key: 'total',
+          align: 'center',
+        },
+      ],
     };
+  },
+  computed: {
+    tableData() {
+      const data = [];
+      for (let i = 0; i < this.dailyTrend.dates.length; i++) {
+        const machine = this.dailyTrend.machine[i] || 0;
+        const game = this.dailyTrend.game[i] || 0;
+        data.push({
+          key: i,
+          date: this.dailyTrend.dates[i],
+          machine: machine.toFixed(2),
+          game: game.toFixed(2),
+          total: (machine + game).toFixed(2),
+        });
+      }
+      return data.reverse(); // 最新日期在前
+    },
+    machinePercent() {
+      const total = this.stats.month.machine + this.stats.month.game;
+      if (total === 0) return 0;
+      return Math.round((this.stats.month.machine / total) * 100);
+    },
+    gamePercent() {
+      const total = this.stats.month.machine + this.stats.month.game;
+      if (total === 0) return 0;
+      return Math.round((this.stats.month.game / total) * 100);
+    },
   },
   mounted() {
     this.loadData();
@@ -127,170 +224,12 @@ export default {
           }
 
           this.dailyTrend = response.data.dailyTrend;
-
-          // 渲染图表
-          this.$nextTick(() => {
-            this.renderLineChart();
-            this.renderPieChart();
-          });
         } else {
           this.$message.error('加载数据失败: ' + response.msg);
         }
       } catch (error) {
-        this.$message.error('加载数据失败: ' + error.message);
+        this.$message.error('加载数据失败: ' + (error.message || '未知错误'));
       }
-    },
-
-    renderLineChart() {
-      if (!this.$refs.lineChart) return;
-
-      const chart = echarts.init(this.$refs.lineChart);
-      const option = {
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: {
-            type: 'cross',
-          },
-        },
-        legend: {
-          data: ['实体机台', '电子游戏'],
-          top: 0,
-        },
-        grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '3%',
-          containLabel: true,
-        },
-        xAxis: {
-          type: 'category',
-          boundaryGap: false,
-          data: this.dailyTrend.dates,
-          axisLabel: {
-            rotate: 45,
-          },
-        },
-        yAxis: {
-          type: 'value',
-          name: '打码量（元）',
-          axisLabel: {
-            formatter: '{value}',
-          },
-        },
-        series: [
-          {
-            name: '实体机台',
-            type: 'line',
-            smooth: true,
-            data: this.dailyTrend.machine,
-            itemStyle: {
-              color: '#5470c6',
-            },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: 'rgba(84, 112, 198, 0.3)' },
-                  { offset: 1, color: 'rgba(84, 112, 198, 0.05)' },
-                ],
-              },
-            },
-          },
-          {
-            name: '电子游戏',
-            type: 'line',
-            smooth: true,
-            data: this.dailyTrend.game,
-            itemStyle: {
-              color: '#91cc75',
-            },
-            areaStyle: {
-              color: {
-                type: 'linear',
-                x: 0,
-                y: 0,
-                x2: 0,
-                y2: 1,
-                colorStops: [
-                  { offset: 0, color: 'rgba(145, 204, 117, 0.3)' },
-                  { offset: 1, color: 'rgba(145, 204, 117, 0.05)' },
-                ],
-              },
-            },
-          },
-        ],
-      };
-
-      chart.setOption(option);
-
-      // 响应式
-      window.addEventListener('resize', () => {
-        chart.resize();
-      });
-    },
-
-    renderPieChart() {
-      if (!this.$refs.pieChart) return;
-
-      const chart = echarts.init(this.$refs.pieChart);
-      const option = {
-        tooltip: {
-          trigger: 'item',
-          formatter: '{a} <br/>{b}: {c} 元 ({d}%)',
-        },
-        legend: {
-          orient: 'vertical',
-          left: 'left',
-          top: 'middle',
-        },
-        series: [
-          {
-            name: '打码量',
-            type: 'pie',
-            radius: ['40%', '70%'],
-            avoidLabelOverlap: false,
-            itemStyle: {
-              borderRadius: 10,
-              borderColor: '#fff',
-              borderWidth: 2,
-            },
-            label: {
-              show: true,
-              formatter: '{b}\n{d}%',
-            },
-            emphasis: {
-              label: {
-                show: true,
-                fontSize: '18',
-                fontWeight: 'bold',
-              },
-            },
-            data: [
-              {
-                value: this.stats.month.machine,
-                name: '实体机台',
-                itemStyle: { color: '#5470c6' },
-              },
-              {
-                value: this.stats.month.game,
-                name: '电子游戏',
-                itemStyle: { color: '#91cc75' },
-              },
-            ],
-          },
-        ],
-      };
-
-      chart.setOption(option);
-
-      // 响应式
-      window.addEventListener('resize', () => {
-        chart.resize();
-      });
     },
   },
 };
