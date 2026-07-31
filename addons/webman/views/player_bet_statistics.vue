@@ -360,15 +360,20 @@ export default {
   min-height: 600px;
   padding: 0;
   background: #f5f5f5;
+  display: block;
+  box-sizing: border-box;
 }
 
 .bet-statistics-container :deep(.ant-spin-container) {
   width: 100%;
+  display: block;
 }
 
 .bet-statistics-container :deep(.ant-row) {
   width: 100%;
   margin: 0 !important;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .bet-statistics-container :deep(.ant-card) {
