@@ -109,12 +109,17 @@ export default {
       },
       lineChartInstance: null,
       pieChartInstance: null,
+      pollingTimer: null, // 轮询定时器
     };
   },
   mounted() {
     this.loadEcharts();
+    // 启动轮询，每5秒刷新一次数据
+    this.startPolling();
   },
   beforeUnmount() {
+    // 停止轮询
+    this.stopPolling();
     // 销毁图表实例
     if (this.lineChartInstance) {
       this.lineChartInstance.dispose();
@@ -124,11 +129,26 @@ export default {
     }
   },
   methods: {
+    // 启动轮询
+    startPolling() {
+      this.pollingTimer = setInterval(() => {
+        this.loadData(false); // false 表示不显示 loading
+      }, 5000); // 每5秒刷新一次
+    },
+
+    // 停止轮询
+    stopPolling() {
+      if (this.pollingTimer) {
+        clearInterval(this.pollingTimer);
+        this.pollingTimer = null;
+      }
+    },
+
     loadEcharts() {
       // 检查 echarts 是否已加载
       if (window.echarts) {
         this.echartsLoaded = true;
-        this.loadData();
+        this.loadData(true);
         return;
       }
 
@@ -137,7 +157,7 @@ export default {
       script.src = 'https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js';
       script.onload = () => {
         this.echartsLoaded = true;
-        this.loadData();
+        this.loadData(true);
       };
       script.onerror = () => {
         this.$message.error('图表库加载失败，请刷新页面重试');
@@ -146,7 +166,11 @@ export default {
       document.head.appendChild(script);
     },
 
-    async loadData() {
+    async loadData(showLoading = true) {
+      if (showLoading) {
+        this.loading = true;
+      }
+
       try {
         const response = await this.$request({
           url: 'ex-admin/addons-webman-controller-PlayerController/getBetStatisticsData',
@@ -171,15 +195,21 @@ export default {
               this.renderLineChart();
               this.renderPieChart();
             }
-            this.loading = false;
+            if (showLoading) {
+              this.loading = false;
+            }
           });
         } else {
           this.$message.error('加载数据失败: ' + response.msg);
-          this.loading = false;
+          if (showLoading) {
+            this.loading = false;
+          }
         }
       } catch (error) {
         this.$message.error('加载数据失败: ' + (error.message || '未知错误'));
-        this.loading = false;
+        if (showLoading) {
+          this.loading = false;
+        }
       }
     },
 
@@ -301,18 +331,13 @@ export default {
           orient: 'vertical',
           left: 'left',
           top: 'middle',
-          textStyle: {
-            fontSize: 14,
-            color: '#333',
-          },
         },
         series: [
           {
             name: '打码量',
             type: 'pie',
             radius: ['40%', '70%'],
-            center: ['60%', '50%'], // ✅ 调整饼图位置，给左侧图例留出空间
-            avoidLabelOverlap: true, // ✅ 启用标签防重叠
+            avoidLabelOverlap: false,
             itemStyle: {
               borderRadius: 10,
               borderColor: '#fff',
@@ -321,32 +346,12 @@ export default {
             label: {
               show: true,
               formatter: '{b}\n{d}%',
-              fontSize: 14, // ✅ 增大字体
-              fontWeight: 'bold', // ✅ 加粗字体
-              color: '#333', // ✅ 深色文字，确保可见
-              position: 'outside', // ✅ 标签显示在外侧
-              distanceToLabelLine: 5, // ✅ 标签与引导线的距离
-            },
-            labelLine: {
-              show: true,
-              length: 15, // ✅ 第一段引导线长度
-              length2: 10, // ✅ 第二段引导线长度
-              smooth: true, // ✅ 平滑引导线
-              lineStyle: {
-                width: 1.5,
-                color: '#999',
-              },
             },
             emphasis: {
               label: {
                 show: true,
-                fontSize: 18,
+                fontSize: '18',
                 fontWeight: 'bold',
-              },
-              itemStyle: {
-                shadowBlur: 10,
-                shadowOffsetX: 0,
-                shadowColor: 'rgba(0, 0, 0, 0.5)',
               },
             },
             data: [
