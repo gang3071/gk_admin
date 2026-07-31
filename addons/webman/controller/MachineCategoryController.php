@@ -7,6 +7,7 @@ use addons\webman\model\Machine;
 use addons\webman\model\MachineCategory;
 use addons\webman\model\MachineCategoryExtend;
 use ExAdmin\ui\component\common\Html;
+use support\Cache;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\form\Watch;
 use ExAdmin\ui\component\grid\card\Card;
@@ -494,6 +495,32 @@ class MachineCategoryController
                             return message_error(admin_trans('machine_category.validation.please_fill_simplified_chinese_name'));
                         }
                         $form->input('name', $content['name']);
+                    }
+                }
+            });
+
+            // 保存后清理该分类下所有机台的缓存
+            $form->saved(function (Form $form) {
+                $categoryId = $form->input('id');
+                if ($categoryId) {
+                    // 获取该分类下的所有机台ID
+                    $machineIds = Machine::query()
+                        ->where('cate_id', $categoryId)
+                        ->pluck('id')
+                        ->toArray();
+
+                    // 清理每个机台的缓存
+                    foreach ($machineIds as $machineId) {
+                        $cacheKey = "machine_tcp_data_cache_{$machineId}";
+                        Cache::delete($cacheKey);
+                    }
+
+                    if (!empty($machineIds)) {
+                        \support\Log::info('MachineCategory: 已清理机台缓存', [
+                            'category_id' => $categoryId,
+                            'machine_ids' => $machineIds,
+                            'count' => count($machineIds),
+                        ]);
                     }
                 }
             });
