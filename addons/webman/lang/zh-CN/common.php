@@ -23,6 +23,7 @@ return [
     'load_failed' => '加载失败',
     'invalid_game_points' => '转换后的游戏点数无效',
     'system_error' => '系统错误',
+    'unknown_error' => '未知错误',
     'machine_in_test_mode' => '该机台作为新版工控测试机台使用中',
     'video_host_request_failed' => '请求视讯主机失败',
     'get_stream_info_failed' => '获取流信息失败',

@@ -6078,10 +6078,26 @@ class ChannelPlayerController
      */
     public function betStatistics(int $playerId)
     {
+        // ✅ 准备翻译对象
+        $trans = [
+            'loading' => admin_trans('player.loading'),
+            'today_bet' => admin_trans('player.today_bet'),
+            'week_bet' => admin_trans('player.week_bet'),
+            'month_bet' => admin_trans('player.month_bet'),
+            'machine_bet' => admin_trans('player.machine_bet'),
+            'game_bet' => admin_trans('player.game_bet'),
+            'bet_amount_unit' => admin_trans('player.bet_amount_unit'),
+            'bet_trend_15days' => admin_trans('player.bet_trend_15days'),
+            'month_bet_distribution' => admin_trans('player.month_bet_distribution'),
+            'load_failed' => admin_trans('player.load_failed'),
+            'unknown_error' => admin_trans('common.unknown_error'),
+        ];
+
         return \ExAdmin\ui\component\layout\Space::create()
             ->style(['width' => '100%', 'display' => 'block'])
             ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
                 'player-id' => $playerId,
+                'trans' => $trans,  // ✅ 传递翻译对象
             ]));
     }
 

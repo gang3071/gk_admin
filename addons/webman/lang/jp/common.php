@@ -23,6 +23,7 @@ return [
     'load_failed' => '読み込みが失敗しました',
     'invalid_game_points' => '変換されたゲームポイントが無効です',
     'system_error' => 'システムエラー',
+    'unknown_error' => '不明なエラー',
     'machine_in_test_mode' => 'このマシンは新バージョン工業制御テストマシンとして使用されています',
     'video_host_request_failed' => 'ビデオホストのリクエストが失敗しました',
     'get_stream_info_failed' => 'ストリーム情報の取得が失敗しました',

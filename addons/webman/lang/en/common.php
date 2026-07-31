@@ -23,6 +23,7 @@ return [
     'load_failed' => 'Load failed',
     'invalid_game_points' => 'Invalid game points',
     'system_error' => 'System error',
+    'unknown_error' => 'Unknown error',
     'machine_in_test_mode' => 'Machine in test mode',
     'video_host_request_failed' => 'Video host request failed',
     'get_stream_info_failed' => 'Failed to get stream info',
