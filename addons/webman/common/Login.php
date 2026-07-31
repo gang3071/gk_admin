@@ -1445,8 +1445,14 @@ class Login extends LoginAbstract
                     $jpQuery->where('is_test', $exAdminFilter['search_type']);
                 }
 
+                // 状态筛选：跟随用户选择，未选择时默认只看已完成
+                if (!empty($exAdminFilter['status'])) {
+                    $jpQuery->where('status', $exAdminFilter['status']);
+                } else {
+                    $jpQuery->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
+                }
+
                 $jpTotalData = $jpQuery->selectRaw('IFNULL(SUM(amount), 0) as total_amount, game_type, lottery_id, lottery_name, lottery_type, lottery_sort')
-                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
                     ->groupBy('game_type', 'lottery_id', 'lottery_name', 'lottery_type', 'lottery_sort')
                     ->orderBy('lottery_type')
                     ->orderBy('lottery_sort')
@@ -1606,8 +1612,14 @@ class Login extends LoginAbstract
                     $jpQuery->where('is_test', $exAdminFilter['search_type']);
                 }
 
+                // 状态筛选：跟随用户选择，未选择时默认只看已完成
+                if (!empty($exAdminFilter['status'])) {
+                    $jpQuery->where('status', $exAdminFilter['status']);
+                } else {
+                    $jpQuery->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
+                }
+
                 $jpTotalData = $jpQuery->selectRaw('IFNULL(SUM(amount), 0) as total_amount, game_type, lottery_id, lottery_name, lottery_type, lottery_sort')
-                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
                     ->groupBy('game_type', 'lottery_id', 'lottery_name', 'lottery_type', 'lottery_sort')
                     ->orderBy('lottery_type')
                     ->orderBy('lottery_sort')
@@ -1982,8 +1994,14 @@ class Login extends LoginAbstract
                     $jpQuery->where('department_id', $exAdminFilter['department_id']);
                 }
 
+                // 状态筛选：跟随用户选择，未选择时默认只看已完成
+                if (!empty($exAdminFilter['status'])) {
+                    $jpQuery->where('status', $exAdminFilter['status']);
+                } else {
+                    $jpQuery->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
+                }
+
                 $jpTotalData = $jpQuery->selectRaw('IFNULL(SUM(amount), 0) as total_amount, game_type, lottery_id, lottery_name, lottery_type, lottery_sort')
-                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
                     ->groupBy('game_type', 'lottery_id', 'lottery_name', 'lottery_type', 'lottery_sort')
                     ->orderBy('lottery_type')
                     ->orderBy('lottery_sort')
