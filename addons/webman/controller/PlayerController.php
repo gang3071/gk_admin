@@ -102,6 +102,7 @@ class PlayerController
         $this->recharge = plugin()->webman->config('database.player_recharge_record_model');
         $this->playerActivityPhaseRecord = plugin()->webman->config('database.player_activity_phase_record_model');
         $this->playerLotteryRecord = plugin()->webman->config('database.player_lottery_record_model');
+        $this->playerBetStatistics = \addons\webman\model\PlayerBetStatistics::class;
         $this->playerDeliveryRecord = plugin()->webman->config('database.player_delivery_record_model');
         $this->playerBank = plugin()->webman->config('database.player_bank_model');
         $this->playGameRecord = plugin()->webman->config('database.play_game_record_model');
@@ -673,6 +674,10 @@ class PlayerController
                             'cursor' => 'pointer'
                         ]))->title(admin_trans('player.wallet.artificial_withdrawal_tip'))
                     ));
+                $dropdown->append('打码统计', 'LineChartOutlined')
+                    ->modal($this->betStatistics($data['id']))
+                    ->width('1200px')
+                    ->title('打码统计 - ' . $data['name']);
                 $dropdown->append(admin_trans('player.player_bank'), 'BankFilled')
                     ->modal($this->playerBank($data['id']))
                     ->width('70%')
@@ -4091,6 +4096,120 @@ class PlayerController
             ]);
             // 返回一个空对象，避免后续代码报错
             return new \stdClass();
+        }
+    }
+
+    /**
+     * 查看打码统计
+     * @auth true
+     * @param int $playerId
+     * @return \ExAdmin\ui\component\layout\Content
+     */
+    public function betStatistics(int $playerId): \ExAdmin\ui\component\layout\Content
+    {
+        return Container::content()
+            ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
+                'player-id' => $playerId,
+            ]));
+    }
+
+    /**
+     * 获取玩家打码统计数据
+     * @auth true
+     * @param int $playerId
+     * @return \support\Response
+     */
+    public function getBetStatisticsData(int $playerId): \support\Response
+    {
+        try {
+            $today = date('Y-m-d');
+            $thisWeek = date('o-\WW');
+            $thisMonth = date('Y-m');
+
+            // 获取今日打码量
+            $dailyStats = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->where('stat_date', $today)
+                ->get();
+
+            // 获取本周打码量
+            $weeklyStats = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'weekly')
+                ->where('stat_date', $thisWeek)
+                ->get();
+
+            // 获取本月打码量
+            $monthlyStats = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'monthly')
+                ->where('stat_date', $thisMonth)
+                ->get();
+
+            // 获取最近30天每日打码量（用于曲线图）
+            $last30Days = [];
+            for ($i = 29; $i >= 0; $i--) {
+                $last30Days[] = date('Y-m-d', strtotime("-{$i} days"));
+            }
+
+            $dailyTrendData = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->whereIn('stat_date', $last30Days)
+                ->orderBy('stat_date', 'asc')
+                ->get()
+                ->keyBy('stat_date');
+
+            // 构建曲线图数据
+            $dailyTrend = [
+                'dates' => [],
+                'machine' => [],
+                'game' => [],
+            ];
+
+            foreach ($last30Days as $date) {
+                $dailyTrend['dates'][] = date('m-d', strtotime($date));
+
+                $machineData = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'machine')->first();
+                $gameData = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'game')->first();
+
+                $dailyTrend['machine'][] = $machineData ? floatval($machineData->bet_amount) : 0;
+                $dailyTrend['game'][] = $gameData ? floatval($gameData->bet_amount) : 0;
+            }
+
+            // 计算汇总数据
+            $todayMachine = $dailyStats->where('stat_type', 'machine')->first();
+            $todayGame = $dailyStats->where('stat_type', 'game')->first();
+            $weekMachine = $weeklyStats->where('stat_type', 'machine')->first();
+            $weekGame = $weeklyStats->where('stat_type', 'game')->first();
+            $monthMachine = $monthlyStats->where('stat_type', 'machine')->first();
+            $monthGame = $monthlyStats->where('stat_type', 'game')->first();
+
+            return json([
+                'code' => 0,
+                'msg' => 'success',
+                'data' => [
+                    'today' => [
+                        'machine' => $todayMachine ? floatval($todayMachine->bet_amount) : 0,
+                        'game' => $todayGame ? floatval($todayGame->bet_amount) : 0,
+                        'total' => ($todayMachine ? floatval($todayMachine->bet_amount) : 0) + ($todayGame ? floatval($todayGame->bet_amount) : 0),
+                    ],
+                    'week' => [
+                        'machine' => $weekMachine ? floatval($weekMachine->bet_amount) : 0,
+                        'game' => $weekGame ? floatval($weekGame->bet_amount) : 0,
+                        'total' => ($weekMachine ? floatval($weekMachine->bet_amount) : 0) + ($weekGame ? floatval($weekGame->bet_amount) : 0),
+                    ],
+                    'month' => [
+                        'machine' => $monthMachine ? floatval($monthMachine->bet_amount) : 0,
+                        'game' => $monthGame ? floatval($monthGame->bet_amount) : 0,
+                        'total' => ($monthMachine ? floatval($monthMachine->bet_amount) : 0) + ($monthGame ? floatval($monthGame->bet_amount) : 0),
+                    ],
+                    'dailyTrend' => $dailyTrend,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return json([
+                'code' => 1,
+                'msg' => $e->getMessage(),
+                'data' => null,
+            ]);
         }
     }
 }
