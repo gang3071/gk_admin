@@ -2,6 +2,7 @@
 
 namespace process;
 
+use app\service\MachineCashbackService;
 use app\service\VipCashbackService;
 use support\Log;
 use Workerman\Crontab\Crontab;
@@ -11,7 +12,7 @@ use Workerman\Crontab\Crontab;
  *
  * 功能：
  * - 每1分钟检查一次已结算但未计算反水的游戏记录
- * - 自动补算VIP反水金额（三方游戏）
+ * - 自动补算VIP反水金额（三方游戏 + 机台游戏）
  * - 更新玩家总打码量
  */
 class VipCashbackTask
@@ -64,35 +65,49 @@ class VipCashbackTask
 
             // 处理三方游戏反水
             $this->log->info('开始处理三方游戏反水');
-            $service = new VipCashbackService();
-            $service->setSinceDate($sinceDate);
-            $result = $service->execute();
+            $electronicService = new VipCashbackService();
+            $electronicService->setSinceDate($sinceDate);
+            $electronicResult = $electronicService->execute();
+
+            // 处理机台游戏反水
+            $this->log->info('开始处理机台游戏反水');
+            $machineService = new MachineCashbackService();
+            $machineService->setSinceDate($sinceDate);
+            $machineResult = $machineService->execute();
 
             $elapsed = round(microtime(true) - $startTime, 3);
 
             $this->log->info('VipCashbackTask 执行完成', [
                 '三方游戏' => [
-                    'processed' => $result['processed'],
-                    'updated' => $result['updated'],
-                    'skipped' => $result['skipped'],
-                    'errors' => $result['errors'],
+                    'processed' => $electronicResult['processed'],
+                    'updated' => $electronicResult['updated'],
+                    'skipped' => $electronicResult['skipped'],
+                    'errors' => $electronicResult['errors'],
+                ],
+                '机台游戏' => [
+                    'processed' => $machineResult['processed'],
+                    'updated' => $machineResult['updated'],
+                    'skipped' => $machineResult['skipped'],
+                    'errors' => $machineResult['errors'],
                 ],
                 'elapsed_seconds' => $elapsed,
                 'memory_peak' => memory_get_peak_usage(true),
             ]);
 
-            if ($result['errors'] > 0) {
+            if ($electronicResult['errors'] > 0 || $machineResult['errors'] > 0) {
                 $this->log->warning('VipCashbackTask 存在错误', [
-                    '三方游戏_errors' => $result['errors'],
+                    '三方游戏_errors' => $electronicResult['errors'],
+                    '机台游戏_errors' => $machineResult['errors'],
                 ]);
             }
 
-            if ($result['processed'] > 0) {
-                echo "[VipCashback] 三方游戏: processed={$result['processed']}, updated={$result['updated']}, errors={$result['errors']}\n";
+            if ($electronicResult['processed'] > 0 || $machineResult['processed'] > 0) {
+                echo "[VipCashback] 三方游戏: processed={$electronicResult['processed']}, updated={$electronicResult['updated']}, errors={$electronicResult['errors']}\n";
+                echo "[VipCashback] 机台游戏: processed={$machineResult['processed']}, updated={$machineResult['updated']}, errors={$machineResult['errors']}\n";
                 echo "[VipCashback] 总耗时: {$elapsed}s\n";
             }
 
-            unset($service, $result);
+            unset($electronicService, $electronicResult, $machineService, $machineResult);
             gc_collect_cycles();
 
         } catch (\Throwable $e) {

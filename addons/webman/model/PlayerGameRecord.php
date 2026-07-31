@@ -27,12 +27,17 @@ use Webman\Event\Event;
  * @property string odds 比值
  * @property int status 状态
  * @property int national_damage_ratio 全民代理返佣比例
+ * @property int vip_level_id VIP等级ID
+ * @property float cashback_ratio 反水比例
+ * @property float cashback_amount 反水金额
+ * @property float chip_amount 打码量
  * @property string created_at 创建时间
  * @property string updated_at 最后一次修改时间
  *
  * @property Machine machine 机台
  * @property Player player 玩家
  * @property PlayerGameLog last_player_game_log 最新游戏记录
+ * @property PlayerGameLog[] player_logs 游戏记录列表
  * @package addons\webman\model
  */
 class PlayerGameRecord extends Model
@@ -117,8 +122,21 @@ class PlayerGameRecord extends Model
         }
     }
 
+    /**
+     * 最新游戏记录
+     * @return HasOne
+     */
     public function last_player_game_log(): HasOne
     {
         return $this->hasOne(PlayerGameLog::class, 'game_record_id')->latest();
+    }
+
+    /**
+     * 所有游戏记录
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function playerLogs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PlayerGameLog::class, 'game_record_id');
     }
 }
