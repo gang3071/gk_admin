@@ -24,6 +24,21 @@ return [
     'artificial_withdrawal_error' => '人工洗分失败',
     'artificial_withdrawal_success' => '人工洗分成功',
     'insufficient_balance' => '账户余额不足',
+
+    // 打码量统计
+    'bet_statistics' => '查看打码',
+    'bet_statistics_title' => '打码量统计',
+    'today_bet' => '今日打码量',
+    'week_bet' => '本周打码量',
+    'month_bet' => '本月打码量',
+    'machine_bet' => '实体机台',
+    'game_bet' => '电子游戏',
+    'bet_trend_30days' => '近30天打码量趋势',
+    'month_bet_distribution' => '本月打码量分布',
+    'bet_amount_unit' => '元',
+    'loading' => '加载中...',
+    'load_failed' => '加载数据失败',
+
     'fields' => [
         'id' => 'ID',
         'phone' => '手机号(账号)',

@@ -1,15 +1,15 @@
 <template>
   <div class="bet-statistics-container">
-    <a-spin :spinning="loading" tip="加载中...">
+    <a-spin :spinning="loading" :tip="$t('player.loading')">
       <!-- 统计卡片 -->
       <a-row :gutter="16" style="margin-bottom: 16px; padding: 16px 16px 0 16px">
         <a-col :span="8">
           <a-card>
             <a-statistic
-              title="今日打码量"
+              :title="$t('player.today_bet')"
               :value="stats.today.total"
               :precision="2"
-              suffix="元"
+              :suffix="$t('player.bet_amount_unit')"
               :value-style="{ color: '#3f8600' }"
             >
               <template #prefix>
@@ -17,8 +17,8 @@
               </template>
             </a-statistic>
             <div style="margin-top: 12px; font-size: 12px; color: rgba(0,0,0,0.45)">
-              实体机台：{{ stats.today.machine.toFixed(2) }} 元<br/>
-              电子游戏：{{ stats.today.game.toFixed(2) }} 元
+              {{ $t('player.machine_bet') }}：{{ stats.today.machine.toFixed(2) }} {{ $t('player.bet_amount_unit') }}<br/>
+              {{ $t('player.game_bet') }}：{{ stats.today.game.toFixed(2) }} {{ $t('player.bet_amount_unit') }}
             </div>
           </a-card>
         </a-col>
@@ -26,10 +26,10 @@
         <a-col :span="8">
           <a-card>
             <a-statistic
-              title="本周打码量"
+              :title="$t('player.week_bet')"
               :value="stats.week.total"
               :precision="2"
-              suffix="元"
+              :suffix="$t('player.bet_amount_unit')"
               :value-style="{ color: '#1890ff' }"
             >
               <template #prefix>
@@ -37,8 +37,8 @@
               </template>
             </a-statistic>
             <div style="margin-top: 12px; font-size: 12px; color: rgba(0,0,0,0.45)">
-              实体机台：{{ stats.week.machine.toFixed(2) }} 元<br/>
-              电子游戏：{{ stats.week.game.toFixed(2) }} 元
+              {{ $t('player.machine_bet') }}：{{ stats.week.machine.toFixed(2) }} {{ $t('player.bet_amount_unit') }}<br/>
+              {{ $t('player.game_bet') }}：{{ stats.week.game.toFixed(2) }} {{ $t('player.bet_amount_unit') }}
             </div>
           </a-card>
         </a-col>
@@ -46,10 +46,10 @@
         <a-col :span="8">
           <a-card>
             <a-statistic
-              title="本月打码量"
+              :title="$t('player.month_bet')"
               :value="stats.month.total"
               :precision="2"
-              suffix="元"
+              :suffix="$t('player.bet_amount_unit')"
               :value-style="{ color: '#cf1322' }"
             >
               <template #prefix>
@@ -57,8 +57,8 @@
               </template>
             </a-statistic>
             <div style="margin-top: 12px; font-size: 12px; color: rgba(0,0,0,0.45)">
-              实体机台：{{ stats.month.machine.toFixed(2) }} 元<br/>
-              电子游戏：{{ stats.month.game.toFixed(2) }} 元
+              {{ $t('player.machine_bet') }}：{{ stats.month.machine.toFixed(2) }} {{ $t('player.bet_amount_unit') }}<br/>
+              {{ $t('player.game_bet') }}：{{ stats.month.game.toFixed(2) }} {{ $t('player.bet_amount_unit') }}
             </div>
           </a-card>
         </a-col>
@@ -68,14 +68,14 @@
       <a-row :gutter="16" style="padding: 0 16px 16px 16px">
         <!-- 近30天打码量曲线图 -->
         <a-col :span="16">
-          <a-card title="近30天打码量趋势" :bordered="false">
+          <a-card :title="$t('player.bet_trend_30days')" :bordered="false">
             <div ref="lineChart" style="width: 100%; height: 400px"></div>
           </a-card>
         </a-col>
 
         <!-- 本月打码量饼图 -->
         <a-col :span="8">
-          <a-card title="本月打码量分布" :bordered="false">
+          <a-card :title="$t('player.month_bet_distribution')" :bordered="false">
             <div ref="pieChart" style="width: 100%; height: 400px"></div>
           </a-card>
         </a-col>
@@ -168,7 +168,7 @@ export default {
         this.loadData(true);
       };
       script.onerror = () => {
-        this.$message.error('图表库加载失败，请刷新页面重试');
+        this.$message.error(this.$t('player.load_failed'));
         this.loading = false;
       };
       document.head.appendChild(script);
@@ -208,13 +208,13 @@ export default {
             }
           });
         } else {
-          this.$message.error('加载数据失败: ' + response.msg);
+          this.$message.error(this.$t('player.load_failed') + ': ' + response.msg);
           if (showLoading) {
             this.loading = false;
           }
         }
       } catch (error) {
-        this.$message.error('加载数据失败: ' + (error.message || '未知错误'));
+        this.$message.error(this.$t('player.load_failed') + ': ' + (error.message || this.$t('common.unknown_error')));
         if (showLoading) {
           this.loading = false;
         }
@@ -237,7 +237,7 @@ export default {
           },
         },
         legend: {
-          data: ['实体机台', '电子游戏'],
+          data: [this.$t('player.machine_bet'), this.$t('player.game_bet')],
           top: 0,
         },
         grid: {
@@ -256,14 +256,14 @@ export default {
         },
         yAxis: {
           type: 'value',
-          name: '打码量（元）',
+          name: this.$t('player.today_bet') + '（' + this.$t('player.bet_amount_unit') + '）',
           axisLabel: {
             formatter: '{value}',
           },
         },
         series: [
           {
-            name: '实体机台',
+            name: this.$t('player.machine_bet'),
             type: 'line',
             smooth: true,
             data: this.dailyTrend.machine,
@@ -285,7 +285,7 @@ export default {
             },
           },
           {
-            name: '电子游戏',
+            name: this.$t('player.game_bet'),
             type: 'line',
             smooth: true,
             data: this.dailyTrend.game,
@@ -337,7 +337,7 @@ export default {
       const option = {
         tooltip: {
           trigger: 'item',
-          formatter: '{a} <br/>{b}: {c} 元 ({d}%)',
+          formatter: '{a} <br/>{b}: {c} ' + this.$t('player.bet_amount_unit') + ' ({d}%)',
         },
         legend: {
           orient: 'vertical',
@@ -346,7 +346,7 @@ export default {
         },
         series: [
           {
-            name: '打码量',
+            name: this.$t('player.month_bet'),
             type: 'pie',
             radius: ['40%', '70%'],
             avoidLabelOverlap: false,
@@ -369,12 +369,12 @@ export default {
             data: [
               {
                 value: this.stats.month.machine,
-                name: '实体机台',
+                name: this.$t('player.machine_bet'),
                 itemStyle: { color: '#5470c6' },
               },
               {
                 value: this.stats.month.game,
-                name: '电子游戏',
+                name: this.$t('player.game_bet'),
                 itemStyle: { color: '#91cc75' },
               },
             ],
