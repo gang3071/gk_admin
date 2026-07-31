@@ -16,6 +16,8 @@ return [
         'machine_put_point' => 'Coin Deposit',
         'lottery_amount' => 'Lottery',
         'activity_total' => 'Activity Rewards',
+        'electronic_game_bet_amount' => 'E-Game Bet Amount',
+        'machine_bet_amount' => 'Machine Bet Amount',
         'subtotal' => 'Subtotal',
         'agent_commission' => 'Agent Commission %',
         'agent_profit' => 'Agent Profit',

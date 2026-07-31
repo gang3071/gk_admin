@@ -16,6 +16,8 @@ return [
         'machine_put_point' => 'コイン投入',
         'lottery_amount' => '宝くじ',
         'activity_total' => 'アクティビティ報酬',
+        'electronic_game_bet_amount' => '電子ゲームベット額',
+        'machine_bet_amount' => 'マシンベット額',
         'subtotal' => '小計',
         'agent_commission' => '代理店手数料率',
         'agent_profit' => '代理店利益',
