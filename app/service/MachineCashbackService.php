@@ -7,6 +7,7 @@ use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerGameLog;
 use addons\webman\model\PlayerGameRecord;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\SystemSetting;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
@@ -96,9 +97,9 @@ class MachineCashbackService
 
         try {
             // 检查机台反水开关是否开启
-            if (!$this->isMachineRebateEnabled()) {
-                $this->log('info', '机台反水开关未开启，跳过处理');
-                return $result;
+            $machineRebateEnabled = $this->isMachineRebateEnabled();
+            if (!$machineRebateEnabled) {
+                $this->log('info', '机台反水开关未开启，仅标记记录已处理');
             }
 
             // 查询已结束但未计算反水的机台游戏记录
@@ -161,6 +162,20 @@ class MachineCashbackService
                             ]);
                             continue;
                         }
+                    }
+
+                    // 如果机台反水开关关闭，标记记录已处理但不计算打码量和反水
+                    if (!$machineRebateEnabled) {
+                        $record->vip_level_id = $vipLevelId;
+                        $record->chip_amount = 0;
+                        $record->cashback_ratio = null;
+                        $record->cashback_amount = null;
+                        $record->save();
+                        $result['skipped']++;
+                        $this->log('debug', '跳过机台游戏反水：反水开关已关闭', [
+                            'record_id' => $record->id,
+                        ]);
+                        continue;
                     }
 
                     // 汇总 chip_amount（从 PlayerGameLog）
@@ -297,7 +312,7 @@ class MachineCashbackService
             ->select($table . '.*');
 
         if ($this->sinceDate) {
-            $query->where($table . '.created_at', '>=', $this->sinceDate);
+            $query->where($table . '.updated_at', '>=', $this->sinceDate);
         }
 
         return $query->orderBy($table . '.id', 'asc')
@@ -327,6 +342,29 @@ class MachineCashbackService
     {
         $player->vip_level_id = $levelId;
         $player->save();
+
+        // 检查是否已存在该等级的保级周期记录
+        $existingPeriod = PlayerVipPeriod::query()
+            ->where('player_id', $player->id)
+            ->where('vip_level_id', $levelId)
+            ->where('status', PlayerVipPeriod::STATUS_ACTIVE)
+            ->first();
+
+        if ($existingPeriod) {
+            // 已存在记录，只更新打码量
+            $existingPeriod->increment('period_bet_amount', $player->total_bet_amount ?? 0);
+        } else {
+            // 不存在记录，创建新的保级周期记录
+            PlayerVipPeriod::query()->create([
+                'player_id' => $player->id,
+                'vip_level_id' => $levelId,
+                'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
+                'start_bet_amount' => $player->total_bet_amount ?? 0,
+                'period_bet_amount' => 0,
+                'started_at' => date('Y-m-d H:i:s'),
+                'status' => PlayerVipPeriod::STATUS_ACTIVE,
+            ]);
+        }
     }
 
     /**

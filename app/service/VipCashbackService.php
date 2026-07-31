@@ -349,16 +349,28 @@ class VipCashbackService
         $player->vip_level_id = $levelId;
         $player->save();
 
-        // 创建保级周期记录
-        PlayerVipPeriod::query()->create([
-            'player_id' => $player->id,
-            'vip_level_id' => $levelId,
-            'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
-            'start_bet_amount' => $player->total_bet_amount ?? 0,
-            'period_bet_amount' => 0,
-            'started_at' => date('Y-m-d H:i:s'),
-            'status' => PlayerVipPeriod::STATUS_ACTIVE,
-        ]);
+        // 检查是否已存在该等级的保级周期记录
+        $existingPeriod = PlayerVipPeriod::query()
+            ->where('player_id', $player->id)
+            ->where('vip_level_id', $levelId)
+            ->where('status', PlayerVipPeriod::STATUS_ACTIVE)
+            ->first();
+
+        if ($existingPeriod) {
+            // 已存在记录，只更新打码量
+            $existingPeriod->increment('period_bet_amount', $player->total_bet_amount ?? 0);
+        } else {
+            // 不存在记录，创建新的保级周期记录
+            PlayerVipPeriod::query()->create([
+                'player_id' => $player->id,
+                'vip_level_id' => $levelId,
+                'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
+                'start_bet_amount' => $player->total_bet_amount ?? 0,
+                'period_bet_amount' => 0,
+                'started_at' => date('Y-m-d H:i:s'),
+                'status' => PlayerVipPeriod::STATUS_ACTIVE,
+            ]);
+        }
     }
 
     /**
