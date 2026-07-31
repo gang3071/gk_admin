@@ -6075,11 +6075,11 @@ class ChannelPlayerController
      * 查看打码统计
      * @auth true
      * @param int $playerId
-     * @return \ExAdmin\ui\component\layout\Content
+     * @return \ExAdmin\ui\component\layout\Space
      */
-    public function betStatistics(int $playerId): \ExAdmin\ui\component\layout\Content
+    public function betStatistics(int $playerId)
     {
-        return Container::content()
+        return \ExAdmin\ui\component\layout\Space::create()
             ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
                 'player-id' => $playerId,
             ]));
