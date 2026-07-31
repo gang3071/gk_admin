@@ -110,6 +110,7 @@ export default {
       lineChartInstance: null,
       pieChartInstance: null,
       pollingTimer: null, // 轮询定时器
+      resizeHandler: null, // 窗口 resize 监听器
     };
   },
   mounted() {
@@ -120,12 +121,19 @@ export default {
   beforeUnmount() {
     // 停止轮询
     this.stopPolling();
+    // 移除 resize 监听器
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      this.resizeHandler = null;
+    }
     // 销毁图表实例
     if (this.lineChartInstance) {
       this.lineChartInstance.dispose();
+      this.lineChartInstance = null;
     }
     if (this.pieChartInstance) {
       this.pieChartInstance.dispose();
+      this.pieChartInstance = null;
     }
   },
   methods: {
@@ -216,12 +224,11 @@ export default {
     renderLineChart() {
       if (!this.$refs.lineChart || !window.echarts) return;
 
-      // 销毁旧实例
-      if (this.lineChartInstance) {
-        this.lineChartInstance.dispose();
+      // ✅ 首次创建实例，后续只更新数据
+      if (!this.lineChartInstance) {
+        this.lineChartInstance = window.echarts.init(this.$refs.lineChart);
       }
 
-      this.lineChartInstance = window.echarts.init(this.$refs.lineChart);
       const option = {
         tooltip: {
           trigger: 'axis',
@@ -302,26 +309,31 @@ export default {
         ],
       };
 
-      this.lineChartInstance.setOption(option);
+      // ✅ 使用 notMerge: false 平滑更新数据，避免闪烁
+      this.lineChartInstance.setOption(option, { notMerge: false });
 
-      // 响应式
-      const resizeHandler = () => {
-        if (this.lineChartInstance) {
-          this.lineChartInstance.resize();
-        }
-      };
-      window.addEventListener('resize', resizeHandler);
+      // ✅ 仅首次添加 resize 监听器
+      if (!this.resizeHandler) {
+        this.resizeHandler = () => {
+          if (this.lineChartInstance) {
+            this.lineChartInstance.resize();
+          }
+          if (this.pieChartInstance) {
+            this.pieChartInstance.resize();
+          }
+        };
+        window.addEventListener('resize', this.resizeHandler);
+      }
     },
 
     renderPieChart() {
       if (!this.$refs.pieChart || !window.echarts) return;
 
-      // 销毁旧实例
-      if (this.pieChartInstance) {
-        this.pieChartInstance.dispose();
+      // ✅ 首次创建实例，后续只更新数据
+      if (!this.pieChartInstance) {
+        this.pieChartInstance = window.echarts.init(this.$refs.pieChart);
       }
 
-      this.pieChartInstance = window.echarts.init(this.$refs.pieChart);
       const option = {
         tooltip: {
           trigger: 'item',
@@ -370,15 +382,9 @@ export default {
         ],
       };
 
-      this.pieChartInstance.setOption(option);
-
-      // 响应式
-      const resizeHandler = () => {
-        if (this.pieChartInstance) {
-          this.pieChartInstance.resize();
-        }
-      };
-      window.addEventListener('resize', resizeHandler);
+      // ✅ 使用 notMerge: false 平滑更新数据，避免闪烁
+      this.pieChartInstance.setOption(option, { notMerge: false });
+      // resize 监听器已在 renderLineChart 中统一处理
     },
   },
 };
