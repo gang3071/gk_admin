@@ -111,18 +111,22 @@ export default {
   methods: {
     async loadData() {
       try {
-        const response = await axios.post('/admin/player/getBetStatisticsData', {
-          playerId: this.playerId,
+        const response = await this.$request({
+          url: 'ex-admin/addons-webman-controller-PlayerController/getBetStatisticsData',
+          method: 'post',
+          data: {
+            playerId: this.playerId,
+          }
         });
 
-        if (response.data.code === 0) {
-          if (response.data.data.today) {
-            this.stats.today = response.data.data.today;
-            this.stats.week = response.data.data.week;
-            this.stats.month = response.data.data.month;
+        if (response.code === 0) {
+          if (response.data.today) {
+            this.stats.today = response.data.today;
+            this.stats.week = response.data.week;
+            this.stats.month = response.data.month;
           }
 
-          this.dailyTrend = response.data.data.dailyTrend;
+          this.dailyTrend = response.data.dailyTrend;
 
           // 渲染图表
           this.$nextTick(() => {
@@ -130,7 +134,7 @@ export default {
             this.renderPieChart();
           });
         } else {
-          this.$message.error('加载数据失败: ' + response.data.msg);
+          this.$message.error('加载数据失败: ' + response.msg);
         }
       } catch (error) {
         this.$message.error('加载数据失败: ' + error.message);
