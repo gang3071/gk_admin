@@ -301,13 +301,18 @@ export default {
           orient: 'vertical',
           left: 'left',
           top: 'middle',
+          textStyle: {
+            fontSize: 14,
+            color: '#333',
+          },
         },
         series: [
           {
             name: '打码量',
             type: 'pie',
             radius: ['40%', '70%'],
-            avoidLabelOverlap: false,
+            center: ['60%', '50%'], // ✅ 调整饼图位置，给左侧图例留出空间
+            avoidLabelOverlap: true, // ✅ 启用标签防重叠
             itemStyle: {
               borderRadius: 10,
               borderColor: '#fff',
@@ -316,12 +321,32 @@ export default {
             label: {
               show: true,
               formatter: '{b}\n{d}%',
+              fontSize: 14, // ✅ 增大字体
+              fontWeight: 'bold', // ✅ 加粗字体
+              color: '#333', // ✅ 深色文字，确保可见
+              position: 'outside', // ✅ 标签显示在外侧
+              distanceToLabelLine: 5, // ✅ 标签与引导线的距离
+            },
+            labelLine: {
+              show: true,
+              length: 15, // ✅ 第一段引导线长度
+              length2: 10, // ✅ 第二段引导线长度
+              smooth: true, // ✅ 平滑引导线
+              lineStyle: {
+                width: 1.5,
+                color: '#999',
+              },
             },
             emphasis: {
               label: {
                 show: true,
-                fontSize: '18',
+                fontSize: 18,
                 fontWeight: 'bold',
+              },
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)',
               },
             },
             data: [
