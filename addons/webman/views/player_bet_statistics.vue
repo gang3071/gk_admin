@@ -2,7 +2,7 @@
   <div class="bet-statistics-container">
     <a-spin :spinning="loading" tip="加载中...">
       <!-- 统计卡片 -->
-      <a-row :gutter="16" style="margin-bottom: 16px; padding: 0 16px">
+      <a-row :gutter="16" style="margin-bottom: 16px; padding: 16px 16px 0 16px">
         <a-col :span="8">
           <a-card>
             <a-statistic
@@ -65,7 +65,7 @@
       </a-row>
 
       <!-- 图表 -->
-      <a-row :gutter="16" style="padding: 0 16px">
+      <a-row :gutter="16" style="padding: 0 16px 16px 16px">
         <!-- 近30天打码量曲线图 -->
         <a-col :span="16">
           <a-card title="近30天打码量趋势" :bordered="false">
