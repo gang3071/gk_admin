@@ -4122,84 +4122,80 @@ class PlayerController
     public function getBetStatisticsData(int $playerId): \support\Response
     {
         try {
+            $redis = \support\Redis::connection('default')->client();
             $today = date('Y-m-d');
             $thisWeek = date('o-\WW');
             $thisMonth = date('Y-m');
 
-            // 获取今日打码量
-            $dailyStats = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'daily')
-                ->where('stat_date', $today)
-                ->get();
+            // ✅ 从 Redis 读取实时数据
+            // Redis key 格式: gk_work:player_bet_stats:{player_id}:{stat_type}:{dimension}:{stat_date}
 
-            // 获取本周打码量
-            $weeklyStats = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'weekly')
-                ->where('stat_date', $thisWeek)
-                ->get();
+            // 今日数据
+            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
+            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+            $todayMachineData = $redis->hGetAll($todayMachineKey);
+            $todayGameData = $redis->hGetAll($todayGameKey);
 
-            // 获取本月打码量
-            $monthlyStats = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'monthly')
-                ->where('stat_date', $thisMonth)
-                ->get();
+            // 本周数据
+            $weekMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:weekly:{$thisWeek}";
+            $weekGameKey = "gk_work:player_bet_stats:{$playerId}:game:weekly:{$thisWeek}";
+            $weekMachineData = $redis->hGetAll($weekMachineKey);
+            $weekGameData = $redis->hGetAll($weekGameKey);
+
+            // 本月数据
+            $monthMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:monthly:{$thisMonth}";
+            $monthGameKey = "gk_work:player_bet_stats:{$playerId}:game:monthly:{$thisMonth}";
+            $monthMachineData = $redis->hGetAll($monthMachineKey);
+            $monthGameData = $redis->hGetAll($monthGameKey);
 
             // 获取最近30天每日打码量（用于曲线图）
-            $last30Days = [];
-            for ($i = 29; $i >= 0; $i--) {
-                $last30Days[] = date('Y-m-d', strtotime("-{$i} days"));
-            }
-
-            $dailyTrendData = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'daily')
-                ->whereIn('stat_date', $last30Days)
-                ->orderBy('stat_date', 'asc')
-                ->get()
-                ->keyBy('stat_date');
-
-            // 构建曲线图数据
             $dailyTrend = [
                 'dates' => [],
                 'machine' => [],
                 'game' => [],
             ];
 
-            foreach ($last30Days as $date) {
+            for ($i = 29; $i >= 0; $i--) {
+                $date = date('Y-m-d', strtotime("-{$i} days"));
                 $dailyTrend['dates'][] = date('m-d', strtotime($date));
 
-                $machineData = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'machine')->first();
-                $gameData = $dailyTrendData->where('stat_date', $date)->where('stat_type', 'game')->first();
+                // 从 Redis 读取每日数据
+                $dateMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$date}";
+                $dateGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$date}";
+                $dateMachineData = $redis->hGetAll($dateMachineKey);
+                $dateGameData = $redis->hGetAll($dateGameKey);
 
-                $dailyTrend['machine'][] = $machineData ? floatval($machineData->bet_amount) : 0;
-                $dailyTrend['game'][] = $gameData ? floatval($gameData->bet_amount) : 0;
+                // Redis 存储的是"分"，需要除以100转为"元"
+                $dailyTrend['machine'][] = isset($dateMachineData['bet_amount']) ? floatval($dateMachineData['bet_amount']) / 100 : 0;
+                $dailyTrend['game'][] = isset($dateGameData['bet_amount']) ? floatval($dateGameData['bet_amount']) / 100 : 0;
             }
 
-            // 计算汇总数据
-            $todayMachine = $dailyStats->where('stat_type', 'machine')->first();
-            $todayGame = $dailyStats->where('stat_type', 'game')->first();
-            $weekMachine = $weeklyStats->where('stat_type', 'machine')->first();
-            $weekGame = $weeklyStats->where('stat_type', 'game')->first();
-            $monthMachine = $monthlyStats->where('stat_type', 'machine')->first();
-            $monthGame = $monthlyStats->where('stat_type', 'game')->first();
+            // ✅ Redis 存储的是"分"，需要除以100转为"元"
+            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
+            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
+            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
+            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
+            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
+            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
 
             return json([
                 'code' => 0,
                 'msg' => 'success',
                 'data' => [
                     'today' => [
-                        'machine' => $todayMachine ? floatval($todayMachine->bet_amount) : 0,
-                        'game' => $todayGame ? floatval($todayGame->bet_amount) : 0,
-                        'total' => ($todayMachine ? floatval($todayMachine->bet_amount) : 0) + ($todayGame ? floatval($todayGame->bet_amount) : 0),
+                        'machine' => $todayMachineAmount,
+                        'game' => $todayGameAmount,
+                        'total' => $todayMachineAmount + $todayGameAmount,
                     ],
                     'week' => [
-                        'machine' => $weekMachine ? floatval($weekMachine->bet_amount) : 0,
-                        'game' => $weekGame ? floatval($weekGame->bet_amount) : 0,
-                        'total' => ($weekMachine ? floatval($weekMachine->bet_amount) : 0) + ($weekGame ? floatval($weekGame->bet_amount) : 0),
+                        'machine' => $weekMachineAmount,
+                        'game' => $weekGameAmount,
+                        'total' => $weekMachineAmount + $weekGameAmount,
                     ],
                     'month' => [
-                        'machine' => $monthMachine ? floatval($monthMachine->bet_amount) : 0,
-                        'game' => $monthGame ? floatval($monthGame->bet_amount) : 0,
-                        'total' => ($monthMachine ? floatval($monthMachine->bet_amount) : 0) + ($monthGame ? floatval($monthGame->bet_amount) : 0),
+                        'machine' => $monthMachineAmount,
+                        'game' => $monthGameAmount,
+                        'total' => $monthMachineAmount + $monthGameAmount,
                     ],
                     'dailyTrend' => $dailyTrend,
                 ],
