@@ -6169,34 +6169,26 @@ class ChannelPlayerController
                 }
             }
 
-            return json([
-                'code' => 0,
-                'msg' => 'success',
-                'data' => [
-                    'today' => [
-                        'machine' => $todayMachineAmount,
-                        'game' => $todayGameAmount,
-                        'total' => $todayMachineAmount + $todayGameAmount,
-                    ],
-                    'week' => [
-                        'machine' => $weekMachineAmount,
-                        'game' => $weekGameAmount,
-                        'total' => $weekMachineAmount + $weekGameAmount,
-                    ],
-                    'month' => [
-                        'machine' => $monthMachineAmount,
-                        'game' => $monthGameAmount,
-                        'total' => $monthMachineAmount + $monthGameAmount,
-                    ],
-                    'dailyTrend' => $dailyTrend,
+            return jsonSuccessResponse('', [
+                'today' => [
+                    'machine' => $todayMachineAmount,
+                    'game' => $todayGameAmount,
+                    'total' => $todayMachineAmount + $todayGameAmount,
                 ],
+                'week' => [
+                    'machine' => $weekMachineAmount,
+                    'game' => $weekGameAmount,
+                    'total' => $weekMachineAmount + $weekGameAmount,
+                ],
+                'month' => [
+                    'machine' => $monthMachineAmount,
+                    'game' => $monthGameAmount,
+                    'total' => $monthMachineAmount + $monthGameAmount,
+                ],
+                'dailyTrend' => $dailyTrend,
             ]);
         } catch (\Exception $e) {
-            return json([
-                'code' => 1,
-                'msg' => $e->getMessage(),
-                'data' => null,
-            ]);
+            return jsonFailResponse($e->getMessage());
         }
     }
 

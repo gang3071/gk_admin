@@ -180,7 +180,7 @@ export default {
           }
         });
 
-        if (response.code === 0) {
+        if (response.code === 200) {
           if (response.data.today) {
             this.stats.today = response.data.today;
             this.stats.week = response.data.week;
