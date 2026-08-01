@@ -2890,7 +2890,10 @@ class ChannelLotteryTicketActivityController
 
         // 验证参数
         if (!$activityId || !$prizeLevelId || !$ticketNo) {
-            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
+            return Response::success([
+                'success' => false,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
         }
 
         // 格式化券号（补齐6位）
@@ -2906,14 +2909,20 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.activity_not_exist'), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.activity_not_exist')
+                ]);
             }
 
             // 验证奖品等级
             $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
             if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo])
+                ]);
             }
 
             // ⭐ 检查奖品数量是否已超发
@@ -2957,7 +2966,10 @@ class ChannelLotteryTicketActivityController
 
             if (!$ticket) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo])
+                ]);
             }
 
             // 双重检查：防止重复录入
@@ -2967,7 +2979,10 @@ class ChannelLotteryTicketActivityController
 
             if ($existingRecord) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo])
+                ]);
             }
 
             // 创建中奖记录
@@ -3047,20 +3062,24 @@ class ChannelLotteryTicketActivityController
                 $record->save();
 
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.distribute_failed', null, [
-                    'ticket_no' => $ticketNo,
-                    'reason' => $e->getMessage()
-                ]), 500);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.distribute_failed', null, [
+                        'ticket_no' => $ticketNo,
+                        'reason' => $e->getMessage()
+                    ])
+                ]);
             }
 
             Db::commit();
 
             // ✅ 成功返回
             return Response::success([
+                'success' => true,
                 'message' => admin_trans('lottery_ticket.message.record_success'),
                 'record_id' => $record->id,
                 'prize_amount' => $prizeLevel->prize_amount
-            ], '', 200);
+            ]);
 
         } catch (\Exception $e) {
             Db::rollBack();
@@ -3069,7 +3088,10 @@ class ChannelLotteryTicketActivityController
                 'ticket_no' => $ticketNo,
                 'error' => $e->getMessage()
             ]);
-            return Response::success([], $e->getMessage(), 500);
+            return Response::success([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
         }
     }
 }
