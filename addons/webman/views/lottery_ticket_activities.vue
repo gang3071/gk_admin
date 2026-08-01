@@ -1897,8 +1897,8 @@ export default {
             error: null
           };
         } else {
-          // ❌ 失败
-          this.$message.error(res.data?.content || res.message || res.msg || '錄入失敗');
+          // ❌ 失败 - 优先读取 res.message（后端返回的错误信息）
+          this.$message.error(res.message || res.data?.content || res.msg || '錄入失敗');
         }
       } catch (error) {
         this.$message.error('錄入失敗');
