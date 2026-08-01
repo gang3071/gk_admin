@@ -1857,6 +1857,20 @@ export default {
 
       this.recordSubmitting = true;
 
+      // ⭐ 调试日志：打印当前选中的奖品等级信息
+      const selectedLevel = this.recordPrizeLevels.find(l => l.id === this.singleRecord.prize_level_id);
+      console.log('[前端派奖调试] 准备提交', {
+        prize_level_id: this.singleRecord.prize_level_id,
+        selected_name: selectedLevel?.level_name || '未找到',
+        selected_amount: selectedLevel?.prize_amount || 0,
+        ticket_no: this.singleRecord.ticket_no,
+        all_levels: this.recordPrizeLevels.map(l => ({
+          id: l.id,
+          name: l.level_name,
+          rank: l.level_rank
+        }))
+      });
+
       try {
         // ⭐ 使用单个录入专用API
         const res = await this.$request({
