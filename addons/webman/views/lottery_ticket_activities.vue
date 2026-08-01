@@ -1886,7 +1886,8 @@ export default {
         console.log('[录入中奖] 后端响应:', res);
 
         // ⭐ 简单清晰的响应处理
-        if (res.code === 200 && res.data?.success !== false) {
+        // 明确检查 success === true（而不是 !== false），避免 undefined 被当作成功
+        if (res.code === 200 && res.data?.success === true) {
           // ✅ 成功
           this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
 
