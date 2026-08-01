@@ -606,7 +606,7 @@ class ChannelLotteryTicketActivityController
             $isEditingOngoingActivity = !empty($data['id']) && $activity->status == LotteryTicketActivity::STATUS_ONGOING;
 
             if ($isEditingOngoingActivity) {
-                // 只更新奖项名称
+                // ⭐ 编辑进行中的活动：可以更新奖项名称和数量，但不能修改金额
                 foreach ($prizeLevels as $level) {
                     if (isset($level['id'])) {
                         $prizeLevel = LotteryTicketPrizeLevel::where('id', $level['id'])
@@ -615,6 +615,7 @@ class ChannelLotteryTicketActivityController
 
                         if ($prizeLevel) {
                             $prizeLevel->level_name = $level['level_name'];
+                            $prizeLevel->prize_count = $level['prize_count'] ?? $prizeLevel->prize_count;  // ⭐ 允许更新数量
                             $prizeLevel->save();
                         }
                     }

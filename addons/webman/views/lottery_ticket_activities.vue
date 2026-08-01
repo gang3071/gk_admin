@@ -551,7 +551,6 @@
                       :precision="0"
                       style="width: 100%;"
                       placeholder="0"
-                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_count_hint || '此獎項的獎品總數量' }}
