@@ -1882,7 +1882,9 @@ export default {
           }
         });
 
-        // ⭐ 调试日志
+        // ⭐ 调试日志：查看完整响应
+        console.log('[录入中奖] 后端响应:', res);
+
         // ⭐ 简单清晰的响应处理
         if (res.code === 200) {
           // ✅ 成功
@@ -1901,8 +1903,16 @@ export default {
           this.$message.error(res.message || res.data?.content || res.msg || '錄入失敗');
         }
       } catch (error) {
-        this.$message.error('錄入失敗');
-        console.error(error);
+        // ⭐ catch 块：可能是网络错误或请求被拦截器处理
+        console.error('[录入中奖] 异常:', error);
+        console.log('[录入中奖] 异常响应:', error.response);
+
+        // 尝试从 error.response 中提取错误信息
+        const errorMsg = error.response?.data?.message
+                      || error.response?.message
+                      || error.message
+                      || '錄入失敗';
+        this.$message.error(errorMsg);
       } finally {
         this.recordSubmitting = false;
       }
