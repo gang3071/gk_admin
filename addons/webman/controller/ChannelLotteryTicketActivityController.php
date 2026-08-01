@@ -2878,6 +2878,66 @@ class ChannelLotteryTicketActivityController
     }
 
     /**
+     * 获取活动奖品等级的发放统计（剩余数量）
+     * @group channel
+     * @auth true
+     */
+    public function getPrizeLevelStats()
+    {
+        $activityId = Request::input('activity_id');
+
+        if (!$activityId) {
+            return Response::success([
+                'success' => false,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
+        }
+
+        // 验证活动权限
+        $activity = LotteryTicketActivity::where('id', $activityId)
+            ->where('department_id', Admin::user()->department_id)
+            ->first();
+
+        if (!$activity) {
+            return Response::success([
+                'success' => false,
+                'message' => admin_trans('lottery_ticket.error.activity_not_exist')
+            ]);
+        }
+
+        // 获取所有奖品等级
+        $prizeLevels = LotteryTicketPrizeLevel::where('activity_id', $activityId)
+            ->where('status', LotteryTicketPrizeLevel::STATUS_ENABLED)
+            ->orderBy('sort_order')
+            ->orderBy('level_rank')
+            ->get();
+
+        // 统计每个等级的已发放数量
+        $stats = [];
+        foreach ($prizeLevels as $level) {
+            $distributedCount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+                ->where('prize_level_id', $level->id)
+                ->count();
+
+            $stats[] = [
+                'prize_level_id' => $level->id,
+                'level_name' => $level->level_name,
+                'level_rank' => $level->level_rank,
+                'prize_amount' => $level->prize_amount,
+                'total_count' => $level->prize_count,
+                'distributed_count' => $distributedCount,
+                'remaining_count' => max(0, $level->prize_count - $distributedCount),
+                'is_sold_out' => $distributedCount >= $level->prize_count
+            ];
+        }
+
+        return Response::success([
+            'success' => true,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
      * 单个录入中奖记录并自动发放（单个录入模式专用API）
      * @group channel
      * @auth true

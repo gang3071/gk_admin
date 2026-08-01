@@ -699,14 +699,19 @@
               v-model:value="singleRecord.prize_level_id"
               placeholder="請選擇獎品等級"
               style="width: 100%;"
+              :loading="prizeLevelStatsLoading"
               @change="handlePrizeLevelChange"
           >
             <a-select-option
                 v-for="level in recordPrizeLevels"
                 :key="level.id"
                 :value="level.id"
+                :disabled="level.is_sold_out"
             >
-              {{ level.level_name }} - {{ formatAmount(level.prize_amount) }}元
+              <span>{{ level.level_name }} - {{ formatAmount(level.prize_amount) }}元</span>
+              <span v-if="level.remaining_count !== undefined" style="margin-left: 8px; color: #999;">
+                （剩餘：<span :style="{color: level.is_sold_out ? '#ff4d4f' : (level.remaining_count <= 3 ? '#faad14' : '#52c41a')}">{{ level.remaining_count }}</span>/{{ level.total_count }}）
+              </span>
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -1126,6 +1131,7 @@ export default {
       recordSubmitting: false,
       uploading: false,
       recordPrizeLevels: [],
+      prizeLevelStatsLoading: false,  // ⭐ 加载奖品等级统计的状态
       ticketList: [],
       ticketLoading: false,
       ticketPagination: {
@@ -1726,6 +1732,9 @@ export default {
           // ⭐ 存储奖品等级列表（供下拉选择使用）
           this.recordPrizeLevels = prizeLevels;
 
+          // ⭐ 加载奖品等级统计（剩余数量）
+          await this.loadPrizeLevelStats(activity.id);
+
           // ⭐ 存储活动信息（用于表单顶部展示）
           this.currentActivityInfo = {
             name: activity.name,
@@ -1754,6 +1763,38 @@ export default {
       } catch (error) {
         this.$message.error('獲取活動詳情失敗');
         console.error(error);
+      }
+    },
+
+    // ⭐ 加载奖品等级统计（剩余数量）
+    async loadPrizeLevelStats(activityId) {
+      this.prizeLevelStatsLoading = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPrizeLevelStats',
+          method: 'post',
+          data: { activity_id: activityId }
+        });
+
+        if (res.code === 200 && res.data?.success === true) {
+          const stats = res.data.stats || [];
+
+          // ⭐ 将统计信息合并到 recordPrizeLevels
+          this.recordPrizeLevels = this.recordPrizeLevels.map(level => {
+            const stat = stats.find(s => s.prize_level_id === level.id);
+            return {
+              ...level,
+              total_count: stat?.total_count || 0,
+              distributed_count: stat?.distributed_count || 0,
+              remaining_count: stat?.remaining_count || 0,
+              is_sold_out: stat?.is_sold_out || false
+            };
+          });
+        }
+      } catch (error) {
+        console.error('[加载奖品统计] 失败:', error);
+      } finally {
+        this.prizeLevelStatsLoading = false;
       }
     },
 
@@ -1890,6 +1931,9 @@ export default {
         if (res.code === 200 && res.data?.success === true) {
           // ✅ 成功
           this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
+
+          // ⭐ 重新加载奖品统计，更新剩余数量
+          await this.loadPrizeLevelStats(this.recordData.activity_id);
 
           // 重置单个录入表单，保持抽屉打开
           this.singleRecord = {
