@@ -383,6 +383,7 @@ return [
         'duration_too_short' => '活動時長過短，至少需要 {min}',
         'duration_too_long' => '活動時長過長，最多 {max}',
         'cannot_edit_started' => '只能編輯未開始的活動',
+        'cannot_edit_ended' => '已結束或已關閉的活動不能編輯',
         'invalid_file' => '無效的文件',
         'invalid_image_type' => '只支持 jpg、png 格式圖片',
         'file_too_large' => '文件大小不能超過2MB',

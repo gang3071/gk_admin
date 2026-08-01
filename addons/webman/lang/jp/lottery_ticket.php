@@ -364,6 +364,7 @@ return [
         'duration_too_short' => 'アクティビティ期間が短すぎます、最小 {min}',
         'duration_too_long' => 'アクティビティ期間が長すぎます、最大 {max}',
         'cannot_edit_started' => '未開始のアクティビティのみ編集可能',
+        'cannot_edit_ended' => '終了または閉鎖されたアクティビティは編集できません',
         'invalid_file' => '無効なファイル',
         'invalid_image_type' => 'jpg、png形式のみ対応',
         'file_too_large' => 'ファイルサイズは2MBを超えることはできません',

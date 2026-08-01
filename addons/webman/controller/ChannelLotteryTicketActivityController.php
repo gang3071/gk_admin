@@ -519,43 +519,32 @@ class ChannelLotteryTicketActivityController
                     throw new \Exception(admin_trans('common.no_permission'));
                 }
 
-                // ⭐ 已结束、待开奖、开奖中、已关闭的活动不能编辑
+                // ⭐ 只有已结束、已关闭的活动不能编辑
                 if (in_array($activity->status, [
                     LotteryTicketActivity::STATUS_ENDED,
-                    LotteryTicketActivity::STATUS_PENDING_DRAW,
-                    LotteryTicketActivity::STATUS_DRAWING,
                     LotteryTicketActivity::STATUS_CLOSED
                 ])) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.cannot_edit_started'));
+                    throw new \Exception(admin_trans('lottery_ticket.error.cannot_edit_ended'));
                 }
 
-                // ⭐ 进行中的活动只能编辑名称、说明、封面图
-                if ($activity->status == LotteryTicketActivity::STATUS_ONGOING) {
-                    $activity->update([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'cover_image' => $data['cover_image'] ?? '',
-                    ]);
-                } else {
-                    // ⭐ 未开始的活动可以编辑所有字段
-                    // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
-                    $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
-                    if ($conflictActivity) {
-                        throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
-                            'name' => $conflictActivity->name,
-                            'start_time' => $conflictActivity->start_time,
-                            'end_time' => $conflictActivity->end_time,
-                        ]));
-                    }
-
-                    $activity->update([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'cover_image' => $data['cover_image'] ?? '',
-                        'start_time' => $data['start_time'],
-                        'end_time' => $data['end_time'],
-                    ]);
+                // ⭐ 所有未结束的活动都可以编辑基本信息
+                // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
+                $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
+                if ($conflictActivity) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
+                        'name' => $conflictActivity->name,
+                        'start_time' => $conflictActivity->start_time,
+                        'end_time' => $conflictActivity->end_time,
+                    ]));
                 }
+
+                $activity->update([
+                    'name' => $data['name'],
+                    'description' => $data['description'] ?? '',
+                    'cover_image' => $data['cover_image'] ?? '',
+                    'start_time' => $data['start_time'],
+                    'end_time' => $data['end_time'],
+                ]);
 
                 // ⭐ 防御性初始化：如果 Redis key 不存在，则初始化
                 // 这是为了修复老活动（修复代码前创建的）
@@ -601,26 +590,12 @@ class ChannelLotteryTicketActivityController
                 ]);
             }
 
-            // ⭐ 编辑进行中的活动：只能更新奖项名称，不能修改金额、数量等
-            // ⭐ 创建新活动：无论状态如何，都允许保存完整配置（因为是新建，不存在已发券的情况）
-            $isEditingOngoingActivity = !empty($data['id']) && $activity->status == LotteryTicketActivity::STATUS_ONGOING;
+            // ⭐ 判断编辑模式
+            // - 未开始的活动：可以完全修改（删除重建奖品等级）
+            // - 进行中/待开奖/开奖中的活动：只能更新名称和数量，不能修改金额（保护已发券）
+            $isEditingNotStartedActivity = !empty($data['id']) && $activity->status == LotteryTicketActivity::STATUS_NOT_STARTED;
 
-            if ($isEditingOngoingActivity) {
-                // ⭐ 编辑进行中的活动：可以更新奖项名称和数量，但不能修改金额
-                foreach ($prizeLevels as $level) {
-                    if (isset($level['id'])) {
-                        $prizeLevel = LotteryTicketPrizeLevel::where('id', $level['id'])
-                            ->where('activity_id', $activity->id)
-                            ->first();
-
-                        if ($prizeLevel) {
-                            $prizeLevel->level_name = $level['level_name'];
-                            $prizeLevel->prize_count = $level['prize_count'] ?? $prizeLevel->prize_count;  // ⭐ 允许更新数量
-                            $prizeLevel->save();
-                        }
-                    }
-                }
-            } else {
+            if ($isEditingNotStartedActivity || empty($data['id'])) {
                 // 创建新活动 或 编辑未开始的活动：可以完全更新配置
                 // 保存 VIP 配置
                 if (!empty($data['vip_configs'])) {
@@ -654,6 +629,22 @@ class ChannelLotteryTicketActivityController
                         'prize_amount' => $level['prize_amount'],
                         'prize_count' => $level['prize_count'] ?? 0,
                     ]);
+                }
+            } else {
+                // ⭐ 编辑进行中/待开奖/开奖中的活动：只能更新名称和数量，不能修改金额
+                foreach ($prizeLevels as $level) {
+                    if (isset($level['id'])) {
+                        $prizeLevel = LotteryTicketPrizeLevel::where('id', $level['id'])
+                            ->where('activity_id', $activity->id)
+                            ->first();
+
+                        if ($prizeLevel) {
+                            $prizeLevel->level_name = $level['level_name'];
+                            $prizeLevel->prize_count = $level['prize_count'] ?? $prizeLevel->prize_count;
+                            // ⚠️ prize_amount 不更新（保护已发券）
+                            $prizeLevel->save();
+                        }
+                    }
                 }
             }
 

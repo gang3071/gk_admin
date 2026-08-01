@@ -384,6 +384,7 @@ return [
         'duration_too_short' => '活动时长过短，至少需要 {min}',
         'duration_too_long' => '活动时长过长，最多 {max}',
         'cannot_edit_started' => '只能编輯未开始的活动',
+        'cannot_edit_ended' => '已结束或已关闭的活动不能编辑',
         'invalid_file' => '无效的文件',
         'invalid_image_type' => '只支持 jpg、png 格式图片',
         'file_too_large' => '文件大小不能超过2MB',

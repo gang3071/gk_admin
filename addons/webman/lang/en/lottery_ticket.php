@@ -381,6 +381,7 @@ return [
         'duration_too_short' => 'Activity duration too short, minimum {min}',
         'duration_too_long' => 'Activity duration too long, maximum {max}',
         'cannot_edit_started' => 'Can only edit activities not started',
+        'cannot_edit_ended' => 'Cannot edit ended or closed activities',
         'invalid_file' => 'Invalid file',
         'invalid_image_type' => 'Only jpg, png format supported',
         'file_too_large' => 'File size cannot exceed 2MB',
