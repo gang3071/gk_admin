@@ -1886,7 +1886,7 @@ export default {
         console.log('[录入中奖] 后端响应:', res);
 
         // ⭐ 简单清晰的响应处理
-        if (res.code === 200) {
+        if (res.code === 200 && res.data?.success !== false) {
           // ✅ 成功
           this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
 
@@ -1899,8 +1899,10 @@ export default {
             error: null
           };
         } else {
-          // ❌ 失败 - 优先读取 res.message（后端返回的错误信息）
-          this.$message.error(res.message || res.data?.content || res.msg || '錄入失敗');
+          // ❌ 失败
+          // 优先读取 res.data.message（业务错误），再读取 res.message（HTTP错误）
+          const errorMsg = res.data?.message || res.message || res.data?.content || res.msg || '錄入失敗';
+          this.$message.error(errorMsg);
         }
       } catch (error) {
         // ⭐ catch 块：可能是网络错误或请求被拦截器处理

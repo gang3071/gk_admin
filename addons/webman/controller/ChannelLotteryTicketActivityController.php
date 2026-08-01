@@ -2923,11 +2923,16 @@ class ChannelLotteryTicketActivityController
 
             if ($distributedCount >= $prizeLevel->prize_count) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.prize_sold_out', null, [
-                    'prize_name' => $prizeLevel->level_name,
-                    'total_count' => $prizeLevel->prize_count,
-                    'distributed_count' => $distributedCount
-                ]), 400);
+                // ⚠️ 返回 code: 200，但通过 success: false 标记为失败
+                // 这样前端不会进入 catch 块，可以正常读取错误信息
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.prize_sold_out', null, [
+                        'prize_name' => $prizeLevel->level_name,
+                        'total_count' => $prizeLevel->prize_count,
+                        'distributed_count' => $distributedCount
+                    ])
+                ]);
             }
 
             // ✅ 记录调试日志：查看实际选择的奖品等级
