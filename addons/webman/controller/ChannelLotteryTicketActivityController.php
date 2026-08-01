@@ -347,6 +347,19 @@ class ChannelLotteryTicketActivityController
 
         $activityArray = $activity->toArray();
 
+        // ✅ 调试日志：检查返回的奖品等级顺序
+        Log::info('[奖品等级数据] getActivityDetail', [
+            'activity_id' => $id,
+            'prize_levels' => array_map(function($level) {
+                return [
+                    'id' => $level['id'],
+                    'level_rank' => $level['level_rank'],
+                    'level_name' => $level['level_name'],
+                    'sort_order' => $level['sort_order'],
+                ];
+            }, $activityArray['prize_levels'] ?? [])
+        ]);
+
         // 添加额外的统计字段
         // ✅ 已发最大券号 - 查询实际最大券号（保留6位格式）
         $maxNo = \addons\webman\model\LotteryTicket::where('activity_id', $activity->id)
@@ -2910,6 +2923,17 @@ class ChannelLotteryTicketActivityController
                 Db::rollBack();
                 return Response::success([], admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]), 400);
             }
+
+            // ✅ 记录调试日志：查看实际选择的奖品等级
+            Log::info('[派奖调试] 录入中奖记录', [
+                'activity_id' => $activityId,
+                'ticket_no' => $ticketNo,
+                'prize_level_id' => $prizeLevelId,
+                'prize_level_rank' => $prizeLevel->level_rank,
+                'prize_level_name' => $prizeLevel->level_name,
+                'prize_amount' => $prizeLevel->prize_amount,
+                'operator' => Admin::user()->username ?? Admin::user()->id,
+            ]);
 
             // 查找券号（必须是未使用状态）
             $ticket = LotteryTicket::where('ticket_no', $ticketNo)
