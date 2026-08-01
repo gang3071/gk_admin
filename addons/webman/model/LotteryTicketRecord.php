@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $department_id 所属渠道部门ID
  * @property int $ticket_id 使用的摸奖券ID
  * @property string $ticket_no 摸奖券编号
+ * @property int $prize_level_id 奖品等级ID
  * @property string $prize_type 奖品类型
  * @property string $prize_name 奖品名称
  * @property float $prize_amount 奖品金额

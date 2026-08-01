@@ -333,6 +333,7 @@ return [
         'amount_exceeded' => '払い出し金額が総賞金額を超えています',
         'ticket_not_found_or_used' => 'チケット {ticket_no} が存在しないか使用済みです',
         'ticket_already_won' => 'チケット {ticket_no} は既に当選記録として登録されています',
+        'prize_sold_out' => '賞品「{prize_name}」は配布完了しました（合計：{total_count}、配布済：{distributed_count}）、記録を続けることができません',
         'prize_level_not_found_for_ticket' => 'チケット {ticket_no} の賞品レベルが存在しません',
         'invalid_ticket_format' => 'チケット {ticket_no} の形式が正しくありません。数字のみで6文字以内にしてください',
         'bet_progress_not_found' => 'ベット進捗記録が見つかりません',

@@ -2924,6 +2924,20 @@ class ChannelLotteryTicketActivityController
                 return Response::success([], admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]), 400);
             }
 
+            // ⭐ 检查奖品数量是否已超发
+            $distributedCount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+                ->where('prize_level_id', $prizeLevelId)  // ⭐ 使用 prize_level_id 精确匹配
+                ->count();
+
+            if ($distributedCount >= $prizeLevel->prize_count) {
+                Db::rollBack();
+                return Response::success([], admin_trans('lottery_ticket.error.prize_sold_out', null, [
+                    'prize_name' => $prizeLevel->level_name,
+                    'total_count' => $prizeLevel->prize_count,
+                    'distributed_count' => $distributedCount
+                ]), 400);
+            }
+
             // ✅ 记录调试日志：查看实际选择的奖品等级
             Log::info('[派奖调试] 录入中奖记录', [
                 'activity_id' => $activityId,
@@ -2932,6 +2946,8 @@ class ChannelLotteryTicketActivityController
                 'prize_level_rank' => $prizeLevel->level_rank,
                 'prize_level_name' => $prizeLevel->level_name,
                 'prize_amount' => $prizeLevel->prize_amount,
+                'prize_count' => $prizeLevel->prize_count,
+                'distributed_count' => $distributedCount,
                 'operator' => Admin::user()->username ?? Admin::user()->id,
             ]);
 
@@ -2964,6 +2980,7 @@ class ChannelLotteryTicketActivityController
                 'department_id' => $ticket->department_id,
                 'ticket_id' => $ticket->id,
                 'ticket_no' => $ticketNo,
+                'prize_level_id' => $prizeLevelId,  // ⭐ 保存奖品等级ID
                 'prize_type' => \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH,  // ⭐ 固定为现金类型
                 'prize_name' => $prizeLevel->level_name,  // ⭐ 使用 prize_name 存储奖品等级名称
                 'prize_amount' => $prizeLevel->prize_amount,

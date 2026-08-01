@@ -345,6 +345,7 @@ return [
         'amount_exceeded' => '派獎金額超出總獎金額度',
         'ticket_not_found_or_used' => '券號 {ticket_no} 不存在或已使用',
         'ticket_already_won' => '券號 {ticket_no} 已錄入過中獎記錄，不能重複錄入',
+        'prize_sold_out' => '獎品「{prize_name}」已發放完畢（總數：{total_count}，已發放：{distributed_count}），無法繼續錄入',
         'prize_level_not_found_for_ticket' => '券號 {ticket_no} 的獎品等級不存在',
         'invalid_ticket_format' => '券號 {ticket_no} 格式錯誤，只能包含數字且不超過6位',
         'distribute_failed' => '券號 {ticket_no} 派獎失敗：{reason}',  // ⭐ 新增：錄入自動派獎失敗提示
