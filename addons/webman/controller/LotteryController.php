@@ -533,6 +533,21 @@ class LotteryController
                                     ->style(['margin-left' => '10px'])
                                     ->span(11);
                             });
+
+                            // ===== 打码量配置 =====
+                            $form->divider()->content(admin_trans('lottery.divider_betting_config'));
+                            $form->number('bet_amount', admin_trans('lottery.base_bet_amount'))->style(['width' => '100%'])
+                                ->min(0)  // ✅ 允许0（不限制）
+                                ->max(100000000)
+                                ->precision(2)
+                                ->default(0)  // ✅ 默认0（不限制）
+                                ->rule([
+                                    'min:0' => admin_trans('lottery.rul.base_bet_amount_0'),
+                                    'max:100000000' => admin_trans('lottery.rul.base_bet_amount_100000000'),
+                                ])
+                                ->help(admin_trans('lottery.base_bet_amount_help'))
+                                ->placeholder(admin_trans('lottery.form_placeholder.required_betting_amount'));
+
                             // ===== 新增：爆彩功能配置 =====
                             $form->divider()->content(admin_trans('lottery.burst_config.divider_title'));
 
@@ -721,6 +736,20 @@ class LotteryController
                                     ->style(['margin-left' => '10px'])
                                     ->span(11);
                             });
+
+                            // ===== 打码量配置 =====
+                            $form->divider()->content(admin_trans('lottery.divider_betting_config'));
+                            $form->number('bet_amount', admin_trans('lottery.base_bet_amount'))->style(['width' => '100%'])
+                                ->min(0)  // ✅ 允许0（不限制）
+                                ->max(100000000)
+                                ->precision(2)
+                                ->default(0)  // ✅ 默认0（不限制）
+                                ->rule([
+                                    'min:0' => admin_trans('lottery.rul.base_bet_amount_0'),
+                                    'max:100000000' => admin_trans('lottery.rul.base_bet_amount_100000000'),
+                                ])
+                                ->help(admin_trans('lottery.base_bet_amount_help'))
+                                ->placeholder(admin_trans('lottery.form_placeholder.required_betting_amount'));
 
                             // 保底金额配置
                             $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
