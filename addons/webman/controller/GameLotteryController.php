@@ -279,17 +279,19 @@ class GameLotteryController
                 ->required();
             // 打码量配置
             $form->divider()->content(admin_trans('lottery.divider_betting_config'));
-            $form->number('bet_amount', admin_trans('lottery.base_bet_amount'))->style(['width' => '100%'])
-                ->min(0)  // ✅ 改为0，允许不限制
+            $form->number('base_bet_amount', admin_trans('lottery.base_bet_amount'))->style(['width' => '100%'])
+                ->min(1)
                 ->max(100000000)
                 ->precision(2)
-                ->default(0)  // ✅ 默认0（不限制）
+                ->default(100)
                 ->rule([
-                    'min:0' => admin_trans('lottery.rul.base_bet_amount_0'),
+                    'required' => admin_trans('lottery.form_validation.required_betting_amount_required'),
+                    'min:1' => admin_trans('lottery.rul.base_bet_amount_0'),
                     'max:100000000' => admin_trans('lottery.rul.base_bet_amount_100000000'),
                 ])
-                ->help('玩家必须累计达到此打码量才能参与抽奖。设置为0表示不限制（每次下注都检查）。例如：设置20，玩家需累计下注20元以上才有资格中奖')
-                ->placeholder('0=不限制，>0=需累计打码量');
+                ->help(admin_trans('lottery.form_help.required_betting_amount'))
+                ->placeholder(admin_trans('lottery.form_placeholder.required_betting_amount'))
+                ->required();
             $form->row(function (Form $form) {
                 $form->number('amount', admin_trans('lottery.game_amount'))->style(['width' => '100%'])
                     ->min(1)
