@@ -294,5 +294,6 @@ return [
     'error' => [
         'not_found' => 'Lottery not found',
         'only_random_support_burst' => 'Only random lottery supports burst feature',
+        'amount_exceed_max_pool' => 'Pool amount cannot exceed maximum pool amount',
     ],
 ];

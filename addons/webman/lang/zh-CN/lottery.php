@@ -313,5 +313,6 @@ return [
     'error' => [
         'not_found' => '彩金不存在',
         'only_random_support_burst' => '只有随机彩金才支持爆彩功能',
+        'amount_exceed_max_pool' => '彩池金额不能超过最大彩池金额',
     ],
 ];

@@ -295,5 +295,6 @@ return [
     'error' => [
         'not_found' => 'ジャックポットが見つかりません',
         'only_random_support_burst' => 'ランダムジャックポットのみがバースト機能をサポートしています',
+        'amount_exceed_max_pool' => 'プール金額は最大プール金額を超えることはできません',
     ],
 ];

@@ -312,5 +312,6 @@ return [
     'error' => [
         'not_found' => '彩金不存在',
         'only_random_support_burst' => '只有隨機彩金才支持爆彩功能',
+        'amount_exceed_max_pool' => '彩池金額不能超過最大彩池金額',
     ],
 ];

@@ -993,6 +993,12 @@ class LotteryController
                         return message_error(admin_trans('common.max_pool_amount_must_greater_than_zero'));
                     }
 
+                    // 验证彩池金额不能超过最大彩池金额
+                    $poolAmount = $form->input('amount');
+                    if (!empty($poolAmount) && $poolAmount > 0 && $poolAmount > $maxPoolAmount) {
+                        return message_error(admin_trans('lottery.error.amount_exceed_max_pool'));
+                    }
+
                     // 验证保底金额
                     if ($autoRefillStatus == 1) {
                         if (empty($autoRefillAmount) || $autoRefillAmount <= 0) {
