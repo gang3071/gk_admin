@@ -672,6 +672,10 @@ class Login extends LoginAbstract
                         $query->where('player_source', $exAdminFilter['search_type']);
                     });
                 }
+                // ⭐ 结算状态筛选（应用于统计查询）
+                if (isset($exAdminFilter['settlement_status']) && $exAdminFilter['settlement_status'] !== '' && $exAdminFilter['settlement_status'] !== null) {
+                    $query->where('settlement_status', $exAdminFilter['settlement_status']);
+                }
                 // 店家筛选（应用于统计查询）
                 if (!empty($exAdminFilter['player']['store_admin_id'])) {
                     $query->whereHas('player', function ($q) use ($exAdminFilter) {
