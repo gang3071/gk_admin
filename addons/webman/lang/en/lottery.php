@@ -113,13 +113,13 @@ return [
     'pool_ratio' => 'Pool ratio',
 
     'pool_ratio_help' => 'For each bet in a video game, a certain percentage of the amount will go into the prize pool',
-    'base_bet_amount' => 'Bet amount limit',
+    'base_bet_amount' => 'Accumulated Wagering Limit',
 
-    'base_bet_amount_0' => 'Minimum bet amount limit set to 0',
+    'base_bet_amount_0' => 'Accumulated wagering limit minimum set to 0 (no limit)',
 
-    'base_bet_amount_100000000' => 'Maximum bet amount limit set to 100 million',
+    'base_bet_amount_100000000' => 'Accumulated wagering limit maximum set to 100 million',
 
-    'base_bet_amount_help' => 'Bet amount limit, each bet must be greater than or equal to this setting to participate in the lottery',
+    'base_bet_amount_help' => 'Players must accumulate this amount of wagering to participate in the lottery. Set to 0 for no limit (check every bet). Example: Set to 20, players need to accumulate 20+ in wagers to qualify for prizes',
     // New fields
     'max_pool_amount' => 'Maximum Pool Amount',
     'auto_refill_amount' => 'Guaranteed Amount',
