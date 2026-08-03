@@ -251,22 +251,22 @@ class GameLotteryController
                 ->help(admin_trans('lottery.form_help.pool_amount'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_amount'));
             $form->text('pool_ratio', admin_trans('lottery.pool_ratio'))
-                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
+                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
                 ->rule([
                     'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
+                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
                 ])
                 ->suffix('%')
                 ->help(admin_trans('lottery.form_help.pool_ratio'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_ratio'))
                 ->required();
             $form->text('rate', admin_trans('lottery.fields.rate'))
-                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
+                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
                 ->rule([
                     'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
+                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
                 ])
                 ->suffix('%')
                 ->help(admin_trans('lottery.form_help.dispatch_ratio'))

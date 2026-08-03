@@ -440,11 +440,11 @@ class LotteryController
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
                             $maxRatio = 100;
                             $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
+                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
                                 ->rule([
                                     'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
                                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
+                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
                                 ])
                                 ->suffix('%')
                                 ->default(100)
@@ -467,11 +467,11 @@ class LotteryController
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
                             $maxRatio = 100;
                             $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
+                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
                                 ->rule([
                                     'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
                                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
+                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
                                 ])
                                 ->suffix('%')
                                 ->default(100)
@@ -497,11 +497,11 @@ class LotteryController
                             $maxRatio = 100;
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
                             $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
+                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
                                 ->rule([
                                     'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
                                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
+                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
                                 ])
                                 ->suffix('%')
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
@@ -698,11 +698,11 @@ class LotteryController
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
                             $maxRatio = 100;
                             $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
+                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
                                 ->rule([
                                     'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
                                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
+                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
                                 ])
                                 ->suffix('%')
                                 ->default(100)
