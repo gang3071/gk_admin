@@ -25,7 +25,6 @@ use ExAdmin\ui\support\Request;
 use ExAdmin\ui\support\Token;
 use Illuminate\Database\Eloquent\Builder;
 use support\Cache;
-use support\Log;
 
 class Login extends LoginAbstract
 {
@@ -660,7 +659,7 @@ class Login extends LoginAbstract
                     });
                 }
                 if (isset($exAdminFilter['date_type'])) {
-                    $query->where(getDateWhere($exAdminFilter['date_type'], 'updated_at'));
+                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                 }
                 if (!empty($exAdminFilter['action_at_start'])) {
                     $query->where('platform_action_at', '>=', $exAdminFilter['action_at_start']);
@@ -683,13 +682,6 @@ class Login extends LoginAbstract
                         $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
                     });
                 }
-
-                // 🔍 调试：打印查询 SQL
-                Log::info('PlayGameRecord totalInfo 查询条件', [
-                    'exAdminFilter' => $exAdminFilter,
-                    'sql' => $query->toSql(),
-                    'bindings' => $query->getBindings()
-                ]);
 
                 // ✅ 分状态统计
                 $settledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
