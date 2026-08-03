@@ -467,7 +467,8 @@ class ChannelPlayerDeliveryRecordController
                 $name = admin_trans('player.player');
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
-                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
+                    PlayerDeliveryRecord::TYPE_SPECIAL,
                 ])) {
                     $name = $data->user_name ?? admin_trans('common.default.admin');
                 }

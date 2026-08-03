@@ -2006,7 +2006,8 @@ class ChannelAgentController
                 $name = admin_trans('channel_agent.player');
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
-                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
+                    PlayerDeliveryRecord::TYPE_SPECIAL,
                 ])) {
                     $name = $data->user_name ?? admin_trans('channel_agent.admin');
                 }
