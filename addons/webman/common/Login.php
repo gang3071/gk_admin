@@ -683,6 +683,13 @@ class Login extends LoginAbstract
                     });
                 }
 
+                // 🔍 调试：打印查询 SQL
+                Log::info('PlayGameRecord totalInfo 查询条件', [
+                    'exAdminFilter' => $exAdminFilter,
+                    'sql' => $query->toSql(),
+                    'bindings' => $query->getBindings()
+                ]);
+
                 // ✅ 分状态统计
                 $settledData = (clone $query)->where('settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)
                     ->selectRaw('sum(bet) as total_bet, sum(diff) as total_diff, sum(reward) as total_reward, count(*) as count')->first();
