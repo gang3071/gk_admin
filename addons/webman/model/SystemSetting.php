@@ -66,6 +66,10 @@ class SystemSetting extends Model
             $cacheKey = 'setting-' . $setting->feature . '-' . $setting->department_id;
             Cache::set($cacheKey, $setting);
 
+            if($setting->feature === 'max_keeping_minutes'){
+                Cache::set($cacheKey, $setting->num);
+            }
+
             // 客户端维护配置更新后立即推送
             if ($setting->feature === 'client_maintain') {
                 // 检查是否修改了 status、num、date_start 或 date_end 字段（使用 wasChanged 方法）
