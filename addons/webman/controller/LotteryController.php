@@ -109,7 +109,7 @@ class LotteryController
             // 入池比值（固定和随机彩金都显示）
             $grid->column('pool_ratio', admin_trans('lottery.fields.pool_ratio'))->display(function ($val, Lottery $data) {
                 return Html::create()->content([
-                    Html::div()->content(floatval($val) . '%')
+                    Html::div()->content(number_format(floatval($val), 4, '.', '') . '%')  // ✅ 显示4位小数
                 ]);
             })->align('center');
 
@@ -403,9 +403,9 @@ class LotteryController
 
             $form->number('pool_ratio', admin_trans('lottery.fields.pool_ratio'))
                 ->style(['width' => '100%'])
-                ->min(0)
+                ->min(0.0001)  // ✅ 最小值改为 0.0001
                 ->max(100)
-                ->precision(2)
+                ->precision(4)  // ✅ 精度改为4位小数
                 ->suffix('%')
                 ->help(admin_trans('lottery.form_help.pool_ratio'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_ratio'))
@@ -1006,8 +1006,8 @@ class LotteryController
                     $autoRefillStatus = $form->input('auto_refill_status');
                     $autoRefillAmount = $form->input('auto_refill_amount');
 
-                    if (empty($poolRatio) || $poolRatio <= 0) {
-                        return message_error(admin_trans('common.pool_ratio_must_greater_than_zero'));
+                    if (empty($poolRatio) || $poolRatio < 0.0001) {
+                        return message_error(admin_trans('common.pool_ratio_must_greater_than_or_equal_0_0001'));
                     }
                     if ($poolRatio > 100) {
                         return message_error(admin_trans('common.pool_ratio_cannot_exceed_100'));

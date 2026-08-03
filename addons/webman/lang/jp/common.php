@@ -74,6 +74,7 @@ return [
 
     // 彩池相关
     'pool_ratio_must_greater_than_zero' => 'プール比率は0より大きくする必要があります',
+    'pool_ratio_must_greater_than_or_equal_0_0001' => 'プール比率は0.0001%以上である必要があります',
     'pool_ratio_cannot_exceed_100' => 'プール比率は100%を超えることはできません',
     'win_probability_must_greater_than_zero' => '当選確率は0より大きくする必要があります',
     'win_probability_cannot_exceed_1' => '当選確率は1 (100%) を超えることはできません',
