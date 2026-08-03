@@ -301,6 +301,7 @@ return [
         'profit' => '推廣員分潤',
         'lottery' => '彩金派彩',
         'lottery_random' => '隨機彩金派彩',
+        'lottery_fixed' => '固定彩金派彩',
         'game_out' => '轉出到電子遊戲',
         'game_in' => '電子遊戲轉入',
         'national_invite' => '邀請獎勵',

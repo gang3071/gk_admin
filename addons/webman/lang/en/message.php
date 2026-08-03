@@ -301,6 +301,7 @@ return [
         'profit' => 'Promoters share profits',
         'lottery' => 'Lottery payout',
         'lottery_random' => 'Random Lottery Payout',
+        'lottery_fixed' => 'Fixed Lottery Payout',
         'game_out' => 'Electronic game transfer',
         'game_in' => 'Transfer to electronic game',
         'national_invite' => 'Invitation reward',
