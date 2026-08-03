@@ -659,7 +659,7 @@ class Login extends LoginAbstract
                     });
                 }
                 if (isset($exAdminFilter['date_type'])) {
-                    $query->where(getDateWhere($exAdminFilter['date_type'], 'updated_at'));
+                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                 }
                 if (!empty($exAdminFilter['action_at_start'])) {
                     $query->where('platform_action_at', '>=', $exAdminFilter['action_at_start']);
@@ -671,6 +671,10 @@ class Login extends LoginAbstract
                     $query->whereHas('player', function ($query) use ($exAdminFilter) {
                         $query->where('player_source', $exAdminFilter['search_type']);
                     });
+                }
+                // ⭐ 结算状态筛选（应用于统计查询）
+                if (isset($exAdminFilter['settlement_status']) && $exAdminFilter['settlement_status'] !== '' && $exAdminFilter['settlement_status'] !== null) {
+                    $query->where('settlement_status', $exAdminFilter['settlement_status']);
                 }
                 // 店家筛选（应用于统计查询）
                 if (!empty($exAdminFilter['player']['store_admin_id'])) {

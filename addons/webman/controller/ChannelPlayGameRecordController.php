@@ -88,7 +88,7 @@ class ChannelPlayGameRecordController
                 });
             }
             if (isset($exAdminFilter['date_type'])) {
-                $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'updated_at'));
+                $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
             }
             if (!empty($exAdminFilter['action_at_start'])) {
                 $grid->model()->where('platform_action_at', '>=', $exAdminFilter['action_at_start']);
