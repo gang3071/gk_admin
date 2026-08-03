@@ -442,7 +442,13 @@ class ChannelPlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_BET:
                     case PlayerDeliveryRecord::TYPE_GIFT:
                     case PlayerDeliveryRecord::TYPE_PREPAY:
+                    case PlayerDeliveryRecord::COIN_DEDUCT:
                         return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                    case PlayerDeliveryRecord::TYPE_SPECIAL:
+                        if ($data->amount_after < $data->amount_before) {
+                            return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                        }
+                        return Html::create()->content(['+' . $val])->style(['color' => 'green']);
                     case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
                         if ($val < 0) {
                             return Html::create()->content([$val])->style(['color' => '#cd201f']);

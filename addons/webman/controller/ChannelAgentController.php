@@ -1980,7 +1980,13 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_BET:
                     case PlayerDeliveryRecord::TYPE_GIFT:
                     case PlayerDeliveryRecord::TYPE_PREPAY:
+                    case PlayerDeliveryRecord::COIN_DEDUCT:
                         return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                    case PlayerDeliveryRecord::TYPE_SPECIAL:
+                        if ($data->amount_after < $data->amount_before) {
+                            return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                        }
+                        return Html::create()->content(['+' . $val])->style(['color' => 'green']);
                     case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
                         // 重新结算根据金额正负显示
                         if ($val < 0) {
