@@ -25,6 +25,7 @@ use ExAdmin\ui\support\Request;
 use ExAdmin\ui\support\Token;
 use Illuminate\Database\Eloquent\Builder;
 use support\Cache;
+use support\Log;
 
 class Login extends LoginAbstract
 {
