@@ -201,9 +201,9 @@ return [
         'agent_profit_records' => 'Profit Records',
         'agent_settlement_records' => 'Settlement Records',
         'agent_store_profit_report' => 'Store Profit Report',
-        //Store Device Management
-        'store_player' => 'Device Management',
-        'store_player_list' => 'Device List',
+        //Store Player Management
+        'store_player' => 'Player Management',
+        'store_player_list' => 'Player List',
         //Store Deposit Bonus Management
         'store_deposit_bonus_manage' => 'Deposit Bonus Management',
         'store_deposit_bonus_activity' => 'Activity Management',

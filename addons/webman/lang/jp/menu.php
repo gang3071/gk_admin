@@ -202,9 +202,9 @@ return [
         'agent_profit_records' => '利益記録',
         'agent_settlement_records' => '決済記録',
         'agent_store_profit_report' => '店舗利益レポート',
-        //店舗デバイス管理
-        'store_player' => 'デバイス管理',
-        'store_player_list' => 'デバイスリスト',
+        //店舗プレイヤー管理
+        'store_player' => 'プレイヤー管理',
+        'store_player_list' => 'プレイヤーリスト',
         //店舗入金ボーナス管理
         'store_deposit_bonus_manage' => '入金ボーナス管理',
         'store_deposit_bonus_activity' => '活動管理',

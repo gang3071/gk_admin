@@ -22,15 +22,15 @@ return [
         'title' => '店家中心',
     ],
 
-    // ========== 设备管理 ==========
+    // ========== 玩家管理 ==========
     [
         'id' => 'addons\webman\controller\StorePlayerController-',
         'pid' => 0,
         'url' => '',
         'group' => 'store',
-        'title' => '设备管理',
+        'title' => '玩家管理',
         'children' => [
-            // 设备列表
+            // 玩家列表
             [
                 'id' => 'addons\webman\controller\StorePlayerController\index',
                 'pid' => 'addons\webman\controller\StorePlayerController-',
@@ -38,7 +38,7 @@ return [
                 'method' => 'get',
                 'group' => 'store',
                 'url' => 'ex-admin/addons-webman-controller-StorePlayerController/index',
-                'title' => '设备列表',
+                'title' => '玩家列表',
             ],
         ]
     ],
