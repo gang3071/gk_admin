@@ -152,6 +152,11 @@ return [
     'clear_stats_success_message' => '{count} 個の宝くじの統計データを正常にクリアしました',
     'clear_stats_error_title' => 'クリア失敗',
 
+    // ステータス表示
+    'status_enabled_parenthesis' => '（有効）',
+    'status_disabled' => '無効',
+    'status_enabled' => '有効',
+
     // フォーム検証
     'form_validation' => [
         'required_betting_amount_required' => '必要ベット額を空にすることはできません',

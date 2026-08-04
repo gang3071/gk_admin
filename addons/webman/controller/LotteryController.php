@@ -170,7 +170,7 @@ class LotteryController
             $grid->column('burst_status', admin_trans('lottery.fields.burst_status'))->display(function ($val, Lottery $data) {
                 if ($data->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
                     return Switches::create(null, $val)
-                        ->options([[1 => admin_trans('lottery.status_enabled')], [0 => admin_trans('common.status.0')]])
+                        ->options([[1 => admin_trans('lottery.status_enabled')], [0 => admin_trans('lottery.status_disabled')]])
                         ->field('burst_status')
                         ->url('ex-admin/addons-webman-controller-LotteryController/changeBurstStatus')
                         ->params(['id' => $data->id]);

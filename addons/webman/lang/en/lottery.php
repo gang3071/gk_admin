@@ -151,6 +151,11 @@ return [
     'clear_stats_success_message' => 'Successfully cleared statistics for {count} lotteries',
     'clear_stats_error_title' => 'Clear Failed',
 
+    // Status display
+    'status_enabled_parenthesis' => '(Enabled)',
+    'status_disabled' => 'Disabled',
+    'status_enabled' => 'Enabled',
+
     // Form validation
     'form_validation' => [
         'required_betting_amount_required' => 'Required betting amount cannot be empty',
