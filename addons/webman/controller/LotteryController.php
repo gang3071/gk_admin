@@ -439,13 +439,11 @@ class LotteryController
                             // 派彩比例配置
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
                             $maxRatio = 100;
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->default(100)
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
@@ -466,13 +464,11 @@ class LotteryController
                             // 派彩比例配置
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
                             $maxRatio = 100;
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->default(100)
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
@@ -496,13 +492,11 @@ class LotteryController
                             // ===== 新增：概率派彩配置 =====
                             $maxRatio = 100;
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
                                 ->placeholder(admin_trans('lottery.machine_lottery.payout_ratio_placeholder'))
@@ -697,13 +691,11 @@ class LotteryController
                         })->when(GameType::TYPE_STEEL_BALL, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
                             $maxRatio = 100;
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(\.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(\.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->default(100)
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
