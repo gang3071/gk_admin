@@ -791,14 +791,17 @@ class StorePlayerController
 
             $grid->actions(function (Actions $actions) use ($admin) {
                 // 打码统计按钮
-                $actions->prepend(admin_trans('player.bet_statistics_button'), 'LineChartOutlined')
-                    ->modal(function ($data) {
-                        return $this->betStatistics($data['id']);
-                    })
-                    ->width('1200px')
-                    ->title(function ($data) {
-                        return admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]);
-                    });
+                $actions->prepend(
+                    Button::create(admin_trans('player.bet_statistics_button'))
+                        ->modal([$this, 'betStatistics'], function ($data) {
+                            return ['playerId' => $data['id']];
+                        })
+                        ->width('1200px')
+                        ->title(function ($data) {
+                            return admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]);
+                        })
+                        ->size('small')
+                );
 
                 $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
