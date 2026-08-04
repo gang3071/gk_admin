@@ -790,16 +790,14 @@ class StorePlayerController
             });
 
             $grid->actions(function (Actions $actions) use ($admin) {
+                $data = $actions->row;
+
                 // 打码统计按钮
                 $actions->prepend(
                     Button::create(admin_trans('player.bet_statistics_button'))
-                        ->modal([$this, 'betStatistics'], function ($data) {
-                            return ['playerId' => $data['id']];
-                        })
+                        ->modal($this->betStatistics($data['id']))
                         ->width('1200px')
-                        ->title(function ($data) {
-                            return admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]);
-                        })
+                        ->title(admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]))
                         ->size('small')
                 );
 
