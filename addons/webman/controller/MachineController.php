@@ -2790,6 +2790,18 @@ class MachineController
         try {
             $result = MachineApiService::getMachineStatus($machine->id, $lang, Admin::id() ?? 0);
 
+            // 调试日志：记录 API 返回的完整数据
+            \support\Log::info('getMachineStatusViaApi response', [
+                'machine_id' => $machine->id,
+                'raw_result' => $result,
+                'has_machine_info' => isset($result['machine_info']),
+                'has_cache_data' => isset($result['cache_data']),
+                'machine_info_keys' => isset($result['machine_info']) ? array_keys($result['machine_info']) : [],
+                'cache_data_keys' => isset($result['cache_data']) ? array_keys($result['cache_data']) : [],
+                'keep_seconds_in_machine_info' => $result['machine_info']['keep_seconds'] ?? 'NOT_FOUND',
+                'keep_seconds_in_cache_data' => $result['cache_data']['machine_tcp_data_cache_' . $machine->id . '_keep_seconds'] ?? 'NOT_FOUND',
+            ]);
+
             // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
             $status = new \stdClass();
 
@@ -2808,6 +2820,12 @@ class MachineController
                     $status->$cleanKey = $value;
                 }
             }
+
+            // 调试日志：记录最终解析出的 keep_seconds
+            \support\Log::info('getMachineStatusViaApi parsed keep_seconds', [
+                'machine_id' => $machine->id,
+                'status_keep_seconds' => $status->keep_seconds ?? 'NOT_SET',
+            ]);
 
             return $status;
         } catch (Exception $e) {
