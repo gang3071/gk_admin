@@ -48,8 +48,10 @@ class TicketRecord extends Model
     protected $dataAuth = ['department_id' => 'department_id'];
 
     // 票据类型常量
-    const TYPE_RECHARGE = 1;   // 开分
-    const TYPE_WITHDRAW = 2;   // 洗分
+    const TYPE_RECHARGE = 1;       // 开分
+    const TYPE_WITHDRAW = 2;       // 洗分
+    const TYPE_EXPERIENCE = 3;     // 体验卷
+    const TYPE_WELFARE = 4;        // 福利卷
 
     // 状态常量
     const STATUS_DISABLED = 0;       // 禁用
@@ -65,6 +67,8 @@ class TicketRecord extends Model
         return match ($this->ticket_type) {
             self::TYPE_RECHARGE => '开分',
             self::TYPE_WITHDRAW => '洗分',
+            self::TYPE_EXPERIENCE => '体验卷',
+            self::TYPE_WELFARE => '福利卷',
             default => '未知',
         };
     }

@@ -290,9 +290,13 @@ class StoreTicketRecordController
             $grid->column('machine_no', admin_trans('ticket_machine.record.machine_no'))->align('center');
             $grid->column('score', admin_trans('ticket_machine.record.score'))->align('right');
             $grid->column('ticket_type', admin_trans('ticket_machine.record.ticket_type'))->display(function ($val) {
-                return $val == TicketRecord::TYPE_RECHARGE
-                    ? Tag::create(admin_trans('ticket_machine.record.type_recharge'))->color('blue')
-                    : Tag::create(admin_trans('ticket_machine.record.type_withdraw'))->color('green');
+                return match ($val) {
+                    TicketRecord::TYPE_RECHARGE => Tag::create(admin_trans('ticket_machine.record.type_recharge'))->color('blue'),
+                    TicketRecord::TYPE_WITHDRAW => Tag::create(admin_trans('ticket_machine.record.type_withdraw'))->color('green'),
+                    TicketRecord::TYPE_EXPERIENCE => Tag::create(admin_trans('ticket_machine.record.type_experience'))->color('purple'),
+                    TicketRecord::TYPE_WELFARE => Tag::create(admin_trans('ticket_machine.record.type_welfare'))->color('orange'),
+                    default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
+                };
             });
             $grid->column('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'))->copy();
             $grid->column('status', admin_trans('ticket_machine.record.status'))->display(function ($val) {
@@ -329,6 +333,8 @@ class StoreTicketRecordController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
                         TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
+                        TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+                        TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->eq()->select('status')
@@ -419,9 +425,13 @@ class StoreTicketRecordController
             $form->desc('machine_no', admin_trans('ticket_machine.record.machine_no'));
             $form->desc('score', admin_trans('ticket_machine.record.score'));
             $form->desc('ticket_type', admin_trans('ticket_machine.record.ticket_type'))->display(function ($val) {
-                return $val == TicketRecord::TYPE_RECHARGE
-                    ? admin_trans('ticket_machine.record.type_recharge')
-                    : admin_trans('ticket_machine.record.type_withdraw');
+                return match ($val) {
+                    TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
+                    TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
+                    TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+                    TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
+                    default => admin_trans('ticket_machine.record.status_unknown'),
+                };
             });
             $form->desc('qr_code', admin_trans('ticket_machine.record.qr_code'));
             $form->desc('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'));

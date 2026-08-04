@@ -86,6 +86,8 @@
             <a-select v-model:value="ticketType" style="width: 100%;">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
+              <a-select-option :value="3">{{ labels.type_experience || '體驗卷' }}</a-select-option>
+              <a-select-option :value="4">{{ labels.type_welfare || '福利卷' }}</a-select-option>
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
