@@ -74,6 +74,7 @@ return [
 
     // 彩池相關
     'pool_ratio_must_greater_than_zero' => '入池比值必須大於0',
+    'pool_ratio_must_greater_than_or_equal_0_0001' => '入池比值必須大於或等於0.0001%',
     'pool_ratio_cannot_exceed_100' => '入池比值不能超過100%',
     'win_probability_must_greater_than_zero' => '中獎概率必須大於0',
     'win_probability_cannot_exceed_1' => '中獎概率不能超過1（100%）',
