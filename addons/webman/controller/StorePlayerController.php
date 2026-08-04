@@ -789,9 +789,7 @@ class StorePlayerController
                     ]);
             });
 
-            $grid->actions(function (Actions $actions) use ($admin) {
-                $data = $actions->row;
-
+            $grid->actions(function ($actions, $data) use ($admin) {
                 // 打码统计按钮
                 $actions->prepend(
                     Button::create(admin_trans('player.bet_statistics_button'))
