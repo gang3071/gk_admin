@@ -365,6 +365,21 @@ class LotteryController
 
             $maxRatio = $model->rate ?? 100;
 
+            // 编辑模式：计算显示金额（DB + Redis），仅用于展示
+            $displayAmount = $model->amount ?? 0;
+            if ($form->isEdit() && $model) {
+                try {
+                    $redis = \support\Redis::connection()->client();
+                    $redisKey = \app\service\LotteryServices::REDIS_KEY_LOTTERY_AMOUNT . $model->id;
+                    $redisAmount = $redis->get($redisKey);
+                    if ($redisAmount !== false && $redisAmount > 0) {
+                        $displayAmount = bcadd($model->amount, $redisAmount, 4);
+                    }
+                } catch (\Exception) {
+                    // Redis 异常时降级使用数据库金额
+                }
+            }
+
             // 使用模型方法获取爆彩配置（自动处理默认值和JSON解析）
             $burstMultiplierConfig = $model ? $model->getBurstMultiplierConfig() : [
                 'final' => 50,
@@ -398,6 +413,7 @@ class LotteryController
                 ->min(0)
                 ->max(10000000000)
                 ->precision(2)
+                ->value($displayAmount)
                 ->help(admin_trans('lottery.form_help.pool_amount'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_amount'));
 
@@ -1052,6 +1068,9 @@ class LotteryController
                         $form->input('burst_status', 0);
                     }
                 }
+
+                // 清除彩金列表缓存
+                \app\service\LotteryServices::clearLotteryListCache($gameType);
             });
         });
     }
