@@ -27,7 +27,8 @@ return [
 
     // Bet Statistics
     'bet_statistics' => 'View Bets',
-    'bet_statistics_title' => 'Bet Statistics',
+    'bet_statistics_button' => 'Bet Stats',
+    'bet_statistics_title' => '{name} - Bet Statistics',
     'today_bet' => 'Today\'s Bets',
     'week_bet' => 'This Week\'s Bets',
     'month_bet' => 'This Month\'s Bets',

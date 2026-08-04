@@ -27,7 +27,8 @@ return [
 
     // 打碼量統計
     'bet_statistics' => '查看打碼',
-    'bet_statistics_title' => '打碼量統計',
+    'bet_statistics_button' => '打碼統計',
+    'bet_statistics_title' => '{name} - 打碼量統計',
     'today_bet' => '今日打碼量',
     'week_bet' => '本周打碼量',
     'month_bet' => '本月打碼量',

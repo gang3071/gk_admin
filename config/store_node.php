@@ -40,6 +40,26 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StorePlayerController/index',
                 'title' => '玩家列表',
             ],
+            // 打码统计
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\betStatistics',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'betStatistics',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/betStatistics',
+                'title' => '打码统计',
+            ],
+            // 获取打码统计数据
+            [
+                'id' => 'addons\webman\controller\StorePlayerController\getBetStatisticsData',
+                'pid' => 'addons\webman\controller\StorePlayerController\index',
+                'action' => 'getBetStatisticsData',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerController/getBetStatisticsData',
+                'title' => '获取打码统计数据',
+            ],
         ]
     ],
 

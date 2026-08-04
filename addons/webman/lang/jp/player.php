@@ -26,7 +26,8 @@ return [
 
     // ベット統計
     'bet_statistics' => 'ベット確認',
-    'bet_statistics_title' => 'ベット統計',
+    'bet_statistics_button' => 'ベット統計',
+    'bet_statistics_title' => '{name} - ベット統計',
     'today_bet' => '今日のベット',
     'week_bet' => '今週のベット',
     'month_bet' => '今月のベット',

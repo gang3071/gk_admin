@@ -14,6 +14,7 @@ use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\VipLevel;
+use addons\webman\model\PlayerBetStatistics;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -788,7 +789,17 @@ class StorePlayerController
                     ]);
             });
 
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions) use ($admin) {
+                // 打码统计按钮
+                $actions->prepend(admin_trans('player.bet_statistics_button'), 'LineChartOutlined')
+                    ->modal(function ($data) {
+                        return $this->betStatistics($data['id']);
+                    })
+                    ->width('1200px')
+                    ->title(function ($data) {
+                        return admin_trans('player.bet_statistics_title', null, ['name' => $data['name']]);
+                    });
+
                 $actions->edit()->modal($this->form())->width('60%');
                 $actions->hideDel();
                 $actions->detail()->modal($this->viewForm())->width('60%');
@@ -1067,5 +1078,155 @@ class StorePlayerController
                 })->span(12);
             });
         });
+    }
+
+    /**
+     * 查看打码统计
+     * @auth true
+     * @group store
+     * @param int $playerId
+     */
+    public function betStatistics(int $playerId)
+    {
+        // 准备翻译对象
+        $trans = [
+            'loading' => admin_trans('player.loading'),
+            'today_bet' => admin_trans('player.today_bet'),
+            'week_bet' => admin_trans('player.week_bet'),
+            'month_bet' => admin_trans('player.month_bet'),
+            'machine_bet' => admin_trans('player.machine_bet'),
+            'game_bet' => admin_trans('player.game_bet'),
+            'bet_amount_unit' => admin_trans('player.bet_amount_unit'),
+            'bet_trend_15days' => admin_trans('player.bet_trend_15days'),
+            'month_bet_distribution' => admin_trans('player.month_bet_distribution'),
+            'load_failed' => admin_trans('player.load_failed'),
+            'unknown_error' => admin_trans('common.unknown_error'),
+        ];
+
+        return \ExAdmin\ui\component\layout\Space::create()
+            ->style(['width' => '100%', 'display' => 'block'])
+            ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
+                'player-id' => $playerId,
+                'trans' => $trans,
+            ]));
+    }
+
+    /**
+     * 获取玩家打码统计数据
+     * @auth true
+     * @group store
+     * @param int $playerId
+     * @return \support\Response
+     */
+    public function getBetStatisticsData(int $playerId): \support\Response
+    {
+        try {
+            $redis = \support\Redis::connection('default')->client();
+            $today = date('Y-m-d');
+            $thisWeek = date('o-\WW');
+            $thisMonth = date('Y-m');
+
+            // 从 Redis 读取实时数据
+            // Redis key 格式: gk_work:player_bet_stats:{player_id}:{stat_type}:{dimension}:{stat_date}
+
+            // 今日数据
+            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
+            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+            $todayMachineData = $redis->hGetAll($todayMachineKey);
+            $todayGameData = $redis->hGetAll($todayGameKey);
+
+            // 本周数据
+            $weekMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:weekly:{$thisWeek}";
+            $weekGameKey = "gk_work:player_bet_stats:{$playerId}:game:weekly:{$thisWeek}";
+            $weekMachineData = $redis->hGetAll($weekMachineKey);
+            $weekGameData = $redis->hGetAll($weekGameKey);
+
+            // 本月数据
+            $monthMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:monthly:{$thisMonth}";
+            $monthGameKey = "gk_work:player_bet_stats:{$playerId}:game:monthly:{$thisMonth}";
+            $monthMachineData = $redis->hGetAll($monthMachineKey);
+            $monthGameData = $redis->hGetAll($monthGameKey);
+
+            // Redis 存储的是"分"，需要除以100转为"元"
+            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
+            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
+            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
+            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
+            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
+            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
+
+            // 获取最近15天每日打码量（用于曲线图）
+            $dailyTrend = [
+                'dates' => [],
+                'machine' => [],
+                'game' => [],
+            ];
+
+            // 准备日期列表
+            $last15Days = [];
+            for ($i = 14; $i >= 0; $i--) {
+                $last15Days[] = date('Y-m-d', strtotime("-{$i} days"));
+            }
+
+            // 从数据库批量查询历史数据（排除今天）
+            $historyDates = array_filter($last15Days, fn($date) => $date !== $today);
+            $historyData = PlayerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->whereIn('stat_date', $historyDates)
+                ->get()
+                ->keyBy(function($item) {
+                    return $item->stat_date . '_' . $item->stat_type;
+                });
+
+            // 构建曲线图数据
+            foreach ($last15Days as $date) {
+                $dailyTrend['dates'][] = date('m-d', strtotime($date));
+
+                if ($date === $today) {
+                    // 今日从Redis
+                    $dailyTrend['machine'][] = round($todayMachineAmount, 2);
+                    $dailyTrend['game'][] = round($todayGameAmount, 2);
+                } else {
+                    // 历史从数据库
+                    $machineKey = $date . '_machine';
+                    $gameKey = $date . '_game';
+                    $dailyTrend['machine'][] = isset($historyData[$machineKey]) ? round($historyData[$machineKey]->bet_amount, 2) : 0;
+                    $dailyTrend['game'][] = isset($historyData[$gameKey]) ? round($historyData[$gameKey]->bet_amount, 2) : 0;
+                }
+            }
+
+            return json([
+                'code' => 0,
+                'data' => [
+                    'today' => [
+                        'machine' => round($todayMachineAmount, 2),
+                        'game' => round($todayGameAmount, 2),
+                        'total' => round($todayMachineAmount + $todayGameAmount, 2),
+                    ],
+                    'week' => [
+                        'machine' => round($weekMachineAmount, 2),
+                        'game' => round($weekGameAmount, 2),
+                        'total' => round($weekMachineAmount + $weekGameAmount, 2),
+                    ],
+                    'month' => [
+                        'machine' => round($monthMachineAmount, 2),
+                        'game' => round($monthGameAmount, 2),
+                        'total' => round($monthMachineAmount + $monthGameAmount, 2),
+                    ],
+                    'daily_trend' => $dailyTrend,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \support\Log::error('获取打码统计数据失败', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return json([
+                'code' => 500,
+                'msg' => $e->getMessage(),
+            ]);
+        }
     }
 }
