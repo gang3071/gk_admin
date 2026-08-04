@@ -365,7 +365,7 @@ class LotteryController
 
             $maxRatio = $model->rate ?? 100;
 
-            // 编辑模式：计算彩池总金额（DB + Redis）
+            // 编辑模式：计算显示金额（DB + Redis），仅用于展示
             $displayAmount = $model->amount ?? 0;
             if ($form->isEdit() && $model) {
                 try {
@@ -911,29 +911,6 @@ class LotteryController
             $form->switch('status', admin_trans('lottery.fields.status'))->default(1);
             $form->layout('vertical');
             $form->saving(function (Form $form) {
-                // 编辑模式：将显示的总金额（DB+Redis）还原为纯 DB 金额
-                if ($form->isEdit()) {
-                    $id = $form->driver()->get('id');
-                    $inputAmount = $form->input('amount');
-                    if ($inputAmount !== null) {
-                        try {
-                            $redis = \support\Redis::connection()->client();
-                            $redisKey = \app\service\LotteryServices::REDIS_KEY_LOTTERY_AMOUNT . $id;
-                            $redisAmount = $redis->get($redisKey);
-                            if ($redisAmount !== false && $redisAmount > 0) {
-                                // 总金额 - Redis金额 = 应存入DB的金额
-                                $dbAmount = bcsub($inputAmount, $redisAmount, 4);
-                                if ($dbAmount < 0) {
-                                    $dbAmount = 0;
-                                }
-                                $form->input('amount', $dbAmount);
-                            }
-                        } catch (\Exception) {
-                            // Redis 异常时按原值保存
-                        }
-                    }
-                }
-
                 $lotteryType = $form->input('lottery_type');
                 $gameType = $form->input('game_type');
 
@@ -1091,6 +1068,9 @@ class LotteryController
                         $form->input('burst_status', 0);
                     }
                 }
+
+                // 清除彩金列表缓存
+                \app\service\LotteryServices::clearLotteryListCache($gameType);
             });
         });
     }
