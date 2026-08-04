@@ -365,6 +365,21 @@ class LotteryController
 
             $maxRatio = $model->rate ?? 100;
 
+            // 编辑模式：计算彩池总金额（DB + Redis）
+            $displayAmount = $model->amount ?? 0;
+            if ($form->isEdit() && $model) {
+                try {
+                    $redis = \support\Redis::connection()->client();
+                    $redisKey = \app\service\LotteryServices::REDIS_KEY_LOTTERY_AMOUNT . $model->id;
+                    $redisAmount = $redis->get($redisKey);
+                    if ($redisAmount !== false && $redisAmount > 0) {
+                        $displayAmount = bcadd($model->amount, $redisAmount, 4);
+                    }
+                } catch (\Exception) {
+                    // Redis 异常时降级使用数据库金额
+                }
+            }
+
             // 使用模型方法获取爆彩配置（自动处理默认值和JSON解析）
             $burstMultiplierConfig = $model ? $model->getBurstMultiplierConfig() : [
                 'final' => 50,
@@ -398,6 +413,7 @@ class LotteryController
                 ->min(0)
                 ->max(10000000000)
                 ->precision(2)
+                ->value($displayAmount)
                 ->help(admin_trans('lottery.form_help.pool_amount'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_amount'));
 
@@ -895,6 +911,29 @@ class LotteryController
             $form->switch('status', admin_trans('lottery.fields.status'))->default(1);
             $form->layout('vertical');
             $form->saving(function (Form $form) {
+                // 编辑模式：将显示的总金额（DB+Redis）还原为纯 DB 金额
+                if ($form->isEdit()) {
+                    $id = $form->driver()->get('id');
+                    $inputAmount = $form->input('amount');
+                    if ($inputAmount !== null) {
+                        try {
+                            $redis = \support\Redis::connection()->client();
+                            $redisKey = \app\service\LotteryServices::REDIS_KEY_LOTTERY_AMOUNT . $id;
+                            $redisAmount = $redis->get($redisKey);
+                            if ($redisAmount !== false && $redisAmount > 0) {
+                                // 总金额 - Redis金额 = 应存入DB的金额
+                                $dbAmount = bcsub($inputAmount, $redisAmount, 4);
+                                if ($dbAmount < 0) {
+                                    $dbAmount = 0;
+                                }
+                                $form->input('amount', $dbAmount);
+                            }
+                        } catch (\Exception) {
+                            // Redis 异常时按原值保存
+                        }
+                    }
+                }
+
                 $lotteryType = $form->input('lottery_type');
                 $gameType = $form->input('game_type');
 
