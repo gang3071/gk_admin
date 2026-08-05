@@ -3886,21 +3886,21 @@ class ChannelIndexController
             }
 
             // 从 Redis 缓存读取今日打码量数据
-            // Redis key 格式: gk_work:player_bet_stats:{player_id}:machine:daily:{date}
+            // Redis key 格式: gk_work:player_bet_stats:{player_id}:game:daily:{date}
             $redis = \support\Redis::connection('default')->client();
             $today = date('Y-m-d');
             $yesterday = date('Y-m-d', strtotime('-1 day'));
 
-            // 今日机器打码量（从 Redis 读取实时数据）
-            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
-            $todayMachineData = $redis->hGetAll($todayMachineKey);
+            // 今日电子游戏打码量（从 Redis 读取实时数据）
+            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+            $todayGameData = $redis->hGetAll($todayGameKey);
             // Redis 存储的是"分"，需要除以100转为"元"
-            $todayBetAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
+            $todayBetAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
 
-            // 昨日机器打码量（从数据库读取历史数据，数据库存储单位为元）
+            // 昨日电子游戏打码量（从数据库读取历史数据，数据库存储单位为元）
             $yesterdayBetAmount = 0;
             $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                ->where('stat_type', 'machine')
+                ->where('stat_type', 'game')
                 ->where('dimension', 'daily')
                 ->where('stat_date', $yesterday)
                 ->first();
