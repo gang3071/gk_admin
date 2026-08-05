@@ -3885,21 +3885,29 @@ class ChannelIndexController
                 return json(['code' => 404, 'message' => '玩家不存在']);
             }
 
-            // 从 Redis 缓存读取打码量数据
-            // Redis key 格式: gk_work:player_bet_stats:{player_id}:game:daily:{date}
+            // 从 Redis 缓存读取今日打码量数据
+            // Redis key 格式: gk_work:player_bet_stats:{player_id}:machine:daily:{date}
             $redis = \support\Redis::connection('default')->client();
             $today = date('Y-m-d');
             $yesterday = date('Y-m-d', strtotime('-1 day'));
 
-            // 今日电子游戏打码量
-            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
-            $todayGameData = $redis->hGetAll($todayGameKey);
-            $todayBetAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
+            // 今日机器打码量（从 Redis 读取实时数据）
+            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
+            $todayMachineData = $redis->hGetAll($todayMachineKey);
+            // Redis 存储的是"分"，需要除以100转为"元"
+            $todayBetAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
 
-            // 昨日电子游戏打码量
-            $yesterdayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$yesterday}";
-            $yesterdayGameData = $redis->hGetAll($yesterdayGameKey);
-            $yesterdayBetAmount = isset($yesterdayGameData['bet_amount']) ? floatval($yesterdayGameData['bet_amount']) / 100 : 0;
+            // 昨日机器打码量（从数据库读取历史数据，数据库存储单位为元）
+            $yesterdayBetAmount = 0;
+            $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                ->where('stat_type', 'machine')
+                ->where('dimension', 'daily')
+                ->where('stat_date', $yesterday)
+                ->first();
+
+            if ($yesterdayData) {
+                $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
+            }
 
             return json([
                 'code' => 200,
