@@ -43,6 +43,8 @@ return [
         'ticket_type' => 'Ticket Type',
         'type_recharge' => 'Recharge',
         'type_withdraw' => 'Withdraw',
+        'type_experience' => 'Experience Voucher',
+        'type_welfare' => 'Welfare Voucher',
         'select_player' => 'Link Player (Optional)',
         'search_player' => 'Select or search player',
         'field_score' => 'Score/Amount',
@@ -116,6 +118,7 @@ return [
         'hex_sent' => 'HEX command sent',
         'not_connected' => 'Not connected',
         'service_unavailable' => 'Service unavailable',
+        'player_required_for_voucher' => 'Welfare and Experience vouchers require a player to be selected',
     ],
 
     // Log
@@ -241,6 +244,8 @@ return [
         'ticket_type' => 'Ticket Type',
         'type_recharge' => 'Recharge',
         'type_withdraw' => 'Withdraw',
+        'type_experience' => 'Experience Voucher',
+        'type_welfare' => 'Welfare Voucher',
         'qr_code' => 'QR Code Info',
         'qr_code_no' => 'QR Code No.',
         'status' => 'Status',

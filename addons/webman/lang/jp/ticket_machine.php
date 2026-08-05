@@ -43,6 +43,8 @@ return [
         'ticket_type' => 'チケットタイプ',
         'type_recharge' => 'チャージ',
         'type_withdraw' => '出金',
+        'type_experience' => '体験券',
+        'type_welfare' => '福利券',
         'select_player' => 'プレイヤー関連付け（任意）',
         'search_player' => 'プレイヤーを選択または検索',
         'field_score' => 'スコア/金額',
@@ -116,6 +118,7 @@ return [
         'hex_sent' => 'HEXコマンドを送信しました',
         'not_connected' => '未接続です',
         'service_unavailable' => 'サービスが利用できません',
+        'player_required_for_voucher' => '福利券と体験券はプレイヤーを選択する必要があります',
     ],
 
     // ログ
@@ -241,6 +244,8 @@ return [
         'ticket_type' => 'チケットタイプ',
         'type_recharge' => 'チャージ',
         'type_withdraw' => '洗分',
+        'type_experience' => '体験券',
+        'type_welfare' => '福利券',
         'qr_code' => 'QRコード情報',
         'qr_code_no' => 'QRコード番号',
         'status' => 'ステータス',
