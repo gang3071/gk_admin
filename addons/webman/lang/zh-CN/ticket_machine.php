@@ -119,6 +119,9 @@ return [
         'not_connected' => '出票机未连接',
         'service_unavailable' => '出票机服务不可用',
         'player_required_for_voucher' => '福利卷和体验卷必须选择关联玩家才能出票',
+        'select_score' => '请选择分数',
+        'today_bet_reached' => '今日打分≥{amount}万',
+        'yesterday_bet_reached' => '昨日打分≥{amount}万',
     ],
 
     // 日志
@@ -268,6 +271,10 @@ return [
         'used_count' => '已使用：',
         'used_score' => '已使用金额：',
         'current_shift' => '当前班次',
+        'today_bet_amount' => '今日电子总打码量',
+        'yesterday_bet_amount' => '昨日电子总打码量',
+        'player_bet_info' => '玩家打码量信息',
+        'refresh' => '刷新',
     ],
 
     // 核销记录

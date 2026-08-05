@@ -4488,6 +4488,15 @@ class ChannelPlayerController
             $storeSettingCrashAmount->status = 0; // 默认不开启
             $storeSettingCrashAmount->save();
 
+            // 菜单图片
+            $storeSettingImage = new StoreSetting();
+            $storeSettingImage->department_id = $departmentId;
+            $storeSettingImage->admin_user_id = $adminUser->id;
+            $storeSettingImage->feature = 'menu_image';
+            $storeSettingImage->num = 0;
+            $storeSettingImage->status = 0;
+            $storeSettingImage->save();
+
             // 5. 创建默认自动交班配置（一个店家一条记录）
             // 修复：唯一索引 uk_dept_admin (department_id, bind_admin_user_id) 限制一个店家只能有一条配置
             $autoShiftConfig = new StoreAutoShiftConfig();

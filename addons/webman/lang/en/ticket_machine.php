@@ -119,6 +119,9 @@ return [
         'not_connected' => 'Not connected',
         'service_unavailable' => 'Service unavailable',
         'player_required_for_voucher' => 'Welfare and Experience vouchers require a player to be selected',
+        'select_score' => 'Please select score',
+        'today_bet_reached' => 'Today bet ≥{amount}0K',
+        'yesterday_bet_reached' => 'Yesterday bet ≥{amount}0K',
     ],
 
     // Log
@@ -269,6 +272,10 @@ return [
         'used_count' => 'Used：',
         'used_score' => 'Used Amount：',
         'current_shift' => 'Current Shift',
+        'today_bet_amount' => 'Today Electronic Bet',
+        'yesterday_bet_amount' => 'Yesterday Electronic Bet',
+        'player_bet_info' => 'Player Bet Info',
+        'refresh' => 'Refresh',
     ],
 
     // Redeem Records

@@ -3773,11 +3773,19 @@ class ChannelIndexController
         // 补充验证消息标签
         $logLabels['player_required_for_voucher'] = admin_trans('ticket_machine.message.player_required_for_voucher');
 
+        // 补充玩家打码量信息标签
+        $logLabels['player_bet_info'] = admin_trans('ticket_machine.record.player_bet_info');
+        $logLabels['player_name'] = admin_trans('ticket_machine.record.player_name');
+        $logLabels['today_bet_amount'] = admin_trans('ticket_machine.record.today_bet_amount');
+        $logLabels['yesterday_bet_amount'] = admin_trans('ticket_machine.record.yesterday_bet_amount');
+        $logLabels['refresh'] = admin_trans('ticket_machine.record.refresh');
+
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
             'default_store_uid' => $storeUid,
             'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
+            'player_bet_info_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/getPlayerBetInfo',
             'store_admin_id' => $store->id ?? 0,
             'department_id' => $store->department_id ?? 0,
             'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
@@ -3851,6 +3859,61 @@ class ChannelIndexController
         }
 
         return json($result);
+    }
+
+    /**
+     * 获取玩家打码量信息（从Redis缓存读取）
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function getPlayerBetInfo(): Response
+    {
+        try {
+            $playerId = (int) request()->input('player_id', 0);
+
+            if ($playerId <= 0) {
+                return json(['code' => 400, 'message' => '玩家ID不能为空']);
+            }
+
+            // 获取玩家信息
+            $player = \addons\webman\model\Player::query()
+                ->where('id', $playerId)
+                ->first();
+
+            if (!$player) {
+                return json(['code' => 404, 'message' => '玩家不存在']);
+            }
+
+            // 从 Redis 缓存读取打码量数据
+            // Redis key 格式: gk_work:player_bet_stats:{player_id}:game:daily:{date}
+            $redis = \support\Redis::connection('default')->client();
+            $today = date('Y-m-d');
+            $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+            // 今日电子游戏打码量
+            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+            $todayGameData = $redis->hGetAll($todayGameKey);
+            $todayBetAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
+
+            // 昨日电子游戏打码量
+            $yesterdayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$yesterday}";
+            $yesterdayGameData = $redis->hGetAll($yesterdayGameKey);
+            $yesterdayBetAmount = isset($yesterdayGameData['bet_amount']) ? floatval($yesterdayGameData['bet_amount']) / 100 : 0;
+
+            return json([
+                'code' => 200,
+                'data' => [
+                    'player_id' => $player->id,
+                    'player_name' => $player->name ?? '',
+                    'player_uuid' => $player->uuid ?? '',
+                    'today_bet_amount' => $todayBetAmount,
+                    'yesterday_bet_amount' => $yesterdayBetAmount,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '获取玩家打码量失败: ' . $e->getMessage()]);
+        }
     }
 
     /**
