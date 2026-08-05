@@ -118,6 +118,7 @@ return [
         'hex_sent' => 'HEXコマンドを送信しました',
         'not_connected' => '未接続です',
         'service_unavailable' => 'サービスが利用できません',
+        'player_required_for_voucher' => '福利券と体験券はプレイヤーを選択する必要があります',
     ],
 
     // ログ

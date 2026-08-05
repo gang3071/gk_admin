@@ -118,6 +118,7 @@ return [
         'hex_sent' => 'HEX指令已发送',
         'not_connected' => '出票机未连接',
         'service_unavailable' => '出票机服务不可用',
+        'player_required_for_voucher' => '福利卷和体验卷必须选择关联玩家才能出票',
     ],
 
     // 日志

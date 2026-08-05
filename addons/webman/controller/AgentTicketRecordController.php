@@ -37,18 +37,26 @@ class AgentTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示代理下属店家的开分类型数据
+            // 只显示代理下属店家的出票类型数据（开分、体验卷、福利卷）
             $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
 
             $grid->model()
                 ->whereIn('store_admin_id', $storeIds)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->orderBy('created_at', 'desc');
 
             // 统计数据（排除禁用状态）
             $totalData = TicketRecord::query()
                 ->whereIn('store_admin_id', $storeIds)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->selectRaw(
                     'sum(score) as total_score, count(*) as total_count, '
@@ -187,7 +195,11 @@ class AgentTicketRecordController
             $storeOptions = ['' => admin_trans('public_msg.all')];
             $stores = TicketRecord::query()
                 ->whereIn('store_admin_id', $storeIds)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->distinct()
                 ->pluck('store_name')
                 ->toArray();

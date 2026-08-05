@@ -40,10 +40,14 @@ class StoreTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示当前店家的开分类型数据
+            // 只显示当前店家的出票类型数据（开分、体验卷、福利卷）
             $grid->model()
                 ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->orderBy('created_at', 'desc');
 
             // 统计数据（基于当前筛选条件，排除禁用状态）
@@ -62,7 +66,11 @@ class StoreTicketRecordController
 
             $currentShiftQuery = TicketRecord::query()
                 ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('created_at', '>', $lastShiftTime);

@@ -3770,6 +3770,9 @@ class ChannelIndexController
         $logLabels['field_remark'] = admin_trans('ticket_machine.field.remark');
         $logLabels['remark_placeholder'] = admin_trans('ticket_machine.field.remark_placeholder');
 
+        // 补充验证消息标签
+        $logLabels['player_required_for_voucher'] = admin_trans('ticket_machine.message.player_required_for_voucher');
+
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
@@ -3883,7 +3886,14 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => '部门ID不能为空']);
             }
 
-            $orderId = \addons\webman\model\TicketRecord::generateOrderId();
+            // 福利卷和体验卷必须选择关联用户
+            if (($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE
+                || $ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                && $playerId <= 0) {
+                return json(['code' => 400, 'message' => '福利卷和体验卷必须选择关联玩家才能出票']);
+            }
+
+            $orderId = \addons\webman\model\TicketRecord::generateOrderId($ticketType);
             $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
 
             // 获取玩家名称

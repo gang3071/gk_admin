@@ -118,6 +118,7 @@ return [
         'hex_sent' => 'HEX command sent',
         'not_connected' => 'Not connected',
         'service_unavailable' => 'Service unavailable',
+        'player_required_for_voucher' => 'Welfare and Experience vouchers require a player to be selected',
     ],
 
     // Log

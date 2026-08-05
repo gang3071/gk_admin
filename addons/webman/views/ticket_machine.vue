@@ -477,11 +477,13 @@ export default {
     async connect() {
       if (!('serial' in navigator)) {
         this.addLog('error', this.t('browser_not_supported'));
+        this.$message.error({ content: this.t('browser_not_supported'), duration: 3 });
         return;
       }
 
       if (!this.config.port) {
         this.addLog('error', this.t('no_port_selected'));
+        this.$message.error({ content: this.t('no_port_selected'), duration: 3 });
         return;
       }
 
@@ -495,6 +497,7 @@ export default {
         const selectedPort = this.availablePorts.find(p => p.path === this.config.port);
         if (!selectedPort) {
           this.addLog('error', this.t('port_not_found'));
+          this.$message.error({ content: this.t('port_not_found'), duration: 3 });
           return;
         }
 
@@ -790,6 +793,14 @@ export default {
     async sendQrCode() {
       if (!this.ticketScore || this.ticketScore <= 0) {
         this.addLog('error', this.t('valid_score_required'));
+        this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
+        return;
+      }
+
+      // 福利卷和体验卷必须选择关联用户
+      if ((this.ticketType === 3 || this.ticketType === 4) && !this.selectedPlayerId) {
+        this.addLog('error', this.t('player_required_for_voucher'));
+        this.$message.error({ content: this.t('player_required_for_voucher'), duration: 3 });
         return;
       }
 
@@ -828,6 +839,7 @@ export default {
       // 纸张正常，保存到数据库获取 order_id
       if (!this.save_ticket_url) {
         this.addLog('error', this.t('save_url_not_configured'));
+        this.$message.error({ content: this.t('save_url_not_configured'), duration: 3 });
         return;
       }
 
@@ -857,11 +869,15 @@ export default {
           this.remark = '';
           this.addLog('success', this.t('ticket_saved', {order_id: orderId}));
         } else {
-          this.addLog('error', this.t('ticket_save_failed', {error: (saveRes.message || '')}));
+          const errorMsg = this.t('ticket_save_failed', {error: (saveRes.message || '')});
+          this.addLog('error', errorMsg);
+          this.$message.error({ content: errorMsg, duration: 3 });
           return;
         }
       } catch (e) {
-        this.addLog('error', this.t('ticket_save_exception', {error: (e.message || '')}));
+        const errorMsg = this.t('ticket_save_exception', {error: (e.message || '')});
+        this.addLog('error', errorMsg);
+        this.$message.error({ content: errorMsg, duration: 3 });
         return;
       }
 
@@ -902,6 +918,7 @@ export default {
       // 使用 order_id 作为QR码发送到出票机
       if (!orderId) {
         this.addLog('error', this.t('order_id_not_found'));
+        this.$message.error({ content: this.t('order_id_not_found'), duration: 3 });
         return;
       }
 

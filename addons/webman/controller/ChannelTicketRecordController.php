@@ -35,9 +35,13 @@ class ChannelTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示开分类型数据
+            // 只显示出票类型数据（开分、体验卷、福利卷）
             $grid->model()
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->orderBy('created_at', 'desc');
 
             // 统计数据（排除禁用状态）
@@ -176,7 +180,11 @@ class ChannelTicketRecordController
             // 获取店名下拉选项
             $storeOptions = ['' => admin_trans('public_msg.all')];
             $stores = TicketRecord::query()
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->distinct()
                 ->pluck('store_name')
                 ->toArray();
