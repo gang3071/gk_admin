@@ -238,44 +238,51 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 添加限红组配置按钮
+                // 使用更紧凑的按钮组 - 第一个按钮为主要操作，其他折叠
+                // 添加限红组配置按钮（主要操作）
                 $actions->append(
-                    Button::create('限红组')
+                    Button::create('配置')
                         ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
                         ->type('primary')
                         ->size('small')
                 );
 
-                // 添加自动交班配置按钮
-                $actions->append(
-                    Button::create('自动交班配置')
-                        ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                // 添加更多配置按钮（下拉菜单）
+                $moreButton = Button::create('···')
+                    ->size('small')
+                    ->type('default');
 
-                // 添加店家系统配置按钮
+                // 创建下拉菜单（使用ExAdmin支持的方式）
                 $actions->append(
-                    Button::create('系统配置')
-                        ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                    Html::create()->content([
+                        // 自动交班配置
+                        Button::create('交班')
+                            ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
 
-                // 添加店家开分配置按钮
-                $actions->append(
-                    Button::create('开分配置')
-                        ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                        // 系统配置
+                        Button::create('系统')
+                            ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
 
-                // 添加店家洗分配置按钮
-                $actions->append(
-                    Button::create('洗分配置')
-                        ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
+                        // 开分配置
+                        Button::create('开分')
+                            ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
+
+                        // 洗分配置
+                        Button::create('洗分')
+                            ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
+                    ])->style(['display' => 'inline-flex', 'gap' => '0px'])
                 );
             });
 
