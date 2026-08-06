@@ -242,26 +242,28 @@ class StoreMachineController
 
                 // 限红组配置
                 $dropdown->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
-                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']]);
+                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
+                    ->width('60%');
 
                 // 自动交班配置
                 $dropdown->prepend(admin_trans('store_machine.actions.auto_shift_config'), 'fas fa-clock')
-                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']]);
+                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
+                    ->width('60%');
 
                 // 系统配置
                 $dropdown->prepend(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
-                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
-                    ->width('80%');
+                    ->modal([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
 
                 // 开分配置
                 $dropdown->prepend(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
-                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
-                    ->width('80%');
+                    ->modal([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
 
                 // 洗分配置
                 $dropdown->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
-                    ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
-                    ->width('80%');
+                    ->modal([$this, 'washPointSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
             });
 
             // 行展开 - 显示限红组配置信息
