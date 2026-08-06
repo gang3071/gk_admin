@@ -238,7 +238,6 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 使用下拉菜单整合多个配置按钮
                 $actions->dropdown()
                     ->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
                     ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
