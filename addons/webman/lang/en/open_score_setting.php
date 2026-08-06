@@ -32,4 +32,7 @@ return [
         'score' => 'Enter score amount, 0 means disable this option',
         'default_scores' => 'Set default score value (0=Standard, 100=Basic, 200=Intermediate, 500=Advanced), used when resetting to default',
     ],
+    'error' => [
+        'must_be_positive_integer' => ':field must be a positive integer',
+    ],
 ];
