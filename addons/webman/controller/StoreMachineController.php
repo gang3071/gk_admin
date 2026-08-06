@@ -238,16 +238,16 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                $actions->dropdown()
-                    ->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
-                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.auto_shift_config'), 'fas fa-clock')
-                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
-                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
-                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
+                $dropdown = $actions->dropdown();
+                $dropdown->item(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
+                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']]);
+                $dropdown->item(admin_trans('store_machine.actions.auto_shift_config'), 'fas fa-clock')
+                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']]);
+                $dropdown->item(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
+                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']]);
+                $dropdown->item(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
+                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']]);
+                $dropdown->item(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
                     ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']]);
             });
 
