@@ -1278,6 +1278,7 @@ class StoreMachineController
 
             $grid->hideDelete();
             $grid->hideSelection();
+            $grid->hideTrashed(); // 去掉回收站
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -1423,10 +1424,14 @@ class StoreMachineController
             $grid->column('created_at', admin_trans('open_score_setting.fields.created_at'))->align('center');
             $grid->column('updated_at', admin_trans('open_score_setting.fields.updated_at'))->align('center');
 
+            $grid->hideCreate(); // 去掉添加
+            $grid->hideDelete(); // 去掉删除
+            $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->openScoreSettingForm($storeId));
             $grid->expandFilter();
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
+                $actions->hideDel(); // 去掉删除按钮
             })->align('center');
         });
     }
@@ -1559,10 +1564,14 @@ class StoreMachineController
             $grid->column('created_at', '创建时间')->align('center');
             $grid->column('updated_at', '更新时间')->align('center');
 
+            $grid->hideCreate(); // 去掉添加
+            $grid->hideDelete(); // 去掉删除
+            $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->washPointSettingForm($storeId));
             $grid->expandFilter();
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
+                $actions->hideDel(); // 去掉删除按钮
             })->align('center');
         });
     }
