@@ -250,15 +250,18 @@ class StoreMachineController
 
                 // 系统配置
                 $dropdown->prepend(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
-                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']]);
+                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                    ->width('80%');
 
                 // 开分配置
                 $dropdown->prepend(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
-                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']]);
+                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                    ->width('80%');
 
                 // 洗分配置
                 $dropdown->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
-                    ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']]);
+                    ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
+                    ->width('80%');
             });
 
             // 行展开 - 显示限红组配置信息
