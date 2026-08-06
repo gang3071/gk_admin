@@ -168,17 +168,26 @@ class StoreMachineController
                     ->precision(2)
             )->width(100)->align('center');
 
-            // 洗分配置
+            // 洗分配置（从配置表读取）
             $grid->column('wash_point_config', admin_trans('store_machine.fields.wash_point_config'))
-                ->display(function ($value) {
-                    return number_format(floatval($value ?? 0), 2);
+                ->display(function ($value, $data) {
+                    // 从洗分配置表获取
+                    $washSetting = \addons\webman\model\WashPointSetting::query()
+                        ->where('admin_user_id', $data['id'])
+                        ->first();
+
+                    if ($washSetting) {
+                        $effectiveWashPoint = $washSetting->getEffectiveWashPoint();
+                        return Tag::create(number_format($effectiveWashPoint, 2))->color('green');
+                    }
+
+                    // 兜底：显示admin_users表中的旧值（如果存在）
+                    if ($value > 0) {
+                        return Tag::create(number_format($value, 2))->color('orange');
+                    }
+
+                    return Tag::create('未配置')->color('default');
                 })
-                ->editable(
-                    (new Editable)->number('wash_point_config')
-                        ->min(0)
-                        ->max(999999.99)
-                        ->precision(2)
-                )
                 ->width(120)->align('center');
 
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
@@ -257,6 +266,14 @@ class StoreMachineController
                 $actions->append(
                     Button::create('开分配置')
                         ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                        ->type('default')
+                        ->size('small')
+                );
+
+                // 添加店家洗分配置按钮
+                $actions->append(
+                    Button::create('洗分配置')
+                        ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
                         ->type('default')
                         ->size('small')
                 );
@@ -379,8 +396,8 @@ class StoreMachineController
                             return message_error(admin_trans('admin.not_found'));
                         }
 
-                        // 更新可编辑字段
-                        $updateableFields = ['wash_point_config', 'agent_commission', 'channel_commission'];
+                        // 更新可编辑字段（wash_point_config已改为使用配置表）
+                        $updateableFields = ['agent_commission', 'channel_commission'];
                         $updated = false;
                         foreach ($updateableFields as $field) {
                             if (array_key_exists($field, $data)) {
@@ -604,6 +621,30 @@ class StoreMachineController
             $autoShiftConfig->shift_time = '02:00:00'; // 默认凌晨2点交班
             $autoShiftConfig->auto_settlement = 1; // 自动结算
             $autoShiftConfig->save();
+
+            // 5. 创建默认开分配置
+            $openScoreSetting = new \addons\webman\model\OpenScoreSetting();
+            $openScoreSetting->admin_user_id = $adminUser->id;
+            $openScoreSetting->score_1 = 100;
+            $openScoreSetting->score_2 = 500;
+            $openScoreSetting->score_3 = 1000;
+            $openScoreSetting->score_4 = 5000;
+            $openScoreSetting->score_5 = 10000;
+            $openScoreSetting->score_6 = 20000;
+            $openScoreSetting->default_scores = 100;
+            $openScoreSetting->save();
+
+            // 6. 创建默认洗分配置
+            $washPointSetting = new \addons\webman\model\WashPointSetting();
+            $washPointSetting->admin_user_id = $adminUser->id;
+            $washPointSetting->wash_1 = 100;
+            $washPointSetting->wash_2 = 500;
+            $washPointSetting->wash_3 = 700;
+            $washPointSetting->wash_4 = 1000;
+            $washPointSetting->wash_5 = 5000;
+            $washPointSetting->wash_6 = 10000;
+            $washPointSetting->default_wash_point = 100;
+            $washPointSetting->save();
 
             DB::commit();
 
@@ -1478,6 +1519,146 @@ class StoreMachineController
     private function getDefaultScore(int $index): int
     {
         $defaults = [100, 500, 1000, 5000, 10000, 20000];
+        return $defaults[$index - 1] ?? 0;
+    }
+
+    /**
+     * 店家洗分配置列表
+     * @auth true
+     * @group channel
+     */
+    public function washPointSettingList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        return Grid::create(new \addons\webman\model\WashPointSetting(), function (Grid $grid) use ($store, $storeId) {
+            $grid->title('洗分配置 - ' . ($store->nickname ?: $store->username));
+            $grid->model()->where('admin_user_id', $storeId)->orderBy('id', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->column('wash_points', '洗分选项')
+                ->display(function ($val, $data) {
+                    $washPoints = [];
+                    for ($i = 1; $i <= 6; $i++) {
+                        $key = 'wash_' . $i;
+                        if ($data->$key > 0) {
+                            $washPoints[] = Tag::create(number_format($data->$key, 2))->color('cyan');
+                        }
+                    }
+                    return Html::create()->content($washPoints)->style([
+                        'display' => 'flex',
+                        'gap' => '5px',
+                        'flex-wrap' => 'wrap'
+                    ]);
+                })->align('center')->width('30%');
+
+            $grid->column('default_wash_point', '默认洗分基数')
+                ->display(function ($val) {
+                    if ($val > 0) {
+                        return Tag::create(number_format($val, 2))->color('orange');
+                    }
+                    return Tag::create('未设置')->color('default');
+                })->align('center');
+
+            $grid->column('created_at', '创建时间')->align('center');
+            $grid->column('updated_at', '更新时间')->align('center');
+
+            $grid->setForm()->drawer($this->washPointSettingForm($storeId));
+            $grid->expandFilter();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDetail();
+            })->align('center');
+        });
+    }
+
+    /**
+     * 店家洗分配置表单
+     * @auth true
+     * @group channel
+     * @param int $storeId
+     * @return Form
+     */
+    public function washPointSettingForm(int $storeId): Form
+    {
+        return Form::create(new \addons\webman\model\WashPointSetting(), function (Form $form) use ($storeId) {
+            $form->title('洗分配置');
+
+            $form->number('default_wash_point', '默认洗分基数')
+                ->default(100)
+                ->min(0)
+                ->max(999999.99)
+                ->step(0.01)
+                ->style(['width' => '100%'])
+                ->help('默认的洗分基数，玩家洗分时按此基数计算（如：基数100，余额500 → 洗分500）');
+
+            $form->divider()->content('洗分选项（可选）');
+
+            // 6个洗分选项
+            for ($i = 1; $i <= 6; $i++) {
+                $form->number('wash_' . $i, '洗分选项' . $i)
+                    ->default($this->getDefaultWashPoint($i))
+                    ->min(0)
+                    ->max(999999.99)
+                    ->step(0.01)
+                    ->style(['width' => '100%'])
+                    ->help('玩家可选择的洗分基数，留空表示不启用该选项');
+            }
+
+            $form->layout('vertical');
+
+            // 保存时验证
+            $form->saving(function (Form $form) use ($storeId) {
+                $form->input('admin_user_id', $storeId);
+
+                // 检查是否已存在配置（编辑时排除当前记录）
+                $exists = \addons\webman\model\WashPointSetting::query()->where('admin_user_id', $storeId);
+
+                if ($form->isEdit()) {
+                    $exists->where('id', '!=', $form->driver()->get('id'));
+                }
+
+                if ($exists->exists()) {
+                    return message_error('该店家已存在洗分配置，请直接编辑');
+                }
+
+                // 验证至少配置默认洗分基数或一个洗分选项
+                $defaultWashPoint = $form->input('default_wash_point');
+                $hasWashOption = false;
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $wash = $form->input('wash_' . $i);
+                    if (!empty($wash) && $wash > 0) {
+                        $hasWashOption = true;
+                        break;
+                    }
+                }
+
+                if (empty($defaultWashPoint) || $defaultWashPoint <= 0) {
+                    if (!$hasWashOption) {
+                        return message_error('请至少配置默认洗分基数或一个洗分选项');
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * 获取默认洗分基数
+     * @param int $index
+     * @return float
+     */
+    private function getDefaultWashPoint(int $index): float
+    {
+        $defaults = [100, 500, 700, 1000, 5000, 10000];
         return $defaults[$index - 1] ?? 0;
     }
 }
