@@ -3862,7 +3862,7 @@ class ChannelIndexController
     }
 
     /**
-     * 获取玩家打码量信息（从Redis缓存读取）
+     * 获取玩家打码量信息（Redis缓存优先，降级到数据库）
      * @group channel
      * @auth true
      * @return Response
@@ -3885,20 +3885,47 @@ class ChannelIndexController
                 return json(['code' => 404, 'message' => '玩家不存在']);
             }
 
-            // 从 Redis 缓存读取今日打码量数据
-            // Redis key 格式: gk_work:player_bet_stats:{player_id}:game:daily:{date}
-            $redis = \support\Redis::connection('default')->client();
             $today = date('Y-m-d');
             $yesterday = date('Y-m-d', strtotime('-1 day'));
-
-            // 今日电子游戏打码量（从 Redis 读取实时数据）
-            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
-            $todayGameData = $redis->hGetAll($todayGameKey);
-            // Redis 存储的是"分"，需要除以100转为"元"
-            $todayBetAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
-
-            // 昨日电子游戏打码量（从数据库读取历史数据，数据库存储单位为元）
+            $todayBetAmount = 0;
             $yesterdayBetAmount = 0;
+
+            try {
+                // 优先从 Redis 缓存读取今日打码量数据
+                // Redis key 格式: gk_work:player_bet_stats:{player_id}:game:daily:{date}
+                $redis = \support\Redis::connection('default')->client();
+                $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+                $todayGameData = $redis->hGetAll($todayGameKey);
+
+                if (!empty($todayGameData) && isset($todayGameData['bet_amount'])) {
+                    // Redis 存储的是"分"，需要除以100转为"元"
+                    $todayBetAmount = floatval($todayGameData['bet_amount']) / 100;
+                } else {
+                    // Redis 缓存未命中，降级从数据库查询今日数据
+                    $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                        ->where('stat_type', 'game')
+                        ->where('dimension', 'daily')
+                        ->where('stat_date', $today)
+                        ->first();
+
+                    if ($todayData) {
+                        $todayBetAmount = floatval($todayData->bet_amount);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Redis 连接异常，降级从数据库查询今日数据
+                $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                    ->where('stat_type', 'game')
+                    ->where('dimension', 'daily')
+                    ->where('stat_date', $today)
+                    ->first();
+
+                if ($todayData) {
+                    $todayBetAmount = floatval($todayData->bet_amount);
+                }
+            }
+
+            // 昨日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
             $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
                 ->where('stat_type', 'game')
                 ->where('dimension', 'daily')
@@ -3907,6 +3934,12 @@ class ChannelIndexController
 
             if ($yesterdayData) {
                 $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
+            } else {
+                // 统计表无数据，降级从游戏记录表实时查询
+                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->whereDate('created_at', $yesterday)
+                    ->sum('bet');
             }
 
             return json([
