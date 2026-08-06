@@ -238,18 +238,52 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 使用下拉菜单整合多个配置按钮
-                $actions->dropdown()
-                    ->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
-                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.auto_shift_config'), 'fas fa-clock')
-                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
-                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
-                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
-                    ->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
-                    ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']]);
+                // 使用更紧凑的按钮组 - 第一个按钮为主要操作，其他折叠
+                // 添加限红组配置按钮（主要操作）
+                $actions->append(
+                    Button::create('配置')
+                        ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
+                        ->type('primary')
+                        ->size('small')
+                );
+
+                // 添加更多配置按钮（下拉菜单）
+                $moreButton = Button::create('···')
+                    ->size('small')
+                    ->type('default');
+
+                // 创建下拉菜单（使用ExAdmin支持的方式）
+                $actions->append(
+                    Html::create()->content([
+                        // 自动交班配置
+                        Button::create('交班')
+                            ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
+
+                        // 系统配置
+                        Button::create('系统')
+                            ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
+
+                        // 开分配置
+                        Button::create('开分')
+                            ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
+
+                        // 洗分配置
+                        Button::create('洗分')
+                            ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
+                            ->type('link')
+                            ->size('small')
+                            ->style(['padding' => '0 4px']),
+                    ])->style(['display' => 'inline-flex', 'gap' => '0px'])
+                );
             });
 
             // 行展开 - 显示限红组配置信息
