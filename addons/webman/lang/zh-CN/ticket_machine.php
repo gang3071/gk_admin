@@ -43,6 +43,8 @@ return [
         'ticket_type' => '票据类型',
         'type_recharge' => '开分',
         'type_withdraw' => '洗分',
+        'type_experience' => '体验卷',
+        'type_welfare' => '福利卷',
         'select_player' => '关联玩家（可选）',
         'search_player' => '选择或搜索玩家',
         'field_score' => '分数/金额',
@@ -116,6 +118,10 @@ return [
         'hex_sent' => 'HEX指令已发送',
         'not_connected' => '出票机未连接',
         'service_unavailable' => '出票机服务不可用',
+        'player_required_for_voucher' => '福利卷和体验卷必须选择关联玩家才能出票',
+        'select_score' => '请选择分数',
+        'today_bet_reached' => '今日打分≥{amount}万',
+        'yesterday_bet_reached' => '昨日打分≥{amount}万',
     ],
 
     // 日志
@@ -240,6 +246,8 @@ return [
         'ticket_type' => '票据类型',
         'type_recharge' => '开分',
         'type_withdraw' => '洗分',
+        'type_experience' => '体验卷',
+        'type_welfare' => '福利卷',
         'qr_code' => '二维码信息',
         'qr_code_no' => '二维码编号',
         'status' => '状态',
@@ -263,6 +271,10 @@ return [
         'used_count' => '已使用：',
         'used_score' => '已使用金额：',
         'current_shift' => '当前班次',
+        'today_bet_amount' => '今日电子总打码量',
+        'yesterday_bet_amount' => '昨日电子总打码量',
+        'player_bet_info' => '玩家打码量信息',
+        'refresh' => '刷新',
     ],
 
     // 核销记录

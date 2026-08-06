@@ -43,6 +43,8 @@ return [
         'ticket_type' => 'Ticket Type',
         'type_recharge' => 'Recharge',
         'type_withdraw' => 'Withdraw',
+        'type_experience' => 'Experience Voucher',
+        'type_welfare' => 'Welfare Voucher',
         'select_player' => 'Link Player (Optional)',
         'search_player' => 'Select or search player',
         'field_score' => 'Score/Amount',
@@ -116,6 +118,10 @@ return [
         'hex_sent' => 'HEX command sent',
         'not_connected' => 'Not connected',
         'service_unavailable' => 'Service unavailable',
+        'player_required_for_voucher' => 'Welfare and Experience vouchers require a player to be selected',
+        'select_score' => 'Please select score',
+        'today_bet_reached' => 'Today bet ≥{amount}0K',
+        'yesterday_bet_reached' => 'Yesterday bet ≥{amount}0K',
     ],
 
     // Log
@@ -241,6 +247,8 @@ return [
         'ticket_type' => 'Ticket Type',
         'type_recharge' => 'Recharge',
         'type_withdraw' => 'Withdraw',
+        'type_experience' => 'Experience Voucher',
+        'type_welfare' => 'Welfare Voucher',
         'qr_code' => 'QR Code Info',
         'qr_code_no' => 'QR Code No.',
         'status' => 'Status',
@@ -264,6 +272,10 @@ return [
         'used_count' => 'Used：',
         'used_score' => 'Used Amount：',
         'current_shift' => 'Current Shift',
+        'today_bet_amount' => 'Today Electronic Bet',
+        'yesterday_bet_amount' => 'Yesterday Electronic Bet',
+        'player_bet_info' => 'Player Bet Info',
+        'refresh' => 'Refresh',
     ],
 
     // Redeem Records

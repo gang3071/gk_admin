@@ -86,6 +86,8 @@
             <a-select v-model:value="ticketType" style="width: 100%;">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
+              <a-select-option :value="3">{{ labels.type_experience || '體驗卷' }}</a-select-option>
+              <a-select-option :value="4">{{ labels.type_welfare || '福利卷' }}</a-select-option>
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
@@ -105,9 +107,61 @@
             >
             </a-select>
           </div>
+
+          <!-- 玩家打码量信息展示（福利卷/体验卷 + 已选择玩家时显示） -->
+          <div v-if="(ticketType === 3 || ticketType === 4) && selectedPlayerId && playerBetInfo" style="margin-bottom: 12px;">
+            <div style="padding: 12px; background: #f0f5ff; border-radius: 4px; border: 1px solid #d6e4ff;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 500; color: #333;">{{ labels.player_bet_info || '玩家打碼量信息' }}</span>
+                <a-button type="link" size="small" @click="refreshPlayerBetInfo" :loading="betInfoLoading">
+                  <reload-outlined /> {{ labels.refresh || '刷新' }}
+                </a-button>
+              </div>
+              <a-descriptions :column="1" size="small">
+                <a-descriptions-item :label="labels.player_name || '玩家名稱'">
+                  <a-tag color="blue">
+                    <user-outlined /> {{ playerBetInfo.player_name }} ({{ playerBetInfo.player_uuid }})
+                  </a-tag>
+                </a-descriptions-item>
+                <a-descriptions-item :label="labels.today_bet_amount || '今日電子總打碼量'">
+                  <a-tag color="green">
+                    <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.today_bet_amount) }}
+                  </a-tag>
+                </a-descriptions-item>
+                <a-descriptions-item :label="labels.yesterday_bet_amount || '昨日電子總打碼量'">
+                  <a-tag color="orange">
+                    <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.yesterday_bet_amount) }}
+                  </a-tag>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+          </div>
+
+          <!-- 分数/金额选择 -->
           <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_score || '分數/金額' }}</div>
-            <a-input-number v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
+            <!-- 福利卷/体验卷：下拉选择 -->
+            <a-select
+                v-if="ticketType === 3 || ticketType === 4"
+                v-model:value="ticketScore"
+                placeholder="請選擇分數"
+                style="width: 100%;"
+                :disabled="!selectedPlayerId || !playerBetInfo"
+            >
+              <a-select-option
+                  v-for="option in voucherScoreOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :disabled="option.disabled"
+              >
+                <span>{{ option.label }}</span>
+                <span v-if="option.condition" style="margin-left: 8px; color: #999; font-size: 12px;">
+                  （{{ option.condition }}）
+                </span>
+              </a-select-option>
+            </a-select>
+            <!-- 开分/洗分：数字输入 -->
+            <a-input-number v-else v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
           </div>
           <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">{{ labels.send_qr || '發送QR碼' }}</a-button>
         </a-card>
@@ -144,6 +198,7 @@ export default {
     default_store_name: String,
     default_store_uid: String,
     save_ticket_url: String,
+    player_bet_info_url: String,
     store_admin_id: Number,
     department_id: Number,
     paper_empty_msg: String,
@@ -191,6 +246,8 @@ export default {
       playerPage: 1,
       playerHasMore: true,
       playerKeyword: '',
+      playerBetInfo: null,
+      betInfoLoading: false,
       hexCommand: '',
       remark: '',
       logExpanded: false,
@@ -198,6 +255,98 @@ export default {
       receiveBuffer: [],
       pendingResolve: null,
     };
+  },
+  computed: {
+    // 计算福利卷/体验卷的可选分数选项
+    voucherScoreOptions() {
+      if (!this.playerBetInfo) return [];
+
+      const todayBet = this.playerBetInfo.today_bet_amount || 0;
+      const yesterdayBet = this.playerBetInfo.yesterday_bet_amount || 0;
+      const options = [];
+
+      if (this.ticketType === 4) {
+        // 福利卷规则
+        // 今日打分达20万分以上即可立即领取福利卷1000分
+        options.push({
+          value: 1000,
+          label: '福利卷 1000 分',
+          disabled: todayBet < 200000,
+          condition: '今日打分≥20萬',
+        });
+
+        // 昨日打分达10万分以上即可领取福利卷1000分
+        options.push({
+          value: 1001,
+          label: '福利卷 1000 分',
+          disabled: yesterdayBet < 100000,
+          condition: '昨日打分≥10萬',
+        });
+
+        // 昨日打分达30万分以上即可领取福利卷2000分
+        options.push({
+          value: 2000,
+          label: '福利卷 2000 分',
+          disabled: yesterdayBet < 300000,
+          condition: '昨日打分≥30萬',
+        });
+
+        // 昨日打分达50万分以上即可领取福利卷3000分
+        options.push({
+          value: 3000,
+          label: '福利卷 3000 分',
+          disabled: yesterdayBet < 500000,
+          condition: '昨日打分≥50萬',
+        });
+      } else if (this.ticketType === 3) {
+        // 体验卷规则（可根据需求扩展）
+        options.push({
+          value: 500,
+          label: '体验卷 500 分',
+          disabled: false,
+          condition: '',
+        });
+        options.push({
+          value: 1000,
+          label: '体验卷 1000 分',
+          disabled: false,
+          condition: '',
+        });
+        options.push({
+          value: 2000,
+          label: '体验卷 2000 分',
+          disabled: false,
+          condition: '',
+        });
+      }
+
+      return options;
+    }
+  },
+  watch: {
+    // 监听票据类型变化
+    ticketType(newType) {
+      this.ticketScore = 0;
+      if ((newType === 3 || newType === 4) && this.selectedPlayerId) {
+        this.loadPlayerBetInfo(this.selectedPlayerId);
+      } else {
+        this.playerBetInfo = null;
+      }
+    },
+    // 监听打码量信息变化，自动选择第一个可用选项
+    playerBetInfo(newInfo) {
+      if (newInfo && (this.ticketType === 3 || this.ticketType === 4)) {
+        // 延迟一帧等待 computed 更新
+        this.$nextTick(() => {
+          const firstAvailable = this.voucherScoreOptions.find(opt => !opt.disabled);
+          if (firstAvailable) {
+            this.ticketScore = firstAvailable.value;
+          } else {
+            this.ticketScore = 0;
+          }
+        });
+      }
+    }
   },
   methods: {
     // 翻译辅助
@@ -475,11 +624,13 @@ export default {
     async connect() {
       if (!('serial' in navigator)) {
         this.addLog('error', this.t('browser_not_supported'));
+        this.$message.error({ content: this.t('browser_not_supported'), duration: 3 });
         return;
       }
 
       if (!this.config.port) {
         this.addLog('error', this.t('no_port_selected'));
+        this.$message.error({ content: this.t('no_port_selected'), duration: 3 });
         return;
       }
 
@@ -493,6 +644,7 @@ export default {
         const selectedPort = this.availablePorts.find(p => p.path === this.config.port);
         if (!selectedPort) {
           this.addLog('error', this.t('port_not_found'));
+          this.$message.error({ content: this.t('port_not_found'), duration: 3 });
           return;
         }
 
@@ -788,6 +940,14 @@ export default {
     async sendQrCode() {
       if (!this.ticketScore || this.ticketScore <= 0) {
         this.addLog('error', this.t('valid_score_required'));
+        this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
+        return;
+      }
+
+      // 福利卷和体验卷必须选择关联用户
+      if ((this.ticketType === 3 || this.ticketType === 4) && !this.selectedPlayerId) {
+        this.addLog('error', this.t('player_required_for_voucher'));
+        this.$message.error({ content: this.t('player_required_for_voucher'), duration: 3 });
         return;
       }
 
@@ -826,6 +986,7 @@ export default {
       // 纸张正常，保存到数据库获取 order_id
       if (!this.save_ticket_url) {
         this.addLog('error', this.t('save_url_not_configured'));
+        this.$message.error({ content: this.t('save_url_not_configured'), duration: 3 });
         return;
       }
 
@@ -855,11 +1016,15 @@ export default {
           this.remark = '';
           this.addLog('success', this.t('ticket_saved', {order_id: orderId}));
         } else {
-          this.addLog('error', this.t('ticket_save_failed', {error: (saveRes.message || '')}));
+          const errorMsg = this.t('ticket_save_failed', {error: (saveRes.message || '')});
+          this.addLog('error', errorMsg);
+          this.$message.error({ content: errorMsg, duration: 3 });
           return;
         }
       } catch (e) {
-        this.addLog('error', this.t('ticket_save_exception', {error: (e.message || '')}));
+        const errorMsg = this.t('ticket_save_exception', {error: (e.message || '')});
+        this.addLog('error', errorMsg);
+        this.$message.error({ content: errorMsg, duration: 3 });
         return;
       }
 
@@ -900,6 +1065,7 @@ export default {
       // 使用 order_id 作为QR码发送到出票机
       if (!orderId) {
         this.addLog('error', this.t('order_id_not_found'));
+        this.$message.error({ content: this.t('order_id_not_found'), duration: 3 });
         return;
       }
 
@@ -929,8 +1095,56 @@ export default {
         this.playerPage = 1;
         this.playerHasMore = true;
         this.playerOptions = [];
+        this.playerBetInfo = null;
         this.loadPlayers();
+      } else if (this.ticketType === 3 || this.ticketType === 4) {
+        // 福利卷/体验卷选择玩家时，获取打码量信息
+        this.loadPlayerBetInfo(value);
       }
+    },
+
+    // 加载玩家打码量信息
+    async loadPlayerBetInfo(playerId) {
+      if (!this.player_bet_info_url || !playerId) {
+        this.playerBetInfo = null;
+        return;
+      }
+
+      this.betInfoLoading = true;
+      try {
+        const res = await this.$request({
+          url: this.player_bet_info_url,
+          method: 'get',
+          params: { player_id: playerId },
+        });
+
+        if (res.code === 200 && res.data) {
+          this.playerBetInfo = res.data;
+        } else {
+          this.playerBetInfo = null;
+        }
+      } catch (e) {
+        console.error('获取玩家打码量失败:', e);
+        this.playerBetInfo = null;
+      } finally {
+        this.betInfoLoading = false;
+      }
+    },
+
+    // 刷新玩家打码量信息
+    refreshPlayerBetInfo() {
+      if (this.selectedPlayerId) {
+        this.loadPlayerBetInfo(this.selectedPlayerId);
+      }
+    },
+
+    // 格式化数字
+    formatNumber(num) {
+      if (num === null || num === undefined) return '0.00';
+      return parseFloat(num).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
     },
 
     // 搜索玩家

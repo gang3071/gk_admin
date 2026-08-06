@@ -43,6 +43,8 @@ return [
         'ticket_type' => '票據類型',
         'type_recharge' => '開分',
         'type_withdraw' => '洗分',
+        'type_experience' => '體驗卷',
+        'type_welfare' => '福利卷',
         'select_player' => '關聯玩家（可選）',
         'search_player' => '選擇或搜索玩家',
         'field_score' => '分數/金額',
@@ -116,6 +118,10 @@ return [
         'hex_sent' => 'HEX指令已發送',
         'not_connected' => '出票機未連接',
         'service_unavailable' => '出票機服務不可用',
+        'player_required_for_voucher' => '福利卷和體驗卷必須選擇關聯玩家才能出票',
+        'select_score' => '請選擇分數',
+        'today_bet_reached' => '今日打分≥{amount}萬',
+        'yesterday_bet_reached' => '昨日打分≥{amount}萬',
     ],
 
     // 日誌
@@ -241,6 +247,8 @@ return [
         'ticket_type' => '票據類型',
         'type_recharge' => '開分',
         'type_withdraw' => '洗分',
+        'type_experience' => '體驗卷',
+        'type_welfare' => '福利卷',
         'qr_code' => '二維碼信息',
         'qr_code_no' => '二維碼編號',
         'status' => '狀態',
@@ -264,6 +272,10 @@ return [
         'used_count' => '已使用：',
         'used_score' => '已使用金額：',
         'current_shift' => '當前班次',
+        'today_bet_amount' => '今日電子總打碼量',
+        'yesterday_bet_amount' => '昨日電子總打碼量',
+        'player_bet_info' => '玩家打碼量信息',
+        'refresh' => '刷新',
     ],
 
     // 核銷記錄

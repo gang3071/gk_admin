@@ -43,6 +43,8 @@ return [
         'ticket_type' => 'チケットタイプ',
         'type_recharge' => 'チャージ',
         'type_withdraw' => '出金',
+        'type_experience' => '体験券',
+        'type_welfare' => '福利券',
         'select_player' => 'プレイヤー関連付け（任意）',
         'search_player' => 'プレイヤーを選択または検索',
         'field_score' => 'スコア/金額',
@@ -116,6 +118,10 @@ return [
         'hex_sent' => 'HEXコマンドを送信しました',
         'not_connected' => '未接続です',
         'service_unavailable' => 'サービスが利用できません',
+        'player_required_for_voucher' => '福利券と体験券はプレイヤーを選択する必要があります',
+        'select_score' => 'スコアを選択してください',
+        'today_bet_reached' => '本日のベット≥{amount}万',
+        'yesterday_bet_reached' => '昨日のベット≥{amount}万',
     ],
 
     // ログ
@@ -241,6 +247,8 @@ return [
         'ticket_type' => 'チケットタイプ',
         'type_recharge' => 'チャージ',
         'type_withdraw' => '洗分',
+        'type_experience' => '体験券',
+        'type_welfare' => '福利券',
         'qr_code' => 'QRコード情報',
         'qr_code_no' => 'QRコード番号',
         'status' => 'ステータス',
@@ -264,6 +272,10 @@ return [
         'used_count' => '使用済み：',
         'used_score' => '使用金額：',
         'current_shift' => '現在のシフト',
+        'today_bet_amount' => '本日の電子ベット額',
+        'yesterday_bet_amount' => '昨日の電子ベット額',
+        'player_bet_info' => 'プレイヤーベット情報',
+        'refresh' => '更新',
     ],
 
     // チケット記録
