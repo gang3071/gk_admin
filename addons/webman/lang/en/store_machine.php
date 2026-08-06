@@ -94,4 +94,13 @@ return [
         'afternoon_desc' => 'Afternoon shift auto handover (16:00-24:00)',
         'night_desc' => 'Night shift auto handover (00:00-08:00)',
     ],
+
+    // Action Menu
+    'actions' => [
+        'limit_group' => 'Limit Group Config',
+        'auto_shift_config' => 'Auto Shift Config',
+        'system_setting' => 'System Settings',
+        'open_score_setting' => 'Open Score Config',
+        'wash_point_setting' => 'Wash Point Config',
+    ],
 ];

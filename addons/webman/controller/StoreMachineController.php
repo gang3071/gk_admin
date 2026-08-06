@@ -238,45 +238,18 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 添加限红组配置按钮
-                $actions->append(
-                    Button::create('限红组')
-                        ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
-                        ->type('primary')
-                        ->size('small')
-                );
-
-                // 添加自动交班配置按钮
-                $actions->append(
-                    Button::create('自动交班配置')
-                        ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
-
-                // 添加店家系统配置按钮
-                $actions->append(
-                    Button::create('系统配置')
-                        ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
-
-                // 添加店家开分配置按钮
-                $actions->append(
-                    Button::create('开分配置')
-                        ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
-
-                // 添加店家洗分配置按钮
-                $actions->append(
-                    Button::create('洗分配置')
-                        ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                // 使用下拉菜单整合多个配置按钮
+                $actions->dropdown()
+                    ->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
+                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
+                    ->prepend(admin_trans('store_machine.actions.auto_shift_config'), 'fas fa-clock')
+                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
+                    ->prepend(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
+                    ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                    ->prepend(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
+                    ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                    ->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
+                    ->drawer([$this, 'washPointSettingList'], ['store_id' => $data['id']]);
             });
 
             // 行展开 - 显示限红组配置信息

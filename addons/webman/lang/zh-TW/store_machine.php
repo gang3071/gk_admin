@@ -94,4 +94,13 @@ return [
         'afternoon_desc' => '中班自動交班（16:00-24:00）',
         'night_desc' => '晚班自動交班（00:00-08:00）',
     ],
+
+    // 操作菜單
+    'actions' => [
+        'limit_group' => '限紅組配置',
+        'auto_shift_config' => '自動交班配置',
+        'system_setting' => '系統配置',
+        'open_score_setting' => '開分配置',
+        'wash_point_setting' => '洗分配置',
+    ],
 ];

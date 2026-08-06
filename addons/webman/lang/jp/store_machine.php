@@ -94,4 +94,13 @@ return [
         'afternoon_desc' => '昼番自動交代（16:00-24:00）',
         'night_desc' => '夜勤自動交代（00:00-08:00）',
     ],
+
+    // 操作メニュー
+    'actions' => [
+        'limit_group' => 'リミットグループ設定',
+        'auto_shift_config' => '自動交代設定',
+        'system_setting' => 'システム設定',
+        'open_score_setting' => 'オープンスコア設定',
+        'wash_point_setting' => 'ウォッシュポイント設定',
+    ],
 ];
