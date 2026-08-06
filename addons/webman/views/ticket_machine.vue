@@ -204,6 +204,10 @@ export default {
     paper_empty_msg: String,
     paper_jam_msg: String,
     paper_error_msg: String,
+    voucher_config: {
+      type: Object,
+      default: () => ({})
+    },
     labels: {
       type: Object,
       default: () => ({})
@@ -257,66 +261,64 @@ export default {
     };
   },
   computed: {
+    // 检查活动是否在有效期内
+    isActivityActive() {
+      const config = this.voucher_config;
+      if (!config || !config.activity) return true;
+
+      // 强制开启
+      if (config.activity.force_enable) return true;
+
+      // 检查结束时间
+      const endTime = config.activity.end_time;
+      if (!endTime) return true;
+
+      return new Date() < new Date(endTime);
+    },
+
     // 计算福利卷/体验卷的可选分数选项
     voucherScoreOptions() {
-      if (!this.playerBetInfo) return [];
+      if (!this.playerBetInfo || !this.isActivityActive) return [];
 
       const todayBet = this.playerBetInfo.today_bet_amount || 0;
       const yesterdayBet = this.playerBetInfo.yesterday_bet_amount || 0;
+      const config = this.voucher_config;
       const options = [];
 
-      if (this.ticketType === 4) {
-        // 福利卷规则
-        // 今日打分达20万分以上即可立即领取福利卷1000分
-        options.push({
-          value: 1000,
-          label: '福利卷 1000 分',
-          disabled: todayBet < 200000,
-          condition: '今日打分≥20萬',
-        });
+      if (this.ticketType === 4 && config.welfare) {
+        // 福利卷规则（从配置读取）
 
-        // 昨日打分达10万分以上即可领取福利卷1000分
-        options.push({
-          value: 1001,
-          label: '福利卷 1000 分',
-          disabled: yesterdayBet < 100000,
-          condition: '昨日打分≥10萬',
-        });
+        // 今日打码量福利卷规则
+        if (config.today_welfare && config.today_welfare.enabled) {
+          config.today_welfare.rules.forEach(rule => {
+            options.push({
+              value: rule.score,
+              label: `福利卷 ${rule.score} 分`,
+              disabled: todayBet < rule.bet_amount,
+              condition: `今日打分≥${this.formatBetAmount(rule.bet_amount)}`,
+            });
+          });
+        }
 
-        // 昨日打分达30万分以上即可领取福利卷2000分
+        // 昨日打码量福利卷规则
+        if (config.welfare.rules) {
+          config.welfare.rules.forEach(rule => {
+            options.push({
+              value: rule.score,
+              label: `福利卷 ${rule.score} 分`,
+              disabled: yesterdayBet < rule.bet_amount,
+              condition: `昨日打分≥${this.formatBetAmount(rule.bet_amount)}`,
+            });
+          });
+        }
+      } else if (this.ticketType === 3 && config.experience) {
+        // 体验卷规则（从配置读取）
+        const score = config.experience.score || 1000;
         options.push({
-          value: 2000,
-          label: '福利卷 2000 分',
-          disabled: yesterdayBet < 300000,
-          condition: '昨日打分≥30萬',
-        });
-
-        // 昨日打分达50万分以上即可领取福利卷3000分
-        options.push({
-          value: 3000,
-          label: '福利卷 3000 分',
-          disabled: yesterdayBet < 500000,
-          condition: '昨日打分≥50萬',
-        });
-      } else if (this.ticketType === 3) {
-        // 体验卷规则（可根据需求扩展）
-        options.push({
-          value: 500,
-          label: '体验卷 500 分',
+          value: score,
+          label: `体验卷 ${score} 分`,
           disabled: false,
-          condition: '',
-        });
-        options.push({
-          value: 1000,
-          label: '体验卷 1000 分',
-          disabled: false,
-          condition: '',
-        });
-        options.push({
-          value: 2000,
-          label: '体验卷 2000 分',
-          disabled: false,
-          condition: '',
+          condition: '新会员可领取',
         });
       }
 
@@ -1145,6 +1147,16 @@ export default {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
       });
+    },
+
+    // 格式化打码量显示（万）
+    formatBetAmount(amount) {
+      if (!amount) return '0';
+      const wan = amount / 10000;
+      if (wan >= 1) {
+        return wan + '萬';
+      }
+      return amount.toLocaleString();
     },
 
     // 搜索玩家

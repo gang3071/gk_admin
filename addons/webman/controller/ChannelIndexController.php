@@ -3780,6 +3780,9 @@ class ChannelIndexController
         $logLabels['yesterday_bet_amount'] = admin_trans('ticket_machine.record.yesterday_bet_amount');
         $logLabels['refresh'] = admin_trans('ticket_machine.record.refresh');
 
+        // 获取福利卷和体验卷配置
+        $voucherConfig = config('voucher');
+
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
@@ -3791,6 +3794,7 @@ class ChannelIndexController
             'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
             'paper_jam_msg' => admin_trans('ticket_machine.paper.jam_msg'),
             'paper_error_msg' => admin_trans('ticket_machine.paper.error_msg'),
+            'voucher_config' => $voucherConfig,
             'labels' => $logLabels,
             'log_title' => admin_trans('ticket_machine.log.title'),
             'log_clear' => admin_trans('ticket_machine.log.clear'),
@@ -3862,7 +3866,7 @@ class ChannelIndexController
     }
 
     /**
-     * 获取玩家打码量信息（Redis缓存优先，降级到数据库）
+     * 获取玩家打码量信息（纯数据库查询）
      * @group channel
      * @auth true
      * @return Response
@@ -3890,39 +3894,22 @@ class ChannelIndexController
             $todayBetAmount = 0;
             $yesterdayBetAmount = 0;
 
-            try {
-                // 优先从 Redis 缓存读取今日打码量数据
-                // Redis key 格式: gk_work:player_bet_stats:{player_id}:game:daily:{date}
-                $redis = \support\Redis::connection('default')->client();
-                $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
-                $todayGameData = $redis->hGetAll($todayGameKey);
+            // 今日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
+            $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                ->where('stat_type', 'game')
+                ->where('dimension', 'daily')
+                ->where('stat_date', $today)
+                ->first();
 
-                if (!empty($todayGameData) && isset($todayGameData['bet_amount'])) {
-                    // Redis 存储的是"分"，需要除以100转为"元"
-                    $todayBetAmount = floatval($todayGameData['bet_amount']) / 100;
-                } else {
-                    // Redis 缓存未命中，降级从数据库查询今日数据
-                    $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                        ->where('stat_type', 'game')
-                        ->where('dimension', 'daily')
-                        ->where('stat_date', $today)
-                        ->first();
-
-                    if ($todayData) {
-                        $todayBetAmount = floatval($todayData->bet_amount);
-                    }
-                }
-            } catch (\Exception $e) {
-                // Redis 连接异常，降级从数据库查询今日数据
-                $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                    ->where('stat_type', 'game')
-                    ->where('dimension', 'daily')
-                    ->where('stat_date', $today)
-                    ->first();
-
-                if ($todayData) {
-                    $todayBetAmount = floatval($todayData->bet_amount);
-                }
+            if ($todayData) {
+                $todayBetAmount = floatval($todayData->bet_amount);
+            } else {
+                // 统计表无数据，降级从游戏记录表实时查询
+                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $today . ' 00:00:00')
+                    ->where('created_at', '<', date('Y-m-d', strtotime('+1 day')) . ' 00:00:00')
+                    ->sum('bet');
             }
 
             // 昨日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
@@ -3938,7 +3925,8 @@ class ChannelIndexController
                 // 统计表无数据，降级从游戏记录表实时查询
                 $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
                     ->where('player_id', $playerId)
-                    ->whereDate('created_at', $yesterday)
+                    ->where('created_at', '>=', $yesterday . ' 00:00:00')
+                    ->where('created_at', '<', $today . ' 00:00:00')
                     ->sum('bet');
             }
 
