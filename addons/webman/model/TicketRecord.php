@@ -58,6 +58,7 @@ class TicketRecord extends Model
     const STATUS_NORMAL = 1;         // 正常
     const STATUS_BACKEND_USED = 2;   // 后台使用
     const STATUS_MACHINE_USED = 3;   // 机台使用
+    const STATUS_PRINT_FAILED = 5;   // 打印失败
 
     /**
      * 获取票据类型名称
@@ -83,6 +84,7 @@ class TicketRecord extends Model
             self::STATUS_NORMAL => '正常',
             self::STATUS_BACKEND_USED => '后台使用',
             self::STATUS_MACHINE_USED => '机台使用',
+            self::STATUS_PRINT_FAILED => '打印失败',
             default => '未知',
         };
     }

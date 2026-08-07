@@ -286,39 +286,57 @@ export default {
       const options = [];
 
       if (this.ticketType === 4 && config.welfare) {
-        // 福利卷规则（从配置读取）
+        // 福利券规则（从配置读取）- 只能领取最高档位
 
-        // 今日打码量福利卷规则
+        // 今日打码量福利券规则（找到最高可领取档位）
         if (config.today_welfare && config.today_welfare.enabled) {
+          let bestTodayRule = null;
           config.today_welfare.rules.forEach(rule => {
-            options.push({
-              value: rule.score,
-              label: `福利卷 ${rule.score} 分`,
-              disabled: todayBet < rule.bet_amount,
-              condition: `今日打分≥${this.formatBetAmount(rule.bet_amount)}`,
-            });
+            if (todayBet >= rule.bet_amount) {
+              if (!bestTodayRule || rule.bet_amount > bestTodayRule.bet_amount) {
+                bestTodayRule = rule;
+              }
+            }
           });
+          if (bestTodayRule) {
+            options.push({
+              value: bestTodayRule.score,
+              label: `福利券 ${bestTodayRule.score} 分`,
+              disabled: this.isWelfareClaimed(bestTodayRule.score),
+              condition: `今日打分≥${this.formatBetAmount(bestTodayRule.bet_amount)}`,
+            });
+          }
         }
 
-        // 昨日打码量福利卷规则
+        // 昨日打码量福利券规则（找到最高可领取档位）
         if (config.welfare.rules) {
+          let bestYesterdayRule = null;
           config.welfare.rules.forEach(rule => {
-            options.push({
-              value: rule.score,
-              label: `福利卷 ${rule.score} 分`,
-              disabled: yesterdayBet < rule.bet_amount,
-              condition: `昨日打分≥${this.formatBetAmount(rule.bet_amount)}`,
-            });
+            if (yesterdayBet >= rule.bet_amount) {
+              if (!bestYesterdayRule || rule.bet_amount > bestYesterdayRule.bet_amount) {
+                bestYesterdayRule = rule;
+              }
+            }
           });
+          if (bestYesterdayRule) {
+            options.push({
+              value: bestYesterdayRule.score,
+              label: `福利券 ${bestYesterdayRule.score} 分`,
+              disabled: this.isWelfareClaimed(bestYesterdayRule.score),
+              condition: `昨日打分≥${this.formatBetAmount(bestYesterdayRule.bet_amount)}`,
+            });
+          }
         }
       } else if (this.ticketType === 3 && config.experience) {
-        // 体验卷规则（从配置读取）
+        // 体验券规则（从配置读取）
         const score = config.experience.score || 1000;
+        const claimedCount = this.playerBetInfo?.claimed_experience_count || 0;
+        const dailyLimit = config.experience.daily_limit || 1;
         options.push({
           value: score,
-          label: `体验卷 ${score} 分`,
-          disabled: false,
-          condition: '新会员可领取',
+          label: `体验券 ${score} 分`,
+          disabled: claimedCount >= dailyLimit,
+          condition: claimedCount >= dailyLimit ? '今日已领取' : '新会员可领取',
         });
       }
 
@@ -940,6 +958,13 @@ export default {
 
     // 发送QR码
     async sendQrCode() {
+      // 检查出票机连接状态
+      if (!this.isConnected || !this.port) {
+        this.addLog('error', this.t('printer_not_connected'));
+        this.$message.error({ content: this.t('printer_not_connected'), duration: 3 });
+        return;
+      }
+
       if (!this.ticketScore || this.ticketScore <= 0) {
         this.addLog('error', this.t('valid_score_required'));
         this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
@@ -1031,11 +1056,13 @@ export default {
       }
 
       // 设置UID为 order_id（16字节，不足补0）
+      let printSuccess = true;
       this.addLog('info', this.t('setting_uid_for_qr', {order_id: orderId}));
       const uid = orderId.padEnd(16, '0').substring(0, 16);
       const uidData = Array.from(uid).map(c => c.charCodeAt(0));
       const uidResult = await this.sendCommand(0x01, 0x03, uidData);
       this.addLog(uidResult ? 'success' : 'error', this.t(uidResult ? 'uid_set_success' : 'uid_set_failed', {uid: uid}));
+      if (!uidResult) printSuccess = false;
 
       // 等待设备处理
       await new Promise(r => setTimeout(r, 100));
@@ -1047,6 +1074,7 @@ export default {
       this.addLog('info', this.t('send_serial_data', {serial: serialStr, len: serialData16.length}));
       const serialResult = await this.sendCommand(0x01, 0x06, serialData16);
       this.addLog(serialResult ? 'success' : 'error', this.t(serialResult ? 'serial_set_success' : 'serial_set_failed', {serial: serialStr}));
+      if (!serialResult) printSuccess = false;
 
       // 等待设备处理
       await new Promise(r => setTimeout(r, 100));
@@ -1061,8 +1089,9 @@ export default {
         0, 0, 0, 0             // 码表数 = 0 (4字节)
       ];
       this.addLog('info', this.t('send_lottery_data', {score: score, hex: lotteryData.map(b => b.toString(16).padStart(2, '0')).join(' ')}));
-      await this.sendCommand(0x01, 0x07, lotteryData);
-      this.addLog('success', this.t('lottery_sent'));
+      const lotteryResult = await this.sendCommand(0x01, 0x07, lotteryData);
+      this.addLog(lotteryResult ? 'success' : 'error', lotteryResult ? this.t('lottery_sent') : this.t('send_failed', {error: ''}));
+      if (!lotteryResult) printSuccess = false;
 
       // 使用 order_id 作为QR码发送到出票机
       if (!orderId) {
@@ -1076,6 +1105,26 @@ export default {
       const data = [...Array.from(orderId).map(c => c.charCodeAt(0)), 0x20];
       await this.sendCommand(0x01, 0x08, data, false);
       this.addLog('success', this.t('qr_sent', {order_id: orderId, len: data.length}));
+
+      // 如果打印失败，更新记录状态并尝试重新连接
+      if (!printSuccess) {
+        this.addLog('warn', this.t('print_failed_marking'));
+        try {
+          await this.$request({
+            url: 'ex-admin/addons-webman-controller-ChannelIndexController/updateTicketStatus',
+            method: 'post',
+            data: { order_id: orderId, status: 5 },  // 5 = 打印失败
+          });
+        } catch (e) {
+          console.error('更新票据状态失败:', e);
+        }
+
+        // 尝试重新连接出票机
+        this.addLog('info', this.t('reconnecting_printer'));
+        await this.disconnect();
+        await new Promise(r => setTimeout(r, 1000)); // 等待1秒
+        await this.connect();
+      }
 
       // 重启心跳
       this.heartbeatTimer = setInterval(async () => {
@@ -1157,6 +1206,14 @@ export default {
         return wan + '萬';
       }
       return amount.toLocaleString();
+    },
+
+    // 检查福利卷档位是否已领取
+    isWelfareClaimed(score) {
+      if (!this.playerBetInfo || !this.playerBetInfo.claimed_welfare_scores) {
+        return false;
+      }
+      return this.playerBetInfo.claimed_welfare_scores.includes(score);
     },
 
     // 搜索玩家

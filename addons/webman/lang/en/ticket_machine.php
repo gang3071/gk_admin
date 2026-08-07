@@ -122,6 +122,9 @@ return [
         'select_score' => 'Please select score',
         'today_bet_reached' => 'Today bet ≥{amount}0K',
         'yesterday_bet_reached' => 'Yesterday bet ≥{amount}0K',
+        'print_failed_marking' => 'Print failed, record status marked',
+        'reconnecting_printer' => 'Reconnecting to printer...',
+        'printer_not_connected' => 'Printer not connected, please connect first',
     ],
 
     // Log
