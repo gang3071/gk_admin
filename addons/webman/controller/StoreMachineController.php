@@ -1454,6 +1454,7 @@ class StoreMachineController
                 ->default(0)
                 ->min(0)
                 ->max(1000000)
+                ->step(1)  // ⭐ 只允许整数
                 ->style(['width' => '100%'])
                 ->help(admin_trans('open_score_setting.help.default_scores'));
 
@@ -1465,6 +1466,7 @@ class StoreMachineController
                     ->default($this->getDefaultScore($i))
                     ->min(0)
                     ->max(1000000)
+                    ->step(1)  // ⭐ 只允许整数
                     ->style(['width' => '100%'])
                     ->help(admin_trans('open_score_setting.help.score'));
             }
@@ -1484,6 +1486,23 @@ class StoreMachineController
 
                 if ($exists->exists()) {
                     return message_error(admin_trans('open_score_setting.player_exists'));
+                }
+
+                // ⭐ 验证所有开分配置必须是正整数
+                $defaultScores = $form->input('default_scores');
+                if ($defaultScores !== null && $defaultScores !== '' && $defaultScores != 0) {
+                    if ($defaultScores != floor($defaultScores) || $defaultScores < 0) {
+                        return message_error(admin_trans('open_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('open_score_setting.fields.default_scores')]));
+                    }
+                }
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $score = $form->input('score_' . $i);
+                    if ($score !== null && $score !== '' && $score != 0) {
+                        if ($score != floor($score) || $score < 0) {
+                            return message_error(admin_trans('open_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('open_score_setting.fields.score_' . $i)]));
+                        }
+                    }
                 }
 
                 // 验证至少配置一个开分选项
@@ -1591,10 +1610,10 @@ class StoreMachineController
             $form->number('default_wash_point', '默认洗分基数')
                 ->default(100)
                 ->min(0)
-                ->max(999999.99)
-                ->step(0.01)
+                ->max(999999)
+                ->step(1)  // ⭐ 只允许整数
                 ->style(['width' => '100%'])
-                ->help('默认的洗分基数，玩家洗分时按此基数计算（如：基数100，余额500 → 洗分500）');
+                ->help('默认的洗分基数（整数），玩家洗分时按此基数计算。特殊值：0 表示只洗整数部分，小数保留');
 
             $form->divider()->content('洗分选项（可选）');
 
@@ -1603,10 +1622,10 @@ class StoreMachineController
                 $form->number('wash_' . $i, '洗分选项' . $i)
                     ->default($this->getDefaultWashPoint($i))
                     ->min(0)
-                    ->max(999999.99)
-                    ->step(0.01)
+                    ->max(999999)
+                    ->step(1)  // ⭐ 只允许整数
                     ->style(['width' => '100%'])
-                    ->help('玩家可选择的洗分基数，留空表示不启用该选项');
+                    ->help('玩家可选择的洗分基数（整数），留空表示不启用该选项');
             }
 
             $form->layout('vertical');
@@ -1626,8 +1645,24 @@ class StoreMachineController
                     return message_error('该店家已存在洗分配置，请直接编辑');
                 }
 
-                // 验证至少配置默认洗分基数或一个洗分选项
+                // ⭐ 验证所有洗分配置必须是非负整数（允许0）
                 $defaultWashPoint = $form->input('default_wash_point');
+                if ($defaultWashPoint !== null && $defaultWashPoint !== '') {
+                    if ($defaultWashPoint != floor($defaultWashPoint) || $defaultWashPoint < 0) {
+                        return message_error(admin_trans('wash_point_setting.error.must_be_non_negative_integer', null, ['field' => admin_trans('wash_point_setting.fields.default_wash_point')]));
+                    }
+                }
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $wash = $form->input('wash_' . $i);
+                    if ($wash !== null && $wash !== '' && $wash != 0) {
+                        if ($wash != floor($wash) || $wash < 0) {
+                            return message_error(admin_trans('wash_point_setting.error.must_be_non_negative_integer', null, ['field' => admin_trans('wash_point_setting.fields.wash_' . $i)]));
+                        }
+                    }
+                }
+
+                // 验证至少配置默认洗分基数或一个洗分选项
                 $hasWashOption = false;
 
                 for ($i = 1; $i <= 6; $i++) {
@@ -1638,7 +1673,8 @@ class StoreMachineController
                     }
                 }
 
-                if (empty($defaultWashPoint) || $defaultWashPoint <= 0) {
+                // 允许 default_wash_point = 0（洗整数部分），或 > 0，或至少有一个洗分选项
+                if ($defaultWashPoint === null || $defaultWashPoint === '') {
                     if (!$hasWashOption) {
                         return message_error('请至少配置默认洗分基数或一个洗分选项');
                     }
