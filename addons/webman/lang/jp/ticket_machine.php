@@ -279,6 +279,11 @@ return [
         'yesterday_bet_amount' => '昨日の電子ベット額',
         'player_bet_info' => 'プレイヤーベット情報',
         'refresh' => '更新',
+        'score_unit' => '点',
+        'today_bet_prefix' => '本日のベット',
+        'yesterday_bet_prefix' => '昨日のベット',
+        'claimed_today' => '本日受取済み',
+        'new_member_claim' => '新規会員',
     ],
 
     // チケット記録

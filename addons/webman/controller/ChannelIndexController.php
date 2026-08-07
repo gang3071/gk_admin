@@ -3780,6 +3780,15 @@ class ChannelIndexController
         $logLabels['yesterday_bet_amount'] = admin_trans('ticket_machine.record.yesterday_bet_amount');
         $logLabels['refresh'] = admin_trans('ticket_machine.record.refresh');
 
+        // 补充下拉选项标签
+        $logLabels['type_welfare'] = admin_trans('ticket_machine.record.type_welfare');
+        $logLabels['type_experience'] = admin_trans('ticket_machine.record.type_experience');
+        $logLabels['score_unit'] = admin_trans('ticket_machine.record.score_unit');
+        $logLabels['today_bet_prefix'] = admin_trans('ticket_machine.record.today_bet_prefix');
+        $logLabels['yesterday_bet_prefix'] = admin_trans('ticket_machine.record.yesterday_bet_prefix');
+        $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
+        $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
+
         // 获取福利券和体验券配置
         $voucherConfig = config('voucher');
 
@@ -4089,6 +4098,47 @@ class ChannelIndexController
                     ->count();
                 if ($todayCount > 0) {
                     return json(['code' => 400, 'message' => '该档位福利券今日已领取过']);
+                }
+
+                // 检查打码量是否满足该档位要求
+                $today = date('Y-m-d');
+                $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+                // 获取今日和昨日打码量
+                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $today . ' 00:00:00')
+                    ->where('created_at', '<', date('Y-m-d', strtotime('+1 day')) . ' 00:00:00')
+                    ->sum('bet');
+                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $yesterday . ' 00:00:00')
+                    ->where('created_at', '<', $today . ' 00:00:00')
+                    ->sum('bet');
+
+                // 检查今日打码量规则
+                $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
+                $todayValid = false;
+                foreach ($todayWelfareRules as $rule) {
+                    if ($rule['score'] == $score && $todayBetAmount >= $rule['bet_amount']) {
+                        $todayValid = true;
+                        break;
+                    }
+                }
+
+                // 检查昨日打码量规则
+                $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
+                $yesterdayValid = false;
+                foreach ($yesterdayWelfareRules as $rule) {
+                    if ($rule['score'] == $score && $yesterdayBetAmount >= $rule['bet_amount']) {
+                        $yesterdayValid = true;
+                        break;
+                    }
+                }
+
+                // 今日或昨日打码量满足任一规则即可
+                if (!$todayValid && !$yesterdayValid) {
+                    return json(['code' => 400, 'message' => '打码量不满足该档位福利券领取条件']);
                 }
             }
 

@@ -279,6 +279,11 @@ return [
         'yesterday_bet_amount' => 'Yesterday Electronic Bet',
         'player_bet_info' => 'Player Bet Info',
         'refresh' => 'Refresh',
+        'score_unit' => 'pts',
+        'today_bet_prefix' => 'Today bet',
+        'yesterday_bet_prefix' => 'Yesterday bet',
+        'claimed_today' => 'Claimed today',
+        'new_member_claim' => 'New member',
     ],
 
     // Redeem Records

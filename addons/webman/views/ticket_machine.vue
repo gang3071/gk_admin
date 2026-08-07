@@ -86,8 +86,8 @@
             <a-select v-model:value="ticketType" style="width: 100%;">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
-              <a-select-option :value="3">{{ labels.type_experience || '體驗卷' }}</a-select-option>
-              <a-select-option :value="4">{{ labels.type_welfare || '福利卷' }}</a-select-option>
+              <a-select-option :value="3">{{ labels.type_experience || '體驗券' }}</a-select-option>
+              <a-select-option :value="4">{{ labels.type_welfare || '福利券' }}</a-select-option>
             </a-select>
           </div>
           <div style="margin-bottom: 12px;">
@@ -286,46 +286,30 @@ export default {
       const options = [];
 
       if (this.ticketType === 4 && config.welfare) {
-        // 福利券规则（从配置读取）- 只能领取最高档位
+        // 福利券规则（从配置读取）- 显示所有档位
 
-        // 今日打码量福利券规则（找到最高可领取档位）
+        // 今日打码量福利券规则
         if (config.today_welfare && config.today_welfare.enabled) {
-          let bestTodayRule = null;
           config.today_welfare.rules.forEach(rule => {
-            if (todayBet >= rule.bet_amount) {
-              if (!bestTodayRule || rule.bet_amount > bestTodayRule.bet_amount) {
-                bestTodayRule = rule;
-              }
-            }
-          });
-          if (bestTodayRule) {
             options.push({
-              value: bestTodayRule.score,
-              label: `福利券 ${bestTodayRule.score} 分`,
-              disabled: this.isWelfareClaimed(bestTodayRule.score),
-              condition: `今日打分≥${this.formatBetAmount(bestTodayRule.bet_amount)}`,
+              value: rule.score,
+              label: `${this.t('type_welfare') || '福利券'} ${rule.score} ${this.t('score_unit') || '分'}`,
+              disabled: todayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
+              condition: `${this.t('today_bet_prefix') || '今日打分'}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
-          }
+          });
         }
 
-        // 昨日打码量福利券规则（找到最高可领取档位）
+        // 昨日打码量福利券规则
         if (config.welfare.rules) {
-          let bestYesterdayRule = null;
           config.welfare.rules.forEach(rule => {
-            if (yesterdayBet >= rule.bet_amount) {
-              if (!bestYesterdayRule || rule.bet_amount > bestYesterdayRule.bet_amount) {
-                bestYesterdayRule = rule;
-              }
-            }
-          });
-          if (bestYesterdayRule) {
             options.push({
-              value: bestYesterdayRule.score,
-              label: `福利券 ${bestYesterdayRule.score} 分`,
-              disabled: this.isWelfareClaimed(bestYesterdayRule.score),
-              condition: `昨日打分≥${this.formatBetAmount(bestYesterdayRule.bet_amount)}`,
+              value: rule.score,
+              label: `${this.t('type_welfare') || '福利券'} ${rule.score} ${this.t('score_unit') || '分'}`,
+              disabled: yesterdayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
+              condition: `${this.t('yesterday_bet_prefix') || '昨日打分'}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
-          }
+          });
         }
       } else if (this.ticketType === 3 && config.experience) {
         // 体验券规则（从配置读取）
@@ -334,9 +318,9 @@ export default {
         const dailyLimit = config.experience.daily_limit || 1;
         options.push({
           value: score,
-          label: `体验券 ${score} 分`,
+          label: `${this.t('type_experience') || '体验券'} ${score} ${this.t('score_unit') || '分'}`,
           disabled: claimedCount >= dailyLimit,
-          condition: claimedCount >= dailyLimit ? '今日已领取' : '新会员可领取',
+          condition: claimedCount >= dailyLimit ? (this.t('claimed_today') || '今日已领取') : (this.t('new_member_claim') || '新会员可领取'),
         });
       }
 

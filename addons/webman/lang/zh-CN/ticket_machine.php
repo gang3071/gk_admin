@@ -278,6 +278,11 @@ return [
         'yesterday_bet_amount' => '昨日电子总打码量',
         'player_bet_info' => '玩家打码量信息',
         'refresh' => '刷新',
+        'score_unit' => '分',
+        'today_bet_prefix' => '今日打分',
+        'yesterday_bet_prefix' => '昨日打分',
+        'claimed_today' => '今日已领取',
+        'new_member_claim' => '新会员可领取',
     ],
 
     // 核销记录
