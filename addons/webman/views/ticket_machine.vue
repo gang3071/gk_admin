@@ -312,15 +312,33 @@ export default {
         }
 
         // 昨日打码量福利券规则（value使用正数）
+        // 找到用户满足的最高档位
+        let maxQualifiedScore = 0;
         if (config.welfare.rules) {
           config.welfare.rules.forEach(rule => {
+            if (yesterdayBet >= rule.bet_amount && rule.score > maxQualifiedScore) {
+              maxQualifiedScore = rule.score;
+            }
+          });
+        }
+
+        // 只显示最高档位，或者显示所有但禁用非最高档位
+        if (config.welfare.rules) {
+          config.welfare.rules.forEach(rule => {
+            const isQualified = yesterdayBet >= rule.bet_amount;
+            const isMaxTier = rule.score === maxQualifiedScore;
+            const isClaimed = this.isWelfareClaimed(rule.score, 'yesterday');
+
             options.push({
               value: rule.score,   // 正数表示昨日规则
               score: rule.score,   // 实际分数
               ruleType: 'yesterday', // 规则类型
               label: `${welfareLabel} ${rule.score} ${scoreUnit} (${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
-              disabled: yesterdayBet < rule.bet_amount || this.isWelfareClaimed(rule.score, 'yesterday'),
-              condition: `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
+              // 禁用条件：不满足打码量 或 不是最高档位 或 已领取
+              disabled: !isQualified || !isMaxTier || isClaimed,
+              condition: !isQualified ? `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}` :
+                        !isMaxTier ? `只能领取${maxQualifiedScore}分` :
+                        isClaimed ? claimedToday : `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
         }

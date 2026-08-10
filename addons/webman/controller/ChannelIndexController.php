@@ -4137,15 +4137,40 @@ class ChannelIndexController
                         ->sum('bet');
 
                     $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
-                    $valid = false;
+
+                    // 找到用户满足的最高档位
+                    $maxQualifiedScore = 0;
                     foreach ($yesterdayWelfareRules as $rule) {
-                        if ($rule['score'] == $actualScore && $yesterdayBetAmount >= $rule['bet_amount']) {
-                            $valid = true;
-                            break;
+                        if ($yesterdayBetAmount >= $rule['bet_amount'] && $rule['score'] > $maxQualifiedScore) {
+                            $maxQualifiedScore = $rule['score'];
                         }
                     }
-                    if (!$valid) {
+
+                    // 检查是否满足该档位
+                    if ($actualScore > $maxQualifiedScore) {
                         return json(['code' => 400, 'message' => '昨日打码量不满足该档位福利券领取条件']);
+                    }
+
+                    // 检查是否只能领取最高档位（不能领取低档位）
+                    if ($actualScore < $maxQualifiedScore) {
+                        return json(['code' => 400, 'message' => '昨日打码量满足更高档位，只能领取' . $maxQualifiedScore . '分福利券']);
+                    }
+
+                    // 检查今日是否已领取过昨日规则的任何档位
+                    $yesterdayClaimedCount = \addons\webman\model\TicketRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                        ->whereDate('created_at', $today)
+                        ->whereNull('deleted_at')
+                        ->get()
+                        ->filter(function ($record) {
+                            if (empty($record->extra_data)) return false;
+                            $extraData = json_decode($record->extra_data, true);
+                            return isset($extraData['rule_type']) && $extraData['rule_type'] === 'yesterday';
+                        })
+                        ->count();
+                    if ($yesterdayClaimedCount > 0) {
+                        return json(['code' => 400, 'message' => '今日已领取过昨日规则福利券，只能领取一次']);
                     }
                 }
 
