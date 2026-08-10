@@ -69,6 +69,14 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // 游戏记录归档任务（每天凌晨3:00将45天前的数据迁移到历史表）
+    'play_game_record_archive' => [
+        'handler' => process\PlayGameRecordArchiveTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
     // ✅ 内存监控进程已禁用（问题已解决，不再需要监控）
     // 'memory_monitor' => [
     //     'handler' => process\MemoryMonitor::class,
