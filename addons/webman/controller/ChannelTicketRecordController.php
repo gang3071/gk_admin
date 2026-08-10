@@ -163,7 +163,19 @@ class ChannelTicketRecordController
                 };
             });
             $grid->column('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'))->copy();
-            $grid->column('status', admin_trans('ticket_machine.record.status'))->display(function ($val) {
+            $grid->column('status', admin_trans('ticket_machine.record.status'))->display(function ($val, $data) {
+                // 体验券和福利券：判断是否超过有效时间
+                if ($val == TicketRecord::STATUS_NORMAL
+                    && in_array($data['ticket_type'], [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE])) {
+                    $voucherConfig = config('voucher');
+                    $expireHours = $data['ticket_type'] == TicketRecord::TYPE_EXPERIENCE
+                        ? ($voucherConfig['experience']['expire_hours'] ?? 24)
+                        : ($voucherConfig['welfare']['expire_hours'] ?? 24);
+                    $expireTime = strtotime($data['created_at']) + ($expireHours * 3600);
+                    if (time() > $expireTime) {
+                        return Tag::create(admin_trans('ticket_machine.record.status_expired'))->color('default');
+                    }
+                }
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.record.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.record.status_normal'))->color('blue'),

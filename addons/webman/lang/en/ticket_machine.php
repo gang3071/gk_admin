@@ -261,6 +261,7 @@ return [
         'status_normal' => 'Normal',
         'status_backend_used' => 'Backend Used',
         'status_machine_used' => 'Machine Used',
+        'status_expired' => 'Expired',
         'status_unknown' => 'Unknown',
         'print_count' => 'Print Count',
         'last_print_time' => 'Last Print Time',

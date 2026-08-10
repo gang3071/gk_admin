@@ -261,6 +261,7 @@ return [
         'status_normal' => '正常',
         'status_backend_used' => '後台使用',
         'status_machine_used' => '機台使用',
+        'status_expired' => '已失效',
         'status_unknown' => '未知',
         'print_count' => '列印次數',
         'last_print_time' => '最後列印時間',
