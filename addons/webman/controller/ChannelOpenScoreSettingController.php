@@ -163,7 +163,7 @@ class ChannelOpenScoreSettingController
      */
     protected function getDefaultScore(int $index): int
     {
-        $defaults = [100, 500, 1000, 5000, 10000, 20000];
+        $defaults = [500, 1000, 3000, 5000, 10000, 20000];
         return $defaults[$index - 1] ?? 0;
     }
 }
