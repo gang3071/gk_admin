@@ -3943,13 +3943,14 @@ class ChannelIndexController
                     ->sum('bet');
             }
 
-            // 查询今日已领取的福利券档位
-            $claimedWelfareScores = \addons\webman\model\TicketRecord::query()
+            // 查询今日已领取的福利券记录（包含规则类型）
+            $claimedWelfareRecords = \addons\webman\model\TicketRecord::query()
                 ->where('player_id', $playerId)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
                 ->whereDate('created_at', $today)
                 ->whereNull('deleted_at')
-                ->pluck('score')
+                ->select('score', 'extra_data')
+                ->get()
                 ->toArray();
 
             // 查询今日已领取的体验券次数
@@ -3968,7 +3969,7 @@ class ChannelIndexController
                     'player_uuid' => $player->uuid ?? '',
                     'today_bet_amount' => $todayBetAmount,
                     'yesterday_bet_amount' => $yesterdayBetAmount,
-                    'claimed_welfare_scores' => $claimedWelfareScores,  // 今日已领取的福利券档位
+                    'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
                     'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
                 ]
             ]);
@@ -4085,23 +4086,11 @@ class ChannelIndexController
                 }
             }
 
-            // 福利券验证（按档位分别限制）
+            // 福利券验证（按档位+规则类型分别限制）
             if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && $playerId > 0) {
                 $welfareConfig = $voucherConfig['welfare'] ?? [];
                 if (empty($welfareConfig['enabled'])) {
                     return json(['code' => 400, 'message' => '福利券功能未启用']);
-                }
-
-                // 检查该档位今日是否已领取（每个档位每天只能领取1次）
-                $todayCount = \addons\webman\model\TicketRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                    ->where('score', $score)  // 按分数档位过滤
-                    ->whereDate('created_at', date('Y-m-d'))
-                    ->whereNull('deleted_at')
-                    ->count();
-                if ($todayCount > 0) {
-                    return json(['code' => 400, 'message' => '该档位福利券今日已领取过']);
                 }
 
                 // 检查打码量是否满足该档位要求
@@ -4120,30 +4109,50 @@ class ChannelIndexController
                     ->where('created_at', '<', $today . ' 00:00:00')
                     ->sum('bet');
 
-                // 检查今日打码量规则
+                // 确定规则类型和对应的打码量
+                $ruleType = '';  // today 或 yesterday
                 $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
-                $todayValid = false;
-                foreach ($todayWelfareRules as $rule) {
-                    if ($rule['score'] == $score && $todayBetAmount >= $rule['bet_amount']) {
-                        $todayValid = true;
-                        break;
-                    }
-                }
-
-                // 检查昨日打码量规则
                 $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
-                $yesterdayValid = false;
-                foreach ($yesterdayWelfareRules as $rule) {
-                    if ($rule['score'] == $score && $yesterdayBetAmount >= $rule['bet_amount']) {
-                        $yesterdayValid = true;
+
+                // 检查今日打码量规则
+                foreach ($todayWelfareRules as $rule) {
+                    if ($rule['score'] == abs($score) && $todayBetAmount >= $rule['bet_amount']) {
+                        $ruleType = 'today';
                         break;
                     }
                 }
 
-                // 今日或昨日打码量满足任一规则即可
-                if (!$todayValid && !$yesterdayValid) {
+                // 如果今日规则不满足，检查昨日打码量规则
+                if (empty($ruleType)) {
+                    foreach ($yesterdayWelfareRules as $rule) {
+                        if ($rule['score'] == abs($score) && $yesterdayBetAmount >= $rule['bet_amount']) {
+                            $ruleType = 'yesterday';
+                            break;
+                        }
+                    }
+                }
+
+                if (empty($ruleType)) {
                     return json(['code' => 400, 'message' => '打码量不满足该档位福利券领取条件']);
                 }
+
+                // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
+                $extraDataKey = json_encode(['rule_type' => $ruleType, 'score' => abs($score)]);
+                $todayCount = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                    ->where('score', abs($score))
+                    ->where('extra_data', $extraDataKey)
+                    ->whereDate('created_at', $today)
+                    ->whereNull('deleted_at')
+                    ->count();
+                if ($todayCount > 0) {
+                    $ruleName = $ruleType === 'today' ? '今日' : '昨日';
+                    return json(['code' => 400, 'message' => "该档位福利券({$ruleName}规则)今日已领取过"]);
+                }
+
+                // 将规则类型传递给后续保存逻辑
+                $welfareRuleType = $ruleType;
             }
 
             $orderId = \addons\webman\model\TicketRecord::generateOrderId($ticketType);
@@ -4160,6 +4169,12 @@ class ChannelIndexController
 
             $remark = request()->input('remark', '');
 
+            // 构建extra_data
+            $extraData = null;
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && !empty($welfareRuleType)) {
+                $extraData = json_encode(['rule_type' => $welfareRuleType, 'score' => abs($score)]);
+            }
+
             $record = \addons\webman\model\TicketRecord::create([
                 'order_id'           => $orderId,
                 'department_id'      => $departmentId,
@@ -4168,11 +4183,12 @@ class ChannelIndexController
                 'machine_no'         => $machineNo,
                 'player_id'          => $playerId > 0 ? $playerId : null,
                 'player_name'        => $playerName,
-                'score'              => $score,
+                'score'              => abs($score),  // 使用绝对值
                 'qr_code'            => $orderId,
                 'qr_code_no'         => $qrCodeNo,
                 'encrypted_content'  => $orderId,
                 'ticket_type'        => $ticketType,
+                'extra_data'         => $extraData,
                 'status'             => \addons\webman\model\TicketRecord::STATUS_NORMAL,
                 'remark'             => $remark,
             ]);
