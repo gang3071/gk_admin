@@ -3789,6 +3789,10 @@ class ChannelIndexController
         $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
         $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
 
+        // 补充连接状态标签
+        $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
+        $logLabels['printer_connected'] = admin_trans('ticket_machine.message.printer_connected');
+
         // 获取福利券和体验券配置
         $voucherConfig = config('voucher');
 
