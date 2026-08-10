@@ -367,9 +367,19 @@ class ChannelLotteryTicketActivityController
             ->value('max_no');
         $activityArray['max_ticket_no'] = $maxNo ? str_pad($maxNo, 6, '0', STR_PAD_LEFT) : '000000';
 
-        // ⭐ 统计已派奖记录数量
-        $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+        // ⭐ 统计总发放数量（从 LotteryTicket 表统计实际发券数）
+        $activityArray['total_tickets'] = \addons\webman\model\LotteryTicket::where('activity_id', $activity->id)->count();
+
+        // ⭐ 统计已使用数量（已派奖的记录数量）
+        $activityArray['used_tickets'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
             ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_CLAIMED)
+            ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+            ->where('prize_amount', '>', 0)
+            ->count();
+
+        // ⭐ 统计待发放数量
+        $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+            ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
             ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
             ->where('prize_amount', '>', 0)
             ->count();

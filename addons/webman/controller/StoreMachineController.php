@@ -363,6 +363,7 @@ class StoreMachineController
 
             $grid->hideSelection();
             $grid->hideDelete();
+            $grid->hideAdd(); // 屏蔽添加按钮
             $grid->setForm()->drawer($this->createStoreMachineForm());
             $grid->expandFilter();
 

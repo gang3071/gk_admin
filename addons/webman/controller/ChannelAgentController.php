@@ -1778,9 +1778,9 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_CANCEL_BET:
                     case PlayerDeliveryRecord::TYPE_SETTLEMENT:
                     case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
-                        return Tag::create($val)->color('blue');
+                        return Tag::create($translatedText)->color('blue');
                     case PlayerDeliveryRecord::TYPE_GIFT:
-                        return Tag::create($val)->color('pink');
+                        return Tag::create($translatedText)->color('pink');
                     case PlayerDeliveryRecord::TYPE_PREPAY:
                     case PlayerDeliveryRecord::TYPE_REFUND:
                         return Tag::create($val)->color('cyan');
@@ -1814,7 +1814,7 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
                     case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
                     case PlayerDeliveryRecord::TYPE_LOTTERY:
-                        return Tag::create(admin_trans('message.source.' . $val))->color('orange');
+                        return Tag::create($translatedText)->color('orange');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();

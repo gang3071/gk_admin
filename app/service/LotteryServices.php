@@ -1348,14 +1348,28 @@ class LotteryServices
         $query = Lottery::where('status', 1)
             ->where('game_type', GameType::TYPE_SLOT)
             ->whereNull('deleted_at')
-            ->orderBy('sort', 'desc');
-
+            ->orderBy('lottery_type', 'asc')
+            ->orderBy('condition', 'desc');
+        
         if ($lotteryType) {
             $query->where('lottery_type', $lotteryType);
         }
+        $fixedSort = 0;
+        $randomSort = 0;
         $list = $query->get();
+        /** @var Lottery $lottery */
+        foreach ($list as $lottery) {
+            if ($lottery->lottery_type == Lottery::LOTTERY_TYPE_FIXED) {
+                $fixedSort++;
+                $lottery->sort = $fixedSort;
+            }
+            if ($lottery->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
+                $randomSort++;
+                $lottery->sort = $randomSort;
+            }
+        }
         $this->slotLotteryList = $list;
-
+        
         return $this;
     }
     
@@ -1369,12 +1383,26 @@ class LotteryServices
         $query = Lottery::where('status', 1)
             ->where('game_type', GameType::TYPE_STEEL_BALL)
             ->whereNull('deleted_at')
-            ->orderBy('sort', 'desc');
-
+            ->orderBy('lottery_type', 'asc')
+            ->orderBy('condition', 'desc');
+        
         if ($lotteryType) {
             $query->where('lottery_type', $lotteryType);
         }
+        $fixedSort = 0;
+        $randomSort = 0;
         $list = $query->get();
+        /** @var Lottery $lottery */
+        foreach ($list as $lottery) {
+            if ($lottery->lottery_type == Lottery::LOTTERY_TYPE_FIXED) {
+                $fixedSort++;
+                $lottery->sort = $fixedSort;
+            }
+            if ($lottery->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
+                $randomSort++;
+                $lottery->sort = $randomSort;
+            }
+        }
         $this->jackLotteryList = $list;
 
         return $this;
