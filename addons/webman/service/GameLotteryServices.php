@@ -1584,7 +1584,6 @@ LUA;
             }
 
             // 累加前检查保底金额
-            $refillAmount = 0;
             if ($lottery->auto_refill_status == 1 && $lottery->auto_refill_amount > 0) {
                 if ($lottery->amount < $lottery->auto_refill_amount) {
                     $refillAmount = bcsub($lottery->auto_refill_amount, $lottery->amount, 4);
@@ -1599,10 +1598,10 @@ LUA;
                 $addAmount = bcsub($lottery->max_pool_amount, $lottery->amount, 4);
             }
 
-            // 准备批量数据（包含保底补充差额）
+            // 准备批量数据
             $poolsData[] = [
                 'id' => $lottery->id,
-                'add_amount' => (float)bcadd($addAmount, $refillAmount, 4),
+                'add_amount' => (float)$addAmount,
                 'stat_increment' => (int)bcmul($bet, 1, 0), // 下注金额作为统计权重
             ];
         }
