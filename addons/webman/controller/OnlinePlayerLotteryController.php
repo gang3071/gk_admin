@@ -31,6 +31,7 @@ class OnlinePlayerLotteryController
                 'lotteryOptions' => $this->getLotteryOptions(),
                 'wsUrl' => config('app.ws_url', ''), // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
                 'appKey' => config('plugin.webman.push.app.app_key'),
+                'langLocale' => \ExAdmin\ui\support\Container::getInstance()->translator->getLocale(),
             ]))->style(['width' => '100%', 'display' => 'block']);
     }
 
