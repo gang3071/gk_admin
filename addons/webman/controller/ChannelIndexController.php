@@ -4001,8 +4001,15 @@ class ChannelIndexController
             }
 
             // 验证必填参数
-            if ($score <= 0) {
-                return json(['code' => 400, 'message' => '分数/金额必须大于0']);
+            // 福利券允许负数（负数表示今日规则），其他类型必须大于0
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE) {
+                if ($score == 0) {
+                    return json(['code' => 400, 'message' => '分数/金额不能为0']);
+                }
+            } else {
+                if ($score <= 0) {
+                    return json(['code' => 400, 'message' => '分数/金额必须大于0']);
+                }
             }
             if (empty($storeAdminId)) {
                 return json(['code' => 400, 'message' => '店家管理员ID不能为空']);
@@ -4093,55 +4100,61 @@ class ChannelIndexController
                     return json(['code' => 400, 'message' => '福利券功能未启用']);
                 }
 
+                // 根据前端传递的score正负确定规则类型
+                // 负数 = 今日规则，正数 = 昨日规则
+                $ruleType = $score < 0 ? 'today' : 'yesterday';
+                $actualScore = abs($score);
+
                 // 检查打码量是否满足该档位要求
                 $today = date('Y-m-d');
                 $yesterday = date('Y-m-d', strtotime('-1 day'));
 
-                // 获取今日和昨日打码量
-                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('created_at', '>=', $today . ' 00:00:00')
-                    ->where('created_at', '<', date('Y-m-d', strtotime('+1 day')) . ' 00:00:00')
-                    ->sum('bet');
-                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('created_at', '>=', $yesterday . ' 00:00:00')
-                    ->where('created_at', '<', $today . ' 00:00:00')
-                    ->sum('bet');
+                if ($ruleType === 'today') {
+                    // 今日规则：检查今日打码量
+                    $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $today . ' 00:00:00')
+                        ->where('created_at', '<', date('Y-m-d', strtotime('+1 day')) . ' 00:00:00')
+                        ->sum('bet');
 
-                // 确定规则类型和对应的打码量
-                $ruleType = '';  // today 或 yesterday
-                $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
-                $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
-
-                // 检查今日打码量规则
-                foreach ($todayWelfareRules as $rule) {
-                    if ($rule['score'] == abs($score) && $todayBetAmount >= $rule['bet_amount']) {
-                        $ruleType = 'today';
-                        break;
-                    }
-                }
-
-                // 如果今日规则不满足，检查昨日打码量规则
-                if (empty($ruleType)) {
-                    foreach ($yesterdayWelfareRules as $rule) {
-                        if ($rule['score'] == abs($score) && $yesterdayBetAmount >= $rule['bet_amount']) {
-                            $ruleType = 'yesterday';
+                    $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
+                    $valid = false;
+                    foreach ($todayWelfareRules as $rule) {
+                        if ($rule['score'] == $actualScore && $todayBetAmount >= $rule['bet_amount']) {
+                            $valid = true;
                             break;
                         }
                     }
-                }
+                    if (!$valid) {
+                        return json(['code' => 400, 'message' => '今日打码量不满足该档位福利券领取条件']);
+                    }
+                } else {
+                    // 昨日规则：检查昨日打码量
+                    $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $yesterday . ' 00:00:00')
+                        ->where('created_at', '<', $today . ' 00:00:00')
+                        ->sum('bet');
 
-                if (empty($ruleType)) {
-                    return json(['code' => 400, 'message' => '打码量不满足该档位福利券领取条件']);
+                    $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
+                    $valid = false;
+                    foreach ($yesterdayWelfareRules as $rule) {
+                        if ($rule['score'] == $actualScore && $yesterdayBetAmount >= $rule['bet_amount']) {
+                            $valid = true;
+                            break;
+                        }
+                    }
+                    if (!$valid) {
+                        return json(['code' => 400, 'message' => '昨日打码量不满足该档位福利券领取条件']);
+                    }
                 }
 
                 // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
-                $extraDataKey = json_encode(['rule_type' => $ruleType, 'score' => abs($score)]);
+                $extraDataKey = json_encode(['rule_type' => $ruleType, 'score' => $actualScore]);
                 $todayCount = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                    ->where('score', abs($score))
+                    ->where('score', $actualScore)
                     ->where('extra_data', $extraDataKey)
                     ->whereDate('created_at', $today)
                     ->whereNull('deleted_at')
@@ -4153,6 +4166,7 @@ class ChannelIndexController
 
                 // 将规则类型传递给后续保存逻辑
                 $welfareRuleType = $ruleType;
+                $score = $actualScore;  // 转换为正数
             }
 
             $orderId = \addons\webman\model\TicketRecord::generateOrderId($ticketType);
