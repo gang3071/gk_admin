@@ -105,19 +105,19 @@ class ChannelDeviceController
                 ->sortable();
 
             // 操作按钮
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDetail();
                 $actions->edit()->modal($this->form())->width('60%');
 
                 // 重新生成语音按钮
-                $actions->add(
-                    Button::create(admin_trans('device.voice.regenerate'))
-                        ->type('primary')
-                        ->size('small')
-                        ->icon(Icon::create('sound'))
-                        ->handler('request', admin_url(['addons-webman-controller-ChannelDeviceController', 'regenerateVoice']))
-                        ->data(['id' => '{id}'])
-                );
+                if (!empty($data['device_name'])) {
+                    $actions->prepend(
+                        Button::create(admin_trans('device.voice.regenerate'))
+                            ->icon(Icon::create('SoundOutlined'))
+                            ->confirm(admin_trans('device.voice.regenerate_confirm'), [$this, 'regenerateVoice'], ['id' => $data['id']])
+                            ->gridRefresh()
+                    );
+                }
             });
 
             // 筛选
