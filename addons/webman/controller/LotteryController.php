@@ -1072,6 +1072,33 @@ class LotteryController
                 // 清除彩金列表缓存
                 \app\service\LotteryServices::clearLotteryListCache($gameType);
             });
+
+            // 保存后检查保底金额，如果当前彩池低于保底金额则自动补充
+            $form->saved(function (Form $form) {
+                $lotteryType = $form->input('lottery_type');
+                $autoRefillStatus = $form->input('auto_refill_status');
+                $autoRefillAmount = $form->input('auto_refill_amount');
+
+                // 只有随机彩金且启用了保底功能才执行
+                if ($lotteryType == Lottery::LOTTERY_TYPE_RANDOM && $autoRefillStatus == 1 && $autoRefillAmount > 0) {
+                    $id = $form->driver()->get('id');
+                    $lottery = Lottery::query()->find($id);
+
+                    if ($lottery && $lottery->amount < $autoRefillAmount) {
+                        $beforeAmount = $lottery->amount;
+                        $lottery->amount = $autoRefillAmount;
+                        $lottery->save();
+
+                        \support\Log::info('保存配置时自动补充到保底金额:', [
+                            'lottery_id' => $lottery->id,
+                            'lottery_name' => $lottery->name,
+                            'before_amount' => $beforeAmount,
+                            'auto_refill_amount' => $autoRefillAmount,
+                            'after_amount' => $lottery->amount,
+                        ]);
+                    }
+                }
+            });
         });
     }
 
