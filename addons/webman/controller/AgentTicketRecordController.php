@@ -185,7 +185,8 @@ class AgentTicketRecordController
                     $expireHours = $data['ticket_type'] == TicketRecord::TYPE_EXPERIENCE
                         ? ($voucherConfig['experience']['expire_hours'] ?? 24)
                         : ($voucherConfig['welfare']['expire_hours'] ?? 24);
-                    $expireTime = strtotime($data['created_at']) + ($expireHours * 3600);
+                    $createdAt = $data['created_at'] instanceof \DateTimeInterface ? $data['created_at']->getTimestamp() : strtotime($data['created_at']);
+                    $expireTime = $createdAt + ($expireHours * 3600);
                     if (time() > $expireTime) {
                         return Tag::create(admin_trans('ticket_machine.record.status_expired'))->color('default');
                     }
