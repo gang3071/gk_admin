@@ -4150,14 +4150,19 @@ class ChannelIndexController
                 }
 
                 // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
-                $extraDataKey = json_encode(['rule_type' => $ruleType, 'score' => $actualScore]);
+                // 使用 JSON_CONTAINS 或遍历查询，避免 JSON 键顺序问题
                 $todayCount = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
                     ->where('score', $actualScore)
-                    ->where('extra_data', $extraDataKey)
                     ->whereDate('created_at', $today)
                     ->whereNull('deleted_at')
+                    ->get()
+                    ->filter(function ($record) use ($ruleType) {
+                        if (empty($record->extra_data)) return false;
+                        $extraData = json_decode($record->extra_data, true);
+                        return isset($extraData['rule_type']) && $extraData['rule_type'] === $ruleType;
+                    })
                     ->count();
                 if ($todayCount > 0) {
                     $ruleName = $ruleType === 'today' ? '今日' : '昨日';
