@@ -285,6 +285,15 @@ export default {
       const config = this.voucher_config;
       const options = [];
 
+      // 从 labels 获取翻译，如果不存在则使用默认值
+      const welfareLabel = this.labels.type_welfare || '福利券';
+      const experienceLabel = this.labels.type_experience || '体验券';
+      const scoreUnit = this.labels.score_unit || '分';
+      const todayPrefix = this.labels.today_bet_prefix || '今日打分';
+      const yesterdayPrefix = this.labels.yesterday_bet_prefix || '昨日打分';
+      const claimedToday = this.labels.claimed_today || '今日已领取';
+      const newMemberClaim = this.labels.new_member_claim || '新会员可领取';
+
       if (this.ticketType === 4 && config.welfare) {
         // 福利券规则（从配置读取）- 显示所有档位
 
@@ -293,9 +302,9 @@ export default {
           config.today_welfare.rules.forEach(rule => {
             options.push({
               value: rule.score,
-              label: `${this.t('type_welfare') || '福利券'} ${rule.score} ${this.t('score_unit') || '分'}`,
+              label: `${welfareLabel} ${rule.score} ${scoreUnit}`,
               disabled: todayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
-              condition: `${this.t('today_bet_prefix') || '今日打分'}≥${this.formatBetAmount(rule.bet_amount)}`,
+              condition: `${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
         }
@@ -305,9 +314,9 @@ export default {
           config.welfare.rules.forEach(rule => {
             options.push({
               value: rule.score,
-              label: `${this.t('type_welfare') || '福利券'} ${rule.score} ${this.t('score_unit') || '分'}`,
+              label: `${welfareLabel} ${rule.score} ${scoreUnit}`,
               disabled: yesterdayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
-              condition: `${this.t('yesterday_bet_prefix') || '昨日打分'}≥${this.formatBetAmount(rule.bet_amount)}`,
+              condition: `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
         }
@@ -318,9 +327,9 @@ export default {
         const dailyLimit = config.experience.daily_limit || 1;
         options.push({
           value: score,
-          label: `${this.t('type_experience') || '体验券'} ${score} ${this.t('score_unit') || '分'}`,
+          label: `${experienceLabel} ${score} ${scoreUnit}`,
           disabled: claimedCount >= dailyLimit,
-          condition: claimedCount >= dailyLimit ? (this.t('claimed_today') || '今日已领取') : (this.t('new_member_claim') || '新会员可领取'),
+          condition: claimedCount >= dailyLimit ? claimedToday : newMemberClaim,
         });
       }
 
