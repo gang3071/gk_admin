@@ -305,7 +305,7 @@ export default {
               score: rule.score,   // 实际分数
               ruleType: 'today',   // 规则类型
               label: `${welfareLabel} ${rule.score} ${scoreUnit} (${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
-              disabled: todayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
+              disabled: todayBet < rule.bet_amount || this.isWelfareClaimed(rule.score, 'today'),
               condition: `${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
@@ -319,7 +319,7 @@ export default {
               score: rule.score,   // 实际分数
               ruleType: 'yesterday', // 规则类型
               label: `${welfareLabel} ${rule.score} ${scoreUnit} (${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
-              disabled: yesterdayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
+              disabled: yesterdayBet < rule.bet_amount || this.isWelfareClaimed(rule.score, 'yesterday'),
               condition: `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
@@ -1049,16 +1049,15 @@ export default {
       try {
         this.addLog('info', this.t('saving_data', {id: this.selectedPlayerId}));
 
-        // 处理分数：如果是负数（今日规则），取绝对值作为实际分数
-        const actualScore = this.ticketType === 4 ? Math.abs(this.ticketScore) : this.ticketScore;
-
+        // 福利券传递原始score（负数表示今日规则，正数表示昨日规则）
+        // 后端会自动转换为绝对值并记录规则类型
         const saveRes = await this.$request({
           url: this.save_ticket_url,
           method: 'post',
           data: {
             store_name: this.config.storeName,
             machine_no: this.config.machineNo,
-            score: actualScore,
+            score: this.ticketScore,
             qr_code: 'auto_generated',
             ticket_type: this.ticketType,
             player_id: this.selectedPlayerId || 0,
@@ -1240,12 +1239,27 @@ export default {
       return amount.toLocaleString();
     },
 
-    // 检查福利卷档位是否已领取
-    isWelfareClaimed(score) {
-      if (!this.playerBetInfo || !this.playerBetInfo.claimed_welfare_scores) {
+    // 检查福利券档位是否已领取（按规则类型区分）
+    isWelfareClaimed(score, ruleType = null) {
+      if (!this.playerBetInfo || !this.playerBetInfo.claimed_welfare_records) {
         return false;
       }
-      return this.playerBetInfo.claimed_welfare_scores.includes(score);
+
+      // 如果指定了规则类型，检查具体的规则
+      if (ruleType) {
+        return this.playerBetInfo.claimed_welfare_records.some(r => {
+          if (r.score !== score || !r.extra_data) return false;
+          try {
+            const extraData = JSON.parse(r.extra_data);
+            return extraData.rule_type === ruleType;
+          } catch {
+            return false;
+          }
+        });
+      }
+
+      // 否则检查所有规则
+      return this.playerBetInfo.claimed_welfare_records.some(r => r.score === score);
     },
 
     // 搜索玩家
