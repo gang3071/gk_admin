@@ -322,7 +322,7 @@ export default {
           });
         }
 
-        // 只显示最高档位，或者显示所有但禁用非最高档位
+        // 显示所有档位，但禁用非最高档位
         if (config.welfare.rules) {
           config.welfare.rules.forEach(rule => {
             const isQualified = yesterdayBet >= rule.bet_amount;
@@ -336,9 +336,7 @@ export default {
               label: `${welfareLabel} ${rule.score} ${scoreUnit} (${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
               // 禁用条件：不满足打码量 或 不是最高档位 或 已领取
               disabled: !isQualified || !isMaxTier || isClaimed,
-              condition: !isQualified ? `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}` :
-                        !isMaxTier ? `只能领取${maxQualifiedScore}分` :
-                        isClaimed ? claimedToday : `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
+              condition: `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
         }
