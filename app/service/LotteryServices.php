@@ -365,6 +365,7 @@ class LotteryServices
             }
 
             // 累加前检查保底金额：如果启用了保底金额且当前彩池低于保底金额，先补充到保底金额
+            $refillAmount = 0;
             if ($lottery->auto_refill_status == 1 && $lottery->auto_refill_amount > 0) {
                 if ($lottery->amount < $lottery->auto_refill_amount) {
                     $refillAmount = bcsub($lottery->auto_refill_amount, $lottery->amount, 4);
@@ -416,8 +417,9 @@ class LotteryServices
                 $redisKey = self::REDIS_KEY_LOTTERY_AMOUNT . $lottery->id;
                 $redis = \support\Redis::connection()->client();
 
-                // 使用 Redis 的 INCRBYFLOAT 原子操作累积
-                $currentRedisAmount = $redis->incrByFloat($redisKey, (float)$addAmount);
+                // 使用 Redis 的 INCRBYFLOAT 原子操作累积（包含保底补充差额）
+                $totalAddAmount = bcadd($addAmount, $refillAmount, 4);
+                $currentRedisAmount = $redis->incrByFloat($redisKey, (float)$totalAddAmount);
 
                 // 更新内存中的金额（用于后续逻辑）
                 $lottery->amount = $newAmount;
