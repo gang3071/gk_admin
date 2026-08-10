@@ -1770,10 +1770,10 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
                     case PlayerDeliveryRecord::TYPE_SPECIAL:
                     case PlayerDeliveryRecord::TYPE_MACHINE:
-                        return Tag::create(admin_trans('message.source.' . $val))->color('red');
+                        return Tag::create($translatedText)->color('red');
                     case PlayerDeliveryRecord::TYPE_PRESENT_IN:
                     case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
-                        return Tag::create($val)->color('green');
+                        return Tag::create($translatedText)->color('green');
                     case PlayerDeliveryRecord::TYPE_BET:
                     case PlayerDeliveryRecord::TYPE_CANCEL_BET:
                     case PlayerDeliveryRecord::TYPE_SETTLEMENT:
@@ -1783,7 +1783,7 @@ class ChannelAgentController
                         return Tag::create($translatedText)->color('pink');
                     case PlayerDeliveryRecord::TYPE_PREPAY:
                     case PlayerDeliveryRecord::TYPE_REFUND:
-                        return Tag::create($val)->color('cyan');
+                        return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_MACHINE_UP:
                     case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
                         if ($data->machine) {
@@ -1798,14 +1798,14 @@ class ChannelAgentController
                         break;
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                     case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
-                        return Tag::create(admin_trans('message.source.' . $val))->color('blue');
+                        return Tag::create($translatedText)->color('blue');
                     case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
                     case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
                         return Tag::create($translatedText)->color('#eb2f96');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL:
-                        return Tag::create(admin_trans('message.source.' . $val))->color('purple');
+                        return Tag::create($translatedText)->color('purple');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
