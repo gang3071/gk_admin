@@ -297,24 +297,28 @@ export default {
       if (this.ticketType === 4 && config.welfare) {
         // 福利券规则（从配置读取）- 显示所有档位
 
-        // 今日打码量福利券规则
+        // 今日打码量福利券规则（value使用负数区分）
         if (config.today_welfare && config.today_welfare.enabled) {
           config.today_welfare.rules.forEach(rule => {
             options.push({
-              value: rule.score,
-              label: `${welfareLabel} ${rule.score} ${scoreUnit}`,
+              value: -rule.score,  // 负数表示今日规则
+              score: rule.score,   // 实际分数
+              ruleType: 'today',   // 规则类型
+              label: `${welfareLabel} ${rule.score} ${scoreUnit} (${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
               disabled: todayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
               condition: `${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
           });
         }
 
-        // 昨日打码量福利券规则
+        // 昨日打码量福利券规则（value使用正数）
         if (config.welfare.rules) {
           config.welfare.rules.forEach(rule => {
             options.push({
-              value: rule.score,
-              label: `${welfareLabel} ${rule.score} ${scoreUnit}`,
+              value: rule.score,   // 正数表示昨日规则
+              score: rule.score,   // 实际分数
+              ruleType: 'yesterday', // 规则类型
+              label: `${welfareLabel} ${rule.score} ${scoreUnit} (${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
               disabled: yesterdayBet < rule.bet_amount || this.isWelfareClaimed(rule.score),
               condition: `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
             });
@@ -963,10 +967,19 @@ export default {
         return;
       }
 
-      if (!this.ticketScore || this.ticketScore <= 0) {
-        this.addLog('error', this.t('valid_score_required'));
-        this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
-        return;
+      // 验证分数：福利券允许负数（今日规则），其他类型必须大于0
+      if (this.ticketType === 4) {
+        if (!this.ticketScore) {
+          this.addLog('error', this.t('valid_score_required'));
+          this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
+          return;
+        }
+      } else {
+        if (!this.ticketScore || this.ticketScore <= 0) {
+          this.addLog('error', this.t('valid_score_required'));
+          this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
+          return;
+        }
       }
 
       // 福利卷和体验卷必须选择关联用户
@@ -1036,13 +1049,16 @@ export default {
       try {
         this.addLog('info', this.t('saving_data', {id: this.selectedPlayerId}));
 
+        // 处理分数：如果是负数（今日规则），取绝对值作为实际分数
+        const actualScore = this.ticketType === 4 ? Math.abs(this.ticketScore) : this.ticketScore;
+
         const saveRes = await this.$request({
           url: this.save_ticket_url,
           method: 'post',
           data: {
             store_name: this.config.storeName,
             machine_no: this.config.machineNo,
-            score: this.ticketScore,
+            score: actualScore,
             qr_code: 'auto_generated',
             ticket_type: this.ticketType,
             player_id: this.selectedPlayerId || 0,
@@ -1094,7 +1110,9 @@ export default {
       await new Promise(r => setTimeout(r, 100));
 
       // 先发送彩票数据（票数3字节 + 赠送1字节 + 码表数4字节 = 8字节）
-      const score = Math.floor(this.ticketScore);
+      // 处理分数：如果是负数（今日规则），取绝对值作为实际分数
+      const printScore = this.ticketType === 4 ? Math.abs(this.ticketScore) : this.ticketScore;
+      const score = Math.floor(printScore);
       const lotteryData = [
         (score >> 16) & 0xFF,  // 票数-高字节
         (score >> 8) & 0xFF,   // 票数-中字节
