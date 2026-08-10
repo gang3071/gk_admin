@@ -433,7 +433,7 @@ class OnlinePlayerLotteryController
         foreach ($lotteries as $lottery) {
             $options[] = [
                 'value' => $lottery->id,
-                'label' => $lottery->name . ' (彩池: ' . number_format($lottery->amount, 2) . ')',
+                'label' => $lottery->name . ' (' . admin_trans('online_player_lottery.lottery_pool') . ': ' . number_format($lottery->amount, 2) . ')',
                 'amount' => $lottery->amount,
             ];
         }
