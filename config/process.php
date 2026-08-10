@@ -70,9 +70,18 @@ return [
         'constructor' => []
     ],
 
-    // 游戏记录归档任务（每天凌晨3:00将45天前的数据迁移到历史表）
-    'play_game_record_archive' => [
-        'handler' => process\PlayGameRecordArchiveTask::class,
+    // ⚠️ 游戏记录归档任务已废弃，改用分区表方案（PartitionMaintenanceTask）
+    // 旧方案：每天DELETE归档（42-83分钟）
+    // 新方案：每月DROP PARTITION（0.1秒）
+    // 'play_game_record_archive' => [
+    //     'handler' => process\PlayGameRecordArchiveTask::class,
+    //     'reloadable' => true,
+    //     'constructor' => []
+    // ],
+
+    // 游戏记录分区维护任务（每月1日自动归档+删除旧分区）
+    'play_game_record_partition_maintenance' => [
+        'handler' => process\PartitionMaintenanceTask::class,
         'reloadable' => true,
         'constructor' => []
     ],
