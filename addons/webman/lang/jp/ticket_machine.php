@@ -125,6 +125,8 @@ return [
         'print_failed_marking' => '印刷失敗、レコードステータスを更新しました',
         'reconnecting_printer' => 'プリンターに再接続中...',
         'printer_not_connected' => 'プリンター未接続です。先に接続してください',
+        'printer_connection_lost' => 'プリンター接続が切れました。再接続してください',
+        'printer_connected' => 'プリンター接続正常',
     ],
 
     // ログ

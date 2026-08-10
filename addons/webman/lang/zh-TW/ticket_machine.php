@@ -125,6 +125,8 @@ return [
         'print_failed_marking' => '打印失敗，已標記記錄狀態',
         'reconnecting_printer' => '正在重新連接出票機...',
         'printer_not_connected' => '出票機未連接，請先連接出票機',
+        'printer_connection_lost' => '出票機連接已斷開，請重新連接',
+        'printer_connected' => '出票機連接正常',
     ],
 
     // 日誌

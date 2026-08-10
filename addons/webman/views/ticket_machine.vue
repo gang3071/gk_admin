@@ -737,10 +737,15 @@ export default {
 
           this.addLog('success', this.t('init_complete'));
         } else {
-          this.addLog('warn', this.t('device_no_response'));
+          // 心跳测试失败，断开连接
+          this.addLog('error', this.t('device_no_response'));
           this.addLog('warn', this.t('device_check_1'));
           this.addLog('warn', this.t('device_check_2'));
           this.addLog('warn', this.t('device_check_3'));
+
+          // 断开连接，防止后续操作
+          await this.disconnect();
+          return;
         }
 
         // 启动心跳
@@ -978,8 +983,24 @@ export default {
         this.addLog('info', this.t('heartbeat_paused'));
       }
 
-      // 先检测纸张状态（在入库之前）
+      // 先发送心跳测试连接状态（在入库之前）
       this.addLog('info', this.t('checking_paper'));
+      const heartbeatTest = await this.sendCommand(0x01, 0x01);
+      if (!heartbeatTest) {
+        // 出票机无响应，连接已断开
+        this.addLog('error', this.t('printer_connection_lost'));
+        this.$message.error({ content: this.t('printer_connection_lost'), duration: 3 });
+        // 标记为未连接
+        this.isConnected = false;
+        // 重启心跳
+        this.heartbeatTimer = setInterval(async () => {
+          await this.sendCommand(0x01, 0x01, [], true, true);
+        }, 10000);
+        return;
+      }
+      this.addLog('success', this.t('printer_connected'));
+
+      // 检测纸张状态
       const paperStatus = await this.sendCommand(0x01, 0x09, [0x00]);
       if (paperStatus && paperStatus.data && paperStatus.data.length > 0) {
         const paperCode = paperStatus.data[0];

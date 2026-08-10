@@ -125,6 +125,8 @@ return [
         'print_failed_marking' => 'Print failed, record status marked',
         'reconnecting_printer' => 'Reconnecting to printer...',
         'printer_not_connected' => 'Printer not connected, please connect first',
+        'printer_connection_lost' => 'Printer connection lost, please reconnect',
+        'printer_connected' => 'Printer connected',
     ],
 
     // Log
