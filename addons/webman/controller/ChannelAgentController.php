@@ -1823,7 +1823,7 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_AGENT_IN:
                         return Tag::create($data->player->channel->name)->color('orange');
                     default:
-                        return '';
+                        return $translatedText ? Tag::create($translatedText)->color('default') : '';
                 }
             })->align('center');
             $grid->column('type', admin_trans('player_delivery_record.fields.type'))
