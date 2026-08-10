@@ -122,6 +122,9 @@ return [
         'select_score' => 'Please select score',
         'today_bet_reached' => 'Today bet ≥{amount}0K',
         'yesterday_bet_reached' => 'Yesterday bet ≥{amount}0K',
+        'print_failed_marking' => 'Print failed, record status marked',
+        'reconnecting_printer' => 'Reconnecting to printer...',
+        'printer_not_connected' => 'Printer not connected, please connect first',
     ],
 
     // Log
@@ -276,6 +279,11 @@ return [
         'yesterday_bet_amount' => 'Yesterday Electronic Bet',
         'player_bet_info' => 'Player Bet Info',
         'refresh' => 'Refresh',
+        'score_unit' => 'pts',
+        'today_bet_prefix' => 'Today bet',
+        'yesterday_bet_prefix' => 'Yesterday bet',
+        'claimed_today' => 'Claimed today',
+        'new_member_claim' => 'New member',
     ],
 
     // Redeem Records

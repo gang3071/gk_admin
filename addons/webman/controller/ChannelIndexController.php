@@ -3780,7 +3780,16 @@ class ChannelIndexController
         $logLabels['yesterday_bet_amount'] = admin_trans('ticket_machine.record.yesterday_bet_amount');
         $logLabels['refresh'] = admin_trans('ticket_machine.record.refresh');
 
-        // 获取福利卷和体验卷配置
+        // 补充下拉选项标签
+        $logLabels['type_welfare'] = admin_trans('ticket_machine.record.type_welfare');
+        $logLabels['type_experience'] = admin_trans('ticket_machine.record.type_experience');
+        $logLabels['score_unit'] = admin_trans('ticket_machine.record.score_unit');
+        $logLabels['today_bet_prefix'] = admin_trans('ticket_machine.record.today_bet_prefix');
+        $logLabels['yesterday_bet_prefix'] = admin_trans('ticket_machine.record.yesterday_bet_prefix');
+        $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
+        $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
+
+        // 获取福利券和体验券配置
         $voucherConfig = config('voucher');
 
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
@@ -3930,6 +3939,23 @@ class ChannelIndexController
                     ->sum('bet');
             }
 
+            // 查询今日已领取的福利券档位
+            $claimedWelfareScores = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                ->whereDate('created_at', $today)
+                ->whereNull('deleted_at')
+                ->pluck('score')
+                ->toArray();
+
+            // 查询今日已领取的体验券次数
+            $claimedExperienceCount = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->whereDate('created_at', $today)
+                ->whereNull('deleted_at')
+                ->count();
+
             return json([
                 'code' => 200,
                 'data' => [
@@ -3938,6 +3964,8 @@ class ChannelIndexController
                     'player_uuid' => $player->uuid ?? '',
                     'today_bet_amount' => $todayBetAmount,
                     'yesterday_bet_amount' => $yesterdayBetAmount,
+                    'claimed_welfare_scores' => $claimedWelfareScores,  // 今日已领取的福利券档位
+                    'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
                 ]
             ]);
         } catch (\Exception $e) {
@@ -3978,11 +4006,140 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => '部门ID不能为空']);
             }
 
-            // 福利卷和体验卷必须选择关联用户
+            // 福利券和体验券必须选择关联用户
             if (($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE
                 || $ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
                 && $playerId <= 0) {
-                return json(['code' => 400, 'message' => '福利卷和体验卷必须选择关联玩家才能出票']);
+                return json(['code' => 400, 'message' => '福利券和体验券必须选择关联玩家才能出票']);
+            }
+
+            // 获取配置
+            $voucherConfig = config('voucher');
+
+            // 验证活动是否在有效期内
+            if (isset($voucherConfig['activity']['end_time'])) {
+                $endTime = $voucherConfig['activity']['end_time'];
+                $forceEnable = $voucherConfig['activity']['force_enable'] ?? false;
+                if (!$forceEnable && $endTime && date('Y-m-d H:i:s') > $endTime) {
+                    return json(['code' => 400, 'message' => '活动已结束，暂不发放福利券和体验券']);
+                }
+            }
+
+            // 体验券验证
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE && $playerId > 0) {
+                $expConfig = $voucherConfig['experience'] ?? [];
+                if (empty($expConfig['enabled'])) {
+                    return json(['code' => 400, 'message' => '体验券功能未启用']);
+                }
+
+                // 检查是否是新用户（注册时间在配置时间之后）
+                $player = \addons\webman\model\Player::query()->where('id', $playerId)->first();
+                $registerAfter = $expConfig['register_after'] ?? '2026-07-01 00:00:00';
+                if (!$player || $player->created_at < $registerAfter) {
+                    return json(['code' => 400, 'message' => '只有新会员才能领取体验券']);
+                }
+
+                // 检查每日领取次数（排除已删除的记录）
+                $dailyLimit = $expConfig['daily_limit'] ?? 1;
+                $todayQuery = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                    ->whereDate('created_at', date('Y-m-d'));
+                $todayCount = $todayQuery->count();
+
+                // 调试日志
+                \support\Log::info('体验券每日领取检查', [
+                    'player_id' => $playerId,
+                    'ticket_type' => \addons\webman\model\TicketRecord::TYPE_EXPERIENCE,
+                    'today' => date('Y-m-d'),
+                    'daily_limit' => $dailyLimit,
+                    'today_count' => $todayCount,
+                    'sql' => $todayQuery->toSql(),
+                    'bindings' => $todayQuery->getBindings(),
+                ]);
+
+                if ($todayCount >= $dailyLimit) {
+                    return json([
+                        'code' => 400,
+                        'message' => '今日体验券领取次数已用完',
+                        'debug' => [
+                            'player_id' => $playerId,
+                            'today_count' => $todayCount,
+                            'daily_limit' => $dailyLimit,
+                        ]
+                    ]);
+                }
+
+                // 检查总领取次数（排除已删除的记录）
+                $totalLimit = $expConfig['total_limit'] ?? 6;
+                $totalCount = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                    ->count();
+                if ($totalCount >= $totalLimit) {
+                    return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
+                }
+            }
+
+            // 福利券验证（按档位分别限制）
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && $playerId > 0) {
+                $welfareConfig = $voucherConfig['welfare'] ?? [];
+                if (empty($welfareConfig['enabled'])) {
+                    return json(['code' => 400, 'message' => '福利券功能未启用']);
+                }
+
+                // 检查该档位今日是否已领取（每个档位每天只能领取1次）
+                $todayCount = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                    ->where('score', $score)  // 按分数档位过滤
+                    ->whereDate('created_at', date('Y-m-d'))
+                    ->whereNull('deleted_at')
+                    ->count();
+                if ($todayCount > 0) {
+                    return json(['code' => 400, 'message' => '该档位福利券今日已领取过']);
+                }
+
+                // 检查打码量是否满足该档位要求
+                $today = date('Y-m-d');
+                $yesterday = date('Y-m-d', strtotime('-1 day'));
+
+                // 获取今日和昨日打码量
+                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $today . ' 00:00:00')
+                    ->where('created_at', '<', date('Y-m-d', strtotime('+1 day')) . ' 00:00:00')
+                    ->sum('bet');
+                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $yesterday . ' 00:00:00')
+                    ->where('created_at', '<', $today . ' 00:00:00')
+                    ->sum('bet');
+
+                // 检查今日打码量规则
+                $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
+                $todayValid = false;
+                foreach ($todayWelfareRules as $rule) {
+                    if ($rule['score'] == $score && $todayBetAmount >= $rule['bet_amount']) {
+                        $todayValid = true;
+                        break;
+                    }
+                }
+
+                // 检查昨日打码量规则
+                $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
+                $yesterdayValid = false;
+                foreach ($yesterdayWelfareRules as $rule) {
+                    if ($rule['score'] == $score && $yesterdayBetAmount >= $rule['bet_amount']) {
+                        $yesterdayValid = true;
+                        break;
+                    }
+                }
+
+                // 今日或昨日打码量满足任一规则即可
+                if (!$todayValid && !$yesterdayValid) {
+                    return json(['code' => 400, 'message' => '打码量不满足该档位福利券领取条件']);
+                }
             }
 
             $orderId = \addons\webman\model\TicketRecord::generateOrderId($ticketType);
@@ -4027,6 +4184,41 @@ class ChannelIndexController
             ]);
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 更新票据状态（用于标记打印失败等）
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function updateTicketStatus(): Response
+    {
+        try {
+            $orderId = request()->input('order_id', '');
+            $status = (int) request()->input('status', 0);
+
+            if (empty($orderId)) {
+                return json(['code' => 400, 'message' => '订单号不能为空']);
+            }
+
+            $admin = Admin::user();
+            $record = \addons\webman\model\TicketRecord::query()
+                ->where('order_id', $orderId)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+
+            if (!$record) {
+                return json(['code' => 404, 'message' => '记录不存在']);
+            }
+
+            $record->status = $status;
+            $record->save();
+
+            return json(['code' => 200, 'message' => '状态更新成功']);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '更新失败: ' . $e->getMessage()]);
         }
     }
 

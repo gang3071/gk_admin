@@ -122,6 +122,9 @@ return [
         'select_score' => 'スコアを選択してください',
         'today_bet_reached' => '本日のベット≥{amount}万',
         'yesterday_bet_reached' => '昨日のベット≥{amount}万',
+        'print_failed_marking' => '印刷失敗、レコードステータスを更新しました',
+        'reconnecting_printer' => 'プリンターに再接続中...',
+        'printer_not_connected' => 'プリンター未接続です。先に接続してください',
     ],
 
     // ログ
@@ -276,6 +279,11 @@ return [
         'yesterday_bet_amount' => '昨日の電子ベット額',
         'player_bet_info' => 'プレイヤーベット情報',
         'refresh' => '更新',
+        'score_unit' => '点',
+        'today_bet_prefix' => '本日のベット',
+        'yesterday_bet_prefix' => '昨日のベット',
+        'claimed_today' => '本日受取済み',
+        'new_member_claim' => '新規会員',
     ],
 
     // チケット記録
