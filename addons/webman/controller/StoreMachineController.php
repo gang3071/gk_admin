@@ -612,25 +612,25 @@ class StoreMachineController
             // 5. 创建默认开分配置
             $openScoreSetting = new \addons\webman\model\OpenScoreSetting();
             $openScoreSetting->admin_user_id = $adminUser->id;
-            $openScoreSetting->score_1 = 100;
-            $openScoreSetting->score_2 = 500;
-            $openScoreSetting->score_3 = 1000;
+            $openScoreSetting->score_1 = 500;
+            $openScoreSetting->score_2 = 1000;
+            $openScoreSetting->score_3 = 3000;
             $openScoreSetting->score_4 = 5000;
             $openScoreSetting->score_5 = 10000;
             $openScoreSetting->score_6 = 20000;
-            $openScoreSetting->default_scores = 100;
+            $openScoreSetting->default_scores = 500;
             $openScoreSetting->save();
 
             // 6. 创建默认洗分配置
             $washPointSetting = new \addons\webman\model\WashPointSetting();
             $washPointSetting->admin_user_id = $adminUser->id;
-            $washPointSetting->wash_1 = 100;
-            $washPointSetting->wash_2 = 500;
-            $washPointSetting->wash_3 = 700;
-            $washPointSetting->wash_4 = 1000;
-            $washPointSetting->wash_5 = 5000;
-            $washPointSetting->wash_6 = 10000;
-            $washPointSetting->default_wash_point = 100;
+            $washPointSetting->wash_1 = 1000;
+            $washPointSetting->wash_2 = 3000;
+            $washPointSetting->wash_3 = 5000;
+            $washPointSetting->wash_4 = 10000;
+            $washPointSetting->wash_5 = 30000;
+            $washPointSetting->wash_6 = 50000;
+            $washPointSetting->default_wash_point = 1000;
             $washPointSetting->save();
 
             DB::commit();
@@ -1529,7 +1529,7 @@ class StoreMachineController
      */
     private function getDefaultScore(int $index): int
     {
-        $defaults = [100, 500, 1000, 5000, 10000, 20000];
+        $defaults = [500, 1000, 3000, 5000, 10000, 20000];
         return $defaults[$index - 1] ?? 0;
     }
 
@@ -1690,7 +1690,7 @@ class StoreMachineController
      */
     private function getDefaultWashPoint(int $index): float
     {
-        $defaults = [100, 500, 700, 1000, 5000, 10000];
+        $defaults = [1000, 3000, 5000, 10000, 30000, 50000];
         return $defaults[$index - 1] ?? 0;
     }
 }
