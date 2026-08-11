@@ -31,6 +31,7 @@ return [
         'jackpot_screen_domain' => 'ジャックポット画面ドメイン',
         'turn_relay_ip' => 'TURNリレーIP',
         'high_score_broadcast_threshold' => 'ハイスコア放送しきい値',
+        'steel_ball_broadcast_threshold' => '鋼玉数放送しきい値',
         'device_collect' => '店舗クロスストアログイン',
         'electronic_game_rebate' => '電子ゲームリベート',
         'machine_rebate' => '物理マシンリベート',
@@ -57,6 +58,7 @@ return [
     'time_range' => '日付範囲',
     'master' => '全体構成',
     'points' => 'ポイント',
+    'balls' => '玉',
     'disabled' => '無効',
     // リベート設定
     'rebate' => [
