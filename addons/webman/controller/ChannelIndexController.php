@@ -3967,6 +3967,7 @@ class ChannelIndexController
                     'player_id' => $player->id,
                     'player_name' => $player->name ?? '',
                     'player_uuid' => $player->uuid ?? '',
+                    'player_phone' => $player->phone ?? '',
                     'today_bet_amount' => $todayBetAmount,
                     'yesterday_bet_amount' => $yesterdayBetAmount,
                     'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
@@ -4316,7 +4317,7 @@ class ChannelIndexController
             ->orderBy('id', 'desc')
             ->skip(($page - 1) * $pageSize)
             ->take($pageSize)
-            ->get(['id', 'name', 'uuid']);
+            ->get(['id', 'name', 'uuid', 'phone']);
 
         return json(['code' => 200, 'data' => $players]);
     }

@@ -120,7 +120,7 @@
               <a-descriptions :column="1" size="small">
                 <a-descriptions-item :label="labels.player_name || '玩家名稱'">
                   <a-tag color="blue">
-                    <user-outlined /> {{ playerBetInfo.player_name }} ({{ playerBetInfo.player_uuid }})
+                    <user-outlined /> {{ playerBetInfo.player_name }} ({{ playerBetInfo.player_phone || playerBetInfo.player_uuid }})
                   </a-tag>
                 </a-descriptions-item>
                 <a-descriptions-item :label="labels.today_bet_amount || '今日電子總打碼量'">
@@ -1306,7 +1306,7 @@ export default {
         if (res.code === 200 && res.data) {
           const newOptions = res.data.map(p => ({
             value: p.id,
-            label: p.name + (p.uuid ? ' (' + p.uuid + ')' : ''),
+            label: p.name + (p.phone ? ' (' + p.phone + ')' : ''),
           }));
 
           if (this.playerPage === 1) {
