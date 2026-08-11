@@ -31,6 +31,7 @@ return [
         'jackpot_screen_domain' => '大屏彩金Domain',
         'turn_relay_ip' => 'TURN中继IP',
         'high_score_broadcast_threshold' => '高分广播阈值',
+        'steel_ball_broadcast_threshold' => '钢珠下珠数报喜阈值',
         'device_collect' => '店机跨店登录',
         'electronic_game_rebate' => '电子游戏反水',
         'machine_rebate' => '实体机台反水',
@@ -57,6 +58,7 @@ return [
     'time_range' => '日期范围',
     'master' => '总配置',
     'points' => '分',
+    'balls' => '珠',
     'disabled' => '已禁用',
     // 反水配置
     'rebate' => [

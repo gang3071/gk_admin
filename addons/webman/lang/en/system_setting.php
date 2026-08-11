@@ -31,6 +31,7 @@ return [
         'jackpot_screen_domain' => 'Jackpot Screen Domain',
         'turn_relay_ip' => 'TURN Relay IP',
         'high_score_broadcast_threshold' => 'High Score Broadcast Threshold',
+        'steel_ball_broadcast_threshold' => 'Steel Ball Broadcast Threshold',
         'device_collect' => 'Store Cross-Store Login',
         'electronic_game_rebate' => 'Electronic Game Rebate',
         'machine_rebate' => 'Physical Machine Rebate',
@@ -57,6 +58,7 @@ return [
     'time_range' => 'Date range',
     'master' => 'Total configuration',
     'points' => 'points',
+    'balls' => 'balls',
     'disabled' => 'Disabled',
     // Rebate Configuration
     'rebate' => [

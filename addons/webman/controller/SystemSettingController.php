@@ -293,6 +293,30 @@ class SystemSettingController
                             'fontWeight' => 'bold',
                             'fontSize' => '14px'
                         ]);
+                })->width('20%')->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'steel_ball_broadcast_threshold';
+                })->editable(
+                    (new Editable)->text('num')
+                        ->rule([
+                            'numeric' => admin_trans('validator.numeric'),
+                            'max:99999' => admin_trans('validator.max', null, ['{max}' => 99999]),
+                            'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                        ])->addonAfter(admin_trans('system_setting.balls'))
+                )->display(function ($val, SystemSetting $data) {
+                    if (empty($data->num) || $data->num <= 0) {
+                        return Html::create('0 (' . admin_trans('system_setting.disabled') . ')')
+                            ->style([
+                                'color' => '#999',
+                                'fontSize' => '13px'
+                            ]);
+                    }
+                    return Html::create(number_format($data->num, 0) . ' ' . admin_trans('system_setting.balls'))
+                        ->style([
+                            'color' => '#ff4d4f',
+                            'fontWeight' => 'bold',
+                            'fontSize' => '14px'
+                        ]);
                 })->width('20%')->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');
