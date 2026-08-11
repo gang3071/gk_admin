@@ -143,27 +143,24 @@ class LotteryController
                 return '-';
             })->align('center');
 
-            // 保底金额（仅随机彩金显示）
+            // 保底金额（固定和随机彩金都显示）
             $grid->column('auto_refill_amount', admin_trans('lottery.fields.auto_refill_amount'))->display(function ($val, Lottery $data) {
-                if ($data->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
-                    if ($data->auto_refill_status == 1 && $val > 0) {
-                        return Html::create()->content([
-                            Html::div()
-                                ->content(number_format($val, 2))
-                                ->style(['color' => '#1890ff', 'font-weight' => 'bold']),
-                            Html::div()
-                                ->content(admin_trans('lottery.status_enabled_parenthesis'))
-                                ->style(['color' => '#52c41a', 'font-size' => '12px'])
-                        ]);
-                    } else {
-                        return Html::create()->content([
-                            Html::div()
-                                ->content(admin_trans('lottery.status_disabled'))
-                                ->style(['color' => '#999', 'font-size' => '12px'])
-                        ]);
-                    }
+                if ($data->auto_refill_status == 1 && $val > 0) {
+                    return Html::create()->content([
+                        Html::div()
+                            ->content(number_format($val, 2))
+                            ->style(['color' => '#1890ff', 'font-weight' => 'bold']),
+                        Html::div()
+                            ->content(admin_trans('lottery.status_enabled_parenthesis'))
+                            ->style(['color' => '#52c41a', 'font-size' => '12px'])
+                    ]);
+                } else {
+                    return Html::create()->content([
+                        Html::div()
+                            ->content(admin_trans('lottery.status_disabled'))
+                            ->style(['color' => '#999', 'font-size' => '12px'])
+                    ]);
                 }
-                return '-';
             })->align('center');
 
             // 新增：爆彩状态（仅随机彩金显示）
@@ -476,6 +473,30 @@ class LotteryController
                                 ->help(admin_trans('lottery.machine_lottery.slot_condition_help'))
                                 ->placeholder(admin_trans('lottery.machine_lottery.slot_condition_placeholder'))
                                 ->required();
+
+                            // ===== 保底金额配置 =====
+                            $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
+                            $form->html('<div style="padding: 10px; margin-bottom: 15px; background: #f0f5ff; border-left: 4px solid #597ef7;">
+                                <p style="margin: 0; font-size: 13px; color: #333; line-height: 1.6;">
+                                    <strong>说明：</strong>保底金额是彩池的最低维持金额，确保彩池始终有足够的资金进行派彩。<br>
+                                    <strong>工作原理：</strong><br>
+                                    • 派彩前：如果彩池不足派彩金额，自动补充到保底金额<br>
+                                    • 派彩后：如果彩池低于保底金额，自动补充到保底金额<br>
+                                    <strong>建议：</strong>保底金额应设置为最大派彩金额的1-2倍，确保随时有足够资金派彩
+                                </p>
+                            </div>');
+                            $form->row(function (Form $form) {
+                                $form->switch('auto_refill_status', admin_trans('lottery.auto_refill.status_label'))
+                                    ->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.status_help'))
+                                    ->span(12);
+                                $form->number('auto_refill_amount', admin_trans('lottery.auto_refill.amount_label'))
+                                    ->style(['width' => '100%'])
+                                    ->min(0)->max(10000000000)->precision(2)->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.amount_help'))
+                                    ->placeholder(admin_trans('lottery.auto_refill.amount_placeholder'))
+                                    ->span(12);
+                            });
                         })->when(GameType::TYPE_STEEL_BALL, function (Form $form) use ($gameType) {
                             // 派彩比例配置
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
@@ -501,6 +522,30 @@ class LotteryController
                                 ->help(admin_trans('lottery.machine_lottery.steel_ball_condition_help'))
                                 ->placeholder(admin_trans('lottery.machine_lottery.steel_ball_condition_placeholder'))
                                 ->required();
+
+                            // ===== 保底金额配置 =====
+                            $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
+                            $form->html('<div style="padding: 10px; margin-bottom: 15px; background: #f0f5ff; border-left: 4px solid #597ef7;">
+                                <p style="margin: 0; font-size: 13px; color: #333; line-height: 1.6;">
+                                    <strong>说明：</strong>保底金额是彩池的最低维持金额，确保彩池始终有足够的资金进行派彩。<br>
+                                    <strong>工作原理：</strong><br>
+                                    • 派彩前：如果彩池不足派彩金额，自动补充到保底金额<br>
+                                    • 派彩后：如果彩池低于保底金额，自动补充到保底金额<br>
+                                    <strong>建议：</strong>保底金额应设置为最大派彩金额的1-2倍，确保随时有足够资金派彩
+                                </p>
+                            </div>');
+                            $form->row(function (Form $form) {
+                                $form->switch('auto_refill_status', admin_trans('lottery.auto_refill.status_label'))
+                                    ->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.status_help'))
+                                    ->span(12);
+                                $form->number('auto_refill_amount', admin_trans('lottery.auto_refill.amount_label'))
+                                    ->style(['width' => '100%'])
+                                    ->min(0)->max(10000000000)->precision(2)->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.amount_help'))
+                                    ->placeholder(admin_trans('lottery.auto_refill.amount_placeholder'))
+                                    ->span(12);
+                            });
                         });
                 })->when(Lottery::LOTTERY_TYPE_RANDOM, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
                     $form->hidden('game_type')->bindAttr('value', $gameType)
@@ -1058,6 +1103,15 @@ class LotteryController
                         $form->input('rate', 100); // 默认100%
                     } elseif ($rate < 0 || $rate > 100) {
                         return message_error(admin_trans('common.distribution_ratio_range_error'));
+                    }
+
+                    // 验证保底金额
+                    $autoRefillStatus = $form->input('auto_refill_status');
+                    $autoRefillAmount = $form->input('auto_refill_amount');
+                    if ($autoRefillStatus == 1) {
+                        if (empty($autoRefillAmount) || $autoRefillAmount <= 0) {
+                            return message_error(admin_trans('common.minimum_amount_must_greater_than_zero'));
+                        }
                     }
 
                     // 固定彩金不需要随机彩金的字段，设置默认值
