@@ -20,25 +20,19 @@ class ShiftReportExporter extends Excel
     // 存储每个设备的累计数据 [player_name => [...]]
     protected $deviceTotals = [];
 
-    // 用户选择的导出列
-    protected $selectedColumns = [];
-
     /**
-     * 所有可导出的列定义
+     * 固定导出的14个列定义
      */
     protected array $availableColumns = [
         'player_name' => 'shift_handover.device_name',
         'player_phone' => 'shift_handover.device_number',
-        'machine_point' => 'shift_handover.machine_point',
-        'recharge_amount' => 'shift_handover.recharge_amount',
-        'withdrawal_amount' => 'shift_handover.withdrawal_amount',
-        'modified_add_amount' => 'shift_handover.modified_add_amount',
-        'modified_deduct_amount' => 'shift_handover.modified_deduct_amount',
-        'lottery_amount' => 'shift_handover.lottery_amount',
-        'activity_bonus_amount' => 'shift_handover.activity_bonus_amount',
-        'lottery_ticket_reward_amount' => 'shift_handover.lottery_ticket_reward_amount',
-        'birthday_bonus_amount' => 'shift_handover.record.birthday_bonus_amount',
-        'upgrade_bonus_amount' => 'shift_handover.record.upgrade_bonus_amount',
+        'open_score_amount' => 'shift_handover.open_score_amount',
+        'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
+        'channel_withdrawal_amount' => 'shift_handover.channel_withdrawal_amount',
+        'ticket_redeem_amount' => 'shift_handover.ticket_redeem_amount',
+        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
+        'experience_coupon_amount' => 'shift_handover.experience_coupon_amount',
+        'welfare_coupon_amount' => 'shift_handover.welfare_coupon_amount',
         'electronic_game_bet_amount' => 'shift_handover.electronic_game_bet_amount',
         'machine_bet_amount' => 'shift_handover.machine_bet_amount',
         'total_in' => 'shift_handover.total_in',
@@ -54,18 +48,6 @@ class ShiftReportExporter extends Excel
     }
 
     /**
-     * 设置要导出的列
-     * @param array $columns 列名数组
-     * @return $this
-     */
-    public function setSelectedColumns(array $columns): static
-    {
-        $this->selectedColumns = $columns;
-        \support\Log::info('ShiftReportExporter: setSelectedColumns', ['columns' => $columns]);
-        return $this;
-    }
-
-    /**
      * 获取所有可导出的列定义
      * @return array
      */
@@ -76,22 +58,6 @@ class ShiftReportExporter extends Excel
             $result[$key] = admin_trans($translationKey);
         }
         return $result;
-    }
-
-    /**
-     * 获取当前选中的列（如果未选择则返回全部）
-     * @return array
-     */
-    protected function getActiveColumns(): array
-    {
-        \support\Log::info('ShiftReportExporter: getActiveColumns', [
-            'selectedColumns' => $this->selectedColumns,
-            'isEmpty' => empty($this->selectedColumns),
-        ]);
-        if (empty($this->selectedColumns)) {
-            return array_keys($this->availableColumns);
-        }
-        return $this->selectedColumns;
     }
 
     /**
@@ -115,16 +81,13 @@ class ShiftReportExporter extends Excel
         return match ($column) {
             'player_name' => $deviceInfo['player_name'],
             'player_phone' => $deviceInfo['player_phone'],
-            'machine_point' => $detail ? $detail->machine_point : 0,
-            'recharge_amount' => $detail ? $detail->recharge_amount : 0,
-            'withdrawal_amount' => $detail ? $detail->withdrawal_amount : 0,
-            'modified_add_amount' => $detail ? $detail->modified_add_amount : 0,
-            'modified_deduct_amount' => $detail ? $detail->modified_deduct_amount : 0,
-            'lottery_amount' => $detail ? $detail->lottery_amount : 0,
-            'activity_bonus_amount' => $detail ? $detail->activity_bonus_amount : 0,
-            'lottery_ticket_reward_amount' => $detail ? $detail->lottery_ticket_reward_amount : 0,
-            'birthday_bonus_amount' => $detail ? ($detail->birthday_bonus_amount ?? 0) : 0,
-            'upgrade_bonus_amount' => $detail ? ($detail->upgrade_bonus_amount ?? 0) : 0,
+            'open_score_amount' => $detail ? ($detail->open_score_amount ?? 0) : 0,
+            'ticket_open_score_amount' => $detail ? ($detail->ticket_open_score_amount ?? 0) : 0,
+            'channel_withdrawal_amount' => $detail ? ($detail->channel_withdrawal_amount ?? 0) : 0,
+            'ticket_redeem_amount' => $detail ? ($detail->ticket_redeem_amount ?? 0) : 0,
+            'ticket_unredeemed_amount' => $detail ? ($detail->ticket_unredeemed_amount ?? 0) : 0,
+            'experience_coupon_amount' => $detail ? ($detail->experience_coupon_amount ?? 0) : 0,
+            'welfare_coupon_amount' => $detail ? ($detail->welfare_coupon_amount ?? 0) : 0,
             'electronic_game_bet_amount' => $detail ? $detail->electronic_game_bet_amount : 0,
             'machine_bet_amount' => $detail ? $detail->machine_bet_amount : 0,
             'total_in' => $detail ? $detail->total_in : 0,
@@ -167,8 +130,8 @@ class ShiftReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-            // 获取当前激活的列
-            $activeColumns = $this->getActiveColumns();
+            // 使用固定的14个列
+            $activeColumns = array_keys($this->availableColumns);
             $columnCount = count($activeColumns);
             $lastColumnLetter = $this->getColumnLetter($columnCount - 1);
 
@@ -464,20 +427,17 @@ class ShiftReportExporter extends Excel
      */
     protected function setColumnWidths(array $activeColumns = [])
     {
-        // 列宽度定义
+        // 列宽度定义（固定14列）
         $columnWidths = [
             'player_name' => 20,
             'player_phone' => 15,
-            'machine_point' => 12,
-            'recharge_amount' => 14,
-            'withdrawal_amount' => 14,
-            'modified_add_amount' => 14,
-            'modified_deduct_amount' => 14,
-            'lottery_amount' => 14,
-            'activity_bonus_amount' => 14,
-            'lottery_ticket_reward_amount' => 14,
-            'birthday_bonus_amount' => 14,
-            'upgrade_bonus_amount' => 14,
+            'open_score_amount' => 14,
+            'ticket_open_score_amount' => 14,
+            'channel_withdrawal_amount' => 14,
+            'ticket_redeem_amount' => 14,
+            'ticket_unredeemed_amount' => 14,
+            'experience_coupon_amount' => 14,
+            'welfare_coupon_amount' => 14,
             'electronic_game_bet_amount' => 14,
             'machine_bet_amount' => 14,
             'total_in' => 14,

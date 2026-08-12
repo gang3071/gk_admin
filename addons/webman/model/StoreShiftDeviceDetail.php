@@ -19,7 +19,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $player_phone 设备编号
  * @property int $machine_point 投钞点数
  * @property float $recharge_amount 开分金额
+ * @property float $open_score_amount 开分金额(source=artificial_recharge)
+ * @property float $ticket_open_score_amount 开票金额(source=ticket_open_score)
  * @property float $withdrawal_amount 洗分金额
+ * @property float $channel_withdrawal_amount 洗分金额(source=channel_withdrawal)
+ * @property float $ticket_redeem_amount 洗票金额(source=ticket_redeem)
+ * @property float $ticket_unredeemed_amount 洗票未核销金额
+ * @property float $experience_coupon_amount 体验券金额
+ * @property float $welfare_coupon_amount 福利券金额
  * @property float $modified_add_amount 后台加点
  * @property float $modified_deduct_amount 后台扣点
  * @property float $lottery_amount 彩金发放
@@ -59,7 +66,14 @@ class StoreShiftDeviceDetail extends Model
         'player_phone',
         'machine_point',
         'recharge_amount',
+        'open_score_amount',
+        'ticket_open_score_amount',
         'withdrawal_amount',
+        'channel_withdrawal_amount',
+        'ticket_redeem_amount',
+        'ticket_unredeemed_amount',
+        'experience_coupon_amount',
+        'welfare_coupon_amount',
         'modified_add_amount',
         'modified_deduct_amount',
         'lottery_amount',
@@ -77,7 +91,14 @@ class StoreShiftDeviceDetail extends Model
     protected $casts = [
         'machine_point' => 'integer',
         'recharge_amount' => 'float',
+        'open_score_amount' => 'float',
+        'ticket_open_score_amount' => 'float',
         'withdrawal_amount' => 'float',
+        'channel_withdrawal_amount' => 'float',
+        'ticket_redeem_amount' => 'float',
+        'ticket_unredeemed_amount' => 'float',
+        'experience_coupon_amount' => 'float',
+        'welfare_coupon_amount' => 'float',
         'modified_add_amount' => 'float',
         'modified_deduct_amount' => 'float',
         'lottery_amount' => 'float',

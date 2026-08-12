@@ -194,7 +194,14 @@ return [
     'device_name' => '会员名称',
     'device_number' => '会员编号',
     'recharge_amount' => '开分',
+    'open_score_amount' => '开分',
+    'ticket_open_score_amount' => '开票',
     'withdrawal_amount' => '洗分',
+    'channel_withdrawal_amount' => '洗分',
+    'ticket_redeem_amount' => '洗票',
+    'ticket_unredeemed_amount' => '洗票未核销',
+    'experience_coupon_amount' => '体验券',
+    'welfare_coupon_amount' => '福利券',
     'modified_add_amount' => '后台加点',
     'modified_deduct_amount' => '后台扣点',
     'subtotal' => '小计',
@@ -296,6 +303,7 @@ return [
         'selected_rows' => '选中行',
         'all_pages' => '导出全部',
         'export_hint' => '设置完成后，请点击导出按钮进行导出',
+        'fixed_columns_hint' => '导出功能已改为固定14列导出，无需选择栏目。',
     ],
 
     // 交易明细

@@ -194,7 +194,14 @@ return [
     'device_name' => 'Member Name',
     'device_number' => 'Member No.',
     'recharge_amount' => 'Open Score',
+    'open_score_amount' => 'Open Score',
+    'ticket_open_score_amount' => 'Ticket Open Score',
     'withdrawal_amount' => 'Wash Score',
+    'channel_withdrawal_amount' => 'Channel Withdrawal',
+    'ticket_redeem_amount' => 'Ticket Redeem',
+    'ticket_unredeemed_amount' => 'Ticket Unredeemed',
+    'experience_coupon_amount' => 'Experience Coupon',
+    'welfare_coupon_amount' => 'Welfare Coupon',
     'modified_add_amount' => 'Admin Add',
     'modified_deduct_amount' => 'Admin Deduct',
     'subtotal' => 'Subtotal',
@@ -237,6 +244,7 @@ return [
         'selected_rows' => 'Selected Rows',
         'all_pages' => 'Export All',
         'export_hint' => 'After settings are saved, please click the export button to export',
+        'fixed_columns_hint' => 'Export has been changed to fixed 14 columns. No column selection needed.',
     ],
 
     // Transaction Details
