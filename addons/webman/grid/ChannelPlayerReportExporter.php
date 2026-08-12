@@ -40,6 +40,7 @@ class ChannelPlayerReportExporter extends Excel
                 \support\Log::info('步骤2: 开始构建查询');
                 $baseQuery = Player::query()->withTrashed();
                 $playGameRecordBaseQuery = PlayGameRecord::query()
+                    ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
                     ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                         $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
                     });
@@ -437,12 +438,18 @@ class ChannelPlayerReportExporter extends Excel
             $playGameRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
         }
 
+        // 推广员筛选（优化：两层 JOIN）
         if (!empty($exAdminFilter['recommend_promoter']['name'])) {
-            $baseQuery->leftjoin('player as rp', 'player.recommend_id', '=', 'rp.id')
+            // baseQuery: player.recommend_id → player_promoter.player_id → player.id
+            $baseQuery
+                ->leftJoin('player_promoter as bp', 'player.recommend_id', '=', 'bp.player_id')
+                ->leftJoin('player as rp', 'bp.player_id', '=', 'rp.id')
                 ->where(function ($q) use ($exAdminFilter) {
                     $q->where('rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
                         ->orWhere('rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                 });
+
+            // playGameRecordBaseQuery: parent_player_id → player.id (直接关联)
             $playGameRecordBaseQuery->leftjoin('player as rp', 'play_game_record.parent_player_id', '=', 'rp.id')
                 ->where(function ($q) use ($exAdminFilter) {
                     $q->where('rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
@@ -450,11 +457,10 @@ class ChannelPlayerReportExporter extends Excel
                 });
         }
 
+        // is_promoter 筛选（优化：whereHas → WHERE）
         if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) {
             $baseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
-            $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-            });
+            $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
         }
 
         if (!empty($exAdminFilter['search_type'])) {

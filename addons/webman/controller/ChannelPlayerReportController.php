@@ -540,12 +540,6 @@ class ChannelPlayerReportController
                     return Html::create(number_format($value, 2))->style(['color' => 'red']);
                 })
                 ->align('center')->sortable();
-            // 总提现
-            $grid->column('artificial_withdrawal_total', admin_trans('player.artificial_withdrawal_total'))
-                ->display(function ($value) {
-                    return Html::create(number_format($value, 2))->style(['color' => 'red']);
-                })
-                ->align('center')->sortable();
             // 币商转入
             $grid->column('coin_transfer', admin_trans('player.coin_transfer'))
                 ->display(function ($value) {
@@ -590,12 +584,6 @@ class ChannelPlayerReportController
                 ->align('center')->sortable();
             // 活动
             $grid->column('activity_total', admin_trans('player.activity_total'))
-                ->display(function ($value) {
-                    return Html::create(number_format($value, 2))->style(['color' => 'red']);
-                })
-                ->align('center')->sortable();
-            // 总押注
-            $grid->column('bet_total', admin_trans('player.artificial_withdrawal_total'))
                 ->display(function ($value) {
                     return Html::create(number_format($value, 2))->style(['color' => 'red']);
                 })
