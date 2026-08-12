@@ -517,14 +517,19 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 开票金额 = 原始开票金额 - 福利券 - 体验券
-        $actualTicketOpenScoreAmount = bcsub(
-            bcsub($data['ticket_open_score_amount'] ?? 0, $experienceCouponAmount, 2),
-            $welfareCouponAmount,
-            2
-        );
+        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+        $ticketOpenScoreAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
 
-        // 计算总收入（开分 + 开票（已减去福利券和体验券））
+        // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
+        $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
+
+        // 计算总收入（开分 + 开票）
         $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
 
         // 计算总支出（洗分 + 洗票 - 洗票未核销）
@@ -551,7 +556,7 @@ class AutoShiftService
             'machine_bet_amount' => (float)$machineBetAmount,
             'ticket_record_total_score' => $ticketRecordTotalScore,
             'ticket_redeem_backend_used_score' => $ticketRedeemBackendUsedScore,
-            // 新增字段（开票金额已减去福利券和体验券）
+            // 新增字段（开票金额从TicketRecord表获取）
             'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
             'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
             'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
@@ -711,14 +716,19 @@ class AutoShiftService
             $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
             $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
 
-            // 开票金额 = 原始开票金额 - 福利券 - 体验券
-            $actualTicketOpenScoreAmount = bcsub(
-                bcsub($data['ticket_open_score_amount'] ?? 0, $experienceCoupon, 2),
-                $welfareCoupon,
-                2
-            );
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+            $ticketOpenScoreAmount = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
 
-            // 计算总收入（开分 + 开票（已减去福利券和体验券））
+            // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
+            $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
+
+            // 计算总收入（开分 + 开票）
             $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
             // 计算总支出（洗分 + 洗票 - 洗票未核销）
             $totalOut = bcsub(
