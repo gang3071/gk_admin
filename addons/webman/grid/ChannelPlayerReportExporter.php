@@ -108,16 +108,18 @@ class ChannelPlayerReportExporter extends Excel
 
                 // 获取电子游戏数据
                 \support\Log::info('步骤5: 查询电子游戏数据');
-                $formattedRecords = $playGameRecordBaseQuery
-                    ->whereIn('player_id', array_column($list, 'id'))
-                    ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
-                    ->groupBy('play_game_record.player_id')
-                    ->get()
-                    ->toArray();
-
                 $playGameRecord = [];
-                foreach ($formattedRecords as $record) {
-                    $playGameRecord[$record['player_id']] = $record;
+                if (!empty($list)) {
+                    $formattedRecords = $playGameRecordBaseQuery
+                        ->whereIn('player_id', array_column($list, 'id'))
+                        ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
+                        ->groupBy('play_game_record.player_id')
+                        ->get()
+                        ->toArray();
+
+                    foreach ($formattedRecords as $record) {
+                        $playGameRecord[$record['player_id']] = $record;
+                    }
                 }
 
                 // 准备导出数据
