@@ -887,6 +887,7 @@ class Login extends LoginAbstract
                             '%' . $exAdminFilter['phone'] . '%');
                     }
                     if (!empty($exAdminFilter['recommend_promoter']['name'])) {
+                        // ⚡ 性能优化：使用 JOIN 替代三层嵌套 whereHas
 
                         $playGameRecordBaseQuery->leftjoin('player as rp', 'play_game_record.parent_player_id', '=',
                             'rp.id')
@@ -895,21 +896,21 @@ class Login extends LoginAbstract
                                     ->orWhere('rp.name', 'like',
                                         '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                             });
-                        $playerDeliveryRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                            $q->whereHas('recommend_promoter', function ($q) use ($exAdminFilter) {
-                                $q->whereHas('player', function ($q) use ($exAdminFilter) {
-                                    $q->where('uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
-                                        ->orWhere('name', 'like',
-                                            '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
-                                });
+
+                        // 充提记录：player → player_promoter → player (推广员信息)
+                        $playerDeliveryRecordBaseQuery
+                            ->leftJoin('player_promoter as pp', 'player.recommend_id', '=', 'pp.player_id')
+                            ->leftJoin('player as promoter_player', 'pp.player_id', '=', 'promoter_player.id')
+                            ->where(function ($q) use ($exAdminFilter) {
+                                $q->where('promoter_player.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
+                                    ->orWhere('promoter_player.name', 'like',
+                                        '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                             });
-                        });
                     }
                     if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                             [0, 1])) {
-                        $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                            $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-                        });
+                        // ⚡ 性能优化：直接使用 WHERE，不使用 whereHas（已有 leftJoin）
+                        $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
                         $playerDeliveryRecordBaseQuery->where('player.is_promoter',
                             $exAdminFilter['search_is_promoter']);
                     }
