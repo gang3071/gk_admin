@@ -490,11 +490,11 @@ class AutoShiftService
             ->where('player_delivery_record.created_at', '<=', $endTime)
             ->sum('player_delivery_record.amount');
 
-        // 计算洗票未核销（出票记录，type=洗分，status!=后台使用）
+        // 计算洗票未核销（出票记录，type=洗分，status=1正常状态）
         $ticketUnredeemedAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', TicketRecord::STATUS_BACKEND_USED)
+            ->where('status', TicketRecord::STATUS_NORMAL)
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
             ->sum('score');
@@ -526,18 +526,25 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
+        // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+        $redeemAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 统计入票金额（原开票 + 核销金额）
+        $incomingTicketAmount = bcadd($ticketOpenScoreAmount, $redeemAmount, 2);
+
         $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
 
         // 计算总收入（开分 + 开票）
         $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
 
-        // 计算总支出（洗分 + 洗票 - 洗票未核销）
-        $totalOut = bcsub(
-            bcadd($data['channel_withdrawal_amount'] ?? 0, $data['ticket_redeem_amount'] ?? 0, 2),
-            $ticketUnredeemedAmount,
-            2
-        );
+        // 计算总支出（洗分 + 核销）
+        $totalOut = bcadd($data['channel_withdrawal_amount'] ?? 0, $redeemAmount, 2);
 
         // 计算利润（总收入 - 总支出）
         $totalProfit = bcsub($totalIn, $totalOut, 2);
@@ -556,12 +563,15 @@ class AutoShiftService
             'machine_bet_amount' => (float)$machineBetAmount,
             'ticket_record_total_score' => $ticketRecordTotalScore,
             'ticket_redeem_backend_used_score' => $ticketRedeemBackendUsedScore,
-            // 新增字段（开票金额从TicketRecord表获取）
+            // 新增字段
             'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
             'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
+            'incoming_ticket_amount' => (float)$incomingTicketAmount,
+            'redeem_amount' => (float)$redeemAmount,
             'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
             'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-            'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
+            // 未核销 = 出卷 - 核销
+            'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmount, 2),
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
             // 详细分类数据（保留原有字段）
@@ -668,7 +678,7 @@ class AutoShiftService
             ->selectRaw('player_id, SUM(score) as total_score')
             ->whereIn('player_id', $playerIds)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', TicketRecord::STATUS_BACKEND_USED)
+            ->where('status', TicketRecord::STATUS_NORMAL)
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
             ->groupBy('player_id')
@@ -725,19 +735,29 @@ class AutoShiftService
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
+            // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+            $redeemAmount = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', TicketRecord::STATUS_BACKEND_USED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计入票金额（原开票 + 核销金额）
+            $incomingTicketAmount = bcadd($ticketOpenScoreAmount, $redeemAmount, 2);
+
             $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
 
             // 计算总收入（开分 + 开票）
             $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
-            // 计算总支出（洗分 + 洗票 - 洗票未核销）
-            $totalOut = bcsub(
-                bcadd($data['channel_withdrawal_amount'] ?? 0, $data['ticket_redeem_amount'] ?? 0, 2),
-                $ticketUnredeemed,
-                2
-            );
+            // 计算总支出（洗分 + 核销）
+            $totalOut = bcadd($data['channel_withdrawal_amount'] ?? 0, $redeemAmount, 2);
             // 计算利润（总收入 - 总支出）
             $profit = bcsub($totalIn, $totalOut, 2);
+
+            // 未核销 = 出卷 - 核销
+            $unredeemedAmount = bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmount, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
             if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
@@ -755,12 +775,14 @@ class AutoShiftService
                     'machine_point' => (int)$data['machine_point'],
                     'recharge_amount' => (float)$data['recharge_amount'],
                     'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
-                    // 开票金额已减去福利券和体验券
                     'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
+                    'incoming_ticket_amount' => (float)$incomingTicketAmount,
+                    'redeem_amount' => (float)$redeemAmount,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    'ticket_unredeemed_amount' => $ticketUnredeemed,
+                    // 未核销 = 出卷 - 核销
+                    'ticket_unredeemed_amount' => (float)$unredeemedAmount,
                     'experience_coupon_amount' => $experienceCoupon,
                     'welfare_coupon_amount' => $welfareCoupon,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
