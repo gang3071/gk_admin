@@ -158,8 +158,8 @@ class ChannelPlayerReportController
             ')
             ->first();
 
-        $summaryData['bet_total'] = $gameStats->bet_total ?? 0;
-        $summaryData['diff_total'] = $gameStats->diff_total ?? 0;
+        $summaryData['bet_total'] = $gameStats?->bet_total ?? 0;
+        $summaryData['diff_total'] = $gameStats?->diff_total ?? 0;
 
         // 2️⃣ 充提记录聚合查询（1 次查询替代 13 次）
         $deliveryStats = $playerDeliveryRecordBaseQuery->clone()
@@ -246,19 +246,19 @@ class ChannelPlayerReportController
             ")
             ->first();
 
-        // 赋值统计数据
-        $summaryData['self_recharge_total'] = $deliveryStats->self_recharge_total ?? 0;
-        $summaryData['artificial_recharge_total'] = $deliveryStats->artificial_recharge_total ?? 0;
-        $summaryData['channel_withdrawal_total'] = ($deliveryStats->channel_withdrawal_total ?? 0) * -1;
-        $summaryData['artificial_withdrawal_total'] = ($deliveryStats->artificial_withdrawal_total ?? 0) * -1;
-        $summaryData['coin_withdraw_total'] = $deliveryStats->coin_withdraw_total ?? 0;
-        $summaryData['coin_transfer_total'] = $deliveryStats->coin_transfer_total ?? 0;
-        $summaryData['machine_up_total'] = $deliveryStats->machine_up_total ?? 0;
-        $summaryData['machine_down_total'] = $deliveryStats->machine_down_total ?? 0;
-        $summaryData['activity_total'] = $deliveryStats->activity_total ?? 0;
-        $summaryData['lottery_total'] = $deliveryStats->lottery_total ?? 0;
-        $summaryData['modified_total'] = $deliveryStats->modified_total ?? 0;
-        $summaryData['machine_chip_total'] = $deliveryStats->machine_chip_total ?? 0;
+        // 赋值统计数据（使用 ?-> 安全访问，防止 $deliveryStats 为 null）
+        $summaryData['self_recharge_total'] = $deliveryStats?->self_recharge_total ?? 0;
+        $summaryData['artificial_recharge_total'] = $deliveryStats?->artificial_recharge_total ?? 0;
+        $summaryData['channel_withdrawal_total'] = ($deliveryStats?->channel_withdrawal_total ?? 0) * -1;
+        $summaryData['artificial_withdrawal_total'] = ($deliveryStats?->artificial_withdrawal_total ?? 0) * -1;
+        $summaryData['coin_withdraw_total'] = $deliveryStats?->coin_withdraw_total ?? 0;
+        $summaryData['coin_transfer_total'] = $deliveryStats?->coin_transfer_total ?? 0;
+        $summaryData['machine_up_total'] = $deliveryStats?->machine_up_total ?? 0;
+        $summaryData['machine_down_total'] = $deliveryStats?->machine_down_total ?? 0;
+        $summaryData['activity_total'] = $deliveryStats?->activity_total ?? 0;
+        $summaryData['lottery_total'] = $deliveryStats?->lottery_total ?? 0;
+        $summaryData['modified_total'] = $deliveryStats?->modified_total ?? 0;
+        $summaryData['machine_chip_total'] = $deliveryStats?->machine_chip_total ?? 0;
 
         //送输赢
         $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['activity_total'] + $summaryData['lottery_total'] + $summaryData['modified_total'];
