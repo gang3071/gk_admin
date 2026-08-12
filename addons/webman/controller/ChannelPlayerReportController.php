@@ -82,10 +82,12 @@ class ChannelPlayerReportController
                     });
                 // ⚡ 性能优化：使用 JOIN 替代三层嵌套 whereHas（性能提升 5-10 倍）
                 // 原逻辑：whereHas('player') -> whereHas('recommend_promoter') -> whereHas('player')
-                // 优化后：直接 JOIN player 和 player_promoter 表
+                // 优化后：利用已有的 player JOIN，再 JOIN player_promoter 表
+                // 注意：Line 59 已经 JOIN 了 player 表，这里复用
+                // player.recommend_id = player_promoter.player_id（推广员）
+                // player_promoter.player_id = promoter_player.id（推广员的玩家信息）
                 $playerDeliveryRecordBaseQuery
-                    ->leftJoin('player as pdr_player', 'player_delivery_record.player_id', '=', 'pdr_player.id')
-                    ->leftJoin('player_promoter as pp', 'pdr_player.recommend_id', '=', 'pp.player_id')
+                    ->leftJoin('player_promoter as pp', 'player.recommend_id', '=', 'pp.player_id')
                     ->leftJoin('player as promoter_player', 'pp.player_id', '=', 'promoter_player.id')
                     ->where(function ($q) use ($exAdminFilter) {
                         $q->where('promoter_player.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
