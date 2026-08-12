@@ -3528,6 +3528,15 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
+                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+                    $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
                     if (!$admin->department) {
@@ -3591,18 +3600,10 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->machine_point =
                         $playerDeliveryRecord['machine_put_point'] ?? 0;
 
-                    // 开票金额 = 原始开票金额 - 福利券 - 体验券
-                    $actualTicketOpenScoreAmount = bcsub(
-                        bcsub(
-                            $playerDeliveryRecord['ticket_open_score_amount'] ?? 0,
-                            $experienceCouponAmount ?? 0,
-                            2
-                        ),
-                        $welfareCouponAmount ?? 0,
-                        2
-                    );
+                    // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
+                    $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
 
-                    // 计算总收入（开分 + 开票（已减去福利券和体验券））
+                    // 计算总收入（开分 + 开票）
                     $storeAgentShiftHandoverRecord->total_in = bcadd(
                         $playerDeliveryRecord['open_score_amount'] ?? 0,
                         $actualTicketOpenScoreAmount,
@@ -4598,14 +4599,19 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+            $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
             // 计算总收入、总支出、利润（新公式）
-            // 开票金额 = 原始开票金额 - 福利券 - 体验券
-            $actualTicketOpenScoreAmount = bcsub(
-                bcsub($data['ticket_open_score_amount'] ?? 0, $experienceCouponAmount, 2),
-                $welfareCouponAmount,
-                2
-            );
-            // 总收入 = 开分 + 开票（已减去福利券和体验券）
+            // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
+            $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
+            // 总收入 = 开分 + 开票
             $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
             // 总支出 = 洗分 + 洗票 - 洗票未核销
             $totalOut = bcsub(
