@@ -97,13 +97,13 @@ class ChannelPlayerReportController
             if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                     [0, 1])) {
                 $baseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
-                $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                    $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-                });
+                // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where 而不是 whereHas
+                $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
                 $playerDeliveryRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
             }
             if (!empty($exAdminFilter['search_type'])) {
                 $baseQuery->where('player.is_test', $exAdminFilter['search_type']);
+                // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where
                 $playGameRecordBaseQuery->where('player.is_test', $exAdminFilter['search_type']);
                 $playerDeliveryRecordBaseQuery->where('player.is_test', $exAdminFilter['search_type']);
             }
