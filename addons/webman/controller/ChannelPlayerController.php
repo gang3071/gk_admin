@@ -386,9 +386,9 @@ class ChannelPlayerController
                 return $val ? $val : '-';
             })->ellipsis(true)->align('center')->copy();
 
-            // 真实姓名（纯文本显示，便于复制）
-            $grid->column('name_text', admin_trans('player.fields.real_name'))->display(function ($val, $data) {
-                return $data['name'] ? $data['name'] : '-';
+            // 真实姓名
+            $grid->column('real_name', admin_trans('player.fields.real_name'))->display(function ($val) {
+                return $val ? $val : '-';
             })->ellipsis(true)->align('center')->copy();
 
             // 线下渠道：使用 player_type 字段显示玩家类型
