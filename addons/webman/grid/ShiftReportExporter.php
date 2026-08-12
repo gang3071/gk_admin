@@ -181,31 +181,6 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
                 $this->currentRow++;
 
-                // 出票核销汇总行
-                $ticketRecordTotal = $originalRecord->ticket_record_total_score ?? 0;
-                $ticketRedeemBackendUsed = $originalRecord->ticket_redeem_backend_used_score ?? 0;
-                $ticketSubtotal = bcsub($ticketRecordTotal, $ticketRedeemBackendUsed, 2);
-
-                $ticketSummaryText = sprintf(
-                    '%s: %s    %s: %s    %s: %s',
-                    admin_trans('shift_handover.record.ticket_record_total_score'),
-                    number_format($ticketRecordTotal, 2),
-                    admin_trans('shift_handover.record.ticket_redeem_backend_used_score'),
-                    number_format($ticketRedeemBackendUsed, 2),
-                    admin_trans('shift_handover.record.ticket_subtotal'),
-                    number_format(floatval($ticketSubtotal), 2)
-                );
-                $this->sheet->setCellValue('A' . $this->currentRow, $ticketSummaryText);
-                $this->sheet->mergeCells('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow);
-                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '333333']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFF2CC']],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
-                ]);
-                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(22);
-                $this->currentRow++;
-
                 // 获取设备明细
                 $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $originalRecord->id)->get();
 
