@@ -517,11 +517,11 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，status=2或3已使用）
         $ticketOpenScoreAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->whereIn('status', [TicketRecord::STATUS_BACKEND_USED, TicketRecord::STATUS_MACHINE_USED])
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
             ->sum('score');
@@ -726,11 +726,11 @@ class AutoShiftService
             $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
             $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
 
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，status=2或3已使用）
             $ticketOpenScoreAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->whereIn('status', [TicketRecord::STATUS_BACKEND_USED, TicketRecord::STATUS_MACHINE_USED])
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');

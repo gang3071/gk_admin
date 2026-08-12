@@ -3528,11 +3528,14 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，status=2或3已使用）
                     $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->whereIn('status', [
+                            \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
+                            \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
+                        ])
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
@@ -4617,11 +4620,14 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型）
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，status=2或3已使用）
             $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->whereIn('status', [
+                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
+                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
+                ])
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
