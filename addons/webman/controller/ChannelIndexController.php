@@ -3974,6 +3974,7 @@ class ChannelIndexController
             // 今日：今日 08:00:00 ~ 隔天 07:59:59
             // 昨日：昨日 08:00:00 ~ 今日 07:59:59
             $now = Carbon::now();
+            $today = date('Y-m-d'); // 用于福利券/体验券查询（按自然日）
             $today8am = Carbon::today()->setTime(8, 0, 0);
             $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
             $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
