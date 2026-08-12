@@ -51,6 +51,7 @@ class ChannelPlayerReportController
         $size = Request::input('ex_admin_size', '20');
         $baseQuery = Player::query()->withTrashed();
         $playGameRecordBaseQuery = PlayGameRecord::query()
+            ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
             ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                         [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                 $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
@@ -58,11 +59,7 @@ class ChannelPlayerReportController
         $playerDeliveryRecordBaseQuery = PlayerDeliveryRecord::query()->leftjoin('player',
             'player_delivery_record.player_id', '=', 'player.id');
         if (!empty($exAdminFilter)) {
-            if (!empty($exAdminFilter['uuid'])) {
-                $baseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
-                $playGameRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
-                $playerDeliveryRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
-            }
+            // UUID 筛选
             if (!empty($exAdminFilter['uuid'])) {
                 $baseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
                 $playGameRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
@@ -73,32 +70,39 @@ class ChannelPlayerReportController
                 $playGameRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
                 $playerDeliveryRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
             }
+            // 推广员筛选（优化：三层 whereHas → 两层 JOIN）
             if (!empty($exAdminFilter['recommend_promoter']['name'])) {
-                $baseQuery->leftjoin('player as rp', 'player.recommend_id', '=', 'rp.id')
+                // baseQuery: player.recommend_id → player.id
+                $baseQuery
+                    ->leftJoin('player_promoter as bp', 'player.recommend_id', '=', 'bp.player_id')
+                    ->leftJoin('player as rp', 'bp.player_id', '=', 'rp.id')
                     ->where(function ($q) use ($exAdminFilter) {
                         $q->where('rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
                             ->orWhere('rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                     });
-                $playGameRecordBaseQuery->leftjoin('player as rp', 'play_game_record.parent_player_id', '=', 'rp.id')
+
+                // playGameRecordBaseQuery: play_game_record.parent_player_id → player_promoter.player_id → player.id
+                $playGameRecordBaseQuery
+                    ->leftJoin('player_promoter as pgr_bp', 'play_game_record.parent_player_id', '=', 'pgr_bp.player_id')
+                    ->leftJoin('player as pgr_rp', 'pgr_bp.player_id', '=', 'pgr_rp.id')
                     ->where(function ($q) use ($exAdminFilter) {
-                        $q->where('rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
-                            ->orWhere('rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
+                        $q->where('pgr_rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
+                            ->orWhere('pgr_rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                     });
-                $playerDeliveryRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                    $q->whereHas('recommend_promoter', function ($q) use ($exAdminFilter) {
-                        $q->whereHas('player', function ($q) use ($exAdminFilter) {
-                            $q->where('uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
-                                ->orWhere('name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
-                        });
+
+                // playerDeliveryRecordBaseQuery: 优化三层 whereHas → 两层 JOIN
+                $playerDeliveryRecordBaseQuery
+                    ->leftJoin('player_promoter as pdr_bp', 'player.recommend_id', '=', 'pdr_bp.player_id')
+                    ->leftJoin('player as pdr_rp', 'pdr_bp.player_id', '=', 'pdr_rp.id')
+                    ->where(function ($q) use ($exAdminFilter) {
+                        $q->where('pdr_rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
+                            ->orWhere('pdr_rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                     });
-                });
             }
-            if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
-                    [0, 1])) {
+            // is_promoter 筛选（优化：whereHas → WHERE）
+            if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) {
                 $baseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
-                $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                    $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-                });
+                $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
                 $playerDeliveryRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
             }
             if (!empty($exAdminFilter['search_type'])) {
@@ -254,17 +258,23 @@ class ChannelPlayerReportController
             ->groupBy('player.id')
             ->get()
             ->toArray();
-        $formattedRecords = $playGameRecordBaseQuery
-            ->whereIn('player_id', array_column($list, 'id'))
-            ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
-            ->groupBy('play_game_record.player_id')
-            ->get()
-            ->toArray();
-        $total = $totalQuery ?? 0;
+
+        // ✅ 边界条件：空列表时不执行查询
         $playGameRecord = [];
-        foreach ($formattedRecords as $record) {
-            $playGameRecord[$record['player_id']] = $record;
+        if (!empty($list)) {
+            $formattedRecords = $playGameRecordBaseQuery
+                ->whereIn('player_id', array_column($list, 'id'))
+                ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
+                ->groupBy('play_game_record.player_id')
+                ->get()
+                ->toArray();
+
+            foreach ($formattedRecords as $record) {
+                $playGameRecord[$record['player_id']] = $record;
+            }
         }
+
+        $total = $totalQuery ?? 0;
         return Grid::create($list, function (Grid $grid) use ($total, $list, $summaryData, $playGameRecord, $exAdminFilter) {
             $grid->bordered(true);
             $grid->autoHeight();
