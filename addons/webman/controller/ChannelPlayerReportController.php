@@ -149,79 +149,21 @@ class ChannelPlayerReportController
                     $q->where('player_delivery_record.type', $exAdminFilter['type']);
                 });
         });
-        $summaryDataBetPlayGameRecordBaseQuery = clone $playGameRecordBaseQuery;
-        $summaryDataDiffPlayGameRecordBaseQuery = clone $playGameRecordBaseQuery;
-        
-        $summaryData['bet_total'] = $summaryDataBetPlayGameRecordBaseQuery->sum('bet');
-        
-        $summaryData['diff_total'] = $summaryDataDiffPlayGameRecordBaseQuery->sum('diff');
-        
-        $summaryData['self_recharge_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_RECHARGE)
-            ->whereIn('player_delivery_record.source', ['self_recharge', 'gb_recharge'])
-            ->sum('player_delivery_record.amount');
-        
-        $summaryData['artificial_recharge_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_RECHARGE)
-            ->where('player_delivery_record.source', 'artificial_recharge')
-            ->sum('player_delivery_record.amount');
-        
-        $summaryData['channel_withdrawal_total'] = $playerDeliveryRecordBaseQuery->clone()
-                ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_WITHDRAWAL)
-                ->whereIn('player_delivery_record.source', ['channel_withdrawal', 'gb_withdrawal'])
-                ->where('player_delivery_record.withdraw_status', PlayerWithdrawRecord::STATUS_SUCCESS)
-                ->sum('player_delivery_record.amount') * -1;
-        
-        $summaryData['artificial_withdrawal_total'] = $playerDeliveryRecordBaseQuery->clone()
-                ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_WITHDRAWAL)
-                ->where('player_delivery_record.source', 'artificial_withdrawal')
-                ->where('player_delivery_record.withdraw_status', PlayerWithdrawRecord::STATUS_SUCCESS)
-                ->sum('player_delivery_record.amount') * -1;
-        
-        //玩家转出
-        $summaryData['coin_withdraw_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_PRESENT_IN)
-            ->sum('player_delivery_record.amount');
-        
-        //币商转入
-        $summaryData['coin_transfer_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_PRESENT_OUT)
-            ->sum('player_delivery_record.amount');
-        
-        //总上分
-        $summaryData['machine_up_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE_UP)
-            ->sum('player_delivery_record.amount');
-        //总下分
-        $summaryData['machine_down_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE_DOWN)
-            ->sum('player_delivery_record.amount');
-        
-        //活动奖励
-        $summaryData['activity_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS)
-            ->sum('player_delivery_record.amount');
-        //彩金奖励
-        $summaryData['lottery_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_LOTTERY)
-            ->sum('player_delivery_record.amount');
-        //管理员加点
-        $summaryData['modified_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD)
-            ->sum('player_delivery_record.amount');
 
-        //投钞总额
-        $summaryData['machine_chip_total'] = $playerDeliveryRecordBaseQuery->clone()
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE)
-            ->sum('player_delivery_record.amount');
+        // ⚡ 性能优化：统计数据改为异步加载（参考 jin 分支）
+        // 好处：
+        //   1. 减少主查询的响应时间（列表加载更快）
+        //   2. 统计数据按需加载（用户展开面板时才查询）
+        //   3. 支持独立刷新统计数据（不需要重新加载整个列表）
+        // 统计逻辑已移至 Login::totalInfo() 的 PlayerReport case
 
-        //送输赢
-        $summaryData['total_diff'] = $summaryData['machine_down_total'] - $summaryData['machine_up_total'] + $summaryData['diff_total'] + $summaryData['activity_total'] + $summaryData['lottery_total'] + $summaryData['modified_total'];
-        
-        $summaryData['total_amount'] = $summaryData['self_recharge_total'] + $summaryData['artificial_recharge_total'] + $summaryData['machine_chip_total'] + $summaryData['channel_withdrawal_total'] + $summaryData['artificial_withdrawal_total'];
+        // ⚡ 性能优化：简化 SELECT 语句，减少重复计算（参考 jin 分支）
+        // 原逻辑：SELECT 中重复计算 winn_los_total（重复使用 machine_down_total、machine_up_total 等）
+        // 优化后：在 PHP 中计算衍生字段（更高效，逻辑更清晰）
         $baseQuery
             ->selectRaw("
             player.*,
+            -- 基础统计
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD . " THEN player_delivery_record.amount ELSE 0 END) AS modified_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN player_delivery_record.amount ELSE 0 END) AS recharge_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN player_delivery_record.amount ELSE 0 END) AS activity_total,
@@ -231,18 +173,13 @@ class ChannelPlayerReportController
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_IN . " THEN player_delivery_record.amount ELSE 0 END) AS coin_withdraw,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_PRESENT_OUT . " THEN player_delivery_record.amount ELSE 0 END) AS coin_transfer,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN player_delivery_record.amount ELSE 0 END) AS machine_chip_total,
-            
-            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_DOWN . " THEN player_delivery_record.amount ELSE 0 END) -
-            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE_UP . " THEN player_delivery_record.amount ELSE 0 END) -
-            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_LOTTERY . " THEN player_delivery_record.amount ELSE 0 END) -
-            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN player_delivery_record.amount ELSE 0 END) AS winn_los_total,
-            
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS withdrawal_total,
+
+            -- 细分充提统计
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " and player_delivery_record.source in ('self_recharge','gb_recharge') THEN player_delivery_record.amount ELSE 0 END) AS self_recharge_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " and player_delivery_record.source = 'artificial_recharge' THEN player_delivery_record.amount ELSE 0 END) AS artificial_recharge_total,
             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.source in ('channel_withdrawal', 'gb_withdrawal') and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS channel_withdrawal_total,
-            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.source = 'artificial_withdrawal' and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS artificial_withdrawal_total,
-            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN player_delivery_record.amount ELSE 0 END) + SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN player_delivery_record.amount ELSE 0 END) + SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS total_amount
+            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.source = 'artificial_withdrawal' and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS artificial_withdrawal_total
         ");
         $list = $baseQuery->with([
             'recommend_promoter.player',
@@ -275,186 +212,43 @@ class ChannelPlayerReportController
         }
 
         $total = $totalQuery ?? 0;
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $summaryData, $playGameRecord, $exAdminFilter) {
+
+        // ⚡ 性能优化：在 PHP 中计算衍生字段，避免 SQL 中重复计算（参考 jin 分支）
+        // 原逻辑：SELECT 中计算 winn_los_total 和 total_amount（重复计算 machine_down_total 等）
+        // 优化后：在 PHP 中计算（更高效，逻辑更清晰）
+        foreach ($list as &$player) {
+            // 机台盈利 = 机台下分 - 机台上分 - 彩金 - 活动奖励
+            $player['winn_los_total'] =
+                $player['machine_down_total'] -
+                $player['machine_up_total'] -
+                $player['lottery_total'] -
+                $player['activity_total'];
+
+            // 总计金额 = 充值 + 投钞 + 提现
+            $player['total_amount'] =
+                $player['recharge_total'] +
+                $player['machine_chip_total'] +
+                $player['withdrawal_total'];
+        }
+        unset($player); // 释放引用
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $playGameRecord, $exAdminFilter) {
             $grid->bordered(true);
             $grid->autoHeight();
             $grid->title(admin_trans('player.player_report'));
+
+            // ⚡ 使用 Vue 组件异步加载统计数据（参考 jin 分支）
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($summaryData) {
+            $layout->row(function (Row $row) use ($exAdminFilter) {
                 $row->gutter([10, 0]);
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.self_recharge_total'))->value(!empty($summaryData['self_recharge_total']) ? floatval($summaryData['self_recharge_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.artificial_recharge_total'))->value(!empty($summaryData['artificial_recharge_total']) ? floatval($summaryData['artificial_recharge_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.coin_transfer'))->value(!empty($summaryData['coin_transfer_total']) ? floatval($summaryData['coin_transfer_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 8),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.channel_withdrawal_total'))->value(!empty($summaryData['channel_withdrawal_total']) ? floatval($summaryData['channel_withdrawal_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.artificial_withdrawal_total'))->value(!empty($summaryData['artificial_withdrawal_total']) ? floatval($summaryData['artificial_withdrawal_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.coin_withdraw'))->value(!empty($summaryData['coin_withdraw_total']) ? floatval($summaryData['coin_withdraw_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 8),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.bet_total'))->value(!empty($summaryData['bet_total']) ? floatval($summaryData['bet_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 12),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.diff_total'))->value(!empty($summaryData['diff_total']) ? floatval($summaryData['diff_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 12),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.total_amount'))->value(!empty($summaryData['total_amount']) ? floatval($summaryData['total_amount']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]),8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player_game_log.total_data.total_open_point'))->value(!empty($summaryData['machine_up_total']) ? floatval($summaryData['machine_up_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]),8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player_game_log.total_data.total_wash_point'))->value(!empty($summaryData['machine_down_total']) ? floatval($summaryData['machine_down_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]),8),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.lottery_total'))->value(!empty($summaryData['lottery_total']) ? floatval($summaryData['lottery_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]),8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.activity_total'))->value(!empty($summaryData['activity_total']) ? floatval($summaryData['activity_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]),8),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('reverse_water.fields.all_diff'))->value(!empty($summaryData['total_diff']) ? number_format(floatval($summaryData['total_diff']),
-                            2, '.', '') : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]),8),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6)->style(['margin-top' => '5px']);
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.modified_total'))->value(!empty($summaryData['modified_total']) ? floatval($summaryData['modified_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 12),
-                        Divider::create()->type('vertical')->style(['height' => '3em']),
-                        Row::create()->column(Statistic::create()->title(admin_trans('player.machine_chip_total'))->value(!empty($summaryData['machine_chip_total']) ? floatval($summaryData['machine_chip_total']) : 0)->valueStyle([
-                            'font-size' => '15px',
-                            'text-align' => 'center'
-                        ])->style([
-                            'font-size' => '10px',
-                            'text-align' => 'center'
-                        ]), 12),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '72px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6)->style(['margin-top' => '5px']);
+                // 使用 Vue 组件异步加载统计数据（参考 ChannelPlayGameRecordController）
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type' => 'PlayerReport',
+                    'department_id' => Admin::user()->department_id,
+                    'admin_user_id' => Admin::user()->id,
+                ]));
             })->style(['background' => '#fff']);
-            
+
             $grid->header($layout);
             $grid->driver()->setPk('id');
             $grid->column('id', admin_trans('player.fields.id'))->align('center');
