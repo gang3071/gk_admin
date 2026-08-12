@@ -236,9 +236,11 @@ class AdminTicketRecordController
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->form()->hidden('created_at_start');
-                $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end');
+                $filter->between()->dateTimeRange('created_at')
+                    ->placeholder([
+                        admin_trans('common.start_time'),
+                        admin_trans('common.end_time')
+                    ]);
             });
 
             $grid->hideDelete();

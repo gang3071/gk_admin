@@ -250,6 +250,14 @@ class AutoShiftService
             $shiftRecord->machine_bet_amount = $statistics['machine_bet_amount'];
             $shiftRecord->ticket_record_total_score = $statistics['ticket_record_total_score'];
             $shiftRecord->ticket_redeem_backend_used_score = $statistics['ticket_redeem_backend_used_score'];
+            // 新增字段
+            $shiftRecord->open_score_amount = $statistics['open_score_amount'];
+            $shiftRecord->ticket_open_score_amount = $statistics['ticket_open_score_amount'];
+            $shiftRecord->channel_withdrawal_amount = $statistics['channel_withdrawal_amount'];
+            $shiftRecord->ticket_redeem_amount = $statistics['ticket_redeem_amount'];
+            $shiftRecord->ticket_unredeemed_amount = $statistics['ticket_unredeemed_amount'];
+            $shiftRecord->experience_coupon_amount = $statistics['experience_coupon_amount'];
+            $shiftRecord->welfare_coupon_amount = $statistics['welfare_coupon_amount'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
 
@@ -370,7 +378,11 @@ class AutoShiftService
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as lottery_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as recharge_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? AND player_delivery_record.source = \'artificial_recharge\' THEN player_delivery_record.amount ELSE 0 END) as open_score_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? AND player_delivery_record.source = \'ticket_open_score\' THEN player_delivery_record.amount ELSE 0 END) as ticket_open_score_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as withdrawal_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? AND player_delivery_record.source = \'channel_withdrawal\' THEN player_delivery_record.amount ELSE 0 END) as channel_withdrawal_amount,
+                SUM(CASE WHEN player_delivery_record.type = ? AND player_delivery_record.source = \'ticket_redeem\' THEN player_delivery_record.amount ELSE 0 END) as ticket_redeem_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as modified_add_amount,
                 SUM(CASE WHEN player_delivery_record.type = ? THEN player_delivery_record.amount ELSE 0 END) as modified_deduct_amount
             ', [
@@ -378,7 +390,11 @@ class AutoShiftService
                 PlayerDeliveryRecord::TYPE_LOTTERY,
                 PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // 开分
+                PlayerDeliveryRecord::TYPE_RECHARGE,            // 开分 (source=artificial_recharge)
+                PlayerDeliveryRecord::TYPE_RECHARGE,            // 开分 (source=ticket_open_score)
                 PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分
+                PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分 (source=channel_withdrawal)
+                PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // 洗分 (source=ticket_redeem)
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD, // 后台加点
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT // 后台扣点
             ])
@@ -395,7 +411,11 @@ class AutoShiftService
             'lottery_amount' => 0,
             'lottery_ticket_reward_amount' => 0,
             'recharge_amount' => 0,
+            'open_score_amount' => 0,
+            'ticket_open_score_amount' => 0,
             'withdrawal_amount' => 0,
+            'channel_withdrawal_amount' => 0,
+            'ticket_redeem_amount' => 0,
             'modified_add_amount' => 0,
             'modified_deduct_amount' => 0,
         ];
@@ -470,6 +490,53 @@ class AutoShiftService
             ->where('player_delivery_record.created_at', '<=', $endTime)
             ->sum('player_delivery_record.amount');
 
+        // 计算洗票未核销（出票记录，type=洗分，status!=后台使用）
+        $ticketUnredeemedAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->where('status', '!=', TicketRecord::STATUS_BACKEND_USED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 计算体验券（ticket_type=3）
+        $experienceCouponAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 计算福利券（ticket_type=4）
+        $welfareCouponAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_WELFARE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 开票金额 = 原始开票金额 - 福利券 - 体验券
+        $actualTicketOpenScoreAmount = bcsub(
+            bcsub($data['ticket_open_score_amount'] ?? 0, $experienceCouponAmount, 2),
+            $welfareCouponAmount,
+            2
+        );
+
+        // 计算总收入（开分 + 开票（已减去福利券和体验券））
+        $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
+
+        // 计算总支出（洗分 + 洗票 - 洗票未核销）
+        $totalOut = bcsub(
+            bcadd($data['channel_withdrawal_amount'] ?? 0, $data['ticket_redeem_amount'] ?? 0, 2),
+            $ticketUnredeemedAmount,
+            2
+        );
+
+        // 计算利润（总收入 - 总支出）
+        $totalProfit = bcsub($totalIn, $totalOut, 2);
+
         return [
             'machine_amount' => (float)$machineAmount,
             'machine_point' => (int)$data['machine_put_point'],
@@ -484,7 +551,15 @@ class AutoShiftService
             'machine_bet_amount' => (float)$machineBetAmount,
             'ticket_record_total_score' => $ticketRecordTotalScore,
             'ticket_redeem_backend_used_score' => $ticketRedeemBackendUsedScore,
-            // 详细分类数据
+            // 新增字段（开票金额已减去福利券和体验券）
+            'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
+            'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
+            'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
+            'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
+            'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
+            'experience_coupon_amount' => $experienceCouponAmount,
+            'welfare_coupon_amount' => $welfareCouponAmount,
+            // 详细分类数据（保留原有字段）
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],
             'modified_add_amount' => (float)$data['modified_add_amount'],
@@ -531,7 +606,11 @@ class AutoShiftService
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as birthday_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as upgrade_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
+                SUM(CASE WHEN type = ? AND source = \'artificial_recharge\' THEN amount ELSE 0 END) as open_score_amount,
+                SUM(CASE WHEN type = ? AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as withdrawal_amount,
+                SUM(CASE WHEN type = ? AND source = \'channel_withdrawal\' THEN amount ELSE 0 END) as channel_withdrawal_amount,
+                SUM(CASE WHEN type = ? AND source = \'ticket_redeem\' THEN amount ELSE 0 END) as ticket_redeem_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_add_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as modified_deduct_amount
             ', [
@@ -540,8 +619,12 @@ class AutoShiftService
                 PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
                 PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
-                PlayerDeliveryRecord::TYPE_RECHARGE,
-                PlayerDeliveryRecord::TYPE_WITHDRAWAL,
+                PlayerDeliveryRecord::TYPE_RECHARGE,            // recharge_amount
+                PlayerDeliveryRecord::TYPE_RECHARGE,            // open_score_amount (source=artificial_recharge)
+                PlayerDeliveryRecord::TYPE_RECHARGE,            // ticket_open_score_amount (source=ticket_open_score)
+                PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // withdrawal_amount
+                PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // channel_withdrawal_amount (source=channel_withdrawal)
+                PlayerDeliveryRecord::TYPE_WITHDRAWAL,          // ticket_redeem_amount (source=ticket_redeem)
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                 PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
             ])
@@ -575,6 +658,39 @@ class AutoShiftService
         // 3. 在内存中合并数据（无数据库查询）
         $deviceDetails = [];
 
+        // 查询洗票未核销（按设备分组）
+        $ticketUnredeemedMap = TicketRecord::query()
+            ->selectRaw('player_id, SUM(score) as total_score')
+            ->whereIn('player_id', $playerIds)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->where('status', '!=', TicketRecord::STATUS_BACKEND_USED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('player_id')
+            ->pluck('total_score', 'player_id');
+
+        // 查询体验券（按设备分组）
+        $experienceCouponMap = TicketRecord::query()
+            ->selectRaw('player_id, SUM(score) as total_score')
+            ->whereIn('player_id', $playerIds)
+            ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('player_id')
+            ->pluck('total_score', 'player_id');
+
+        // 查询福利券（按设备分组）
+        $welfareCouponMap = TicketRecord::query()
+            ->selectRaw('player_id, SUM(score) as total_score')
+            ->whereIn('player_id', $playerIds)
+            ->where('ticket_type', TicketRecord::TYPE_WELFARE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('player_id')
+            ->pluck('total_score', 'player_id');
+
         foreach ($players as $player) {
             // 从统计结果中获取该设备的数据
             $stat = $statistics->get($player->id);
@@ -586,20 +702,39 @@ class AutoShiftService
 
             $data = $stat->toArray();
 
-            // 计算总收入、总支出、利润
-            $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
-            $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
-            $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut, 2);
-
             // 获取该设备的电子游戏打码量和机器打码量
             $electronicGameBet = (float)($electronicGameBetMap[$player->id] ?? 0);
             $machineBet = (float)($machineBetMap[$player->id] ?? 0);
+
+            // 获取洗票未核销、体验券、福利券
+            $ticketUnredeemed = (float)($ticketUnredeemedMap[$player->id] ?? 0);
+            $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
+            $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
+
+            // 开票金额 = 原始开票金额 - 福利券 - 体验券
+            $actualTicketOpenScoreAmount = bcsub(
+                bcsub($data['ticket_open_score_amount'] ?? 0, $experienceCoupon, 2),
+                $welfareCoupon,
+                2
+            );
+
+            // 计算总收入（开分 + 开票（已减去福利券和体验券））
+            $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
+            // 计算总支出（洗分 + 洗票 - 洗票未核销）
+            $totalOut = bcsub(
+                bcadd($data['channel_withdrawal_amount'] ?? 0, $data['ticket_redeem_amount'] ?? 0, 2),
+                $ticketUnredeemed,
+                2
+            );
+            // 计算利润（总收入 - 总支出）
+            $profit = bcsub($totalIn, $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
             if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
                 $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
                 $data['lottery_ticket_reward_amount'] > 0 || $data['birthday_bonus_amount'] > 0 || $data['upgrade_bonus_amount'] > 0 ||
-                $electronicGameBet > 0 || $machineBet > 0) {
+                $electronicGameBet > 0 || $machineBet > 0 || $ticketUnredeemed > 0 ||
+                $experienceCoupon > 0 || $welfareCoupon > 0) {
 
                 $deviceDetails[] = [
                     'department_id' => $departmentId,
@@ -609,7 +744,15 @@ class AutoShiftService
                     'player_phone' => $player->phone,
                     'machine_point' => (int)$data['machine_point'],
                     'recharge_amount' => (float)$data['recharge_amount'],
+                    'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
+                    // 开票金额已减去福利券和体验券
+                    'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
+                    'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
+                    'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
+                    'ticket_unredeemed_amount' => $ticketUnredeemed,
+                    'experience_coupon_amount' => $experienceCoupon,
+                    'welfare_coupon_amount' => $welfareCoupon,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],

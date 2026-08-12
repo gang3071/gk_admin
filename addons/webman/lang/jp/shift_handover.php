@@ -194,7 +194,14 @@ return [
     'device_name' => '会員名',
     'device_number' => '会員番号',
     'recharge_amount' => 'チャージ',
+    'open_score_amount' => '開分',
+    'ticket_open_score_amount' => 'チケット開分',
     'withdrawal_amount' => '洗分',
+    'channel_withdrawal_amount' => 'チャネル洗分',
+    'ticket_redeem_amount' => 'チケット洗分',
+    'ticket_unredeemed_amount' => 'チケット未消込',
+    'experience_coupon_amount' => '体験券',
+    'welfare_coupon_amount' => '福祉券',
     'modified_add_amount' => '管理者追加',
     'modified_deduct_amount' => '管理者控除',
     'subtotal' => '小計',
@@ -237,6 +244,7 @@ return [
         'selected_rows' => '選択行',
         'all_pages' => 'すべてエクスポート',
         'export_hint' => '設定保存後、エクスポートボタンをクリックしてエクスポートしてください',
+        'fixed_columns_hint' => 'エクスポート機能は固定14列に変更されました。列選択は不要です。',
     ],
 
     // 取引明細
