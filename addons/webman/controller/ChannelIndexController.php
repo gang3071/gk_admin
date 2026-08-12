@@ -3540,11 +3540,14 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.11 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+                    // 5.11 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2或3已核销）
                     $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->whereIn('status', [
+                            \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
+                            \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
+                        ])
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
@@ -4632,11 +4635,14 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+            // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2或3已核销）
             $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                ->whereIn('status', [
+                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
+                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
+                ])
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');

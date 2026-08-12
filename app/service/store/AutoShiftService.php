@@ -526,11 +526,11 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+        // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2或3已核销）
         $redeemAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->whereIn('status', [TicketRecord::STATUS_BACKEND_USED, TicketRecord::STATUS_MACHINE_USED])
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
             ->sum('score');
@@ -735,11 +735,11 @@ class AutoShiftService
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+            // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2或3已核销）
             $redeemAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->where('status', TicketRecord::STATUS_BACKEND_USED)
+                ->whereIn('status', [TicketRecord::STATUS_BACKEND_USED, TicketRecord::STATUS_MACHINE_USED])
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
