@@ -201,6 +201,7 @@ class ChannelPlayerController
             'player_extend.remark',
             'player_extend.pending_cashback_amount',
             'player_extend.total_cashback_amount',
+            'player_extend.id_number',  // 添加：身份证号
             'channel.name as channel_name',
             'recommend_promoter.uuid as recommend_promoter_uuid',
             'recommend_promoter.phone as recommend_promoter_phone',
@@ -373,7 +374,22 @@ class ChannelPlayerController
                     $data['is_test'] == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
                 ]);
             })->fixed(true)->align('center');
-            $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center');
+            $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center')->copy();
+
+            // 身份证号
+            $grid->column('id_number', admin_trans('player_extend.fields.id_number'))->display(function ($val) {
+                return $val ? $val : '-';
+            })->ellipsis(true)->align('center')->copy();
+
+            // 手机号码
+            $grid->column('phone', admin_trans('player.fields.phone'))->display(function ($val) {
+                return $val ? $val : '-';
+            })->ellipsis(true)->align('center')->copy();
+
+            // 真实姓名（纯文本显示，便于复制）
+            $grid->column('name_text', admin_trans('player.fields.real_name'))->display(function ($val, $data) {
+                return $data['name'] ? $data['name'] : '-';
+            })->ellipsis(true)->align('center')->copy();
 
             // 线下渠道：使用 player_type 字段显示玩家类型
             if ($channel && $channel->is_offline == 1) {
@@ -637,6 +653,7 @@ class ChannelPlayerController
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->like()->text('id_number')->placeholder(admin_trans('player_extend.fields.id_number'));
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
@@ -918,6 +935,10 @@ class ChannelPlayerController
             }
             if (!empty($requestFilter['remark'])) {
                 $query->where('player_extend.remark', 'like', '%' . $requestFilter['remark'] . '%');
+            }
+            // 身份证号筛选
+            if (!empty($requestFilter['id_number'])) {
+                $query->where('player_extend.id_number', 'like', '%' . $requestFilter['id_number'] . '%');
             }
             if (!empty($requestFilter['ip'])) {
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
