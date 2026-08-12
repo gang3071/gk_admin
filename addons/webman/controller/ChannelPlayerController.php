@@ -653,6 +653,7 @@ class ChannelPlayerController
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->like()->text('real_name')->placeholder(admin_trans('player.fields.real_name'));
                 $filter->like()->text('id_number')->placeholder(admin_trans('player_extend.fields.id_number'));
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
