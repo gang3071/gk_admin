@@ -53,7 +53,7 @@ class ChannelPlayerReportController
         $baseQuery = Player::query()->withTrashed();
         $playGameRecordBaseQuery = PlayGameRecord::query()
             ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
-            ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
+            ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                         [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                 $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
             });
@@ -205,18 +205,21 @@ class ChannelPlayerReportController
         // ⚡ 性能优化：N+1 查询问题修复
         // 原逻辑：先查玩家列表，再单独查游戏记录（2 次查询）
         // 优化后：通过 whereIn 批量查询（仍为 2 次，但避免了循环查询）
-        $formattedRecords = $playGameRecordBaseQuery
-            ->whereIn('player_id', array_column($list, 'id'))
-            ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
-            ->groupBy('play_game_record.player_id')
-            ->get()
-            ->toArray();
+        $playGameRecord = [];
+        if (!empty($list)) {
+            $formattedRecords = $playGameRecordBaseQuery
+                ->whereIn('player_id', array_column($list, 'id'))
+                ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
+                ->groupBy('play_game_record.player_id')
+                ->get()
+                ->toArray();
+
+            foreach ($formattedRecords as $record) {
+                $playGameRecord[$record['player_id']] = $record;
+            }
+        }
 
         $total = $totalQuery ?? 0;
-        $playGameRecord = [];
-        foreach ($formattedRecords as $record) {
-            $playGameRecord[$record['player_id']] = $record;
-        }
 
         // ⚡ 性能优化：在 PHP 中计算衍生字段，避免 SQL 中重复计算
         // 原逻辑：SELECT 中计算 winn_los_total 和 total_amount（重复计算 machine_down_total 等）
