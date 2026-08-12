@@ -4201,6 +4201,7 @@ class ChannelIndexController
                 // 检查打码量是否满足该档位要求
                 // 时间区间：以每天08:00:00作为分界点
                 $now = Carbon::now();
+                $today = date('Y-m-d'); // 用于福利券/体验券查询（按自然日）
                 $today8am = Carbon::today()->setTime(8, 0, 0);
                 $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
                 $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
