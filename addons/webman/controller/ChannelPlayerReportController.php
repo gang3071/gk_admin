@@ -57,19 +57,15 @@ class ChannelPlayerReportController
                         [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                 $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
             });
-        $playerDeliveryRecordBaseQuery = PlayerDeliveryRecord::query()->leftjoin('player',
-            'player_delivery_record.player_id', '=', 'player.id');
         if (!empty($exAdminFilter)) {
             if (!empty($exAdminFilter['uuid'])) {
                 // 注意：baseQuery 主表是 player，无需加前缀（虽然加了也能工作）
                 $baseQuery->where('uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
                 $playGameRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
-                $playerDeliveryRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
             }
             if (!empty($exAdminFilter['phone'])) {
                 $baseQuery->where('phone', 'like', '%' . $exAdminFilter['phone'] . '%');
                 $playGameRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
-                $playerDeliveryRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
             }
             if (!empty($exAdminFilter['recommend_promoter']['name'])) {
                 // ⚡ 修复：推广员筛选逻辑错误
@@ -87,32 +83,17 @@ class ChannelPlayerReportController
                         $q->where('rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
                             ->orWhere('rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                     });
-                // ⚡ 性能优化：使用 JOIN 替代三层嵌套 whereHas（性能提升 5-10 倍）
-                // 原逻辑：whereHas('player') -> whereHas('recommend_promoter') -> whereHas('player')
-                // 优化后：利用已有的 player JOIN，再 JOIN player_promoter 表
-                // 注意：Line 59 已经 JOIN 了 player 表，这里复用
-                // player.recommend_id = player_promoter.player_id（推广员）
-                // player_promoter.player_id = promoter_player.id（推广员的玩家信息）
-                $playerDeliveryRecordBaseQuery
-                    ->leftJoin('player_promoter as pp', 'player.recommend_id', '=', 'pp.player_id')
-                    ->leftJoin('player as promoter_player', 'pp.player_id', '=', 'promoter_player.id')
-                    ->where(function ($q) use ($exAdminFilter) {
-                        $q->where('promoter_player.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
-                            ->orWhere('promoter_player.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
-                    });
             }
             if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                     [0, 1])) {
                 $baseQuery->where('is_promoter', $exAdminFilter['search_is_promoter']);
                 // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where 而不是 whereHas
                 $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
-                $playerDeliveryRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
             }
             if (!empty($exAdminFilter['search_type'])) {
                 $baseQuery->where('is_test', $exAdminFilter['search_type']);
                 // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where
                 $playGameRecordBaseQuery->where('player.is_test', $exAdminFilter['search_type']);
-                $playerDeliveryRecordBaseQuery->where('player.is_test', $exAdminFilter['search_type']);
             }
         }
         $totalQuery = $baseQuery->clone()->count('*');
@@ -120,22 +101,13 @@ class ChannelPlayerReportController
             if (!empty($exAdminFilter['created_at_start'])) {
                 $playGameRecordBaseQuery->where('play_game_record.created_at', '>=',
                     $exAdminFilter['created_at_start']);
-                $playerDeliveryRecordBaseQuery->where('player_delivery_record.created_at', '>=',
-                    $exAdminFilter['created_at_start']);
             }
             if (!empty($exAdminFilter['created_at_end'])) {
                 $playGameRecordBaseQuery->where('play_game_record.created_at', '<=', $exAdminFilter['created_at_end']);
-                $playerDeliveryRecordBaseQuery->where('player_delivery_record.created_at', '<=',
-                    $exAdminFilter['created_at_end']);
-            }
-            if (!empty($exAdminFilter['type'])) {
-                $playerDeliveryRecordBaseQuery->where('player_delivery_record.type', $exAdminFilter['type']);
             }
             if (isset($exAdminFilter['date_type'])) {
                 $playGameRecordBaseQuery->where(getDateWhere($exAdminFilter['date_type'],
                     'play_game_record.created_at'));
-                $playerDeliveryRecordBaseQuery->where(getDateWhere($exAdminFilter['date_type'],
-                    'player_delivery_record.created_at'));
             }
         }
         $baseQuery->leftJoin('player_delivery_record', function ($join) use ($exAdminFilter) {
