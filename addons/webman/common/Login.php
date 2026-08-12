@@ -834,6 +834,7 @@ class Login extends LoginAbstract
                 break;
             case 'PlayerReport':
                 $playGameRecordBaseQuery = PlayGameRecord::query()
+                    ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
                     ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                                 [
                                     0,
@@ -859,8 +860,9 @@ class Login extends LoginAbstract
                         $playerDeliveryRecordBaseQuery->where('player.phone', 'like',
                             '%' . $exAdminFilter['phone'] . '%');
                     }
+                    // 推广员筛选（优化：三层 whereHas → 两层 JOIN）
                     if (!empty($exAdminFilter['recommend_promoter']['name'])) {
-                        
+                        // playGameRecordBaseQuery: parent_player_id → player.id (直接关联)
                         $playGameRecordBaseQuery->leftjoin('player as rp', 'play_game_record.parent_player_id', '=',
                             'rp.id')
                             ->where(function ($q) use ($exAdminFilter) {
@@ -868,21 +870,21 @@ class Login extends LoginAbstract
                                     ->orWhere('rp.name', 'like',
                                         '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                             });
-                        $playerDeliveryRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                            $q->whereHas('recommend_promoter', function ($q) use ($exAdminFilter) {
-                                $q->whereHas('player', function ($q) use ($exAdminFilter) {
-                                    $q->where('uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
-                                        ->orWhere('name', 'like',
-                                            '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
-                                });
+
+                        // playerDeliveryRecordBaseQuery: 优化三层 whereHas → 两层 JOIN
+                        $playerDeliveryRecordBaseQuery
+                            ->leftJoin('player_promoter as pdr_bp', 'player.recommend_id', '=', 'pdr_bp.player_id')
+                            ->leftJoin('player as pdr_rp', 'pdr_bp.player_id', '=', 'pdr_rp.id')
+                            ->where(function ($q) use ($exAdminFilter) {
+                                $q->where('pdr_rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
+                                    ->orWhere('pdr_rp.name', 'like',
+                                        '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
                             });
-                        });
                     }
+                    // is_promoter 筛选（优化：whereHas → WHERE）
                     if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'],
                             [0, 1])) {
-                        $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                            $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-                        });
+                        $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
                         $playerDeliveryRecordBaseQuery->where('player.is_promoter',
                             $exAdminFilter['search_is_promoter']);
                     }
