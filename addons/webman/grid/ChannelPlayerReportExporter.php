@@ -40,6 +40,7 @@ class ChannelPlayerReportExporter extends Excel
                 \support\Log::info('步骤2: 开始构建查询');
                 $baseQuery = Player::query()->withTrashed();
                 $playGameRecordBaseQuery = PlayGameRecord::query()
+                    ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
                     ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                         $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
                     });
@@ -452,13 +453,13 @@ class ChannelPlayerReportExporter extends Excel
 
         if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) {
             $baseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
-            $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-            });
+            // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where 而不是 whereHas
+            $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
         }
 
         if (!empty($exAdminFilter['search_type'])) {
             $baseQuery->where('player.is_test', $exAdminFilter['search_type']);
+            // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where
             $playGameRecordBaseQuery->where('player.is_test', $exAdminFilter['search_type']);
         }
 
