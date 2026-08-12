@@ -3501,11 +3501,11 @@ class ChannelIndexController
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->sum('player_delivery_record.amount');
 
-                    // 5.7 统计洗票未核销（出票记录，type=洗分，status!=后台使用）
+                    // 5.7 统计洗票未核销（出票记录，type=洗分，status=1正常状态）
                     $ticketUnredeemedAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_NORMAL)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
@@ -3536,6 +3536,18 @@ class ChannelIndexController
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
+
+                    // 5.11 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+                    $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.12 统计入票金额（原开票 + 核销金额）
+                    $incomingTicketAmount = bcadd($ticketOpenScoreAmount, $redeemAmount, 2);
 
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
@@ -3646,11 +3658,17 @@ class ChannelIndexController
 
                     // 新增字段：按source细分的金额
                     $storeAgentShiftHandoverRecord->open_score_amount = $playerDeliveryRecord['open_score_amount'] ?? 0;
-                    // 开票金额已减去福利券和体验券
                     $storeAgentShiftHandoverRecord->ticket_open_score_amount = $actualTicketOpenScoreAmount;
+                    $storeAgentShiftHandoverRecord->incoming_ticket_amount = $incomingTicketAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->redeem_amount = $redeemAmount ?? 0;
                     $storeAgentShiftHandoverRecord->channel_withdrawal_amount = $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->ticket_redeem_amount = $playerDeliveryRecord['ticket_redeem_amount'] ?? 0;
-                    $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = $ticketUnredeemedAmount ?? 0;
+                    // 未核销 = 出卷 - 核销
+                    $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = bcsub(
+                        $playerDeliveryRecord['ticket_redeem_amount'] ?? 0,
+                        $redeemAmount ?? 0,
+                        2
+                    );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
                     $storeAgentShiftHandoverRecord->welfare_coupon_amount = $welfareCouponAmount ?? 0;
 
@@ -4572,11 +4590,11 @@ class ChannelIndexController
             $electronicGameBet = $electronicGameBetMap[$player->id] ?? 0;
             $machineBet = $machineBetMap[$player->id] ?? 0;
 
-            // 统计洗票未核销（该设备的出票记录，type=洗分，status!=后台使用）
+            // 统计洗票未核销（该设备的出票记录，type=洗分，status=1正常状态）
             $ticketUnredeemedAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_NORMAL)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
@@ -4608,17 +4626,24 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
+            // 统计核销金额（TicketRecord中ticket_type=2洗分类型，status=2后台使用）
+            $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计入票金额（原开票 + 核销金额）
+            $incomingTicketAmount = bcadd($ticketOpenScoreAmount, $redeemAmount, 2);
+
             // 计算总收入、总支出、利润（新公式）
-            // 开票金额直接从TicketRecord表获取，不需要扣除福利券和体验券
             $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
             // 总收入 = 开分 + 开票
             $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
-            // 总支出 = 洗分 + 洗票 - 洗票未核销
-            $totalOut = bcsub(
-                bcadd($data['channel_withdrawal_amount'] ?? 0, $data['ticket_redeem_amount'] ?? 0, 2),
-                $ticketUnredeemedAmount,
-                2
-            );
+            // 总支出 = 洗分 + 核销
+            $totalOut = bcadd($data['channel_withdrawal_amount'] ?? 0, $redeemAmount, 2);
             // 利润 = 总收入 - 总支出
             $profit = bcsub($totalIn, $totalOut, 2);
 
@@ -4638,12 +4663,14 @@ class ChannelIndexController
                     'machine_point' => (int)$data['machine_point'],
                     'recharge_amount' => (float)$data['recharge_amount'],
                     'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
-                    // 开票金额已减去福利券和体验券
                     'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
+                    'incoming_ticket_amount' => (float)$incomingTicketAmount,
+                    'redeem_amount' => (float)$redeemAmount,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
+                    // 未核销 = 出卷 - 核销
+                    'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmount, 2),
                     'experience_coupon_amount' => $experienceCouponAmount,
                     'welfare_coupon_amount' => $welfareCouponAmount,
                     'modified_add_amount' => (float)$data['modified_add_amount'],

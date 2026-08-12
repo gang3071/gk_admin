@@ -21,15 +21,17 @@ class ShiftReportExporter extends Excel
     protected $deviceTotals = [];
 
     /**
-     * 固定导出的14个列定义
+     * 固定导出的16个列定义
      */
     protected array $availableColumns = [
         'player_name' => 'shift_handover.device_name',
         'player_phone' => 'shift_handover.device_number',
         'open_score_amount' => 'shift_handover.open_score_amount',
-        'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
         'channel_withdrawal_amount' => 'shift_handover.channel_withdrawal_amount',
+        'incoming_ticket_amount' => 'shift_handover.incoming_ticket_amount',
         'ticket_redeem_amount' => 'shift_handover.ticket_redeem_amount',
+        'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
+        'redeem_amount' => 'shift_handover.redeem_amount',
         'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
         'experience_coupon_amount' => 'shift_handover.experience_coupon_amount',
         'welfare_coupon_amount' => 'shift_handover.welfare_coupon_amount',
@@ -83,6 +85,8 @@ class ShiftReportExporter extends Excel
             'player_phone' => $deviceInfo['player_phone'],
             'open_score_amount' => $detail ? ($detail->open_score_amount ?? 0) : 0,
             'ticket_open_score_amount' => $detail ? ($detail->ticket_open_score_amount ?? 0) : 0,
+            'incoming_ticket_amount' => $detail ? ($detail->incoming_ticket_amount ?? 0) : 0,
+            'redeem_amount' => $detail ? ($detail->redeem_amount ?? 0) : 0,
             'channel_withdrawal_amount' => $detail ? ($detail->channel_withdrawal_amount ?? 0) : 0,
             'ticket_redeem_amount' => $detail ? ($detail->ticket_redeem_amount ?? 0) : 0,
             'ticket_unredeemed_amount' => $detail ? ($detail->ticket_unredeemed_amount ?? 0) : 0,
@@ -402,17 +406,19 @@ class ShiftReportExporter extends Excel
      */
     protected function setColumnWidths(array $activeColumns = [])
     {
-        // 列宽度定义（固定14列）
+        // 列宽度定义（固定16列）
         $columnWidths = [
             'player_name' => 20,
             'player_phone' => 15,
-            'open_score_amount' => 14,
-            'ticket_open_score_amount' => 14,
-            'channel_withdrawal_amount' => 14,
-            'ticket_redeem_amount' => 14,
-            'ticket_unredeemed_amount' => 14,
-            'experience_coupon_amount' => 14,
-            'welfare_coupon_amount' => 14,
+            'open_score_amount' => 12,
+            'channel_withdrawal_amount' => 12,
+            'incoming_ticket_amount' => 14,
+            'ticket_redeem_amount' => 12,
+            'ticket_open_score_amount' => 12,
+            'redeem_amount' => 12,
+            'ticket_unredeemed_amount' => 12,
+            'experience_coupon_amount' => 12,
+            'welfare_coupon_amount' => 12,
             'electronic_game_bet_amount' => 14,
             'machine_bet_amount' => 14,
             'total_in' => 14,

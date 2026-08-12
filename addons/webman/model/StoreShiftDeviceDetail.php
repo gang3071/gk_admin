@@ -21,10 +21,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $recharge_amount 开分金额
  * @property float $open_score_amount 开分金额(source=artificial_recharge)
  * @property float $ticket_open_score_amount 开票金额(source=ticket_open_score)
+ * @property float $incoming_ticket_amount 入票金额(原开票+后台核销)
+ * @property float $redeem_amount 核销金额(后台核销)
  * @property float $withdrawal_amount 洗分金额
  * @property float $channel_withdrawal_amount 洗分金额(source=channel_withdrawal)
- * @property float $ticket_redeem_amount 洗票金额(source=ticket_redeem)
- * @property float $ticket_unredeemed_amount 洗票未核销金额
+ * @property float $ticket_redeem_amount 出卷金额(source=ticket_redeem)
+ * @property float $ticket_unredeemed_amount 未核销金额(出卷-核销)
  * @property float $experience_coupon_amount 体验券金额
  * @property float $welfare_coupon_amount 福利券金额
  * @property float $modified_add_amount 后台加点
@@ -68,6 +70,8 @@ class StoreShiftDeviceDetail extends Model
         'recharge_amount',
         'open_score_amount',
         'ticket_open_score_amount',
+        'incoming_ticket_amount',
+        'redeem_amount',
         'withdrawal_amount',
         'channel_withdrawal_amount',
         'ticket_redeem_amount',
@@ -93,6 +97,8 @@ class StoreShiftDeviceDetail extends Model
         'recharge_amount' => 'float',
         'open_score_amount' => 'float',
         'ticket_open_score_amount' => 'float',
+        'incoming_ticket_amount' => 'float',
+        'redeem_amount' => 'float',
         'withdrawal_amount' => 'float',
         'channel_withdrawal_amount' => 'float',
         'ticket_redeem_amount' => 'float',

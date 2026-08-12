@@ -22,9 +22,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $total_out 总支出（取分金额）
  * @property float $open_score_amount 开分金额汇总
  * @property float $ticket_open_score_amount 开票金额汇总
+ * @property float $incoming_ticket_amount 入票金额汇总(原开票+后台核销)
+ * @property float $redeem_amount 核销金额汇总(后台核销)
  * @property float $channel_withdrawal_amount 洗分金额汇总
- * @property float $ticket_redeem_amount 洗票金额汇总
- * @property float $ticket_unredeemed_amount 洗票未核销汇总
+ * @property float $ticket_redeem_amount 出卷金额汇总
+ * @property float $ticket_unredeemed_amount 未核销汇总(出卷-核销)
  * @property float $experience_coupon_amount 体验券汇总
  * @property float $welfare_coupon_amount 福利券汇总
  * @property float $lottery_amount 彩金发放金额（TYPE_LOTTERY=13）
