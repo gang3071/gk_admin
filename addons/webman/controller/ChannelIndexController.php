@@ -3536,14 +3536,11 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.11 统计开票已使用金额（用于入票计算，status=2或3已使用）
+                    // 5.11 统计开票已使用金额（用于入票计算，status=3机台使用）
                     $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->whereIn('status', [
-                            \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
-                            \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
-                        ])
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
@@ -3557,19 +3554,16 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.13 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=2或3已核销）
+                    // 5.13 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
                     $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->whereIn('status', [
-                            \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
-                            \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
-                        ])
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.14 统计入票金额（开票已使用 + 核销金额-入票用）
+                    // 5.14 统计入票金额（开票机台使用 + 核销机台使用）
                     $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemAmount, 2);
 
                     // 7. 获取货币配置并验证（在事务外）
@@ -3645,10 +3639,10 @@ class ChannelIndexController
                         2
                     );
 
-                    // 计算总支出（洗分 + 核销）
+                    // 计算总支出（洗分 + 核销-导出用）
                     $storeAgentShiftHandoverRecord->total_out = bcadd(
                         $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0,
-                        $redeemAmount ?? 0,
+                        $redeemAmountExport ?? 0,
                         2
                     );
 
@@ -4645,14 +4639,11 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计开票已使用金额（用于入票计算，status=2或3已使用）
+            // 统计开票已使用金额（用于入票计算，status=3机台使用）
             $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                ->whereIn('status', [
-                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
-                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
-                ])
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
@@ -4666,27 +4657,24 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=2或3已核销）
+            // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
             $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                ->whereIn('status', [
-                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
-                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED
-                ])
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计入票金额（开票已使用 + 核销金额-入票用）
+            // 统计入票金额（开票机台使用 + 核销机台使用）
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemAmount, 2);
 
             // 计算总收入、总支出、利润（新公式）
             $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
             // 总收入 = 开分 + 开票
             $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
-            // 总支出 = 洗分 + 核销
-            $totalOut = bcadd($data['channel_withdrawal_amount'] ?? 0, $redeemAmount, 2);
+            // 总支出 = 洗分 + 核销（导出用）
+            $totalOut = bcadd($data['channel_withdrawal_amount'] ?? 0, $redeemAmountExport, 2);
             // 利润 = 总收入 - 总支出
             $profit = bcsub($totalIn, $totalOut, 2);
 
