@@ -2,6 +2,7 @@
 
 namespace addons\webman\controller;
 
+use addons\webman\Admin;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerPlatformCash;
@@ -243,6 +244,7 @@ class ChannelPlayerReportController
                     'ex_admin_filter' => $exAdminFilter,
                     'type' => 'PlayerReport',
                     'department_id' => Admin::user()->department_id,
+                    'admin_user_id' => Admin::user()->id,
                 ]));
             })->style(['background' => '#fff']);
 
