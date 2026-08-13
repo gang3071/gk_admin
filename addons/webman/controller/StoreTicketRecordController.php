@@ -66,11 +66,7 @@ class StoreTicketRecordController
 
             $currentShiftQuery = TicketRecord::query()
                 ->where('store_admin_id', $admin->id)
-                ->whereIn('ticket_type', [
-                    TicketRecord::TYPE_RECHARGE,
-                    TicketRecord::TYPE_EXPERIENCE,
-                    TicketRecord::TYPE_WELFARE,
-                ])
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                     $query->where('created_at', '>', $lastShiftTime);
