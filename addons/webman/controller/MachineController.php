@@ -145,7 +145,7 @@ class MachineController
                     'height' => '30px',
                     'padding' => '0px'
                 ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                , 4);
+                , 6);
         })->style(['background' => '#fff', 'margin-left' => '10px']);
         $grid->tools([
             $layout
