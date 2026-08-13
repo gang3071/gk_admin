@@ -42,10 +42,17 @@ class ShiftReportExporter extends Excel
         'profit' => 'shift_handover.profit',
     ];
 
-    public function columns(array $columns)
+    // 用户选择的导出列
+    protected $selectedColumns = [];
+
+    /**
+     * 设置要导出的列
+     * @param array $columns 列名数组
+     * @return $this
+     */
+    public function setSelectedColumns(array $columns): static
     {
-        // 保存列配置，但不生成默认表头
-        $this->columns = $columns;
+        $this->selectedColumns = $columns;
         return $this;
     }
 
@@ -60,6 +67,25 @@ class ShiftReportExporter extends Excel
             $result[$key] = admin_trans($translationKey);
         }
         return $result;
+    }
+
+    /**
+     * 获取当前选中的列（如果未选择则返回全部）
+     * @return array
+     */
+    protected function getActiveColumns(): array
+    {
+        if (empty($this->selectedColumns)) {
+            return array_keys($this->availableColumns);
+        }
+        return $this->selectedColumns;
+    }
+
+    public function columns(array $columns)
+    {
+        // 保存列配置，但不生成默认表头
+        $this->columns = $columns;
+        return $this;
     }
 
     /**
@@ -134,8 +160,8 @@ class ShiftReportExporter extends Excel
     public function write(array $data, \Closure $finish = null)
     {
         try {
-            // 使用固定的14个列
-            $activeColumns = array_keys($this->availableColumns);
+            // 使用用户选择的列（如果未选择则使用全部列）
+            $activeColumns = $this->getActiveColumns();
             $columnCount = count($activeColumns);
             $lastColumnLetter = $this->getColumnLetter($columnCount - 1);
 
