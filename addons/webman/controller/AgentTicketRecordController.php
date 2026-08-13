@@ -42,21 +42,13 @@ class AgentTicketRecordController
 
             $grid->model()
                 ->whereIn('store_admin_id', $storeIds)
-                ->whereIn('ticket_type', [
-                    TicketRecord::TYPE_RECHARGE,
-                    TicketRecord::TYPE_EXPERIENCE,
-                    TicketRecord::TYPE_WELFARE,
-                ])
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->orderBy('created_at', 'desc');
 
             // 统计数据（排除禁用状态）
             $totalData = TicketRecord::query()
                 ->whereIn('store_admin_id', $storeIds)
-                ->whereIn('ticket_type', [
-                    TicketRecord::TYPE_RECHARGE,
-                    TicketRecord::TYPE_EXPERIENCE,
-                    TicketRecord::TYPE_WELFARE,
-                ])
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->selectRaw(
                     'sum(score) as total_score, count(*) as total_count, '
