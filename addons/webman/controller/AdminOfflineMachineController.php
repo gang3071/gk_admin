@@ -487,22 +487,13 @@ class AdminOfflineMachineController
     }
 
     /**
-     * 获取机台标签选项
+     * 获取机台标签选项（按游戏类型过滤）
      */
     private function getMachineLabelOptions(int $gameType): array
     {
-        $labelModel = new MachineLabel();
-        $categoryModel = new MachineCategory();
-        $labelTable = $labelModel->getTable();
-        $categoryTable = $categoryModel->getTable();
-
-        return MachineLabel::query()
-            ->leftJoin($categoryTable, $labelTable . '.cate_id', '=', $categoryTable . '.id')
-            ->where($categoryTable . '.type', $gameType)
-            ->where($labelTable . '.status', 1)
-            ->orderBy($labelTable . '.id', 'desc')
-            ->get([$labelTable . '.id', $labelTable . '.name'])
-            ->pluck('name', 'id')
-            ->toArray();
+        // 直接使用全局 helper 函数，不按游戏类型过滤
+        // 因为 MachineLabel 本身已经通过 cate_id 关联到具体分类
+        // 在创建表单时通过 cascaderSingle 选择分类会自动过滤对应的标签
+        return getMachineLabelOptions();
     }
 }
