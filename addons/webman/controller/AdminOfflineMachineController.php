@@ -191,19 +191,24 @@ class AdminOfflineMachineController
 
         // 筛选器
         $grid->filter(function (Filter $filter) use ($gameType) {
-            $filter->like('code', admin_trans('offline_machine.fields.code'));
+            $filter->like()->text('code')
+                ->placeholder(admin_trans('offline_machine.fields.code'));
 
-            $filter->equal('status', admin_trans('offline_machine.fields.status'))
-                ->select([
+            $filter->eq()->select('status')
+                ->options([
+                    '' => admin_trans('public_msg.all'),
                     1 => admin_trans('common.status.enable'),
                     0 => admin_trans('common.status.disable'),
-                ]);
+                ])
+                ->placeholder(admin_trans('offline_machine.fields.status'));
 
-            $filter->equal('gaming', admin_trans('offline_machine.fields.gaming'))
-                ->select([
+            $filter->eq()->select('gaming')
+                ->options([
+                    '' => admin_trans('public_msg.all'),
                     1 => admin_trans('offline_machine.status.gaming'),
                     0 => admin_trans('offline_machine.status.idle'),
-                ]);
+                ])
+                ->placeholder(admin_trans('offline_machine.fields.gaming'));
         });
     }
 
