@@ -266,7 +266,7 @@ return [
         'store_manage' => '店舗バックエンド',
         'agent_center' => '代理店センター',
         'store_list' => '店舗リスト',
-        'device_list_tw' => 'デバイスリスト',
+        'device_list_tw' => 'プレイヤーリスト',
         'store_center' => '店舗センター',
         'store_machine_manage' => '店舗マシン管理',
         'lottery_receive' => '宝くじ受取',
