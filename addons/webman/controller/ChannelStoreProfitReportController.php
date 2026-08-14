@@ -286,17 +286,8 @@ class ChannelStoreProfitReportController
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             // 计算小计 = (开分 + 投钞) - 洗分
-            // 注意：洗分中不包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
-
-            // 计算代理分润：小计 * 代理抽成比例
-            $agentCommission = floatval($store->agent_commission ?? 0);
-            $agentProfit = bcmul($subtotal, bcdiv($agentCommission, 100, 4), 2);
-
-            // 计算渠道分润：小计 * 渠道抽成比例
-            $channelCommission = floatval($store->channel_commission ?? 0);
-            $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
 
             // 计算总收入 = 开分 + 开票（与导出报表一致）
             $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
@@ -306,6 +297,14 @@ class ChannelStoreProfitReportController
 
             // 计算总利润 = 总收入 - 总支出
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
+
+            // 计算代理分润：利润 * 代理抽成比例
+            $agentCommission = floatval($store->agent_commission ?? 0);
+            $agentProfit = bcmul($totalProfit, bcdiv($agentCommission, 100, 4), 2);
+
+            // 计算渠道分润：利润 * 渠道抽成比例
+            $channelCommission = floatval($store->channel_commission ?? 0);
+            $channelProfit = bcmul($totalProfit, bcdiv($channelCommission, 100, 4), 2);
 
             $reportData[] = [
                 'id' => $store->id,
