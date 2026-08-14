@@ -182,12 +182,12 @@ class AdminOfflineMachineController
 
         // 操作列
         $grid->actions(function (Actions $actions) use ($gameType) {
-            $actions->edit()->modal([$this, 'save'], ['game_type' => $gameType])->width('70%');
+            $actions->edit()->modal([$this, 'form'], ['game_type' => $gameType])->width('70%');
             $actions->delete();
         });
 
-        // 工具栏
-        $grid->createButton()->modal([$this, 'save'], ['game_type' => $gameType])->width('70%');
+        // 工具栏 - ExAdmin 自动添加创建按钮，需指定 modal 和参数
+        $grid->createButton()->modal([$this, 'form'], ['game_type' => $gameType])->width('70%');
 
         // 筛选器
         $grid->filter(function (Filter $filter) use ($gameType) {
@@ -217,7 +217,7 @@ class AdminOfflineMachineController
      * @group admin
      * @auth true
      */
-    public function save(): Form
+    public function form(): Form
     {
         $gameType = request()->input('game_type', GameType::TYPE_SLOT);
 
