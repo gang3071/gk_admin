@@ -169,6 +169,8 @@ return [
     'chart' => '圖表',
     'start_time' => '開始時間',
     'end_time' => '結束時間',
+    'created_at' => '創建時間',
+    'updated_at' => '更新時間',
     'no_permission' => '沒有權限',
     'refresh' => '刷新',
     'save' => '保存',

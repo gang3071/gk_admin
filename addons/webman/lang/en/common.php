@@ -164,9 +164,11 @@ return [
     ],
 
     // 通用UI
-    'start_time' => '开始时间',
-    'end_time' => '结束时间',
-    'no_permission' => '没有权限',
+    'start_time' => 'Start Time',
+    'end_time' => 'End Time',
+    'created_at' => 'Created At',
+    'updated_at' => 'Updated At',
+    'no_permission' => 'No Permission',
     'refresh' => '刷新',
     'save' => '保存',
     'cancel' => '取消',

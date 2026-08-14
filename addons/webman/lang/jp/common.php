@@ -166,6 +166,8 @@ return [
     // 通用UI
     'start_time' => '開始時間',
     'end_time' => '終了時間',
+    'created_at' => '作成日時',
+    'updated_at' => '更新日時',
     'no_permission' => '権限がありません',
     'refresh' => '更新',
     'save' => '保存',
