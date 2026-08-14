@@ -187,7 +187,14 @@ return [
     'close' => '閉じる',
     'back' => '戻る',
 
-    // 通用错误（分组）
+    // 共通ステータス
+    'status' => [
+        'enable' => '有効',
+        'disable' => '無効',
+        'normal' => '正常',
+    ],
+
+    // 共通エラー
     'error' => [
         'busy_retry' => '操作がビジーです、後でもう一度お試しください',
         'operation_failed' => '操作が失敗しました',

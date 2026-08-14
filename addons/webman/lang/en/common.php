@@ -184,10 +184,17 @@ return [
     'reset' => '重置',
     'export' => '导出',
     'import' => '导入',
-    'close' => '关闭',
-    'back' => '返回',
+    'close' => 'Close',
+    'back' => 'Back',
 
-    // 通用错误（分组）
+    // Common Status
+    'status' => [
+        'enable' => 'Enable',
+        'disable' => 'Disable',
+        'normal' => 'Normal',
+    ],
+
+    // Common Errors
     'error' => [
         'busy_retry' => 'Busy, please try again later',
         'operation_failed' => 'Operation failed',

@@ -187,6 +187,13 @@ return [
     'close' => '关闭',
     'back' => '返回',
 
+    // 通用状态
+    'status' => [
+        'enable' => '启用',
+        'disable' => '禁用',
+        'normal' => '正常',
+    ],
+
     // 通用错误（分组）
     'error' => [
         'busy_retry' => '操作繁忙，请稍后重试',

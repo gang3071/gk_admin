@@ -190,6 +190,13 @@ return [
     'close' => '關閉',
     'back' => '返回',
 
+    // 通用状态
+    'status' => [
+        'enable' => '啟用',
+        'disable' => '禁用',
+        'normal' => '正常',
+    ],
+
     // 通用錯誤（分組）
     'error' => [
         'busy_retry' => '操作繁忙，請稍後重試',
