@@ -71,6 +71,9 @@ class AdminOfflineMachineController
                 ->orderBy('id', 'desc');
 
             $this->buildGrid($grid, GameType::TYPE_SLOT);
+
+            // 在这里设置表单，传递固定的 game_type
+            $grid->setForm()->modal([$this, 'slotForm'])->width('70%');
         });
     }
 
@@ -96,6 +99,9 @@ class AdminOfflineMachineController
                 ->orderBy('id', 'desc');
 
             $this->buildGrid($grid, GameType::TYPE_STEEL_BALL);
+
+            // 在这里设置表单，传递固定的 game_type
+            $grid->setForm()->modal([$this, 'steelBallForm'])->width('70%');
         });
     }
 
@@ -178,9 +184,6 @@ class AdminOfflineMachineController
 
         $grid->column('created_at', admin_trans('common.created_at'))->width(180)->align('center');
 
-        // 设置表单 - ExAdmin 会自动添加创建和编辑按钮
-        $grid->setForm()->modal([$this, 'form?game_type=' . $gameType])->width('70%');
-
         // 筛选器
         $grid->filter(function (Filter $filter) use ($gameType) {
             $filter->like()->text('code')
@@ -205,14 +208,32 @@ class AdminOfflineMachineController
     }
 
     /**
-     * 创建/编辑线下机台
+     * 斯洛机台表单
      * @group admin
      * @auth true
      */
-    public function form(): Form
+    public function slotForm(): Form
     {
-        $gameType = request()->input('game_type', GameType::TYPE_SLOT);
+        return $this->buildForm(GameType::TYPE_SLOT);
+    }
 
+    /**
+     * 钢珠机台表单
+     * @group admin
+     * @auth true
+     */
+    public function steelBallForm(): Form
+    {
+        return $this->buildForm(GameType::TYPE_STEEL_BALL);
+    }
+
+    /**
+     * 构建表单
+     * @param int $gameType
+     * @return Form
+     */
+    private function buildForm(int $gameType): Form
+    {
         return Form::create(new $this->model(), function (Form $form) use ($gameType) {
             // 编辑模式：验证当前记录必须是线下机台
             if ($form->isEdit()) {
