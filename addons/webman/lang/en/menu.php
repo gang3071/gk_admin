@@ -300,6 +300,9 @@ return [
         'ticket_management' => 'Ticket Management',
         'ticket_record_list' => 'Ticket Records',
         'ticket_redeem_list' => 'Redeem Records',
+        //Admin Offline Machine Management
+        'offline_machine_manage' => 'Offline Machine Management',
+        'offline_machine_list' => 'Machine List',
         //Store Offline Machine Management
         'store_offline_machine' => 'Offline Machines',
         'store_offline_machine_list' => 'Machine List',

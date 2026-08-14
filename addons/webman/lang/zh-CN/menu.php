@@ -300,6 +300,9 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票记录',
         'ticket_redeem_list' => '核销记录',
+        //总站线下机台管理
+        'offline_machine_manage' => '线下机台管理',
+        'offline_machine_list' => '机台列表',
         //店家后台线下机台管理
         'store_offline_machine' => '线下机台',
         'store_offline_machine_list' => '机台列表',
