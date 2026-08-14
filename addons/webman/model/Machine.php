@@ -282,7 +282,7 @@ class Machine extends Model
      */
     public function channelMachines(): HasMany
     {
-        return $this->hasMany(ChannelMachine::class, 'machine_id');
+        return $this->hasMany(plugin()->webman->config('database.channel_machine_model'), 'machine_id');
     }
 
     /**
