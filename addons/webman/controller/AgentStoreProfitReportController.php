@@ -104,9 +104,19 @@ class AgentStoreProfitReportController
                     'activity_total' => 0,
                     'electronic_game_bet_amount' => 0,
                     'machine_bet_amount' => 0,
+                    'incoming_ticket_amount' => 0,
+                    'ticket_redeem_amount' => 0,
+                    'ticket_open_score_amount' => 0,
+                    'redeem_amount' => 0,
+                    'ticket_unredeemed_amount' => 0,
+                    'experience_coupon_amount' => 0,
+                    'welfare_coupon_amount' => 0,
                     'subtotal' => 0,
                     'agent_profit' => 0,
                     'channel_profit' => 0,
+                    'total_income' => 0,
+                    'total_expense' => 0,
+                    'total_profit' => 0,
                 ];
                 continue;
             }
@@ -139,11 +149,9 @@ class AgentStoreProfitReportController
                 SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")->first();
 
-            // 查询福利券和体验券已使用的金额（需要从开分中扣除）
+            // 查询票务数据（入票、出卷、开票、核销、未核销、体验券、福利券）
             $ticketQuery = TicketRecord::query()
-                ->whereIn('player_id', $playerIds)
-                ->whereIn('ticket_type', [TicketRecord::TYPE_WELFARE, TicketRecord::TYPE_EXPERIENCE])
-                ->whereIn('status', [TicketRecord::STATUS_BACKEND_USED, TicketRecord::STATUS_MACHINE_USED]);
+                ->whereIn('player_id', $playerIds);
 
             // 时间筛选：优先使用结算周期，否则使用手动时间范围
             if (!empty($dateType)) {
@@ -163,7 +171,13 @@ class AgentStoreProfitReportController
             }
 
             $ticketData = $ticketQuery->selectRaw("
-                SUM(`score`) as ticket_amount
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS incoming_ticket_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS ticket_redeem_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_NORMAL . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS redeem_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_NORMAL . " THEN `score` ELSE 0 END) AS ticket_unredeemed_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS experience_coupon_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS welfare_coupon_amount
             ")->first();
 
             // 查询拉彩数据
@@ -228,14 +242,22 @@ class AgentStoreProfitReportController
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
             $electronicGameBetAmount = floatval($betData->electronic_game_bet_amount ?? 0);
             $machineBetAmount = floatval($betData->machine_bet_amount ?? 0);
-            $ticketAmount = floatval($ticketData->ticket_amount ?? 0);
+
+            // 票务数据
+            $incomingTicketAmount = floatval($ticketData->incoming_ticket_amount ?? 0);  // 入票
+            $ticketRedeemAmount = floatval($ticketData->ticket_redeem_amount ?? 0);      // 出卷
+            $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0); // 开票
+            $redeemAmount = floatval($ticketData->redeem_amount ?? 0);                   // 核销
+            $ticketUnredeemedAmount = floatval($ticketData->ticket_unredeemed_amount ?? 0); // 未核销
+            $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0); // 体验券
+            $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);     // 福利券
 
             // 从开分中扣除福利券和体验券的金额
+            $ticketAmount = bcadd($experienceCouponAmount, $welfareCouponAmount, 2);
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             // 计算小计 = (开分 + 投钞) - 洗分
-            // 注意：此处从账变记录统计，TYPE_RECHARGE和TYPE_MACHINE是分开的，需要相加
-            // 注意：洗分中不包含彩金（彩金已发放给客户，客户洗分会洗掉）
+            // 注意：洗分中不包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
@@ -246,6 +268,15 @@ class AgentStoreProfitReportController
             // 计算渠道分润：小计 * 渠道抽成比例
             $channelCommission = floatval($store->channel_commission ?? 0);
             $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
+
+            // 计算总收入 = 开分 + 投钞 + 彩金 + 活动奖励
+            $totalIncome = bcadd(bcadd(bcadd($rechargeAmount, $machinePutPoint, 2), $lotteryAmount, 2), $activityTotal, 2);
+
+            // 计算总支出 = 洗分 + 代理分润 + 渠道分润
+            $totalExpense = bcadd(bcadd($withdrawAmount, $agentProfit, 2), $channelProfit, 2);
+
+            // 计算总利润 = 总收入 - 总支出
+            $totalProfit = bcsub($totalIncome, $totalExpense, 2);
 
             $reportData[] = [
                 'id' => $store->id,
@@ -261,37 +292,43 @@ class AgentStoreProfitReportController
                 'activity_total' => $activityTotal,
                 'electronic_game_bet_amount' => $electronicGameBetAmount,
                 'machine_bet_amount' => $machineBetAmount,
+                'incoming_ticket_amount' => $incomingTicketAmount,
+                'ticket_redeem_amount' => $ticketRedeemAmount,
+                'ticket_open_score_amount' => $ticketOpenScoreAmount,
+                'redeem_amount' => $redeemAmount,
+                'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
+                'experience_coupon_amount' => $experienceCouponAmount,
+                'welfare_coupon_amount' => $welfareCouponAmount,
                 'subtotal' => $subtotal,
                 'agent_profit' => $agentProfit,
                 'channel_profit' => $channelProfit,
+                'total_income' => $totalIncome,
+                'total_expense' => $totalExpense,
+                'total_profit' => $totalProfit,
             ];
         }
 
         // 计算统计数据
         $totalStats = [
-            'total_recharge' => '0',
-            'total_withdraw' => '0',
             'total_machine_put' => '0',
             'total_lottery' => '0',
             'total_activity' => '0',
-            'total_electronic_game_bet' => '0',
-            'total_machine_bet' => '0',
-            'total_subtotal' => '0',
             'total_agent_profit' => '0',
             'total_channel_profit' => '0',
+            'total_income' => '0',
+            'total_expense' => '0',
+            'total_profit' => '0',
         ];
 
         foreach ($reportData as $item) {
-            $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], strval($item['recharge_amount']), 2);
-            $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], strval($item['withdraw_amount']), 2);
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($item['machine_put_point']), 2);
             $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($item['lottery_amount']), 2);
-            $totalStats['total_activity'] = bcadd($totalStats['total_activity'] ?? 0, strval($item['activity_total']), 2);
-            $totalStats['total_electronic_game_bet'] = bcadd($totalStats['total_electronic_game_bet'], strval($item['electronic_game_bet_amount']), 2);
-            $totalStats['total_machine_bet'] = bcadd($totalStats['total_machine_bet'], strval($item['machine_bet_amount']), 2);
-            $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
-            $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
-            $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
+            $totalStats['total_activity'] = bcadd($totalStats['total_activity'] ?? '0', strval($item['activity_total']), 2);
+            $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], strval($item['agent_profit']), 2);
+            $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], strval($item['channel_profit']), 2);
+            $totalStats['total_income'] = bcadd($totalStats['total_income'], strval($item['total_income']), 2);
+            $totalStats['total_expense'] = bcadd($totalStats['total_expense'], strval($item['total_expense']), 2);
+            $totalStats['total_profit'] = bcadd($totalStats['total_profit'], strval($item['total_profit']), 2);
         }
 
         // 获取店家选项列表用于筛选器下拉选择
@@ -316,13 +353,13 @@ class AgentStoreProfitReportController
             $layout->row(function (Row $row) use ($totalStats) {
                 $row->gutter([10, 10]);
 
-                // 第一行：累计开分、累计洗分、投钞
+                // 累计总收入
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_recharge']))
+                            ->value(floatval($totalStats['total_income']))
                             ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_recharge'))
+                            ->prefix(admin_trans('agent_store_profit.stats.total_income'))
                             ->valueStyle([
                                 'font-size' => '14px',
                                 'font-weight' => '500',
@@ -337,17 +374,18 @@ class AgentStoreProfitReportController
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
 
+                // 累计总支出
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_withdraw']))
+                            ->value(floatval($totalStats['total_expense']))
                             ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_withdraw'))
+                            ->prefix(admin_trans('agent_store_profit.stats.total_expense'))
                             ->valueStyle([
                                 'font-size' => '14px',
                                 'font-weight' => '500',
                                 'text-align' => 'center',
-                                'color' => '#fa8c16'
+                                'color' => '#f5222d'
                             ])),
                     ])->bodyStyle([
                         'display' => 'flex',
@@ -357,6 +395,32 @@ class AgentStoreProfitReportController
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 8);
 
+                // 累计总利润
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_profit']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_profit'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => floatval($totalStats['total_profit']) >= 0 ? '#3f8600' : '#cf1322'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 8);
+            });
+
+            $layout->row(function (Row $row) use ($totalStats) {
+                $row->gutter([10, 0]);
+
+                // 投钞
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
@@ -375,34 +439,10 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-            });
+                    ->style(['margin-top' => '10px'])
+                    , 5);
 
-            $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 0]);
-
-                // 第二行：彩金、小计、代理分润、渠道分润
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_subtotal']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_subtotal'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => floatval($totalStats['total_subtotal']) >= 0 ? '#3f8600' : '#cf1322'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                        ->style(['margin-top' => '10px'])
-                    , 6);
-
+                // 彩金
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
@@ -421,9 +461,32 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
+                        ->style(['margin-top' => '10px'])
+                    , 5);
 
+                // 活动奖励
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(floatval($totalStats['total_activity']))
+                            ->precision(2)
+                            ->prefix(admin_trans('agent_store_profit.stats.total_activity'))
+                            ->valueStyle([
+                                'font-size' => '14px',
+                                'font-weight' => '500',
+                                'text-align' => 'center',
+                                'color' => '#fa8c16'
+                            ])),
+                    ])->bodyStyle([
+                        'display' => 'flex',
+                        'align-items' => 'center',
+                        'height' => '30px',
+                        'padding' => '0px'
+                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                        ->style(['margin-top' => '10px'])
+                    , 5);
+
+                // 代理分润
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
@@ -442,9 +505,10 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
+                        ->style(['margin-top' => '10px'])
+                    , 5);
 
+                // 渠道分润
                 $row->column(
                     Card::create([
                         Row::create()->column(Statistic::create()
@@ -463,66 +527,127 @@ class AgentStoreProfitReportController
                         'height' => '30px',
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
+                        ->style(['margin-top' => '10px'])
+                    , 4);
             });
 
             $grid->tools([$layout]);
 
+            // ID
             $grid->column('id', 'ID')->width(80)->align('center');
 
+            // 店家名称
             $grid->column('store_name', admin_trans('agent_store_profit.fields.store_name'))->width(150)->align('center');
 
+            // 设备数量
             $grid->column('device_count', admin_trans('agent_store_profit.fields.device_count'))->width(100)->align('center');
 
+            // 登录账号
             $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 
-            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->display(function ($value) {
-                return number_format(floatval($value), 2);
-            })->width(120)->align('center');
-
+            // 开分
             $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            // 洗分
             $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            // 投钞
+            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 入票
+            $grid->column('incoming_ticket_amount', admin_trans('agent_store_profit.fields.incoming_ticket_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 出卷
+            $grid->column('ticket_redeem_amount', admin_trans('agent_store_profit.fields.ticket_redeem_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 开票
+            $grid->column('ticket_open_score_amount', admin_trans('agent_store_profit.fields.ticket_open_score_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 核销
+            $grid->column('redeem_amount', admin_trans('agent_store_profit.fields.redeem_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 未核销
+            $grid->column('ticket_unredeemed_amount', admin_trans('agent_store_profit.fields.ticket_unredeemed_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 体验券
+            $grid->column('experience_coupon_amount', admin_trans('agent_store_profit.fields.experience_coupon_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 福利券
+            $grid->column('welfare_coupon_amount', admin_trans('agent_store_profit.fields.welfare_coupon_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 彩金
             $grid->column('lottery_amount', admin_trans('agent_store_profit.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            // 活动奖励
             $grid->column('activity_total', admin_trans('agent_store_profit.fields.activity_total'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            // 电子打码量
             $grid->column('electronic_game_bet_amount', admin_trans('agent_store_profit.fields.electronic_game_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
+            // 机器打码量
             $grid->column('machine_bet_amount', admin_trans('agent_store_profit.fields.machine_bet_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
-            $grid->column('subtotal', admin_trans('agent_store_profit.fields.subtotal'))->display(function ($value) {
+            // 总收入
+            $grid->column('total_income', admin_trans('agent_store_profit.fields.total_income'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 总支出
+            $grid->column('total_expense', admin_trans('agent_store_profit.fields.total_expense'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->width(120)->align('center');
+
+            // 利润
+            $grid->column('total_profit', admin_trans('agent_store_profit.fields.total_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
+            // 代理抽成比例
             $grid->column('agent_commission', admin_trans('agent_store_profit.fields.agent_commission'))->display(function ($value) {
                 return $value . '%';
             })->width(100)->align('center');
 
+            // 代理分润
             $grid->column('agent_profit', admin_trans('agent_store_profit.fields.agent_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#1890ff' : '#fa8c16';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
+            // 渠道抽成比例
             $grid->column('channel_commission', admin_trans('agent_store_profit.fields.channel_commission'))->display(function ($value) {
                 return $value . '%';
             })->width(100)->align('center');
 
+            // 渠道分润
             $grid->column('channel_profit', admin_trans('agent_store_profit.fields.channel_profit'))->display(function ($value) {
                 $color = $value >= 0 ? '#52c41a' : '#f5222d';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
