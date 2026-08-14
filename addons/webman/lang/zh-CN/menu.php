@@ -300,6 +300,10 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票记录',
         'ticket_redeem_list' => '核销记录',
+        //店家后台线下机台管理
+        'store_offline_machine' => '线下机台',
+        'store_offline_machine_list' => '机台列表',
+        'store_offline_machine_info' => '机台资讯',
     ],
     'help' => [
         'controlled_menu' => '此菜单受功能开关控制，名称不可修改',

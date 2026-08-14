@@ -97,10 +97,19 @@ return [
 
     // 操作菜单
     'actions' => [
+        'bind_offline_machine' => '添加线下机台',
         'limit_group' => '限红组配置',
         'auto_shift_config' => '自动交班配置',
         'system_setting' => '系统配置',
         'open_score_setting' => '开分配置',
         'wash_point_setting' => '洗分配置',
     ],
+
+    // 线下机台绑定
+    'bind_offline_machine_title' => '为 {store} 绑定线下机台',
+    'select_machines' => '选择机台',
+    'confirm_bind_machine' => '确定要绑定选中的机台吗？',
+    'please_select_machine' => '请选择要绑定的机台',
+    'machine_already_bound' => '机台 {code} 已绑定到其他店家',
+    'bind_success' => '绑定成功',
 ];

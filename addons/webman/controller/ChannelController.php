@@ -251,8 +251,14 @@ class ChannelController
             $grid->setForm()->drawer($this->form());
             $grid->actions(function (Actions $actions, Channel $data) {
                 $actions->prepend(
-                    Button::create(admin_trans('channel.add_machine'))->drawer(admin_url([$this, 'machineList']),
-                        ['department_id' => $data->department_id])
+                    Button::create(admin_trans('channel.add_offline_machine'))
+                        ->type('default')
+                        ->drawer(admin_url([$this, 'offlineMachineList']), ['department_id' => $data->department_id])
+                );
+                $actions->prepend(
+                    Button::create(admin_trans('channel.add_machine'))
+                        ->type('primary')
+                        ->drawer(admin_url([$this, 'machineList']), ['department_id' => $data->department_id])
                 );
             });
             $grid->filter(function (Filter $filter) {
@@ -947,8 +953,11 @@ class ChannelController
             ->toArray();
         return Grid::create(new $this->machineModel(), function (Grid $grid) use ($department_id) {
             $grid->title(admin_trans('channel.add_machine'));
-            $grid->model()->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])->orderBy('id',
-                'desc');
+            // 只显示线上机台
+            $grid->model()
+                ->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+                ->where('machine_source', Machine::MACHINE_SOURCE_ONLINE)
+                ->orderBy('id', 'desc');
             $grid->driver()->setPk('id');
             $exAdminFilter = Request::input('ex_admin_filter', []);
             $page = Request::input('ex_admin_page', 1);
@@ -1061,7 +1070,10 @@ class ChannelController
         if ($channel->status == 0) {
             return message_error(admin_trans('channel.channel_disable'));
         }
-        $selectedMachineList = Machine::query()->whereIn('id', $selected)->get();
+        $selectedMachineList = Machine::query()
+            ->whereIn('id', $selected)
+            ->where('machine_source', Machine::MACHINE_SOURCE_ONLINE)
+            ->get();
         if (!$selectedMachineList) {
             return message_error(admin_trans('channel.not_found_selected_machine'));
         }
@@ -1070,6 +1082,7 @@ class ChannelController
         if (!empty($ex_admin_filter['code']) || !empty($ex_admin_filter['machineLabel']['code']) || !empty($ex_admin_filter['cate_id']) || !empty($ex_admin_filter['label_id']) || !empty($ex_admin_filter['status'])) {
             /** @var Machine $machine */
             $machineList = Machine::query()
+                ->where('machine_source', Machine::MACHINE_SOURCE_ONLINE)
                 ->when(!empty($ex_admin_filter['code']), function (Builder $query) use ($ex_admin_filter) {
                     $query->where('code', 'like', '%' . $ex_admin_filter['code'] . '%');
                 })
@@ -1123,5 +1136,231 @@ class ChannelController
         }
 
         return message_success(admin_trans('channel.add_machine_success'))->refresh();
+    }
+
+    /**
+     * 线下机台列表（供渠道选择）
+     * @param int $department_id
+     * @return Grid
+     * @group admin
+     * @auth true
+     */
+    public function offlineMachineList(int $department_id): Grid
+    {
+        $departmentId = Request::input('department_id');
+
+        // 获取当前渠道已绑定的线下机台ID
+        $selectedId = ChannelMachine::query()
+            ->when(!empty($department_id), function ($query) use ($department_id) {
+                $query->where('department_id', $department_id);
+            })
+            ->when(!empty($departmentId), function ($query) use ($departmentId) {
+                $query->where('department_id', $departmentId);
+            })
+            ->whereHas('machine', function ($query) {
+                $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
+            })
+            ->pluck('machine_id')
+            ->toArray();
+
+        // 获取已被其他渠道绑定的线下机台ID
+        $boundToOtherChannels = ChannelMachine::query()
+            ->when(!empty($department_id), function ($query) use ($department_id) {
+                $query->where('department_id', '!=', $department_id);
+            })
+            ->when(!empty($departmentId), function ($query) use ($departmentId) {
+                $query->where('department_id', '!=', $departmentId);
+            })
+            ->whereHas('machine', function ($query) {
+                $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
+            })
+            ->pluck('machine_id')
+            ->toArray();
+
+        return Grid::create(new $this->machineModel(), function (Grid $grid) use ($department_id, $boundToOtherChannels) {
+            $grid->title(admin_trans('channel.add_offline_machine'));
+
+            // 只显示线下机台，且排除已绑定到其他渠道的
+            $grid->model()
+                ->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+                ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+                ->whereNotIn('id', $boundToOtherChannels)
+                ->with(['machineLabel', 'channelMachines'])
+                ->orderBy('id', 'desc');
+
+            $grid->driver()->setPk('id');
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+            $page = Request::input('ex_admin_page', 1);
+            $size = Request::input('ex_admin_size', 25);
+            $param = [
+                'size' => $size,
+                'page' => $page,
+                'ex_admin_filter' => $exAdminFilter,
+                'department_id' => $department_id,
+            ];
+
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->column('id', admin_trans('machine.fields.id'))->align('center')->width(80);
+
+            $grid->column('code', admin_trans('machine.fields.code'))
+                ->sortable()
+                ->align('center')
+                ->filter(FilterColumn::like()->text('code'));
+
+            $grid->column('cate_id', admin_trans('machine.fields.cate_id'))
+                ->display(function ($val, Machine $data) {
+                    return Html::create()->content([
+                        Tag::create(getGameTypeName($data->type)),
+                        $data->machineCategory->name ?? '',
+                    ]);
+                })->align('center');
+
+            $grid->column('label_id', admin_trans('machine.fields.label_id'))
+                ->display(function ($val, Machine $data) {
+                    return $data->machineLabel->name ?? '-';
+                })->align('center');
+
+            // 分配状态
+            $grid->column('assign_status', admin_trans('channel.assign_status'))
+                ->display(function ($val, Machine $data) {
+                    // 检查是否已分配给任何渠道
+                    if ($data->channelMachines->isEmpty()) {
+                        return Tag::create(admin_trans('channel.unassigned'))->color('default');
+                    }
+                    // 注：已分配给其他渠道的机台已被过滤，不会出现在这里
+                    return Tag::create(admin_trans('channel.unassigned'))->color('default');
+                })->align('center');
+
+            $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
+
+            $grid->hideDelete();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+
+            $grid->pagination()->pageSize(25);
+            $grid->hideDeleteSelection();
+            $grid->hideTrashed();
+
+            $grid->tools(
+                Button::create(admin_trans('channel.add_offline_machine'))
+                    ->icon(Icon::create('fas fa-chalkboard'))
+                    ->confirm(admin_trans('channel.add_offline_machine_confirm'),
+                        [
+                            $this,
+                            'addOfflineMachine?' . http_build_query($param)
+                        ])
+                    ->gridBatch()->gridRefresh()
+            );
+
+            $grid->filter(function (Filter $filter) {
+                $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
+                $filter->eq()->select('label_id')
+                    ->placeholder(admin_trans('machine.fields.label_id'))
+                    ->style(['width' => '150px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options(getMachineLabelOptions());
+                $filter->eq()->select('status')
+                    ->placeholder(admin_trans('machine.fields.status'))
+                    ->showSearch()
+                    ->style(['width' => '150px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        1 => admin_trans('admin.normal'),
+                        0 => admin_trans('admin.disable')
+                    ]);
+            });
+        })->selection($selectedId);
+    }
+
+    /**
+     * 执行添加线下机台
+     * @param $selected
+     * @param $department_id
+     * @param $size
+     * @param $page
+     * @param array $ex_admin_filter
+     * @return Msg
+     * @auth true
+     */
+    public function addOfflineMachine($selected, $department_id, $size, $page, array $ex_admin_filter = []): Msg
+    {
+        if (!isset($selected) || empty($selected)) {
+            return message_error(admin_trans('channel.selected_machine'));
+        }
+
+        /** @var Channel $channel */
+        $channel = Channel::query()->where('department_id', $department_id)->first();
+        if (empty($channel)) {
+            return message_error(admin_trans('channel.channel_not_found'));
+        }
+        if ($channel->status == 0) {
+            return message_error(admin_trans('channel.channel_disable'));
+        }
+
+        // 验证选中的都是线下机台
+        $selectedMachineList = Machine::query()
+            ->whereIn('id', $selected)
+            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+            ->get();
+
+        if ($selectedMachineList->count() != count($selected)) {
+            return message_error(admin_trans('channel.not_all_offline_machine'));
+        }
+
+        // 检查是否有机台已被其他渠道绑定
+        $boundToOther = ChannelMachine::query()
+            ->whereIn('machine_id', $selected)
+            ->where('department_id', '!=', $department_id)
+            ->exists();
+
+        if ($boundToOther) {
+            return message_error(admin_trans('channel.offline_machine_already_bound'));
+        }
+
+        DB::beginTransaction();
+        try {
+            // 先删除当前渠道已绑定的线下机台（如果有取消选择的）
+            $currentBoundIds = ChannelMachine::query()
+                ->where('department_id', $department_id)
+                ->whereHas('machine', function ($query) {
+                    $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
+                })
+                ->pluck('machine_id')
+                ->toArray();
+
+            $toUnbind = array_diff($currentBoundIds, $selected);
+            if (!empty($toUnbind)) {
+                ChannelMachine::query()
+                    ->where('department_id', $department_id)
+                    ->whereIn('machine_id', $toUnbind)
+                    ->delete();
+            }
+
+            // 添加新选择的线下机台
+            $insertData = [];
+            foreach ($selected as $machineId) {
+                $insertData[] = [
+                    'department_id' => $department_id,
+                    'machine_id' => $machineId,
+                ];
+            }
+
+            ChannelMachine::query()->upsert($insertData, ['department_id', 'machine_id']);
+
+            // 更新渠道机台数量
+            $channel->machine_num = ChannelMachine::query()->where('department_id', $department_id)->count();
+            $channel->save();
+
+            DB::commit();
+        } catch (Exception $e) {
+            DB::rollBack();
+            return message_error(admin_trans('channel.add_machine_fail') . ': ' . $e->getMessage());
+        }
+
+        return message_success(admin_trans('channel.add_offline_machine_success'))->refresh();
     }
 }

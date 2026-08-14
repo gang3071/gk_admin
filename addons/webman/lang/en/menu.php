@@ -300,6 +300,10 @@ return [
         'ticket_management' => 'Ticket Management',
         'ticket_record_list' => 'Ticket Records',
         'ticket_redeem_list' => 'Redeem Records',
+        //Store Offline Machine Management
+        'store_offline_machine' => 'Offline Machines',
+        'store_offline_machine_list' => 'Machine List',
+        'store_offline_machine_info' => 'Machine Info',
     ],
     'help' => [
         'controlled_menu' => 'This menu is controlled by feature toggle, name cannot be modified',

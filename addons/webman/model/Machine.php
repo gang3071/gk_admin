@@ -90,10 +90,14 @@ use support\Cache;
 class Machine extends Model
 {
     use SoftDeletes, HasDateTimeFormatter;
-    
+
     const CONTROL_TYPE_MEI = 1;
     const CONTROL_TYPE_SONG = 2;
-    
+
+    // 机台来源类型
+    const MACHINE_SOURCE_ONLINE = 1;  // 线上机台（有直播）
+    const MACHINE_SOURCE_OFFLINE = 2; // 线下机台（无直播）
+
     protected $name;
     protected $correct_rate;
     protected $picture_url;
@@ -270,5 +274,32 @@ class Machine extends Model
     {
         return $this->belongsTo(plugin()->webman->config('database.machine_producer_model'),
             'producer_id')->withTrashed();
+    }
+
+    /**
+     * 渠道机台关联（用于线下机台）
+     * @return HasMany
+     */
+    public function channelMachines(): HasMany
+    {
+        return $this->hasMany(plugin()->webman->config('database.channel_machine_model'), 'machine_id');
+    }
+
+    /**
+     * 判断是否为线下机台
+     * @return bool
+     */
+    public function isOfflineMachine(): bool
+    {
+        return $this->machine_source == self::MACHINE_SOURCE_OFFLINE;
+    }
+
+    /**
+     * 判断是否为线上机台
+     * @return bool
+     */
+    public function isOnlineMachine(): bool
+    {
+        return $this->machine_source == self::MACHINE_SOURCE_ONLINE;
     }
 }

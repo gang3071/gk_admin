@@ -2111,7 +2111,10 @@ class PlayerController
             return message_error(admin_trans('player.player_no_change'));
         }
 
-        $selfMachineCount = Machine::where('gaming_user_id', $changePlayer->id)->count();
+        // 统计玩家占用的机台数量（根据当前机台类型过滤）
+        $selfMachineCount = Machine::where('gaming_user_id', $changePlayer->id)
+            ->where('machine_source', $machine->machine_source)
+            ->count();
         $machinePlayNum = $changePlayer->machine_play_num ?? 1;
         if ($changePlayer->type != 4 && $machinePlayNum <= $selfMachineCount) {
             return message_error(admin_trans('player.player_machine_limit', '',

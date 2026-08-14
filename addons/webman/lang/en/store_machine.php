@@ -97,10 +97,19 @@ return [
 
     // Action Menu
     'actions' => [
+        'bind_offline_machine' => 'Bind Offline Machine',
         'limit_group' => 'Limit Group Config',
         'auto_shift_config' => 'Auto Shift Config',
         'system_setting' => 'System Settings',
         'open_score_setting' => 'Open Score Config',
         'wash_point_setting' => 'Wash Point Config',
     ],
+
+    // Offline Machine Binding
+    'bind_offline_machine_title' => 'Bind Offline Machines for {store}',
+    'select_machines' => 'Select Machines',
+    'confirm_bind_machine' => 'Are you sure you want to bind the selected machines?',
+    'please_select_machine' => 'Please select machines to bind',
+    'machine_already_bound' => 'Machine {code} is already bound to another store',
+    'bind_success' => 'Binding successful',
 ];

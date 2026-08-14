@@ -792,4 +792,35 @@ return [
             ],
         ]
     ],
+
+    // ========== 线下机台管理 ==========
+    [
+        'id' => 'addons\webman\controller\StoreOfflineMachineController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '线下机台',
+        'children' => [
+            // 机台列表
+            [
+                'id' => 'addons\webman\controller\StoreOfflineMachineController\index',
+                'pid' => 'addons\webman\controller\StoreOfflineMachineController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/index',
+                'title' => '机台列表',
+            ],
+            // 机台资讯
+            [
+                'id' => 'addons\webman\controller\StoreOfflineMachineController\infoList',
+                'pid' => 'addons\webman\controller\StoreOfflineMachineController-',
+                'action' => 'infoList',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/infoList',
+                'title' => '机台资讯',
+            ],
+        ]
+    ],
 ];

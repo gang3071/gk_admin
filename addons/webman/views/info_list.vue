@@ -90,6 +90,17 @@
                     >
                     </a-tree-select>
                   </a-form-item>
+                  <a-form-item name="machine_source">
+                    <a-select v-model:value="formState.machine_source" :placeholder="message.machine_source" allowClear style="min-width:150px">
+                      <a-select-option :value="1">{{ message.machine_source_online }}</a-select-option>
+                      <a-select-option :value="2">{{ message.machine_source_offline }}</a-select-option>
+                    </a-select>
+                  </a-form-item>
+                  <a-form-item name="store_admin_id">
+                    <a-select v-model:value="formState.store_admin_id" :placeholder="message.store" allowClear show-search style="min-width:150px">
+                      <a-select-option v-for="store in storeOptions" :key="store.value" :value="store.value">{{ store.label }}</a-select-option>
+                    </a-select>
+                  </a-form-item>
                   <a-form-item>
                     <a-button html-type="submit" type="primary">
                       <template #icon>
@@ -289,6 +300,17 @@
                         @change="onCateChange"
                     >
                     </a-tree-select>
+                  </a-form-item>
+                  <a-form-item name="machine_source">
+                    <a-select v-model:value="formState.machine_source" :placeholder="message.machine_source" allowClear style="min-width:150px">
+                      <a-select-option :value="1">{{ message.machine_source_online }}</a-select-option>
+                      <a-select-option :value="2">{{ message.machine_source_offline }}</a-select-option>
+                    </a-select>
+                  </a-form-item>
+                  <a-form-item name="store_admin_id">
+                    <a-select v-model:value="formState.store_admin_id" :placeholder="message.store" allowClear show-search style="min-width:150px">
+                      <a-select-option v-for="store in storeOptions" :key="store.value" :value="store.value">{{ store.label }}</a-select-option>
+                    </a-select>
                   </a-form-item>
                   <a-form-item>
                     <a-button html-type="submit" type="primary">
@@ -546,6 +568,10 @@ const lang_map = {
     machine_name: '机器名称',
     machine_code: '机器编号',
     machine_cate: '机台类别',
+    machine_source: '机台来源',
+    machine_source_online: '线上机台',
+    machine_source_offline: '线下机台',
+    store: '所属店家',
     reset: '重置',
     close: '关闭',
     open: '开启',
@@ -592,6 +618,10 @@ const lang_map = {
     machine_name: 'machine name',
     machine_code: 'machine number',
     machine_cate: 'machine category',
+    machine_source: 'Machine Source',
+    machine_source_online: 'Online Machine',
+    machine_source_offline: 'Offline Machine',
+    store: 'Store',
     reset: 'reset',
     close: 'close',
     open: 'open',
@@ -638,6 +668,10 @@ const lang_map = {
     machine_name: 'マシン名',
     machine_code: 'マシン番号',
     machine_cate: 'マシン カテゴリ',
+    machine_source: '機台ソース',
+    machine_source_online: 'オンライン機台',
+    machine_source_offline: 'オフライン機台',
+    store: '店舗',
     reset: 'リセット',
     close: '閉じる',
     open: '開く',
@@ -684,6 +718,10 @@ const lang_map = {
     machine_name: '機器名稱',
     machine_code: '機器編號',
     machine_cate: '機器類別',
+    machine_source: '機台來源',
+    machine_source_online: '線上機台',
+    machine_source_offline: '線下機台',
+    store: '所屬店家',
     reset: '重置',
     close: '關閉',
     open: '開啟',
@@ -744,6 +782,10 @@ export default {
         machine_name: lang_map[this.lang].machine_name,
         machine_code: lang_map[this.lang].machine_code,
         machine_cate: lang_map[this.lang].machine_cate,
+        machine_source: lang_map[this.lang].machine_source,
+        machine_source_online: lang_map[this.lang].machine_source_online,
+        machine_source_offline: lang_map[this.lang].machine_source_offline,
+        store: lang_map[this.lang].store,
         reset: lang_map[this.lang].reset,
         close: lang_map[this.lang].close,
         open: lang_map[this.lang].open,
@@ -1108,8 +1150,11 @@ export default {
       formState: {
         name: '',
         code: '',
-        cate_id: []
+        cate_id: [],
+        machine_source: undefined,
+        store_admin_id: undefined
       },
+      storeOptions: [], // ✅ 店家列表
       modalFormState: {
         type: '1',
         action_type: '1',
@@ -1149,6 +1194,7 @@ export default {
   },
   created() {
     this.queryData();
+    this.loadStoreOptions(); // ✅ 加载店家列表
     if (this.activeKey === '1') {
       this.action_list = this.slot_action_list;
     }
@@ -1207,6 +1253,8 @@ export default {
               name: this.formState.name,
               code: this.formState.code,
               cate_id: this.formState.cate_id,
+              machine_source: this.formState.machine_source,
+              store_admin_id: this.formState.store_admin_id,
               sort: this.sort,
             });
             break;
@@ -1273,6 +1321,17 @@ export default {
         this.loading = false;
       });
     },
+    // ✅ 加载店家列表
+    loadStoreOptions() {
+      this.$request({
+        url: 'ex-admin/addons-webman-controller-ChannelMachineController/getStoreList',
+        method: 'get',
+      }).then(res => {
+        this.storeOptions = res.data || [];
+      }).catch(error => {
+        console.error('Load store options failed:', error);
+      });
+    },
     toggleColumnVisibility() {
     },
     handleColumnChange(col) {
@@ -1316,6 +1375,8 @@ export default {
         name: this.formState.name,
         code: this.formState.code,
         cate_id: this.formState.cate_id,
+        machine_source: this.formState.machine_source,
+        store_admin_id: this.formState.store_admin_id,
         sort: this.sort,
       };
       this.queryData(params);
@@ -1328,6 +1389,8 @@ export default {
         name: this.formState.name,
         code: this.formState.code,
         cate_id: this.formState.cate_id,
+        machine_source: this.formState.machine_source,
+        store_admin_id: this.formState.store_admin_id,
         sort: this.sort,
       });
     },
@@ -1343,6 +1406,8 @@ export default {
         name: this.formState.name,
         code: this.formState.code,
         cate_id: this.formState.cate_id,
+        machine_source: this.formState.machine_source,
+        store_admin_id: this.formState.store_admin_id,
         sort: this.sort,
       });
     },
@@ -1357,6 +1422,8 @@ export default {
         name: '',
         code: '',
         cate_id: [],
+        machine_source: undefined,
+        store_admin_id: undefined,
         sort: this.sort,
       });
     },

@@ -3,7 +3,7 @@
 use addons\webman\model\Machine;
 
 return [
-    'title' => 'Machine information',
+    'title' => 'Online Machines',
     'point_chart' => 'Up and down trend of the machine',
     'open_point_chart' => 'Upward trend',
     'wash_point_chart' => 'Downward trend',
@@ -77,6 +77,8 @@ return [
         'use_turn' => 'Using RPM',
         'has_lock' => 'Is it locked',
         'viewers' => 'Number of viewers',
+        'machine_source' => 'Machine Source',
+        'store' => 'Store',
     ],
     'delete_has_machine_error' => 'A machine has been added under the changed category, please delete the machine first',
     'change_point_gaming' => 'The machines in the game cannot change the point card.',
@@ -198,6 +200,13 @@ return [
     'control_type' => [
         Machine::CONTROL_TYPE_MEI => 'Double Beauty',
         Machine::CONTROL_TYPE_SONG => 'Xiaosong',
+    ],
+    'machine_source' => [
+        'online' => 'Online Machine',
+        'offline' => 'Offline Machine',
+    ],
+    'store' => [
+        'unbound' => 'Unbound',
     ],
     'seat' => [
         1 => '1P',

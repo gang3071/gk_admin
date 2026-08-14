@@ -299,6 +299,10 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票記錄',
         'ticket_redeem_list' => '核銷記錄',
+        //店家后台线下机台管理
+        'store_offline_machine' => '線下機台',
+        'store_offline_machine_list' => '機台列表',
+        'store_offline_machine_info' => '機台資訊',
     ],
     'help' => [
         'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',

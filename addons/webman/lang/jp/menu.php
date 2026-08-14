@@ -300,6 +300,10 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票記録',
         'ticket_redeem_list' => 'チケット記録',
+        //店舗バックエンドオフライン機台管理
+        'store_offline_machine' => 'オフライン機台',
+        'store_offline_machine_list' => '機台リスト',
+        'store_offline_machine_info' => '機台情報',
     ],
     'help' => [
         'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',

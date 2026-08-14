@@ -240,6 +240,12 @@ class StoreMachineController
 
                 $dropdown = $actions->dropdown();
 
+                // ✅ 添加线下机台
+                $dropdown->prepend(admin_trans('store_machine.actions.bind_offline_machine'), 'fas fa-desktop')
+                    ->modal([$this, 'bindOfflineMachineForm'], ['store_id' => $data['id']])
+                    ->width('70%')
+                    ->gridRefresh();
+
                 // 限红组配置
                 $dropdown->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
                     ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
@@ -1693,5 +1699,136 @@ class StoreMachineController
     {
         $defaults = [1000, 3000, 5000, 10000, 30000, 50000];
         return $defaults[$index - 1] ?? 0;
+    }
+
+    /**
+     * 绑定线下机台表单
+     * @auth true
+     * @group channel
+     * @return Form
+     */
+    public function bindOfflineMachineForm(): Form
+    {
+        $storeId = \ExAdmin\ui\support\Request::input('store_id');
+        $currentDepartmentId = Admin::user()->department_id;
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Form::create([], function (Form $form) {
+                $form->html(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        return Form::create([], function (Form $form) use ($storeId, $currentDepartmentId, $store) {
+            $form->title(admin_trans('store_machine.bind_offline_machine_title', null, ['store' => $store->nickname ?: $store->username]));
+
+            // 店家ID（隐藏）
+            $form->hidden('store_id')->value($storeId);
+
+            // 获取当前渠道下未绑定店家的线下机台（或已绑定到当前店家的机台）
+            $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
+            $machineModel = plugin()->webman->config('database.machine_model');
+
+            // 获取当前渠道下的所有线下机台
+            $availableMachines = $channelMachineModel::query()
+                ->join('machine', 'channel_machine.machine_id', '=', 'machine.id')
+                ->join('machine_category', 'machine.cate_id', '=', 'machine_category.id')
+                ->where('channel_machine.department_id', $currentDepartmentId)
+                ->where('machine.machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE)
+                ->where(function ($query) use ($storeId) {
+                    // 未绑定 或 已绑定到当前店家
+                    $query->whereNull('channel_machine.store_admin_id')
+                        ->orWhere('channel_machine.store_admin_id', $storeId);
+                })
+                ->whereNull('machine.deleted_at')
+                ->select([
+                    'machine.id',
+                    'machine.name',
+                    'machine.code',
+                    'machine.type',
+                    'machine_category.name as category_name',
+                    'channel_machine.store_admin_id'
+                ])
+                ->orderBy('machine.code', 'asc')
+                ->get();
+
+            if ($availableMachines->isEmpty()) {
+                $form->html(Html::markdown('><font size=3 color="#ff9800">暂无可绑定的线下机台</font>'));
+                return;
+            }
+
+            // 构建机台选项
+            $machineOptions = [];
+            foreach ($availableMachines as $machine) {
+                $typeLabel = getGameTypeName($machine->type);
+                $label = "{$machine->code} - {$machine->name} ({$typeLabel} / {$machine->category_name})";
+                if ($machine->store_admin_id == $storeId) {
+                    $label .= ' [已绑定]';
+                }
+                $machineOptions[$machine->id] = $label;
+            }
+
+            // 机台多选
+            $form->checkbox('machine_ids', admin_trans('store_machine.select_machines'))
+                ->options($machineOptions)
+                ->required();
+
+            // 提示信息
+            $form->html(Html::markdown('><font size=2 color="#999">提示：线下机台只能绑定到一个店家。选中已绑定的机台将解除绑定，未选中已绑定的机台也将解除绑定。</font>'));
+
+            $form->confirm(admin_trans('store_machine.confirm_bind_machine'));
+
+            $form->saving(function (Form $form) use ($storeId, $currentDepartmentId) {
+                $machineIds = $form->machine_ids ?? [];
+
+                if (empty($machineIds)) {
+                    return message_error(admin_trans('store_machine.please_select_machine'));
+                }
+
+                Db::beginTransaction();
+                try {
+                    $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
+
+                    // 1. 先解除该店家在当前渠道下所有线下机台的绑定
+                    $channelMachineModel::query()
+                        ->where('department_id', $currentDepartmentId)
+                        ->where('store_admin_id', $storeId)
+                        ->whereHas('machine', function ($query) {
+                            $query->where('machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE);
+                        })
+                        ->update(['store_admin_id' => null]);
+
+                    // 2. 绑定选中的机台到该店家
+                    foreach ($machineIds as $machineId) {
+                        // 先检查该机台是否已绑定到其他店家
+                        $existBinding = $channelMachineModel::query()
+                            ->where('department_id', $currentDepartmentId)
+                            ->where('machine_id', $machineId)
+                            ->whereNotNull('store_admin_id')
+                            ->where('store_admin_id', '!=', $storeId)
+                            ->first();
+
+                        if ($existBinding) {
+                            Db::rollBack();
+                            return message_error(admin_trans('store_machine.machine_already_bound', null, ['code' => $existBinding->machine->code ?? $machineId]));
+                        }
+
+                        // 更新绑定
+                        $channelMachineModel::query()
+                            ->where('department_id', $currentDepartmentId)
+                            ->where('machine_id', $machineId)
+                            ->update(['store_admin_id' => $storeId]);
+                    }
+
+                    Db::commit();
+                    return message_success(admin_trans('store_machine.bind_success'));
+
+                } catch (\Exception $e) {
+                    Db::rollBack();
+                    return message_error($e->getMessage());
+                }
+            });
+        });
     }
 }

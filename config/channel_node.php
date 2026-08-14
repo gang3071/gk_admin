@@ -795,6 +795,24 @@ return [
         'url' => 'ex-admin/addons-webman-controller-StoreMachineController/openScoreSettingForm',
         'title' => '删除开分配置',
     ],
+    [
+        'id' => 'addons\webman\controller\StoreMachineController\bindOfflineMachineForm',
+        'pid' => 'addons\webman\controller\StoreMachineController\index',
+        'action' => 'bindOfflineMachineForm',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-StoreMachineController/bindOfflineMachineForm',
+        'title' => '添加线下机台',
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreMachineController\bindOfflineMachineForm-post',
+        'pid' => 'addons\webman\controller\StoreMachineController\bindOfflineMachineForm',
+        'action' => 'bindOfflineMachineForm',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-StoreMachineController/bindOfflineMachineForm',
+        'title' => '保存线下机台绑定',
+    ],
 
     //设备管理
     [

@@ -3,7 +3,7 @@
 use addons\webman\model\Machine;
 
 return [
-    'title' => '機台資訊',
+    'title' => '線上機台管理',
     'point_chart' => '機台上下分趨勢',
     'open_point_chart' => '上分趨勢',
     'wash_point_chart' => '下分趨勢',
@@ -77,6 +77,8 @@ return [
         'use_turn' => '使用轉數',
         'has_lock' => '是否鎖定',
         'viewers' => '觀看人數',
+        'machine_source' => '機台來源',
+        'store' => '所屬店家',
     ],
     'delete_has_machine_error' => '改分類下已添加機台,請先删除機台',
     'change_point_gaming' => '遊戲中的機台無法更換開分卡.',
@@ -198,6 +200,13 @@ return [
     'control_type' => [
         Machine::CONTROL_TYPE_MEI => '雙美',
         Machine::CONTROL_TYPE_SONG => '小淞',
+    ],
+    'machine_source' => [
+        'online' => '線上機台',
+        'offline' => '線下機台',
+    ],
+    'store' => [
+        'unbound' => '未綁定',
     ],
     'seat' => [
         1 => '1P',

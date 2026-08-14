@@ -71,13 +71,22 @@ class ChannelMachineController
     public function slotList(int $machineId = 0): Grid
     {
         return Grid::create(new $this->model(), function (Grid $grid) use ($machineId) {
-            $machineIds = ChannelMachine::query()->where('department_id',
-                Admin::user()->department_id)->get()->pluck('machine_id');
+            $departmentId = Admin::user()->department_id;
+            $machineIds = ChannelMachine::query()
+                ->where('department_id', $departmentId)
+                ->pluck('machine_id');
+
+            // ✅ 查询所有机台（线上+线下）
             $grid->model()
                 ->where('type', GameType::TYPE_SLOT)
                 ->whereIn('id', $machineIds)
+                ->with(['channelMachines' => function ($query) use ($departmentId) {
+                    // 只加载当前渠道的 channel_machine 记录
+                    $query->where('department_id', $departmentId)->with('storeAdmin');
+                }])
                 ->orderBy('sort')
                 ->orderBy('id', 'desc');
+
             $this->getList($grid, GameType::TYPE_SLOT);
         });
     }
@@ -89,13 +98,22 @@ class ChannelMachineController
     public function steelBallList(): Grid
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
-            $machineIds = ChannelMachine::query()->where('department_id',
-                Admin::user()->department_id)->get()->pluck('machine_id');
+            $departmentId = Admin::user()->department_id;
+            $machineIds = ChannelMachine::query()
+                ->where('department_id', $departmentId)
+                ->pluck('machine_id');
+
+            // ✅ 查询所有机台（线上+线下）
             $grid->model()
                 ->where('type', GameType::TYPE_STEEL_BALL)
                 ->whereIn('id', $machineIds)
+                ->with(['channelMachines' => function ($query) use ($departmentId) {
+                    // 只加载当前渠道的 channel_machine 记录
+                    $query->where('department_id', $departmentId)->with('storeAdmin');
+                }])
                 ->orderBy('sort')
                 ->orderBy('id', 'desc');
+
             $grid->title(admin_trans('machine.title'));
             $this->getList($grid, GameType::TYPE_STEEL_BALL);
         });
@@ -120,6 +138,15 @@ class ChannelMachineController
             }
             if (!empty($requestFilter['created_at_end'])) {
                 $grid->model()->where('created_at', '<=', $requestFilter['created_at_end']);
+            }
+
+            // ✅ 店家筛选（通过 channel_machine 表）
+            if (!empty($requestFilter['store_admin_id'])) {
+                $departmentId = Admin::user()->department_id;
+                $grid->model()->whereHas('channelMachines', function ($query) use ($requestFilter, $departmentId) {
+                    $query->where('department_id', $departmentId)
+                        ->where('store_admin_id', $requestFilter['store_admin_id']);
+                });
             }
         }
         $grid->column('id', admin_trans('machine.fields.id'))->align('center');
@@ -151,6 +178,45 @@ class ChannelMachineController
             ->filter(
                 FilterColumn::like()->text('code')
             );
+
+        // ✅ 机台来源列（线上/线下）
+        $grid->column('machine_source', admin_trans('machine.fields.machine_source'))
+            ->display(function ($val, Machine $data) {
+                if ($data->machine_source == Machine::MACHINE_SOURCE_OFFLINE) {
+                    return Tag::create(admin_trans('machine.machine_source.offline'))->color('purple');
+                }
+                return Tag::create(admin_trans('machine.machine_source.online'))->color('blue');
+            })
+            ->width(100)
+            ->align('center');
+
+        // ✅ 所属店家列（仅线下机台）
+        $grid->column('store', admin_trans('machine.fields.store'))
+            ->display(function ($val, Machine $data) {
+                // 获取当前渠道的 channel_machine 记录
+                $channelMachine = $data->channelMachines->first();
+
+                if (!$channelMachine) {
+                    return '-';
+                }
+
+                // 线上机台不显示店家
+                if ($data->machine_source == Machine::MACHINE_SOURCE_ONLINE) {
+                    return Tag::create('-')->color('default');
+                }
+
+                // 线下机台未绑定店家
+                if (!$channelMachine->storeAdmin) {
+                    return Tag::create(admin_trans('machine.store.unbound'))->color('orange');
+                }
+
+                // 显示店家信息
+                return Tag::create($channelMachine->storeAdmin->nickname ?: $channelMachine->storeAdmin->username)
+                    ->color('green');
+            })
+            ->width(120)
+            ->align('center');
+
         $grid->column('odds_x', admin_trans('machine.fields.odds_x'))->display(function ($val, Machine $data) {
             return Html::create()->content([
                 $data->odds_x . ' / ' . $data->odds_y
@@ -164,6 +230,18 @@ class ChannelMachineController
             $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
             $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
             $filter->like()->text('port')->placeholder(admin_trans('machine.fields.port'));
+
+            // ✅ 机台来源筛选器
+            $filter->eq()->select('machine_source')
+                ->placeholder(admin_trans('machine.fields.machine_source'))
+                ->showSearch()
+                ->style(['width' => '150px'])
+                ->dropdownMatchSelectWidth()
+                ->options([
+                    Machine::MACHINE_SOURCE_ONLINE => admin_trans('machine.machine_source.online'),
+                    Machine::MACHINE_SOURCE_OFFLINE => admin_trans('machine.machine_source.offline'),
+                ]);
+
             $filter->eq()->select('control_type')
                 ->placeholder(admin_trans('machine.fields.control_type'))
                 ->showSearch()
@@ -214,6 +292,18 @@ class ChannelMachineController
                     1 => admin_trans('machine.gaming'),
                     0 => admin_trans('machine.not_gaming')
                 ]);
+
+            // ✅ 店家筛选器（仅线下机台）
+            $storeOptions = $this->getStoreOptionsForChannel();
+            if (!empty($storeOptions)) {
+                $filter->eq()->select('store_admin_id')
+                    ->placeholder(admin_trans('machine.fields.store'))
+                    ->showSearch()
+                    ->style(['width' => '150px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($storeOptions);
+            }
+
             $filter->form()->hidden('created_at_start');
             $filter->form()->hidden('created_at_end');
             $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
@@ -309,6 +399,7 @@ class ChannelMachineController
             $requestFilter = Request::input('ex_admin_filter', []);
             $grid->model()->with(['machineCategory', 'gamingPlayer', 'gamingPlayer.machine_wallet'])->where('type',
                 GameType::TYPE_FISH)
+                ->where('machine_source', Machine::MACHINE_SOURCE_ONLINE)
                 ->where('gaming', '!=', 1)
                 ->whereHas('gamingPlayer', function ($query) use ($departmentId) {
                     $query->where('department_id', $departmentId);
@@ -506,19 +597,38 @@ class ChannelMachineController
         $page = Request::input('page', 1);
         $pageSize = Request::input('pageSize', 10);
         $type = Request::input('type', GameType::TYPE_SLOT);
+        $machineSource = Request::input('machine_source', ''); // ✅ 新增：机台来源筛选
+        $storeAdminId = Request::input('store_admin_id', ''); // ✅ 新增：店家筛选
+
         $model = Machine::query()
             ->with([
                 'machineCategory',
                 'machine_media',
                 'gamingPlayer' => function ($query) {
-                    return $query->select(['id', 'name', 'phone', 'avatar']);
+                    return $query->select(['id', 'name', 'phone', 'avatar', 'store_admin_id']);
                 },
-                'gamingPlayer.machine_wallet'
+                'gamingPlayer.machine_wallet',
+                'channelMachines' => function ($query) use ($departmentId) {
+                    // ✅ 只加载当前渠道的 channel_machine 记录
+                    $query->where('department_id', $departmentId)->with('storeAdmin');
+                }
             ])
             ->where('type', $type)
+            // ✅ 移除硬编码，支持线上+线下机台
             ->where('gaming_user_id', '!=', 0)
             ->whereHas('gamingPlayer', function ($query) use ($departmentId) {
                 $query->where('department_id', $departmentId);
+            })
+            // ✅ 机台来源筛选
+            ->when(!empty($machineSource), function ($query) use ($machineSource) {
+                $query->where('machine_source', $machineSource);
+            })
+            // ✅ 店家筛选（通过 channel_machine 表）
+            ->when(!empty($storeAdminId), function ($query) use ($storeAdminId, $departmentId) {
+                $query->whereHas('channelMachines', function ($q) use ($storeAdminId, $departmentId) {
+                    $q->where('department_id', $departmentId)
+                        ->where('store_admin_id', $storeAdminId);
+                });
             })
             ->whereHas('machineLabel', function ($query) use ($name) {
                 $query->when(!empty($name), function ($query) use ($name) {
@@ -630,6 +740,17 @@ class ChannelMachineController
             $lastPlayTime = $services->last_play_time ?? 0;
             $playStartTime = $services->play_start_time ?? 0;
             $actionTime = $services->action_time ?? 0;
+
+            // ✅ 获取店家信息（仅线下机台）
+            $channelMachine = $item->channelMachines->first();
+            $storeInfo = null;
+            if ($channelMachine && $channelMachine->storeAdmin) {
+                $storeInfo = [
+                    'id' => $channelMachine->storeAdmin->id,
+                    'name' => $channelMachine->storeAdmin->nickname ?: $channelMachine->storeAdmin->username,
+                ];
+            }
+
             $machineData = [
                 'id' => $item->id,
                 'name' => $item->name,
@@ -657,6 +778,12 @@ class ChannelMachineController
                 'wash' => $wash > 0 ? $wash : 0,
                 'src_list' => $srcList,
                 'iframe_src' => $iframeSrc,
+                // ✅ 新增字段
+                'machine_source' => $item->machine_source,
+                'machine_source_text' => $item->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                    ? admin_trans('machine.machine_source.offline')
+                    : admin_trans('machine.machine_source.online'),
+                'store_info' => $storeInfo,
             ];
             switch ($item->type) {
                 case GameType::TYPE_SLOT:
@@ -699,6 +826,7 @@ class ChannelMachineController
         /** @var Machine $machine */
         $machine = Machine::query()
             ->where('id', $id)
+            ->where('machine_source', Machine::MACHINE_SOURCE_ONLINE)
             ->whereHas('gamingPlayer', function ($query) {
                 $query->where('department_id', Admin::user()->department_id);
             })
@@ -761,6 +889,60 @@ class ChannelMachineController
         $machineKeepingLog->save();
 
         return message_success(admin_trans('machine.action.action_success'));
+    }
+
+    /**
+     * 获取店家列表API（供前端调用）
+     * @auth true
+     * @group channel
+     * @return Response
+     */
+    public function getStoreList(): Response
+    {
+        $options = $this->getStoreOptionsForChannel();
+
+        // 转换为前端需要的格式 [{value: 1, label: 'xxx'}]
+        $data = [];
+        foreach ($options as $value => $label) {
+            $data[] = [
+                'value' => $value,
+                'label' => $label,
+            ];
+        }
+
+        return json(['code' => 0, 'data' => $data]);
+    }
+
+    /**
+     * 获取当前渠道的店家选项（用于筛选器）
+     * @return array
+     */
+    private function getStoreOptionsForChannel(): array
+    {
+        $departmentId = Admin::user()->department_id;
+
+        // 获取当前渠道下所有绑定了店家的 channel_machine 记录
+        $storeIds = ChannelMachine::query()
+            ->where('department_id', $departmentId)
+            ->whereNotNull('store_admin_id')
+            ->distinct()
+            ->pluck('store_admin_id');
+
+        if ($storeIds->isEmpty()) {
+            return [];
+        }
+
+        // 获取店家信息
+        $adminUserModel = plugin()->webman->config('database.admin_user_model');
+        return $adminUserModel::query()
+            ->whereIn('id', $storeIds)
+            ->orderBy('id', 'desc')
+            ->get()
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 
     /**

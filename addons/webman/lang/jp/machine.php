@@ -3,7 +3,7 @@
 use addons\webman\model\Machine;
 
 return [
-    'title' => 'マシン情報',
+    'title' => 'オンライン機台管理',
     'point_chart' => 'マシンの上下トレンド',
     'open_point_chart' => '上昇トレンド',
     'wash_point_chart' => '下降傾向',
@@ -79,6 +79,8 @@ return [
         'use_turn' => '回転数の使用',
         'has_lock' => 'ロックするかどうか',
         'viewers' => '視聴者数',
+        'machine_source' => '機台ソース',
+        'store' => '店舗',
     ],
     'delete_has_machine_error' => '変更されたカテゴリにマシンが追加されました。最初にマシンを削除してください',
     'change_point_gaming' => 'ゲーム内のマシンはポイントカードを変更できません。',
@@ -200,6 +202,13 @@ return [
     'control_type' => [
         Machine::CONTROL_TYPE_MEI => '双美',
         Machine::CONTROL_TYPE_SONG => '小淞',
+    ],
+    'machine_source' => [
+        'online' => 'オンライン機台',
+        'offline' => 'オフライン機台',
+    ],
+    'store' => [
+        'unbound' => '未紐付け',
     ],
     'seat' => [
         1 => '1P',

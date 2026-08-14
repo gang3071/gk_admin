@@ -97,10 +97,19 @@ return [
 
     // 操作メニュー
     'actions' => [
+        'bind_offline_machine' => 'オフライン機台追加',
         'limit_group' => 'リミットグループ設定',
         'auto_shift_config' => '自動交代設定',
         'system_setting' => 'システム設定',
         'open_score_setting' => 'オープンスコア設定',
         'wash_point_setting' => 'ウォッシュポイント設定',
     ],
+
+    // オフライン機台バインディング
+    'bind_offline_machine_title' => '{store} のオフライン機台をバインド',
+    'select_machines' => '機台を選択',
+    'confirm_bind_machine' => '選択した機台をバインドしてもよろしいですか？',
+    'please_select_machine' => 'バインドする機台を選択してください',
+    'machine_already_bound' => '機台 {code} は既に他の店舗にバインドされています',
+    'bind_success' => 'バインド成功',
 ];
