@@ -5,6 +5,7 @@ return [
         //用户表
         'user_table' => 'admin_users',
         'user_model' => addons\webman\model\AdminUser::class,
+        'admin_user_model' => addons\webman\model\AdminUser::class, // 管理员用户模型（别名）
         //菜单表
         'menu_table' => 'admin_menus',
         'menu_model' => addons\webman\model\AdminMenu::class,
