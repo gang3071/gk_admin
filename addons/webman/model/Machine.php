@@ -254,7 +254,7 @@ class Machine extends Model
      */
     public function machine_media(): HasMany
     {
-        return $this->hasMany(plugin()->webman->config('database.machine_media_model'), 'machine_id');
+        return $this->hasMany(MachineMedia::class, 'machine_id');
     }
     
     /**
