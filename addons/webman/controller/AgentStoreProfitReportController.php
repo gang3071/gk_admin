@@ -174,8 +174,8 @@ class AgentStoreProfitReportController
             }
 
             $ticketData = $ticketQuery->selectRaw("
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_NORMAL . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS experience_coupon_amount,
@@ -276,8 +276,8 @@ class AgentStoreProfitReportController
             $channelCommission = floatval($store->channel_commission ?? 0);
             $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
 
-            // 计算总收入 = 开分 + 开票 + 投钞 + 彩金 + 活动奖励
-            $totalIncome = bcadd(bcadd(bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $machinePutPoint, 2), $lotteryAmount, 2), $activityTotal, 2);
+            // 计算总收入 = 开分 + 开票（与导出报表一致）
+            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
 
             // 计算总支出 = 洗分 + 核销金额（后台核销）
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
