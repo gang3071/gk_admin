@@ -20,6 +20,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use Illuminate\Support\Str;
+use support\Cache;
 
 /**
  * 管理后台 - 线下机台管理
@@ -74,6 +75,17 @@ class AdminOfflineMachineController
 
             // 设置表单
             $grid->setForm()->drawer([$this, 'slotForm']);
+
+            // 删除时清除缓存
+            $grid->deling(function ($ids) {
+                $machineList = Machine::query()->whereIn('id', $ids)->get(['domain', 'port', 'type']);
+                foreach ($machineList as $machine) {
+                    $cacheKey = sprintf('machine:domain:%s:port:%s:type:%s',
+                        $machine->domain, $machine->port, $machine->type
+                    );
+                    Cache::delete($cacheKey);
+                }
+            });
         });
     }
 
@@ -102,6 +114,17 @@ class AdminOfflineMachineController
 
             // 设置表单
             $grid->setForm()->drawer([$this, 'steelBallForm']);
+
+            // 删除时清除缓存
+            $grid->deling(function ($ids) {
+                $machineList = Machine::query()->whereIn('id', $ids)->get(['domain', 'port', 'type']);
+                foreach ($machineList as $machine) {
+                    $cacheKey = sprintf('machine:domain:%s:port:%s:type:%s',
+                        $machine->domain, $machine->port, $machine->type
+                    );
+                    Cache::delete($cacheKey);
+                }
+            });
         });
     }
 
@@ -246,7 +269,25 @@ class AdminOfflineMachineController
                     1 => admin_trans('offline_machine.status.gaming'),
                     0 => admin_trans('offline_machine.status.idle'),
                 ]);
+
+            $filter->in()->cascaderSingle('cate_id')
+                ->showSearch()
+                ->style(['width' => '150px'])
+                ->placeholder(admin_trans('machine.fields.cate_id'))
+                ->options(getCateListOptions())
+                ->multiple();
+
+            $producerModel = plugin()->webman->config('database.machine_producer_model');
+            $producerOptions = $producerModel::select(['id', 'name'])->pluck('name', 'id')->all();
+            $filter->eq()->select('producer_id')
+                ->placeholder(admin_trans('machine.fields.producer_id'))
+                ->showSearch()
+                ->style(['width' => '150px'])
+                ->dropdownMatchSelectWidth()
+                ->options($producerOptions);
         });
+
+        $grid->expandFilter();
     }
 
     /**
@@ -474,9 +515,20 @@ class AdminOfflineMachineController
             });
 
             $form->saved(function (Form $form, $result) {
-                // 线下机台不允许配置直播流，删除可能存在的媒体配置
                 if ($result && $form->model()->id) {
-                    MachineMedia::where('machine_id', $form->model()->id)->delete();
+                    /** @var Machine $machine */
+                    $machine = Machine::find($form->model()->id);
+
+                    if ($machine) {
+                        // 线下机台不允许配置直播流，删除可能存在的媒体配置
+                        MachineMedia::where('machine_id', $machine->id)->delete();
+
+                        // 更新缓存
+                        $cacheKey = sprintf('machine:domain:%s:port:%s:type:%s',
+                            $machine->domain, $machine->port, $machine->type
+                        );
+                        Cache::set($cacheKey, $machine, 3600);
+                    }
                 }
 
                 return message_success(admin_trans('common.save_success'));
