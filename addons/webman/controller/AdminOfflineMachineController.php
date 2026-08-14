@@ -491,12 +491,17 @@ class AdminOfflineMachineController
      */
     private function getMachineLabelOptions(int $gameType): array
     {
+        $labelModel = new MachineLabel();
+        $categoryModel = new MachineCategory();
+        $labelTable = $labelModel->getTable();
+        $categoryTable = $categoryModel->getTable();
+
         return MachineLabel::query()
-            ->leftJoin('yjb_machine_category', 'yjb_machine_label.cate_id', '=', 'yjb_machine_category.id')
-            ->where('yjb_machine_category.type', $gameType)
-            ->where('yjb_machine_label.status', 1)
-            ->orderBy('yjb_machine_label.id', 'desc')
-            ->get(['yjb_machine_label.id', 'yjb_machine_label.name'])
+            ->leftJoin($categoryTable, $labelTable . '.cate_id', '=', $categoryTable . '.id')
+            ->where($categoryTable . '.type', $gameType)
+            ->where($labelTable . '.status', 1)
+            ->orderBy($labelTable . '.id', 'desc')
+            ->get([$labelTable . '.id', $labelTable . '.name'])
             ->pluck('name', 'id')
             ->toArray();
     }
