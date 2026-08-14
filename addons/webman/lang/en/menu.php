@@ -266,7 +266,7 @@ return [
         'store_manage' => 'Store Backend',
         'agent_center' => 'Agent Center',
         'store_list' => 'Store List',
-        'device_list_tw' => 'Device List',
+        'device_list_tw' => 'Player List',
         'store_center' => 'Store Center',
         'store_machine_manage' => 'Store Machine Management',
         'lottery_receive' => 'Lottery Receive',

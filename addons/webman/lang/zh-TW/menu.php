@@ -265,7 +265,7 @@ return [
         'store_manage' => '店機後台',
         'agent_center' => '代理中心',
         'store_list' => '店家列表',
-        'device_list_tw' => '設備列表',
+        'device_list_tw' => '玩家列表',
         'store_center' => '店機中心',
         'store_machine_manage' => '店機管理',
         'lottery_receive' => '彩金領取',
