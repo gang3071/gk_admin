@@ -1640,27 +1640,7 @@ class ChannelAgentController
             }
             if (!empty($exAdminFilter['search_source'])) {
                 $searchSource = $exAdminFilter['search_source'];
-                $grid->model()->where(function ($query) use ($searchSource) {
-                    $query->where([
-                        ['code', 'like', '%' . $searchSource . '%', 'or'],
-                        ['machine_name', 'like', '%' . $searchSource . '%', 'or']
-                    ])->orWhere(function ($query) use ($searchSource) {
-                        $query->where([
-                            ['source', 'like', '%' . $searchSource . '%', 'and'],
-                        ])->whereIn('type',
-                            [PlayerDeliveryRecord::TYPE_PRESENT_IN, PlayerDeliveryRecord::TYPE_PRESENT_OUT]);
-                    })->orWhere(function ($query) use ($searchSource) {
-                        $query->whereHas('gamePlatform', function ($query) use ($searchSource) {
-                            $query->where([
-                                ['name', 'like', '%' . $searchSource . '%', 'or'],
-                            ]);
-                        })->whereIn('type',
-                            [
-                                PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT,
-                                PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN
-                            ]);
-                    });
-                });
+                $grid->model()->where('source', $searchSource);
             }
             if (!empty($exAdminFilter['activity'])) {
                 $target_id = PlayerMoneyEditLog::query()
@@ -2029,7 +2009,25 @@ class ChannelAgentController
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
-                $filter->like()->text('search_source')->placeholder(admin_trans('player_delivery_record.fields.source'));
+                $filter->eq()->select('search_source')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_delivery_record.fields.source'))
+                    ->options([
+                        'artificial_recharge' => admin_trans('message.target.artificial_recharge'),
+                        'self_recharge' => admin_trans('message.target.self_recharge'),
+                        'gb_recharge' => admin_trans('message.target.gb_recharge'),
+                        'channel_withdrawal' => admin_trans('message.target.channel_withdrawal'),
+                        'artificial_withdrawal' => admin_trans('message.target.artificial_withdrawal'),
+                        'gb_withdrawal' => admin_trans('message.target.gb_withdrawal'),
+                        'ticket_open_score' => admin_trans('message.target.ticket_open_score'),
+                        'ticket_redeem' => admin_trans('message.target.ticket_redeem'),
+                        'lottery_game' => admin_trans('message.target.lottery_game'),
+                        'coin_recharge' => admin_trans('message.target.coin_recharge'),
+                        'talk_recharge' => admin_trans('message.target.talk_recharge'),
+                        'talk_withdrawal' => admin_trans('message.target.talk_withdrawal'),
+                    ]);
                 $filter->select('search_type')
                     ->showSearch()
                     ->style(['width' => '200px'])
