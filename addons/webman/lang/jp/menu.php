@@ -302,7 +302,7 @@ return [
         'ticket_redeem_list' => 'チケット記録',
         //総局オフライン機台管理
         'offline_machine_manage' => 'オフライン機台管理',
-        'offline_machine_list' => '機台リスト',
+        'offline_machine_list' => 'オフライン機台',
         //店舗バックエンドオフライン機台管理
         'store_offline_machine' => 'オフライン機台',
         'store_offline_machine_list' => '機台リスト',

@@ -302,7 +302,7 @@ return [
         'ticket_redeem_list' => 'Redeem Records',
         //Admin Offline Machine Management
         'offline_machine_manage' => 'Offline Machine Management',
-        'offline_machine_list' => 'Machine List',
+        'offline_machine_list' => 'Offline Machines',
         //Store Offline Machine Management
         'store_offline_machine' => 'Offline Machines',
         'store_offline_machine_list' => 'Machine List',
