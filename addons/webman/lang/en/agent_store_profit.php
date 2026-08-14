@@ -10,6 +10,7 @@ return [
         'device_count' => 'Device Count',
         'store_username' => 'Login Account',
         'recharge_amount' => 'Open Score',
+        'open_score_amount' => 'Manual Recharge',
         'withdraw_amount' => 'Wash Score',
         'machine_put_point' => 'Cash In',
         'incoming_ticket_amount' => 'Incoming Ticket',

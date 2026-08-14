@@ -12,6 +12,7 @@ return [
         'agent_name' => '所属代理店',
         'remark' => '備考',
         'recharge_amount' => '開分',
+        'open_score_amount' => '人工充值',
         'withdraw_amount' => '洗分',
         'machine_put_point' => 'コイン投入',
         'incoming_ticket_amount' => '入票',

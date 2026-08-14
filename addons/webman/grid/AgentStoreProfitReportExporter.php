@@ -141,7 +141,14 @@ class AgentStoreProfitReportExporter extends Excel
 
                 // ✅ 参考 Eloquent driver 的做法，使用 Filesystem::path() 和 Filesystem::url()
                 \support\Log::info('步骤9: 保存文件到 public/storage');
-                parent::save(\addons\webman\filesystem\Filesystem::path(''));
+
+                // 确保存储目录存在
+                $storagePath = \addons\webman\filesystem\Filesystem::path('');
+                if (!is_dir($storagePath)) {
+                    mkdir($storagePath, 0755, true);
+                }
+
+                parent::save($storagePath);
 
                 // ✅ 使用 Filesystem::url() 构建 HTTPS URL（与 ShiftReportExporter 一致）
                 $downloadUrl = \addons\webman\filesystem\Filesystem::url($this->getFilename() . '.' . $this->getExtension());

@@ -12,6 +12,7 @@ return [
         'agent_name' => 'Agent',
         'remark' => 'Remark',
         'recharge_amount' => 'Open Score',
+        'open_score_amount' => 'Manual Recharge',
         'withdraw_amount' => 'Wash Score',
         'machine_put_point' => 'Coin Deposit',
         'incoming_ticket_amount' => 'Incoming Ticket',
