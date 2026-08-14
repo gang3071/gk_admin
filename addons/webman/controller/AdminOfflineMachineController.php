@@ -288,6 +288,7 @@ class AdminOfflineMachineController
         });
 
         $grid->expandFilter();
+        $grid->hideDelete();
     }
 
     /**

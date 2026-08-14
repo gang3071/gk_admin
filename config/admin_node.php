@@ -748,15 +748,6 @@ return [
         'title' => '线下钢珠机台表单',
     ],
     [
-        'id' => 'addons\webman\controller\AdminOfflineMachineController\index-delete',
-        'pid' => 'addons\webman\controller\AdminOfflineMachineController\index',
-        'action' => 'index',
-        'method' => 'delete',
-        'group' => 'department',
-        'url' => 'ex-admin/addons-webman-controller-AdminOfflineMachineController/index',
-        'title' => '删除线下机台',
-    ],
-    [
         'id' => 'addons\webman\controller\MachineProducerController\index',
         'pid' => 'addons\webman\controller\GameTypeController-',
         'action' => 'index',
