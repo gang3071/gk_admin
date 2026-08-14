@@ -10,6 +10,7 @@ return [
         'device_count' => '設備數量',
         'store_username' => '登入帳號',
         'recharge_amount' => '開分',
+        'open_score_amount' => '人工儲值',
         'withdraw_amount' => '洗分',
         'machine_put_point' => '投鈔',
         'incoming_ticket_amount' => '入票',

@@ -120,6 +120,7 @@ class ChannelStoreProfitReportController
                     'channel_commission' => $store->channel_commission ?? 0,
                     'remark' => $store->remark ?? '',
                     'recharge_amount' => 0,
+                    'open_score_amount' => 0,
                     'withdraw_amount' => 0,
                     'machine_put_point' => 0,
                     'lottery_amount' => 0,
@@ -166,7 +167,9 @@ class ChannelStoreProfitReportController
 
             $deliveryData = $deliveryQuery->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND `source` = 'artificial_recharge' THEN `amount` ELSE 0 END) AS open_score_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS withdraw_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'ticket_redeem' THEN `amount` ELSE 0 END) AS ticket_redeem_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                 SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")->first();
@@ -193,11 +196,10 @@ class ChannelStoreProfitReportController
             }
 
             $ticketData = $ticketQuery->selectRaw("
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS incoming_ticket_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS ticket_redeem_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_NORMAL . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS redeem_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_NORMAL . " THEN `score` ELSE 0 END) AS ticket_unredeemed_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS experience_coupon_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS welfare_coupon_amount
             ")->first();
@@ -258,7 +260,9 @@ class ChannelStoreProfitReportController
 
             // 提取数据
             $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
+            $openScoreAmount = floatval($deliveryData->open_score_amount ?? 0);          // 开分（人工储值）
             $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
+            $ticketRedeemAmount = floatval($deliveryData->ticket_redeem_amount ?? 0);    // 出卷（从账变记录查询）
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
@@ -266,11 +270,14 @@ class ChannelStoreProfitReportController
             $machineBetAmount = floatval($betData->machine_bet_amount ?? 0);
 
             // 票务数据
-            $incomingTicketAmount = floatval($ticketData->incoming_ticket_amount ?? 0);  // 入票
-            $ticketRedeemAmount = floatval($ticketData->ticket_redeem_amount ?? 0);      // 出卷
-            $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0); // 开票
-            $redeemAmount = floatval($ticketData->redeem_amount ?? 0);                   // 核销
-            $ticketUnredeemedAmount = floatval($ticketData->ticket_unredeemed_amount ?? 0); // 未核销
+            $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0); // 开票机台使用
+            $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0); // 开票（未使用）
+            $redeemAmount = floatval($ticketData->redeem_amount ?? 0);                   // 核销（后台核销）
+            $redeemMachineAmount = floatval($ticketData->redeem_machine_amount ?? 0);     // 核销（机台核销）
+            // 入票 = 开票机台使用 + 核销机台使用（与导出报表逻辑一致）
+            $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
+            // 未核销 = 出卷 - 核销（后台核销）
+            $ticketUnredeemedAmount = bcsub($ticketRedeemAmount, $redeemAmount, 2);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0); // 体验券
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);     // 福利券
 
@@ -291,11 +298,11 @@ class ChannelStoreProfitReportController
             $channelCommission = floatval($store->channel_commission ?? 0);
             $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
 
-            // 计算总收入 = 开分 + 投钞 + 彩金 + 活动奖励
-            $totalIncome = bcadd(bcadd(bcadd($rechargeAmount, $machinePutPoint, 2), $lotteryAmount, 2), $activityTotal, 2);
+            // 计算总收入 = 开分 + 开票（与导出报表一致）
+            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
 
-            // 计算总支出 = 洗分 + 代理分润 + 渠道分润
-            $totalExpense = bcadd(bcadd($withdrawAmount, $agentProfit, 2), $channelProfit, 2);
+            // 计算总支出 = 洗分 + 核销金额（后台核销）
+            $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
 
             // 计算总利润 = 总收入 - 总支出
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
@@ -310,6 +317,7 @@ class ChannelStoreProfitReportController
                 'channel_commission' => $channelCommission,
                 'remark' => $store->remark ?? '',
                 'recharge_amount' => $rechargeAmount,
+                'open_score_amount' => $openScoreAmount,
                 'withdraw_amount' => $withdrawAmount,
                 'machine_put_point' => $machinePutPoint,
                 'lottery_amount' => $lotteryAmount,
