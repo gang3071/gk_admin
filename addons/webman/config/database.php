@@ -229,7 +229,7 @@ return [
         'machine_label_model' => \addons\webman\model\MachineLabel::class,
         //渠道机器
         'channel_machine_table' => 'channel_machine',
-        'channel_machine_label_model' => \addons\webman\model\ChannelMachine::class,
+        'channel_machine_model' => \addons\webman\model\ChannelMachine::class,
         //机器中奖记录
         'machine_lottery_record_table' => 'machine_lottery_record',
         'machine_lottery_record_model' => \addons\webman\model\MachineLotteryRecord::class,
