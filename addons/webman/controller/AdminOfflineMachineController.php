@@ -10,12 +10,10 @@ use addons\webman\model\MachineCategory;
 use addons\webman\model\MachineLabel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\Channel;
-use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
-use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
@@ -180,14 +178,8 @@ class AdminOfflineMachineController
 
         $grid->column('created_at', admin_trans('common.created_at'))->width(180)->align('center');
 
-        // 操作列
-        $grid->actions(function (Actions $actions) use ($gameType) {
-            $actions->edit()->modal([$this, 'form'], ['game_type' => $gameType])->width('70%');
-            $actions->delete();
-        });
-
-        // 工具栏 - ExAdmin 自动添加创建按钮，需指定 modal 和参数
-        $grid->createButton()->modal([$this, 'form'], ['game_type' => $gameType])->width('70%');
+        // 设置表单 - ExAdmin 会自动添加创建和编辑按钮
+        $grid->setForm()->modal([$this, 'form?game_type=' . $gameType])->width('70%');
 
         // 筛选器
         $grid->filter(function (Filter $filter) use ($gameType) {
