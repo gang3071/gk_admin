@@ -2867,8 +2867,9 @@ class ChannelLotteryTicketActivityController
             return Response::success([], admin_trans('lottery_ticket.error.ticket_already_recorded'), 409);
         }
 
-        // 查询玩家信息
+        // 查询玩家信息（预加载店家关系）
         $player = Player::query()
+            ->with(['storeAdmin'])
             ->where('id', $ticket->player_id)
             ->first();
 
@@ -2876,12 +2877,23 @@ class ChannelLotteryTicketActivityController
             return Response::success([], admin_trans('lottery_ticket.error.player_not_found_for_ticket'), 404);
         }
 
-        // ✅ 成功：返回玩家信息
+        // ⭐ 获取店家信息
+        $storeName = '-';
+        $storeId = null;
+        if ($player->storeAdmin) {
+            // 优先使用 nickname，没有则使用 username
+            $storeName = $player->storeAdmin->nickname ?? $player->storeAdmin->username ?? '-';
+            $storeId = $player->storeAdmin->id;
+        }
+
+        // ✅ 成功：返回玩家信息（包含店家信息）
         return Response::success([
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
             'player_name' => $player->name,
             'player_account' => $player->phone ?? '-',  // 玩家账号（phone字段）
+            'store_id' => $storeId,                     // ⭐ 新增：店家ID
+            'store_name' => $storeName,                  // ⭐ 新增：店家名称
             'ticket_no' => $ticketNo,
             'ticket_id' => $ticket->id
         ], '', 200);

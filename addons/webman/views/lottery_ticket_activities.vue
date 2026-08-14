@@ -781,6 +781,22 @@
                   </a-button>
                 </a-space>
               </a-descriptions-item>
+              <!-- ⭐ 新增：所屬店家 -->
+              <a-descriptions-item label="所屬店家">
+                <a-space>
+                  <a-tag color="orange">
+                    <shop-outlined /> {{ singleRecord.player_info.store_name }}
+                  </a-tag>
+                  <a-button
+                      type="link"
+                      size="small"
+                      @click="copyToClipboard(singleRecord.player_info.store_name)"
+                      style="padding: 0;"
+                  >
+                    <copy-outlined /> 複製
+                  </a-button>
+                </a-space>
+              </a-descriptions-item>
             </a-descriptions>
           </div>
         </a-form-item>
