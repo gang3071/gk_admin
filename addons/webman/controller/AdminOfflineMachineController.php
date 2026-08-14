@@ -73,7 +73,7 @@ class AdminOfflineMachineController
             $this->buildGrid($grid, GameType::TYPE_SLOT);
 
             // 设置表单
-            $grid->setForm()->drawer([$this, 'slotForm'])->width('70%');
+            $grid->setForm()->drawer([$this, 'slotForm']);
         });
     }
 
@@ -101,7 +101,7 @@ class AdminOfflineMachineController
             $this->buildGrid($grid, GameType::TYPE_STEEL_BALL);
 
             // 设置表单
-            $grid->setForm()->drawer([$this, 'steelBallForm'])->width('70%');
+            $grid->setForm()->drawer([$this, 'steelBallForm']);
         });
     }
 
