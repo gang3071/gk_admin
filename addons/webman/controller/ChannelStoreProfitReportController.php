@@ -9,6 +9,7 @@ use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\TicketRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\grid\card\Card;
@@ -160,6 +161,33 @@ class ChannelStoreProfitReportController
                 SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
             ")->first();
 
+            // 查询福利券和体验券已使用的金额（需要从开分中扣除）
+            $ticketQuery = TicketRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->whereIn('ticket_type', [TicketRecord::TYPE_WELFARE, TicketRecord::TYPE_EXPERIENCE])
+                ->whereIn('status', [TicketRecord::STATUS_BACKEND_USED, TicketRecord::STATUS_MACHINE_USED]);
+
+            // 时间筛选：优先使用结算周期，否则使用手动时间范围
+            if (!empty($dateType)) {
+                $ticketQuery->where(getDateWhere($dateType, 'created_at'));
+            } else {
+                if (!empty($createdAtStart)) {
+                    $ticketQuery->where('created_at', '>=', $createdAtStart);
+                }
+                if (!empty($createdAtEnd)) {
+                    $ticketQuery->where('created_at', '<=', $createdAtEnd);
+                }
+            }
+
+            // 班次筛选
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($ticketQuery, $selectedShift);
+            }
+
+            $ticketData = $ticketQuery->selectRaw("
+                SUM(`score`) as ticket_amount
+            ")->first();
+
             // 查询拉彩数据
             $lotteryQuery = PlayerLotteryRecord::query()
                 ->whereIn('player_id', $playerIds)
@@ -222,6 +250,10 @@ class ChannelStoreProfitReportController
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
             $electronicGameBetAmount = floatval($betData->electronic_game_bet_amount ?? 0);
             $machineBetAmount = floatval($betData->machine_bet_amount ?? 0);
+            $ticketAmount = floatval($ticketData->ticket_amount ?? 0);
+
+            // 从开分中扣除福利券和体验券的金额
+            $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             // 计算小计 = (开分 + 投钞) - 洗分
             // 注意：洗分中不包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
