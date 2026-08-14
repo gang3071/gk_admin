@@ -2031,7 +2031,11 @@ class ChannelAgentController
                         'ticket_open_score' => admin_trans('message.target.ticket_open_score'),
                         'ticket_redeem' => admin_trans('message.target.ticket_redeem'),
                         'lottery_game' => admin_trans('message.target.lottery_game'),
+                        'lottery_random' => admin_trans('message.target.lottery_random'),
+                        'lottery_fixed' => admin_trans('message.target.lottery_fixed'),
                         'lottery_ticket_reward' => admin_trans('message.target.lottery_ticket_reward'),
+                        'machine_up' => admin_trans('message.target.machine_up'),
+                        'machine_down' => admin_trans('message.target.machine_down'),
                         'birthday_bonus' => admin_trans('message.target.birthday_bonus'),
                         'vip_upgrade_bonus' => admin_trans('message.target.vip_upgrade_bonus'),
                         'activity_bonus' => admin_trans('message.target.activity_bonus'),
@@ -2116,6 +2120,9 @@ class ChannelAgentController
                         PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RE_SETTLEMENT),
                         PlayerDeliveryRecord::TYPE_PREPAY => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY),
                         PlayerDeliveryRecord::TYPE_REFUND => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND),
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD),
+                        PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS),
+                        PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS),
                     ]);
             });
             $grid->expandFilter();
