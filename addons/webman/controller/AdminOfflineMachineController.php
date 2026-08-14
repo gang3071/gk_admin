@@ -535,8 +535,10 @@ class AdminOfflineMachineController
                 return message_success(admin_trans('common.save_success'));
             });
 
+            $form->actions()->hideResetButton();
+            $form->layout('vertical');
             $form->labelWidth('150px');
-        });
+        })->style(['margin-top' => '-30px']);
     }
 
     /**
