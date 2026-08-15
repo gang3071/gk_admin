@@ -319,14 +319,6 @@ class AdminOfflineMachineController
     private function buildForm(int $gameType): Form
     {
         return Form::create(new $this->model(), function (Form $form) use ($gameType) {
-            // 编辑模式：验证当前记录必须是线下机台
-            if ($form->isEdit()) {
-                $currentMachine = Machine::find($form->model()->getKey());
-                if (!$currentMachine || $currentMachine->machine_source != Machine::MACHINE_SOURCE_OFFLINE) {
-                    throw new \Exception(admin_trans('offline_machine.error.not_offline_machine'));
-                }
-            }
-
             $form->title(admin_trans('offline_machine.title'));
             $form->hidden('type')->default($gameType);
             $form->hidden('machine_source')->default(Machine::MACHINE_SOURCE_OFFLINE);
