@@ -2,6 +2,7 @@
 
 namespace addons\webman\controller;
 
+use addons\webman\Admin;
 use addons\webman\controller\MachineStrategyController;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
@@ -10,6 +11,7 @@ use addons\webman\model\MachineLabel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineProducer;
 use addons\webman\model\MachineStrategy;
+use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
@@ -193,6 +195,56 @@ class AdminOfflineMachineController
                         ->style(['margin-left' => '8px'])
                 ]);
             })->width(150);
+
+        // 实时状态
+        $onlineStatusCache = null;
+        $grid->column('now_status', admin_trans('machine.fields.now_status'))
+            ->display(function ($val, Machine $data) use (&$onlineStatusCache, $gameType) {
+                // 首次调用时批量获取所有机台在线状态
+                if ($onlineStatusCache === null) {
+                    $onlineStatusCache = [];
+                    try {
+                        // 获取当前页所有机台ID
+                        $allMachines = $this->model::query()
+                            ->where('type', $gameType)
+                            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+                            ->get(['id']);
+                        $machineIds = $allMachines->pluck('id')->toArray();
+
+                        // 批量检查在线状态
+                        if (!empty($machineIds)) {
+                            $result = MachineApiService::getAllOnlineStatus(
+                                departmentId: Admin::user()->department_id,
+                                type: $gameType,
+                                adminId: Admin::id(),
+                                machineIds: $machineIds
+                            );
+                            if (is_array($result)) {
+                                foreach ($result as $item) {
+                                    if (isset($item['id']) && isset($item['online'])) {
+                                        $onlineStatusCache[$item['id']] = $item['online'];
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \support\Log::warning('Batch check offline machine online status failed', [
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+
+                // 从缓存中读取在线状态
+                $machineStatus = ($onlineStatusCache[$data->id] ?? false) ? 'online' : 'offline';
+                return admin_view(plugin()->webman->getPath() . '/views/machine_status.vue')->attrs([
+                    'id' => $data->id,
+                    'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
+                    'department_id' => Admin::user()->department_id,
+                    'ws' => config('app.ws_url', ''),
+                    'machine_status' => $machineStatus,
+                ]);
+            })
+            ->width(100)->align('center');
 
         $grid->column('odds_x', admin_trans('machine.fields.odds_x'))
             ->editable(Editable::number('odds_x')->min(1)->precision(3))
