@@ -19,7 +19,7 @@
     </div>
 
     <div class="qrcode-wrapper">
-      <div id="qrcode" ref="qrcode"></div>
+      <div class="qrcode-container" ref="qrcode"></div>
     </div>
 
     <div class="qrcode-footer">
@@ -70,8 +70,20 @@ export default {
       default: '机台二维码'
     }
   },
+  data() {
+    return {
+      qrcodeInstance: null
+    };
+  },
   mounted() {
     this.loadQrCodeLibrary();
+  },
+  beforeUnmount() {
+    // 清理二维码实例
+    if (this.$refs.qrcode) {
+      this.$refs.qrcode.innerHTML = '';
+    }
+    this.qrcodeInstance = null;
   },
   methods: {
     loadQrCodeLibrary() {
@@ -83,15 +95,22 @@ export default {
 
       // 动态加载 qrcodejs2 库
       const script = document.createElement('script');
+      script.id = 'qrcode-lib-script';
       script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js';
       script.onload = () => {
         this.generateQrCode();
       };
       script.onerror = () => {
         console.error('Failed to load QRCode library');
-        this.$message.error('二维码库加载失败');
+        if (this.$message) {
+          this.$message.error('二维码库加载失败');
+        }
       };
-      document.head.appendChild(script);
+
+      // 检查是否已经添加过该脚本
+      if (!document.getElementById('qrcode-lib-script')) {
+        document.head.appendChild(script);
+      }
     },
 
     generateQrCode() {
@@ -109,91 +128,130 @@ export default {
       // 生成二维码内容：使用机台ID
       const qrContent = String(this.machineId);
 
-      // 创建二维码
-      new window.QRCode(this.$refs.qrcode, {
-        text: qrContent,
-        width: 300,
-        height: 300,
-        colorDark: '#000000',
-        colorLight: '#ffffff',
-        correctLevel: window.QRCode.CorrectLevel.H
-      });
+      try {
+        // 创建二维码
+        this.qrcodeInstance = new window.QRCode(this.$refs.qrcode, {
+          text: qrContent,
+          width: 300,
+          height: 300,
+          colorDark: '#000000',
+          colorLight: '#ffffff',
+          correctLevel: window.QRCode.CorrectLevel.H
+        });
+      } catch (error) {
+        console.error('Failed to generate QR code:', error);
+        if (this.$message) {
+          this.$message.error('二维码生成失败');
+        }
+      }
     },
 
     downloadQrCode() {
+      if (!this.$refs.qrcode) return;
+
       const canvas = this.$refs.qrcode.querySelector('canvas');
       if (canvas) {
-        const url = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `machine_${this.machineCode}_qrcode.png`;
-        link.href = url;
-        link.click();
+        try {
+          const url = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `machine_${this.machineCode}_qrcode.png`;
+          link.href = url;
+          link.click();
+        } catch (error) {
+          console.error('Failed to download QR code:', error);
+          if (this.$message) {
+            this.$message.error('下载失败');
+          }
+        }
       }
     },
 
     printQrCode() {
+      if (!this.$refs.qrcode) return;
+
       const canvas = this.$refs.qrcode.querySelector('canvas');
       if (canvas) {
-        const printWindow = window.open('', '_blank');
-        const img = new Image();
-        img.src = canvas.toDataURL('image/png');
-        const machineCode = this.machineCode;
-        const machineName = this.machineName;
-        const machineId = this.machineId;
+        try {
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            if (this.$message) {
+              this.$message.warning('请允许弹出窗口');
+            }
+            return;
+          }
 
-        img.onload = function() {
-          printWindow.document.write(`
-            <html>
-              <head>
-                <title>打印机台二维码 - ${machineCode}</title>
-                <style>
-                  body {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 20px;
-                    font-family: Arial, sans-serif;
-                  }
-                  img {
-                    max-width: 400px;
-                    margin: 20px 0;
-                  }
-                  .info {
-                    text-align: center;
-                    margin: 10px 0;
-                  }
-                  .label {
-                    font-weight: bold;
-                    color: #333;
-                  }
-                  @media print {
+          const img = new Image();
+          img.src = canvas.toDataURL('image/png');
+          const machineCode = this.machineCode;
+          const machineName = this.machineName;
+          const machineId = this.machineId;
+
+          img.onload = function() {
+            printWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <meta charset="UTF-8">
+                  <title>打印机台二维码 - ${machineCode}</title>
+                  <style>
                     body {
-                      padding: 0;
+                      display: flex;
+                      flex-direction: column;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 20px;
+                      font-family: Arial, sans-serif;
                     }
-                  }
-                </style>
-              </head>
-              <body>
-                <h2>机台二维码</h2>
-                <div class="info">
-                  <div><span class="label">机台编号：</span>${machineCode}</div>
-                  <div><span class="label">机台名称：</span>${machineName}</div>
-                  <div><span class="label">机台ID：</span>${machineId}</div>
-                </div>
-                <img src="${img.src}" />
-                <div class="info">
-                  <small>扫描此二维码查看机台信息</small>
-                </div>
-              </body>
-            </html>
-          `);
-          printWindow.document.close();
-          printWindow.focus();
-          setTimeout(() => {
-            printWindow.print();
-          }, 250);
-        };
+                    img {
+                      max-width: 400px;
+                      margin: 20px 0;
+                    }
+                    .info {
+                      text-align: center;
+                      margin: 10px 0;
+                    }
+                    .label {
+                      font-weight: bold;
+                      color: #333;
+                    }
+                    @media print {
+                      body {
+                        padding: 0;
+                      }
+                    }
+                  </style>
+                </head>
+                <body>
+                  <h2>机台二维码</h2>
+                  <div class="info">
+                    <div><span class="label">机台编号：</span>${machineCode}</div>
+                    <div><span class="label">机台名称：</span>${machineName}</div>
+                    <div><span class="label">机台ID：</span>${machineId}</div>
+                  </div>
+                  <img src="${img.src}" alt="机台二维码" />
+                  <div class="info">
+                    <small>扫描此二维码查看机台信息</small>
+                  </div>
+                </body>
+              </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+              printWindow.print();
+            }, 250);
+          };
+
+          img.onerror = function() {
+            printWindow.close();
+            console.error('Failed to load image for printing');
+          };
+        } catch (error) {
+          console.error('Failed to print QR code:', error);
+          if (this.$message) {
+            this.$message.error('打印失败');
+          }
+        }
       }
     }
   }
@@ -233,7 +291,7 @@ export default {
   margin-bottom: 24px;
 }
 
-#qrcode {
+.qrcode-container {
   display: inline-block;
 }
 
