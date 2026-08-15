@@ -297,9 +297,9 @@ class ChannelMachineController
             $storeOptions = $this->getStoreOptionsForChannel();
             if (!empty($storeOptions)) {
                 $filter->eq()->select('store_admin_id')
-                    ->placeholder(admin_trans('machine.fields.store'))
+                    ->placeholder(admin_trans('machine.filter.store_offline_only'))
                     ->showSearch()
-                    ->style(['width' => '150px'])
+                    ->style(['width' => '180px'])
                     ->dropdownMatchSelectWidth()
                     ->options($storeOptions);
             }
@@ -914,17 +914,21 @@ class ChannelMachineController
     }
 
     /**
-     * 获取当前渠道的店家选项（用于筛选器）
+     * 获取当前渠道的店家选项（用于筛选器）- 仅线下机台
      * @return array
      */
     private function getStoreOptionsForChannel(): array
     {
         $departmentId = Admin::user()->department_id;
 
-        // 获取当前渠道下所有绑定了店家的 channel_machine 记录
+        // ⭐ 只获取线下机台绑定的店家
         $storeIds = ChannelMachine::query()
             ->where('department_id', $departmentId)
             ->whereNotNull('store_admin_id')
+            ->whereHas('machine', function ($query) {
+                // 只查询线下机台
+                $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
+            })
             ->distinct()
             ->pluck('store_admin_id');
 

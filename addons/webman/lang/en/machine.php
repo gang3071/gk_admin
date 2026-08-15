@@ -80,6 +80,9 @@ return [
         'machine_source' => 'Machine Source',
         'store' => 'Store',
     ],
+    'filter' => [
+        'store_offline_only' => 'Store (Offline Only)',
+    ],
     'delete_has_machine_error' => 'A machine has been added under the changed category, please delete the machine first',
     'change_point_gaming' => 'The machines in the game cannot change the point card.',
     'machine_media_normal' => 'normal',

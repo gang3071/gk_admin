@@ -80,6 +80,9 @@ return [
         'machine_source' => '機台來源',
         'store' => '所屬店家',
     ],
+    'filter' => [
+        'store_offline_only' => '所屬店家（僅線下機台）',
+    ],
     'delete_has_machine_error' => '改分類下已添加機台,請先删除機台',
     'change_point_gaming' => '遊戲中的機台無法更換開分卡.',
     'machine_media_normal' => '正常',
