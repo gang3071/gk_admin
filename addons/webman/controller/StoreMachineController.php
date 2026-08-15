@@ -139,10 +139,10 @@ class StoreMachineController
                 ]);
             })->width(150);
 
-            $grid->column('username', admin_trans('store_machine.fields.username'))->width(120)->align('center');
+            $grid->column('username', admin_trans('store_machine.fields.username'))->width(120)->align('center')->copy();
             $grid->column('department_phone', admin_trans('store_machine.fields.phone'))->width(120)->align('center');
-            $grid->column('parent_agent_name', admin_trans('admin.agent'))->width(120)->align('center');
-            $grid->column('department_name', admin_trans('store_machine.fields.department_name'))->width(150)->ellipsis(true);
+            $grid->column('parent_agent_name', admin_trans('admin.agent'))->width(120)->align('center')->copy();
+            $grid->column('department_name', admin_trans('store_machine.fields.department_name'))->width(150)->ellipsis(true)->copy();
 
             // 分润比例（可编辑）
             $grid->column('agent_commission', admin_trans('store_machine.fields.agent_commission'))->display(function ($value) {
