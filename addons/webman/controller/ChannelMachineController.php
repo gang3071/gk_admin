@@ -925,9 +925,9 @@ class ChannelMachineController
         return $adminUserModel::query()
             ->where('department_id', $departmentId)
             ->whereHas('roles', function ($query) use ($storeRoleId) {
-                $query->where('id', $storeRoleId);
+                $query->where('admin_roles.id', $storeRoleId); // ✅ 明确指定表名
             })
-            ->orderBy('id', 'desc')
+            ->orderBy('admin_users.id', 'desc') // ✅ 明确指定表名
             ->get()
             ->mapWithKeys(function ($store) {
                 $label = $store->nickname ?: $store->username;
