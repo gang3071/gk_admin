@@ -213,6 +213,8 @@ return [
     ],
     'store' => [
         'unbound' => '未紐付け',
+        'bound_to_current' => '紐付済',
+        'bound_to_other' => '他店舗に紐付済',
     ],
     'seat' => [
         1 => '1P',

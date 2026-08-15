@@ -211,6 +211,8 @@ return [
     ],
     'store' => [
         'unbound' => 'Unbound',
+        'bound_to_current' => 'Bound',
+        'bound_to_other' => 'Bound to Other',
     ],
     'seat' => [
         1 => '1P',

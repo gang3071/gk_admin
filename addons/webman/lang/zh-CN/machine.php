@@ -211,6 +211,8 @@ return [
     ],
     'store' => [
         'unbound' => '未绑定',
+        'bound_to_current' => '已绑定',
+        'bound_to_other' => '已绑定其他店家',
     ],
     'seat' => [
         1 => '1P',

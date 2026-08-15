@@ -240,10 +240,9 @@ class StoreMachineController
 
                 $dropdown = $actions->dropdown();
 
-                // ✅ 添加线下机台
+                // ✅ 添加线下机台 (使用 drawer 抽屉,参照渠道列表实现)
                 $dropdown->prepend(admin_trans('store_machine.actions.bind_offline_machine'), 'fas fa-desktop')
-                    ->modal([$this, 'bindOfflineMachineForm'], ['store_id' => $data['id']])
-                    ->width('70%')
+                    ->drawer(admin_url([$this, 'offlineMachineList']), ['store_id' => $data['id']])
                     ->gridRefresh();
 
                 // 限红组配置
@@ -1699,6 +1698,202 @@ class StoreMachineController
     {
         $defaults = [1000, 3000, 5000, 10000, 30000, 50000];
         return $defaults[$index - 1] ?? 0;
+    }
+
+    /**
+     * 线下机台列表（用于店家绑定）
+     * @auth true
+     * @group channel
+     * @return Grid
+     */
+    public function offlineMachineList(): Grid
+    {
+        $storeId = \ExAdmin\ui\support\Request::input('store_id');
+        $currentDepartmentId = Admin::user()->department_id;
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        // 获取该店家已绑定的线下机台ID列表
+        $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
+        $selectedIds = $channelMachineModel::query()
+            ->where('department_id', $currentDepartmentId)
+            ->where('store_admin_id', $storeId)
+            ->whereHas('machine', function ($query) {
+                $query->where('machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE);
+            })
+            ->pluck('machine_id')
+            ->toArray();
+
+        $machineModel = plugin()->webman->config('database.machine_model');
+
+        return Grid::create(new $machineModel(), function (Grid $grid) use ($storeId, $currentDepartmentId, $store, $selectedIds) {
+            $grid->title(admin_trans('store_machine.bind_offline_machine_title', null, ['store' => $store->nickname ?: $store->username]));
+
+            // 只显示当前渠道下的线下机台
+            $grid->model()
+                ->join('channel_machine', 'machine.id', '=', 'channel_machine.machine_id')
+                ->join('machine_category', 'machine.cate_id', '=', 'machine_category.id')
+                ->where('channel_machine.department_id', $currentDepartmentId)
+                ->where('machine.machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE)
+                ->where(function ($query) use ($storeId) {
+                    // 未绑定 或 已绑定到当前店家
+                    $query->whereNull('channel_machine.store_admin_id')
+                        ->orWhere('channel_machine.store_admin_id', $storeId);
+                })
+                ->select([
+                    'machine.id',
+                    'machine.code',
+                    'machine.name',
+                    'machine.type',
+                    'machine.status',
+                    'machine_category.name as category_name',
+                    'channel_machine.store_admin_id'
+                ])
+                ->orderBy('machine.code', 'asc');
+
+            $grid->driver()->setPk('id');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 列配置
+            $grid->column('id', admin_trans('machine.fields.id'))->align('center');
+            $grid->column('code', admin_trans('machine.fields.code'))->align('center')->sortable();
+            $grid->column('name', admin_trans('machine.fields.name'))->align('center');
+            $grid->column('type', admin_trans('machine.fields.type'))->display(function ($val) {
+                return Tag::create(getGameTypeName($val))->color('blue');
+            })->align('center');
+            $grid->column('category_name', admin_trans('machine.fields.cate_id'))->align('center');
+            $grid->column('store_admin_id', admin_trans('machine.fields.store'))->display(function ($val) use ($storeId) {
+                if ($val == $storeId) {
+                    return Tag::create(admin_trans('machine.store.bound_to_current'))->color('green');
+                } elseif ($val) {
+                    return Tag::create(admin_trans('machine.store.bound_to_other'))->color('red');
+                } else {
+                    return Tag::create(admin_trans('machine.store.unbound'))->color('default');
+                }
+            })->align('center');
+            $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
+
+            $grid->hideDelete();
+            $grid->hideDeleteSelection();
+            $grid->hideTrashed();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+
+            // 添加确认按钮
+            $exAdminFilter = \ExAdmin\ui\support\Request::input('ex_admin_filter', []);
+            $page = \ExAdmin\ui\support\Request::input('ex_admin_page', 1);
+            $size = \ExAdmin\ui\support\Request::input('ex_admin_size', 25);
+            $param = [
+                'size' => $size,
+                'page' => $page,
+                'ex_admin_filter' => $exAdminFilter,
+                'store_id' => $storeId,
+            ];
+
+            $grid->tools(
+                Button::create(admin_trans('store_machine.actions.bind_offline_machine'))
+                    ->icon(Icon::create('fas fa-desktop'))
+                    ->confirm(
+                        admin_trans('store_machine.confirm_bind_machine'),
+                        [$this, 'bindOfflineMachine?' . http_build_query($param)]
+                    )
+                    ->gridBatch()
+                    ->gridRefresh()
+            );
+
+            // 筛选器
+            $grid->filter(function (Filter $filter) {
+                $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
+                $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->eq()->select('machine.status')
+                    ->placeholder(admin_trans('machine.fields.status'))
+                    ->options([
+                        1 => admin_trans('admin.normal'),
+                        0 => admin_trans('admin.disable')
+                    ]);
+            });
+
+            $grid->pagination()->pageSize(25);
+        })->selection($selectedIds);
+    }
+
+    /**
+     * 执行绑定线下机台
+     * @auth true
+     * @group channel
+     * @return \ExAdmin\ui\response\Msg
+     */
+    public function bindOfflineMachine()
+    {
+        $selected = \ExAdmin\ui\support\Request::input('selected');
+        $storeId = \ExAdmin\ui\support\Request::input('store_id');
+        $currentDepartmentId = Admin::user()->department_id;
+
+        if (!isset($selected)) {
+            return message_error(admin_trans('store_machine.please_select_machine'));
+        }
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return message_error(admin_trans('admin.not_found'));
+        }
+
+        Db::beginTransaction();
+        try {
+            $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
+
+            // 1. 先解除该店家在当前渠道下所有线下机台的绑定
+            $channelMachineModel::query()
+                ->where('department_id', $currentDepartmentId)
+                ->where('store_admin_id', $storeId)
+                ->whereHas('machine', function ($query) {
+                    $query->where('machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE);
+                })
+                ->update(['store_admin_id' => null]);
+
+            // 2. 绑定选中的机台到该店家
+            if (!empty($selected)) {
+                foreach ($selected as $machineId) {
+                    // 先检查该机台是否已绑定到其他店家
+                    $existBinding = $channelMachineModel::query()
+                        ->where('department_id', $currentDepartmentId)
+                        ->where('machine_id', $machineId)
+                        ->whereNotNull('store_admin_id')
+                        ->where('store_admin_id', '!=', $storeId)
+                        ->first();
+
+                    if ($existBinding) {
+                        Db::rollBack();
+                        $machine = \addons\webman\model\Machine::find($machineId);
+                        $code = $machine ? $machine->code : $machineId;
+                        return message_error(admin_trans('store_machine.machine_already_bound', null, ['code' => $code]));
+                    }
+
+                    // 更新绑定
+                    $channelMachineModel::query()
+                        ->where('department_id', $currentDepartmentId)
+                        ->where('machine_id', $machineId)
+                        ->update(['store_admin_id' => $storeId]);
+                }
+            }
+
+            Db::commit();
+            return message_success(admin_trans('store_machine.bind_success'));
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return message_error($e->getMessage());
+        }
     }
 
     /**
