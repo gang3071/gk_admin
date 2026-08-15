@@ -350,6 +350,10 @@ class StoreTicketRedeemController
                 };
             });
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
+            $grid->column('scanned_at', admin_trans('ticket_machine.redeem.scanned_at'))
+                ->display(function ($val) {
+                    return $val ?: '-';
+                });
 
             // 备注（可编辑）
             $grid->column('remark', admin_trans('ticket_machine.redeem.remark'))
@@ -805,6 +809,7 @@ class StoreTicketRedeemController
             });
             $form->desc('print_count', admin_trans('ticket_machine.redeem.print_count'));
             $form->desc('last_print_time', admin_trans('ticket_machine.redeem.last_print_time'));
+            $form->desc('scanned_at', admin_trans('ticket_machine.redeem.scanned_at'));
             $form->desc('remark', admin_trans('ticket_machine.redeem.remark'));
             $form->desc('created_at', admin_trans('ticket_machine.redeem.created_at'));
 
