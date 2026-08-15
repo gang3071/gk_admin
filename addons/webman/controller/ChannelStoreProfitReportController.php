@@ -231,20 +231,31 @@ class ChannelStoreProfitReportController
             ")->first();
 
             // 查询电子游戏打码量和机器打码量
+            // 使用交班记录的 start_time ~ end_time 作为时间范围，与交班报表导出保持一致
             $shiftTable = (new StoreAgentShiftHandoverRecord())->getTable();
             $betQuery = StoreShiftDeviceDetail::query()
                 ->join($shiftTable, 'store_shift_device_detail.shift_record_id', '=', $shiftTable . '.id')
                 ->where($shiftTable . '.bind_admin_user_id', $storeId);
 
-            // 时间筛选：优先使用结算周期，否则使用手动时间范围
+            // 时间筛选：使用交班记录的 start_time 和 end_time 范围
             if (!empty($dateType)) {
-                $betQuery->where(getDateWhere($dateType, $shiftTable . '.created_at'));
+                // 结算周期筛选：使用 start_time 作为筛选字段
+                $betQuery->where(function ($query) use ($dateType, $shiftTable) {
+                    $dateWhere = getDateWhere($dateType, $shiftTable . '.start_time');
+                    if (!empty($dateWhere)) {
+                        foreach ($dateWhere as $condition) {
+                            $query->where($condition);
+                        }
+                    }
+                });
             } else {
                 if (!empty($createdAtStart)) {
-                    $betQuery->where($shiftTable . '.created_at', '>=', $createdAtStart);
+                    // 交班结束时间 >= 查询开始时间
+                    $betQuery->where($shiftTable . '.end_time', '>=', $createdAtStart);
                 }
                 if (!empty($createdAtEnd)) {
-                    $betQuery->where($shiftTable . '.created_at', '<=', $createdAtEnd);
+                    // 交班开始时间 <= 查询结束时间
+                    $betQuery->where($shiftTable . '.start_time', '<=', $createdAtEnd);
                 }
             }
 

@@ -4007,7 +4007,6 @@ class ChannelIndexController
             // 今日：今日 08:00:00 ~ 隔天 07:59:59
             // 昨日：昨日 08:00:00 ~ 今日 07:59:59
             $now = Carbon::now();
-            $today = date('Y-m-d'); // 用于福利券/体验券查询（按自然日）
             $today8am = Carbon::today()->setTime(8, 0, 0);
             $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
             $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
@@ -4069,20 +4068,24 @@ class ChannelIndexController
             }
 
             // 查询今日已领取的福利券记录（包含规则类型）
+            // 时间范围与打码量同步，以08:00作为分界点
             $claimedWelfareRecords = \addons\webman\model\TicketRecord::query()
                 ->where('player_id', $playerId)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                ->whereDate('created_at', $today)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
                 ->whereNull('deleted_at')
                 ->select('score', 'extra_data')
                 ->get()
                 ->toArray();
 
             // 查询今日已领取的体验券次数
+            // 时间范围与打码量同步，以08:00作为分界点
             $claimedExperienceCount = \addons\webman\model\TicketRecord::query()
                 ->where('player_id', $playerId)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
-                ->whereDate('created_at', $today)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
                 ->whereNull('deleted_at')
                 ->count();
 
@@ -4178,18 +4181,35 @@ class ChannelIndexController
                 }
 
                 // 检查每日领取次数（排除已删除的记录）
+                // 时间范围与打码量同步，以08:00作为分界点
                 $dailyLimit = $expConfig['daily_limit'] ?? 1;
+                $now = Carbon::now();
+                $today8am = Carbon::today()->setTime(8, 0, 0);
+                $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
+                $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
+
+                // 判断当前时间是否在今日08:00之后
+                if ($now->gte($today8am)) {
+                    $todayStart = $today8am->toDateTimeString();
+                    $todayEnd = $tomorrow8am->toDateTimeString();
+                } else {
+                    $todayStart = $yesterday8am->toDateTimeString();
+                    $todayEnd = $today8am->toDateTimeString();
+                }
+
                 $todayQuery = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
-                    ->whereDate('created_at', date('Y-m-d'));
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd);
                 $todayCount = $todayQuery->count();
 
                 // 调试日志
                 \support\Log::info('体验券每日领取检查', [
                     'player_id' => $playerId,
                     'ticket_type' => \addons\webman\model\TicketRecord::TYPE_EXPERIENCE,
-                    'today' => date('Y-m-d'),
+                    'today_start' => $todayStart,
+                    'today_end' => $todayEnd,
                     'daily_limit' => $dailyLimit,
                     'today_count' => $todayCount,
                     'sql' => $todayQuery->toSql(),
@@ -4234,7 +4254,6 @@ class ChannelIndexController
                 // 检查打码量是否满足该档位要求
                 // 时间区间：以每天08:00:00作为分界点
                 $now = Carbon::now();
-                $today = date('Y-m-d'); // 用于福利券/体验券查询（按自然日）
                 $today8am = Carbon::today()->setTime(8, 0, 0);
                 $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
                 $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
@@ -4304,10 +4323,12 @@ class ChannelIndexController
                     }
 
                     // 检查今日是否已领取过昨日规则的任何档位
+                    // 时间范围与打码量同步，以08:00作为分界点
                     $yesterdayClaimedCount = \addons\webman\model\TicketRecord::query()
                         ->where('player_id', $playerId)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                        ->whereDate('created_at', $today)
+                        ->where('created_at', '>=', $todayStart)
+                        ->where('created_at', '<', $todayEnd)
                         ->whereNull('deleted_at')
                         ->get()
                         ->filter(function ($record) {
@@ -4322,12 +4343,13 @@ class ChannelIndexController
                 }
 
                 // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
-                // 使用 JSON_CONTAINS 或遍历查询，避免 JSON 键顺序问题
+                // 时间范围与打码量同步，以08:00作为分界点
                 $todayCount = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
                     ->where('score', $actualScore)
-                    ->whereDate('created_at', $today)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd)
                     ->whereNull('deleted_at')
                     ->get()
                     ->filter(function ($record) use ($ruleType) {
