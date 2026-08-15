@@ -1298,19 +1298,31 @@ export default {
           params: { order_id: this.reprintOrderId.trim() },
         });
 
-        if (res.code === 200 && res.data) {
-          this.reprintOrderInfo = res.data;
+        // 兼容不同的响应格式
+        const code = res.code || res.status;
+        const data = res.data;
+        const message = res.message || res.msg;
+
+        if (code === 200 && data) {
+          this.reprintOrderInfo = data;
           this.addLog('success', this.t('order_query_success'));
         } else {
           this.reprintOrderInfo = null;
-          const msg = res.message || this.t('order_not_found');
+          const msg = message || this.t('order_not_found');
           this.addLog('error', msg);
-          this.$message.error({ content: msg, duration: 3 });
+          this.$message.error(msg);
         }
       } catch (e) {
         this.reprintOrderInfo = null;
-        this.addLog('error', this.t('order_not_found'));
-        this.$message.error({ content: this.t('order_not_found'), duration: 3 });
+        // 尝试从错误响应中获取消息
+        let errorMsg = this.t('order_not_found');
+        if (e.response && e.response.data) {
+          errorMsg = e.response.data.message || e.response.data.msg || errorMsg;
+        } else if (e.message) {
+          errorMsg = e.message;
+        }
+        this.addLog('error', errorMsg);
+        this.$message.error(errorMsg);
       }
     },
 
