@@ -71,7 +71,7 @@ class StoreOfflineMachineController
                 ->where('machine.machine_source', Machine::MACHINE_SOURCE_OFFLINE)
                 ->where('machine.type', GameType::TYPE_SLOT)
                 ->whereNull('machine.deleted_at')
-                ->with(['gamingPlayer'])
+                ->with(['gamingPlayer', 'machineLabel'])
                 ->orderBy('machine.code', 'asc');
 
             $grid->title(admin_trans('store_offline_machine.slot_list'));
@@ -80,7 +80,9 @@ class StoreOfflineMachineController
 
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
-            $grid->column('name', admin_trans('machine.fields.name'))->width(150);
+            $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
+                return $data->machineLabel->name ?? '-';
+            })->width(150);
             $grid->column('category_name', admin_trans('machine.fields.cate_id'))->width(120)->align('center');
 
             // 游戏状态
@@ -118,7 +120,7 @@ class StoreOfflineMachineController
 
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->eq()->select('machine.status')
                     ->placeholder(admin_trans('machine.fields.status'))
                     ->options([
@@ -160,7 +162,7 @@ class StoreOfflineMachineController
                 ->where('machine.machine_source', Machine::MACHINE_SOURCE_OFFLINE)
                 ->where('machine.type', GameType::TYPE_STEEL_BALL)
                 ->whereNull('machine.deleted_at')
-                ->with(['gamingPlayer'])
+                ->with(['gamingPlayer', 'machineLabel'])
                 ->orderBy('machine.code', 'asc');
 
             $grid->title(admin_trans('store_offline_machine.steel_ball_list'));
@@ -169,7 +171,9 @@ class StoreOfflineMachineController
 
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
-            $grid->column('name', admin_trans('machine.fields.name'))->width(150);
+            $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
+                return $data->machineLabel->name ?? '-';
+            })->width(150);
             $grid->column('category_name', admin_trans('machine.fields.cate_id'))->width(120)->align('center');
 
             // 游戏状态
@@ -207,7 +211,7 @@ class StoreOfflineMachineController
 
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->eq()->select('machine.status')
                     ->placeholder(admin_trans('machine.fields.status'))
                     ->options([
@@ -265,7 +269,7 @@ class StoreOfflineMachineController
                 ->where('machine.type', GameType::TYPE_SLOT)
                 ->where('machine.gaming_user_id', '!=', 0)
                 ->whereNull('machine.deleted_at')
-                ->with(['gamingPlayer', 'gamingPlayer.machine_wallet'])
+                ->with(['gamingPlayer', 'gamingPlayer.machine_wallet', 'machineLabel'])
                 ->orderBy('machine.code', 'asc');
 
             $grid->title(admin_trans('store_offline_machine.slot_info_list'));
@@ -274,7 +278,9 @@ class StoreOfflineMachineController
 
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
-            $grid->column('name', admin_trans('machine.fields.name'))->width(150);
+            $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
+                return $data->machineLabel->name ?? '-';
+            })->width(150);
             $grid->column('category_name', admin_trans('machine.fields.cate_id'))->width(120)->align('center');
 
             // 游戏中设备信息
@@ -334,7 +340,7 @@ class StoreOfflineMachineController
 
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
             });
 
             $grid->hideDelete();
@@ -371,7 +377,7 @@ class StoreOfflineMachineController
                 ->where('machine.type', GameType::TYPE_STEEL_BALL)
                 ->where('machine.gaming_user_id', '!=', 0)
                 ->whereNull('machine.deleted_at')
-                ->with(['gamingPlayer', 'gamingPlayer.machine_wallet'])
+                ->with(['gamingPlayer', 'gamingPlayer.machine_wallet', 'machineLabel'])
                 ->orderBy('machine.code', 'asc');
 
             $grid->title(admin_trans('store_offline_machine.steel_ball_info_list'));
@@ -380,7 +386,9 @@ class StoreOfflineMachineController
 
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
-            $grid->column('name', admin_trans('machine.fields.name'))->width(150);
+            $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
+                return $data->machineLabel->name ?? '-';
+            })->width(150);
             $grid->column('category_name', admin_trans('machine.fields.cate_id'))->width(120)->align('center');
 
             // 游戏中设备信息
@@ -427,7 +435,7 @@ class StoreOfflineMachineController
 
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
             });
 
             $grid->hideDelete();
