@@ -81,6 +81,7 @@ return [
         'store' => 'Store',
     ],
     'filter' => [
+        'store' => 'Store',
         'store_offline_only' => 'Store (Offline Only)',
     ],
     'delete_has_machine_error' => 'A machine has been added under the changed category, please delete the machine first',

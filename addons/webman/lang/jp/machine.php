@@ -83,6 +83,7 @@ return [
         'store' => '店舗',
     ],
     'filter' => [
+        'store' => '店舗',
         'store_offline_only' => '店舗（オフライン機のみ）',
     ],
     'delete_has_machine_error' => '変更されたカテゴリにマシンが追加されました。最初にマシンを削除してください',

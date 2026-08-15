@@ -81,6 +81,7 @@ return [
         'store' => '所属店家',
     ],
     'filter' => [
+        'store' => '所属店家',
         'store_offline_only' => '所属店家（仅线下机台）',
     ],
     'delete_has_machine_error' => '改分类下已添加机台,请先删除机台',

@@ -293,16 +293,14 @@ class ChannelMachineController
                     0 => admin_trans('machine.not_gaming')
                 ]);
 
-            // ✅ 店家筛选器（仅线下机台）
+            // ✅ 店家筛选器（常驻显示）
             $storeOptions = $this->getStoreOptionsForChannel();
-            if (!empty($storeOptions)) {
-                $filter->eq()->select('store_admin_id')
-                    ->placeholder(admin_trans('machine.filter.store_offline_only'))
-                    ->showSearch()
-                    ->style(['width' => '180px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options($storeOptions);
-            }
+            $filter->eq()->select('store_admin_id')
+                ->placeholder(admin_trans('machine.filter.store'))
+                ->showSearch()
+                ->style(['width' => '150px'])
+                ->dropdownMatchSelectWidth()
+                ->options($storeOptions);
 
             $filter->form()->hidden('created_at_start');
             $filter->form()->hidden('created_at_end');
@@ -914,32 +912,21 @@ class ChannelMachineController
     }
 
     /**
-     * 获取当前渠道的店家选项（用于筛选器）- 仅线下机台
+     * 获取当前渠道的店家选项（用于筛选器）
      * @return array
      */
     private function getStoreOptionsForChannel(): array
     {
         $departmentId = Admin::user()->department_id;
+        $storeRoleId = config('app.store_role', 19); // 店家角色ID
 
-        // ⭐ 只获取线下机台绑定的店家
-        $storeIds = ChannelMachine::query()
-            ->where('department_id', $departmentId)
-            ->whereNotNull('store_admin_id')
-            ->whereHas('machine', function ($query) {
-                // 只查询线下机台
-                $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
-            })
-            ->distinct()
-            ->pluck('store_admin_id');
-
-        if ($storeIds->isEmpty()) {
-            return [];
-        }
-
-        // 获取店家信息
+        // ⭐ 获取当前渠道下所有的店家管理员（通过角色判断）
         $adminUserModel = plugin()->webman->config('database.admin_user_model');
         return $adminUserModel::query()
-            ->whereIn('id', $storeIds)
+            ->where('department_id', $departmentId)
+            ->whereHas('roles', function ($query) use ($storeRoleId) {
+                $query->where('id', $storeRoleId);
+            })
             ->orderBy('id', 'desc')
             ->get()
             ->mapWithKeys(function ($store) {
