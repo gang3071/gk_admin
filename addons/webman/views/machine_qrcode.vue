@@ -33,14 +33,14 @@
       <div class="button-group">
         <a-button type="primary" @click="downloadQrCode" size="large">
           <template #icon>
-            <DownloadOutlined />
+            <download-outlined />
           </template>
           下载二维码
         </a-button>
 
         <a-button @click="printQrCode" size="large">
           <template #icon>
-            <PrinterOutlined />
+            <printer-outlined />
           </template>
           打印二维码
         </a-button>
@@ -50,15 +50,8 @@
 </template>
 
 <script>
-import QRCode from 'qrcodejs2';
-import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons-vue';
-
 export default {
   name: 'MachineQrCode',
-  components: {
-    DownloadOutlined,
-    PrinterOutlined
-  },
   props: {
     machineId: {
       type: [String, Number],
@@ -78,26 +71,52 @@ export default {
     }
   },
   mounted() {
-    this.generateQrCode();
+    this.loadQrCodeLibrary();
   },
   methods: {
+    loadQrCodeLibrary() {
+      // 检查是否已加载 QRCode 库
+      if (window.QRCode) {
+        this.generateQrCode();
+        return;
+      }
+
+      // 动态加载 qrcodejs2 库
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js';
+      script.onload = () => {
+        this.generateQrCode();
+      };
+      script.onerror = () => {
+        console.error('Failed to load QRCode library');
+        this.$message.error('二维码库加载失败');
+      };
+      document.head.appendChild(script);
+    },
+
     generateQrCode() {
       // 清空之前的二维码
       if (this.$refs.qrcode) {
         this.$refs.qrcode.innerHTML = '';
       }
 
+      // 确保 QRCode 库已加载
+      if (!window.QRCode) {
+        console.error('QRCode library not loaded');
+        return;
+      }
+
       // 生成二维码内容：使用机台ID
       const qrContent = String(this.machineId);
 
       // 创建二维码
-      new QRCode(this.$refs.qrcode, {
+      new window.QRCode(this.$refs.qrcode, {
         text: qrContent,
         width: 300,
         height: 300,
         colorDark: '#000000',
         colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: window.QRCode.CorrectLevel.H
       });
     },
 
@@ -118,11 +137,15 @@ export default {
         const printWindow = window.open('', '_blank');
         const img = new Image();
         img.src = canvas.toDataURL('image/png');
+        const machineCode = this.machineCode;
+        const machineName = this.machineName;
+        const machineId = this.machineId;
+
         img.onload = function() {
           printWindow.document.write(`
             <html>
               <head>
-                <title>打印机台二维码 - ${this.machineCode}</title>
+                <title>打印机台二维码 - ${machineCode}</title>
                 <style>
                   body {
                     display: flex;
@@ -154,9 +177,9 @@ export default {
               <body>
                 <h2>机台二维码</h2>
                 <div class="info">
-                  <div><span class="label">机台编号：</span>${this.machineCode}</div>
-                  <div><span class="label">机台名称：</span>${this.machineName}</div>
-                  <div><span class="label">机台ID：</span>${this.machineId}</div>
+                  <div><span class="label">机台编号：</span>${machineCode}</div>
+                  <div><span class="label">机台名称：</span>${machineName}</div>
+                  <div><span class="label">机台ID：</span>${machineId}</div>
                 </div>
                 <img src="${img.src}" />
                 <div class="info">
@@ -170,7 +193,7 @@ export default {
           setTimeout(() => {
             printWindow.print();
           }, 250);
-        }.bind(this);
+        };
       }
     }
   }
