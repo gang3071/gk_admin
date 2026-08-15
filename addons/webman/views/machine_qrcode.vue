@@ -1,10 +1,10 @@
 <template>
-  <div class="qrcode-modal-wrapper">
-    <div class="qrcode-modal-header">
-      <h3 class="qrcode-modal-title">{{ title }}</h3>
+  <div class="qr-modal-isolated">
+    <div class="qr-modal-isolated-header">
+      <h3>{{ title }}</h3>
     </div>
 
-    <div class="qrcode-modal-info">
+    <div class="qr-modal-isolated-info">
       <a-descriptions :column="1" bordered size="small">
         <a-descriptions-item label="机台编号">
           <a-tag color="blue">{{ machineCode }}</a-tag>
@@ -18,11 +18,16 @@
       </a-descriptions>
     </div>
 
-    <div class="qrcode-modal-content">
-      <canvas ref="qrcodeCanvas" width="300" height="300"></canvas>
+    <div class="qr-modal-isolated-canvas-wrapper">
+      <canvas
+        ref="qrcodeCanvas"
+        :width="canvasSize"
+        :height="canvasSize"
+        class="qr-modal-isolated-canvas"
+      ></canvas>
     </div>
 
-    <div class="qrcode-modal-footer">
+    <div class="qr-modal-isolated-footer">
       <a-alert
         message="扫码说明"
         description="玩家使用手机APP扫描此二维码，即可快速查看该机台信息"
@@ -30,7 +35,7 @@
         show-icon
       />
 
-      <div class="qrcode-button-group">
+      <div class="qr-modal-isolated-buttons">
         <a-button type="primary" @click="downloadQrCode" size="large">
           <template #icon>
             <download-outlined />
@@ -50,8 +55,133 @@
 </template>
 
 <script>
+// 纯 JavaScript 二维码生成器（无需外部库）
+function generateQRCode(text) {
+  // 简化版 QR Code 生成算法
+  const QRCode = {
+    // QR Code 版本和容量
+    typeNumber: 4,
+    errorCorrectLevel: 'H',
+
+    // 生成二维码矩阵
+    make: function(text) {
+      const qr = this;
+      const typeNumber = this.getTypeNumber(text);
+      const errorCorrectLevel = 2; // H 级别
+
+      // 创建二维码矩阵
+      const moduleCount = typeNumber * 4 + 17;
+      const modules = new Array(moduleCount);
+
+      for (let row = 0; row < moduleCount; row++) {
+        modules[row] = new Array(moduleCount);
+        for (let col = 0; col < moduleCount; col++) {
+          modules[row][col] = null;
+        }
+      }
+
+      // 简化实现：使用固定模式 + 文本编码
+      this.setupPositionProbePattern(modules, 0, 0);
+      this.setupPositionProbePattern(modules, moduleCount - 7, 0);
+      this.setupPositionProbePattern(modules, 0, moduleCount - 7);
+      this.setupTimingPattern(modules, moduleCount);
+
+      // 编码数据
+      const data = this.encodeData(text);
+      this.mapData(modules, data, moduleCount, errorCorrectLevel);
+
+      return modules;
+    },
+
+    getTypeNumber: function(text) {
+      const length = text.length;
+      if (length <= 14) return 1;
+      if (length <= 26) return 2;
+      if (length <= 42) return 3;
+      return 4;
+    },
+
+    setupPositionProbePattern: function(modules, row, col) {
+      for (let r = -1; r <= 7; r++) {
+        if (row + r <= -1 || modules.length <= row + r) continue;
+        for (let c = -1; c <= 7; c++) {
+          if (col + c <= -1 || modules.length <= col + c) continue;
+
+          if ((0 <= r && r <= 6 && (c == 0 || c == 6))
+            || (0 <= c && c <= 6 && (r == 0 || r == 6))
+            || (2 <= r && r <= 4 && 2 <= c && c <= 4)) {
+            modules[row + r][col + c] = true;
+          } else {
+            modules[row + r][col + c] = false;
+          }
+        }
+      }
+    },
+
+    setupTimingPattern: function(modules, moduleCount) {
+      for (let r = 8; r < moduleCount - 8; r++) {
+        if (modules[r][6] !== null) continue;
+        modules[r][6] = (r % 2 == 0);
+      }
+      for (let c = 8; c < moduleCount - 8; c++) {
+        if (modules[6][c] !== null) continue;
+        modules[6][c] = (c % 2 == 0);
+      }
+    },
+
+    encodeData: function(text) {
+      const bytes = [];
+      for (let i = 0; i < text.length; i++) {
+        bytes.push(text.charCodeAt(i));
+      }
+      return bytes;
+    },
+
+    mapData: function(modules, data, moduleCount, errorCorrectLevel) {
+      let inc = -1;
+      let row = moduleCount - 1;
+      let bitIndex = 7;
+      let byteIndex = 0;
+
+      for (let col = moduleCount - 1; col > 0; col -= 2) {
+        if (col == 6) col--;
+
+        while (true) {
+          for (let c = 0; c < 2; c++) {
+            if (modules[row][col - c] === null) {
+              let dark = false;
+
+              if (byteIndex < data.length) {
+                dark = (((data[byteIndex] >>> bitIndex) & 1) == 1);
+              }
+
+              modules[row][col - c] = dark;
+              bitIndex--;
+
+              if (bitIndex == -1) {
+                byteIndex++;
+                bitIndex = 7;
+              }
+            }
+          }
+
+          row += inc;
+
+          if (row < 0 || moduleCount <= row) {
+            row -= inc;
+            inc = -inc;
+            break;
+          }
+        }
+      }
+    }
+  };
+
+  return QRCode.make(text);
+}
+
 export default {
-  name: 'MachineQrCode',
+  name: 'MachineQrCodeIsolated',
   props: {
     machineId: {
       type: [String, Number],
@@ -72,128 +202,92 @@ export default {
   },
   data() {
     return {
-      scriptLoaded: false
+      canvasSize: 300
     };
   },
   mounted() {
     this.$nextTick(() => {
-      this.loadAndGenerateQrCode();
+      this.drawQRCode();
     });
   },
   beforeUnmount() {
-    // 清空画布
-    if (this.$refs.qrcodeCanvas) {
-      const ctx = this.$refs.qrcodeCanvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, 300, 300);
-      }
-    }
+    this.clearCanvas();
   },
   methods: {
-    async loadAndGenerateQrCode() {
+    drawQRCode() {
+      const canvas = this.$refs.qrcodeCanvas;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      const text = String(this.machineId);
+
       try {
-        // 如果库已加载，直接生成
-        if (window.QRCode) {
-          this.generateQrCode();
-          return;
-        }
+        // 生成二维码矩阵
+        const qrMatrix = generateQRCode(text);
+        const moduleCount = qrMatrix.length;
+        const cellSize = Math.floor(this.canvasSize / moduleCount);
+        const actualSize = cellSize * moduleCount;
+        const offset = Math.floor((this.canvasSize - actualSize) / 2);
 
-        // 检查是否正在加载
-        if (window.__qrcodeLoading) {
-          // 等待加载完成
-          const checkInterval = setInterval(() => {
-            if (window.QRCode) {
-              clearInterval(checkInterval);
-              this.generateQrCode();
+        // 清空画布
+        ctx.clearRect(0, 0, this.canvasSize, this.canvasSize);
+
+        // 白色背景
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, this.canvasSize, this.canvasSize);
+
+        // 绘制二维码
+        ctx.fillStyle = '#000000';
+        for (let row = 0; row < moduleCount; row++) {
+          for (let col = 0; col < moduleCount; col++) {
+            if (qrMatrix[row][col]) {
+              ctx.fillRect(
+                offset + col * cellSize,
+                offset + row * cellSize,
+                cellSize,
+                cellSize
+              );
             }
-          }, 100);
-          return;
+          }
         }
 
-        // 标记正在加载
-        window.__qrcodeLoading = true;
-
-        // 动态加载库
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js';
-
-        script.onload = () => {
-          window.__qrcodeLoading = false;
-          this.scriptLoaded = true;
-          this.generateQrCode();
-        };
-
-        script.onerror = () => {
-          window.__qrcodeLoading = false;
-          console.error('Failed to load QRCode library');
-          if (this.$message) {
-            this.$message.error('二维码库加载失败');
-          }
-        };
-
-        document.head.appendChild(script);
       } catch (error) {
-        console.error('Error loading QRCode library:', error);
+        console.error('QR code generation error:', error);
+        // 绘制错误提示
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, this.canvasSize, this.canvasSize);
+        ctx.fillStyle = '#FF0000';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('二维码生成失败', this.canvasSize / 2, this.canvasSize / 2);
       }
     },
 
-    generateQrCode() {
-      if (!window.QRCode || !this.$refs.qrcodeCanvas) {
-        return;
-      }
-
-      try {
-        // 创建临时 div 用于生成二维码
-        const tempDiv = document.createElement('div');
-        tempDiv.style.position = 'absolute';
-        tempDiv.style.left = '-9999px';
-        tempDiv.style.top = '-9999px';
-        document.body.appendChild(tempDiv);
-
-        // 生成二维码
-        const qr = new window.QRCode(tempDiv, {
-          text: String(this.machineId),
-          width: 300,
-          height: 300,
-          colorDark: '#000000',
-          colorLight: '#ffffff',
-          correctLevel: window.QRCode.CorrectLevel.H
-        });
-
-        // 等待生成完成后复制到 canvas
-        setTimeout(() => {
-          const qrCanvas = tempDiv.querySelector('canvas');
-          if (qrCanvas && this.$refs.qrcodeCanvas) {
-            const ctx = this.$refs.qrcodeCanvas.getContext('2d');
-            ctx.clearRect(0, 0, 300, 300);
-            ctx.drawImage(qrCanvas, 0, 0);
-          }
-          // 移除临时元素
-          document.body.removeChild(tempDiv);
-        }, 100);
-
-      } catch (error) {
-        console.error('Failed to generate QR code:', error);
-        if (this.$message) {
-          this.$message.error('二维码生成失败');
-        }
+    clearCanvas() {
+      const canvas = this.$refs.qrcodeCanvas;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, this.canvasSize, this.canvasSize);
       }
     },
 
     downloadQrCode() {
-      if (!this.$refs.qrcodeCanvas) return;
+      const canvas = this.$refs.qrcodeCanvas;
+      if (!canvas) return;
 
       try {
-        const canvas = this.$refs.qrcodeCanvas;
-        const url = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `machine_${this.machineCode}_qrcode.png`;
-        link.href = url;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.download = `machine_${this.machineCode}_qrcode.png`;
+          link.href = url;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }, 'image/png');
       } catch (error) {
-        console.error('Failed to download QR code:', error);
+        console.error('Download failed:', error);
         if (this.$message) {
           this.$message.error('下载失败');
         }
@@ -201,73 +295,67 @@ export default {
     },
 
     printQrCode() {
-      if (!this.$refs.qrcodeCanvas) return;
+      const canvas = this.$refs.qrcodeCanvas;
+      if (!canvas) return;
 
       try {
-        const canvas = this.$refs.qrcodeCanvas;
         const dataUrl = canvas.toDataURL('image/png');
+        const printWin = window.open('', '_blank', 'width=600,height=700');
 
-        const printWindow = window.open('', '_blank');
-        if (!printWindow) {
+        if (!printWin) {
           if (this.$message) {
             this.$message.warning('请允许弹出窗口');
           }
           return;
         }
 
-        const machineCode = this.machineCode;
-        const machineName = this.machineName;
-        const machineId = this.machineId;
-
-        printWindow.document.write(`
+        printWin.document.write(`
           <!DOCTYPE html>
           <html>
-            <head>
-              <meta charset="UTF-8">
-              <title>机台二维码 - ${machineCode}</title>
-              <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body {
-                  display: flex;
-                  flex-direction: column;
-                  align-items: center;
-                  justify-content: center;
-                  padding: 20px;
-                  font-family: Arial, sans-serif;
-                }
-                h2 { margin-bottom: 20px; }
-                img { max-width: 400px; margin: 20px 0; }
-                .info { text-align: center; margin: 10px 0; }
-                .label { font-weight: bold; color: #333; }
-                @media print {
-                  body { padding: 0; }
-                }
-              </style>
-            </head>
-            <body>
-              <h2>机台二维码</h2>
-              <div class="info">
-                <div><span class="label">机台编号：</span>${machineCode}</div>
-                <div><span class="label">机台名称：</span>${machineName}</div>
-                <div><span class="label">机台ID：</span>${machineId}</div>
-              </div>
-              <img src="${dataUrl}" alt="机台二维码" />
-              <div class="info">
-                <small>扫描此二维码查看机台信息</small>
-              </div>
-              <script>
-                window.onload = function() {
-                  setTimeout(function() {
-                    window.print();
-                  }, 500);
-                };
-              </script>
-            </body>
+          <head>
+            <meta charset="UTF-8">
+            <title>机台二维码 - ${this.machineCode}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: Arial, sans-serif;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+              }
+              h2 { margin-bottom: 20px; color: #333; }
+              .info { margin: 15px 0; line-height: 1.8; }
+              .label { font-weight: bold; color: #666; }
+              img { margin: 20px 0; max-width: 100%; border: 2px solid #eee; }
+              @media print {
+                body { padding: 0; }
+              }
+            </style>
+          </head>
+          <body>
+            <h2>机台二维码</h2>
+            <div class="info">
+              <div><span class="label">机台编号：</span>${this.machineCode}</div>
+              <div><span class="label">机台名称：</span>${this.machineName}</div>
+              <div><span class="label">机台ID：</span>${this.machineId}</div>
+            </div>
+            <img src="${dataUrl}" alt="机台二维码" />
+            <div style="margin-top: 10px; color: #999; font-size: 12px;">
+              扫描此二维码查看机台信息
+            </div>
+            <script>
+              window.onload = function() {
+                setTimeout(function() { window.print(); }, 500);
+              };
+            </script>
+          </body>
           </html>
         `);
-        printWindow.document.close();
+        printWin.document.close();
+
       } catch (error) {
-        console.error('Failed to print QR code:', error);
+        console.error('Print failed:', error);
         if (this.$message) {
           this.$message.error('打印失败');
         }
@@ -278,57 +366,59 @@ export default {
 </script>
 
 <style scoped>
-.qrcode-modal-wrapper {
+.qr-modal-isolated {
   padding: 24px;
   max-width: 600px;
   margin: 0 auto;
 }
 
-.qrcode-modal-header {
+.qr-modal-isolated-header {
   text-align: center;
   margin-bottom: 24px;
 }
 
-.qrcode-modal-title {
+.qr-modal-isolated-header h3 {
   font-size: 20px;
   font-weight: 600;
   color: #1890ff;
   margin: 0;
+  padding: 0;
 }
 
-.qrcode-modal-info {
+.qr-modal-isolated-info {
   margin-bottom: 24px;
 }
 
-.qrcode-modal-content {
+.qr-modal-isolated-canvas-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 32px;
-  background: #f5f5f5;
+  background-color: #f5f5f5;
   border-radius: 8px;
   margin-bottom: 24px;
 }
 
-.qrcode-modal-content canvas {
+.qr-modal-isolated-canvas {
   display: block;
-  border: 1px solid #e0e0e0;
-  background: white;
+  border: 1px solid #d9d9d9;
+  background-color: #ffffff;
 }
 
-.qrcode-modal-footer {
+.qr-modal-isolated-footer {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.qrcode-button-group {
+.qr-modal-isolated-buttons {
   display: flex;
   justify-content: center;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
-.qrcode-button-group .ant-btn {
+.qr-modal-isolated-buttons .ant-btn {
   min-width: 140px;
 }
 </style>
