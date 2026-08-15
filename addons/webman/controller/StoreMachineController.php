@@ -241,10 +241,10 @@ class StoreMachineController
 
                 $dropdown = $actions->dropdown();
 
-                // ✅ 添加线下机台 (使用 drawer 抽屉,参照渠道列表实现)
+                // ✅ 添加线下机台
                 $dropdown->prepend(admin_trans('store_machine.actions.bind_offline_machine'), 'fas fa-desktop')
-                    ->drawer(admin_url([$this, 'offlineMachineList']), ['store_id' => $data['id']]);
-
+                    ->modal(admin_url([$this, 'offlineMachineList']), ['store_id' => $data['id']])
+                    ->width('70%');
                 // 限红组配置
                 $dropdown->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
                     ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
