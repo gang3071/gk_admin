@@ -98,6 +98,7 @@ return [
     // 操作菜單
     'actions' => [
         'bind_offline_machine' => '添加線下機台',
+        'unbind_machine' => '解綁',
         'limit_group' => '限紅組配置',
         'auto_shift_config' => '自動交班配置',
         'system_setting' => '系統配置',
@@ -109,7 +110,10 @@ return [
     'bind_offline_machine_title' => '為 {store} 綁定線下機台',
     'select_machines' => '選擇機台',
     'confirm_bind_machine' => '確定要綁定選中的機台嗎？',
+    'confirm_unbind_machine' => '確定要解綁該機台嗎？',
     'please_select_machine' => '請選擇要綁定的機台',
     'machine_already_bound' => '機台 {code} 已綁定到其他店家',
     'bind_success' => '綁定成功',
+    'unbind_success' => '解綁成功',
+    'unbind_failed' => '解綁失敗',
 ];

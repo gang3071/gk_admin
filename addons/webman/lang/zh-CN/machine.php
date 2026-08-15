@@ -79,6 +79,8 @@ return [
         'viewers' => '观看人数',
         'machine_source' => '机台来源',
         'store' => '所属店家',
+        'bound_store' => '绑定店家',
+        'bind_status' => '绑定状态',
     ],
     'filter' => [
         'store' => '所属店家',

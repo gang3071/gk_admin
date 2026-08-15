@@ -98,6 +98,7 @@ return [
     // 操作メニュー
     'actions' => [
         'bind_offline_machine' => 'オフライン機台追加',
+        'unbind_machine' => '解除',
         'limit_group' => 'リミットグループ設定',
         'auto_shift_config' => '自動交代設定',
         'system_setting' => 'システム設定',
@@ -109,7 +110,10 @@ return [
     'bind_offline_machine_title' => '{store} のオフライン機台をバインド',
     'select_machines' => '機台を選択',
     'confirm_bind_machine' => '選択した機台をバインドしてもよろしいですか？',
+    'confirm_unbind_machine' => 'この機台の紐付を解除してもよろしいですか？',
     'please_select_machine' => 'バインドする機台を選択してください',
     'machine_already_bound' => '機台 {code} は既に他の店舗にバインドされています',
     'bind_success' => 'バインド成功',
+    'unbind_success' => '解除成功',
+    'unbind_failed' => '解除失敗',
 ];

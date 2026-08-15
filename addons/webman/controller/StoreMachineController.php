@@ -1735,14 +1735,10 @@ class StoreMachineController
         return Grid::create(new $machineModel(), function (Grid $grid) use ($storeId, $currentDepartmentId, $store, $selectedIds, $channelMachineModel) {
             $grid->title(admin_trans('store_machine.bind_offline_machine_title', null, ['store' => $store->nickname ?: $store->username]));
 
-            // 获取当前渠道下符合条件的机台ID和绑定状态
+            // 获取当前渠道下所有线下机台的绑定状态
             $channelMachines = $channelMachineModel::query()
                 ->where('department_id', $currentDepartmentId)
-                ->where(function ($query) use ($storeId) {
-                    // 未绑定 或 已绑定到当前店家
-                    $query->whereNull('store_admin_id')
-                        ->orWhere('store_admin_id', $storeId);
-                })
+                ->with(['storeAdmin']) // 预加载店家信息
                 ->whereHas('machine', function ($query) {
                     $query->where('machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE);
                 })
@@ -1750,6 +1746,9 @@ class StoreMachineController
                 ->keyBy('machine_id');
 
             $machineIds = $channelMachines->pluck('machine_id')->toArray();
+
+            // 获取店家角色ID用于查询
+            $storeRoleId = config('app.store_role', 19);
 
             // 只显示当前渠道下的线下机台
             $grid->model()
@@ -1774,30 +1773,66 @@ class StoreMachineController
             $grid->column('cate_id', admin_trans('machine.fields.cate_id'))->display(function ($val, $data) {
                 return $data->machineCategory->name ?? '-';
             })->align('center');
-            $grid->column('store_status', admin_trans('machine.fields.store'))->display(function ($val, $data) use ($storeId, $channelMachines) {
-                // 从预加载的数据中获取绑定状态
+
+            // 绑定店家列
+            $grid->column('bound_store', admin_trans('machine.fields.bound_store'))->display(function ($val, $data) use ($channelMachines) {
                 $channelMachine = $channelMachines->get($data->id);
 
-                if (!$channelMachine) {
+                if (!$channelMachine || !$channelMachine->store_admin_id) {
+                    return Tag::create(admin_trans('machine.store.unbound'))->color('default');
+                }
+
+                $storeName = $channelMachine->storeAdmin->nickname ?? $channelMachine->storeAdmin->username ?? '-';
+                return Tag::create($storeName)->color('blue');
+            })->align('center');
+
+            // 绑定状态列
+            $grid->column('store_status', admin_trans('machine.fields.bind_status'))->display(function ($val, $data) use ($storeId, $channelMachines) {
+                $channelMachine = $channelMachines->get($data->id);
+
+                if (!$channelMachine || !$channelMachine->store_admin_id) {
                     return Tag::create(admin_trans('machine.store.unbound'))->color('default');
                 }
 
                 if ($channelMachine->store_admin_id == $storeId) {
                     return Tag::create(admin_trans('machine.store.bound_to_current'))->color('green');
-                } elseif ($channelMachine->store_admin_id) {
-                    return Tag::create(admin_trans('machine.store.bound_to_other'))->color('red');
                 } else {
-                    return Tag::create(admin_trans('machine.store.unbound'))->color('default');
+                    return Tag::create(admin_trans('machine.store.bound_to_other'))->color('red');
                 }
             })->align('center');
+
             $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
 
             $grid->hideDelete();
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
-            $grid->actions(function (Actions $actions) {
+
+            // 操作列
+            $grid->actions(function (Actions $actions, $data) use ($channelMachines, $storeId, $currentDepartmentId) {
                 $actions->hideDel();
                 $actions->hideEdit();
+
+                // 获取绑定信息
+                $channelMachine = $channelMachines->get($data->id);
+
+                // 如果已绑定店家，显示解绑按钮
+                if ($channelMachine && $channelMachine->store_admin_id) {
+                    $actions->append(
+                        Button::create(admin_trans('store_machine.actions.unbind_machine'))
+                            ->type('danger')
+                            ->size('small')
+                            ->confirm(
+                                admin_trans('store_machine.confirm_unbind_machine'),
+                                [$this, 'unbindOfflineMachine'],
+                                [
+                                    'machine_id' => $data->id,
+                                    'department_id' => $currentDepartmentId,
+                                    'store_id' => $storeId
+                                ]
+                            )
+                            ->gridRefresh()
+                    );
+                }
             });
 
             // 添加确认按钮
@@ -1901,6 +1936,45 @@ class StoreMachineController
 
             Db::commit();
             return message_success(admin_trans('store_machine.bind_success'));
+
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return message_error($e->getMessage());
+        }
+    }
+
+    /**
+     * 解绑线下机台
+     * @auth true
+     * @group channel
+     * @return \ExAdmin\ui\response\Msg
+     */
+    public function unbindOfflineMachine()
+    {
+        $machineId = \ExAdmin\ui\support\Request::input('machine_id');
+        $departmentId = \ExAdmin\ui\support\Request::input('department_id');
+
+        if (!$machineId || !$departmentId) {
+            return message_error(admin_trans('common.invalid_param'));
+        }
+
+        Db::beginTransaction();
+        try {
+            $channelMachineModel = plugin()->webman->config('database.channel_machine_model');
+
+            // 解绑机台（将 store_admin_id 设置为 null）
+            $updated = $channelMachineModel::query()
+                ->where('department_id', $departmentId)
+                ->where('machine_id', $machineId)
+                ->update(['store_admin_id' => null]);
+
+            if (!$updated) {
+                Db::rollBack();
+                return message_error(admin_trans('store_machine.unbind_failed'));
+            }
+
+            Db::commit();
+            return message_success(admin_trans('store_machine.unbind_success'));
 
         } catch (\Exception $e) {
             Db::rollBack();

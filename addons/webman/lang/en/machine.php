@@ -79,6 +79,8 @@ return [
         'viewers' => 'Number of viewers',
         'machine_source' => 'Machine Source',
         'store' => 'Store',
+        'bound_store' => 'Bound Store',
+        'bind_status' => 'Bind Status',
     ],
     'filter' => [
         'store' => 'Store',

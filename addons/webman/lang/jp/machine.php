@@ -81,6 +81,8 @@ return [
         'viewers' => '視聴者数',
         'machine_source' => '機台ソース',
         'store' => '店舗',
+        'bound_store' => '紐付店舗',
+        'bind_status' => '紐付状態',
     ],
     'filter' => [
         'store' => '店舗',
