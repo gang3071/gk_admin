@@ -323,7 +323,7 @@ class AdminOfflineMachineController
             if ($form->isEdit()) {
                 $currentMachine = Machine::find($form->model()->getKey());
                 if (!$currentMachine || $currentMachine->machine_source != Machine::MACHINE_SOURCE_OFFLINE) {
-                    abort(403, admin_trans('offline_machine.error.not_offline_machine'));
+                    throw new \Exception(admin_trans('offline_machine.error.not_offline_machine'));
                 }
             }
 
