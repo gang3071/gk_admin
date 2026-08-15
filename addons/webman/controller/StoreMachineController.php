@@ -243,8 +243,7 @@ class StoreMachineController
 
                 // ✅ 添加线下机台 (使用 drawer 抽屉,参照渠道列表实现)
                 $dropdown->prepend(admin_trans('store_machine.actions.bind_offline_machine'), 'fas fa-desktop')
-                    ->drawer(admin_url([$this, 'offlineMachineList']), ['store_id' => $data['id']])
-                    ->gridRefresh();
+                    ->drawer(admin_url([$this, 'offlineMachineList']), ['store_id' => $data['id']]);
 
                 // 限红组配置
                 $dropdown->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
@@ -1733,30 +1732,31 @@ class StoreMachineController
 
         $machineModel = plugin()->webman->config('database.machine_model');
 
-        return Grid::create(new $machineModel(), function (Grid $grid) use ($storeId, $currentDepartmentId, $store, $selectedIds) {
+        return Grid::create(new $machineModel(), function (Grid $grid) use ($storeId, $currentDepartmentId, $store, $selectedIds, $channelMachineModel) {
             $grid->title(admin_trans('store_machine.bind_offline_machine_title', null, ['store' => $store->nickname ?: $store->username]));
+
+            // 获取当前渠道下符合条件的机台ID和绑定状态
+            $channelMachines = $channelMachineModel::query()
+                ->where('department_id', $currentDepartmentId)
+                ->where(function ($query) use ($storeId) {
+                    // 未绑定 或 已绑定到当前店家
+                    $query->whereNull('store_admin_id')
+                        ->orWhere('store_admin_id', $storeId);
+                })
+                ->whereHas('machine', function ($query) {
+                    $query->where('machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE);
+                })
+                ->get()
+                ->keyBy('machine_id');
+
+            $machineIds = $channelMachines->pluck('machine_id')->toArray();
 
             // 只显示当前渠道下的线下机台
             $grid->model()
-                ->join('channel_machine', 'machine.id', '=', 'channel_machine.machine_id')
-                ->join('machine_category', 'machine.cate_id', '=', 'machine_category.id')
-                ->where('channel_machine.department_id', $currentDepartmentId)
-                ->where('machine.machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE)
-                ->where(function ($query) use ($storeId) {
-                    // 未绑定 或 已绑定到当前店家
-                    $query->whereNull('channel_machine.store_admin_id')
-                        ->orWhere('channel_machine.store_admin_id', $storeId);
-                })
-                ->select([
-                    'machine.id',
-                    'machine.code',
-                    'machine.name',
-                    'machine.type',
-                    'machine.status',
-                    'machine_category.name as category_name',
-                    'channel_machine.store_admin_id'
-                ])
-                ->orderBy('machine.code', 'asc');
+                ->whereIn('id', $machineIds)
+                ->where('machine_source', \addons\webman\model\Machine::MACHINE_SOURCE_OFFLINE)
+                ->with(['machineLabel', 'machineCategory'])
+                ->orderBy('code', 'asc');
 
             $grid->driver()->setPk('id');
             $grid->autoHeight();
@@ -1765,15 +1765,26 @@ class StoreMachineController
             // 列配置
             $grid->column('id', admin_trans('machine.fields.id'))->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->align('center')->sortable();
-            $grid->column('name', admin_trans('machine.fields.name'))->align('center');
+            $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, $data) {
+                return $data->machineLabel->name ?? '-';
+            })->align('center');
             $grid->column('type', admin_trans('machine.fields.type'))->display(function ($val) {
                 return Tag::create(getGameTypeName($val))->color('blue');
             })->align('center');
-            $grid->column('category_name', admin_trans('machine.fields.cate_id'))->align('center');
-            $grid->column('store_admin_id', admin_trans('machine.fields.store'))->display(function ($val) use ($storeId) {
-                if ($val == $storeId) {
+            $grid->column('cate_id', admin_trans('machine.fields.cate_id'))->display(function ($val, $data) {
+                return $data->machineCategory->name ?? '-';
+            })->align('center');
+            $grid->column('store_status', admin_trans('machine.fields.store'))->display(function ($val, $data) use ($storeId, $channelMachines) {
+                // 从预加载的数据中获取绑定状态
+                $channelMachine = $channelMachines->get($data->id);
+
+                if (!$channelMachine) {
+                    return Tag::create(admin_trans('machine.store.unbound'))->color('default');
+                }
+
+                if ($channelMachine->store_admin_id == $storeId) {
                     return Tag::create(admin_trans('machine.store.bound_to_current'))->color('green');
-                } elseif ($val) {
+                } elseif ($channelMachine->store_admin_id) {
                     return Tag::create(admin_trans('machine.store.bound_to_other'))->color('red');
                 } else {
                     return Tag::create(admin_trans('machine.store.unbound'))->color('default');
@@ -1813,9 +1824,9 @@ class StoreMachineController
 
             // 筛选器
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
-                $filter->eq()->select('machine.status')
+                $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
+                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
+                $filter->eq()->select('status')
                     ->placeholder(admin_trans('machine.fields.status'))
                     ->options([
                         1 => admin_trans('admin.normal'),
