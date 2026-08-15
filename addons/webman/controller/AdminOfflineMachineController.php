@@ -513,6 +513,19 @@ class AdminOfflineMachineController
                 // 确保是线下机台
                 $form->machine_source = Machine::MACHINE_SOURCE_OFFLINE;
                 $form->is_live = 0;
+
+                // 处理整数字段：空字符串转为 null
+                $intFields = ['strategy_id', 'producer_id'];
+                foreach ($intFields as $field) {
+                    if (isset($form->$field) && $form->$field === '') {
+                        $form->$field = null;
+                    }
+                }
+
+                // 处理文本字段：空字符串转为 null
+                if (isset($form->remark) && $form->remark === '') {
+                    $form->remark = null;
+                }
             });
 
             $form->saved(function (Form $form, $result) {
