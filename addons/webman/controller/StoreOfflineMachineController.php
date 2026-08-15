@@ -132,9 +132,19 @@ class StoreOfflineMachineController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                // 查看二维码
+                $actions->append(
+                    Button::create(admin_trans('store_offline_machine.actions.view_qrcode'))
+                        ->type('primary')
+                        ->size('small')
+                        ->icon(Icon::create('fas fa-qrcode'))
+                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
+                        ->width('500px')
+                );
             });
         });
     }
@@ -223,9 +233,19 @@ class StoreOfflineMachineController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                // 查看二维码
+                $actions->append(
+                    Button::create(admin_trans('store_offline_machine.actions.view_qrcode'))
+                        ->type('primary')
+                        ->size('small')
+                        ->icon(Icon::create('fas fa-qrcode'))
+                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
+                        ->width('500px')
+                );
             });
         });
     }
@@ -469,5 +489,42 @@ class StoreOfflineMachineController
                 'last_play_time' => 0,
             ];
         }
+    }
+
+    /**
+     * 查看机台二维码
+     * @auth true
+     * @group store
+     * @return mixed
+     */
+    public function viewQrCode()
+    {
+        $machineId = Request::input('machine_id');
+
+        // 验证机台归属
+        $storeAdminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
+
+        $machine = Machine::query()
+            ->with(['machineLabel'])
+            ->whereHas('channelMachines', function ($query) use ($storeAdminId, $departmentId) {
+                $query->where('store_admin_id', $storeAdminId)
+                    ->where('department_id', $departmentId);
+            })
+            ->where('id', $machineId)
+            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+            ->first();
+
+        if (!$machine) {
+            return message_error(admin_trans('store_offline_machine.error.machine_not_found'));
+        }
+
+        // 使用 admin_view 返回 Vue 组件展示二维码
+        return admin_view(plugin()->webman->getPath() . '/views/machine_qrcode.vue')->attrs([
+            'machineId' => $machine->id,
+            'machineCode' => $machine->code,
+            'machineName' => $machine->machineLabel->name ?? '-',
+            'title' => admin_trans('store_offline_machine.qrcode_title'),
+        ]);
     }
 }
