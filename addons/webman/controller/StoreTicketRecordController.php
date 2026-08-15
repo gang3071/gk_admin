@@ -411,15 +411,6 @@ class StoreTicketRecordController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 物理删除按钮（所有状态都显示）
-                $actions->prepend(
-                    Button::create(admin_trans('ticket_machine.record.force_delete'))
-                        ->confirm(admin_trans('ticket_machine.record.force_delete_confirm'), [$this, 'forceDeleteRecord'], ['id' => $data['id']])
-                        ->type('danger')
-                        ->size('small')
-                        ->gridRefresh()
-                );
-
                 if ($data['status'] == TicketRecord::STATUS_DISABLED) {
                     // 已禁用 - 显示恢复按钮
                     $actions->prepend(
