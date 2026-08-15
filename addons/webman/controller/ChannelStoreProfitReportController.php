@@ -238,6 +238,7 @@ class ChannelStoreProfitReportController
                 ->where($shiftTable . '.bind_admin_user_id', $storeId);
 
             // 时间筛选：使用交班记录的 start_time 和 end_time 范围
+            // 使用开区间避免边界重叠问题（前一个交班的 end_time 等于当前交班的 start_time）
             if (!empty($dateType)) {
                 // 结算周期筛选：使用 start_time 作为筛选字段
                 $betQuery->where(function ($query) use ($dateType, $shiftTable) {
@@ -250,12 +251,12 @@ class ChannelStoreProfitReportController
                 });
             } else {
                 if (!empty($createdAtStart)) {
-                    // 交班结束时间 >= 查询开始时间
-                    $betQuery->where($shiftTable . '.end_time', '>=', $createdAtStart);
+                    // 交班结束时间 > 查询开始时间（使用 > 而非 >= 避免边界重叠）
+                    $betQuery->where($shiftTable . '.end_time', '>', $createdAtStart);
                 }
                 if (!empty($createdAtEnd)) {
-                    // 交班开始时间 <= 查询结束时间
-                    $betQuery->where($shiftTable . '.start_time', '<=', $createdAtEnd);
+                    // 交班开始时间 < 查询结束时间（使用 < 而非 <= 避免边界重叠）
+                    $betQuery->where($shiftTable . '.start_time', '<', $createdAtEnd);
                 }
             }
 
