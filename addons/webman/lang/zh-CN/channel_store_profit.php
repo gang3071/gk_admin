@@ -12,7 +12,7 @@ return [
         'agent_name' => '所属代理',
         'remark' => '备注',
         'recharge_amount' => '开分',
-        'open_score_amount' => '人工储值',
+        'open_score_amount' => '开分',
         'withdraw_amount' => '洗分',
         'machine_put_point' => '投钞',
         'incoming_ticket_amount' => '入票',

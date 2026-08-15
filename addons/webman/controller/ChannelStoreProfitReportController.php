@@ -200,8 +200,8 @@ class ChannelStoreProfitReportController
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS experience_coupon_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` IN (" . TicketRecord::STATUS_BACKEND_USED . "," . TicketRecord::STATUS_MACHINE_USED . ") THEN `score` ELSE 0 END) AS welfare_coupon_amount
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS welfare_coupon_amount
             ")->first();
 
             // 查询拉彩数据
@@ -286,17 +286,8 @@ class ChannelStoreProfitReportController
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             // 计算小计 = (开分 + 投钞) - 洗分
-            // 注意：洗分中不包含彩金和活动奖励（发放给客户后，客户洗分会洗掉）
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
-
-            // 计算代理分润：小计 * 代理抽成比例
-            $agentCommission = floatval($store->agent_commission ?? 0);
-            $agentProfit = bcmul($subtotal, bcdiv($agentCommission, 100, 4), 2);
-
-            // 计算渠道分润：小计 * 渠道抽成比例
-            $channelCommission = floatval($store->channel_commission ?? 0);
-            $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
 
             // 计算总收入 = 开分 + 开票（与导出报表一致）
             $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
@@ -306,6 +297,14 @@ class ChannelStoreProfitReportController
 
             // 计算总利润 = 总收入 - 总支出
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
+
+            // 计算代理分润：利润 * 代理抽成比例
+            $agentCommission = floatval($store->agent_commission ?? 0);
+            $agentProfit = bcmul($totalProfit, bcdiv($agentCommission, 100, 4), 2);
+
+            // 计算渠道分润：利润 * 渠道抽成比例
+            $channelCommission = floatval($store->channel_commission ?? 0);
+            $channelProfit = bcmul($totalProfit, bcdiv($channelCommission, 100, 4), 2);
 
             $reportData[] = [
                 'id' => $store->id,
@@ -595,8 +594,8 @@ class ChannelStoreProfitReportController
             // 所属代理
             $grid->column('agent_name', admin_trans('channel_store_profit.fields.agent_name'))->width(120)->align('center');
 
-            // 开分
-            $grid->column('recharge_amount', admin_trans('channel_store_profit.fields.recharge_amount'))->display(function ($value) {
+            // 开分（人工储值）
+            $grid->column('open_score_amount', admin_trans('channel_store_profit.fields.open_score_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
             })->width(120)->align('center');
 
