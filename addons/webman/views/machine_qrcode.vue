@@ -202,16 +202,30 @@ export default {
   },
   data() {
     return {
-      canvasSize: 300
+      canvasSize: 300,
+      originalBodyOverflow: undefined,
+      originalBodyClass: undefined
     };
   },
   mounted() {
+    // 保存原始 body 样式
+    this.originalBodyOverflow = document.body.style.overflow;
+    this.originalBodyClass = document.body.className;
+
     this.$nextTick(() => {
       this.drawQRCode();
     });
   },
   beforeUnmount() {
     this.clearCanvas();
+
+    // 恢复原始 body 样式（以防万一）
+    if (this.originalBodyOverflow !== undefined) {
+      document.body.style.overflow = this.originalBodyOverflow;
+    }
+    if (this.originalBodyClass !== undefined) {
+      document.body.className = this.originalBodyClass;
+    }
   },
   methods: {
     drawQRCode() {
@@ -366,15 +380,35 @@ export default {
 </script>
 
 <style scoped>
+/* 强制重置所有可能被污染的样式 */
+.qr-modal-isolated,
+.qr-modal-isolated * {
+  box-sizing: border-box;
+  line-height: normal;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-transform: none;
+  text-indent: 0;
+  text-shadow: none;
+  white-space: normal;
+}
+
 .qr-modal-isolated {
   padding: 24px;
   max-width: 600px;
   margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5715;
+  color: rgba(0, 0, 0, 0.85);
+  background: transparent;
 }
 
 .qr-modal-isolated-header {
   text-align: center;
   margin-bottom: 24px;
+  margin-top: 0;
+  padding: 0;
 }
 
 .qr-modal-isolated-header h3 {
@@ -383,10 +417,14 @@ export default {
   color: #1890ff;
   margin: 0;
   padding: 0;
+  line-height: 1.35;
+  font-family: inherit;
 }
 
 .qr-modal-isolated-info {
   margin-bottom: 24px;
+  margin-top: 0;
+  padding: 0;
 }
 
 .qr-modal-isolated-canvas-wrapper {
@@ -397,18 +435,25 @@ export default {
   background-color: #f5f5f5;
   border-radius: 8px;
   margin-bottom: 24px;
+  margin-top: 0;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .qr-modal-isolated-canvas {
   display: block;
   border: 1px solid #d9d9d9;
   background-color: #ffffff;
+  margin: 0;
+  padding: 0;
 }
 
 .qr-modal-isolated-footer {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  margin: 0;
+  padding: 0;
 }
 
 .qr-modal-isolated-buttons {
@@ -416,9 +461,12 @@ export default {
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
 }
 
 .qr-modal-isolated-buttons .ant-btn {
   min-width: 140px;
+  margin: 0;
 }
 </style>
