@@ -539,8 +539,8 @@ class AutoShiftService
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
             ->where('status', TicketRecord::STATUS_BACKEND_USED)
-            ->where('created_at', '>', $startTime)
-            ->where('created_at', '<=', $endTime)
+            ->where('scanned_at', '>', $startTime)
+            ->where('scanned_at', '<=', $endTime)
             ->sum('score');
 
         // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
@@ -548,8 +548,8 @@ class AutoShiftService
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
             ->where('status', TicketRecord::STATUS_MACHINE_USED)
-            ->where('created_at', '>', $startTime)
-            ->where('created_at', '<=', $endTime)
+            ->where('scanned_at', '>', $startTime)
+            ->where('scanned_at', '<=', $endTime)
             ->sum('score');
 
         // 统计入票金额（开票机台使用 + 核销机台使用）
@@ -766,8 +766,8 @@ class AutoShiftService
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->where('status', TicketRecord::STATUS_BACKEND_USED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
@@ -775,8 +775,8 @@ class AutoShiftService
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->where('status', TicketRecord::STATUS_MACHINE_USED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计入票金额（开票机台使用 + 核销机台使用）
