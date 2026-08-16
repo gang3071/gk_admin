@@ -175,8 +175,9 @@ class ChannelStoreProfitReportController
             ")->first();
 
             // 查询票务数据（入票、出卷、开票、核销、未核销、体验券、福利券）
+            // 使用 store_admin_id 关联，确保包含 player_id 为空的历史票券
             $ticketQuery = TicketRecord::query()
-                ->whereIn('player_id', $playerIds);
+                ->where('store_admin_id', $storeId);
 
             // 时间筛选：优先使用结算周期，否则使用手动时间范围
             if (!empty($dateType)) {
@@ -203,8 +204,9 @@ class ChannelStoreProfitReportController
             ")->first();
 
             // 核销相关查询：使用 scanned_at（扫码时间）作为时间筛选
+            // 使用 store_admin_id 关联，确保包含 player_id 为空的历史票券
             $redeemQuery = TicketRecord::query()
-                ->whereIn('player_id', $playerIds);
+                ->where('store_admin_id', $storeId);
 
             if (!empty($dateType)) {
                 $redeemQuery->where(getDateWhere($dateType, 'scanned_at'));
