@@ -265,14 +265,7 @@ class ChannelStoreProfitReportController
             // 使用开区间避免边界重叠问题（前一个交班的 end_time 等于当前交班的 start_time）
             if (!empty($dateType)) {
                 // 结算周期筛选：使用 start_time 作为筛选字段
-                $betQuery->where(function ($query) use ($dateType, $shiftTable) {
-                    $dateWhere = getDateWhere($dateType, $shiftTable . '.start_time');
-                    if (!empty($dateWhere)) {
-                        foreach ($dateWhere as $condition) {
-                            $query->where($condition);
-                        }
-                    }
-                });
+                $betQuery->where(getDateWhere($dateType, $shiftTable . '.start_time'));
             } else {
                 if (!empty($createdAtStart)) {
                     // 交班结束时间 > 查询开始时间（使用 > 而非 >= 避免边界重叠）
