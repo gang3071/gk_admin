@@ -2,7 +2,7 @@
 
 namespace process;
 
-use Illuminate\Support\Facades\DB;
+use support\Db;
 use support\Log;
 use Workerman\Crontab\Crontab;
 
@@ -82,7 +82,7 @@ class CleanupTypeBetTask
             $tableName = config('database.connections.mysql.prefix') . 'player_delivery_record';
             $archiveTableName = config('database.connections.mysql.prefix') . 'player_delivery_record_archive_type_bet';
 
-            DB::statement("
+            Db::statement("
                 CREATE TABLE IF NOT EXISTS {$archiveTableName}
                 LIKE {$tableName}
             ");
@@ -115,7 +115,7 @@ class CleanupTypeBetTask
         ini_set('memory_limit', '512M');
 
         try {
-            DB::beginTransaction();
+            Db::beginTransaction();
 
             // 获取表名前缀
             $prefix = config('database.connections.mysql.prefix', '');
@@ -123,7 +123,7 @@ class CleanupTypeBetTask
             $archiveTable = $prefix . 'player_delivery_record_archive_type_bet';
 
             // 🔒 步骤 1：查询要删除的 ID 列表（加锁，确保数据一致性）
-            $idsToDelete = DB::select("
+            $idsToDelete = Db::select("
                 SELECT id FROM {$sourceTable}
                 WHERE type = 26
                 LIMIT ?
@@ -132,7 +132,7 @@ class CleanupTypeBetTask
 
             // 如果没有数据，提交事务并返回
             if (empty($idsToDelete)) {
-                DB::commit();
+                Db::commit();
                 $this->isCompleted = true;
                 $this->onCleanupCompleted();
                 return;
@@ -144,19 +144,19 @@ class CleanupTypeBetTask
             $deletedRows = count($ids);
 
             // 📦 步骤 2：按 ID 归档数据（使用 INSERT IGNORE 避免主键冲突）
-            DB::statement("
+            Db::statement("
                 INSERT IGNORE INTO {$archiveTable}
                 SELECT * FROM {$sourceTable}
                 WHERE id IN ({$idList})
             ");
 
             // 🗑️ 步骤 3：按相同的 ID 删除数据
-            DB::delete("
+            Db::delete("
                 DELETE FROM {$sourceTable}
                 WHERE id IN ({$idList})
             ");
 
-            DB::commit();
+            Db::commit();
 
             // 4. 更新统计
             $this->totalDeleted += $deletedRows;
@@ -172,7 +172,7 @@ class CleanupTypeBetTask
             gc_collect_cycles();
 
         } catch (\Exception $e) {
-            DB::rollBack();
+            Db::rollBack();
 
             Log::error('CleanupTypeBet 执行失败', [
                 'batch' => $this->totalBatches,
@@ -205,7 +205,7 @@ class CleanupTypeBetTask
     {
         try {
             // 查询剩余数量
-            $remaining = DB::table('player_delivery_record')
+            $remaining = Db::table('player_delivery_record')
                 ->where('type', 26)
                 ->count();
 
@@ -219,7 +219,7 @@ class CleanupTypeBetTask
             // 检查锁等待（仅在每 50 批检查一次，减少开销）
             $lockCount = 0;
             if ($this->totalBatches % 50 === 0) {
-                $lockWaits = DB::select("
+                $lockWaits = Db::select("
                     SELECT COUNT(*) as count
                     FROM information_schema.processlist
                     WHERE state LIKE '%Waiting for table%'
@@ -299,16 +299,16 @@ class CleanupTypeBetTask
     {
         try {
             // 1. 确认剩余 TYPE_BET 数量
-            $remaining = DB::table('player_delivery_record')
+            $remaining = Db::table('player_delivery_record')
                 ->where('type', 26)
                 ->count();
 
             // 2. 确认归档数量
-            $archived = DB::table('player_delivery_record_archive_type_bet')
+            $archived = Db::table('player_delivery_record_archive_type_bet')
                 ->count();
 
             // 3. 检查其他类型数据
-            $otherTypes = DB::table('player_delivery_record')
+            $otherTypes = Db::table('player_delivery_record')
                 ->whereIn('type', [1, 6, 7, 23, 29])
                 ->selectRaw('type, COUNT(*) as count')
                 ->groupBy('type')
