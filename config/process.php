@@ -39,4 +39,18 @@ return [
     //     'reloadable' => true,
     //     'constructor' => []
     // ],
+
+    // ⚠️ TYPE_BET 数据清理任务（需要时取消注释）
+    // 功能：每 5 秒删除 5000 条 TYPE_BET (26) 数据
+    // 预计耗时：约 5.5 小时清理 2000 万条数据
+    // 使用方式：
+    //   1. 取消下面的注释
+    //   2. 执行 php start.php restart
+    //   3. 观察日志输出和 runtime/logs/webman.log
+    //   4. 清理完成后，重新注释掉并重启服务
+    // 'cleanup_type_bet' => [
+    //     'handler' => process\CleanupTypeBetTask::class,
+    //     'reloadable' => true,
+    //     'constructor' => []
+    // ],
 ];
