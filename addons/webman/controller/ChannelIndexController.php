@@ -537,582 +537,124 @@ class ChannelIndexController
     }
 
     /**
-     * 获取充值数据
+     * 获取充值数据（✅ 性能优化：6次查询 → 1次查询）
      * @param $data_type
      * @return array
      */
     public function rechargeData($data_type): array
     {
+        // ✅ 使用一次聚合查询替代6次独立查询
+        $rechargeQuery = PlayerRechargeRecord::query()
+            ->where('status', PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)
+            ->when($data_type, function (Builder $q, $value) {
+                $this->applyDateWhere($q, $value, 'finish_time');
+            });
+
+        // 执行聚合查询（一次性获取所有统计）
+        $rechargeStats = $rechargeQuery->selectRaw("
+            SUM(CASE WHEN type IN (" . PlayerRechargeRecord::TYPE_THIRD . "," . PlayerRechargeRecord::TYPE_SELF . "," . PlayerRechargeRecord::TYPE_ARTIFICIAL . "," . PlayerRechargeRecord::TYPE_GB . ") THEN point ELSE 0 END) as all_sum,
+            SUM(CASE WHEN type = " . PlayerRechargeRecord::TYPE_SELF . " THEN point ELSE 0 END) as self_sum,
+            SUM(CASE WHEN type IN (" . PlayerRechargeRecord::TYPE_THIRD . "," . PlayerRechargeRecord::TYPE_GB . ") THEN point ELSE 0 END) as third_sum,
+            SUM(CASE WHEN type = " . PlayerRechargeRecord::TYPE_ARTIFICIAL . " THEN point ELSE 0 END) as artificial_sum
+        ")->first();
+
+        // 查询业务充值（来自不同表）
+        $businessQuery = PlayerPresentRecord::query()
+            ->where('type', PlayerPresentRecord::TYPE_OUT)
+            ->when($data_type, function (Builder $q, $value) {
+                $this->applyDateWhere($q, $value, 'created_at');
+            });
+
+        // 查询投钞金额（来自不同表）
+        $machinePutQuery = PlayerDeliveryRecord::query()
+            ->where('type', PlayerDeliveryRecord::TYPE_MACHINE)
+            ->when($data_type, function (Builder $q, $value) {
+                $this->applyDateWhere($q, $value, 'created_at');
+            });
+
         return [
-            'all' => PlayerRechargeRecord::where('status',
-                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->whereIn('type', [
-                PlayerRechargeRecord::TYPE_THIRD,
-                PlayerRechargeRecord::TYPE_SELF,
-                PlayerRechargeRecord::TYPE_ARTIFICIAL,
-                PlayerRechargeRecord::TYPE_GB,
-            ])->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('point'),
-            'self' => PlayerRechargeRecord::where('status',
-                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->where('type',
-                PlayerRechargeRecord::TYPE_SELF)->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('point'),
-            'third' => PlayerRechargeRecord::where('status',
-                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->whereIn('type',
-                [
-                    PlayerRechargeRecord::TYPE_THIRD,
-                    PlayerRechargeRecord::TYPE_GB,
-                ])->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('point'),
-            'artificial' => PlayerRechargeRecord::where('status',
-                PlayerRechargeRecord::STATUS_RECHARGED_SUCCESS)->where('type',
-                PlayerRechargeRecord::TYPE_ARTIFICIAL)->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('point'),
-            'business' => PlayerPresentRecord::where('type', PlayerPresentRecord::TYPE_OUT)->when($data_type,
-                function (Builder $q, $value) {
-                    switch ($value) {
-                        case 'today': // 今天
-                            $q->where('created_at', '>=', Carbon::today()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfDay());
-                            break;
-                        case 'yesterday': // 昨天
-                            $q->where('created_at', '>=', Carbon::yesterday()->startOfDay())->where('created_at', '<=',
-                                Carbon::yesterday()->endOfDay());
-                            break;
-                        case 'week': // 本周
-                            $q->where('created_at', '>=',
-                                Carbon::today()->startOfWeek()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfWeek()->endOfDay());
-                            break;
-                        case 'last_week': // 上周
-                            $q->where('created_at', '>=',
-                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                            break;
-                        case 'month': // 本月
-                            $q->where('created_at', '>=',
-                                Carbon::today()->firstOfMonth()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfMonth()->endOfDay());
-                            break;
-                        case 'last_month': // 上月
-                            $startDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                1, // 第一天
-                                0, 0, 0
-                            );
-
-                            $endDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                                23, 59, 59
-                            );
-
-                            $q->whereBetween('created_at', [$startDate, $endDate]);
-                            break;
-                        default:
-                            break;
-                    }
-                })->sum('amount'),
-            'machine_put_amount' => PlayerDeliveryRecord::where('type',
-                PlayerDeliveryRecord::TYPE_MACHINE)->when($data_type,
-                function (Builder $q, $value) {
-                    switch ($value) {
-                        case 'today': // 今天
-                            $q->where('created_at', '>=', Carbon::today()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfDay());
-                            break;
-                        case 'yesterday': // 昨天
-                            $q->where('created_at', '>=', Carbon::yesterday()->startOfDay())->where('created_at', '<=',
-                                Carbon::yesterday()->endOfDay());
-                            break;
-                        case 'week': // 本周
-                            $q->where('created_at', '>=',
-                                Carbon::today()->startOfWeek()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfWeek()->endOfDay());
-                            break;
-                        case 'last_week': // 上周
-                            $q->where('created_at', '>=',
-                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                            break;
-                        case 'month': // 本月
-                            $q->where('created_at', '>=',
-                                Carbon::today()->firstOfMonth()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfMonth()->endOfDay());
-                            break;
-                        case 'last_month': // 上月
-                            $startDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                1, // 第一天
-                                0, 0, 0
-                            );
-
-                            $endDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                                23, 59, 59
-                            );
-
-                            $q->whereBetween('created_at', [$startDate, $endDate]);
-                            break;
-                        default:
-                            break;
-                    }
-                })->sum('amount'),
+            'all' => $rechargeStats->all_sum ?? 0,
+            'self' => $rechargeStats->self_sum ?? 0,
+            'third' => $rechargeStats->third_sum ?? 0,
+            'artificial' => $rechargeStats->artificial_sum ?? 0,
+            'business' => $businessQuery->sum('amount') ?? 0,
+            'machine_put_amount' => $machinePutQuery->sum('amount') ?? 0,
         ];
     }
 
     /**
-     * 获取提现数据
+     * 获取提现数据（✅ 性能优化：5次查询 → 1次查询）
      * @param $data_type
      * @return array
      */
     public function withdrawData($data_type): array
     {
+        // ✅ 使用一次聚合查询替代4次独立查询
+        $withdrawQuery = PlayerWithdrawRecord::query()
+            ->where('status', PlayerWithdrawRecord::STATUS_SUCCESS)
+            ->when($data_type, function (Builder $q, $value) {
+                $this->applyDateWhere($q, $value, 'finish_time');
+            });
+
+        // 执行聚合查询
+        $withdrawStats = $withdrawQuery->selectRaw("
+            SUM(money) as all_sum,
+            SUM(CASE WHEN type = " . PlayerWithdrawRecord::TYPE_SELF . " THEN money ELSE 0 END) as self_sum,
+            SUM(CASE WHEN type IN (" . PlayerWithdrawRecord::TYPE_THIRD . "," . PlayerWithdrawRecord::TYPE_GB . ") THEN money ELSE 0 END) as third_sum,
+            SUM(CASE WHEN type = " . PlayerWithdrawRecord::TYPE_ARTIFICIAL . " THEN point ELSE 0 END) as artificial_sum
+        ")->first();
+
+        // 查询业务提现（来自不同表）
+        $businessQuery = PlayerPresentRecord::query()
+            ->where('type', PlayerPresentRecord::TYPE_IN)
+            ->when($data_type, function (Builder $q, $value) {
+                $this->applyDateWhere($q, $value, 'created_at');
+            });
+
         return [
-            'all' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->when($data_type,
-                function (Builder $q, $value) {
-                    switch ($value) {
-                        case 'today': // 今天
-                            $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                                Carbon::today()->endOfDay());
-                            break;
-                        case 'yesterday': // 昨天
-                            $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time',
-                                '<=',
-                                Carbon::yesterday()->endOfDay());
-                            break;
-                        case 'week': // 本周
-                            $q->where('finish_time', '>=',
-                                Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                                Carbon::today()->endOfWeek()->endOfDay());
-                            break;
-                        case 'last_week': // 上周
-                            $q->where('finish_time', '>=',
-                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                            break;
-                        case 'month': // 本月
-                            $q->where('finish_time', '>=',
-                                Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                                Carbon::today()->endOfMonth()->endOfDay());
-                            break;
-                        case 'last_month': // 上月
-                            $startDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                1, // 第一天
-                                0, 0, 0
-                            );
-
-                            $endDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                                23, 59, 59
-                            );
-
-                            $q->whereBetween('finish_time', [$startDate, $endDate]);
-                            break;
-                        default:
-                            break;
-                    }
-                })->sum('money'),
-            'self' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->where('type',
-                PlayerWithdrawRecord::TYPE_SELF)->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('money'),
-            'third' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->whereIn('type',
-                [
-                    PlayerWithdrawRecord::TYPE_THIRD,
-                    PlayerWithdrawRecord::TYPE_GB,
-                ])->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('money'),
-            'artificial' => PlayerWithdrawRecord::where('status', PlayerWithdrawRecord::STATUS_SUCCESS)->where('type',
-                PlayerWithdrawRecord::TYPE_ARTIFICIAL)->when($data_type, function (Builder $q, $value) {
-                switch ($value) {
-                    case 'today': // 今天
-                        $q->where('finish_time', '>=', Carbon::today()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfDay());
-                        break;
-                    case 'yesterday': // 昨天
-                        $q->where('finish_time', '>=', Carbon::yesterday()->startOfDay())->where('finish_time', '<=',
-                            Carbon::yesterday()->endOfDay());
-                        break;
-                    case 'week': // 本周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfWeek()->endOfDay());
-                        break;
-                    case 'last_week': // 上周
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                        break;
-                    case 'month': // 本月
-                        $q->where('finish_time', '>=',
-                            Carbon::today()->firstOfMonth()->startOfDay())->where('finish_time', '<=',
-                            Carbon::today()->endOfMonth()->endOfDay());
-                        break;
-                    case 'last_month': // 上月
-                        $startDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            1, // 第一天
-                            0, 0, 0
-                        );
-
-                        $endDate = Carbon::create(
-                            Carbon::now()->subMonthNoOverflow()->year,
-                            Carbon::now()->subMonthNoOverflow()->month,
-                            Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                            23, 59, 59
-                        );
-
-                        $q->whereBetween('finish_time', [$startDate, $endDate]);
-                        break;
-                    default:
-                        break;
-                }
-            })->sum('point'),
-            'business' => PlayerPresentRecord::where('type', PlayerPresentRecord::TYPE_IN)->when($data_type,
-                function (Builder $q, $value) {
-                    switch ($value) {
-                        case 'today': // 今天
-                            $q->where('created_at', '>=', Carbon::today()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfDay());
-                            break;
-                        case 'yesterday': // 昨天
-                            $q->where('created_at', '>=', Carbon::yesterday()->startOfDay())->where('created_at', '<=',
-                                Carbon::yesterday()->endOfDay());
-                            break;
-                        case 'week': // 本周
-                            $q->where('created_at', '>=',
-                                Carbon::today()->startOfWeek()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfWeek()->endOfDay());
-                            break;
-                        case 'last_week': // 上周
-                            $q->where('created_at', '>=',
-                                Carbon::today()->subWeek()->startOfWeek()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                            break;
-                        case 'month': // 本月
-                            $q->where('created_at', '>=',
-                                Carbon::today()->firstOfMonth()->startOfDay())->where('created_at', '<=',
-                                Carbon::today()->endOfMonth()->endOfDay());
-                            break;
-                        case 'last_month': // 上月
-                            $startDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                1, // 第一天
-                                0, 0, 0
-                            );
-
-                            $endDate = Carbon::create(
-                                Carbon::now()->subMonthNoOverflow()->year,
-                                Carbon::now()->subMonthNoOverflow()->month,
-                                Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                                23, 59, 59
-                            );
-
-                            $q->whereBetween('created_at', [$startDate, $endDate]);
-                            break;
-                        default:
-                            break;
-                    }
-                })->sum('amount'),
+            'all' => $withdrawStats->all_sum ?? 0,
+            'self' => $withdrawStats->self_sum ?? 0,
+            'third' => $withdrawStats->third_sum ?? 0,
+            'artificial' => $withdrawStats->artificial_sum ?? 0,
+            'business' => $businessQuery->sum('amount') ?? 0,
         ];
     }
 
     /**
-     * 获取玩家数据
+     * 获取玩家数据（✅ 性能优化：添加部门过滤）
      * @return array
      */
     public function playerData(): array
     {
+        // ✅ 修复：添加 department_id 过滤，避免查询全表
+        $departmentId = Admin::user()->department_id;
+
         return [
-            'all' => Player::count('*'),
-            'today' => Player::whereDate('created_at', date('Y-m-d'))->count(),
+            'all' => Player::where('department_id', $departmentId)->count(),
+            'today' => Player::where('department_id', $departmentId)
+                ->whereDate('created_at', date('Y-m-d'))
+                ->count(),
         ];
     }
 
     /**
-     * 获取活跃玩家数据
+     * 获取活跃玩家数据（✅ 性能优化：一次聚合查询，依赖 DataPermissions trait 自动过滤）
      * @return array
      */
     public function loginData(): array
     {
+        // ✅ 使用一次聚合查询替代2次独立查询
+        // ✅ PlayerLoginRecord 使用 DataPermissions trait，会自动添加 department_id 过滤
+        $loginStats = PlayerLoginRecord::query()
+            ->selectRaw("
+                COUNT(DISTINCT CASE WHEN DATE(created_at) = CURDATE() THEN player_id END) as today_count,
+                COUNT(DISTINCT CASE WHEN YEAR(created_at) = YEAR(NOW()) AND MONTH(created_at) = MONTH(NOW()) THEN player_id END) as month_count
+            ")
+            ->first();
+
         return [
-            'month' => PlayerLoginRecord::whereYear('created_at', date('Y'))->whereMonth('created_at',
-                date('m'))->distinct('player_id')->count(),
-            'today' => PlayerLoginRecord::whereDate('created_at', date('Y-m-d'))->distinct('player_id')->count(),
+            'month' => $loginStats->month_count ?? 0,
+            'today' => $loginStats->today_count ?? 0,
         ];
     }
 
@@ -3150,51 +2692,6 @@ class ChannelIndexController
     }
 
     /**
-     * 应用日期筛选条件到查询
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @param string $data_type
-     * @param string $field
-     */
-    private function applyDateWhere($query, $data_type, $field = 'created_at')
-    {
-        switch ($data_type) {
-            case 'today': // 今天
-                $query->where($field, '>=', Carbon::today()->startOfDay());
-                break;
-            case 'yesterday': // 昨天
-                $query->where($field, '>=', Carbon::yesterday()->startOfDay())
-                      ->where($field, '<=', Carbon::yesterday()->endOfDay());
-                break;
-            case 'week': // 本周
-                $query->where($field, '>=', Carbon::today()->startOfWeek()->startOfDay());
-                break;
-            case 'last_week': // 上周
-                $query->where($field, '>=', Carbon::today()->subWeek()->startOfWeek()->startOfDay())
-                      ->where($field, '<=', Carbon::today()->subWeek()->endOfWeek()->endOfDay());
-                break;
-            case 'month': // 本月
-                $query->where($field, '>=', Carbon::today()->firstOfMonth()->startOfDay());
-                break;
-            case 'last_month': // 上月
-                $startDate = Carbon::create(
-                    Carbon::now()->subMonthNoOverflow()->year,
-                    Carbon::now()->subMonthNoOverflow()->month,
-                    1,
-                    0, 0, 0
-                );
-                $endDate = Carbon::create(
-                    Carbon::now()->subMonthNoOverflow()->year,
-                    Carbon::now()->subMonthNoOverflow()->month,
-                    Carbon::now()->subMonthNoOverflow()->daysInMonth,
-                    23, 59, 59
-                );
-                $query->where($field, '>=', $startDate)
-                      ->where($field, '<=', $endDate);
-                break;
-        }
-    }
-
-    /**
      * 保存交班设备明细
      */
     private function saveDeviceDetails(
@@ -3272,6 +2769,57 @@ class ChannelIndexController
                     'profit' => (float)$profit,
                 ]);
             }
+        }
+    }
+
+    /**
+     * 应用日期过滤条件（✅ 性能优化：统一的时间过滤逻辑）
+     * @param Builder $query
+     * @param string $dateType
+     * @param string $fieldName
+     * @return void
+     */
+    private function applyDateWhere(Builder $query, string $dateType, string $fieldName = 'created_at'): void
+    {
+        if (!$dateType || $dateType === 'all') {
+            return;
+        }
+
+        switch ($dateType) {
+            case 'today': // 今天
+                $query->where($fieldName, '>=', Carbon::today()->startOfDay())
+                    ->where($fieldName, '<=', Carbon::today()->endOfDay());
+                break;
+            case 'yesterday': // 昨天
+                $query->where($fieldName, '>=', Carbon::yesterday()->startOfDay())
+                    ->where($fieldName, '<=', Carbon::yesterday()->endOfDay());
+                break;
+            case 'week': // 本周
+                $query->where($fieldName, '>=', Carbon::today()->startOfWeek()->startOfDay())
+                    ->where($fieldName, '<=', Carbon::today()->endOfWeek()->endOfDay());
+                break;
+            case 'last_week': // 上周
+                $query->where($fieldName, '>=', Carbon::today()->subWeek()->startOfWeek()->startOfDay())
+                    ->where($fieldName, '<=', Carbon::today()->subWeek()->endOfWeek()->endOfDay());
+                break;
+            case 'month': // 本月
+                $query->where($fieldName, '>=', Carbon::today()->firstOfMonth()->startOfDay())
+                    ->where($fieldName, '<=', Carbon::today()->endOfMonth()->endOfDay());
+                break;
+            case 'last_month': // 上月
+                $startDate = Carbon::create(
+                    Carbon::now()->subMonthNoOverflow()->year,
+                    Carbon::now()->subMonthNoOverflow()->month,
+                    1, 0, 0, 0
+                );
+                $endDate = Carbon::create(
+                    Carbon::now()->subMonthNoOverflow()->year,
+                    Carbon::now()->subMonthNoOverflow()->month,
+                    Carbon::now()->subMonthNoOverflow()->daysInMonth,
+                    23, 59, 59
+                );
+                $query->whereBetween($fieldName, [$startDate, $endDate]);
+                break;
         }
     }
 }
