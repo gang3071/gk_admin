@@ -17,7 +17,7 @@ use Workerman\Crontab\Crontab;
  * 执行策略：
  * - 每月 1 日凌晨 1:00 自动执行
  * - 创建下个月分区（重组 p_future 分区）
- * - 删除 N 个月前的旧分区（默认保留 3 个月）
+ * - 删除 N 个月前的旧分区（默认保留 2 个月）
  *
  * 性能特点：
  * - 删除分区：0.1 秒（vs 传统 DELETE 需要 42-83 分钟）
@@ -34,11 +34,11 @@ class PartitionMaintenanceTask
      *
      * 可选值：
      * - 1 个月：主表最小，查询最快
-     * - 2 个月：平衡性能和数据可用性
-     * - 3 个月：推荐值（默认）
+     * - 2 个月：推荐值（默认）- 平衡性能和数据可用性
+     * - 3 个月：保留更多近期数据
      * - 6 个月：保留更多历史数据
      */
-    private const RETENTION_MONTHS = 3;
+    private const RETENTION_MONTHS = 2;
 
     /**
      * Worker 启动时的回调
