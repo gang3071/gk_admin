@@ -75,6 +75,10 @@ export default {
     agent_player_id: Number,
     parent_player_id: Number,
     player_id: Number,
+    url: {
+      type: String,
+      default: 'ex-admin/login/totalInfo'
+    },
     minSpan: {
       type: Number,
       default: 4
@@ -215,7 +219,7 @@ export default {
       const filterToUse = this.currentFilter || this.ex_admin_filter;
 
       this.$request({
-        url: 'ex-admin/login/totalInfo',
+        url: this.url,
         method: 'post',
         data: {
           ex_admin_filter: filterToUse,
