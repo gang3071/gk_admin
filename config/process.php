@@ -48,9 +48,9 @@ return [
     //   2. 执行 php start.php restart
     //   3. 观察日志输出和 runtime/logs/webman.log
     //   4. 清理完成后，重新注释掉并重启服务
-    // 'cleanup_type_bet' => [
-    //     'handler' => process\CleanupTypeBetTask::class,
-    //     'reloadable' => true,
-    //     'constructor' => []
-    // ],
+     'cleanup_type_bet' => [
+         'handler' => process\CleanupTypeBetTask::class,
+         'reloadable' => true,
+         'constructor' => []
+     ],
 ];
