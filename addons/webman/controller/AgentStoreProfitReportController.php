@@ -453,6 +453,60 @@ class AgentStoreProfitReportController
         $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
         $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
+        // 查询店家的分润比例并计算分润
+        $storeList = AdminUser::query()
+            ->whereIn('id', $stores)
+            ->select(['id', 'agent_commission', 'channel_commission'])
+            ->get();
+
+        // 批量查询每个店家的统计数据来计算分润
+        $totalAgentProfit = 0;
+        $totalChannelProfit = 0;
+
+        // 按店家分组玩家
+        $playersByStore = Player::query()
+            ->whereIn('store_admin_id', $stores)
+            ->where('is_promoter', 0)
+            ->select(['id', 'store_admin_id'])
+            ->get()
+            ->groupBy('store_admin_id');
+
+        foreach ($storeList as $store) {
+            $storePlayers = $playersByStore->get($store->id, collect());
+            $playerIds = $storePlayers->pluck('id')->toArray();
+
+            if (empty($playerIds)) {
+                continue;
+            }
+
+            // 该店家的开分/洗分/投钞统计
+            $storeDelivery = PlayerDeliveryRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->when(true, $applyTimeFilter)
+                ->selectRaw("
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                ")
+                ->first();
+
+            $storeRecharge = floatval($storeDelivery->recharge_amount ?? 0);
+            $storeWithdraw = floatval($storeDelivery->withdraw_amount ?? 0);
+            $storeMachinePut = floatval($storeDelivery->machine_put_point ?? 0);
+
+            // 该店家的小计
+            $storeTotalIn = bcadd($storeRecharge, $storeMachinePut, 2);
+            $storeSubtotal = bcsub($storeTotalIn, $storeWithdraw, 2);
+
+            // 计算该店家的代理分润
+            $agentCommission = floatval($store->agent_commission ?? 0);
+            $totalAgentProfit = bcadd($totalAgentProfit, bcmul($storeSubtotal, bcdiv($agentCommission, 100, 4), 2), 2);
+
+            // 计算该店家的渠道分润
+            $channelCommission = floatval($store->channel_commission ?? 0);
+            $totalChannelProfit = bcadd($totalChannelProfit, bcmul($storeSubtotal, bcdiv($channelCommission, 100, 4), 2), 2);
+        }
+
         $data = [
             [
                 'title' => admin_trans('agent_store_profit.stats.total_recharge'),
@@ -481,6 +535,18 @@ class AgentStoreProfitReportController
             [
                 'title' => admin_trans('agent_store_profit.stats.total_subtotal'),
                 'number' => floatval($subtotal),
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_agent_profit'),
+                'number' => floatval($totalAgentProfit),
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_channel_profit'),
+                'number' => floatval($totalChannelProfit),
                 'prefix' => '',
                 'suffix' => ''
             ],
@@ -522,6 +588,18 @@ class AgentStoreProfitReportController
             ],
             [
                 'title' => admin_trans('agent_store_profit.stats.total_subtotal'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_agent_profit'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_channel_profit'),
                 'number' => 0,
                 'prefix' => '',
                 'suffix' => ''
