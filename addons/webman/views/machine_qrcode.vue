@@ -195,7 +195,9 @@ export default {
   },
   data() {
     return {
-      canvasSize: 300
+      qrcodeSize: 300,      // 二维码区域大小
+      canvasSize: 380,      // 总画布大小（二维码 + 文字区域）
+      textHeight: 80        // 文字区域高度
     };
   },
   mounted() {
@@ -212,14 +214,22 @@ export default {
       if (!canvas) return;
 
       const ctx = canvas.getContext('2d');
-      const text = String(this.machineId);
+
+      const qrData = JSON.stringify({
+        id: this.machineId,
+        code: this.machineCode,
+        name: this.machineName,
+        type: 'machine',
+        timestamp: Date.now()
+      });
 
       try {
-        const qrMatrix = generateQRCode(text);
+        const qrMatrix = generateQRCode(qrData);
         const moduleCount = qrMatrix.length;
-        const cellSize = Math.floor(this.canvasSize / moduleCount);
+        const cellSize = Math.floor(this.qrcodeSize / moduleCount);
         const actualSize = cellSize * moduleCount;
-        const offset = Math.floor((this.canvasSize - actualSize) / 2);
+        const offsetX = Math.floor((this.canvasSize - actualSize) / 2);
+        const offsetY = 10;
 
         ctx.clearRect(0, 0, this.canvasSize, this.canvasSize);
 
@@ -231,14 +241,33 @@ export default {
           for (let col = 0; col < moduleCount; col++) {
             if (qrMatrix[row][col]) {
               ctx.fillRect(
-                offset + col * cellSize,
-                offset + row * cellSize,
+                offsetX + col * cellSize,
+                offsetY + row * cellSize,
                 cellSize,
                 cellSize
               );
             }
           }
         }
+
+        const textStartY = offsetY + actualSize + 20;
+
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        ctx.font = 'bold 16px Arial, sans-serif';
+        ctx.fillText(`编号: ${this.machineCode}`, this.canvasSize / 2, textStartY);
+
+        ctx.font = '14px Arial, sans-serif';
+        const nameText = this.machineName.length > 15
+          ? this.machineName.substring(0, 15) + '...'
+          : this.machineName;
+        ctx.fillText(`名称: ${nameText}`, this.canvasSize / 2, textStartY + 25);
+
+        ctx.strokeStyle = '#d9d9d9';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, this.canvasSize, this.canvasSize);
 
       } catch (error) {
         console.error('QR code generation error:', error);
@@ -431,30 +460,19 @@ export default {
     display: none;
   }
 
-  /* 机台信息 - 紧凑显示 */
+  /* 隐藏机台信息（二维码图片内已包含） */
   .qrcode-print-container .print-info {
-    margin: 0 auto 10px;
-    text-align: center;
-    line-height: 1.6;
-    font-size: 14px;
+    display: none;
   }
 
-  .qrcode-print-container .print-info div {
-    margin: 4px 0;
-  }
-
-  .qrcode-print-container .print-info strong {
-    color: #000;
-    font-weight: bold;
-  }
-
-  /* 二维码图片 - 固定大小 */
+  /* 二维码图片 - 固定大小（现在包含文字标签） */
   .qrcode-print-container .print-qrcode-image {
-    width: 8cm;
-    height: 8cm;
+    width: 10cm;
+    height: auto;
+    max-height: 12cm;
     margin: 0 auto;
     display: block;
-    border: 1px solid #333;
+    border: none;
   }
 
   /* 隐藏底部提示 */
@@ -464,8 +482,8 @@ export default {
 
   /* 设置打印页面 - 紧凑尺寸 */
   @page {
-    size: 10cm 12cm;  /* 宽10cm 高12cm，刚好容纳二维码和信息 */
-    margin: 0.5cm;
+    size: 10cm 13cm;
+    margin: 0.3cm;
   }
 
   /* 重置 body 样式 */
