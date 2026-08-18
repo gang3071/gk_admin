@@ -132,16 +132,15 @@ class StoreOfflineMachineController
             $grid->hideDelete();
             $grid->hideTrashed();
 
-            // 批量操作
-            $grid->batchActions(function ($batch) {
-                $batch->append(
-                    Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                        ->type('primary')
-                        ->icon(Icon::create('fas fa-qrcode'))
-                        ->modal([$this, 'batchQrCode'])
-                        ->width('90%')
-                );
-            });
+            // 批量操作工具栏按钮
+            $grid->tools(
+                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                    ->type('primary')
+                    ->icon(Icon::create('fas fa-qrcode'))
+                    ->modal([$this, 'batchQrCode'])
+                    ->width('90%')
+                    ->gridBatch()
+            );
 
             $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
@@ -244,16 +243,15 @@ class StoreOfflineMachineController
             $grid->hideDelete();
             $grid->hideTrashed();
 
-            // 批量操作
-            $grid->batchActions(function ($batch) {
-                $batch->append(
-                    Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                        ->type('primary')
-                        ->icon(Icon::create('fas fa-qrcode'))
-                        ->modal([$this, 'batchQrCode'])
-                        ->width('90%')
-                );
-            });
+            // 批量操作工具栏按钮
+            $grid->tools(
+                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                    ->type('primary')
+                    ->icon(Icon::create('fas fa-qrcode'))
+                    ->modal([$this, 'batchQrCode'])
+                    ->width('90%')
+                    ->gridBatch()
+            );
 
             $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
