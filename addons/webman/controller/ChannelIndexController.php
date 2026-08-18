@@ -3546,21 +3546,23 @@ class ChannelIndexController
                         ->sum('score');
 
                     // 5.12 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
+                    // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
                     $redeemAmountExport = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
                         ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
-                        ->where('created_at', '>', $startTime)
-                        ->where('created_at', '<=', $endTime)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.13 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
+                    // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
                     $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
                         ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
-                        ->where('created_at', '>', $startTime)
-                        ->where('created_at', '<=', $endTime)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.14 统计入票金额（开票机台使用 + 核销机台使用）
@@ -4737,21 +4739,23 @@ class ChannelIndexController
                 ->sum('score');
 
             // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
+            // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
             $redeemAmountExport = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
                 ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
+            // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
             $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
                 ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计入票金额（开票机台使用 + 核销机台使用）

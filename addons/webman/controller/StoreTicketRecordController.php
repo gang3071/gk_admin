@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
+use addons\webman\model\Player;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
 use ExAdmin\ui\component\common\Button;
@@ -330,6 +332,27 @@ class StoreTicketRecordController
             $grid->column('scanned_at', admin_trans('ticket_machine.record.scanned_at'))
                 ->display(function ($val) {
                     return $val ?: '-';
+                });
+            $grid->column('scanned_by', admin_trans('ticket_machine.record.scanned_by'))
+                ->display(function ($val, $data) {
+                    if (empty($val)) {
+                        return '-';
+                    }
+                    // 根据 status 区分核销来源
+                    if ($data['status'] == TicketRecord::STATUS_BACKEND_USED) {
+                        // 后台核销：查询 admin_user
+                        $adminUser = AdminUser::query()->where('id', $val)->first();
+                        return $adminUser
+                            ? Tag::create($adminUser->username)->color('orange')
+                            : Tag::create('ID:' . $val)->color('default');
+                    } elseif ($data['status'] == TicketRecord::STATUS_MACHINE_USED) {
+                        // 机台核销：查询 player
+                        $player = Player::query()->where('id', $val)->first();
+                        return $player
+                            ? Tag::create($player->name ?? $player->uuid)->color('purple')
+                            : Tag::create('ID:' . $val)->color('default');
+                    }
+                    return Tag::create('ID:' . $val)->color('default');
                 });
 
             // 备注（可编辑）
