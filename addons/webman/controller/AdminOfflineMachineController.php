@@ -14,7 +14,6 @@ use addons\webman\model\MachineStrategy;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
-use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -182,18 +181,7 @@ class AdminOfflineMachineController
                     return Tag::create(admin_trans('offline_machine.status.unbound'))->color('orange');
                 }
 
-                $avatar = !empty($channelMachine->storeAdmin->avatar)
-                    ? Avatar::create()
-                        ->src(is_numeric($channelMachine->storeAdmin->avatar) ? config('def_avatar.' . $channelMachine->storeAdmin->avatar) : $channelMachine->storeAdmin->avatar)
-                        ->size(30)
-                    : Avatar::create()->text(mb_substr($channelMachine->storeAdmin->nickname ?: 'U', 0, 1))->size(30);
-
-                return Html::create()->content([
-                    $avatar,
-                    Html::div()
-                        ->content($channelMachine->storeAdmin->nickname ?: $channelMachine->storeAdmin->username)
-                        ->style(['margin-left' => '8px'])
-                ]);
+                return Tag::create($channelMachine->storeAdmin->nickname ?: $channelMachine->storeAdmin->username)->color('blue');
             })->width(150);
 
         // 实时状态
