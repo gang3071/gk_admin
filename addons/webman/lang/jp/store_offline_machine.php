@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'オフライン機台管理',
+    'title' => 'オフライン機台リスト',
     'slot_list' => 'スロット機台リスト',
     'steel_ball_list' => '鋼球機台リスト',
     'slot_info_list' => 'スロット機台情報',

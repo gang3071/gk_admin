@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Offline Machine Management',
+    'title' => 'Offline Machine List',
     'slot_list' => 'Slot Machine List',
     'steel_ball_list' => 'Steel Ball Machine List',
     'slot_info_list' => 'Slot Machine Info',
