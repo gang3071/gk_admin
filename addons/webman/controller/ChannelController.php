@@ -326,7 +326,7 @@ class ChannelController
                     ->rule([
                         (string)Rule::unique(plugin()->webman->config('database.channel_model'))->ignore($form->input('id')) => admin_trans('channel.channel_exist'),
                     ])
-                    ->required()->style(['margin-left' => '10px']);
+                    ->required();
                 $form->text('sms_name', admin_trans('channel.fields.sms_name'))->maxlength(10);
             });
 
@@ -342,8 +342,7 @@ class ChannelController
             ])->maxlength(30)->required();
             $form->row(function (Form $form) {
                 $form->text('department.phone', admin_trans('channel.fields.phone'))->ruleNumber();
-                $form->text('department.leader',
-                    admin_trans('channel.fields.leader'))->style(['margin-left' => '10px']);
+                $form->text('department.leader', admin_trans('channel.fields.leader'));
             });
             $form->text('download_url', admin_trans('channel.fields.download_url'))->maxlength('255')->ruleUrl();
 
