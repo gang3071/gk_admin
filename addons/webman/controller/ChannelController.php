@@ -1203,7 +1203,13 @@ class ChannelController
                 ->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
                 ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
                 ->whereNotIn('id', $boundToOtherChannels)
-                ->with(['machineLabel', 'channelMachines', 'channelMachines.storeAdmin'])
+                ->with([
+                    'machineLabel',
+                    'channelMachines' => function ($query) use ($department_id) {
+                        $query->where('department_id', $department_id);
+                    },
+                    'channelMachines.storeAdmin'
+                ])
                 ->orderBy('id', 'desc');
 
             $grid->driver()->setPk('id');
@@ -1253,19 +1259,20 @@ class ChannelController
             // 绑定门店
             $grid->column('bound_store', admin_trans('channel.bound_store'))
                 ->display(function ($val, Machine $data) use ($department_id) {
-                    // 查找当前渠道的绑定记录
-                    $channelMachine = $data->channelMachines->firstWhere('department_id', $department_id);
+                    // 因为预加载时已经筛选了当前渠道，所以直接取第一条记录
+                    $channelMachine = $data->channelMachines->first();
 
                     // 调试：记录数据
-                    if ($channelMachine) {
-                        \support\Log::info('ChannelMachine found', [
-                            'machine_id' => $data->id,
-                            'department_id' => $channelMachine->department_id,
-                            'store_admin_id' => $channelMachine->store_admin_id,
-                            'has_storeAdmin' => !is_null($channelMachine->storeAdmin),
-                            'storeAdmin_nickname' => $channelMachine->storeAdmin ? $channelMachine->storeAdmin->nickname : null,
-                        ]);
-                    }
+                    \support\Log::info('ChannelMachine debug', [
+                        'machine_id' => $data->id,
+                        'machine_code' => $data->code,
+                        'channelMachines_count' => $data->channelMachines->count(),
+                        'has_channelMachine' => !is_null($channelMachine),
+                        'department_id' => $channelMachine ? $channelMachine->department_id : null,
+                        'store_admin_id' => $channelMachine ? $channelMachine->store_admin_id : null,
+                        'has_storeAdmin_relation' => $channelMachine ? !is_null($channelMachine->storeAdmin) : false,
+                        'storeAdmin_nickname' => ($channelMachine && $channelMachine->storeAdmin) ? $channelMachine->storeAdmin->nickname : null,
+                    ]);
 
                     if ($channelMachine && $channelMachine->store_admin_id && $channelMachine->storeAdmin) {
                         return Tag::create($channelMachine->storeAdmin->nickname)->color('blue');
