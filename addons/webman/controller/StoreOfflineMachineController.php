@@ -133,6 +133,13 @@ class StoreOfflineMachineController
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
+            // 批量按钮（最简化测试）
+            $grid->tools(
+                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                    ->icon(Icon::create('fas fa-qrcode'))
+                    ->gridBatch()
+            );
+
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->eq()->select('label_id')
