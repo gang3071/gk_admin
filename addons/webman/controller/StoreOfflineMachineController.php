@@ -554,11 +554,13 @@ class StoreOfflineMachineController
      * 批量生成机台二维码
      * @auth true
      * @group store
+     * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
      * @return mixed
      */
-    public function batchQrCode()
+    public function batchQrCode($selected = null)
     {
-        $machineIds = Request::input('ids', []);
+        // gridBatch 会将选中的 IDs 作为参数传递
+        $machineIds = $selected ?? [];
 
         if (empty($machineIds)) {
             return message_error(admin_trans('store_offline_machine.error.no_machines_selected'));
