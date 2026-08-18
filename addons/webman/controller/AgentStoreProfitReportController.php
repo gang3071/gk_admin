@@ -9,12 +9,11 @@ use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -35,123 +34,141 @@ class AgentStoreProfitReportController
 
         // 获取筛选参数
         $exAdminFilter = Request::input('ex_admin_filter', []);
-        $createdAtStart = $exAdminFilter['created_at_start'] ?? null;
-        $createdAtEnd = $exAdminFilter['created_at_end'] ?? null;
-        $dateType = $exAdminFilter['date_type'] ?? null;
         $selectedStoreId = $exAdminFilter['store_id'] ?? null;
 
-        // 获取代理下的所有店家
-        $allStoresQuery = $admin->childStores()
-            ->where('type', AdminUser::TYPE_STORE)
-            ->where('status', 1)
-            ->orderBy('id', 'desc');
+        // ========== 1. 批量查询店家信息（1次查询替代 N 次） ==========
+        $storeTable = (new AdminUser())->getTable();
+        $stores = AdminUser::query()
+            ->where("{$storeTable}.parent_admin_id", $admin->id)
+            ->where("{$storeTable}.type", AdminUser::TYPE_STORE)
+            ->where("{$storeTable}.status", 1)
+            ->when(!empty($selectedStoreId), function ($query) use ($selectedStoreId, $storeTable) {
+                $query->where("{$storeTable}.id", $selectedStoreId);
+            })
+            ->select([
+                "{$storeTable}.id",
+                "{$storeTable}.nickname",
+                "{$storeTable}.username",
+                "{$storeTable}.agent_commission",
+                "{$storeTable}.channel_commission",
+            ])
+            ->orderBy("{$storeTable}.id", 'desc')
+            ->get();
 
-        // 如果选择了特定店家，只查询该店家
-        if (!empty($selectedStoreId)) {
-            $storeIds = [$selectedStoreId];
-        } else {
-            $storeIds = $allStoresQuery->pluck('id')->toArray();
+        if ($stores->isEmpty()) {
+            return $this->buildEmptyGrid($exAdminFilter);
         }
 
-        // 构建报表数据
+        // 店家ID列表
+        $storeIds = $stores->pluck('id')->toArray();
+
+        // ========== 2. 批量查询所有玩家（1次查询替代 N 次） ==========
+        $players = Player::query()
+            ->whereIn('store_admin_id', $storeIds)
+            ->where('is_promoter', 0)
+            ->select(['id', 'store_admin_id'])
+            ->get();
+
+        // 按店家ID分组玩家ID
+        $playersByStore = $players->groupBy('store_admin_id');
+        // 所有玩家ID
+        $allPlayerIds = $players->pluck('id')->toArray();
+
+        // ========== 3. 批量查询统计数据（2次查询替代 2N 次） ==========
+        // 时间条件闭包
+        $applyTimeFilter = function ($query) use ($exAdminFilter) {
+            $dateType = $exAdminFilter['date_type'] ?? null;
+            if (!empty($dateType)) {
+                $query->where(getDateWhere($dateType, 'created_at'));
+            } else {
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+            }
+        };
+
+        // 开分/洗分/投钞统计（按player_id分组）
+        $deliveryStats = [];
+        if (!empty($allPlayerIds)) {
+            $deliveryStats = PlayerDeliveryRecord::query()
+                ->whereIn('player_id', $allPlayerIds)
+                ->when(true, $applyTimeFilter)
+                ->selectRaw("
+                    `player_id`,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                ")
+                ->groupBy('player_id')
+                ->get()
+                ->keyBy('player_id');
+        }
+
+        // 彩金统计（按player_id分组）
+        $lotteryStats = [];
+        if (!empty($allPlayerIds)) {
+            $lotteryStats = PlayerLotteryRecord::query()
+                ->whereIn('player_id', $allPlayerIds)
+                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+                ->when(true, $applyTimeFilter)
+                ->selectRaw("`player_id`, SUM(`amount`) as lottery_amount")
+                ->groupBy('player_id')
+                ->get()
+                ->keyBy('player_id');
+        }
+
+        // ========== 4. 按玩家ID映射统计数据 ==========
+        $deliveryByPlayer = [];
+        foreach ($deliveryStats as $playerId => $stat) {
+            $deliveryByPlayer[$playerId] = [
+                'recharge_amount' => floatval($stat->recharge_amount ?? 0),
+                'withdraw_amount' => floatval($stat->withdraw_amount ?? 0),
+                'machine_put_point' => floatval($stat->machine_put_point ?? 0),
+            ];
+        }
+
+        $lotteryByPlayer = [];
+        foreach ($lotteryStats as $playerId => $stat) {
+            $lotteryByPlayer[$playerId] = floatval($stat->lottery_amount ?? 0);
+        }
+
+        // ========== 5. 组装报表数据（PHP计算，无查询） ==========
         $reportData = [];
 
-        foreach ($storeIds as $storeId) {
-            $store = AdminUser::find($storeId);
-            if (!$store) {
-                continue;
-            }
-
-            // 获取该店家下的所有玩家
-            $playerIds = Player::query()
-                ->where('store_admin_id', $storeId)
-                ->where('is_promoter', 0)
-                ->pluck('id')
-                ->toArray();
-
-            // 统计设备数量（玩家数量）
+        foreach ($stores as $store) {
+            // 获取该店家的玩家ID列表
+            $storePlayers = $playersByStore->get($store->id, collect());
+            $playerIds = $storePlayers->pluck('id')->toArray();
             $deviceCount = count($playerIds);
 
-            if (empty($playerIds)) {
-                // 没有玩家也要显示店家信息
-                $reportData[] = [
-                    'id' => $store->id,
-                    'store_name' => $store->nickname,
-                    'store_username' => $store->username,
-                    'device_count' => $deviceCount,
-                    'agent_commission' => $store->agent_commission ?? 0,
-                    'channel_commission' => $store->channel_commission ?? 0,
-                    'recharge_amount' => 0,
-                    'withdraw_amount' => 0,
-                    'machine_put_point' => 0,
-                    'lottery_amount' => 0,
-                    'subtotal' => 0,
-                    'agent_profit' => 0,
-                    'channel_profit' => 0,
-                ];
-                continue;
+            // 汇总该店家的统计数据
+            $rechargeAmount = 0;
+            $withdrawAmount = 0;
+            $machinePutPoint = 0;
+            $lotteryAmount = 0;
+
+            foreach ($playerIds as $playerId) {
+                $delivery = $deliveryByPlayer[$playerId] ?? null;
+                if ($delivery) {
+                    $rechargeAmount += $delivery['recharge_amount'];
+                    $withdrawAmount += $delivery['withdraw_amount'];
+                    $machinePutPoint += $delivery['machine_put_point'];
+                }
+                $lotteryAmount += ($lotteryByPlayer[$playerId] ?? 0);
             }
-
-            // 查询开分、洗分、投钞数据
-            $deliveryQuery = PlayerDeliveryRecord::query()
-                ->whereIn('player_id', $playerIds);
-
-            // 时间筛选：优先使用结算周期，否则使用手动时间范围
-            if (!empty($dateType)) {
-                $deliveryQuery->where(getDateWhere($dateType, 'created_at'));
-            } else {
-                if (!empty($createdAtStart)) {
-                    $deliveryQuery->where('created_at', '>=', $createdAtStart);
-                }
-                if (!empty($createdAtEnd)) {
-                    $deliveryQuery->where('created_at', '<=', $createdAtEnd);
-                }
-            }
-
-            $deliveryData = $deliveryQuery->selectRaw("
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
-                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
-            ")->first();
-
-            // 查询拉彩数据
-            $lotteryQuery = PlayerLotteryRecord::query()
-                ->whereIn('player_id', $playerIds)
-                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE);
-
-            // 时间筛选：优先使用结算周期，否则使用手动时间范围
-            if (!empty($dateType)) {
-                $lotteryQuery->where(getDateWhere($dateType, 'created_at'));
-            } else {
-                if (!empty($createdAtStart)) {
-                    $lotteryQuery->where('created_at', '>=', $createdAtStart);
-                }
-                if (!empty($createdAtEnd)) {
-                    $lotteryQuery->where('created_at', '<=', $createdAtEnd);
-                }
-            }
-
-            $lotteryData = $lotteryQuery->selectRaw("
-                SUM(`amount`) as lottery_amount
-            ")->first();
-
-            // 提取数据
-            $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
-            $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
-            $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
-            $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
 
             // 计算小计 = (开分 + 投钞) - 洗分
-            // 注意：此处从账变记录统计，TYPE_RECHARGE和TYPE_MACHINE是分开的，需要相加
-            // 洗分已包含彩金
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
-            // 计算代理分润：小计 * 代理抽成比例
+            // 计算代理分润
             $agentCommission = floatval($store->agent_commission ?? 0);
             $agentProfit = bcmul($subtotal, bcdiv($agentCommission, 100, 4), 2);
 
-            // 计算渠道分润：小计 * 渠道抽成比例
+            // 计算渠道分润
             $channelCommission = floatval($store->channel_commission ?? 0);
             $channelProfit = bcmul($subtotal, bcdiv($channelCommission, 100, 4), 2);
 
@@ -172,28 +189,7 @@ class AgentStoreProfitReportController
             ];
         }
 
-        // 计算统计数据
-        $totalStats = [
-            'total_recharge' => '0',
-            'total_withdraw' => '0',
-            'total_machine_put' => '0',
-            'total_lottery' => '0',
-            'total_subtotal' => '0',
-            'total_agent_profit' => '0',
-            'total_channel_profit' => '0',
-        ];
-
-        foreach ($reportData as $item) {
-            $totalStats['total_recharge'] = bcadd($totalStats['total_recharge'], strval($item['recharge_amount']), 2);
-            $totalStats['total_withdraw'] = bcadd($totalStats['total_withdraw'], strval($item['withdraw_amount']), 2);
-            $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], strval($item['machine_put_point']), 2);
-            $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], strval($item['lottery_amount']), 2);
-            $totalStats['total_subtotal'] = bcadd($totalStats['total_subtotal'], $item['subtotal'], 2);
-            $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
-            $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
-        }
-
-        // 获取店家选项列表用于筛选器下拉选择
+        // ========== 6. 筛选器选项 ==========
         $storeOptions = $admin->childStores()
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
@@ -206,167 +202,24 @@ class AgentStoreProfitReportController
             })
             ->toArray();
 
-        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData, $storeOptions, $totalStats) {
+        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData, $storeOptions) {
             $grid->title(admin_trans('agent_store_profit.title'));
             $grid->autoHeight();
             $grid->bordered(true);
-            // 统计卡片
-            $layout = Layout::create()->style(['background' => '#fff', 'padding' => '10px']);
-            $layout->row(function (Row $row) use ($totalStats) {
-                $row->gutter([10, 10]);
 
-                // 第一行：累计开分、累计洗分、投钞
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_recharge']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_recharge'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_withdraw']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_withdraw'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#fa8c16'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_machine_put']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_machine_put'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 8);
-            });
-
-            $layout->row(function (Row $row) use ($totalStats) {
+            // 使用异步加载的统计组件
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($exAdminFilter) {
                 $row->gutter([10, 0]);
-
-                // 第二行：彩金、小计、代理分润、渠道分润
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_subtotal']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_subtotal'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => floatval($totalStats['total_subtotal']) >= 0 ? '#3f8600' : '#cf1322'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                        ->style(['margin-top' => '10px'])
-                    , 6);
-
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_lottery']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_lottery'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#eb2f96'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
-
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_agent_profit']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_agent_profit'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#722ed1'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
-
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(floatval($totalStats['total_channel_profit']))
-                            ->precision(2)
-                            ->prefix(admin_trans('agent_store_profit.stats.total_channel_profit'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#13c2c2'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    ->style(['margin-top' => '10px'])
-                    , 6);
-            });
-
-            $grid->tools([$layout]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type' => 'StoreProfitReport',
+                    'department_id' => Admin::user()->department_id,
+                    'admin_user_id' => Admin::user()->id,
+                    'url' => admin_url(['addons-webman-controller-AgentStoreProfitReportController', 'totalInfo']),
+                ]));
+            })->style(['background' => '#fff']);
+            $grid->header($layout);
 
             $grid->column('id', 'ID')->width(80)->align('center');
 
@@ -451,16 +304,307 @@ class AgentStoreProfitReportController
             $grid->hideSelection();
             $grid->hideAdd();
             $grid->expandFilter();
-            // 使用 Arrays driver（必需，因为数据是手动查询的，不是通过 model()）
-            // 导出器的 save() 返回相对路径 /storage/xxx.xlsx，Arrays driver 会包装成 download URL
+            // 使用 Arrays driver
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', count($reportData));
             $grid->attr('mongo_model', $reportData);
 
-            // 导出功能（权限通过 agent_node.php 和 @auth true 控制）
+            // 导出功能
             $grid->export(new \addons\webman\grid\AgentStoreProfitMonthlyExporter())
                 ->filename('monthly_business_report_' . date('YmdHis'));
         });
+    }
+
+    /**
+     * 构建空数据Grid
+     * @param array $exAdminFilter
+     * @return Grid
+     */
+    protected function buildEmptyGrid(array $exAdminFilter = []): Grid
+    {
+        return Grid::create([], function (Grid $grid) use ($exAdminFilter) {
+            $grid->title(admin_trans('agent_store_profit.title'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 使用异步加载的统计组件
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($exAdminFilter) {
+                $row->gutter([10, 0]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type' => 'StoreProfitReport',
+                    'department_id' => Admin::user()->department_id,
+                    'admin_user_id' => Admin::user()->id,
+                    'url' => admin_url(['addons-webman-controller-AgentStoreProfitReportController', 'totalInfo']),
+                ]));
+            })->style(['background' => '#fff']);
+            $grid->header($layout);
+
+            $grid->column('id', 'ID')->width(80)->align('center');
+            $grid->column('store_name', admin_trans('agent_store_profit.fields.store_name'));
+            $grid->column('device_count', admin_trans('agent_store_profit.fields.device_count'));
+            $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'));
+            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'));
+            $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'));
+            $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'));
+            $grid->column('lottery_amount', admin_trans('agent_store_profit.fields.lottery_amount'));
+            $grid->column('subtotal', admin_trans('agent_store_profit.fields.subtotal'));
+            $grid->column('agent_commission', admin_trans('agent_store_profit.fields.agent_commission'));
+            $grid->column('agent_profit', admin_trans('agent_store_profit.fields.agent_profit'));
+            $grid->column('channel_commission', admin_trans('agent_store_profit.fields.channel_commission'));
+            $grid->column('channel_profit', admin_trans('agent_store_profit.fields.channel_profit'));
+
+            $grid->hideAction();
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->hideAdd();
+            $grid->expandFilter();
+        });
+    }
+
+    /**
+     * 异步加载统计数据
+     * @group agent
+     * @auth true
+     * @return Response
+     */
+    public function totalInfo(): Response
+    {
+        $request = Request::input();
+        $exAdminFilter = $request['ex_admin_filter'] ?? [];
+        $adminUserId = $request['admin_user_id'] ?? 0;
+
+        $admin = AdminUser::query()->find($adminUserId);
+        if (!$admin) {
+            return Response::success([]);
+        }
+
+        // 获取筛选参数
+        $selectedStoreId = $exAdminFilter['store_id'] ?? null;
+
+        // 获取代理下的所有店家
+        $stores = AdminUser::query()
+            ->where('parent_admin_id', $admin->id)
+            ->where('type', AdminUser::TYPE_STORE)
+            ->where('status', 1)
+            ->when(!empty($selectedStoreId), function ($query) use ($selectedStoreId) {
+                $query->where('id', $selectedStoreId);
+            })
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($stores)) {
+            return Response::success([]);
+        }
+
+        // 批量查询所有玩家
+        $allPlayerIds = Player::query()
+            ->whereIn('store_admin_id', $stores)
+            ->where('is_promoter', 0)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($allPlayerIds)) {
+            return Response::success($this->buildEmptyStats());
+        }
+
+        // 时间条件闭包
+        $applyTimeFilter = function ($query) use ($exAdminFilter) {
+            $dateType = $exAdminFilter['date_type'] ?? null;
+            if (!empty($dateType)) {
+                $query->where(getDateWhere($dateType, 'created_at'));
+            } else {
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+            }
+        };
+
+        // 开分/洗分/投钞统计
+        $deliveryData = PlayerDeliveryRecord::query()
+            ->whereIn('player_id', $allPlayerIds)
+            ->when(true, $applyTimeFilter)
+            ->selectRaw("
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+            ")
+            ->first();
+
+        // 彩金统计
+        $lotteryData = PlayerLotteryRecord::query()
+            ->whereIn('player_id', $allPlayerIds)
+            ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
+            ->when(true, $applyTimeFilter)
+            ->selectRaw("SUM(`amount`) as lottery_amount")
+            ->first();
+
+        // 提取数据
+        $rechargeAmount = floatval($deliveryData->recharge_amount ?? 0);
+        $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
+        $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
+        $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);
+
+        // 计算小计
+        $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
+        $subtotal = bcsub($totalIn, $withdrawAmount, 2);
+
+        // 查询店家的分润比例并计算分润
+        $storeList = AdminUser::query()
+            ->whereIn('id', $stores)
+            ->select(['id', 'agent_commission', 'channel_commission'])
+            ->get();
+
+        // 批量查询每个店家的统计数据来计算分润
+        $totalAgentProfit = 0;
+        $totalChannelProfit = 0;
+
+        // 按店家分组玩家
+        $playersByStore = Player::query()
+            ->whereIn('store_admin_id', $stores)
+            ->where('is_promoter', 0)
+            ->select(['id', 'store_admin_id'])
+            ->get()
+            ->groupBy('store_admin_id');
+
+        foreach ($storeList as $store) {
+            $storePlayers = $playersByStore->get($store->id, collect());
+            $playerIds = $storePlayers->pluck('id')->toArray();
+
+            if (empty($playerIds)) {
+                continue;
+            }
+
+            // 该店家的开分/洗分/投钞统计
+            $storeDelivery = PlayerDeliveryRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->when(true, $applyTimeFilter)
+                ->selectRaw("
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdraw_amount,
+                    SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point
+                ")
+                ->first();
+
+            $storeRecharge = floatval($storeDelivery->recharge_amount ?? 0);
+            $storeWithdraw = floatval($storeDelivery->withdraw_amount ?? 0);
+            $storeMachinePut = floatval($storeDelivery->machine_put_point ?? 0);
+
+            // 该店家的小计
+            $storeTotalIn = bcadd($storeRecharge, $storeMachinePut, 2);
+            $storeSubtotal = bcsub($storeTotalIn, $storeWithdraw, 2);
+
+            // 计算该店家的代理分润
+            $agentCommission = floatval($store->agent_commission ?? 0);
+            $totalAgentProfit = bcadd($totalAgentProfit, bcmul($storeSubtotal, bcdiv($agentCommission, 100, 4), 2), 2);
+
+            // 计算该店家的渠道分润
+            $channelCommission = floatval($store->channel_commission ?? 0);
+            $totalChannelProfit = bcadd($totalChannelProfit, bcmul($storeSubtotal, bcdiv($channelCommission, 100, 4), 2), 2);
+        }
+
+        $data = [
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_recharge'),
+                'number' => $rechargeAmount,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_withdraw'),
+                'number' => $withdrawAmount,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_machine_put'),
+                'number' => $machinePutPoint,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_lottery'),
+                'number' => $lotteryAmount,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_subtotal'),
+                'number' => floatval($subtotal),
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_agent_profit'),
+                'number' => floatval($totalAgentProfit),
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_channel_profit'),
+                'number' => floatval($totalChannelProfit),
+                'prefix' => '',
+                'suffix' => ''
+            ],
+        ];
+
+        return Response::success($data);
+    }
+
+    /**
+     * 构建空统计数据
+     * @return array
+     */
+    protected function buildEmptyStats(): array
+    {
+        return [
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_recharge'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_withdraw'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_machine_put'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_lottery'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_subtotal'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_agent_profit'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title' => admin_trans('agent_store_profit.stats.total_channel_profit'),
+                'number' => 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+        ];
     }
 
     /**
