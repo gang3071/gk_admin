@@ -218,8 +218,8 @@ export default {
 
       const ctx = canvas.getContext('2d');
 
-      // 使用最简单的内容 - 只有机台编号，确保能被正确解析
-      const qrData = this.machineCode;
+      // 简化内容：只包含机台ID、编号和时间戳
+      const qrData = `${this.machineId}|${this.machineCode}|${Date.now()}`;
 
       try {
         const qrMatrix = generateQRCode(qrData);
