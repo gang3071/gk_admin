@@ -37,17 +37,11 @@
 
       <div class="qr-buttons">
         <a-button type="primary" @click="downloadQrCode" size="large">
-          <template #icon>
-            <download-outlined />
-          </template>
-          下载二维码
+          📥 下载二维码
         </a-button>
 
         <a-button @click="printQrCode" size="large">
-          <template #icon>
-            <printer-outlined />
-          </template>
-          打印二维码
+          🖨️ 打印二维码
         </a-button>
       </div>
     </div>
@@ -55,8 +49,6 @@
 </template>
 
 <script>
-import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons-vue';
-
 // 引入第三方二维码库（通过 CDN）
 // 注意：这里使用内联实现，避免外部依赖
 
@@ -180,10 +172,6 @@ function generateQRCode(text) {
 
 export default {
   name: 'MachineQrCode',
-  components: {
-    DownloadOutlined,
-    PrinterOutlined
-  },
   props: {
     machineId: {
       type: [String, Number],
