@@ -3,7 +3,6 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\model\ChannelMachine;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use addons\webman\service\WalletService;
@@ -15,10 +14,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\layout\layout\Layout;
-use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
-use support\Container;
 
 /**
  * 店家后台 - 线下机台管理
@@ -77,7 +73,7 @@ class StoreOfflineMachineController
             $grid->title(admin_trans('store_offline_machine.slot_list'));
             $grid->autoHeight();
             $grid->bordered(true);
-
+            $grid->driver()->setPk('id');
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
             $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
