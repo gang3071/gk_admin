@@ -3,18 +3,18 @@
     <!-- 操作按钮 -->
     <div class="batch-action-bar">
       <a-button type="primary" @click="downloadImage" :loading="generating" class="batch-btn-download">
-        {{ $t('下載圖片') }}
+        下載圖片
       </a-button>
       <a-button @click="printQRCodes" :loading="generating" class="batch-btn-print">
-        {{ $t('列印') }}
+        列印
       </a-button>
-      <a-tag color="blue" class="batch-machine-count">{{ $t('共') }} {{ machines.length }} {{ $t('個機台') }}</a-tag>
+      <a-tag color="blue" class="batch-machine-count">共 {{ machines.length }} 個機台</a-tag>
     </div>
 
     <!-- 加载提示 -->
     <div v-if="generating" class="batch-loading">
       <a-spin size="large" />
-      <div class="batch-loading-text">{{ $t('正在生成二維碼...') }}</div>
+      <div class="batch-loading-text">正在生成二維碼...</div>
     </div>
 
     <!-- A4 画布预览 -->
@@ -113,7 +113,7 @@ export default {
           resolve();
         };
         script.onerror = (error) => {
-          this.$message.error(this.$t('二維碼庫加載失敗，請檢查網絡連接'));
+          this.$message.error('二維碼庫加載失敗，請檢查網絡連接');
           this.generating = false;
           reject(error);
         };
@@ -173,7 +173,7 @@ export default {
         this.calculateCanvasScale();
       } catch (error) {
         console.error('Generate QR codes failed:', error);
-        this.$message.error(this.$t('生成二維碼失敗'));
+        this.$message.error('生成二維碼失敗');
         this.generating = false;
       }
     },
@@ -311,14 +311,14 @@ export default {
       try {
         const canvas = this.$refs.batchCanvas;
         if (!canvas) {
-          this.$message.error(this.$t('畫布未就緒'));
+          this.$message.error('畫布未就緒');
           return;
         }
 
         // 转换为 Blob
         canvas.toBlob((blob) => {
           if (!blob) {
-            this.$message.error(this.$t('生成圖片失敗'));
+            this.$message.error('生成圖片失敗');
             return;
           }
 
@@ -332,12 +332,12 @@ export default {
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          this.$message.success(this.$t('圖片已下載'));
+          this.$message.success('圖片已下載');
         }, 'image/png', 1.0);
 
       } catch (error) {
         console.error('Download failed:', error);
-        this.$message.error(this.$t('下載失敗'));
+        this.$message.error('下載失敗');
       }
     },
 
@@ -350,14 +350,14 @@ export default {
       try {
         const canvas = this.$refs.batchCanvas;
         if (!canvas) {
-          this.$message.error(this.$t('畫布未就緒'));
+          this.$message.error('畫布未就緒');
           return;
         }
 
         // 创建打印窗口
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
-          this.$message.error(this.$t('請允許彈出窗口以進行列印'));
+          this.$message.error('請允許彈出窗口以進行列印');
           return;
         }
 
@@ -383,7 +383,7 @@ export default {
 
       } catch (error) {
         console.error('Print failed:', error);
-        this.$message.error(this.$t('列印失敗'));
+        this.$message.error('列印失敗');
       }
     }
   }
