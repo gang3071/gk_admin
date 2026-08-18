@@ -204,14 +204,119 @@ export default {
     };
   },
   mounted() {
-    this.$nextTick(() => {
-      this.drawQRCode();
+    // 加载完整的 QR Code 库
+    this.loadQRCodeLibrary().then(() => {
+      this.$nextTick(() => {
+        this.drawQRCodeWithLibrary();
+      });
+    }).catch(() => {
+      // 如果加载失败，回退到简化版本
+      this.$nextTick(() => {
+        this.drawQRCode();
+      });
     });
   },
   beforeUnmount() {
     this.clearCanvas();
   },
   methods: {
+    loadQRCodeLibrary() {
+      // 检查是否已加载
+      if (window.qrcode) {
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
+        script.onload = () => {
+          console.log('[QRCode] Library loaded successfully');
+          resolve();
+        };
+        script.onerror = () => {
+          console.error('[QRCode] Failed to load library');
+          reject();
+        };
+        document.head.appendChild(script);
+      });
+    },
+
+    drawQRCodeWithLibrary() {
+      const canvas = this.$refs.qrcodeCanvas;
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      const qrData = `${this.machineId}|${this.machineCode}|${Date.now()}`;
+
+      try {
+        // 使用完整的 QR Code 库
+        const qr = window.qrcode(0, 'M'); // type=0(自动), 纠错级别=M
+        qr.addData(qrData);
+        qr.make();
+
+        const moduleCount = qr.getModuleCount();
+        const cellSize = Math.floor(this.qrcodeSize / moduleCount);
+        const actualSize = cellSize * moduleCount;
+        const offsetX = Math.floor((this.canvasSize - actualSize) / 2);
+        const offsetY = 10;
+
+        // 清空画布
+        ctx.clearRect(0, 0, this.canvasSize, this.canvasSize);
+
+        // 白色背景
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, this.canvasSize, this.canvasSize);
+
+        // 绘制二维码
+        ctx.fillStyle = '#000000';
+        for (let row = 0; row < moduleCount; row++) {
+          for (let col = 0; col < moduleCount; col++) {
+            if (qr.isDark(row, col)) {
+              ctx.fillRect(
+                offsetX + col * cellSize,
+                offsetY + row * cellSize,
+                cellSize,
+                cellSize
+              );
+            }
+          }
+        }
+
+        // 绘制文字标签
+        const textStartY = offsetY + actualSize + 20;
+
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+
+        ctx.font = 'bold 16px Arial, sans-serif';
+        ctx.fillText(`编号: ${this.machineCode}`, this.canvasSize / 2, textStartY);
+
+        ctx.font = '14px Arial, sans-serif';
+        const nameText = this.machineName.length > 15
+          ? this.machineName.substring(0, 15) + '...'
+          : this.machineName;
+        ctx.fillText(`名称: ${nameText}`, this.canvasSize / 2, textStartY + 25);
+
+        // 边框
+        ctx.strokeStyle = '#d9d9d9';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, this.canvasSize, this.canvasSize);
+
+        console.log('[QRCode] Generated successfully with library');
+
+      } catch (error) {
+        console.error('QR code generation error:', error);
+        // 绘制错误提示
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, this.canvasSize, this.canvasSize);
+        ctx.fillStyle = '#FF0000';
+        ctx.font = '16px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('二维码生成失败', this.canvasSize / 2, this.canvasSize / 2);
+      }
+    },
+
     drawQRCode() {
       const canvas = this.$refs.qrcodeCanvas;
       if (!canvas) return;
