@@ -1241,7 +1241,7 @@ class ChannelController
                     $channelMachine = $data->channelMachines->firstWhere('department_id', $department_id);
 
                     if ($channelMachine && $channelMachine->storeAdmin) {
-                        return Tag::create($channelMachine->storeAdmin->username)->color('blue');
+                        return Tag::create($channelMachine->storeAdmin->name)->color('blue');
                     }
                     return Tag::create(admin_trans('channel.unbound_store'))->color('default');
                 })->align('center');
