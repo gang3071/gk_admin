@@ -198,9 +198,6 @@ export default {
     };
   },
   mounted() {
-    // 计算并调整 Canvas 尺寸
-    this.adjustCanvasSize();
-
     // 加载完整的 QR Code 库
     this.loadQRCodeLibrary().then(() => {
       this.$nextTick(() => {
@@ -212,52 +209,11 @@ export default {
         this.drawQRCode();
       });
     });
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', this.handleResize);
   },
   beforeUnmount() {
     this.clearCanvas();
-    window.removeEventListener('resize', this.handleResize);
   },
   methods: {
-    /**
-     * 根据容器大小调整 Canvas 尺寸
-     */
-    adjustCanvasSize() {
-      this.$nextTick(() => {
-        const canvas = this.$refs.qrcodeCanvas;
-        if (!canvas) return;
-
-        const wrapper = canvas.parentElement;
-        if (!wrapper) return;
-
-        const rect = wrapper.getBoundingClientRect();
-        const maxSize = Math.min(rect.width, rect.height) - 40; // 减去 padding
-
-        // 限制最小和最大尺寸
-        const size = Math.max(280, Math.min(maxSize, 400));
-
-        this.canvasSize = size;
-        this.qrcodeSize = size - 80; // 留出文字区域
-      });
-    },
-
-    /**
-     * 处理窗口大小变化
-     */
-    handleResize() {
-      this.adjustCanvasSize();
-      // 重新绘制二维码
-      setTimeout(() => {
-        if (window.qrcode) {
-          this.drawQRCodeWithLibrary();
-        } else {
-          this.drawQRCode();
-        }
-      }, 100);
-    },
-
     loadQRCodeLibrary() {
       // 检查是否已加载
       if (window.qrcode) {
@@ -511,29 +467,22 @@ export default {
 
 <style scoped>
 .qr-modal-container {
-  padding: 16px;
-  max-width: 550px;
+  padding: 24px;
+  max-width: 600px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5715;
   color: rgba(0, 0, 0, 0.85);
-  /* 自适应高度 */
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden;
 }
 
 .qr-header {
-  flex-shrink: 0;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
 }
 
 .qr-header h3 {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 600;
   color: #1890ff;
   margin: 0;
@@ -542,36 +491,29 @@ export default {
 }
 
 .qr-info {
-  flex-shrink: 0;
-  margin-bottom: 12px;
+  margin-bottom: 24px;
 }
 
 .qr-canvas-wrapper {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: 32px;
   background-color: #f5f5f5;
   border-radius: 8px;
-  margin-bottom: 12px;
-  min-height: 0; /* 允许收缩 */
+  margin-bottom: 24px;
 }
 
 .qr-canvas {
   display: block;
   border: 1px solid #d9d9d9;
   background-color: #ffffff;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
 }
 
 .qr-footer {
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .qr-buttons {
@@ -582,35 +524,7 @@ export default {
 }
 
 .qr-buttons .ant-btn {
-  min-width: 120px;
-}
-
-/* 响应式：小屏幕进一步压缩 */
-@media (max-height: 700px) {
-  .qr-modal-container {
-    padding: 12px;
-  }
-
-  .qr-header {
-    margin-bottom: 8px;
-  }
-
-  .qr-header h3 {
-    font-size: 16px;
-  }
-
-  .qr-info {
-    margin-bottom: 8px;
-  }
-
-  .qr-canvas-wrapper {
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-
-  .qr-footer {
-    gap: 8px;
-  }
+  min-width: 140px;
 }
 </style>
 
