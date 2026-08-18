@@ -43,7 +43,14 @@ class StoreOfflineMachineController
             // 查询绑定到当前店家的线下机台（包含斯洛和钢珠）
             $grid->model()
                 ->select([
-                    'machine.*',
+                    'machine.id',  // 明确选择主键
+                    'machine.code',
+                    'machine.type',
+                    'machine.label_id',
+                    'machine.cate_id',
+                    'machine.gaming_user_id',
+                    'machine.status',
+                    'machine.created_at',
                     'machine_category.name as category_name'
                 ])
                 ->join('channel_machine', 'machine.id', '=', 'channel_machine.machine_id')
@@ -60,6 +67,17 @@ class StoreOfflineMachineController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->driver()->setPk('id');
+
+            // 读取 ExAdmin Grid 标准参数（必须在 setPk 之后立即读取）
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+            $page = Request::input('ex_admin_page', 1);
+            $size = Request::input('ex_admin_size', 25);
+            $param = [
+                'size' => $size,
+                'page' => $page,
+                'ex_admin_filter' => $exAdminFilter,
+            ];
+
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
             $grid->column('type', admin_trans('machine.fields.type'))->display(function ($val) {
@@ -125,15 +143,6 @@ class StoreOfflineMachineController
             $grid->hideTrashed();
 
             // 批量操作工具栏按钮 - 严格按照 ExAdmin 标准模式
-            // 从 Request 读取标准参数（ExAdmin Grid 需要这些参数）
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-            $page = Request::input('ex_admin_page', 1);
-            $size = Request::input('ex_admin_size', 25);
-            $param = [
-                'size' => $size,
-                'page' => $page,
-                'ex_admin_filter' => $exAdminFilter,
-            ];
             $grid->tools(
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
