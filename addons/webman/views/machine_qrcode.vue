@@ -204,13 +204,17 @@ export default {
     return {
       canvasSize: 300,
       originalBodyOverflow: undefined,
-      originalBodyClass: undefined
+      originalBodyClass: undefined,
+      originalBodyStyle: undefined,
+      originalHtmlStyle: undefined
     };
   },
   mounted() {
-    // 保存原始 body 样式
+    // 保存原始样式（完整备份）
     this.originalBodyOverflow = document.body.style.overflow;
     this.originalBodyClass = document.body.className;
+    this.originalBodyStyle = document.body.getAttribute('style');
+    this.originalHtmlStyle = document.documentElement.getAttribute('style');
 
     this.$nextTick(() => {
       this.drawQRCode();
@@ -218,16 +222,45 @@ export default {
   },
   beforeUnmount() {
     this.clearCanvas();
-
-    // 恢复原始 body 样式（以防万一）
-    if (this.originalBodyOverflow !== undefined) {
-      document.body.style.overflow = this.originalBodyOverflow;
-    }
-    if (this.originalBodyClass !== undefined) {
-      document.body.className = this.originalBodyClass;
-    }
+    this.restoreOriginalStyles();
   },
   methods: {
+    restoreOriginalStyles() {
+      try {
+        // 恢复 body 样式
+        if (this.originalBodyOverflow !== undefined) {
+          document.body.style.overflow = this.originalBodyOverflow;
+        }
+        if (this.originalBodyClass !== undefined) {
+          document.body.className = this.originalBodyClass;
+        }
+        if (this.originalBodyStyle !== undefined) {
+          if (this.originalBodyStyle) {
+            document.body.setAttribute('style', this.originalBodyStyle);
+          } else {
+            document.body.removeAttribute('style');
+          }
+        }
+
+        // 恢复 html 样式
+        if (this.originalHtmlStyle !== undefined) {
+          if (this.originalHtmlStyle) {
+            document.documentElement.setAttribute('style', this.originalHtmlStyle);
+          } else {
+            document.documentElement.removeAttribute('style');
+          }
+        }
+
+        // 移除可能的 viewport meta 标签污染（防御性编程）
+        const viewportMeta = document.querySelector('meta[name="viewport"][data-qrcode]');
+        if (viewportMeta) {
+          viewportMeta.remove();
+        }
+      } catch (error) {
+        console.error('[QRCode] Failed to restore styles:', error);
+      }
+    },
+
     drawQRCode() {
       const canvas = this.$refs.qrcodeCanvas;
       if (!canvas) return;
@@ -314,7 +347,9 @@ export default {
 
       try {
         const dataUrl = canvas.toDataURL('image/png');
-        const printWin = window.open('', '_blank', 'width=600,height=700');
+
+        // 使用更严格的窗口配置，完全隔离
+        const printWin = window.open('', '_blank', 'width=600,height=700,toolbar=no,menubar=no,scrollbars=yes,resizable=yes');
 
         if (!printWin) {
           if (this.$message) {
@@ -323,27 +358,47 @@ export default {
           return;
         }
 
+        // 确保新窗口完全独立，清除任何默认内容
         printWin.document.write(`
           <!DOCTYPE html>
           <html>
           <head>
             <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
             <title>机台二维码 - ${this.machineCode}</title>
             <style>
               * { margin: 0; padding: 0; box-sizing: border-box; }
+              html, body {
+                width: 100%;
+                height: 100%;
+                overflow-x: hidden;
+              }
               body {
                 font-family: Arial, sans-serif;
                 padding: 20px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                min-width: 600px;
               }
-              h2 { margin-bottom: 20px; color: #333; }
-              .info { margin: 15px 0; line-height: 1.8; }
+              h2 { margin-bottom: 20px; color: #333; font-size: 24px; }
+              .info { margin: 15px 0; line-height: 1.8; width: 100%; max-width: 400px; }
               .label { font-weight: bold; color: #666; }
-              img { margin: 20px 0; max-width: 100%; border: 2px solid #eee; }
+              img {
+                margin: 20px 0;
+                width: 300px;
+                height: 300px;
+                border: 2px solid #eee;
+                display: block;
+              }
               @media print {
-                body { padding: 0; }
+                body { padding: 0; min-width: auto; }
+                @page { size: portrait; margin: 1cm; }
+              }
+              @media screen and (max-width: 640px) {
+                body { min-width: 100%; padding: 10px; }
+                h2 { font-size: 18px; }
+                img { width: 250px; height: 250px; }
               }
             </style>
           </head>
