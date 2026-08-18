@@ -153,8 +153,9 @@ class AgentStoreProfitReportController
             ")->first();
 
             // 查询票务数据（入票、出卷、开票、核销、未核销、体验券、福利券）
+            // 使用 store_admin_id 关联，确保包含 player_id 为空的历史票券
             $ticketQuery = TicketRecord::query()
-                ->whereIn('player_id', $playerIds);
+                ->where('store_admin_id', $storeId);
 
             // 时间筛选：优先使用结算周期，否则使用手动时间范围
             if (!empty($dateType)) {
@@ -176,10 +177,33 @@ class AgentStoreProfitReportController
             $ticketData = $ticketQuery->selectRaw("
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
-                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
                 SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS welfare_coupon_amount
+            ")->first();
+
+            // 核销相关查询：使用 scanned_at（扫码时间）作为时间筛选
+            // 使用 store_admin_id 关联，确保包含 player_id 为空的历史票券
+            $redeemQuery = TicketRecord::query()
+                ->where('store_admin_id', $storeId);
+
+            if (!empty($dateType)) {
+                $redeemQuery->where(getDateWhere($dateType, 'scanned_at'));
+            } else {
+                if (!empty($createdAtStart)) {
+                    $redeemQuery->where('scanned_at', '>=', $createdAtStart);
+                }
+                if (!empty($createdAtEnd)) {
+                    $redeemQuery->where('scanned_at', '<=', $createdAtEnd);
+                }
+            }
+
+            if (!empty($selectedShift)) {
+                $this->applyShiftFilter($redeemQuery, $selectedShift);
+            }
+
+            $redeemData = $redeemQuery->selectRaw("
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
+                SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount
             ")->first();
 
             // 查询拉彩数据
@@ -250,8 +274,9 @@ class AgentStoreProfitReportController
             // 票务数据
             $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0); // 开票机台使用
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0); // 开票（未使用）
-            $redeemAmount = floatval($ticketData->redeem_amount ?? 0);                   // 核销（后台核销）
-            $redeemMachineAmount = floatval($ticketData->redeem_machine_amount ?? 0);     // 核销（机台核销）
+            // 核销数据（使用 scanned_at 扫码时间筛选）
+            $redeemAmount = floatval($redeemData->redeem_amount ?? 0);                   // 核销（后台核销）
+            $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);     // 核销（机台核销）
             // 入票 = 开票机台使用 + 核销机台使用（与导出报表逻辑一致）
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
             // 未核销 = 出卷 - 核销（后台核销）

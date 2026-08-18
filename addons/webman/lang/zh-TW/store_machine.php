@@ -104,6 +104,110 @@ return [
         'system_setting' => '系統配置',
         'open_score_setting' => '開分配置',
         'wash_point_setting' => '洗分配置',
+        'activity_config' => '活動配置',
+    ],
+
+    // 活動配置
+    'activity_config' => [
+        'title' => '活動配置',
+        'list_title' => '活動配置列表',
+        'create_title' => '新增活動配置',
+        'edit_title' => '編輯活動配置',
+        'no_config' => '暫無活動配置',
+
+        // 欄位
+        'fields' => [
+            'id' => 'ID',
+            'start_time' => '活動開始時間',
+            'end_time' => '活動結束時間',
+            'status' => '狀態',
+            'created_at' => '建立時間',
+            'updated_at' => '更新時間',
+        ],
+
+        // 狀態
+        'status' => [
+            '0' => '停用',
+            '1' => '啟用',
+        ],
+
+        // 區段標題
+        'section' => [
+            'basic' => '基本資訊',
+            'experience' => '體驗券配置',
+            'welfare' => '福利券配置',
+            'order_prefix' => '訂單前綴配置',
+        ],
+
+        // 欄位標籤
+        'label' => [
+            'start_time' => '開始時間',
+            'end_time' => '結束時間',
+            'activity_end_time' => '發放截止時間',
+            'experience_enabled' => '啟用體驗券',
+            'experience_register_after' => '新用戶閾值',
+            'experience_daily_limit' => '每日次數',
+            'experience_total_limit' => '總次數',
+            'experience_score' => '領取分數',
+            'experience_expire_hours' => '有效時長(時)',
+            'welfare_enabled' => '啟用福利券',
+            'welfare_daily_limit' => '每日次數',
+            'welfare_rules' => '福利券檔位規則',
+            'welfare_expire_hours' => '有效時長(時)',
+            'order_prefix_experience' => '體驗券前綴',
+            'order_prefix_welfare' => '福利券前綴',
+            'order_prefix_recharge' => '開分前綴',
+            'order_prefix_withdraw' => '洗分前綴',
+        ],
+
+        // 幫助文字
+        'help' => [
+            'start_time' => '活動開始時間，留空表示立即開始',
+            'end_time' => '活動結束時間，留空表示不限制',
+            'activity_end_time' => '到達此時間後，福利券和體驗券暫停發放',
+            'experience_register_after' => '大於等於此時間註冊的用戶視為新用戶',
+            'experience_daily_limit' => '每個用戶每天可領取的次數',
+            'experience_total_limit' => '每個用戶總共可領取的次數',
+            'experience_score' => '每次領取獲得的分數',
+            'experience_expire_hours' => '超過此時間後券自動失效',
+            'welfare_daily_limit' => '0 表示不限制',
+            'welfare_rules' => '配置福利券的打碼量門檻，達到門檻即可領取',
+            'welfare_expire_hours' => '超過此時間後券自動失效',
+            'order_prefix_experience' => '體驗券訂單號前綴',
+            'order_prefix_welfare' => '福利券訂單號前綴',
+            'order_prefix_recharge' => '開分訂單號前綴',
+            'order_prefix_withdraw' => '洗分訂單號前綴',
+        ],
+
+        // 規則相關
+        'rules' => [
+            'bet_amount' => '打碼量門檻',
+            'score' => '領取分數',
+            'add_rule' => '新增檔位',
+            'remove_rule' => '移除',
+            'day_type' => '計算類型',
+            'yesterday' => '昨日打碼量',
+            'today' => '今日打碼量',
+        ],
+
+        // 驗證
+        'validation' => [
+            'start_time_required' => '請填寫活動開始時間',
+            'end_time_after_start' => '結束時間必須晚於開始時間',
+        ],
+
+        // 錯誤訊息
+        'error' => [
+            'already_exists' => '該店鋪已存在活動配置，請直接編輯',
+        ],
+
+        // 訊息
+        'message' => [
+            'create_success' => '活動配置建立成功',
+            'update_success' => '活動配置更新成功',
+            'delete_success' => '活動配置刪除成功',
+            'delete_confirm' => '確定要刪除此活動配置嗎？',
+        ],
     ],
 
     // 線下機台綁定

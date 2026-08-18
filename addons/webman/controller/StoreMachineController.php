@@ -269,6 +269,11 @@ class StoreMachineController
                 $dropdown->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
                     ->modal([$this, 'washPointSettingList'], ['store_id' => $data['id']])
                     ->width('90%');
+
+                // 活动配置
+                $dropdown->prepend(admin_trans('store_machine.actions.activity_config'), 'fas fa-gift')
+                    ->modal([$this, 'activityConfigList'], ['store_id' => $data['id']])
+                    ->width('90%');
             });
 
             // 行展开 - 显示限红组配置信息
@@ -2112,4 +2117,284 @@ class StoreMachineController
             });
         });
     }
+
+    // =========================================================================
+    // 活动配置（福利券/体验券）
+    // =========================================================================
+
+    /**
+     * 店家活动配置列表
+     * @auth true
+     * @group channel
+     */
+    public function activityConfigList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        // 检查是否已有配置
+        $existingConfig = \addons\webman\model\StoreActivityConfig::query()
+            ->where('admin_user_id', $storeId)
+            ->whereNull('deleted_at')
+            ->first();
+
+        return Grid::create(new \addons\webman\model\StoreActivityConfig(), function (Grid $grid) use ($store, $storeId, $existingConfig) {
+            $grid->title(admin_trans('store_machine.activity_config.list_title') . ' - ' . ($store->nickname ?: $store->username));
+            $grid->model()->where('admin_user_id', $storeId)->orderBy('id', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 基础字段
+            $grid->column('id', 'ID')->width(60)->align('center');
+
+            // 时间范围
+            $grid->column('time_range', admin_trans('store_machine.activity_config.fields.start_time'))
+                ->display(function ($val, $data) {
+                    $start = $data->start_time ?: '-';
+                    $end = $data->end_time ?: '-';
+                    return "$start ~ $end";
+                })->width(200)->align('center');
+
+            // 状态
+            $grid->column('status', admin_trans('store_machine.activity_config.fields.status'))
+                ->switch()
+                ->align('center');
+
+            // 体验券状态
+            $grid->column('experience_enabled', admin_trans('store_machine.activity_config.label.experience_enabled'))
+                ->display(function ($val) {
+                    return $val
+                        ? Tag::create(admin_trans('store_machine.activity_config.status.1'))->color('green')
+                        : Tag::create(admin_trans('store_machine.activity_config.status.0'))->color('red');
+                })->align('center');
+
+            // 福利券状态
+            $grid->column('welfare_enabled', admin_trans('store_machine.activity_config.label.welfare_enabled'))
+                ->display(function ($val) {
+                    return $val
+                        ? Tag::create(admin_trans('store_machine.activity_config.status.1'))->color('green')
+                        : Tag::create(admin_trans('store_machine.activity_config.status.0'))->color('red');
+                })->align('center');
+
+            // 创建时间
+            $grid->column('created_at', admin_trans('store_machine.activity_config.fields.created_at'))->width(160)->align('center');
+
+            // 使用 drawer 方式处理表单（避免嵌套 modal）
+            $grid->setForm()->drawer($this->activityConfigForm($storeId))->width('50%');
+
+            // 操作
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+            })->align('center');
+
+            // 工具栏
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->hideTrashed();
+
+            // 如果已有配置，隐藏新增按钮（一个店铺只能有一个配置）
+            if ($existingConfig) {
+                $grid->hideCreate();
+            }
+        });
+    }
+
+    /**
+     * 活动配置表单（新增/编辑）
+     * @auth true
+     * @group channel
+     * @param int $storeId
+     * @return Form
+     */
+    public function activityConfigForm(int $storeId = 0): Form
+    {
+        $model = \addons\webman\model\StoreActivityConfig::class;
+
+        return Form::create(new $model(), function (Form $form) use ($storeId) {
+            $form->title(admin_trans('store_machine.activity_config.edit_title'));
+
+            $form->hidden('admin_user_id')->value($storeId);
+
+            // 获取店家的 department_id
+            $store = AdminUser::find($storeId);
+            if ($store) {
+                $form->hidden('department_id')->value($store->department_id);
+            }
+
+            // ========== 基本信息 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.basic'));
+
+            $form->row(function (Form $form) {
+                $form->dateTime('start_time', admin_trans('store_machine.activity_config.label.start_time'))
+                    ->help(admin_trans('store_machine.activity_config.help.start_time'))
+                    ->span(12);
+
+                $form->dateTime('end_time', admin_trans('store_machine.activity_config.label.end_time'))
+                    ->help(admin_trans('store_machine.activity_config.help.end_time'))
+                    ->span(12);
+            });
+
+            $form->row(function (Form $form) {
+                $form->switch('status', admin_trans('store_machine.activity_config.fields.status'))
+                    ->checkedValue(1)
+                    ->unCheckedValue(0)
+                    ->value(1)
+                    ->span(12);
+
+                $form->dateTime('activity_end_time', admin_trans('store_machine.activity_config.label.activity_end_time'))
+                    ->help(admin_trans('store_machine.activity_config.help.activity_end_time'))
+                    ->span(12);
+            });
+
+            // ========== 体验券配置 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.experience'));
+
+            $form->switch('experience_enabled', admin_trans('store_machine.activity_config.label.experience_enabled'))
+                ->checkedValue(1)
+                ->unCheckedValue(0)
+                ->value(1);
+
+            $form->row(function (Form $form) {
+                $form->dateTime('experience_register_after', admin_trans('store_machine.activity_config.label.experience_register_after'))
+                    ->help(admin_trans('store_machine.activity_config.help.experience_register_after'))
+                    ->span(12);
+
+                $form->number('experience_score', admin_trans('store_machine.activity_config.label.experience_score'))
+                    ->min(0)
+                    ->max(999999)
+                    ->value(1000)
+                    ->help(admin_trans('store_machine.activity_config.help.experience_score'))
+                    ->span(12);
+            });
+
+            $form->row(function (Form $form) {
+                $form->number('experience_daily_limit', admin_trans('store_machine.activity_config.label.experience_daily_limit'))
+                    ->min(0)
+                    ->max(999)
+                    ->value(1)
+                    ->help(admin_trans('store_machine.activity_config.help.experience_daily_limit'))
+                    ->span(12);
+
+                $form->number('experience_total_limit', admin_trans('store_machine.activity_config.label.experience_total_limit'))
+                    ->min(0)
+                    ->max(9999)
+                    ->value(6)
+                    ->help(admin_trans('store_machine.activity_config.help.experience_total_limit'))
+                    ->span(12);
+            });
+
+            $form->number('experience_expire_hours', admin_trans('store_machine.activity_config.label.experience_expire_hours'))
+                ->min(1)
+                ->max(720)
+                ->value(24)
+                ->help(admin_trans('store_machine.activity_config.help.experience_expire_hours'));
+
+            // ========== 福利券配置 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.welfare'));
+
+            $form->switch('welfare_enabled', admin_trans('store_machine.activity_config.label.welfare_enabled'))
+                ->checkedValue(1)
+                ->unCheckedValue(0)
+                ->value(1);
+
+            $form->row(function (Form $form) {
+                $form->number('welfare_daily_limit', admin_trans('store_machine.activity_config.label.welfare_daily_limit'))
+                    ->min(0)
+                    ->max(999)
+                    ->value(1)
+                    ->help(admin_trans('store_machine.activity_config.help.welfare_daily_limit'))
+                    ->span(12);
+
+                $form->number('welfare_expire_hours', admin_trans('store_machine.activity_config.label.welfare_expire_hours'))
+                    ->min(1)
+                    ->max(720)
+                    ->value(24)
+                    ->help(admin_trans('store_machine.activity_config.help.welfare_expire_hours'))
+                    ->span(12);
+            });
+
+            // 福利券档位规则（使用 hasMany 实现动态表格）
+            $form->divider()->content(admin_trans('store_machine.activity_config.label.welfare_rules'));
+            $form->help(admin_trans('store_machine.activity_config.help.welfare_rules'));
+
+            $form->hasMany('welfare_rules', admin_trans('store_machine.activity_config.rules.add_rule'), function (Form $form) {
+                $form->select('day_type', admin_trans('store_machine.activity_config.rules.day_type'))
+                    ->options([
+                        'yesterday' => admin_trans('store_machine.activity_config.rules.yesterday'),
+                        'today' => admin_trans('store_machine.activity_config.rules.today'),
+                    ])
+                    ->default('yesterday')
+                    ->required();
+                $form->number('bet_amount', admin_trans('store_machine.activity_config.rules.bet_amount'))
+                    ->min(0)
+                    ->max(99999999)
+                    ->required();
+                $form->number('score', admin_trans('store_machine.activity_config.rules.score'))
+                    ->min(0)
+                    ->max(999999)
+                    ->required();
+            });
+
+            // ========== 订单前缀配置 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.order_prefix'));
+
+            $form->row(function (Form $form) {
+                $form->text('order_prefix_experience', admin_trans('store_machine.activity_config.label.order_prefix_experience'))
+                    ->maxlength(10)
+                    ->value('TY')
+                    ->span(6);
+
+                $form->text('order_prefix_welfare', admin_trans('store_machine.activity_config.label.order_prefix_welfare'))
+                    ->maxlength(10)
+                    ->value('FL')
+                    ->span(6);
+
+                $form->text('order_prefix_recharge', admin_trans('store_machine.activity_config.label.order_prefix_recharge'))
+                    ->maxlength(10)
+                    ->value('TK')
+                    ->span(6);
+
+                $form->text('order_prefix_withdraw', admin_trans('store_machine.activity_config.label.order_prefix_withdraw'))
+                    ->maxlength(10)
+                    ->value('TK')
+                    ->span(6);
+            });
+
+            $form->layout('vertical');
+
+            // 保存时设置 admin_user_id 和验证
+            $form->saving(function (Form $form) use ($storeId) {
+                $form->input('admin_user_id', $storeId);
+                // 设置 department_id
+                $store = AdminUser::find($storeId);
+                if ($store) {
+                    $form->input('department_id', $store->department_id);
+                }
+
+                // 新增时检查是否已有配置
+                if (!$form->isEdit()) {
+                    $exists = \addons\webman\model\StoreActivityConfig::query()
+                        ->where('admin_user_id', $storeId)
+                        ->whereNull('deleted_at')
+                        ->exists();
+                    if ($exists) {
+                        return message_error(admin_trans('store_machine.activity_config.error.already_exists'));
+                    }
+                }
+            });
+
+            // 保存成功后提示
+            $form->saved(function () {
+                return message_success(admin_trans('store_machine.activity_config.message.update_success'));
+            });
+        });
+    }
+
 }

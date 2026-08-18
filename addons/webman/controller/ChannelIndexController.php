@@ -4007,7 +4007,6 @@ class ChannelIndexController
             // 今日：今日 08:00:00 ~ 隔天 07:59:59
             // 昨日：昨日 08:00:00 ~ 今日 07:59:59
             $now = Carbon::now();
-            $today = date('Y-m-d'); // 用于福利券/体验券查询（按自然日）
             $today8am = Carbon::today()->setTime(8, 0, 0);
             $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
             $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
@@ -4069,20 +4068,24 @@ class ChannelIndexController
             }
 
             // 查询今日已领取的福利券记录（包含规则类型）
+            // 时间范围与打码量同步，以08:00作为分界点
             $claimedWelfareRecords = \addons\webman\model\TicketRecord::query()
                 ->where('player_id', $playerId)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                ->whereDate('created_at', $today)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
                 ->whereNull('deleted_at')
                 ->select('score', 'extra_data')
                 ->get()
                 ->toArray();
 
             // 查询今日已领取的体验券次数
+            // 时间范围与打码量同步，以08:00作为分界点
             $claimedExperienceCount = \addons\webman\model\TicketRecord::query()
                 ->where('player_id', $playerId)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
-                ->whereDate('created_at', $today)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
                 ->whereNull('deleted_at')
                 ->count();
 
@@ -4178,18 +4181,35 @@ class ChannelIndexController
                 }
 
                 // 检查每日领取次数（排除已删除的记录）
+                // 时间范围与打码量同步，以08:00作为分界点
                 $dailyLimit = $expConfig['daily_limit'] ?? 1;
+                $now = Carbon::now();
+                $today8am = Carbon::today()->setTime(8, 0, 0);
+                $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
+                $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
+
+                // 判断当前时间是否在今日08:00之后
+                if ($now->gte($today8am)) {
+                    $todayStart = $today8am->toDateTimeString();
+                    $todayEnd = $tomorrow8am->toDateTimeString();
+                } else {
+                    $todayStart = $yesterday8am->toDateTimeString();
+                    $todayEnd = $today8am->toDateTimeString();
+                }
+
                 $todayQuery = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
-                    ->whereDate('created_at', date('Y-m-d'));
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd);
                 $todayCount = $todayQuery->count();
 
                 // 调试日志
                 \support\Log::info('体验券每日领取检查', [
                     'player_id' => $playerId,
                     'ticket_type' => \addons\webman\model\TicketRecord::TYPE_EXPERIENCE,
-                    'today' => date('Y-m-d'),
+                    'today_start' => $todayStart,
+                    'today_end' => $todayEnd,
                     'daily_limit' => $dailyLimit,
                     'today_count' => $todayCount,
                     'sql' => $todayQuery->toSql(),
@@ -4234,7 +4254,6 @@ class ChannelIndexController
                 // 检查打码量是否满足该档位要求
                 // 时间区间：以每天08:00:00作为分界点
                 $now = Carbon::now();
-                $today = date('Y-m-d'); // 用于福利券/体验券查询（按自然日）
                 $today8am = Carbon::today()->setTime(8, 0, 0);
                 $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
                 $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
@@ -4304,10 +4323,12 @@ class ChannelIndexController
                     }
 
                     // 检查今日是否已领取过昨日规则的任何档位
+                    // 时间范围与打码量同步，以08:00作为分界点
                     $yesterdayClaimedCount = \addons\webman\model\TicketRecord::query()
                         ->where('player_id', $playerId)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                        ->whereDate('created_at', $today)
+                        ->where('created_at', '>=', $todayStart)
+                        ->where('created_at', '<', $todayEnd)
                         ->whereNull('deleted_at')
                         ->get()
                         ->filter(function ($record) {
@@ -4322,12 +4343,13 @@ class ChannelIndexController
                 }
 
                 // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
-                // 使用 JSON_CONTAINS 或遍历查询，避免 JSON 键顺序问题
+                // 时间范围与打码量同步，以08:00作为分界点
                 $todayCount = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
                     ->where('score', $actualScore)
-                    ->whereDate('created_at', $today)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd)
                     ->whereNull('deleted_at')
                     ->get()
                     ->filter(function ($record) use ($ruleType) {
@@ -4430,6 +4452,72 @@ class ChannelIndexController
             return json(['code' => 200, 'message' => '状态更新成功']);
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '更新失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 查询订单状态（用于重复打印）
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function getTicketOrderInfo(): Response
+    {
+        try {
+            $orderId = request()->input('order_id', '');
+
+            if (empty($orderId)) {
+                return json(['code' => 400, 'message' => '订单号不能为空']);
+            }
+
+            $admin = Admin::user();
+            $record = \addons\webman\model\TicketRecord::query()
+                ->where('order_id', $orderId)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+
+            if (!$record) {
+                return json(['code' => 404, 'message' => '订单不存在']);
+            }
+
+            // 检查是否可以重复打印：只有未使用(1)和打印失败(5)的订单可以重复打印
+            $reprintableStatuses = [
+                \addons\webman\model\TicketRecord::STATUS_NORMAL,        // 1 = 未使用
+                \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED,  // 5 = 打印失败
+            ];
+
+            if (!in_array($record->status, $reprintableStatuses)) {
+                return json(['code' => 400, 'message' => '该订单状态不允许重复打印（仅支持未使用和打印失败的订单）']);
+            }
+
+            // 获取玩家信息
+            $playerName = $record->player_name ?? '';
+            if (!empty($record->player_id)) {
+                $player = \addons\webman\model\Player::query()->where('id', $record->player_id)->first();
+                if ($player) {
+                    $playerName = $player->name ?? $playerName;
+                }
+            }
+
+            return json([
+                'code' => 200,
+                'message' => '订单查询成功',
+                'data' => [
+                    'id' => $record->id,
+                    'order_id' => $record->order_id,
+                    'store_name' => $record->store_name,
+                    'machine_no' => $record->machine_no,
+                    'score' => $record->score,
+                    'ticket_type' => $record->ticket_type,
+                    'status' => $record->status,
+                    'player_id' => $record->player_id,
+                    'player_name' => $playerName,
+                    'qr_code' => $record->qr_code,
+                    'created_at' => $record->created_at instanceof \DateTimeInterface ? $record->created_at->format('Y-m-d H:i:s') : (string) ($record->created_at ?? ''),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '查询失败: ' . $e->getMessage()]);
         }
     }
 

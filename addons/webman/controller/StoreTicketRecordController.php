@@ -322,10 +322,15 @@ class StoreTicketRecordController
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.record.status_normal'))->color('blue'),
                     TicketRecord::STATUS_BACKEND_USED => Tag::create(admin_trans('ticket_machine.record.status_backend_used'))->color('orange'),
                     TicketRecord::STATUS_MACHINE_USED => Tag::create(admin_trans('ticket_machine.record.status_machine_used'))->color('purple'),
+                    TicketRecord::STATUS_PRINT_FAILED => Tag::create(admin_trans('ticket_machine.record.status_print_failed'))->color('red'),
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
             });
             $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
+            $grid->column('scanned_at', admin_trans('ticket_machine.record.scanned_at'))
+                ->display(function ($val) {
+                    return $val ?: '-';
+                });
 
             // 备注（可编辑）
             $grid->column('remark', admin_trans('ticket_machine.record.remark'))
@@ -362,6 +367,7 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
                         TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
+                        TicketRecord::STATUS_PRINT_FAILED => admin_trans('ticket_machine.record.status_print_failed'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
@@ -419,7 +425,7 @@ class StoreTicketRecordController
                     $actions->prepend(
                         Button::create(admin_trans('ticket_machine.record.disable'))
                             ->confirm(admin_trans('ticket_machine.record.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
-                            ->type('danger')
+                            ->type('warning')
                             ->size('small')
                             ->gridRefresh()
                     );
@@ -460,11 +466,13 @@ class StoreTicketRecordController
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
                     TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
+                    TicketRecord::STATUS_PRINT_FAILED => admin_trans('ticket_machine.record.status_print_failed'),
                     default => admin_trans('ticket_machine.record.status_unknown'),
                 };
             });
             $form->desc('print_count', admin_trans('ticket_machine.record.print_count'));
             $form->desc('last_print_time', admin_trans('ticket_machine.record.last_print_time'));
+            $form->desc('scanned_at', admin_trans('ticket_machine.record.scanned_at'));
             $form->desc('remark', admin_trans('ticket_machine.record.remark'));
             $form->desc('created_at', admin_trans('ticket_machine.record.created_at'));
 
@@ -528,5 +536,35 @@ class StoreTicketRecordController
         $record->update(['status' => TicketRecord::STATUS_NORMAL]);
 
         return message_success(admin_trans('ticket_machine.record.restore_success'));
+    }
+
+    /**
+     * 物理删除记录
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function forceDeleteRecord()
+    {
+        $id = request()->input('id', 0);
+
+        if (empty($id)) {
+            return message_error(admin_trans('common.invalid_parameter'));
+        }
+
+        $admin = Admin::user();
+        $record = TicketRecord::query()
+            ->where('id', $id)
+            ->where('store_admin_id', $admin->id)
+            ->first();
+
+        if (empty($record)) {
+            return message_error(admin_trans('common.data_not_found'));
+        }
+
+        // 物理删除
+        $record->delete();
+
+        return message_success(admin_trans('ticket_machine.record.force_delete_success'));
     }
 }
