@@ -120,6 +120,40 @@ class StoreOfflineMachineController
 
             $grid->column('created_at', admin_trans('machine.fields.created_at'))->width(160)->align('center');
 
+            // 严格按照 ChannelController::offlineMachineList 的配置顺序
+            $grid->hideDelete();
+            $grid->actions(function ($actions, $data) {
+                $actions->hideDel();
+                $actions->hideEdit();
+
+                // 查看二维码
+                $actions->append(
+                    Button::create(admin_trans('store_offline_machine.actions.view_qrcode'))
+                        ->type('primary')
+                        ->size('small')
+                        ->icon(Icon::create('fas fa-qrcode'))
+                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
+                        ->width('550px')
+                );
+            });
+
+            $grid->pagination()->pageSize(25);
+            $grid->hideDeleteSelection();
+            $grid->hideTrashed();
+
+            // 批量操作工具栏按钮
+            $grid->tools(
+                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                    ->type('primary')
+                    ->icon(Icon::create('fas fa-qrcode'))
+                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
+                        [
+                            $this,
+                            'batchQrCode?' . http_build_query($param)
+                        ])
+                    ->gridBatch()->gridRefresh()
+            );
+
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->eq()->select('label_id')
@@ -138,41 +172,6 @@ class StoreOfflineMachineController
                         0 => admin_trans('admin.close')
                     ]);
             });
-
-            $grid->hideDelete();
-            $grid->hideDeleteSelection();
-            $grid->hideTrashed();
-
-            // 批量操作工具栏按钮 - 严格按照 ExAdmin 标准模式
-            $grid->tools(
-                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                    ->type('primary')
-                    ->icon(Icon::create('fas fa-qrcode'))
-                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
-                        [
-                            $this,
-                            'batchQrCode?' . http_build_query($param)
-                        ])
-                    ->gridBatch()
-                    ->gridRefresh()
-            );
-
-            $grid->actions(function ($actions, $data) {
-                $actions->hideEdit();
-                $actions->hideDel();
-
-                // 查看二维码
-                $actions->append(
-                    Button::create(admin_trans('store_offline_machine.actions.view_qrcode'))
-                        ->type('primary')
-                        ->size('small')
-                        ->icon(Icon::create('fas fa-qrcode'))
-                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
-                        ->width('550px')
-                );
-            });
-
-            $grid->pagination()->pageSize(25);
         })->selection([]);  // 关键：必须添加 selection()，即使是空数组
     }
 
