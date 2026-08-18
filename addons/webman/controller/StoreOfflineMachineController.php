@@ -125,8 +125,15 @@ class StoreOfflineMachineController
             $grid->hideTrashed();
 
             // 批量操作工具栏按钮 - 严格按照 ExAdmin 标准模式
-            // 构建 URL 参数（空参数也需要显式传递）
-            $param = [];
+            // 从 Request 读取标准参数（ExAdmin Grid 需要这些参数）
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+            $page = Request::input('ex_admin_page', 1);
+            $size = Request::input('ex_admin_size', 25);
+            $param = [
+                'size' => $size,
+                'page' => $page,
+                'ex_admin_filter' => $exAdminFilter,
+            ];
             $grid->tools(
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
@@ -493,7 +500,7 @@ class StoreOfflineMachineController
      * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
      * @return Msg
      */
-    public function batchQrCode($selected = null)
+    public function batchQrCode($selected, $size, $page, array $ex_admin_filter = [])
     {
         // gridBatch 会将选中的 IDs 作为参数传递
         $machineIds = $selected ?? [];
