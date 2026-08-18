@@ -1,24 +1,24 @@
 <template>
   <div class="batch-qrcode-container">
     <!-- 操作按钮 -->
-    <div class="action-bar" style="margin-bottom: 20px; text-align: center;">
-      <a-button type="primary" @click="downloadImage" :loading="generating" style="margin-right: 10px;">
+    <div class="batch-action-bar">
+      <a-button type="primary" @click="downloadImage" :loading="generating" class="batch-btn-download">
         {{ $t('下載圖片') }}
       </a-button>
-      <a-button @click="printQRCodes" :loading="generating">
+      <a-button @click="printQRCodes" :loading="generating" class="batch-btn-print">
         {{ $t('列印') }}
       </a-button>
-      <a-tag color="blue" style="margin-left: 10px;">{{ $t('共') }} {{ machines.length }} {{ $t('個機台') }}</a-tag>
+      <a-tag color="blue" class="batch-machine-count">{{ $t('共') }} {{ machines.length }} {{ $t('個機台') }}</a-tag>
     </div>
 
     <!-- 加载提示 -->
-    <div v-if="generating" style="text-align: center; padding: 40px 0;">
+    <div v-if="generating" class="batch-loading">
       <a-spin size="large" />
-      <div style="margin-top: 15px; color: #666;">{{ $t('正在生成二維碼...') }}</div>
+      <div class="batch-loading-text">{{ $t('正在生成二維碼...') }}</div>
     </div>
 
     <!-- A4 画布预览 -->
-    <div v-show="!generating" class="canvas-wrapper" ref="canvasWrapper">
+    <div v-show="!generating" class="batch-canvas-wrapper" ref="canvasWrapper">
       <canvas
         ref="batchCanvas"
         class="batch-canvas"
@@ -364,37 +364,22 @@ export default {
         // 转换为图片 URL
         const imageUrl = canvas.toDataURL('image/png');
 
-        // 写入打印页面 HTML
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>機台二維碼列印</title>
-            <style>
-              @page {
-                size: A4;
-                margin: 0;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-                display: flex;
-                justify-content: center;
-                align-items: flex-start;
-              }
-              img {
-                max-width: 100%;
-                height: auto;
-                display: block;
-              }
-            </style>
-          </head>
-          <body>
-            <img src="${imageUrl}" onload="window.print(); window.close();" />
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
+        // 使用 DOM 操作创建打印页面
+        const doc = printWindow.document;
+
+        // 创建样式标签
+        const styleEl = doc.createElement('style');
+        styleEl.textContent = '@page { size: A4; margin: 0; } body { margin: 0; padding: 0; } img { max-width: 100%; height: auto; display: block; margin: 0 auto; }';
+        doc.head.appendChild(styleEl);
+
+        // 创建图片元素
+        const imgEl = doc.createElement('img');
+        imgEl.src = imageUrl;
+        imgEl.onload = function() {
+          printWindow.print();
+          printWindow.close();
+        };
+        doc.body.appendChild(imgEl);
 
       } catch (error) {
         console.error('Print failed:', error);
@@ -410,14 +395,33 @@ export default {
   padding: 20px;
 }
 
-.action-bar {
+.batch-action-bar {
   background: #fff;
   padding: 15px;
   margin-bottom: 20px;
   border-bottom: 1px solid #e8e8e8;
+  text-align: center;
 }
 
-.canvas-wrapper {
+.batch-btn-download {
+  margin-right: 10px;
+}
+
+.batch-machine-count {
+  margin-left: 10px;
+}
+
+.batch-loading {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.batch-loading-text {
+  margin-top: 15px;
+  color: #666;
+}
+
+.batch-canvas-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
