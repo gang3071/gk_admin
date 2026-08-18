@@ -87,7 +87,7 @@ export default {
     // 监听窗口大小变化
     window.addEventListener('resize', this.calculateCanvasScale);
   },
-  beforeUnmount() {
+  beforeDestroy() {
     // 移除监听器
     window.removeEventListener('resize', this.calculateCanvasScale);
   },
