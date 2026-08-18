@@ -36,39 +36,28 @@ class StoreOfflineMachineController
      */
     public function index(): Grid
     {
-        return Grid::create(new $this->model(), function (Grid $grid) {
-            $storeAdminId = Admin::user()->id;
-            $departmentId = Admin::user()->department_id;
+        $storeAdminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
+
+        // 获取当前店家绑定的机台ID列表
+        $machineIds = \addons\webman\model\ChannelMachine::query()
+            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $storeAdminId)
+            ->pluck('machine_id')
+            ->toArray();
+
+        return Grid::create(new $this->model(), function (Grid $grid) use ($machineIds) {
+            $grid->title(admin_trans('store_offline_machine.title'));
 
             // 查询绑定到当前店家的线下机台（包含斯洛和钢珠）
             $grid->model()
-                ->select([
-                    'machine.id',  // 明确选择主键
-                    'machine.code',
-                    'machine.type',
-                    'machine.label_id',
-                    'machine.cate_id',
-                    'machine.gaming_user_id',
-                    'machine.status',
-                    'machine.created_at',
-                    'machine_category.name as category_name'
-                ])
-                ->join('channel_machine', 'machine.id', '=', 'channel_machine.machine_id')
-                ->leftJoin('machine_category', 'machine.cate_id', '=', 'machine_category.id')
-                ->where('channel_machine.department_id', $departmentId)
-                ->where('channel_machine.store_admin_id', $storeAdminId)
-                ->where('machine.machine_source', Machine::MACHINE_SOURCE_OFFLINE)
-                ->whereIn('machine.type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])  // 包含两种类型
-                ->whereNull('machine.deleted_at')
-                ->with(['gamingPlayer', 'machineLabel'])
-                ->orderBy('machine.code', 'asc');
+                ->whereIn('id', $machineIds)
+                ->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
+                ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+                ->with(['gamingPlayer', 'machineLabel', 'machineCategory'])
+                ->orderBy('code', 'asc');
 
-            $grid->title(admin_trans('store_offline_machine.title'));
-            $grid->autoHeight();
-            $grid->bordered(true);
             $grid->driver()->setPk('id');
-
-            // 读取 ExAdmin Grid 标准参数（必须在 setPk 之后立即读取）
             $exAdminFilter = Request::input('ex_admin_filter', []);
             $page = Request::input('ex_admin_page', 1);
             $size = Request::input('ex_admin_size', 25);
@@ -78,6 +67,9 @@ class StoreOfflineMachineController
                 'ex_admin_filter' => $exAdminFilter,
             ];
 
+            $grid->autoHeight();
+            $grid->bordered(true);
+
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
             $grid->column('type', admin_trans('machine.fields.type'))->display(function ($val) {
@@ -86,7 +78,9 @@ class StoreOfflineMachineController
             $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
                 return $data->machineLabel->name ?? '-';
             })->width(150);
-            $grid->column('category_name', admin_trans('machine.fields.cate_id'))->width(120)->align('center');
+            $grid->column('cate_id', admin_trans('machine.fields.cate_id'))->display(function ($val, Machine $data) {
+                return $data->machineCategory->name ?? '-';
+            })->width(120)->align('center');
 
             // 游戏状态
             $grid->column('gaming', admin_trans('machine.fields.gaming'))
@@ -122,15 +116,17 @@ class StoreOfflineMachineController
             $grid->column('created_at', admin_trans('machine.fields.created_at'))->width(160)->align('center');
 
             $grid->filter(function (Filter $filter) {
-                $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
-                $filter->eq()->select('machine.type')
+                $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
+                $filter->eq()->select('label_id')
+                    ->placeholder(admin_trans('machine.fields.name'))
+                    ->options(getMachineLabelOptions());
+                $filter->eq()->select('type')
                     ->placeholder(admin_trans('machine.fields.type'))
                     ->options([
                         GameType::TYPE_SLOT => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT),
                         GameType::TYPE_STEEL_BALL => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL),
                     ]);
-                $filter->eq()->select('machine.status')
+                $filter->eq()->select('status')
                     ->placeholder(admin_trans('machine.fields.status'))
                     ->options([
                         1 => admin_trans('admin.open'),
