@@ -514,11 +514,38 @@ class StoreOfflineMachineController
             return message_error(admin_trans('store_offline_machine.error.too_many_machines'));
         }
 
-        // 构建 URL
-        $url = admin_url([$this, 'batchQrCodeView'], ['ids' => implode(',', $machineIds)]);
+        // 验证机台归属
+        $storeAdminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
 
-        // 返回成功消息并打开新窗口
-        return message_success(admin_trans('common.success'))
-            ->script("window.open('{$url}', '_blank', 'width=1200,height=800,scrollbars=yes')");
+        $machines = Machine::query()
+            ->with(['machineLabel'])
+            ->whereHas('channelMachines', function ($query) use ($storeAdminId, $departmentId) {
+                $query->where('store_admin_id', $storeAdminId)
+                    ->where('department_id', $departmentId);
+            })
+            ->whereIn('id', $machineIds)
+            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+            ->orderBy('code', 'asc')
+            ->get();
+
+        if ($machines->isEmpty()) {
+            return message_error(admin_trans('store_offline_machine.error.machine_not_found'));
+        }
+
+        // 准备机台数据
+        $machineData = $machines->map(function (Machine $machine) {
+            return [
+                'id' => (int)$machine->id,
+                'code' => (string)($machine->code ?? $machine->id),
+                'name' => (string)($machine->machineLabel->name ?? '-'),
+            ];
+        })->toArray();
+
+        // 直接返回 Vue 组件展示批量二维码（在当前窗口）
+        return admin_view(plugin()->webman->getPath() . '/views/batch_machine_qrcode.vue')->attrs([
+            'machines' => $machineData,
+            'title' => admin_trans('store_offline_machine.batch_qrcode_title'),
+        ]);
     }
 }
