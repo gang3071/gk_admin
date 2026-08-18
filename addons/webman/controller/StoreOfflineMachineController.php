@@ -142,8 +142,8 @@ class StoreOfflineMachineController
                         ->type('primary')
                         ->size('small')
                         ->icon(Icon::create('fas fa-qrcode'))
-                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
-                        ->width('500px')
+                        ->drawer([$this, 'viewQrCode'], ['machine_id' => $data['id']])
+                        ->width('600px')
                 );
             });
         });
@@ -243,8 +243,8 @@ class StoreOfflineMachineController
                         ->type('primary')
                         ->size('small')
                         ->icon(Icon::create('fas fa-qrcode'))
-                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
-                        ->width('500px')
+                        ->drawer([$this, 'viewQrCode'], ['machine_id' => $data['id']])
+                        ->width('600px')
                 );
             });
         });
