@@ -133,13 +133,61 @@ class StoreOfflineMachineController
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
-            // 批量操作工具栏按钮
+            // 批量操作工具栏按钮 - 使用自定义 JavaScript
             $grid->tools(
-                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                    ->type('primary')
-                    ->icon(Icon::create('fas fa-qrcode'))
-                    ->window([$this, 'batchQrCode'])
-                    ->gridBatch()
+                Html::create(<<<'HTML'
+                <button type="button" class="ant-btn ant-btn-primary" onclick="batchQrCodeHandler()">
+                    <span role="img" class="anticon"><i class="fas fa-qrcode"></i></span>
+                    <span>批量生成二維碼</span>
+                </button>
+                <script>
+                function batchQrCodeHandler() {
+                    // 获取选中的行
+                    const grid = document.querySelector('.ex-admin-grid');
+                    if (!grid) return;
+
+                    // 获取所有选中的复选框
+                    const checkboxes = grid.querySelectorAll('input[type="checkbox"]:checked');
+                    const selectedIds = [];
+
+                    checkboxes.forEach(cb => {
+                        const value = cb.value;
+                        if (value && value !== 'on' && !isNaN(value)) {
+                            selectedIds.push(value);
+                        }
+                    });
+
+                    if (selectedIds.length === 0) {
+                        antd.message.error('請至少選擇一個機台');
+                        return;
+                    }
+
+                    if (selectedIds.length > 30) {
+                        antd.message.error('一次最多生成30個二維碼');
+                        return;
+                    }
+
+                    // 构建 URL
+                    const url = '/ex-admin/addons-webman-controller-StoreOfflineMachineController/batchQrCodePage?ids=' + selectedIds.join(',');
+
+                    // 打开模态框
+                    const iframe = document.createElement('iframe');
+                    iframe.src = url;
+                    iframe.style.width = '100%';
+                    iframe.style.height = '600px';
+                    iframe.style.border = 'none';
+
+                    antd.Modal.info({
+                        title: '批量機台二維碼',
+                        width: '90%',
+                        maskClosable: true,
+                        content: iframe.outerHTML,
+                        okText: '關閉',
+                    });
+                }
+                </script>
+                HTML
+                )
             );
 
             $grid->actions(function ($actions, $data) {
@@ -244,13 +292,61 @@ class StoreOfflineMachineController
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
-            // 批量操作工具栏按钮
+            // 批量操作工具栏按钮 - 使用自定义 JavaScript
             $grid->tools(
-                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                    ->type('primary')
-                    ->icon(Icon::create('fas fa-qrcode'))
-                    ->window([$this, 'batchQrCode'])
-                    ->gridBatch()
+                Html::create(<<<'HTML'
+                <button type="button" class="ant-btn ant-btn-primary" onclick="batchQrCodeHandler()">
+                    <span role="img" class="anticon"><i class="fas fa-qrcode"></i></span>
+                    <span>批量生成二維碼</span>
+                </button>
+                <script>
+                function batchQrCodeHandler() {
+                    // 获取选中的行
+                    const grid = document.querySelector('.ex-admin-grid');
+                    if (!grid) return;
+
+                    // 获取所有选中的复选框
+                    const checkboxes = grid.querySelectorAll('input[type="checkbox"]:checked');
+                    const selectedIds = [];
+
+                    checkboxes.forEach(cb => {
+                        const value = cb.value;
+                        if (value && value !== 'on' && !isNaN(value)) {
+                            selectedIds.push(value);
+                        }
+                    });
+
+                    if (selectedIds.length === 0) {
+                        antd.message.error('請至少選擇一個機台');
+                        return;
+                    }
+
+                    if (selectedIds.length > 30) {
+                        antd.message.error('一次最多生成30個二維碼');
+                        return;
+                    }
+
+                    // 构建 URL
+                    const url = '/ex-admin/addons-webman-controller-StoreOfflineMachineController/batchQrCodePage?ids=' + selectedIds.join(',');
+
+                    // 打开模态框
+                    const iframe = document.createElement('iframe');
+                    iframe.src = url;
+                    iframe.style.width = '100%';
+                    iframe.style.height = '600px';
+                    iframe.style.border = 'none';
+
+                    antd.Modal.info({
+                        title: '批量機台二維碼',
+                        width: '90%',
+                        maskClosable: true,
+                        content: iframe.outerHTML,
+                        okText: '關閉',
+                    });
+                }
+                </script>
+                HTML
+                )
             );
 
             $grid->actions(function ($actions, $data) {
@@ -549,7 +645,64 @@ class StoreOfflineMachineController
     }
 
     /**
-     * 批量生成机台二维码
+     * 批量生成机台二维码（页面版本，通过 URL 参数）
+     * @auth true
+     * @group store
+     * @return mixed
+     */
+    public function batchQrCodePage()
+    {
+        // 从 URL 参数获取机台 IDs
+        $idsParam = Request::input('ids', '');
+        $machineIds = $idsParam ? explode(',', $idsParam) : [];
+        $machineIds = array_map('intval', array_filter($machineIds));
+
+        if (empty($machineIds)) {
+            return message_error(admin_trans('store_offline_machine.error.no_machines_selected'));
+        }
+
+        // 限制最多一次生成30个二维码
+        if (count($machineIds) > 30) {
+            return message_error(admin_trans('store_offline_machine.error.too_many_machines'));
+        }
+
+        // 验证机台归属
+        $storeAdminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
+
+        $machines = Machine::query()
+            ->with(['machineLabel'])
+            ->whereHas('channelMachines', function ($query) use ($storeAdminId, $departmentId) {
+                $query->where('store_admin_id', $storeAdminId)
+                    ->where('department_id', $departmentId);
+            })
+            ->whereIn('id', $machineIds)
+            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+            ->orderBy('code', 'asc')
+            ->get();
+
+        if ($machines->isEmpty()) {
+            return message_error(admin_trans('store_offline_machine.error.machine_not_found'));
+        }
+
+        // 准备机台数据
+        $machineData = $machines->map(function (Machine $machine) {
+            return [
+                'id' => (int)$machine->id,
+                'code' => (string)($machine->code ?? $machine->id),
+                'name' => (string)($machine->machineLabel->name ?? '-'),
+            ];
+        })->toArray();
+
+        // 返回 Vue 组件展示批量二维码
+        return admin_view(plugin()->webman->getPath() . '/views/batch_machine_qrcode.vue')->attrs([
+            'machines' => $machineData,
+            'title' => admin_trans('store_offline_machine.batch_qrcode_title'),
+        ]);
+    }
+
+    /**
+     * 批量生成机台二维码（gridBatch 版本）
      * @auth true
      * @group store
      * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
