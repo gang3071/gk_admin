@@ -37,11 +37,11 @@
 
       <div class="qr-buttons">
         <a-button type="primary" @click="downloadQrCode" size="large">
-          📥 下载二维码
+          下载二维码
         </a-button>
 
         <a-button @click="printQrCode" size="large">
-          🖨️ 打印二维码
+          打印二维码
         </a-button>
       </div>
     </div>

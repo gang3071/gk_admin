@@ -3,10 +3,10 @@
     <!-- 操作按钮 -->
     <div class="action-bar" style="margin-bottom: 20px; text-align: center;">
       <a-button type="primary" @click="downloadImage" :loading="generating" style="margin-right: 10px;">
-        📥 {{ $t('下載圖片') }}
+        {{ $t('下載圖片') }}
       </a-button>
       <a-button @click="printQRCodes" :loading="generating">
-        🖨️ {{ $t('列印') }}
+        {{ $t('列印') }}
       </a-button>
       <a-tag color="blue" style="margin-left: 10px;">{{ $t('共') }} {{ machines.length }} {{ $t('個機台') }}</a-tag>
     </div>
