@@ -206,35 +206,162 @@ export default {
       originalBodyOverflow: undefined,
       originalBodyClass: undefined,
       originalBodyStyle: undefined,
-      originalHtmlStyle: undefined
+      originalHtmlStyle: undefined,
+      originalViewportContent: undefined,
+      debugInfo: {
+        mountTime: null,
+        unmountTime: null,
+        styleChanges: []
+      }
     };
   },
   mounted() {
+    this.debugInfo.mountTime = new Date().toISOString();
+
+    // 调试：记录 Modal 打开前的状态
+    console.group('[QRCode Debug] Component Mounted');
+    console.log('Mount Time:', this.debugInfo.mountTime);
+
     // 保存原始样式（完整备份）
     this.originalBodyOverflow = document.body.style.overflow;
     this.originalBodyClass = document.body.className;
     this.originalBodyStyle = document.body.getAttribute('style');
     this.originalHtmlStyle = document.documentElement.getAttribute('style');
 
+    // 检查 viewport
+    const viewportMeta = document.querySelector('meta[name="viewport"]');
+    if (viewportMeta) {
+      this.originalViewportContent = viewportMeta.getAttribute('content');
+    }
+
+    // 调试：记录当前状态
+    console.log('Body className:', document.body.className);
+    console.log('Body style:', document.body.getAttribute('style'));
+    console.log('Body overflow:', document.body.style.overflow);
+    console.log('HTML style:', document.documentElement.getAttribute('style'));
+    console.log('Viewport content:', this.originalViewportContent);
+
+    // 检查是否有 Modal 容器
+    const modalContainer = this.$el?.closest?.('.ant-modal');
+    if (modalContainer) {
+      console.log('Modal container found:', modalContainer);
+      console.log('Modal container class:', modalContainer.className);
+    }
+
+    console.groupEnd();
+
     this.$nextTick(() => {
       this.drawQRCode();
+      this.startStyleMonitoring();
     });
   },
   beforeUnmount() {
+    this.debugInfo.unmountTime = new Date().toISOString();
+
+    // 调试：记录 Modal 关闭前的状态
+    console.group('[QRCode Debug] Component Before Unmount');
+    console.log('Unmount Time:', this.debugInfo.unmountTime);
+    console.log('Body className (before restore):', document.body.className);
+    console.log('Body style (before restore):', document.body.getAttribute('style'));
+    console.log('Body overflow (before restore):', document.body.style.overflow);
+    console.log('HTML style (before restore):', document.documentElement.getAttribute('style'));
+
+    this.stopStyleMonitoring();
     this.clearCanvas();
     this.restoreOriginalStyles();
+
+    // 调试：记录恢复后的状态
+    console.log('--- After Restore ---');
+    console.log('Body className (after restore):', document.body.className);
+    console.log('Body style (after restore):', document.body.getAttribute('style'));
+    console.log('Body overflow (after restore):', document.body.style.overflow);
+    console.log('HTML style (after restore):', document.documentElement.getAttribute('style'));
+    console.log('Style changes during lifecycle:', this.debugInfo.styleChanges);
+    console.groupEnd();
   },
   methods: {
+    startStyleMonitoring() {
+      // 监控 body 和 html 的样式变化
+      const bodyObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+            const change = {
+              timestamp: new Date().toISOString(),
+              target: 'body',
+              attribute: mutation.attributeName,
+              oldValue: mutation.oldValue,
+              newValue: mutation.attributeName === 'style'
+                ? document.body.getAttribute('style')
+                : document.body.className
+            };
+            this.debugInfo.styleChanges.push(change);
+            console.warn('[QRCode StyleChange]', change);
+          }
+        });
+      });
+
+      bodyObserver.observe(document.body, {
+        attributes: true,
+        attributeOldValue: true,
+        attributeFilter: ['style', 'class']
+      });
+
+      const htmlObserver = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+            const change = {
+              timestamp: new Date().toISOString(),
+              target: 'html',
+              attribute: 'style',
+              oldValue: mutation.oldValue,
+              newValue: document.documentElement.getAttribute('style')
+            };
+            this.debugInfo.styleChanges.push(change);
+            console.warn('[QRCode StyleChange]', change);
+          }
+        });
+      });
+
+      htmlObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeOldValue: true,
+        attributeFilter: ['style']
+      });
+
+      this._bodyObserver = bodyObserver;
+      this._htmlObserver = htmlObserver;
+    },
+
+    stopStyleMonitoring() {
+      if (this._bodyObserver) {
+        this._bodyObserver.disconnect();
+        this._bodyObserver = null;
+      }
+      if (this._htmlObserver) {
+        this._htmlObserver.disconnect();
+        this._htmlObserver = null;
+      }
+    },
+
     restoreOriginalStyles() {
       try {
-        // 恢复 body 样式
+        console.log('[QRCode] Starting style restoration...');
+
+        // 恢复 body overflow
         if (this.originalBodyOverflow !== undefined) {
+          console.log('Restoring body.overflow:', this.originalBodyOverflow);
           document.body.style.overflow = this.originalBodyOverflow;
         }
+
+        // 恢复 body className
         if (this.originalBodyClass !== undefined) {
+          console.log('Restoring body.className:', this.originalBodyClass);
           document.body.className = this.originalBodyClass;
         }
+
+        // 恢复 body style 属性
         if (this.originalBodyStyle !== undefined) {
+          console.log('Restoring body style attr:', this.originalBodyStyle);
           if (this.originalBodyStyle) {
             document.body.setAttribute('style', this.originalBodyStyle);
           } else {
@@ -242,8 +369,9 @@ export default {
           }
         }
 
-        // 恢复 html 样式
+        // 恢复 html style 属性
         if (this.originalHtmlStyle !== undefined) {
+          console.log('Restoring html style attr:', this.originalHtmlStyle);
           if (this.originalHtmlStyle) {
             document.documentElement.setAttribute('style', this.originalHtmlStyle);
           } else {
@@ -251,11 +379,27 @@ export default {
           }
         }
 
-        // 移除可能的 viewport meta 标签污染（防御性编程）
-        const viewportMeta = document.querySelector('meta[name="viewport"][data-qrcode]');
-        if (viewportMeta) {
-          viewportMeta.remove();
+        // 恢复 viewport
+        const viewportMeta = document.querySelector('meta[name="viewport"]');
+        if (viewportMeta && this.originalViewportContent !== undefined) {
+          console.log('Restoring viewport content:', this.originalViewportContent);
+          viewportMeta.setAttribute('content', this.originalViewportContent);
         }
+
+        // 移除可能的污染标签
+        const qrcodeViewportMeta = document.querySelector('meta[name="viewport"][data-qrcode]');
+        if (qrcodeViewportMeta) {
+          console.log('Removing QRCode viewport meta');
+          qrcodeViewportMeta.remove();
+        }
+
+        // 强制移除 Ant Design Modal 可能添加的样式
+        document.body.classList.remove('ant-scrolling-effect');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('width');
+        document.body.style.removeProperty('padding-right');
+
+        console.log('[QRCode] Style restoration completed');
       } catch (error) {
         console.error('[QRCode] Failed to restore styles:', error);
       }
