@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\ChannelMachine;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use addons\webman\service\WalletService;
@@ -10,7 +11,9 @@ use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
+use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -23,10 +26,12 @@ use ExAdmin\ui\support\Request;
 class StoreOfflineMachineController
 {
     protected $model;
+    protected $machineModel;
 
     public function __construct()
     {
         $this->model = plugin()->webman->config('database.machine_model');
+        $this->machineModel = plugin()->webman->config('database.machine_model');
     }
 
     /**
@@ -146,7 +151,7 @@ class StoreOfflineMachineController
                     ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
                         [
                             $this,
-                            'batchQrCode?' . http_build_query($param)  // 关键：必须有 ?
+                            'batchQrCode?' . http_build_query($param)
                         ])
                     ->gridBatch()
                     ->gridRefresh()
@@ -166,7 +171,9 @@ class StoreOfflineMachineController
                         ->width('550px')
                 );
             });
-        });
+
+            $grid->pagination()->pageSize(25);
+        })->selection([]);  // 关键：必须添加 selection()，即使是空数组
     }
 
     /**
