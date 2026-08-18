@@ -1187,7 +1187,7 @@ class ChannelController
                 ->whereIn('type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])
                 ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
                 ->whereNotIn('id', $boundToOtherChannels)
-                ->with(['machineLabel', 'channelMachines'])
+                ->with(['machineLabel', 'channelMachines', 'channelMachines.storeAdmin'])
                 ->orderBy('id', 'desc');
 
             $grid->driver()->setPk('id');
@@ -1232,6 +1232,18 @@ class ChannelController
                         return Tag::create(admin_trans('channel.assigned'))->color('green');
                     }
                     return Tag::create(admin_trans('channel.unassigned'))->color('default');
+                })->align('center');
+
+            // 绑定门店
+            $grid->column('bound_store', admin_trans('channel.bound_store'))
+                ->display(function ($val, Machine $data) use ($department_id) {
+                    // 查找当前渠道的绑定记录
+                    $channelMachine = $data->channelMachines->firstWhere('department_id', $department_id);
+
+                    if ($channelMachine && $channelMachine->storeAdmin) {
+                        return Tag::create($channelMachine->storeAdmin->username)->color('blue');
+                    }
+                    return Tag::create(admin_trans('channel.unbound_store'))->color('default');
                 })->align('center');
 
             $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
