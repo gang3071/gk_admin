@@ -130,6 +130,7 @@ class StoreOfflineMachineController
             });
 
             $grid->hideDelete();
+            $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
             // 批量操作工具栏按钮
@@ -241,6 +242,7 @@ class StoreOfflineMachineController
             });
 
             $grid->hideDelete();
+            $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
             // 批量操作工具栏按钮
