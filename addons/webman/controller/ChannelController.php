@@ -1226,12 +1226,11 @@ class ChannelController
 
             // 分配状态
             $grid->column('assign_status', admin_trans('channel.assign_status'))
-                ->display(function ($val, Machine $data) {
-                    // 检查是否已分配给任何渠道
-                    if ($data->channelMachines->isEmpty()) {
-                        return Tag::create(admin_trans('channel.unassigned'))->color('default');
+                ->display(function ($val, Machine $data) use ($selectedId) {
+                    // 检查是否已分配给当前渠道
+                    if (in_array($data->id, $selectedId)) {
+                        return Tag::create(admin_trans('channel.assigned'))->color('green');
                     }
-                    // 注：已分配给其他渠道的机台已被过滤，不会出现在这里
                     return Tag::create(admin_trans('channel.unassigned'))->color('default');
                 })->align('center');
 

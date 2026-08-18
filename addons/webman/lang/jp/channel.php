@@ -98,6 +98,7 @@ return [
     'unbind_offline_machine_success' => 'オフライン機台の紐付け解除に成功しました',
     'no_machine_to_unbind' => '選択した機台はこのチャネルに紐付けされていません',
     'assign_status' => '割当状態',
+    'assigned' => '割当済み',
     'unassigned' => '未割当',
     'bound_store' => '紐付け店舗',
     'unbound_store' => '未紐付け',

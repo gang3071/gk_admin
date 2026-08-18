@@ -108,6 +108,7 @@ return [
     'unbind_offline_machine_success' => '解绑线下机台成功',
     'no_machine_to_unbind' => '所选机台未绑定到该通路',
     'assign_status' => '分配状态',
+    'assigned' => '已分配',
     'unassigned' => '未分配',
     'bound_store' => '绑定店家',
     'unbound_store' => '未绑定',

@@ -107,6 +107,7 @@ return [
     'unbind_offline_machine_success' => 'Unbind offline machines successfully',
     'no_machine_to_unbind' => 'Selected machines are not bound to this channel',
     'assign_status' => 'Assignment Status',
+    'assigned' => 'Assigned',
     'unassigned' => 'Unassigned',
     'bound_store' => 'Bound Store',
     'unbound_store' => 'Unbound',
