@@ -1256,7 +1256,18 @@ class ChannelController
                     // 查找当前渠道的绑定记录
                     $channelMachine = $data->channelMachines->firstWhere('department_id', $department_id);
 
-                    if ($channelMachine && $channelMachine->storeAdmin) {
+                    // 调试：记录数据
+                    if ($channelMachine) {
+                        \support\Log::info('ChannelMachine found', [
+                            'machine_id' => $data->id,
+                            'department_id' => $channelMachine->department_id,
+                            'store_admin_id' => $channelMachine->store_admin_id,
+                            'has_storeAdmin' => !is_null($channelMachine->storeAdmin),
+                            'storeAdmin_nickname' => $channelMachine->storeAdmin ? $channelMachine->storeAdmin->nickname : null,
+                        ]);
+                    }
+
+                    if ($channelMachine && $channelMachine->store_admin_id && $channelMachine->storeAdmin) {
                         return Tag::create($channelMachine->storeAdmin->nickname)->color('blue');
                     }
                     return Tag::create(admin_trans('channel.unbound_store'))->color('default');
