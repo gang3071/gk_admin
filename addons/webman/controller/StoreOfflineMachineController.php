@@ -40,7 +40,7 @@ class StoreOfflineMachineController
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_SLOT), $this->slotList())
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL), $this->steelBallList())
             ->type('card')
-            ->destroyInactiveTabPane()
+            // ->destroyInactiveTabPane()  // 注释掉，避免销毁 Grid 导致 gridBatch 失效
         );
     }
 
