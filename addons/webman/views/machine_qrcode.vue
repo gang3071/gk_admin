@@ -36,16 +36,19 @@
       />
 
       <div class="qr-buttons">
-        <a-button type="primary" @click="downloadQrCode" size="large" block>
+        <a-button type="primary" @click="downloadQrCode" size="large">
           <template #icon>
             <download-outlined />
           </template>
           下载二维码
         </a-button>
-      </div>
 
-      <div style="margin-top: 12px; text-align: center; color: #999; font-size: 12px;">
-        提示：下载后可使用系统打印功能打印图片
+        <a-button @click="printQrCode" size="large">
+          <template #icon>
+            <printer-outlined />
+          </template>
+          打印二维码
+        </a-button>
       </div>
     </div>
   </div>
@@ -277,6 +280,75 @@ export default {
           this.$message.error('下载失败');
         }
       }
+    },
+
+    printQrCode() {
+      const canvas = this.$refs.qrcodeCanvas;
+      if (!canvas) return;
+
+      try {
+        // 1. 转换 canvas 为图片
+        const dataUrl = canvas.toDataURL('image/png');
+
+        // 2. 创建临时打印容器（纯 DOM 元素，不使用 HTML 字符串）
+        const printContainer = document.createElement('div');
+        printContainer.className = 'qrcode-print-container';
+
+        // 3. 创建标题
+        const title = document.createElement('h2');
+        title.textContent = '机台二维码';
+        printContainer.appendChild(title);
+
+        // 4. 创建信息区域
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'print-info';
+
+        const codeInfo = document.createElement('div');
+        codeInfo.innerHTML = `<strong>机台编号：</strong>${this.machineCode}`;
+        infoDiv.appendChild(codeInfo);
+
+        const nameInfo = document.createElement('div');
+        nameInfo.innerHTML = `<strong>机台名称：</strong>${this.machineName}`;
+        infoDiv.appendChild(nameInfo);
+
+        const idInfo = document.createElement('div');
+        idInfo.innerHTML = `<strong>机台ID：</strong>${this.machineId}`;
+        infoDiv.appendChild(idInfo);
+
+        printContainer.appendChild(infoDiv);
+
+        // 5. 创建二维码图片
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.alt = '机台二维码';
+        img.className = 'print-qrcode-image';
+        printContainer.appendChild(img);
+
+        // 6. 创建底部提示
+        const hint = document.createElement('div');
+        hint.className = 'print-hint';
+        hint.textContent = '扫描此二维码查看机台信息';
+        printContainer.appendChild(hint);
+
+        // 7. 添加到 body
+        document.body.appendChild(printContainer);
+
+        // 8. 执行打印
+        setTimeout(() => {
+          window.print();
+
+          // 9. 监听打印完成后清理（延迟确保打印完成）
+          setTimeout(() => {
+            document.body.removeChild(printContainer);
+          }, 1000);
+        }, 100);
+
+      } catch (error) {
+        console.error('Print failed:', error);
+        if (this.$message) {
+          this.$message.error('打印失败');
+        }
+      }
     }
   }
 };
@@ -342,5 +414,71 @@ export default {
 
 .qr-buttons .ant-btn {
   min-width: 140px;
+}
+</style>
+
+<style>
+/* 全局打印样式（不能 scoped，因为打印元素在 body 下） */
+
+/* 打印容器默认隐藏 */
+.qrcode-print-container {
+  display: none;
+}
+
+/* 打印时的样式 */
+@media print {
+  /* 隐藏页面所有内容 */
+  body > *:not(.qrcode-print-container) {
+    display: none !important;
+  }
+
+  /* 显示打印容器 */
+  .qrcode-print-container {
+    display: block !important;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .qrcode-print-container h2 {
+    font-size: 24px;
+    color: #333;
+    margin-bottom: 20px;
+  }
+
+  .qrcode-print-container .print-info {
+    margin: 20px auto;
+    max-width: 400px;
+    text-align: left;
+    line-height: 1.8;
+  }
+
+  .qrcode-print-container .print-info div {
+    margin: 8px 0;
+  }
+
+  .qrcode-print-container .print-info strong {
+    color: #666;
+    font-weight: bold;
+  }
+
+  .qrcode-print-container .print-qrcode-image {
+    width: 300px;
+    height: 300px;
+    margin: 20px auto;
+    display: block;
+    border: 2px solid #eee;
+  }
+
+  .qrcode-print-container .print-hint {
+    margin-top: 10px;
+    color: #999;
+    font-size: 12px;
+  }
+
+  /* 设置打印页面 */
+  @page {
+    size: portrait;
+    margin: 1cm;
+  }
 }
 </style>
