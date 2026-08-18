@@ -36,19 +36,16 @@
       />
 
       <div class="qr-buttons">
-        <a-button type="primary" @click="downloadQrCode" size="large">
+        <a-button type="primary" @click="downloadQrCode" size="large" block>
           <template #icon>
             <download-outlined />
           </template>
           下载二维码
         </a-button>
+      </div>
 
-        <a-button @click="printQrCode" size="large">
-          <template #icon>
-            <printer-outlined />
-          </template>
-          打印二维码
-        </a-button>
+      <div style="margin-top: 12px; text-align: center; color: #999; font-size: 12px;">
+        提示：下载后可使用系统打印功能打印图片
       </div>
     </div>
   </div>
@@ -278,102 +275,6 @@ export default {
         console.error('Download failed:', error);
         if (this.$message) {
           this.$message.error('下载失败');
-        }
-      }
-    },
-
-    printQrCode() {
-      const canvas = this.$refs.qrcodeCanvas;
-      if (!canvas) return;
-
-      try {
-        const dataUrl = canvas.toDataURL('image/png');
-
-        // 使用隐藏的 iframe 进行打印，避免影响主页面样式
-        const printContent = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>机台二维码 - ${this.machineCode}</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              html, body { width: 100%; height: 100%; overflow-x: hidden; }
-              body {
-                font-family: Arial, sans-serif;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                min-width: 600px;
-              }
-              h2 { margin-bottom: 20px; color: #333; font-size: 24px; }
-              .info { margin: 15px 0; line-height: 1.8; width: 100%; max-width: 400px; }
-              .label { font-weight: bold; color: #666; }
-              img { margin: 20px 0; width: 300px; height: 300px; border: 2px solid #eee; display: block; }
-              @media print {
-                body { padding: 0; min-width: auto; }
-                @page { size: portrait; margin: 1cm; }
-              }
-            </style>
-          </head>
-          <body>
-            <h2>机台二维码</h2>
-            <div class="info">
-              <div><span class="label">机台编号：</span>${this.machineCode}</div>
-              <div><span class="label">机台名称：</span>${this.machineName}</div>
-              <div><span class="label">机台ID：</span>${this.machineId}</div>
-            </div>
-            <img src="${dataUrl}" alt="机台二维码" />
-            <div style="margin-top: 10px; color: #999; font-size: 12px;">
-              扫描此二维码查看机台信息
-            </div>
-          </body>
-          </html>
-        `;
-
-        // 创建隐藏的 iframe
-        const printFrame = document.createElement('iframe');
-        printFrame.style.position = 'fixed';
-        printFrame.style.top = '-9999px';
-        printFrame.style.left = '-9999px';
-        printFrame.style.width = '0';
-        printFrame.style.height = '0';
-        printFrame.style.border = 'none';
-
-        document.body.appendChild(printFrame);
-
-        // 写入内容
-        const frameDoc = printFrame.contentWindow.document;
-        frameDoc.open();
-        frameDoc.write(printContent);
-        frameDoc.close();
-
-        // 等待图片加载后打印
-        printFrame.contentWindow.onload = () => {
-          setTimeout(() => {
-            try {
-              printFrame.contentWindow.print();
-
-              // 打印完成后移除 iframe
-              setTimeout(() => {
-                document.body.removeChild(printFrame);
-              }, 100);
-            } catch (e) {
-              console.error('Print error:', e);
-              document.body.removeChild(printFrame);
-              if (this.$message) {
-                this.$message.error('打印失败');
-              }
-            }
-          }, 500);
-        };
-
-      } catch (error) {
-        console.error('Print failed:', error);
-        if (this.$message) {
-          this.$message.error('打印失败');
         }
       }
     }
