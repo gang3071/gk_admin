@@ -474,15 +474,9 @@ export default {
   font-size: 14px;
   line-height: 1.5715;
   color: rgba(0, 0, 0, 0.85);
-  /* 自适应高度 - 纯 CSS 实现 */
-  display: flex;
-  flex-direction: column;
-  max-height: 90vh;
-  overflow: hidden;
 }
 
 .qr-header {
-  flex-shrink: 0;
   text-align: center;
   margin-bottom: 12px;
 }
@@ -497,12 +491,10 @@ export default {
 }
 
 .qr-info {
-  flex-shrink: 0;
   margin-bottom: 12px;
 }
 
 .qr-canvas-wrapper {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -510,64 +502,39 @@ export default {
   background-color: #f5f5f5;
   border-radius: 8px;
   margin-bottom: 12px;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .qr-canvas {
   display: block;
   border: 1px solid #d9d9d9;
   background-color: #ffffff;
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
 }
 
 .qr-footer {
-  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+}
+
+.qr-footer > * {
+  margin-bottom: 12px;
+}
+
+.qr-footer > *:last-child {
+  margin-bottom: 0;
 }
 
 .qr-buttons {
   display: flex;
   justify-content: center;
-  gap: 12px;
   flex-wrap: wrap;
+}
+
+.qr-buttons > * {
+  margin: 0 6px 6px 6px;
 }
 
 .qr-buttons .ant-btn {
   min-width: 120px;
-}
-
-/* 小屏幕优化 */
-@media (max-height: 700px) {
-  .qr-modal-container {
-    padding: 12px;
-    max-height: 95vh;
-  }
-
-  .qr-header {
-    margin-bottom: 8px;
-  }
-
-  .qr-header h3 {
-    font-size: 16px;
-  }
-
-  .qr-info {
-    margin-bottom: 8px;
-  }
-
-  .qr-canvas-wrapper {
-    padding: 12px;
-    margin-bottom: 8px;
-  }
-
-  .qr-footer {
-    gap: 8px;
-  }
 }
 </style>
 
