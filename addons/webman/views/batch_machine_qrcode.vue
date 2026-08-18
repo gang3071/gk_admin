@@ -408,7 +408,8 @@ export default {
 <style scoped>
 .batch-qrcode-container {
   padding: 20px;
-  height: 100vh;
+  min-height: 600px;
+  max-height: 80vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
