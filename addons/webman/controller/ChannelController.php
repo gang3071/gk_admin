@@ -1177,7 +1177,7 @@ class ChannelController
             ->pluck('machine_id')
             ->toArray();
 
-        return Grid::create(new $this->machineModel(), function (Grid $grid) use ($department_id, $boundToOtherChannels) {
+        return Grid::create(new $this->machineModel(), function (Grid $grid) use ($department_id, $boundToOtherChannels, $selectedId) {
             $grid->title(admin_trans('channel.add_offline_machine'));
 
             // 只显示线下机台，且排除已绑定到其他渠道的
@@ -1236,9 +1236,25 @@ class ChannelController
             $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
 
             $grid->hideDelete();
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, $data) use ($department_id, $selectedId) {
                 $actions->hideDel();
                 $actions->hideEdit();
+
+                // 如果机台已绑定到当前渠道，显示解绑按钮
+                if (in_array($data['id'], $selectedId)) {
+                    $actions->append(
+                        Button::create(admin_trans('channel.unbind_offline_machine'))
+                            ->type('danger')
+                            ->size('small')
+                            ->icon(Icon::create('fas fa-unlink'))
+                            ->confirm(
+                                admin_trans('channel.unbind_offline_machine_confirm'),
+                                [$this, 'unbindOfflineMachine'],
+                                ['machine_id' => $data['id'], 'department_id' => $department_id]
+                            )
+                            ->gridRefresh()
+                    );
+                }
             });
 
             $grid->pagination()->pageSize(25);
@@ -1252,15 +1268,6 @@ class ChannelController
                         [
                             $this,
                             'addOfflineMachine?' . http_build_query($param)
-                        ])
-                    ->gridBatch()->gridRefresh(),
-                Button::create(admin_trans('channel.unbind_offline_machine'))
-                    ->type('danger')
-                    ->icon(Icon::create('fas fa-unlink'))
-                    ->confirm(admin_trans('channel.unbind_offline_machine_confirm'),
-                        [
-                            $this,
-                            'unbindOfflineMachine?' . http_build_query($param)
                         ])
                     ->gridBatch()->gridRefresh()
             );
@@ -1375,46 +1382,36 @@ class ChannelController
 
     /**
      * 解绑线下机台
-     * @param $selected
-     * @param $department_id
-     * @param $size
-     * @param $page
-     * @param array $ex_admin_filter
+     * @param int $machine_id
+     * @param int $department_id
      * @return Msg
      * @auth true
      */
-    public function unbindOfflineMachine($selected, $department_id, $size, $page, array $ex_admin_filter = []): Msg
+    public function unbindOfflineMachine(int $machine_id, int $department_id): Msg
     {
-        if (!isset($selected) || empty($selected)) {
-            return message_error(admin_trans('channel.selected_machine'));
-        }
-
         /** @var Channel $channel */
         $channel = Channel::query()->where('department_id', $department_id)->first();
         if (empty($channel)) {
             return message_error(admin_trans('channel.channel_not_found'));
         }
 
-        // 验证选中的机台是否绑定到当前渠道
-        $boundMachines = ChannelMachine::query()
+        // 验证机台是否绑定到当前渠道
+        $boundMachine = ChannelMachine::query()
             ->where('department_id', $department_id)
-            ->whereIn('machine_id', $selected)
+            ->where('machine_id', $machine_id)
             ->whereHas('machine', function ($query) {
                 $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
             })
-            ->get();
+            ->first();
 
-        if ($boundMachines->isEmpty()) {
+        if (!$boundMachine) {
             return message_error(admin_trans('channel.no_machine_to_unbind'));
         }
 
         DB::beginTransaction();
         try {
             // 删除渠道机台绑定（会同时删除店家绑定，因为是同一条记录）
-            ChannelMachine::query()
-                ->where('department_id', $department_id)
-                ->whereIn('machine_id', $selected)
-                ->delete();
+            $boundMachine->delete();
 
             // 更新渠道机台数量
             $channel->machine_num = ChannelMachine::query()->where('department_id', $department_id)->count();
