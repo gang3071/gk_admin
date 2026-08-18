@@ -232,7 +232,10 @@ export default {
      */
     adjustCanvasSize() {
       this.$nextTick(() => {
-        const wrapper = this.$refs.qrcodeCanvas?.parentElement;
+        const canvas = this.$refs.qrcodeCanvas;
+        if (!canvas) return;
+
+        const wrapper = canvas.parentElement;
         if (!wrapper) return;
 
         const rect = wrapper.getBoundingClientRect();
