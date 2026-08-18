@@ -314,21 +314,25 @@ class ChannelController
         return Form::create(new $this->model, function (Form $form) {
             $form->title(admin_trans('channel.title'));
 
-            $form->row(function (Form $form) {
-                $form->text('name', admin_trans('channel.fields.name'))
-                    ->ruleChsDash()
-                    ->rule([
-                        (string)Rule::unique(plugin()->webman->config('database.channel_model'))->ignore($form->input('id')) => admin_trans('channel.name_exist'),
-                    ])
-                    ->required();
-                $form->text('domain', admin_trans('channel.fields.domain'))
-                    ->ruleUrl()
-                    ->rule([
-                        (string)Rule::unique(plugin()->webman->config('database.channel_model'))->ignore($form->input('id')) => admin_trans('channel.channel_exist'),
-                    ])
-                    ->required();
-                $form->text('sms_name', admin_trans('channel.fields.sms_name'))->maxlength(10);
-            });
+            $form->text('name', admin_trans('channel.fields.name'))
+                ->ruleChsDash()
+                ->rule([
+                    (string)Rule::unique(plugin()->webman->config('database.channel_model'))->ignore($form->input('id')) => admin_trans('channel.name_exist'),
+                ])
+                ->required()
+                ->style(['width' => '100%']);
+
+            $form->text('domain', admin_trans('channel.fields.domain'))
+                ->ruleUrl()
+                ->rule([
+                    (string)Rule::unique(plugin()->webman->config('database.channel_model'))->ignore($form->input('id')) => admin_trans('channel.channel_exist'),
+                ])
+                ->required()
+                ->style(['width' => '100%']);
+
+            $form->text('sms_name', admin_trans('channel.fields.sms_name'))
+                ->maxlength(10)
+                ->style(['width' => '100%']);
 
             $form->hasMany('domain_ext', admin_trans('channel.fields.domain_ext'), function (Form $form) {
                 $form->text('domain', admin_trans('channel.fields.domain_ext'))
@@ -337,14 +341,25 @@ class ChannelController
                         (string)Rule::unique(plugin()->webman->config('database.channel_model'))->ignore($form->input('id')) => admin_trans('channel.channel_exist')
                     ]);
             });
-            $form->text('client_version', admin_trans('channel.fields.client_version'))->rule([
-                'regex:/^\d+\.\d+\.\d+$/' => admin_trans('channel.app_version_regex')
-            ])->maxlength(30)->required();
-            $form->row(function (Form $form) {
-                $form->text('department.phone', admin_trans('channel.fields.phone'))->ruleNumber();
-                $form->text('department.leader', admin_trans('channel.fields.leader'));
-            });
-            $form->text('download_url', admin_trans('channel.fields.download_url'))->maxlength('255')->ruleUrl();
+            $form->text('client_version', admin_trans('channel.fields.client_version'))
+                ->rule([
+                    'regex:/^\d+\.\d+\.\d+$/' => admin_trans('channel.app_version_regex')
+                ])
+                ->maxlength(30)
+                ->required()
+                ->style(['width' => '100%']);
+
+            $form->text('department.phone', admin_trans('channel.fields.phone'))
+                ->ruleNumber()
+                ->style(['width' => '100%']);
+
+            $form->text('department.leader', admin_trans('channel.fields.leader'))
+                ->style(['width' => '100%']);
+
+            $form->text('download_url', admin_trans('channel.fields.download_url'))
+                ->maxlength('255')
+                ->ruleUrl()
+                ->style(['width' => '100%']);
 
             // 线下渠道开关
             $form->switch('is_offline', admin_trans('channel.fields.is_offline'))
@@ -401,28 +416,31 @@ class ChannelController
                     3 => admin_trans('channel.type.' . Channel::TYPE_AGENT),
                 ])
                 ->required();
-            $form->row(function (Form $form) {
-                if (!$form->isEdit()) {
-                    $form->text('user.username', admin_trans('channel.fields.username'))
-                        ->ruleChsDash()
-                        ->rule([
-                            (string)Rule::unique(plugin()->webman->config('database.user_model'),
-                                'username')->ignore($form->input('id')) => admin_trans('admin.username_exist'),
-                        ])
-                        ->required()
-                        ->addonAfter(Copy::create($form->input('user.username')))
-                        ->disabled($form->isEdit());
-                    $form->password('user.password', admin_trans('channel.fields.password'))
-                        ->default(123456)
-                        ->help(admin_trans('admin.pass_help'))
-                        ->required();
-                } else {
-                    $form->text('user.username', admin_trans('channel.fields.username'))
-                        ->ruleChsDash()
-                        ->addonAfter(Copy::create($form->input('user.username')))
-                        ->disabled($form->isEdit());
-                }
-            });
+
+            if (!$form->isEdit()) {
+                $form->text('user.username', admin_trans('channel.fields.username'))
+                    ->ruleChsDash()
+                    ->rule([
+                        (string)Rule::unique(plugin()->webman->config('database.user_model'),
+                            'username')->ignore($form->input('id')) => admin_trans('admin.username_exist'),
+                    ])
+                    ->required()
+                    ->addonAfter(Copy::create($form->input('user.username')))
+                    ->disabled($form->isEdit())
+                    ->style(['width' => '100%']);
+
+                $form->password('user.password', admin_trans('channel.fields.password'))
+                    ->default(123456)
+                    ->help(admin_trans('admin.pass_help'))
+                    ->required()
+                    ->style(['width' => '100%']);
+            } else {
+                $form->text('user.username', admin_trans('channel.fields.username'))
+                    ->ruleChsDash()
+                    ->addonAfter(Copy::create($form->input('user.username')))
+                    ->disabled($form->isEdit())
+                    ->style(['width' => '100%']);
+            }
             $gamePlatformList = GamePlatform::query()->where('status', 1)->get();
             $optionList = [];
             /** @var GamePlatform $item */
@@ -515,69 +533,68 @@ class ChannelController
                     $channelFunction[] = 'vip_level_status';
                 }
             }
-            $form->row(function (Form $form) use ($channelFunction) {
-                $form->checkbox('channel_function', admin_trans('channel.fields.channel_function'))
-                    ->value($channelFunction)
-                    ->options([
-                        'web_login_status' => admin_trans('channel.fields.web_login_status'),
-                        'recharge_status' => admin_trans('channel.fields.recharge_status'),
-                        'withdraw_status' => admin_trans('channel.fields.withdraw_status'),
-                        'q_talk_recharge_status' => admin_trans('channel.fields.q_talk_recharge_status'),
-                        'q_talk_point_status' => admin_trans('channel.fields.q_talk_point_status'),
-                        'q_talk_withdraw_status' => admin_trans('channel.fields.q_talk_withdraw_status'),
-                        'promotion_status' => admin_trans('channel.fields.promotion_status'),
-                        'wallet_action_status' => admin_trans('channel.fields.wallet_action_status'),
-                        'coin_status' => admin_trans('channel.fields.coin_status'),
-                        1 => admin_trans('channel.fields.line_login_status'),
-                        'national_promoter_status' => admin_trans('channel.fields.national_promoter_status'),
-                        'reverse_water_status' => admin_trans('channel.fields.reverse_water_status'),
-                        'discussion_group_status' => admin_trans('channel.fields.discussion_group_status'),
-                        'ranking_status' => admin_trans('channel.fields.ranking_status'),
-                        'activity_status' => admin_trans('channel.fields.activity_status'),
-                        'lottery_status' => admin_trans('channel.fields.lottery_status'),
-                        'lottery_ticket_enabled' => admin_trans('channel.fields.lottery_ticket_enabled'),
-                        'gb_payment_recharge_status' => admin_trans('channel.fields.gb_payment_recharge_status'),
-                        'gb_payment_withdraw_status' => admin_trans('channel.fields.gb_payment_withdraw_status'),
-                        'status_machine' => admin_trans('channel.fields.status_machine'),
-                        'eh_payment_recharge_status' => admin_trans('channel.fields.eh_payment_recharge_status'),
-                        'eh_payment_withdraw_status' => admin_trans('channel.fields.eh_payment_withdraw_status'),
-                        'vip_level_status' => admin_trans('channel.fields.vip_level_status'),
-                    ])
-                    ->help(admin_trans('channel.channel_function_help'))
-                    ->when([1], function (Form $form) {
-                        $form->text('line_client_id', admin_trans('channel.fields.line_client_id'))
-                            ->maxlength('50')
-                            ->help(admin_trans('channel.line_client_id_help'));
-                    })
-                    ->when(['vip_level_status'], function (Form $form) {
-                        // 获取当前渠道的VIP等级列表
-                        $vipLevelOptions = [];
-                        $enabledLevelIds = [];
-                        if ($form->isEdit()) {
-                            $id = $form->driver()->get('id');
-                            $channel = Channel::find($id);
-                            if ($channel) {
-                                $vipLevels = VipLevel::query()
-                                    ->where('department_id', $channel->department_id)
-                                    ->orderBy('sort', 'asc')
-                                    ->get();
-                                foreach ($vipLevels as $level) {
-                                    $vipLevelOptions[$level->id] = $level->name;
-                                    if ($level->status == VipLevel::STATUS_ENABLED) {
-                                        $enabledLevelIds[] = $level->id;
-                                    }
+            $form->checkbox('channel_function', admin_trans('channel.fields.channel_function'))
+                ->value($channelFunction)
+                ->options([
+                    'web_login_status' => admin_trans('channel.fields.web_login_status'),
+                    'recharge_status' => admin_trans('channel.fields.recharge_status'),
+                    'withdraw_status' => admin_trans('channel.fields.withdraw_status'),
+                    'q_talk_recharge_status' => admin_trans('channel.fields.q_talk_recharge_status'),
+                    'q_talk_point_status' => admin_trans('channel.fields.q_talk_point_status'),
+                    'q_talk_withdraw_status' => admin_trans('channel.fields.q_talk_withdraw_status'),
+                    'promotion_status' => admin_trans('channel.fields.promotion_status'),
+                    'wallet_action_status' => admin_trans('channel.fields.wallet_action_status'),
+                    'coin_status' => admin_trans('channel.fields.coin_status'),
+                    1 => admin_trans('channel.fields.line_login_status'),
+                    'national_promoter_status' => admin_trans('channel.fields.national_promoter_status'),
+                    'reverse_water_status' => admin_trans('channel.fields.reverse_water_status'),
+                    'discussion_group_status' => admin_trans('channel.fields.discussion_group_status'),
+                    'ranking_status' => admin_trans('channel.fields.ranking_status'),
+                    'activity_status' => admin_trans('channel.fields.activity_status'),
+                    'lottery_status' => admin_trans('channel.fields.lottery_status'),
+                    'lottery_ticket_enabled' => admin_trans('channel.fields.lottery_ticket_enabled'),
+                    'gb_payment_recharge_status' => admin_trans('channel.fields.gb_payment_recharge_status'),
+                    'gb_payment_withdraw_status' => admin_trans('channel.fields.gb_payment_withdraw_status'),
+                    'status_machine' => admin_trans('channel.fields.status_machine'),
+                    'eh_payment_recharge_status' => admin_trans('channel.fields.eh_payment_recharge_status'),
+                    'eh_payment_withdraw_status' => admin_trans('channel.fields.eh_payment_withdraw_status'),
+                    'vip_level_status' => admin_trans('channel.fields.vip_level_status'),
+                ])
+                ->help(admin_trans('channel.channel_function_help'))
+                ->when([1], function (Form $form) {
+                    $form->text('line_client_id', admin_trans('channel.fields.line_client_id'))
+                        ->maxlength('50')
+                        ->help(admin_trans('channel.line_client_id_help'))
+                        ->style(['width' => '100%']);
+                })
+                ->when(['vip_level_status'], function (Form $form) {
+                    // 获取当前渠道的VIP等级列表
+                    $vipLevelOptions = [];
+                    $enabledLevelIds = [];
+                    if ($form->isEdit()) {
+                        $id = $form->driver()->get('id');
+                        $channel = Channel::find($id);
+                        if ($channel) {
+                            $vipLevels = VipLevel::query()
+                                ->where('department_id', $channel->department_id)
+                                ->orderBy('sort', 'asc')
+                                ->get();
+                            foreach ($vipLevels as $level) {
+                                $vipLevelOptions[$level->id] = $level->name;
+                                if ($level->status == VipLevel::STATUS_ENABLED) {
+                                    $enabledLevelIds[] = $level->id;
                                 }
                             }
                         }
+                    }
 
-                        if (!empty($vipLevelOptions)) {
-                            $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
-                                ->options($vipLevelOptions)
-                                ->value($enabledLevelIds)
-                                ->help(admin_trans('channel.help.vip_levels'));
-                        }
-                    });
-            });
+                    if (!empty($vipLevelOptions)) {
+                        $form->checkbox('vip_levels', admin_trans('channel.fields.vip_levels'))
+                            ->options($vipLevelOptions)
+                            ->value($enabledLevelIds)
+                            ->help(admin_trans('channel.help.vip_levels'));
+                    }
+                });
 
             $form->layout('vertical');
 
