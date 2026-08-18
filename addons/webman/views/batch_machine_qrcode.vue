@@ -408,57 +408,27 @@ export default {
 <style scoped>
 .batch-qrcode-container {
   padding: 20px;
-  min-height: 600px;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
 .action-bar {
-  flex-shrink: 0;
   background: #fff;
-  z-index: 10;
   padding: 15px;
+  margin-bottom: 20px;
   border-bottom: 1px solid #e8e8e8;
 }
 
 .canvas-wrapper {
-  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   background: #f0f0f0;
   padding: 20px;
-  overflow: hidden;
+  min-height: 500px;
 }
 
 .batch-canvas {
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: block;
-  /* Canvas 实际尺寸保持不变，通过 transform: scale() 缩放 */
-}
-
-@media print {
-  .batch-qrcode-container {
-    height: auto;
-    overflow: visible;
-  }
-
-  .action-bar {
-    display: none !important;
-  }
-
-  .canvas-wrapper {
-    background: transparent !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
-
-  .batch-canvas {
-    box-shadow: none !important;
-    transform: none !important; /* 打印时取消缩放 */
-  }
 }
 </style>
