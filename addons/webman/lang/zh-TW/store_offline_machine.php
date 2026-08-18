@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => '線下機台管理',
+    'title' => '線下機台列表',
     'slot_list' => '斯洛機台列表',
     'steel_ball_list' => '鋼珠機台列表',
     'slot_info_list' => '斯洛機台資訊',

@@ -34,27 +34,13 @@ class StoreOfflineMachineController
      * @auth true
      * @group store
      */
-    public function index(): Card
-    {
-        return Card::create(Tabs::create()
-            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_SLOT), $this->slotList())
-            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL), $this->steelBallList())
-            ->type('card')
-            // ->destroyInactiveTabPane()  // 注释掉，避免销毁 Grid 导致 gridBatch 失效
-        );
-    }
-
-    /**
-     * 斯洛机台列表
-     * @return Grid
-     */
-    private function slotList(): Grid
+    public function index(): Grid
     {
         return Grid::create(new $this->model(), function (Grid $grid) {
             $storeAdminId = Admin::user()->id;
             $departmentId = Admin::user()->department_id;
 
-            // 查询绑定到当前店家的线下斯洛机台
+            // 查询绑定到当前店家的线下机台（包含斯洛和钢珠）
             $grid->model()
                 ->select([
                     'machine.*',
@@ -65,17 +51,20 @@ class StoreOfflineMachineController
                 ->where('channel_machine.department_id', $departmentId)
                 ->where('channel_machine.store_admin_id', $storeAdminId)
                 ->where('machine.machine_source', Machine::MACHINE_SOURCE_OFFLINE)
-                ->where('machine.type', GameType::TYPE_SLOT)
+                ->whereIn('machine.type', [GameType::TYPE_SLOT, GameType::TYPE_STEEL_BALL])  // 包含两种类型
                 ->whereNull('machine.deleted_at')
                 ->with(['gamingPlayer', 'machineLabel'])
                 ->orderBy('machine.code', 'asc');
 
-            $grid->title(admin_trans('store_offline_machine.slot_list'));
+            $grid->title(admin_trans('store_offline_machine.title'));
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->driver()->setPk('id');
             $grid->column('id', 'ID')->width(80)->align('center');
             $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
+            $grid->column('type', admin_trans('machine.fields.type'))->display(function ($val) {
+                return Tag::create(getGameTypeName($val))->color($val == GameType::TYPE_SLOT ? 'blue' : 'orange');
+            })->width(100)->align('center');
             $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
                 return $data->machineLabel->name ?? '-';
             })->width(150);
@@ -117,124 +106,12 @@ class StoreOfflineMachineController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
-                $filter->eq()->select('machine.status')
-                    ->placeholder(admin_trans('machine.fields.status'))
+                $filter->eq()->select('machine.type')
+                    ->placeholder(admin_trans('machine.fields.type'))
                     ->options([
-                        1 => admin_trans('admin.open'),
-                        0 => admin_trans('admin.close')
+                        GameType::TYPE_SLOT => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT),
+                        GameType::TYPE_STEEL_BALL => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL),
                     ]);
-            });
-
-            $grid->hideDelete();
-            $grid->hideDeleteSelection();
-            $grid->hideTrashed();
-
-            // 批量操作工具栏按钮 - 严格按照 ExAdmin 标准模式
-            // 构建 URL 参数（空参数也需要显式传递）
-            $param = [];
-            $grid->tools(
-                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                    ->type('primary')
-                    ->icon(Icon::create('fas fa-qrcode'))
-                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
-                        [
-                            $this,
-                            'batchQrCode?' . http_build_query($param)  // 关键：必须有 ?
-                        ])
-                    ->gridBatch()
-                    ->gridRefresh()
-            );
-
-            $grid->actions(function ($actions, $data) {
-                $actions->hideEdit();
-                $actions->hideDel();
-
-                // 查看二维码
-                $actions->append(
-                    Button::create(admin_trans('store_offline_machine.actions.view_qrcode'))
-                        ->type('primary')
-                        ->size('small')
-                        ->icon(Icon::create('fas fa-qrcode'))
-                        ->modal([$this, 'viewQrCode'], ['machine_id' => $data['id']])
-                        ->width('550px')
-                );
-            });
-        });
-    }
-
-    /**
-     * 钢珠机台列表
-     * @return Grid
-     */
-    private function steelBallList(): Grid
-    {
-        return Grid::create(new $this->model(), function (Grid $grid) {
-            $storeAdminId = Admin::user()->id;
-            $departmentId = Admin::user()->department_id;
-
-            // 查询绑定到当前店家的线下钢珠机台
-            $grid->model()
-                ->select([
-                    'machine.*',
-                    'machine_category.name as category_name'
-                ])
-                ->join('channel_machine', 'machine.id', '=', 'channel_machine.machine_id')
-                ->leftJoin('machine_category', 'machine.cate_id', '=', 'machine_category.id')
-                ->where('channel_machine.department_id', $departmentId)
-                ->where('channel_machine.store_admin_id', $storeAdminId)
-                ->where('machine.machine_source', Machine::MACHINE_SOURCE_OFFLINE)
-                ->where('machine.type', GameType::TYPE_STEEL_BALL)
-                ->whereNull('machine.deleted_at')
-                ->with(['gamingPlayer', 'machineLabel'])
-                ->orderBy('machine.code', 'asc');
-
-            $grid->title(admin_trans('store_offline_machine.steel_ball_list'));
-            $grid->autoHeight();
-            $grid->bordered(true);
-
-            $grid->column('id', 'ID')->width(80)->align('center');
-            $grid->column('code', admin_trans('machine.fields.code'))->width(120)->align('center');
-            $grid->column('label_id', admin_trans('machine.fields.name'))->display(function ($val, Machine $data) {
-                return $data->machineLabel->name ?? '-';
-            })->width(150);
-            $grid->column('category_name', admin_trans('machine.fields.cate_id'))->width(120)->align('center');
-
-            // 游戏状态
-            $grid->column('gaming', admin_trans('machine.fields.gaming'))
-                ->display(function ($val, Machine $data) {
-                    if ($data->gaming_user_id > 0) {
-                        return Tag::create(admin_trans('machine.gaming'))->color('green');
-                    }
-                    return Tag::create(admin_trans('machine.not_gaming'))->color('default');
-                })
-                ->width(100)->align('center');
-
-            // 游戏中设备
-            $grid->column('gaming_player', admin_trans('store_offline_machine.gaming_device'))
-                ->display(function ($val, Machine $data) {
-                    if ($data->gamingPlayer) {
-                        return Html::create()->content([
-                            Html::div()->content($data->gamingPlayer->name),
-                            Html::small()->content('UUID: ' . $data->gamingPlayer->uuid)->style(['color' => '#999'])
-                        ]);
-                    }
-                    return '-';
-                })
-                ->width(180);
-
-            $grid->column('status', admin_trans('machine.fields.status'))
-                ->display(function ($val) {
-                    return $val == 1
-                        ? Tag::create(admin_trans('admin.open'))->color('green')
-                        : Tag::create(admin_trans('admin.close'))->color('red');
-                })
-                ->width(80)->align('center');
-
-            $grid->column('created_at', admin_trans('machine.fields.created_at'))->width(160)->align('center');
-
-            $grid->filter(function (Filter $filter) {
-                $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
-                $filter->like()->text('machineLabel.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->eq()->select('machine.status')
                     ->placeholder(admin_trans('machine.fields.status'))
                     ->options([
