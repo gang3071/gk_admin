@@ -20,8 +20,12 @@
     </div>
 
     <!-- A4 画布预览 -->
-    <div v-show="!generating" class="canvas-wrapper" style="background: #f0f0f0; padding: 20px; overflow-x: auto;">
-      <canvas ref="batchCanvas" class="batch-canvas"></canvas>
+    <div v-show="!generating" class="canvas-wrapper" ref="canvasWrapper">
+      <canvas
+        ref="batchCanvas"
+        class="batch-canvas"
+        :style="canvasStyle"
+      ></canvas>
     </div>
   </div>
 </template>
@@ -50,6 +54,7 @@ export default {
     return {
       generating: false,
       qrcodeLoaded: false,
+      canvasScale: 1,   // Canvas 缩放比例
 
       // A4 纸张尺寸 (96 DPI)
       pageWidth: 794,   // 210mm
@@ -71,6 +76,14 @@ export default {
     },
     cellHeight() {
       return this.qrSize + this.textHeight + this.gapY;
+    },
+    // Canvas 缩放样式
+    canvasStyle() {
+      return {
+        transform: `scale(${this.canvasScale})`,
+        transformOrigin: 'center center',
+        transition: 'transform 0.3s ease'
+      };
     }
   },
   created() {
@@ -79,6 +92,12 @@ export default {
   },
   mounted() {
     this.loadQRCodeLibrary();
+    // 监听窗口大小变化
+    window.addEventListener('resize', this.calculateCanvasScale);
+  },
+  beforeUnmount() {
+    // 移除监听器
+    window.removeEventListener('resize', this.calculateCanvasScale);
   },
   methods: {
     /**
@@ -156,11 +175,41 @@ export default {
         }
 
         this.generating = false;
+
+        // 生成完成后计算缩放比例
+        await this.$nextTick();
+        this.calculateCanvasScale();
       } catch (error) {
         console.error('Generate QR codes failed:', error);
         this.$message.error(this.$t('生成二維碼失敗'));
         this.generating = false;
       }
+    },
+
+    /**
+     * 计算 Canvas 缩放比例，使其适应可视区域
+     */
+    calculateCanvasScale() {
+      this.$nextTick(() => {
+        const wrapper = this.$refs.canvasWrapper;
+        const canvas = this.$refs.batchCanvas;
+
+        if (!wrapper || !canvas) {
+          return;
+        }
+
+        // 获取容器尺寸
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const wrapperWidth = wrapperRect.width - 40; // 减去 padding
+        const wrapperHeight = wrapperRect.height - 40;
+
+        // 计算缩放比例（保持宽高比）
+        const scaleX = wrapperWidth / this.pageWidth;
+        const scaleY = wrapperHeight / this.pageHeight;
+        const scale = Math.min(scaleX, scaleY, 1); // 不放大，只缩小
+
+        this.canvasScale = scale;
+      });
     },
 
     /**
@@ -367,11 +416,14 @@ export default {
 <style scoped>
 .batch-qrcode-container {
   padding: 20px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .action-bar {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   background: #fff;
   z-index: 10;
   padding: 15px;
@@ -379,19 +431,28 @@ export default {
 }
 
 .canvas-wrapper {
+  flex: 1;
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  min-height: 400px;
+  align-items: center;
+  background: #f0f0f0;
+  padding: 20px;
+  overflow: hidden;
 }
 
 .batch-canvas {
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: block;
+  /* Canvas 实际尺寸保持不变，通过 transform: scale() 缩放 */
 }
 
 @media print {
+  .batch-qrcode-container {
+    height: auto;
+    overflow: visible;
+  }
+
   .action-bar {
     display: none !important;
   }
@@ -399,10 +460,12 @@ export default {
   .canvas-wrapper {
     background: transparent !important;
     padding: 0 !important;
+    overflow: visible !important;
   }
 
   .batch-canvas {
     box-shadow: none !important;
+    transform: none !important; /* 打印时取消缩放 */
   }
 }
 </style>
