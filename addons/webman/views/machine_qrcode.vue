@@ -294,12 +294,7 @@ export default {
         const printContainer = document.createElement('div');
         printContainer.className = 'qrcode-print-container';
 
-        // 3. 创建标题
-        const title = document.createElement('h2');
-        title.textContent = '机台二维码';
-        printContainer.appendChild(title);
-
-        // 4. 创建信息区域
+        // 3. 创建机台信息区域（只显示编号和名称）
         const infoDiv = document.createElement('div');
         infoDiv.className = 'print-info';
 
@@ -311,33 +306,23 @@ export default {
         nameInfo.innerHTML = `<strong>机台名称：</strong>${this.machineName}`;
         infoDiv.appendChild(nameInfo);
 
-        const idInfo = document.createElement('div');
-        idInfo.innerHTML = `<strong>机台ID：</strong>${this.machineId}`;
-        infoDiv.appendChild(idInfo);
-
         printContainer.appendChild(infoDiv);
 
-        // 5. 创建二维码图片
+        // 4. 创建二维码图片
         const img = document.createElement('img');
         img.src = dataUrl;
         img.alt = '机台二维码';
         img.className = 'print-qrcode-image';
         printContainer.appendChild(img);
 
-        // 6. 创建底部提示
-        const hint = document.createElement('div');
-        hint.className = 'print-hint';
-        hint.textContent = '扫描此二维码查看机台信息';
-        printContainer.appendChild(hint);
-
-        // 7. 添加到 body
+        // 5. 添加到 body
         document.body.appendChild(printContainer);
 
-        // 8. 执行打印
+        // 6. 执行打印
         setTimeout(() => {
           window.print();
 
-          // 9. 监听打印完成后清理（延迟确保打印完成）
+          // 7. 监听打印完成后清理（延迟确保打印完成）
           setTimeout(() => {
             document.body.removeChild(printContainer);
           }, 1000);
@@ -435,50 +420,60 @@ export default {
   /* 显示打印容器 */
   .qrcode-print-container {
     display: block !important;
-    padding: 20px;
+    padding: 10px;
     text-align: center;
+    width: 100%;
+    max-width: 100%;
   }
 
+  /* 隐藏标题 */
   .qrcode-print-container h2 {
-    font-size: 24px;
-    color: #333;
-    margin-bottom: 20px;
+    display: none;
   }
 
+  /* 机台信息 - 紧凑显示 */
   .qrcode-print-container .print-info {
-    margin: 20px auto;
-    max-width: 400px;
-    text-align: left;
-    line-height: 1.8;
+    margin: 0 auto 10px;
+    text-align: center;
+    line-height: 1.6;
+    font-size: 14px;
   }
 
   .qrcode-print-container .print-info div {
-    margin: 8px 0;
+    margin: 4px 0;
   }
 
   .qrcode-print-container .print-info strong {
-    color: #666;
+    color: #000;
     font-weight: bold;
   }
 
+  /* 二维码图片 - 固定大小 */
   .qrcode-print-container .print-qrcode-image {
-    width: 300px;
-    height: 300px;
-    margin: 20px auto;
+    width: 8cm;
+    height: 8cm;
+    margin: 0 auto;
     display: block;
-    border: 2px solid #eee;
+    border: 1px solid #333;
   }
 
+  /* 隐藏底部提示 */
   .qrcode-print-container .print-hint {
-    margin-top: 10px;
-    color: #999;
-    font-size: 12px;
+    display: none;
   }
 
-  /* 设置打印页面 */
+  /* 设置打印页面 - 紧凑尺寸 */
   @page {
-    size: portrait;
-    margin: 1cm;
+    size: 10cm 12cm;  /* 宽10cm 高12cm，刚好容纳二维码和信息 */
+    margin: 0.5cm;
+  }
+
+  /* 重置 body 样式 */
+  html, body {
+    width: 100%;
+    height: auto;
+    margin: 0;
+    padding: 0;
   }
 }
 </style>
