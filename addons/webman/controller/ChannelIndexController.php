@@ -2202,12 +2202,13 @@ class ChannelIndexController
         ];
 
         // 核销记录统计（洗分类型，排除禁用状态）
+        // 使用 scanned_at（核销时间）作为时间筛选，而非 created_at（出票时间）
         $ticketRedeemQuery = \addons\webman\model\TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
             ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
-                $query->where(getDateWhere($dateType, 'created_at'));
+                $query->where(getDateWhere($dateType, 'scanned_at'));
             })
             ->selectRaw(
                 'sum(score) as total_score, count(*) as total_count, '
@@ -4771,10 +4772,29 @@ class ChannelIndexController
             $profit = bcsub($totalIn, $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
-            if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
-                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
-                $electronicGameBet > 0 || $machineBet > 0 || $ticketUnredeemedAmount > 0 ||
-                $experienceCouponAmount > 0 || $welfareCouponAmount > 0) {
+            // 根据导出栏目判断：投钞、收入(开分+开票)、支出(洗分+核销)、拉彩、活动、打码量、票券等
+            $hasData = $data['machine_point'] > 0                              // 投钞点数
+                || $data['recharge_amount'] > 0                                // 开分
+                || $data['open_score_amount'] > 0                              // 人工储值
+                || $actualTicketOpenScoreAmount > 0                            // 开票金额
+                || $data['withdrawal_amount'] > 0                              // 洗分
+                || $data['channel_withdrawal_amount'] > 0                      // 渠道洗分
+                || $redeemAmountExport > 0                                     // 核销金额（后台核销）
+                || $redeemAmount > 0                                           // 核销金额（机台核销）
+                || $ticketUnredeemedAmount > 0                                 // 未核销金额
+                || $data['lottery_amount'] > 0                                 // 拉彩金额
+                || $data['activity_bonus_amount'] > 0                          // 活动礼金
+                || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
+                || $data['birthday_bonus_amount'] > 0                          // 生日礼金
+                || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
+                || $data['modified_add_amount'] > 0                            // 调账增加
+                || $data['modified_deduct_amount'] > 0                         // 调账扣除
+                || $electronicGameBet > 0                                      // 电子游戏打码量
+                || $machineBet > 0                                             // 机器打码量
+                || $experienceCouponAmount > 0                                 // 体验券
+                || $welfareCouponAmount > 0;                                   // 福利券
+
+            if ($hasData) {
 
                 StoreShiftDeviceDetail::create([
                     'shift_record_id' => $shiftRecordId,

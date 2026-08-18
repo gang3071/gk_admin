@@ -792,11 +792,29 @@ class AutoShiftService
             $profit = bcsub($totalIn, $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
-            if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
-                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
-                $data['lottery_ticket_reward_amount'] > 0 || $data['birthday_bonus_amount'] > 0 || $data['upgrade_bonus_amount'] > 0 ||
-                $electronicGameBet > 0 || $machineBet > 0 || $ticketUnredeemed > 0 ||
-                $experienceCoupon > 0 || $welfareCoupon > 0) {
+            // 根据导出栏目判断：投钞、收入(开分+开票)、支出(洗分+核销)、拉彩、活动、打码量、票券等
+            $hasData = $data['machine_point'] > 0                              // 投钞点数
+                || $data['recharge_amount'] > 0                                // 开分
+                || $data['open_score_amount'] > 0                              // 人工储值
+                || $actualTicketOpenScoreAmount > 0                            // 开票金额
+                || $data['withdrawal_amount'] > 0                              // 洗分
+                || $data['channel_withdrawal_amount'] > 0                      // 渠道洗分
+                || $redeemAmountExport > 0                                     // 核销金额（后台核销）
+                || $redeemAmount > 0                                           // 核销金额（机台核销）
+                || $ticketUnredeemed > 0                                       // 未核销金额
+                || $data['lottery_amount'] > 0                                 // 拉彩金额
+                || $data['activity_bonus_amount'] > 0                          // 活动礼金
+                || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
+                || $data['birthday_bonus_amount'] > 0                          // 生日礼金
+                || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
+                || $data['modified_add_amount'] > 0                            // 调账增加
+                || $data['modified_deduct_amount'] > 0                         // 调账扣除
+                || $electronicGameBet > 0                                      // 电子游戏打码量
+                || $machineBet > 0                                             // 机器打码量
+                || $experienceCoupon > 0                                       // 体验券
+                || $welfareCoupon > 0;                                         // 福利券
+
+            if ($hasData) {
 
                 $deviceDetails[] = [
                     'department_id' => $departmentId,
