@@ -1231,7 +1231,7 @@ class ChannelIndexController
 
     /**
      * 代理数据中心
-     * @group channel
+     * @group agent
      * @auth true
      */
     public function agentIndex($data_type = null): Layout
@@ -2095,7 +2095,7 @@ class ChannelIndexController
 
     /**
      * 店家中心
-     * @group channel
+     * @group store
      * @auth true
      */
     public function storeIndex(): Layout
