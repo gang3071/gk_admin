@@ -138,8 +138,7 @@ class StoreOfflineMachineController
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
-                    ->modal([$this, 'batchQrCode'])
-                    ->width('90%')
+                    ->window([$this, 'batchQrCode'])
                     ->gridBatch()
             );
 
@@ -250,8 +249,7 @@ class StoreOfflineMachineController
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
-                    ->modal([$this, 'batchQrCode'])
-                    ->width('90%')
+                    ->window([$this, 'batchQrCode'])
                     ->gridBatch()
             );
 
