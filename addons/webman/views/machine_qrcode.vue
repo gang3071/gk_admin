@@ -205,6 +205,22 @@ export default {
   },
   beforeUnmount() {
     this.clearCanvas();
+
+    // 延迟清除可能残留的 Modal 样式类
+    setTimeout(() => {
+      try {
+        // 移除 Ant Design Modal 可能添加的滚动锁定类
+        document.body.classList.remove('ant-scrolling-effect');
+
+        // 如果 body 的 style 属性只包含 overflow 或为空，则清除
+        const bodyStyle = document.body.getAttribute('style');
+        if (!bodyStyle || bodyStyle.trim() === '' || bodyStyle.trim() === 'overflow: hidden;') {
+          document.body.removeAttribute('style');
+        }
+      } catch (e) {
+        console.error('[QRCode] Style cleanup error:', e);
+      }
+    }, 300); // 300ms 延迟，确保 Modal 动画完成
   },
   methods: {
     drawQRCode() {
