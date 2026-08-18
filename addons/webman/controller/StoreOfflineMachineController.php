@@ -134,12 +134,17 @@ class StoreOfflineMachineController
             $grid->hideTrashed();
 
             // 批量操作工具栏按钮 - 严格按照 ExAdmin 标准模式
+            // 构建 URL 参数（空参数也需要显式传递）
+            $param = [];
             $grid->tools(
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
                     ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
-                        [$this, 'batchQrCode'])
+                        [
+                            $this,
+                            'batchQrCode?' . http_build_query($param)  // 关键：必须有 ?
+                        ])
                     ->gridBatch()
                     ->gridRefresh()
             );
@@ -247,12 +252,17 @@ class StoreOfflineMachineController
             $grid->hideTrashed();
 
             // 批量操作工具栏按钮 - 严格按照 ExAdmin 标准模式
+            // 构建 URL 参数（空参数也需要显式传递）
+            $param = [];
             $grid->tools(
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
                     ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
-                        [$this, 'batchQrCode'])
+                        [
+                            $this,
+                            'batchQrCode?' . http_build_query($param)  // 关键：必须有 ?
+                        ])
                     ->gridBatch()
                     ->gridRefresh()
             );
