@@ -1,5 +1,5 @@
 <template>
-  <div class="qr-modal-container">
+  <div class="qr-modal-container" ref="modalContainer">
     <div class="qr-header">
       <h3>{{ title }}</h3>
     </div>
@@ -55,7 +55,10 @@
 </template>
 
 <script>
-// 纯 JavaScript 二维码生成器
+// 引入第三方二维码库（通过 CDN）
+// 注意：这里使用内联实现，避免外部依赖
+
+// 使用更简单的 QR Code 生成方式
 function generateQRCode(text) {
   const QRCode = {
     typeNumber: 4,
@@ -215,13 +218,8 @@ export default {
 
       const ctx = canvas.getContext('2d');
 
-      const qrData = JSON.stringify({
-        id: this.machineId,
-        code: this.machineCode,
-        name: this.machineName,
-        type: 'machine',
-        timestamp: Date.now()
-      });
+      // 使用最简单的内容 - 只有机台编号，确保能被正确解析
+      const qrData = this.machineCode;
 
       try {
         const qrMatrix = generateQRCode(qrData);
