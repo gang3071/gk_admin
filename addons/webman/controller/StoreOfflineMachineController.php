@@ -142,8 +142,7 @@ class StoreOfflineMachineController
                         ->type('primary')
                         ->size('small')
                         ->icon(Icon::create('fas fa-qrcode'))
-                        ->drawer([$this, 'viewQrCode'], ['machine_id' => $data['id']])
-                        ->width('600px')
+                        ->handler("window.open('/ex-admin/addons-webman-controller-StoreOfflineMachineController/viewQrCodePage?machine_id={$data['id']}', '_blank', 'width=700,height=900,toolbar=no,menubar=no,scrollbars=yes,resizable=yes')")
                 );
             });
         });
@@ -243,8 +242,7 @@ class StoreOfflineMachineController
                         ->type('primary')
                         ->size('small')
                         ->icon(Icon::create('fas fa-qrcode'))
-                        ->drawer([$this, 'viewQrCode'], ['machine_id' => $data['id']])
-                        ->width('600px')
+                        ->handler("window.open('/ex-admin/addons-webman-controller-StoreOfflineMachineController/viewQrCodePage?machine_id={$data['id']}', '_blank', 'width=700,height=900,toolbar=no,menubar=no,scrollbars=yes,resizable=yes')")
                 );
             });
         });
@@ -492,12 +490,12 @@ class StoreOfflineMachineController
     }
 
     /**
-     * 查看机台二维码
+     * 查看机台二维码（新窗口完整页面）
      * @auth true
      * @group store
-     * @return mixed
+     * @return \support\Response
      */
-    public function viewQrCode()
+    public function viewQrCodePage()
     {
         $machineId = Request::input('machine_id');
 
@@ -516,15 +514,358 @@ class StoreOfflineMachineController
             ->first();
 
         if (!$machine) {
-            return message_error(admin_trans('store_offline_machine.error.machine_not_found'));
+            return response('<h3 style="text-align:center;margin-top:50px;color:#f5222d;">机台不存在或无权限访问</h3>');
         }
 
-        // 使用 admin_view 返回 Vue 组件展示二维码
-        return admin_view(plugin()->webman->getPath() . '/views/machine_qrcode.vue')->attrs([
-            'machineId' => $machine->id,
-            'machineCode' => $machine->code,
-            'machineName' => $machine->machineLabel->name ?? '-',
-            'title' => admin_trans('store_offline_machine.qrcode_title'),
+        $machineCode = htmlspecialchars($machine->code);
+        $machineName = htmlspecialchars($machine->machineLabel->name ?? '-');
+        $machineId = $machine->id;
+        $title = htmlspecialchars(admin_trans('store_offline_machine.qrcode_title'));
+
+        // 返回完整的 HTML 页面
+        $html = <<<HTML
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$title} - {$machineCode}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #1890ff;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .info-card {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #666;
+        }
+        .info-value {
+            color: #1890ff;
+            font-weight: 500;
+        }
+        .qrcode-wrapper {
+            text-align: center;
+            padding: 30px;
+            background: #fafafa;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        #qrcodeCanvas {
+            border: 2px solid #d9d9d9;
+            background: white;
+            border-radius: 4px;
+        }
+        .actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(24,144,255,0.4);
+        }
+        .btn-default {
+            background: #fff;
+            color: #333;
+            border: 1px solid #d9d9d9;
+        }
+        .btn-default:hover {
+            color: #1890ff;
+            border-color: #1890ff;
+            transform: translateY(-2px);
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                padding: 20px;
+            }
+            .actions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{$title}</h1>
+        </div>
+
+        <div class="info-card">
+            <div class="info-item">
+                <span class="info-label">机台编号：</span>
+                <span class="info-value">{$machineCode}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">机台名称：</span>
+                <span class="info-value">{$machineName}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">机台ID：</span>
+                <span class="info-value">{$machineId}</span>
+            </div>
+        </div>
+
+        <div class="qrcode-wrapper">
+            <canvas id="qrcodeCanvas" width="300" height="300"></canvas>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="downloadQrCode()">
+                📥 下载二维码
+            </button>
+            <button class="btn btn-default" onclick="window.print()">
+                🖨️ 打印二维码
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const machineId = '{$machineId}';
+
+        // 简化版二维码生成（与 Vue 组件相同的算法）
+        function generateQRCode(text) {
+            const QRCode = {
+                typeNumber: 4,
+                errorCorrectLevel: 'H',
+
+                make: function(text) {
+                    const typeNumber = this.getTypeNumber(text);
+                    const moduleCount = typeNumber * 4 + 17;
+                    const modules = new Array(moduleCount);
+
+                    for (let row = 0; row < moduleCount; row++) {
+                        modules[row] = new Array(moduleCount);
+                        for (let col = 0; col < moduleCount; col++) {
+                            modules[row][col] = null;
+                        }
+                    }
+
+                    this.setupPositionProbePattern(modules, 0, 0);
+                    this.setupPositionProbePattern(modules, moduleCount - 7, 0);
+                    this.setupPositionProbePattern(modules, 0, moduleCount - 7);
+                    this.setupTimingPattern(modules, moduleCount);
+
+                    const data = this.encodeData(text);
+                    this.mapData(modules, data, moduleCount, 2);
+
+                    return modules;
+                },
+
+                getTypeNumber: function(text) {
+                    const length = text.length;
+                    if (length <= 14) return 1;
+                    if (length <= 26) return 2;
+                    if (length <= 42) return 3;
+                    return 4;
+                },
+
+                setupPositionProbePattern: function(modules, row, col) {
+                    for (let r = -1; r <= 7; r++) {
+                        if (row + r <= -1 || modules.length <= row + r) continue;
+                        for (let c = -1; c <= 7; c++) {
+                            if (col + c <= -1 || modules.length <= col + c) continue;
+
+                            if ((0 <= r && r <= 6 && (c == 0 || c == 6))
+                                || (0 <= c && c <= 6 && (r == 0 || r == 6))
+                                || (2 <= r && r <= 4 && 2 <= c && c <= 4)) {
+                                modules[row + r][col + c] = true;
+                            } else {
+                                modules[row + r][col + c] = false;
+                            }
+                        }
+                    }
+                },
+
+                setupTimingPattern: function(modules, moduleCount) {
+                    for (let r = 8; r < moduleCount - 8; r++) {
+                        if (modules[r][6] !== null) continue;
+                        modules[r][6] = (r % 2 == 0);
+                    }
+                    for (let c = 8; c < moduleCount - 8; c++) {
+                        if (modules[6][c] !== null) continue;
+                        modules[6][c] = (c % 2 == 0);
+                    }
+                },
+
+                encodeData: function(text) {
+                    const bytes = [];
+                    for (let i = 0; i < text.length; i++) {
+                        bytes.push(text.charCodeAt(i));
+                    }
+                    return bytes;
+                },
+
+                mapData: function(modules, data, moduleCount) {
+                    let inc = -1;
+                    let row = moduleCount - 1;
+                    let bitIndex = 7;
+                    let byteIndex = 0;
+
+                    for (let col = moduleCount - 1; col > 0; col -= 2) {
+                        if (col == 6) col--;
+
+                        while (true) {
+                            for (let c = 0; c < 2; c++) {
+                                if (modules[row][col - c] === null) {
+                                    let dark = false;
+
+                                    if (byteIndex < data.length) {
+                                        dark = (((data[byteIndex] >>> bitIndex) & 1) == 1);
+                                    }
+
+                                    modules[row][col - c] = dark;
+                                    bitIndex--;
+
+                                    if (bitIndex == -1) {
+                                        byteIndex++;
+                                        bitIndex = 7;
+                                    }
+                                }
+                            }
+
+                            row += inc;
+
+                            if (row < 0 || moduleCount <= row) {
+                                row -= inc;
+                                inc = -inc;
+                                break;
+                            }
+                        }
+                    }
+                }
+            };
+
+            return QRCode.make(text);
+        }
+
+        // 绘制二维码
+        function drawQRCode() {
+            const canvas = document.getElementById('qrcodeCanvas');
+            const ctx = canvas.getContext('2d');
+            const canvasSize = 300;
+
+            try {
+                const qrMatrix = generateQRCode(machineId);
+                const moduleCount = qrMatrix.length;
+                const cellSize = Math.floor(canvasSize / moduleCount);
+                const actualSize = cellSize * moduleCount;
+                const offset = Math.floor((canvasSize - actualSize) / 2);
+
+                ctx.clearRect(0, 0, canvasSize, canvasSize);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+                ctx.fillStyle = '#000000';
+                for (let row = 0; row < moduleCount; row++) {
+                    for (let col = 0; col < moduleCount; col++) {
+                        if (qrMatrix[row][col]) {
+                            ctx.fillRect(
+                                offset + col * cellSize,
+                                offset + row * cellSize,
+                                cellSize,
+                                cellSize
+                            );
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('QR code generation error:', error);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+                ctx.fillStyle = '#FF0000';
+                ctx.font = '16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('二维码生成失败', canvasSize / 2, canvasSize / 2);
+            }
+        }
+
+        // 下载二维码
+        function downloadQrCode() {
+            const canvas = document.getElementById('qrcodeCanvas');
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.download = 'machine_{$machineCode}_qrcode.png';
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 'image/png');
+        }
+
+        // 页面加载完成后绘制二维码
+        window.onload = function() {
+            drawQRCode();
+        };
+    </script>
+</body>
+</html>
+HTML;
+
+        return response($html)->withHeaders([
+            'Content-Type' => 'text/html; charset=utf-8',
         ]);
     }
 }
