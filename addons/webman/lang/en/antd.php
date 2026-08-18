@@ -304,12 +304,14 @@ return [
         'restoreSelected' => 'Restore selected',
         'deleteSelected' => 'Delete selected',
         'selectedAction' => 'Please check the operation data',
+        'selectedTotal'=>'Selected {total} items'
     ],
     'SelectTable' => [
         'select' => 'select',
         'selected' => 'selected',
         'confirm' => 'OK',
         'cancel' => 'cancel',
+        'clear' => 'clear',
     ],
     'Confirm' => [
         'title' => 'Prompt'

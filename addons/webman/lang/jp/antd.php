@@ -303,12 +303,14 @@ return [
         'restoreSelected' => '選択したものを復元する',
         'deleteSelected' => '選択を削除します',
         'selectedAction' => '稼働データを確認してください',
+        'selectedTotal'=>'{total} 項目を選択しました'
     ],
     'SelectTable' => [
         'select' => '選ぶ',
         'selected' => '選択された',
         'confirm' => 'もちろん',
         'cancel' => 'キャンセル',
+        'clear' => 'クリア',
     ],
     'Confirm' => [
         'title' => 'ヒント'
