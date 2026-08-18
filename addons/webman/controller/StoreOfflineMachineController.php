@@ -133,16 +133,6 @@ class StoreOfflineMachineController
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
-            // 批量按钮（完全按照 changePlayerList 的简单模式）
-            $grid->tools(
-                Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
-                    ->type('primary')
-                    ->icon(Icon::create('fas fa-qrcode'))
-                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
-                        [$this, 'batchQrCode'])  // 简单！不传任何参数
-                    ->gridBatch()
-            );
-
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->eq()->select('label_id')
