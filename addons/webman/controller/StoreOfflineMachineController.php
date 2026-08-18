@@ -129,14 +129,17 @@ class StoreOfflineMachineController
             });
 
             $grid->pagination()->pageSize(25);
-            $grid->selectionType('checkbox');  // 关键！设置选择类型
+            $grid->selectionType('checkbox');
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
-            // 批量按钮（最简化测试）
+            // 批量生成二维码按钮
             $grid->tools(
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                    ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
+                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
+                        [$this, 'batchQrCode'])
                     ->gridBatch()
             );
 
