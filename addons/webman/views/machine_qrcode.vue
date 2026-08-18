@@ -467,22 +467,28 @@ export default {
 
 <style scoped>
 .qr-modal-container {
-  padding: 24px;
-  max-width: 600px;
+  padding: 16px;
+  max-width: 550px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
   line-height: 1.5715;
   color: rgba(0, 0, 0, 0.85);
+  /* 自适应高度 - 纯 CSS 实现 */
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
 }
 
 .qr-header {
+  flex-shrink: 0;
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .qr-header h3 {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
   color: #1890ff;
   margin: 0;
@@ -491,29 +497,37 @@ export default {
 }
 
 .qr-info {
-  margin-bottom: 24px;
+  flex-shrink: 0;
+  margin-bottom: 12px;
 }
 
 .qr-canvas-wrapper {
+  flex: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 32px;
+  padding: 16px;
   background-color: #f5f5f5;
   border-radius: 8px;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .qr-canvas {
   display: block;
   border: 1px solid #d9d9d9;
   background-color: #ffffff;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .qr-footer {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .qr-buttons {
@@ -524,7 +538,36 @@ export default {
 }
 
 .qr-buttons .ant-btn {
-  min-width: 140px;
+  min-width: 120px;
+}
+
+/* 小屏幕优化 */
+@media (max-height: 700px) {
+  .qr-modal-container {
+    padding: 12px;
+    max-height: 95vh;
+  }
+
+  .qr-header {
+    margin-bottom: 8px;
+  }
+
+  .qr-header h3 {
+    font-size: 16px;
+  }
+
+  .qr-info {
+    margin-bottom: 8px;
+  }
+
+  .qr-canvas-wrapper {
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+
+  .qr-footer {
+    gap: 8px;
+  }
 }
 </style>
 
