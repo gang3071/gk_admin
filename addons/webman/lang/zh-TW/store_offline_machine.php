@@ -17,6 +17,11 @@ return [
         'batch_qrcode' => '批量生成二維碼',
     ],
 
+    // 确认消息
+    'confirm' => [
+        'batch_qrcode' => '確定要為選中的機台生成二維碼嗎？',
+    ],
+
     // 二维码
     'qrcode_title' => '機台二維碼',
     'batch_qrcode_title' => '批量機台二維碼',

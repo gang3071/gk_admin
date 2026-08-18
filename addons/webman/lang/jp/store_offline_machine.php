@@ -17,6 +17,11 @@ return [
         'batch_qrcode' => '一括QRコード生成',
     ],
 
+    // 確認メッセージ
+    'confirm' => [
+        'batch_qrcode' => '選択した機台のQRコードを生成してもよろしいですか？',
+    ],
+
     // QRコード
     'qrcode_title' => '機台QRコード',
     'batch_qrcode_title' => '一括機台QRコード',

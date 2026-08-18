@@ -138,8 +138,10 @@ class StoreOfflineMachineController
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
-                    ->drawer([$this, 'batchQrCode'])
+                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
+                        [$this, 'batchQrCode'])
                     ->gridBatch()
+                    ->gridRefresh()
             );
 
             $grid->actions(function ($actions, $data) {
@@ -249,8 +251,10 @@ class StoreOfflineMachineController
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
-                    ->drawer([$this, 'batchQrCode'])
+                    ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
+                        [$this, 'batchQrCode'])
                     ->gridBatch()
+                    ->gridRefresh()
             );
 
             $grid->actions(function ($actions, $data) {
@@ -549,24 +553,19 @@ class StoreOfflineMachineController
     }
 
     /**
-     * 批量生成机台二维码
+     * 批量生成机台二维码（通过 URL 访问）
      * @auth true
      * @group store
-     * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
      * @return mixed
      */
-    public function batchQrCode($selected = null)
+    public function batchQrCodeView()
     {
-        // gridBatch 会将选中的 IDs 作为参数传递
-        $machineIds = $selected ?? [];
+        $ids = Request::input('ids', '');
+        $machineIds = $ids ? explode(',', $ids) : [];
+        $machineIds = array_map('intval', array_filter($machineIds));
 
         if (empty($machineIds)) {
             return message_error(admin_trans('store_offline_machine.error.no_machines_selected'));
-        }
-
-        // 限制最多一次生成30个二维码（一页A4纸最多放30个）
-        if (count($machineIds) > 30) {
-            return message_error(admin_trans('store_offline_machine.error.too_many_machines'));
         }
 
         // 验证机台归属
@@ -602,5 +601,34 @@ class StoreOfflineMachineController
             'machines' => $machineData,
             'title' => admin_trans('store_offline_machine.batch_qrcode_title'),
         ]);
+    }
+
+    /**
+     * 批量生成机台二维码（gridBatch 处理）
+     * @auth true
+     * @group store
+     * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
+     * @return Msg
+     */
+    public function batchQrCode($selected = null)
+    {
+        // gridBatch 会将选中的 IDs 作为参数传递
+        $machineIds = $selected ?? [];
+
+        if (empty($machineIds)) {
+            return message_error(admin_trans('store_offline_machine.error.no_machines_selected'));
+        }
+
+        // 限制最多一次生成30个二维码
+        if (count($machineIds) > 30) {
+            return message_error(admin_trans('store_offline_machine.error.too_many_machines'));
+        }
+
+        // 构建 URL
+        $url = admin_url([$this, 'batchQrCodeView'], ['ids' => implode(',', $machineIds)]);
+
+        // 返回成功消息并打开新窗口
+        return message_success(admin_trans('common.success'))
+            ->script("window.open('{$url}', '_blank', 'width=1200,height=800,scrollbars=yes')");
     }
 }

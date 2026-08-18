@@ -17,6 +17,11 @@ return [
         'batch_qrcode' => '批量生成二维码',
     ],
 
+    // 确认消息
+    'confirm' => [
+        'batch_qrcode' => '确定要为选中的机台生成二维码吗？',
+    ],
+
     // 二维码
     'qrcode_title' => '机台二维码',
     'batch_qrcode_title' => '批量机台二维码',

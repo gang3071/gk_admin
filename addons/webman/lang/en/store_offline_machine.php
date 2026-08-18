@@ -17,6 +17,11 @@ return [
         'batch_qrcode' => 'Batch Generate QR Codes',
     ],
 
+    // Confirm messages
+    'confirm' => [
+        'batch_qrcode' => 'Are you sure you want to generate QR codes for selected machines?',
+    ],
+
     // QR Code
     'qrcode_title' => 'Machine QR Code',
     'batch_qrcode_title' => 'Batch Machine QR Codes',
