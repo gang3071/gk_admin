@@ -55,6 +55,8 @@
 </template>
 
 <script>
+import { DownloadOutlined, PrinterOutlined } from '@ant-design/icons-vue';
+
 // 引入第三方二维码库（通过 CDN）
 // 注意：这里使用内联实现，避免外部依赖
 
@@ -178,6 +180,10 @@ function generateQRCode(text) {
 
 export default {
   name: 'MachineQrCode',
+  components: {
+    DownloadOutlined,
+    PrinterOutlined
+  },
   props: {
     machineId: {
       type: [String, Number],
