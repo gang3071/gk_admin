@@ -73,6 +73,10 @@ export default {
       return this.qrSize + this.textHeight + this.gapY;
     }
   },
+  created() {
+    // 调试：打印接收到的机台数据
+    console.log('Batch QR Code - Machines data:', this.machines);
+  },
   mounted() {
     this.loadQRCodeLibrary();
   },
@@ -164,8 +168,17 @@ export default {
      */
     async drawSingleQRCode(ctx, machine, x, y) {
       try {
+        // 防御性检查：确保必要字段存在
+        if (!machine || !machine.id) {
+          throw new Error('Invalid machine data');
+        }
+
+        // 确保 code 和 name 是字符串
+        const machineCode = String(machine.code || machine.id);
+        const machineName = String(machine.name || '-');
+
         // 生成二维码数据：机台ID|机台编号|时间戳
-        const qrData = `${machine.id}|${machine.code}|${Date.now()}`;
+        const qrData = `${machine.id}|${machineCode}|${Date.now()}`;
 
         // 使用 qrcode-generator 库生成二维码
         const qr = window.qrcode(0, 'M'); // type=0(auto), errorCorrectionLevel='M'(15%)
@@ -202,12 +215,12 @@ export default {
 
         // 机台编号（粗体、较大）
         ctx.font = 'bold 16px Arial, sans-serif';
-        ctx.fillText(machine.code, x + this.qrSize / 2, textY);
+        ctx.fillText(machineCode, x + this.qrSize / 2, textY);
 
         // 机台名称（普通、较小）
         ctx.font = '14px Arial, sans-serif';
         const maxNameWidth = this.qrSize - 10;
-        const truncatedName = this.truncateText(ctx, machine.name, maxNameWidth);
+        const truncatedName = this.truncateText(ctx, machineName, maxNameWidth);
         ctx.fillText(truncatedName, x + this.qrSize / 2, textY + 22);
 
       } catch (error) {
@@ -229,12 +242,19 @@ export default {
      * 截断文字以适应宽度
      */
     truncateText(ctx, text, maxWidth) {
-      const metrics = ctx.measureText(text);
-      if (metrics.width <= maxWidth) {
-        return text;
+      // 确保 text 是字符串
+      const safeText = String(text || '');
+
+      if (!safeText) {
+        return '';
       }
 
-      let truncated = text;
+      const metrics = ctx.measureText(safeText);
+      if (metrics.width <= maxWidth) {
+        return safeText;
+      }
+
+      let truncated = safeText;
       while (ctx.measureText(truncated + '...').width > maxWidth && truncated.length > 0) {
         truncated = truncated.slice(0, -1);
       }

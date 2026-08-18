@@ -593,9 +593,9 @@ class StoreOfflineMachineController
         // 准备机台数据
         $machineData = $machines->map(function (Machine $machine) {
             return [
-                'id' => $machine->id,
-                'code' => $machine->code,
-                'name' => $machine->machineLabel->name ?? '-',
+                'id' => (int)$machine->id,
+                'code' => (string)($machine->code ?? $machine->id),
+                'name' => (string)($machine->machineLabel->name ?? '-'),
             ];
         })->toArray();
 
