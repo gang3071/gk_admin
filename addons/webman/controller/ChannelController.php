@@ -253,12 +253,14 @@ class ChannelController
                 $actions->prepend(
                     Button::create(admin_trans('channel.add_offline_machine'))
                         ->type('default')
-                        ->drawer(admin_url([$this, 'offlineMachineList']), ['department_id' => $data->department_id])
+                        ->modal(admin_url([$this, 'offlineMachineList']), ['department_id' => $data->department_id])
+                        ->width('90%')
                 );
                 $actions->prepend(
                     Button::create(admin_trans('channel.add_machine'))
                         ->type('primary')
-                        ->drawer(admin_url([$this, 'machineList']), ['department_id' => $data->department_id])
+                        ->modal(admin_url([$this, 'machineList']), ['department_id' => $data->department_id])
+                        ->width('90%')
                 );
             });
             $grid->filter(function (Filter $filter) {
