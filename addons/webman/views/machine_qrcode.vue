@@ -313,55 +313,6 @@ export default {
           return;
         }
 
-        printWin.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>机台二维码 - ${this.machineCode}</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              html, body { width: 100%; height: 100%; overflow-x: hidden; }
-              body {
-                font-family: Arial, sans-serif;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                min-width: 600px;
-              }
-              h2 { margin-bottom: 20px; color: #333; font-size: 24px; }
-              .info { margin: 15px 0; line-height: 1.8; width: 100%; max-width: 400px; }
-              .label { font-weight: bold; color: #666; }
-              img { margin: 20px 0; width: 300px; height: 300px; border: 2px solid #eee; display: block; }
-              @media print {
-                body { padding: 0; min-width: auto; }
-                @page { size: portrait; margin: 1cm; }
-              }
-            </style>
-          </head>
-          <body>
-            <h2>机台二维码</h2>
-            <div class="info">
-              <div><span class="label">机台编号：</span>${this.machineCode}</div>
-              <div><span class="label">机台名称：</span>${this.machineName}</div>
-              <div><span class="label">机台ID：</span>${this.machineId}</div>
-            </div>
-            <img src="${dataUrl}" alt="机台二维码" />
-            <div style="margin-top: 10px; color: #999; font-size: 12px;">
-              扫描此二维码查看机台信息
-            </div>
-            <script>
-              window.onload = function() {
-                setTimeout(function() { window.print(); }, 500);
-              };
-            </script>
-          </body>
-          </html>
-        `);
-        printWin.document.close();
-
       } catch (error) {
         console.error('Print failed:', error);
         if (this.$message) {
