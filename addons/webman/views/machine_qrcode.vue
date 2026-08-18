@@ -192,9 +192,9 @@ export default {
   },
   data() {
     return {
-      qrcodeSize: 300,      // 二维码区域大小
-      canvasSize: 380,      // 总画布大小（二维码 + 文字区域）
-      textHeight: 80        // 文字区域高度
+      qrcodeSize: 260,      // 二维码区域大小（从 300 缩小到 260）
+      canvasSize: 320,      // 总画布大小（从 380 缩小到 320）
+      textHeight: 60        // 文字区域高度（从 80 缩小到 60）
     };
   },
   mounted() {
@@ -467,8 +467,8 @@ export default {
 
 <style scoped>
 .qr-modal-container {
-  padding: 16px;
-  max-width: 550px;
+  padding: 12px;
+  max-width: 500px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 14px;
@@ -478,11 +478,11 @@ export default {
 
 .qr-header {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .qr-header h3 {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #1890ff;
   margin: 0;
@@ -491,17 +491,17 @@ export default {
 }
 
 .qr-info {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .qr-canvas-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 16px;
+  padding: 12px;
   background-color: #f5f5f5;
   border-radius: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .qr-canvas {
@@ -516,7 +516,7 @@ export default {
 }
 
 .qr-footer > * {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .qr-footer > *:last-child {
@@ -534,7 +534,7 @@ export default {
 }
 
 .qr-buttons .ant-btn {
-  min-width: 120px;
+  min-width: 100px;
 }
 </style>
 
