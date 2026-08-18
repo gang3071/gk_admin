@@ -63,15 +63,6 @@ class StoreOfflineMachineController
                 ->orderBy('code', 'asc');
 
             $grid->driver()->setPk('id');
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-            $page = Request::input('ex_admin_page', 1);
-            $size = Request::input('ex_admin_size', 25);
-            $param = [
-                'size' => $size,
-                'page' => $page,
-                'ex_admin_filter' => $exAdminFilter,
-            ];
-
             $grid->autoHeight();
             $grid->bordered(true);
 
@@ -138,20 +129,18 @@ class StoreOfflineMachineController
             });
 
             $grid->pagination()->pageSize(25);
+            $grid->selectionType('checkbox');  // 关键：设置选择类型
             $grid->hideDeleteSelection();
             $grid->hideTrashed();
 
-            // 批量操作工具栏按钮
+            // 批量操作工具栏按钮 - 按照 changePlayerList 的简单模式
             $grid->tools(
                 Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
                     ->type('primary')
                     ->icon(Icon::create('fas fa-qrcode'))
                     ->confirm(admin_trans('store_offline_machine.confirm.batch_qrcode'),
-                        [
-                            $this,
-                            'batchQrCode?' . http_build_query($param)
-                        ])
-                    ->gridBatch()->gridRefresh()
+                        [$this, 'batchQrCode'])  // 简化：不传任何 URL 参数
+                    ->gridBatch()
             );
 
             $grid->filter(function (Filter $filter) {
@@ -172,7 +161,7 @@ class StoreOfflineMachineController
                         0 => admin_trans('admin.close')
                     ]);
             });
-        })->selection([]);  // 关键：必须添加 selection()，即使是空数组
+        });
     }
 
     /**
@@ -511,7 +500,7 @@ class StoreOfflineMachineController
      * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
      * @return Msg
      */
-    public function batchQrCode($selected, $size, $page, array $ex_admin_filter = [])
+    public function batchQrCode($selected)
     {
         // gridBatch 会将选中的 IDs 作为参数传递
         $machineIds = $selected ?? [];
