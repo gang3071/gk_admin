@@ -14,14 +14,18 @@ return [
     // 操作
     'actions' => [
         'view_qrcode' => 'QRコードを表示',
+        'batch_qrcode' => '一括QRコード生成',
     ],
 
     // QRコード
     'qrcode_title' => '機台QRコード',
+    'batch_qrcode_title' => '一括機台QRコード',
 
     // エラーメッセージ
     'error' => [
         'machine_not_found' => '機台が存在しないか、アクセス権限がありません',
+        'no_machines_selected' => '少なくとも1つの機台を選択してください',
+        'too_many_machines' => '一度に最大30個のQRコードを生成できます',
     ],
 
     'menu' => [

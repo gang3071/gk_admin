@@ -14,14 +14,18 @@ return [
     // 操作
     'actions' => [
         'view_qrcode' => '查看二維碼',
+        'batch_qrcode' => '批量生成二維碼',
     ],
 
     // 二维码
     'qrcode_title' => '機台二維碼',
+    'batch_qrcode_title' => '批量機台二維碼',
 
     // 错误消息
     'error' => [
         'machine_not_found' => '機台不存在或無權訪問',
+        'no_machines_selected' => '請至少選擇一個機台',
+        'too_many_machines' => '一次最多生成30個二維碼',
     ],
 
     'menu' => [

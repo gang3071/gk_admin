@@ -130,8 +130,19 @@ class StoreOfflineMachineController
             });
 
             $grid->hideDelete();
-            $grid->hideSelection();
             $grid->hideTrashed();
+
+            // 批量操作
+            $grid->batchActions(function ($batch) {
+                $batch->append(
+                    Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                        ->type('primary')
+                        ->icon(Icon::create('fas fa-qrcode'))
+                        ->modal([$this, 'batchQrCode'])
+                        ->width('90%')
+                );
+            });
+
             $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
@@ -231,8 +242,19 @@ class StoreOfflineMachineController
             });
 
             $grid->hideDelete();
-            $grid->hideSelection();
             $grid->hideTrashed();
+
+            // 批量操作
+            $grid->batchActions(function ($batch) {
+                $batch->append(
+                    Button::create(admin_trans('store_offline_machine.actions.batch_qrcode'))
+                        ->type('primary')
+                        ->icon(Icon::create('fas fa-qrcode'))
+                        ->modal([$this, 'batchQrCode'])
+                        ->width('90%')
+                );
+            });
+
             $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
@@ -525,6 +547,60 @@ class StoreOfflineMachineController
             'machineCode' => $machine->code,
             'machineName' => $machine->machineLabel->name ?? '-',
             'title' => admin_trans('store_offline_machine.qrcode_title'),
+        ]);
+    }
+
+    /**
+     * 批量生成机台二维码
+     * @auth true
+     * @group store
+     * @return mixed
+     */
+    public function batchQrCode()
+    {
+        $machineIds = Request::input('ids', []);
+
+        if (empty($machineIds)) {
+            return message_error(admin_trans('store_offline_machine.error.no_machines_selected'));
+        }
+
+        // 限制最多一次生成30个二维码（一页A4纸最多放30个）
+        if (count($machineIds) > 30) {
+            return message_error(admin_trans('store_offline_machine.error.too_many_machines'));
+        }
+
+        // 验证机台归属
+        $storeAdminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
+
+        $machines = Machine::query()
+            ->with(['machineLabel'])
+            ->whereHas('channelMachines', function ($query) use ($storeAdminId, $departmentId) {
+                $query->where('store_admin_id', $storeAdminId)
+                    ->where('department_id', $departmentId);
+            })
+            ->whereIn('id', $machineIds)
+            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+            ->orderBy('code', 'asc')
+            ->get();
+
+        if ($machines->isEmpty()) {
+            return message_error(admin_trans('store_offline_machine.error.machine_not_found'));
+        }
+
+        // 准备机台数据
+        $machineData = $machines->map(function (Machine $machine) {
+            return [
+                'id' => $machine->id,
+                'code' => $machine->code,
+                'name' => $machine->machineLabel->name ?? '-',
+            ];
+        })->toArray();
+
+        // 返回 Vue 组件展示批量二维码
+        return admin_view(plugin()->webman->getPath() . '/views/batch_machine_qrcode.vue')->attrs([
+            'machines' => $machineData,
+            'title' => admin_trans('store_offline_machine.batch_qrcode_title'),
         ]);
     }
 }

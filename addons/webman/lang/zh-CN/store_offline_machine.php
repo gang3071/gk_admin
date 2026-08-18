@@ -14,14 +14,18 @@ return [
     // 操作
     'actions' => [
         'view_qrcode' => '查看二维码',
+        'batch_qrcode' => '批量生成二维码',
     ],
 
     // 二维码
     'qrcode_title' => '机台二维码',
+    'batch_qrcode_title' => '批量机台二维码',
 
     // 错误消息
     'error' => [
         'machine_not_found' => '机台不存在或无权访问',
+        'no_machines_selected' => '请至少选择一个机台',
+        'too_many_machines' => '一次最多生成30个二维码',
     ],
 
     'menu' => [
