@@ -26,7 +26,7 @@ class MachineServices
      * 创建机台服务
      * @param Machine $machine 机台
      * @param string $lang 语言
-     * @return Jackpot|Slot|SongSlot|SongJackpot
+     * @return Jackpot|Slot|SongSlot|SongJackpot|PokemonBall
      * @throws Exception
      */
     public static function createServices(Machine $machine, string $lang = 'zh_CN')
@@ -50,6 +50,8 @@ class MachineServices
                     default:
                         throw new Exception('Invalid product type');
                 }
+            case GameType::TYPE_POKEMON_BALL:
+                return new PokemonBall($machine, $lang);
             default:
                 throw new Exception('Invalid product type');
         }
@@ -272,6 +274,52 @@ class MachineServices
             Jackpot::WIN_NUMBER,
             Jackpot::READ_OPEN_POINT,
             Jackpot::READ_WASH_POINT,
+        ];
+    }
+
+    /**
+     * 获取精灵球操作
+     * @return array
+     */
+    public static function getPokemonBallAction(): array
+    {
+        return [
+            PokemonBall::ALL,
+            PokemonBall::WASH_ZERO,
+            PokemonBall::OPEN_ANY_POINT,
+            PokemonBall::SCORE_UP,
+            PokemonBall::SCORE_DOWN,
+            PokemonBall::GAME_ENABLE_ON,
+            PokemonBall::GAME_ENABLE_OFF,
+            PokemonBall::GAME_END,
+            PokemonBall::ENTER_JP1,
+            PokemonBall::SET_JACKPOT,
+            PokemonBall::QUERY_UID,
+            PokemonBall::QUERY_ACCOUNT,
+            PokemonBall::SET_MULTIPLIER,
+            PokemonBall::ADD_SCORE,
+            PokemonBall::SUB_SCORE,
+            PokemonBall::START_GAME,
+            PokemonBall::AUTO_START,
+            PokemonBall::SET_BALL_COUNT,
+            PokemonBall::SET_LIGHT_COUNT,
+        ];
+    }
+
+    /**
+     * 获取精灵球渠道后台操作
+     * @return array
+     */
+    public static function getChannelPokemonBallAction(): array
+    {
+        return [
+            PokemonBall::ALL,
+            PokemonBall::GAME_ENABLE_ON,
+            PokemonBall::GAME_ENABLE_OFF,
+            PokemonBall::START_GAME,
+            PokemonBall::AUTO_START,
+            PokemonBall::ADD_SCORE,
+            PokemonBall::SUB_SCORE,
         ];
     }
     

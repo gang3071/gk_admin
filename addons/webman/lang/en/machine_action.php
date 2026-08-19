@@ -3,6 +3,7 @@
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use app\service\machine\Jackpot;
+use app\service\machine\PokemonBall;
 use app\service\machine\Slot;
 use app\service\machine\SongJackpot;
 use app\service\machine\SongSlot;
@@ -171,6 +172,48 @@ return [
             SongSlot::MACHINE_OPEN => 'Power on',
             SongSlot::MACHINE_CLOSE => 'Shutdown',
             SongSlot::ALL_DOWN => 'Clean up historical data',
+        ],
+        GameType::TYPE_POKEMON_BALL . '_' . Machine::CONTROL_TYPE_MEI => [
+            PokemonBall::ALL => 'Machine Status',
+            PokemonBall::WASH_ZERO => 'Wash & Reset',
+            PokemonBall::OPEN_ANY_POINT => 'Open Any Points',
+            PokemonBall::SCORE_UP => 'Score Up',
+            PokemonBall::SCORE_DOWN => 'Score Down',
+            PokemonBall::GAME_ENABLE_ON => 'Enable Game',
+            PokemonBall::GAME_ENABLE_OFF => 'Disable Game',
+            PokemonBall::GAME_END => 'Game End',
+            PokemonBall::ENTER_JP1 => 'Enter JP1',
+            PokemonBall::SET_JACKPOT => 'Set Jackpot Score',
+            PokemonBall::QUERY_UID => 'Query UID',
+            PokemonBall::QUERY_ACCOUNT => 'Query Account',
+            PokemonBall::SET_MULTIPLIER => 'Set Level Multiplier',
+            PokemonBall::ADD_SCORE => 'Add Score',
+            PokemonBall::SUB_SCORE => 'Subtract Score',
+            PokemonBall::START_GAME => 'Start Game',
+            PokemonBall::AUTO_START => 'Auto Start',
+            PokemonBall::SET_BALL_COUNT => 'Set Ball Count',
+            PokemonBall::SET_LIGHT_COUNT => 'Set Light Count',
+        ],
+        GameType::TYPE_POKEMON_BALL . '_' . Machine::CONTROL_TYPE_SONG => [
+            PokemonBall::ALL => 'Machine Status',
+            PokemonBall::WASH_ZERO => 'Wash & Reset',
+            PokemonBall::OPEN_ANY_POINT => 'Open Any Points',
+            PokemonBall::SCORE_UP => 'Score Up',
+            PokemonBall::SCORE_DOWN => 'Score Down',
+            PokemonBall::GAME_ENABLE_ON => 'Enable Game',
+            PokemonBall::GAME_ENABLE_OFF => 'Disable Game',
+            PokemonBall::GAME_END => 'Game End',
+            PokemonBall::ENTER_JP1 => 'Enter JP1',
+            PokemonBall::SET_JACKPOT => 'Set Jackpot Score',
+            PokemonBall::QUERY_UID => 'Query UID',
+            PokemonBall::QUERY_ACCOUNT => 'Query Account',
+            PokemonBall::SET_MULTIPLIER => 'Set Level Multiplier',
+            PokemonBall::ADD_SCORE => 'Add Score',
+            PokemonBall::SUB_SCORE => 'Subtract Score',
+            PokemonBall::START_GAME => 'Start Game',
+            PokemonBall::AUTO_START => 'Auto Start',
+            PokemonBall::SET_BALL_COUNT => 'Set Ball Count',
+            PokemonBall::SET_LIGHT_COUNT => 'Set Light Count',
         ],
     ]
 ];

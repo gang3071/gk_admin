@@ -3,6 +3,7 @@
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use app\service\machine\Jackpot;
+use app\service\machine\PokemonBall;
 use app\service\machine\Slot;
 use app\service\machine\SongJackpot;
 use app\service\machine\SongSlot;
@@ -171,6 +172,48 @@ return [
             SongSlot::MACHINE_OPEN => '开机',
             SongSlot::MACHINE_CLOSE => '关机',
             SongSlot::ALL_DOWN => '清理历史数据',
+        ],
+        GameType::TYPE_POKEMON_BALL . '_' . Machine::CONTROL_TYPE_MEI => [
+            PokemonBall::ALL => '機台狀態',
+            PokemonBall::WASH_ZERO => '洗分&清零',
+            PokemonBall::OPEN_ANY_POINT => '開任意分',
+            PokemonBall::SCORE_UP => '上分',
+            PokemonBall::SCORE_DOWN => '下分',
+            PokemonBall::GAME_ENABLE_ON => '允許遊戲',
+            PokemonBall::GAME_ENABLE_OFF => '禁止遊戲',
+            PokemonBall::GAME_END => '遊戲結束',
+            PokemonBall::ENTER_JP1 => '進入JP1',
+            PokemonBall::SET_JACKPOT => '設置彩金分數',
+            PokemonBall::QUERY_UID => '查詢UID',
+            PokemonBall::QUERY_ACCOUNT => '查詢帳目',
+            PokemonBall::SET_MULTIPLIER => '設置關卡倍數',
+            PokemonBall::ADD_SCORE => '加分',
+            PokemonBall::SUB_SCORE => '減分',
+            PokemonBall::START_GAME => '啟動',
+            PokemonBall::AUTO_START => '自動啟動',
+            PokemonBall::SET_BALL_COUNT => '設置球數',
+            PokemonBall::SET_LIGHT_COUNT => '設置燈數',
+        ],
+        GameType::TYPE_POKEMON_BALL . '_' . Machine::CONTROL_TYPE_SONG => [
+            PokemonBall::ALL => '機台狀態',
+            PokemonBall::WASH_ZERO => '洗分&清零',
+            PokemonBall::OPEN_ANY_POINT => '開任意分',
+            PokemonBall::SCORE_UP => '上分',
+            PokemonBall::SCORE_DOWN => '下分',
+            PokemonBall::GAME_ENABLE_ON => '允許遊戲',
+            PokemonBall::GAME_ENABLE_OFF => '禁止遊戲',
+            PokemonBall::GAME_END => '遊戲結束',
+            PokemonBall::ENTER_JP1 => '進入JP1',
+            PokemonBall::SET_JACKPOT => '設置彩金分數',
+            PokemonBall::QUERY_UID => '查詢UID',
+            PokemonBall::QUERY_ACCOUNT => '查詢帳目',
+            PokemonBall::SET_MULTIPLIER => '設置關卡倍數',
+            PokemonBall::ADD_SCORE => '加分',
+            PokemonBall::SUB_SCORE => '減分',
+            PokemonBall::START_GAME => '啟動',
+            PokemonBall::AUTO_START => '自動啟動',
+            PokemonBall::SET_BALL_COUNT => '設置球數',
+            PokemonBall::SET_LIGHT_COUNT => '設置燈數',
         ],
     ]
 ];

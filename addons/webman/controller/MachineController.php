@@ -18,6 +18,7 @@ use addons\webman\model\Player;
 use addons\webman\service\MediaServer;
 use addons\webman\service\WalletService;
 use app\service\machine\Jackpot;
+use app\service\machine\PokemonBall;
 use app\service\machine\Slot;
 use app\service\machine\SongJackpot;
 use app\service\machine\SongSlot;
@@ -1604,8 +1605,8 @@ class MachineController
                 [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => Slot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => PokemonBall::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => PokemonBall::class,
                 default => Slot::class,
             };
 
@@ -2550,8 +2551,8 @@ class MachineController
                 [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => Slot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => PokemonBall::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => PokemonBall::class,
                 default => Slot::class,
             };
 
@@ -2876,8 +2877,8 @@ class MachineController
                 [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => Slot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => PokemonBall::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => PokemonBall::class,
                 default => Slot::class,
             };
 
@@ -2930,8 +2931,8 @@ class MachineController
                 [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => Slot::class,
-                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_MEI] => PokemonBall::class,
+                [GameType::TYPE_POKEMON_BALL, Machine::CONTROL_TYPE_SONG] => PokemonBall::class,
                 default => Slot::class,
             };
 

@@ -37,6 +37,7 @@ use app\service\ActivityServices;
 use app\service\LotteryServices;
 use app\service\machine\Jackpot;
 use app\service\machine\MachineServices;
+use app\service\machine\PokemonBall;
 use app\service\machine\Slot;
 use app\service\machine\SongJackpot;
 use app\service\machine\SongSlot;
@@ -1685,6 +1686,9 @@ if (!function_exists('getMachineAction')) {
             case GameType::TYPE_STEEL_BALL:
                 $data = MachineServices::getJackpotAction($controlType);
                 break;
+            case GameType::TYPE_POKEMON_BALL:
+                $data = MachineServices::getPokemonBallAction();
+                break;
         }
         $optionList = [];
         if (!empty($data)) {
@@ -1717,6 +1721,9 @@ if (!function_exists('getMachineOpenAny')) {
             case GameType::TYPE_STEEL_BALL:
                 $cmd = $controlType == Machine::CONTROL_TYPE_SONG ? SongJackpot::OPEN_ANY_POINT : Slot::OPEN_ANY_POINT;
                 break;
+            case GameType::TYPE_POKEMON_BALL:
+                $cmd = PokemonBall::OPEN_ANY_POINT;
+                break;
         }
 
         return $cmd;
@@ -1739,6 +1746,9 @@ if (!function_exists('getChannelMachineAction')) {
                 break;
             case GameType::TYPE_STEEL_BALL:
                 $data = MachineServices::getChannelJackpotAction($controlType);
+                break;
+            case GameType::TYPE_POKEMON_BALL:
+                $data = MachineServices::getChannelPokemonBallAction();
                 break;
         }
         $optionList = [];

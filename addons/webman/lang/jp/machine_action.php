@@ -3,6 +3,7 @@
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use app\service\machine\Jackpot;
+use app\service\machine\PokemonBall;
 use app\service\machine\Slot;
 use app\service\machine\SongJackpot;
 use app\service\machine\SongSlot;
@@ -172,6 +173,48 @@ return [
             SongSlot::MACHINE_OPEN => '電源投入',
             SongSlot::MACHINE_CLOSE => 'シャットダウン',
             SongSlot::ALL_DOWN => '履歴データのクリーンアップ',
+        ],
+        GameType::TYPE_POKEMON_BALL . '_' . Machine::CONTROL_TYPE_MEI => [
+            PokemonBall::ALL => 'マシンステータス',
+            PokemonBall::WASH_ZERO => '洗浄&クリア',
+            PokemonBall::OPEN_ANY_POINT => '任意ポイント開放',
+            PokemonBall::SCORE_UP => 'スコアアップ',
+            PokemonBall::SCORE_DOWN => 'スコアダウン',
+            PokemonBall::GAME_ENABLE_ON => 'ゲーム許可',
+            PokemonBall::GAME_ENABLE_OFF => 'ゲーム禁止',
+            PokemonBall::GAME_END => 'ゲーム終了',
+            PokemonBall::ENTER_JP1 => 'JP1進入',
+            PokemonBall::SET_JACKPOT => 'ジャックポット設定',
+            PokemonBall::QUERY_UID => 'UID照会',
+            PokemonBall::QUERY_ACCOUNT => 'アカウント照会',
+            PokemonBall::SET_MULTIPLIER => 'レベル倍率設定',
+            PokemonBall::ADD_SCORE => '加点',
+            PokemonBall::SUB_SCORE => '減点',
+            PokemonBall::START_GAME => 'ゲーム開始',
+            PokemonBall::AUTO_START => '自動開始',
+            PokemonBall::SET_BALL_COUNT => 'ボール数設定',
+            PokemonBall::SET_LIGHT_COUNT => 'ライト数設定',
+        ],
+        GameType::TYPE_POKEMON_BALL . '_' . Machine::CONTROL_TYPE_SONG => [
+            PokemonBall::ALL => 'マシンステータス',
+            PokemonBall::WASH_ZERO => '洗浄&クリア',
+            PokemonBall::OPEN_ANY_POINT => '任意ポイント開放',
+            PokemonBall::SCORE_UP => 'スコアアップ',
+            PokemonBall::SCORE_DOWN => 'スコアダウン',
+            PokemonBall::GAME_ENABLE_ON => 'ゲーム許可',
+            PokemonBall::GAME_ENABLE_OFF => 'ゲーム禁止',
+            PokemonBall::GAME_END => 'ゲーム終了',
+            PokemonBall::ENTER_JP1 => 'JP1進入',
+            PokemonBall::SET_JACKPOT => 'ジャックポット設定',
+            PokemonBall::QUERY_UID => 'UID照会',
+            PokemonBall::QUERY_ACCOUNT => 'アカウント照会',
+            PokemonBall::SET_MULTIPLIER => 'レベル倍率設定',
+            PokemonBall::ADD_SCORE => '加点',
+            PokemonBall::SUB_SCORE => '減点',
+            PokemonBall::START_GAME => 'ゲーム開始',
+            PokemonBall::AUTO_START => '自動開始',
+            PokemonBall::SET_BALL_COUNT => 'ボール数設定',
+            PokemonBall::SET_LIGHT_COUNT => 'ライト数設定',
         ],
     ]
 ];
