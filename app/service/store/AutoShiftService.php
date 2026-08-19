@@ -635,6 +635,7 @@ class AutoShiftService
                 player_id,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as machine_point,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as activity_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as birthday_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as upgrade_bonus_amount,
@@ -649,6 +650,7 @@ class AutoShiftService
             ', [
                 PlayerDeliveryRecord::TYPE_MACHINE,
                 PlayerDeliveryRecord::TYPE_LOTTERY,
+                PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
                 PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
                 PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
@@ -803,7 +805,7 @@ class AutoShiftService
                 || $redeemAmount > 0                                           // 核销金额（机台核销）
                 || $ticketUnredeemed > 0                                       // 未核销金额
                 || $data['lottery_amount'] > 0                                 // 拉彩金额
-                || $data['activity_bonus_amount'] > 0                          // 活动礼金
+                || ($data['activity_bonus_amount'] ?? 0) > 0                   // 活动礼金
                 || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
                 || $data['birthday_bonus_amount'] > 0                          // 生日礼金
                 || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
@@ -839,6 +841,7 @@ class AutoShiftService
                     'modified_add_amount' => (float)$data['modified_add_amount'],
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],
+                    'activity_bonus_amount' => (float)($data['activity_bonus_amount'] ?? 0),
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
                     'birthday_bonus_amount' => (float)($data['birthday_bonus_amount'] ?? 0),
                     'upgrade_bonus_amount' => (float)($data['upgrade_bonus_amount'] ?? 0),
