@@ -23,6 +23,7 @@ return [
     'load_failed' => '読み込みが失敗しました',
     'invalid_game_points' => '変換されたゲームポイントが無効です',
     'system_error' => 'システムエラー',
+    'unknown_error' => '不明なエラー',
     'machine_in_test_mode' => 'このマシンは新バージョン工業制御テストマシンとして使用されています',
     'video_host_request_failed' => 'ビデオホストのリクエストが失敗しました',
     'get_stream_info_failed' => 'ストリーム情報の取得が失敗しました',
@@ -73,6 +74,7 @@ return [
 
     // 彩池相关
     'pool_ratio_must_greater_than_zero' => 'プール比率は0より大きくする必要があります',
+    'pool_ratio_must_greater_than_or_equal_0_0001' => 'プール比率は0.0001%以上である必要があります',
     'pool_ratio_cannot_exceed_100' => 'プール比率は100%を超えることはできません',
     'win_probability_must_greater_than_zero' => '当選確率は0より大きくする必要があります',
     'win_probability_cannot_exceed_1' => '当選確率は1 (100%) を超えることはできません',

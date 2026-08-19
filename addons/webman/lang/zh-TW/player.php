@@ -24,6 +24,22 @@ return [
     'artificial_withdrawal_error' => '人工洗分失敗',
     'artificial_withdrawal_success' => '人工洗分成功',
     'insufficient_balance' => '帳戶餘額不足',
+
+    // 打碼量統計
+    'bet_statistics' => '查看打碼',
+    'bet_statistics_button' => '打碼統計',
+    'bet_statistics_title' => '{name} - 打碼量統計',
+    'today_bet' => '今日打碼量',
+    'week_bet' => '本周打碼量',
+    'month_bet' => '本月打碼量',
+    'machine_bet' => '實體機台',
+    'game_bet' => '電子遊戲',
+    'bet_trend_15days' => '近15天打碼量趨勢',
+    'month_bet_distribution' => '本月打碼量分佈',
+    'bet_amount_unit' => 'NT$',
+    'loading' => '加載中...',
+    'load_failed' => '加載數據失敗',
+
     'fields' => [
         'id' => 'ID',
         'phone' => '手機號（帳號）',

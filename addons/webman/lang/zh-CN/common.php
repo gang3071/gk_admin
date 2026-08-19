@@ -23,6 +23,7 @@ return [
     'load_failed' => '加载失败',
     'invalid_game_points' => '转换后的游戏点数无效',
     'system_error' => '系统错误',
+    'unknown_error' => '未知错误',
     'machine_in_test_mode' => '该机台作为新版工控测试机台使用中',
     'video_host_request_failed' => '请求视讯主机失败',
     'get_stream_info_failed' => '获取流信息失败',
@@ -73,6 +74,7 @@ return [
 
     // 彩池相关
     'pool_ratio_must_greater_than_zero' => '入池比值必须大于0',
+    'pool_ratio_must_greater_than_or_equal_0_0001' => '入池比值必须大于或等于0.0001%',
     'pool_ratio_cannot_exceed_100' => '入池比值不能超过100%',
     'win_probability_must_greater_than_zero' => '中奖概率必须大于0',
     'win_probability_cannot_exceed_1' => '中奖概率不能超过1（100%）',

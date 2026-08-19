@@ -88,7 +88,7 @@ class ChannelPlayGameRecordController
                 });
             }
             if (isset($exAdminFilter['date_type'])) {
-                $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'updated_at'));
+                $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
             }
             if (!empty($exAdminFilter['action_at_start'])) {
                 $grid->model()->where('platform_action_at', '>=', $exAdminFilter['action_at_start']);
@@ -169,6 +169,30 @@ class ChannelPlayGameRecordController
             })->align('center');
             $grid->column('reward', admin_trans('play_game_record.fields.reward'))->display(function ($val) {
                 return Html::create()->content(['+' . $val])->style(['color' => 'green']);
+            })->align('center');
+
+            // VIP等级
+            $grid->column('vip_level_id', admin_trans('play_game_record.fields.vip_level_id'))->display(function ($val, PlayGameRecord $data) {
+                if ($data->player && $data->player->vipLevel) {
+                    return Tag::create($data->player->vipLevel->name)->color('purple');
+                }
+                return $val ? Tag::create('VIP' . $val)->color('purple') : '-';
+            })->align('center');
+
+            // 反水比例
+            $grid->column('cashback_ratio', admin_trans('play_game_record.fields.cashback_ratio'))->display(function ($val) {
+                if ($val !== null && $val > 0) {
+                    return number_format((float)$val, 4) . '%';
+                }
+                return '-';
+            })->align('center');
+
+            // 反水金额
+            $grid->column('cashback_amount', admin_trans('play_game_record.fields.cashback_amount'))->display(function ($val) {
+                if ($val !== null && $val > 0) {
+                    return Html::create()->content(['+' . number_format((float)$val, 4)])->style(['color' => 'green']);
+                }
+                return '-';
             })->align('center');
 
             // ✅ 添加结算状态显示列

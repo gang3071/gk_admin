@@ -131,7 +131,13 @@ class AgentStoreProfitMonthlyExporter extends Excel
 
                 $this->setColumnWidths();
 
-                parent::save(\addons\webman\filesystem\Filesystem::path(''));
+                // 确保存储目录存在
+                $storagePath = \addons\webman\filesystem\Filesystem::path('');
+                if (!is_dir($storagePath)) {
+                    mkdir($storagePath, 0755, true);
+                }
+
+                parent::save($storagePath);
                 $downloadUrl = \addons\webman\filesystem\Filesystem::url($this->getFilename() . '.' . $this->getExtension());
 
                 \support\Log::info('步骤5: 生成下载 URL', [

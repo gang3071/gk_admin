@@ -176,6 +176,30 @@ class PlayGameRecordController
                 return Html::create()->content(['+' . (float)$val])->style(['color' => 'green']);
             })->align('center');
 
+            // VIP等级
+            $grid->column('vip_level_id', admin_trans('play_game_record.fields.vip_level_id'))->display(function ($val, PlayGameRecord $data) {
+                if ($data->player && $data->player->vipLevel) {
+                    return Tag::create($data->player->vipLevel->name)->color('purple');
+                }
+                return $val ? Tag::create('VIP' . $val)->color('purple') : '-';
+            })->align('center');
+
+            // 反水比例
+            $grid->column('cashback_ratio', admin_trans('play_game_record.fields.cashback_ratio'))->display(function ($val) {
+                if ($val !== null && $val > 0) {
+                    return number_format((float)$val, 4) . '%';
+                }
+                return '-';
+            })->align('center');
+
+            // 反水金额
+            $grid->column('cashback_amount', admin_trans('play_game_record.fields.cashback_amount'))->display(function ($val) {
+                if ($val !== null && $val > 0) {
+                    return Html::create()->content(['+' . number_format((float)$val, 4)])->style(['color' => 'green']);
+                }
+                return '-';
+            })->align('center');
+
             // ✅ 添加结算状态显示列
             $grid->column('settlement_status', admin_trans('play_game_record.fields.settlement_status'))->display(function ($val) {
                 switch ($val) {

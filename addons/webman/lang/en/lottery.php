@@ -113,13 +113,13 @@ return [
     'pool_ratio' => 'Pool ratio',
 
     'pool_ratio_help' => 'For each bet in a video game, a certain percentage of the amount will go into the prize pool',
-    'base_bet_amount' => 'Bet amount limit',
+    'base_bet_amount' => 'Accumulated Wagering Limit',
 
-    'base_bet_amount_0' => 'Minimum bet amount limit set to 0',
+    'base_bet_amount_0' => 'Accumulated wagering limit minimum set to 0 (no limit)',
 
-    'base_bet_amount_100000000' => 'Maximum bet amount limit set to 100 million',
+    'base_bet_amount_100000000' => 'Accumulated wagering limit maximum set to 100 million',
 
-    'base_bet_amount_help' => 'Bet amount limit, each bet must be greater than or equal to this setting to participate in the lottery',
+    'base_bet_amount_help' => 'Players must accumulate this amount of wagering to participate in the lottery. Set to 0 for no limit (check every bet). Example: Set to 20, players need to accumulate 20+ in wagers to qualify for prizes',
     // New fields
     'max_pool_amount' => 'Maximum Pool Amount',
     'auto_refill_amount' => 'Guaranteed Amount',
@@ -150,6 +150,11 @@ return [
     'clear_stats_success_title' => 'Cleared Successfully',
     'clear_stats_success_message' => 'Successfully cleared statistics for {count} lotteries',
     'clear_stats_error_title' => 'Clear Failed',
+
+    // Status display
+    'status_enabled_parenthesis' => '(Enabled)',
+    'status_disabled' => 'Disabled',
+    'status_enabled' => 'Enabled',
 
     // Form validation
     'form_validation' => [
@@ -288,5 +293,12 @@ return [
         'steel_ball_condition_placeholder' => 'Enter count, e.g., 50',
         'win_ratio_label' => 'Win Probability',
         'minutes_suffix' => 'minutes',
+    ],
+
+    // Error Messages
+    'error' => [
+        'not_found' => 'Lottery not found',
+        'only_random_support_burst' => 'Only random lottery supports burst feature',
+        'amount_exceed_max_pool' => 'Pool amount cannot exceed maximum pool amount',
     ],
 ];

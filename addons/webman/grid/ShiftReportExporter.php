@@ -20,6 +20,67 @@ class ShiftReportExporter extends Excel
     // 存储每个设备的累计数据 [player_name => [...]]
     protected $deviceTotals = [];
 
+    /**
+     * 固定导出的16个列定义
+     */
+    protected array $availableColumns = [
+        'player_name' => 'shift_handover.device_name',
+        'player_phone' => 'shift_handover.device_number',
+        'open_score_amount' => 'shift_handover.open_score_amount',
+        'channel_withdrawal_amount' => 'shift_handover.channel_withdrawal_amount',
+        'incoming_ticket_amount' => 'shift_handover.incoming_ticket_amount',
+        'ticket_redeem_amount' => 'shift_handover.ticket_redeem_amount',
+        'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
+        'redeem_amount' => 'shift_handover.redeem_amount',
+        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
+        'experience_coupon_amount' => 'shift_handover.experience_coupon_amount',
+        'welfare_coupon_amount' => 'shift_handover.welfare_coupon_amount',
+        'electronic_game_bet_amount' => 'shift_handover.electronic_game_bet_amount',
+        'machine_bet_amount' => 'shift_handover.machine_bet_amount',
+        'total_in' => 'shift_handover.total_in',
+        'total_out' => 'shift_handover.total_out',
+        'profit' => 'shift_handover.profit',
+    ];
+
+    // 用户选择的导出列
+    protected $selectedColumns = [];
+
+    /**
+     * 设置要导出的列
+     * @param array $columns 列名数组
+     * @return $this
+     */
+    public function setSelectedColumns(array $columns): static
+    {
+        $this->selectedColumns = $columns;
+        return $this;
+    }
+
+    /**
+     * 获取所有可导出的列定义
+     * @return array
+     */
+    public function getAvailableColumns(): array
+    {
+        $result = [];
+        foreach ($this->availableColumns as $key => $translationKey) {
+            $result[$key] = admin_trans($translationKey);
+        }
+        return $result;
+    }
+
+    /**
+     * 获取当前选中的列（如果未选择则返回全部）
+     * @return array
+     */
+    protected function getActiveColumns(): array
+    {
+        if (empty($this->selectedColumns)) {
+            return array_keys($this->availableColumns);
+        }
+        return $this->selectedColumns;
+    }
+
     public function columns(array $columns)
     {
         // 保存列配置，但不生成默认表头
@@ -27,9 +88,83 @@ class ShiftReportExporter extends Excel
         return $this;
     }
 
+    /**
+     * 根据列索引获取 Excel 列字母（A, B, ..., Z, AA, AB, ...）
+     */
+    protected function getColumnLetter(int $index): string
+    {
+        $letter = '';
+        while ($index >= 0) {
+            $letter = chr(65 + ($index % 26)) . $letter;
+            $index = intdiv($index, 26) - 1;
+        }
+        return $letter;
+    }
+
+    /**
+     * 获取列数据（支持设备信息和数值列）
+     */
+    protected function getColumnValue(string $column, array $deviceInfo, ?object $detail, array &$subtotal): mixed
+    {
+        return match ($column) {
+            'player_name' => $deviceInfo['player_name'],
+            'player_phone' => $deviceInfo['player_phone'],
+            'open_score_amount' => $detail ? ($detail->open_score_amount ?? 0) : 0,
+            'ticket_open_score_amount' => $detail ? ($detail->ticket_open_score_amount ?? 0) : 0,
+            'incoming_ticket_amount' => $detail ? ($detail->incoming_ticket_amount ?? 0) : 0,
+            'redeem_amount' => $detail ? ($detail->redeem_amount ?? 0) : 0,
+            'channel_withdrawal_amount' => $detail ? ($detail->channel_withdrawal_amount ?? 0) : 0,
+            'ticket_redeem_amount' => $detail ? ($detail->ticket_redeem_amount ?? 0) : 0,
+            'ticket_unredeemed_amount' => $detail ? ($detail->ticket_unredeemed_amount ?? 0) : 0,
+            'experience_coupon_amount' => $detail ? ($detail->experience_coupon_amount ?? 0) : 0,
+            'welfare_coupon_amount' => $detail ? ($detail->welfare_coupon_amount ?? 0) : 0,
+            'electronic_game_bet_amount' => $detail ? $detail->electronic_game_bet_amount : 0,
+            'machine_bet_amount' => $detail ? $detail->machine_bet_amount : 0,
+            'total_in' => $detail ? $detail->total_in : 0,
+            'total_out' => $detail ? $detail->total_out : 0,
+            'profit' => $detail ? $detail->profit : 0,
+            default => 0,
+        };
+    }
+
+    /**
+     * 格式化列值用于显示
+     */
+    protected function formatColumnValue(string $column, mixed $value): string
+    {
+        return match ($column) {
+            'player_name', 'player_phone' => (string) $value,
+            'machine_point' => number_format($value, 0),
+            default => number_format($value, 2),
+        };
+    }
+
+    /**
+     * 检查一行数据是否全部为0（排除文本列）
+     */
+    protected function isAllZero(array $values, array $activeColumns): bool
+    {
+        foreach ($activeColumns as $column) {
+            // 跳过文本列
+            if (in_array($column, ['player_name', 'player_phone'])) {
+                continue;
+            }
+            $value = $values[$column] ?? 0;
+            if (bccomp($value, '0', 2) !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public function write(array $data, \Closure $finish = null)
     {
         try {
+            // 使用用户选择的列（如果未选择则使用全部列）
+            $activeColumns = $this->getActiveColumns();
+            $columnCount = count($activeColumns);
+            $lastColumnLetter = $this->getColumnLetter($columnCount - 1);
+
             // 如果是第一次调用，初始化店家所有设备
             if ($this->processedRecords == 0) {
                 // 获取店家管理员ID
@@ -66,7 +201,7 @@ class ShiftReportExporter extends Excel
                 $titleText = admin_trans('shift_handover.shift_id') . ': ' . $originalRecord->id . '    ' .
                              admin_trans('shift_handover.shift_time') . ': ' . $originalRecord->start_time . ' ~ ' . $originalRecord->end_time;
                 $this->sheet->setCellValue('A' . $this->currentRow, $titleText);
-                $this->sheet->mergeCells('A' . $this->currentRow . ':T' . $this->currentRow);
+                $this->sheet->mergeCells('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow);
                 $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
@@ -74,31 +209,6 @@ class ShiftReportExporter extends Excel
                     'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
                 ]);
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
-                $this->currentRow++;
-
-                // 出票核销汇总行
-                $ticketRecordTotal = $originalRecord->ticket_record_total_score ?? 0;
-                $ticketRedeemBackendUsed = $originalRecord->ticket_redeem_backend_used_score ?? 0;
-                $ticketSubtotal = bcsub($ticketRecordTotal, $ticketRedeemBackendUsed, 2);
-
-                $ticketSummaryText = sprintf(
-                    '%s: %s    %s: %s    %s: %s',
-                    admin_trans('shift_handover.record.ticket_record_total_score'),
-                    number_format($ticketRecordTotal, 2),
-                    admin_trans('shift_handover.record.ticket_redeem_backend_used_score'),
-                    number_format($ticketRedeemBackendUsed, 2),
-                    admin_trans('shift_handover.record.ticket_subtotal'),
-                    number_format(floatval($ticketSubtotal), 2)
-                );
-                $this->sheet->setCellValue('A' . $this->currentRow, $ticketSummaryText);
-                $this->sheet->mergeCells('A' . $this->currentRow . ':T' . $this->currentRow);
-                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-                    'font' => ['bold' => true, 'size' => 11, 'color' => ['rgb' => '333333']],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFF2CC']],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
-                ]);
-                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(22);
                 $this->currentRow++;
 
                 // 获取设备明细
@@ -112,33 +222,14 @@ class ShiftReportExporter extends Excel
 
                 // 总是显示设备明细表（即使没有数据）
                 {
-                    // 设备明细表头
-                    $headers = [
-                        admin_trans('shift_handover.device_name'),
-                        admin_trans('shift_handover.device_number'),
-                        admin_trans('shift_handover.machine_point'),
-                        admin_trans('shift_handover.recharge_amount'),
-                        admin_trans('shift_handover.withdrawal_amount'),
-                        admin_trans('shift_handover.modified_add_amount'),
-                        admin_trans('shift_handover.modified_deduct_amount'),
-                        admin_trans('shift_handover.lottery_amount'),
-                        admin_trans('shift_handover.activity_bonus_amount'),
-                        admin_trans('shift_handover.lottery_ticket_reward_amount'),
-                        admin_trans('shift_handover.record.birthday_bonus_amount'),
-                        admin_trans('shift_handover.record.upgrade_bonus_amount'),
-                        admin_trans('shift_handover.electronic_game_bet_amount'),
-                        admin_trans('shift_handover.machine_bet_amount'),
-                        admin_trans('shift_handover.total_in'),
-                        admin_trans('shift_handover.total_out'),
-                        admin_trans('shift_handover.profit')
-                    ];
+                    // 设备明细表头（基于选中的列）
                     $headerRow = $this->currentRow;
-
-                    foreach ($headers as $index => $header) {
-                        $this->sheet->setCellValueByColumnAndRow($index + 1, $this->currentRow, $header);
+                    foreach ($activeColumns as $index => $column) {
+                        $headerLabel = admin_trans($this->availableColumns[$column] ?? $column);
+                        $this->sheet->setCellValueByColumnAndRow($index + 1, $this->currentRow, $headerLabel);
                     }
 
-                    $this->sheet->getStyle('A' . $this->currentRow . ':Q' . $this->currentRow)->applyFromArray([
+                    $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
                         'font' => ['bold' => true, 'size' => 11],
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
                         'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -147,24 +238,13 @@ class ShiftReportExporter extends Excel
                     $this->sheet->getRowDimension($this->currentRow)->setRowHeight(22);
                     $this->currentRow++;
 
-                    // 小计数据
-                    $subtotal = [
-                        'machine_point' => 0,
-                        'recharge_amount' => 0,
-                        'withdrawal_amount' => 0,
-                        'modified_add_amount' => 0,
-                        'modified_deduct_amount' => 0,
-                        'lottery_amount' => 0,
-                        'activity_bonus_amount' => 0,
-                        'lottery_ticket_reward_amount' => 0,
-                        'birthday_bonus_amount' => 0,
-                        'upgrade_bonus_amount' => 0,
-                        'electronic_game_bet_amount' => 0,
-                        'machine_bet_amount' => 0,
-                        'total_in' => 0,
-                        'total_out' => 0,
-                        'profit' => 0
-                    ];
+                    // 小计数据（只初始化选中的列）
+                    $subtotal = [];
+                    foreach ($activeColumns as $column) {
+                        if (!in_array($column, ['player_name', 'player_phone'])) {
+                            $subtotal[$column] = 0;
+                        }
+                    }
 
                     // 设备明细数据 - 遍历所有设备（即使某些设备在本次交班中没有数据）
                     // 使用与初始化相同的排序逻辑（按 player_id 升序）
@@ -177,118 +257,73 @@ class ShiftReportExporter extends Excel
                         // 检查该设备在本次交班记录中是否有数据
                         $detail = $deviceDetailsMap[$playerId] ?? null;
 
-                        // 如果有数据，显示真实数据；如果没有数据，显示0
-                        $machinePoint = $detail ? $detail->machine_point : 0;
-                        $rechargeAmount = $detail ? $detail->recharge_amount : 0;
-                        $withdrawalAmount = $detail ? $detail->withdrawal_amount : 0;
-                        $modifiedAddAmount = $detail ? $detail->modified_add_amount : 0;
-                        $modifiedDeductAmount = $detail ? $detail->modified_deduct_amount : 0;
-                        $lotteryAmount = $detail ? $detail->lottery_amount : 0;
-                        $activityBonusAmount = $detail ? $detail->activity_bonus_amount : 0;
-                        $lotteryTicketRewardAmount = $detail ? $detail->lottery_ticket_reward_amount : 0;
-                        $birthdayBonusAmount = $detail ? ($detail->birthday_bonus_amount ?? 0) : 0;
-                        $upgradeBonusAmount = $detail ? ($detail->upgrade_bonus_amount ?? 0) : 0;
-                        $electronicGameBetAmount = $detail ? $detail->electronic_game_bet_amount : 0;
-                        $machineBetAmount = $detail ? $detail->machine_bet_amount : 0;
-                        $totalIn = $detail ? $detail->total_in : 0;
-                        $totalOut = $detail ? $detail->total_out : 0;
-                        $profit = $detail ? $detail->profit : 0;
+                        // 获取所有列的值
+                        $rowValues = [];
+                        foreach ($activeColumns as $column) {
+                            $rowValues[$column] = $this->getColumnValue($column, $deviceInfo, $detail, $subtotal);
+                        }
 
-                        // 过滤全部为0的明细行（使用 bccomp 精确比较小数）
-                        $allZero = (bccomp($machinePoint, '0', 2) === 0
-                            && bccomp($rechargeAmount, '0', 2) === 0
-                            && bccomp($withdrawalAmount, '0', 2) === 0
-                            && bccomp($modifiedAddAmount, '0', 2) === 0
-                            && bccomp($modifiedDeductAmount, '0', 2) === 0
-                            && bccomp($lotteryAmount, '0', 2) === 0
-                            && bccomp($activityBonusAmount, '0', 2) === 0
-                            && bccomp($lotteryTicketRewardAmount, '0', 2) === 0
-                            && bccomp($birthdayBonusAmount, '0', 2) === 0
-                            && bccomp($upgradeBonusAmount, '0', 2) === 0
-                            && bccomp($electronicGameBetAmount, '0', 2) === 0
-                            && bccomp($machineBetAmount, '0', 2) === 0
-                            && bccomp($totalIn, '0', 2) === 0
-                            && bccomp($totalOut, '0', 2) === 0
-                            && bccomp($profit, '0', 2) === 0);
-                        if ($allZero) {
+                        // 过滤全部为0的明细行
+                        if ($this->isAllZero($rowValues, $activeColumns)) {
                             continue;
                         }
 
-                        $this->sheet->setCellValue('A' . $this->currentRow, $deviceInfo['player_name']);
-                        $this->sheet->setCellValue('B' . $this->currentRow, $deviceInfo['player_phone']);
-                        $this->sheet->setCellValue('C' . $this->currentRow, number_format($machinePoint, 0));
-                        $this->sheet->setCellValue('D' . $this->currentRow, number_format($rechargeAmount, 2));
-                        $this->sheet->setCellValue('E' . $this->currentRow, number_format($withdrawalAmount, 2));
-                        $this->sheet->setCellValue('F' . $this->currentRow, number_format($modifiedAddAmount, 2));
-                        $this->sheet->setCellValue('G' . $this->currentRow, number_format($modifiedDeductAmount, 2));
-                        $this->sheet->setCellValue('H' . $this->currentRow, number_format($lotteryAmount, 2));
-                        $this->sheet->setCellValue('I' . $this->currentRow, number_format($activityBonusAmount, 2));
-                        $this->sheet->setCellValue('J' . $this->currentRow, number_format($lotteryTicketRewardAmount, 2));
-                        $this->sheet->setCellValue('K' . $this->currentRow, number_format($birthdayBonusAmount, 2));
-                        $this->sheet->setCellValue('L' . $this->currentRow, number_format($upgradeBonusAmount, 2));
-                        $this->sheet->setCellValue('M' . $this->currentRow, number_format($electronicGameBetAmount, 2));
-                        $this->sheet->setCellValue('N' . $this->currentRow, number_format($machineBetAmount, 2));
-                        $this->sheet->setCellValue('O' . $this->currentRow, number_format($totalIn, 2));
-                        $this->sheet->setCellValue('P' . $this->currentRow, number_format($totalOut, 2));
-                        $this->sheet->setCellValue('Q' . $this->currentRow, number_format($profit, 2));
+                        // 写入每列数据
+                        foreach ($activeColumns as $colIndex => $column) {
+                            $value = $rowValues[$column];
+                            $formattedValue = $this->formatColumnValue($column, $value);
+                            $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
+                        }
 
-                        // 数字列右对齐
-                        $this->sheet->getStyle('C' . $this->currentRow . ':Q' . $this->currentRow)
-                            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                        // 数字列右对齐（跳过前两列文本）
+                        if ($columnCount > 2) {
+                            $this->sheet->getStyle($this->getColumnLetter(2) . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)
+                                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                        }
 
                         // 交替行背景色
                         $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
-                        $this->sheet->getStyle('A' . $this->currentRow . ':Q' . $this->currentRow)->applyFromArray([
+                        $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
                             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
                             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
                         ]);
 
-                        // 利润颜色
-                        $profitColor = $profit >= 0 ? '3f8600' : 'cf1322';
-                        $this->sheet->getStyle('Q' . $this->currentRow)->getFont()->getColor()->setRGB($profitColor);
-                        $this->sheet->getStyle('Q' . $this->currentRow)->getFont()->setBold(true);
+                        // 利润颜色（如果利润列被选中）
+                        if (in_array('profit', $activeColumns)) {
+                            $profitColIndex = array_search('profit', $activeColumns);
+                            $profitLetter = $this->getColumnLetter($profitColIndex);
+                            $profit = $rowValues['profit'] ?? 0;
+                            $profitColor = $profit >= 0 ? '3f8600' : 'cf1322';
+                            $this->sheet->getStyle($profitLetter . $this->currentRow)->getFont()->getColor()->setRGB($profitColor);
+                            $this->sheet->getStyle($profitLetter . $this->currentRow)->getFont()->setBold(true);
+                        }
 
                         // 累加小计
-                        $subtotal['machine_point'] += $machinePoint;
-                        $subtotal['recharge_amount'] += $rechargeAmount;
-                        $subtotal['withdrawal_amount'] += $withdrawalAmount;
-                        $subtotal['modified_add_amount'] += $modifiedAddAmount;
-                        $subtotal['modified_deduct_amount'] += $modifiedDeductAmount;
-                        $subtotal['lottery_amount'] += $lotteryAmount;
-                        $subtotal['activity_bonus_amount'] += $activityBonusAmount;
-                        $subtotal['lottery_ticket_reward_amount'] += $lotteryTicketRewardAmount;
-                        $subtotal['birthday_bonus_amount'] += $birthdayBonusAmount;
-                        $subtotal['upgrade_bonus_amount'] += $upgradeBonusAmount;
-                        $subtotal['electronic_game_bet_amount'] += $electronicGameBetAmount;
-                        $subtotal['machine_bet_amount'] += $machineBetAmount;
-                        $subtotal['total_in'] += $totalIn;
-                        $subtotal['total_out'] += $totalOut;
-                        $subtotal['profit'] += $profit;
+                        foreach ($subtotal as $column => &$value) {
+                            $value += $rowValues[$column] ?? 0;
+                        }
+                        unset($value);
 
                         $this->currentRow++;
                         $index++;
                     }
 
                     // 小计行
-                    $this->sheet->setCellValue('A' . $this->currentRow, admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $originalRecord->id . ')');
-                    $this->sheet->setCellValue('B' . $this->currentRow, '');
-                    $this->sheet->setCellValue('C' . $this->currentRow, number_format($subtotal['machine_point'], 0));
-                    $this->sheet->setCellValue('D' . $this->currentRow, number_format($subtotal['recharge_amount'], 2));
-                    $this->sheet->setCellValue('E' . $this->currentRow, number_format($subtotal['withdrawal_amount'], 2));
-                    $this->sheet->setCellValue('F' . $this->currentRow, number_format($subtotal['modified_add_amount'], 2));
-                    $this->sheet->setCellValue('G' . $this->currentRow, number_format($subtotal['modified_deduct_amount'], 2));
-                    $this->sheet->setCellValue('H' . $this->currentRow, number_format($subtotal['lottery_amount'], 2));
-                    $this->sheet->setCellValue('I' . $this->currentRow, number_format($subtotal['activity_bonus_amount'], 2));
-                    $this->sheet->setCellValue('J' . $this->currentRow, number_format($subtotal['lottery_ticket_reward_amount'], 2));
-                    $this->sheet->setCellValue('K' . $this->currentRow, number_format($subtotal['birthday_bonus_amount'], 2));
-                    $this->sheet->setCellValue('L' . $this->currentRow, number_format($subtotal['upgrade_bonus_amount'], 2));
-                    $this->sheet->setCellValue('M' . $this->currentRow, number_format($subtotal['electronic_game_bet_amount'], 2));
-                    $this->sheet->setCellValue('N' . $this->currentRow, number_format($subtotal['machine_bet_amount'], 2));
-                    $this->sheet->setCellValue('O' . $this->currentRow, number_format($subtotal['total_in'], 2));
-                    $this->sheet->setCellValue('P' . $this->currentRow, number_format($subtotal['total_out'], 2));
-                    $this->sheet->setCellValue('Q' . $this->currentRow, number_format($subtotal['profit'], 2));
+                    $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $originalRecord->id . ')';
+                    $this->sheet->setCellValue('A' . $this->currentRow, $subtotalLabel);
 
-                    $this->sheet->getStyle('A' . $this->currentRow . ':Q' . $this->currentRow)->applyFromArray([
+                    // 写入小计数据
+                    foreach ($activeColumns as $colIndex => $column) {
+                        if (in_array($column, ['player_name', 'player_phone'])) {
+                            $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, '');
+                        } else {
+                            $value = $subtotal[$column] ?? 0;
+                            $formattedValue = $this->formatColumnValue($column, $value);
+                            $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
+                        }
+                    }
+
+                    $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
                         'font' => ['bold' => true, 'size' => 11],
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
                         'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -297,8 +332,13 @@ class ShiftReportExporter extends Excel
                     $this->sheet->getStyle('A' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                     // 小计利润颜色
-                    $subtotalProfitColor = $subtotal['profit'] >= 0 ? '3f8600' : 'cf1322';
-                    $this->sheet->getStyle('Q' . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
+                    if (in_array('profit', $activeColumns)) {
+                        $profitColIndex = array_search('profit', $activeColumns);
+                        $profitLetter = $this->getColumnLetter($profitColIndex);
+                        $subtotalProfit = $subtotal['profit'] ?? 0;
+                        $subtotalProfitColor = $subtotalProfit >= 0 ? '3f8600' : 'cf1322';
+                        $this->sheet->getStyle($profitLetter . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
+                    }
 
                     $this->currentRow++;
                 }
@@ -322,7 +362,7 @@ class ShiftReportExporter extends Excel
             // 在 foreach 循环外部检查是否所有记录都已处理完成
             if ($this->processedRecords >= $this->count) {
                 // 设置列宽
-                $this->setColumnWidths();
+                $this->setColumnWidths($activeColumns);
 
                 // 冻结首行
                 $this->sheet->freezePane('A1');
@@ -387,30 +427,41 @@ class ShiftReportExporter extends Excel
     }
 
     /**
-     * 设置列宽
+     * 设置列宽（基于选中的列）
+     * @param array $activeColumns 当前激活的列
      */
-    protected function setColumnWidths()
+    protected function setColumnWidths(array $activeColumns = [])
     {
-        $widths = [
-            'A' => 20,  // 设备名称
-            'B' => 15,  // 设备编号
-            'C' => 12,  // 投钞点数
-            'D' => 14,  // 开分
-            'E' => 14,  // 洗分
-            'F' => 14,  // 后台加点
-            'G' => 14,  // 后台扣点
-            'H' => 14,  // 彩金
-            'I' => 14,  // 活动奖励
-            'J' => 14,  // 摸奖券奖励
-            'K' => 14,  // 电子游戏打码量
-            'L' => 14,  // 机器打码量
-            'M' => 14,  // 总收入
-            'N' => 14,  // 总支出
-            'O' => 16,  // 利润
+        // 列宽度定义（固定16列）
+        $columnWidths = [
+            'player_name' => 20,
+            'player_phone' => 15,
+            'open_score_amount' => 12,
+            'channel_withdrawal_amount' => 12,
+            'incoming_ticket_amount' => 14,
+            'ticket_redeem_amount' => 12,
+            'ticket_open_score_amount' => 12,
+            'redeem_amount' => 12,
+            'ticket_unredeemed_amount' => 12,
+            'experience_coupon_amount' => 12,
+            'welfare_coupon_amount' => 12,
+            'electronic_game_bet_amount' => 14,
+            'machine_bet_amount' => 14,
+            'total_in' => 14,
+            'total_out' => 14,
+            'profit' => 16,
         ];
 
-        foreach ($widths as $col => $width) {
-            $this->sheet->getColumnDimension($col)->setWidth($width);
+        // 如果没有指定列，使用全部列
+        if (empty($activeColumns)) {
+            $activeColumns = array_keys($columnWidths);
+        }
+
+        // 根据选中的列设置宽度
+        foreach ($activeColumns as $index => $column) {
+            $letter = $this->getColumnLetter($index);
+            $width = $columnWidths[$column] ?? 14;
+            $this->sheet->getColumnDimension($letter)->setWidth($width);
         }
     }
 

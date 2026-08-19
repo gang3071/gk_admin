@@ -2,19 +2,19 @@
   <div class="online-players-container">
     <a-tabs v-model:activeKey="activeTab" @change="onTabChange">
       <!-- 电子游戏在线玩家 -->
-      <a-tab-pane key="game" tab="電子遊戲在線玩家">
-        <a-card :bordered="false" :title="`電子遊戲在線玩家 (${gamePlayers.length}人在線)`">
+      <a-tab-pane key="game" :tab="t('tab.game_online_players')">
+        <a-card :bordered="false" :title="t('card.game_title', { count: gamePlayers.length })">
           <template #extra>
             <a-space>
-              <a-tag color="green">實時更新</a-tag>
-              <a-tag color="blue">最後更新: {{ lastGameUpdateTime }}</a-tag>
+              <a-tag color="green">{{ t('tag.realtime_update') }}</a-tag>
+              <a-tag color="blue">{{ t('tag.last_update', { time: lastGameUpdateTime }) }}</a-tag>
               <a-button size="small" type="primary" @click="refreshGamePlayers">
-                刷新
+                {{ t('button.refresh') }}
               </a-button>
             </a-space>
           </template>
 
-          <a-empty v-if="!gameLoading && gamePlayers.length === 0" description="暫無在線玩家（最近1分鐘內無押注記錄）" />
+          <a-empty v-if="!gameLoading && gamePlayers.length === 0" :description="t('empty.no_online_players')" />
 
           <a-table
             v-else
@@ -45,17 +45,17 @@
               <template v-if="column.key === 'last_bet_time'">
                 <div>
                   <div>{{ record.last_bet_time }}</div>
-                  <a-tag color="green" style="margin-top: 4px;">{{ record.bet_seconds_ago }}秒前</a-tag>
+                  <a-tag color="green" style="margin-top: 4px;">{{ t('tag.seconds_ago', { seconds: record.bet_seconds_ago }) }}</a-tag>
                 </div>
               </template>
 
               <template v-if="column.key === 'status'">
-                <a-tag color="green">遊戲中</a-tag>
+                <a-tag color="green">{{ t('tag.playing') }}</a-tag>
               </template>
 
               <template v-if="column.key === 'action'">
                 <a-button type="primary" size="small" @click="showGrantModal(record)">
-                  發放彩金
+                  {{ t('button.grant_lottery') }}
                 </a-button>
               </template>
             </template>
@@ -63,20 +63,20 @@
         </a-card>
       </a-tab-pane>
 
-      <!-- 實體機台在線玩家 -->
-      <a-tab-pane key="machine" tab="實體機台在線玩家">
-        <a-card :bordered="false" :title="`實體機台在線玩家 (${machinePlayers.length}人在線)`">
+      <!-- 实体机台在线玩家 -->
+      <a-tab-pane key="machine" :tab="t('tab.machine_online_players')">
+        <a-card :bordered="false" :title="t('card.machine_title', { count: machinePlayers.length })">
           <template #extra>
             <a-space>
-              <a-tag color="green">實時更新</a-tag>
-              <a-tag color="blue">最後更新: {{ lastMachineUpdateTime }}</a-tag>
+              <a-tag color="green">{{ t('tag.realtime_update') }}</a-tag>
+              <a-tag color="blue">{{ t('tag.last_update', { time: lastMachineUpdateTime }) }}</a-tag>
               <a-button size="small" type="primary" @click="refreshMachinePlayers">
-                刷新
+                {{ t('button.refresh') }}
               </a-button>
             </a-space>
           </template>
 
-          <a-empty v-if="!machineLoading && machinePlayers.length === 0" description="暫無在線玩家（最近1分鐘內無押注記錄）" />
+          <a-empty v-if="!machineLoading && machinePlayers.length === 0" :description="t('empty.no_online_players')" />
 
           <a-table
             v-else
@@ -102,7 +102,7 @@
               <template v-if="column.key === 'machine_info'">
                 <div v-if="record.machine_name">
                   <div>{{ record.machine_name }}</div>
-                  <div style="color: #999; font-size: 12px;">編號: {{ record.machine_code }}</div>
+                  <div style="color: #999; font-size: 12px;">{{ t('display.code_prefix', { code: record.machine_code }) }}</div>
                 </div>
                 <span v-else>-</span>
               </template>
@@ -110,17 +110,17 @@
               <template v-if="column.key === 'last_bet_time'">
                 <div>
                   <div>{{ record.last_bet_time }}</div>
-                  <a-tag color="green" style="margin-top: 4px;">{{ record.bet_seconds_ago }}秒前</a-tag>
+                  <a-tag color="green" style="margin-top: 4px;">{{ t('tag.seconds_ago', { seconds: record.bet_seconds_ago }) }}</a-tag>
                 </div>
               </template>
 
               <template v-if="column.key === 'status'">
-                <a-tag color="green">遊戲中</a-tag>
+                <a-tag color="green">{{ t('tag.playing') }}</a-tag>
               </template>
 
               <template v-if="column.key === 'action'">
                 <a-button type="primary" size="small" @click="showGrantModal(record)">
-                  發放彩金
+                  {{ t('button.grant_lottery') }}
                 </a-button>
               </template>
             </template>
@@ -129,47 +129,47 @@
       </a-tab-pane>
     </a-tabs>
 
-    <!-- 發放彩金彈窗 -->
+    <!-- 发放彩金弹窗 -->
     <a-modal
       v-model:visible="grantModalVisible"
-      title="發放彩金"
+      :title="t('modal.grant_lottery')"
       @ok="handleGrantLottery"
       @cancel="handleCancelGrant"
       :confirm-loading="grantLoading"
     >
       <a-form :model="grantForm" :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-        <a-form-item label="玩家信息">
+        <a-form-item :label="t('modal.player_info')">
           <div>
             <div><strong>{{ selectedPlayer?.name }}</strong></div>
             <div style="color: #999; font-size: 12px;">UUID: {{ selectedPlayer?.uuid }}</div>
-            <div style="color: #999; font-size: 12px;">手機: {{ selectedPlayer?.phone }}</div>
+            <div style="color: #999; font-size: 12px;">{{ selectedPlayer?.phone }}</div>
           </div>
         </a-form-item>
 
-        <a-form-item label="選擇彩金" required>
+        <a-form-item :label="t('modal.select_lottery')" required>
           <a-select
             v-model:value="grantForm.lottery_id"
-            placeholder="請選擇彩金類型"
+            :placeholder="t('placeholder.select_lottery')"
             :options="lotteryOptions"
           />
         </a-form-item>
 
-        <a-form-item label="發放金額" required>
+        <a-form-item :label="t('modal.grant_amount')" required>
           <a-input-number
             v-model:value="grantForm.amount"
             :min="1"
             :max="1000000"
             :precision="2"
-            placeholder="請輸入發放金額"
+            :placeholder="t('placeholder.input_amount')"
             style="width: 100%;"
           />
         </a-form-item>
 
-        <a-form-item label="備註">
+        <a-form-item :label="t('modal.remark')">
           <a-textarea
             v-model:value="grantForm.remark"
             :rows="3"
-            placeholder="請輸入發放原因或備註信息"
+            :placeholder="t('placeholder.input_remark')"
           />
         </a-form-item>
       </a-form>
@@ -178,6 +178,245 @@
 </template>
 
 <script>
+const messages = {
+  'zh-CN': {
+    tab: {
+      game_online_players: '电子游戏在线玩家',
+      machine_online_players: '实体机台在线玩家',
+    },
+    card: {
+      game_title: '电子游戏在线玩家 ({count}人在线)',
+      machine_title: '实体机台在线玩家 ({count}人在线)',
+    },
+    tag: {
+      realtime_update: '实时更新',
+      last_update: '最后更新: {time}',
+      playing: '游戏中',
+      seconds_ago: '{seconds}秒前',
+    },
+    button: {
+      refresh: '刷新',
+      grant_lottery: '发放彩金',
+    },
+    empty: {
+      no_online_players: '暂无在线玩家（最近1分钟内无押注记录）',
+    },
+    columns: {
+      id: 'ID',
+      player_info: '玩家信息',
+      uuid: 'UUID',
+      current_machine: '当前机台',
+      current_platform: '当前平台',
+      last_bet_time: '最后押注时间',
+      total_pressure: '累计押注',
+      total_bet: '累计押注',
+      status: '状态',
+      action: '操作',
+    },
+    display: {
+      code_prefix: '编号: {code}',
+    },
+    modal: {
+      grant_lottery: '发放彩金',
+      player_info: '玩家信息',
+      select_lottery: '选择彩金',
+      grant_amount: '发放金额',
+      remark: '备注',
+    },
+    placeholder: {
+      select_lottery: '请选择彩金类型',
+      input_amount: '请输入发放金额',
+      input_remark: '请输入发放原因或备注信息',
+    },
+    validation_msg: {
+      select_lottery: '请选择彩金类型',
+      input_valid_amount: '请输入有效的发放金额',
+      grant_success: '彩金发放成功',
+      grant_failed: '彩金发放失败',
+    },
+    default: {
+      not_updated: '未更新',
+    },
+  },
+  en: {
+    tab: {
+      game_online_players: 'Online Game Players',
+      machine_online_players: 'Machine Online Players',
+    },
+    card: {
+      game_title: 'Online Game Players ({count} online)',
+      machine_title: 'Machine Online Players ({count} online)',
+    },
+    tag: {
+      realtime_update: 'Real-time',
+      last_update: 'Last update: {time}',
+      playing: 'Playing',
+      seconds_ago: '{seconds}s ago',
+    },
+    button: {
+      refresh: 'Refresh',
+      grant_lottery: 'Grant Lottery',
+    },
+    empty: {
+      no_online_players: 'No online players (no bet records in the last 1 minute)',
+    },
+    columns: {
+      id: 'ID',
+      player_info: 'Player Info',
+      uuid: 'UUID',
+      current_machine: 'Current Machine',
+      current_platform: 'Current Platform',
+      last_bet_time: 'Last Bet Time',
+      total_pressure: 'Total Bets',
+      total_bet: 'Total Bets',
+      status: 'Status',
+      action: 'Action',
+    },
+    display: {
+      code_prefix: 'Code: {code}',
+    },
+    modal: {
+      grant_lottery: 'Grant Lottery',
+      player_info: 'Player Info',
+      select_lottery: 'Select Lottery',
+      grant_amount: 'Grant Amount',
+      remark: 'Remark',
+    },
+    placeholder: {
+      select_lottery: 'Please select lottery type',
+      input_amount: 'Please enter grant amount',
+      input_remark: 'Please enter reason or remark',
+    },
+    validation_msg: {
+      select_lottery: 'Please select lottery type',
+      input_valid_amount: 'Please enter a valid amount',
+      grant_success: 'Lottery granted successfully',
+      grant_failed: 'Lottery grant failed',
+    },
+    default: {
+      not_updated: 'Not updated',
+    },
+  },
+  jp: {
+    tab: {
+      game_online_players: 'オンラインゲームプレイヤー',
+      machine_online_players: 'マシンオンラインプレイヤー',
+    },
+    card: {
+      game_title: 'オンラインゲームプレイヤー ({count}人オンライン)',
+      machine_title: 'マシンオンラインプレイヤー ({count}人オンライン)',
+    },
+    tag: {
+      realtime_update: 'リアルタイム更新',
+      last_update: '最終更新: {time}',
+      playing: 'プレイ中',
+      seconds_ago: '{seconds}秒前',
+    },
+    button: {
+      refresh: '更新',
+      grant_lottery: '宝くじ付与',
+    },
+    empty: {
+      no_online_players: 'オンラインプレイヤーがいません（直近1分以内にベット記録なし）',
+    },
+    columns: {
+      id: 'ID',
+      player_info: 'プレイヤー情報',
+      uuid: 'UUID',
+      current_machine: '現在のマシン',
+      current_platform: '現在のプラットフォーム',
+      last_bet_time: '最終ベット時間',
+      total_pressure: '累計ベット',
+      total_bet: '累計ベット',
+      status: 'ステータス',
+      action: 'アクション',
+    },
+    display: {
+      code_prefix: 'コード: {code}',
+    },
+    modal: {
+      grant_lottery: '宝くじ付与',
+      player_info: 'プレイヤー情報',
+      select_lottery: '宝くじ選択',
+      grant_amount: '付与金額',
+      remark: '備考',
+    },
+    placeholder: {
+      select_lottery: '宝くじタイプを選択してください',
+      input_amount: '付与金額を入力してください',
+      input_remark: '理由または備考を入力してください',
+    },
+    validation_msg: {
+      select_lottery: '宝くじタイプを選択してください',
+      input_valid_amount: '有効な金額を入力してください',
+      grant_success: '宝くじ付与成功',
+      grant_failed: '宝くじ付与失敗',
+    },
+    default: {
+      not_updated: '未更新',
+    },
+  },
+  'zh-TW': {
+    tab: {
+      game_online_players: '電子遊戲在線玩家',
+      machine_online_players: '實體機台在線玩家',
+    },
+    card: {
+      game_title: '電子遊戲在線玩家 ({count}人在線)',
+      machine_title: '實體機台在線玩家 ({count}人在線)',
+    },
+    tag: {
+      realtime_update: '實時更新',
+      last_update: '最後更新: {time}',
+      playing: '遊戲中',
+      seconds_ago: '{seconds}秒前',
+    },
+    button: {
+      refresh: '刷新',
+      grant_lottery: '發放彩金',
+    },
+    empty: {
+      no_online_players: '暫無在線玩家（最近1分鐘內無押注記錄）',
+    },
+    columns: {
+      id: 'ID',
+      player_info: '玩家信息',
+      uuid: 'UUID',
+      current_machine: '當前機台',
+      current_platform: '當前平台',
+      last_bet_time: '最後押注時間',
+      total_pressure: '累計押注',
+      total_bet: '累計押注',
+      status: '狀態',
+      action: '操作',
+    },
+    display: {
+      code_prefix: '編號: {code}',
+    },
+    modal: {
+      grant_lottery: '發放彩金',
+      player_info: '玩家信息',
+      select_lottery: '選擇彩金',
+      grant_amount: '發放金額',
+      remark: '備註',
+    },
+    placeholder: {
+      select_lottery: '請選擇彩金類型',
+      input_amount: '請輸入發放金額',
+      input_remark: '請輸入發放原因或備註信息',
+    },
+    validation_msg: {
+      select_lottery: '請選擇彩金類型',
+      input_valid_amount: '請輸入有效的發放金額',
+      grant_success: '彩金發放成功',
+      grant_failed: '彩金發放失敗',
+    },
+    default: {
+      not_updated: '未更新',
+    },
+  },
+};
+
 export default {
   name: 'OnlinePlayers',
   props: {
@@ -192,6 +431,10 @@ export default {
     appKey: {
       type: String,
       default: '20f94408fc4c52845f162e92a253c7a3'
+    },
+    langLocale: {
+      type: String,
+      default: 'zh-TW'
     }
   },
   data() {
@@ -201,8 +444,8 @@ export default {
       gamePlayers: [],
       machineLoading: false,
       gameLoading: false,
-      lastMachineUpdateTime: '未更新',
-      lastGameUpdateTime: '未更新',
+      lastMachineUpdateTime: messages[this.langLocale]?.default?.not_updated || '未更新',
+      lastGameUpdateTime: messages[this.langLocale]?.default?.not_updated || '未更新',
       grantModalVisible: false,
       grantLoading: false,
       selectedPlayer: null,
@@ -215,27 +458,27 @@ export default {
       machineChannelName: null,
       gameChannelName: null,
       reconnectTimer: null,
-      cleanupTimer: null, // 自动清理定时器
-      updateTimer: null, // 更新时间显示定时器
+      cleanupTimer: null,
+      updateTimer: null,
       machineColumns: [
-        { title: 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
-        { title: '玩家信息', key: 'player_info', width: 200, align: 'center' },
-        { title: 'UUID', dataIndex: 'uuid', key: 'uuid', width: 150, align: 'center' },
-        { title: '當前機台', key: 'machine_info', width: 180, align: 'center' },
-        { title: '最後押注時間', key: 'last_bet_time', width: 180, align: 'center' },
-        { title: '累計押注', dataIndex: 'total_pressure', key: 'total_pressure', width: 120, align: 'center' },
-        { title: '狀態', key: 'status', width: 100, align: 'center' },
-        { title: '操作', key: 'action', width: 150, align: 'center', fixed: 'right' },
+        { title: messages[this.langLocale]?.columns?.id || 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.player_info || '玩家信息', key: 'player_info', width: 200, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.uuid || 'UUID', dataIndex: 'uuid', key: 'uuid', width: 150, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.current_machine || '當前機台', key: 'machine_info', width: 180, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.last_bet_time || '最後押注時間', key: 'last_bet_time', width: 180, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.total_pressure || '累計押注', dataIndex: 'total_pressure', key: 'total_pressure', width: 120, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.status || '狀態', key: 'status', width: 100, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.action || '操作', key: 'action', width: 150, align: 'center', fixed: 'right' },
       ],
       gameColumns: [
-        { title: 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
-        { title: '玩家信息', key: 'player_info', width: 200, align: 'center' },
-        { title: 'UUID', dataIndex: 'uuid', key: 'uuid', width: 150, align: 'center' },
-        { title: '當前平台', key: 'platform_info', width: 150, align: 'center' },
-        { title: '最後押注時間', key: 'last_bet_time', width: 180, align: 'center' },
-        { title: '累計押注', dataIndex: 'total_bet', key: 'total_bet', width: 120, align: 'center' },
-        { title: '狀態', key: 'status', width: 100, align: 'center' },
-        { title: '操作', key: 'action', width: 150, align: 'center', fixed: 'right' },
+        { title: messages[this.langLocale]?.columns?.id || 'ID', dataIndex: 'id', key: 'id', width: 80, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.player_info || '玩家信息', key: 'player_info', width: 200, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.uuid || 'UUID', dataIndex: 'uuid', key: 'uuid', width: 150, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.current_platform || '當前平台', key: 'platform_info', width: 150, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.last_bet_time || '最後押注時間', key: 'last_bet_time', width: 180, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.total_bet || '累計押注', dataIndex: 'total_bet', key: 'total_bet', width: 120, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.status || '狀態', key: 'status', width: 100, align: 'center' },
+        { title: messages[this.langLocale]?.columns?.action || '操作', key: 'action', width: 150, align: 'center', fixed: 'right' },
       ],
     };
   },
@@ -269,6 +512,26 @@ export default {
     this.stopUpdateTimer();
   },
   methods: {
+    // 翻译方法
+    t(key, params = {}) {
+      const keys = key.split('.');
+      let value = messages[this.langLocale];
+      for (const k of keys) {
+        if (value && typeof value === 'object') {
+          value = value[k];
+        } else {
+          return key;
+        }
+      }
+      if (typeof value !== 'string') {
+        return key;
+      }
+      // 替换参数
+      return value.replace(/\{(\w+)\}/g, (match, paramKey) => {
+        return params[paramKey] !== undefined ? params[paramKey] : match;
+      });
+    },
+
     // 加载实体机台玩家
     async loadMachinePlayers() {
 
@@ -361,11 +624,11 @@ export default {
     // 发放彩金
     async handleGrantLottery() {
       if (!this.grantForm.lottery_id) {
-        this.$message.error('請選擇彩金類型');
+        this.$message.error(this.t('validation_msg.select_lottery'));
         return;
       }
       if (!this.grantForm.amount || this.grantForm.amount <= 0) {
-        this.$message.error('請輸入有效的發放金額');
+        this.$message.error(this.t('validation_msg.input_valid_amount'));
         return;
       }
 
@@ -378,7 +641,7 @@ export default {
         });
 
         if (res.code === 200) {
-          this.$message.success('彩金發放成功');
+          this.$message.success(this.t('validation_msg.grant_success'));
           this.grantModalVisible = false;
           this.handleCancelGrant();
           // 刷新列表
@@ -388,11 +651,11 @@ export default {
             this.refreshGamePlayers();
           }
         } else {
-          this.$message.error(res.msg || '彩金發放失敗');
+          this.$message.error(res.msg || this.t('validation_msg.grant_failed'));
         }
       } catch (error) {
-        console.error('發放彩金失敗:', error);
-        this.$message.error('彩金發放失敗');
+        console.error(this.t('validation_msg.grant_failed'), error);
+        this.$message.error(this.t('validation_msg.grant_failed'));
       } finally {
         this.grantLoading = false;
       }

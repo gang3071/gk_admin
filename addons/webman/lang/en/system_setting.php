@@ -31,7 +31,10 @@ return [
         'jackpot_screen_domain' => 'Jackpot Screen Domain',
         'turn_relay_ip' => 'TURN Relay IP',
         'high_score_broadcast_threshold' => 'High Score Broadcast Threshold',
+        'steel_ball_broadcast_threshold' => 'Steel Ball Broadcast Threshold',
         'device_collect' => 'Store Cross-Store Login',
+        'electronic_game_rebate' => 'Electronic Game Rebate',
+        'machine_rebate' => 'Physical Machine Rebate',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',
@@ -55,5 +58,15 @@ return [
     'time_range' => 'Date range',
     'master' => 'Total configuration',
     'points' => 'points',
-    'disabled' => 'Disabled'
+    'balls' => 'balls',
+    'disabled' => 'Disabled',
+    // Rebate Configuration
+    'rebate' => [
+        'electronic_game_rebate' => 'Electronic Game Rebate',
+        'machine_rebate' => 'Physical Machine Rebate',
+        'enabled' => 'Enabled',
+        'disabled' => 'Disabled',
+        'electronic_game_rebate_help' => 'Control whether electronic game rebate is enabled',
+        'machine_rebate_help' => 'Control whether physical machine rebate is enabled',
+    ],
 ];

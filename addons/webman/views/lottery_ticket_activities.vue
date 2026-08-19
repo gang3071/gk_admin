@@ -551,7 +551,6 @@
                       :precision="0"
                       style="width: 100%;"
                       placeholder="0"
-                      :disabled="isRestrictedEdit"
                   />
                   <div style="margin-top: 4px; color: #999; font-size: 12px;">
                     {{ trans.help?.prize_count_hint || '此獎項的獎品總數量' }}
@@ -700,14 +699,19 @@
               v-model:value="singleRecord.prize_level_id"
               placeholder="請選擇獎品等級"
               style="width: 100%;"
+              :loading="prizeLevelStatsLoading"
               @change="handlePrizeLevelChange"
           >
             <a-select-option
                 v-for="level in recordPrizeLevels"
                 :key="level.id"
                 :value="level.id"
+                :disabled="level.is_sold_out"
             >
-              {{ level.level_name }} - {{ formatAmount(level.prize_amount) }}元
+              <span>{{ level.level_name }} - {{ formatAmount(level.prize_amount) }}元</span>
+              <span v-if="level.remaining_count !== undefined" style="margin-left: 8px; color: #999;">
+                （剩餘：<span :style="{color: level.is_sold_out ? '#ff4d4f' : (level.remaining_count <= 3 ? '#faad14' : '#52c41a')}">{{ level.remaining_count }}</span>/{{ level.total_count }}）
+              </span>
             </a-select-option>
           </a-select>
         </a-form-item>
@@ -771,6 +775,22 @@
                       type="link"
                       size="small"
                       @click="copyToClipboard(singleRecord.player_info.player_account)"
+                      style="padding: 0;"
+                  >
+                    <copy-outlined /> 複製
+                  </a-button>
+                </a-space>
+              </a-descriptions-item>
+              <!-- ⭐ 新增：所屬店家 -->
+              <a-descriptions-item label="所屬店家">
+                <a-space>
+                  <a-tag color="orange">
+                    <shop-outlined /> {{ singleRecord.player_info.store_name }}
+                  </a-tag>
+                  <a-button
+                      type="link"
+                      size="small"
+                      @click="copyToClipboard(singleRecord.player_info.store_name)"
                       style="padding: 0;"
                   >
                     <copy-outlined /> 複製
@@ -1127,6 +1147,7 @@ export default {
       recordSubmitting: false,
       uploading: false,
       recordPrizeLevels: [],
+      prizeLevelStatsLoading: false,  // ⭐ 加载奖品等级统计的状态
       ticketList: [],
       ticketLoading: false,
       ticketPagination: {
@@ -1727,6 +1748,9 @@ export default {
           // ⭐ 存储奖品等级列表（供下拉选择使用）
           this.recordPrizeLevels = prizeLevels;
 
+          // ⭐ 加载奖品等级统计（剩余数量）
+          await this.loadPrizeLevelStats(activity.id);
+
           // ⭐ 存储活动信息（用于表单顶部展示）
           this.currentActivityInfo = {
             name: activity.name,
@@ -1755,6 +1779,38 @@ export default {
       } catch (error) {
         this.$message.error('獲取活動詳情失敗');
         console.error(error);
+      }
+    },
+
+    // ⭐ 加载奖品等级统计（剩余数量）
+    async loadPrizeLevelStats(activityId) {
+      this.prizeLevelStatsLoading = true;
+      try {
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelLotteryTicketActivityController/getPrizeLevelStats',
+          method: 'post',
+          data: { activity_id: activityId }
+        });
+
+        if (res.code === 200 && res.data?.success === true) {
+          const stats = res.data.stats || [];
+
+          // ⭐ 将统计信息合并到 recordPrizeLevels
+          this.recordPrizeLevels = this.recordPrizeLevels.map(level => {
+            const stat = stats.find(s => s.prize_level_id === level.id);
+            return {
+              ...level,
+              total_count: stat?.total_count || 0,
+              distributed_count: stat?.distributed_count || 0,
+              remaining_count: stat?.remaining_count || 0,
+              is_sold_out: stat?.is_sold_out || false
+            };
+          });
+        }
+      } catch (error) {
+        console.error('[加载奖品统计] 失败:', error);
+      } finally {
+        this.prizeLevelStatsLoading = false;
       }
     },
 
@@ -1857,6 +1913,20 @@ export default {
 
       this.recordSubmitting = true;
 
+      // ⭐ 调试日志：打印当前选中的奖品等级信息
+      const selectedLevel = this.recordPrizeLevels.find(l => l.id === this.singleRecord.prize_level_id);
+      console.log('[前端派奖调试] 准备提交', {
+        prize_level_id: this.singleRecord.prize_level_id,
+        selected_name: selectedLevel?.level_name || '未找到',
+        selected_amount: selectedLevel?.prize_amount || 0,
+        ticket_no: this.singleRecord.ticket_no,
+        all_levels: this.recordPrizeLevels.map(l => ({
+          id: l.id,
+          name: l.level_name,
+          rank: l.level_rank
+        }))
+      });
+
       try {
         // ⭐ 使用单个录入专用API
         const res = await this.$request({
@@ -1869,11 +1939,17 @@ export default {
           }
         });
 
-        // ⭐ 调试日志
+        // ⭐ 调试日志：查看完整响应
+        console.log('[录入中奖] 后端响应:', res);
+
         // ⭐ 简单清晰的响应处理
-        if (res.code === 200) {
+        // 明确检查 success === true（而不是 !== false），避免 undefined 被当作成功
+        if (res.code === 200 && res.data?.success === true) {
           // ✅ 成功
           this.$message.success(res.data?.message || '錄入成功並已自動發放獎勵');
+
+          // ⭐ 重新加载奖品统计，更新剩余数量
+          await this.loadPrizeLevelStats(this.recordData.activity_id);
 
           // 重置单个录入表单，保持抽屉打开
           this.singleRecord = {
@@ -1885,11 +1961,21 @@ export default {
           };
         } else {
           // ❌ 失败
-          this.$message.error(res.data?.content || res.message || res.msg || '錄入失敗');
+          // 优先读取 res.data.message（业务错误），再读取 res.message（HTTP错误）
+          const errorMsg = res.data?.message || res.message || res.data?.content || res.msg || '錄入失敗';
+          this.$message.error(errorMsg);
         }
       } catch (error) {
-        this.$message.error('錄入失敗');
-        console.error(error);
+        // ⭐ catch 块：可能是网络错误或请求被拦截器处理
+        console.error('[录入中奖] 异常:', error);
+        console.log('[录入中奖] 异常响应:', error.response);
+
+        // 尝试从 error.response 中提取错误信息
+        const errorMsg = error.response?.data?.message
+                      || error.response?.message
+                      || error.message
+                      || '錄入失敗';
+        this.$message.error(errorMsg);
       } finally {
         this.recordSubmitting = false;
       }

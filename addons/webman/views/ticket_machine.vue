@@ -83,12 +83,38 @@
         <a-card :title="labels.qr_print || 'QR碼列印'" size="small" :headStyle="{borderBottom: '2px solid #67C23A'}">
           <div style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.ticket_type || '票據類型' }}</div>
-            <a-select v-model:value="ticketType" style="width: 100%;">
+            <a-select v-model:value="ticketType" style="width: 100%;" @change="handleTicketTypeChange">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
+              <a-select-option :value="3">{{ labels.type_experience || '體驗券' }}</a-select-option>
+              <a-select-option :value="4">{{ labels.type_welfare || '福利券' }}</a-select-option>
+              <a-select-option :value="6">{{ labels.type_reprint || '重複列印' }}</a-select-option>
             </a-select>
           </div>
-          <div style="margin-bottom: 12px;">
+
+          <!-- 重复打印：订单号输入 -->
+          <div v-if="ticketType === 6" style="margin-bottom: 12px;">
+            <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.order_id || '訂單號' }}</div>
+            <a-input
+              v-model:value="reprintOrderId"
+              :placeholder="labels.order_id_placeholder || '請輸入要重複列印的訂單號'"
+              allow-clear
+              style="width: 100%;"
+              @blur="queryOrderForReprint"
+            />
+            <!-- 订单信息预览 -->
+            <div v-if="reprintOrderInfo" style="margin-top: 8px; padding: 8px; background: #f6ffed; border: 1px solid #b7eb8f; border-radius: 4px;">
+              <div style="font-size: 12px; color: #666;">
+                <div>{{ labels.store_name || '店名' }}: {{ reprintOrderInfo.store_name }}</div>
+                <div>{{ labels.machine_no || '台號' }}: {{ reprintOrderInfo.machine_no }}</div>
+                <div>{{ labels.field_score || '分數/金額' }}: {{ reprintOrderInfo.score }}</div>
+                <div v-if="reprintOrderInfo.player_name">{{ labels.player_name || '玩家' }}: {{ reprintOrderInfo.player_name }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 非重复打印时显示玩家选择 -->
+          <div v-if="ticketType !== 6" style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.select_player || '關聯玩家（可選）' }}</div>
             <a-select
               v-model:value="selectedPlayerId"
@@ -105,9 +131,61 @@
             >
             </a-select>
           </div>
-          <div style="margin-bottom: 12px;">
+
+          <!-- 玩家打码量信息展示（福利卷/体验卷 + 已选择玩家时显示） -->
+          <div v-if="(ticketType === 3 || ticketType === 4) && selectedPlayerId && playerBetInfo" style="margin-bottom: 12px;">
+            <div style="padding: 12px; background: #f0f5ff; border-radius: 4px; border: 1px solid #d6e4ff;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 500; color: #333;">{{ labels.player_bet_info || '玩家打碼量信息' }}</span>
+                <a-button type="link" size="small" @click="refreshPlayerBetInfo" :loading="betInfoLoading">
+                  <reload-outlined /> {{ labels.refresh || '刷新' }}
+                </a-button>
+              </div>
+              <a-descriptions :column="1" size="small">
+                <a-descriptions-item :label="labels.player_name || '玩家名稱'">
+                  <a-tag color="blue">
+                    <user-outlined /> {{ playerBetInfo.player_name }} ({{ playerBetInfo.player_phone || playerBetInfo.player_uuid }})
+                  </a-tag>
+                </a-descriptions-item>
+                <a-descriptions-item :label="labels.today_bet_amount || '今日電子總打碼量'">
+                  <a-tag color="green">
+                    <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.today_bet_amount) }}
+                  </a-tag>
+                </a-descriptions-item>
+                <a-descriptions-item :label="labels.yesterday_bet_amount || '昨日電子總打碼量'">
+                  <a-tag color="orange">
+                    <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.yesterday_bet_amount) }}
+                  </a-tag>
+                </a-descriptions-item>
+              </a-descriptions>
+            </div>
+          </div>
+
+          <!-- 分数/金额选择（重复打印时隐藏） -->
+          <div v-if="ticketType !== 6" style="margin-bottom: 12px;">
             <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.field_score || '分數/金額' }}</div>
-            <a-input-number v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
+            <!-- 福利卷/体验卷：下拉选择 -->
+            <a-select
+                v-if="ticketType === 3 || ticketType === 4"
+                v-model:value="ticketScore"
+                placeholder="請選擇分數"
+                style="width: 100%;"
+                :disabled="!selectedPlayerId || !playerBetInfo"
+            >
+              <a-select-option
+                  v-for="option in voucherScoreOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :disabled="option.disabled"
+              >
+                <span>{{ option.label }}</span>
+                <span v-if="option.condition" style="margin-left: 8px; color: #999; font-size: 12px;">
+                  （{{ option.condition }}）
+                </span>
+              </a-select-option>
+            </a-select>
+            <!-- 开分/洗分：数字输入 -->
+            <a-input-number v-else v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
           </div>
           <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">{{ labels.send_qr || '發送QR碼' }}</a-button>
         </a-card>
@@ -144,11 +222,16 @@ export default {
     default_store_name: String,
     default_store_uid: String,
     save_ticket_url: String,
+    player_bet_info_url: String,
     store_admin_id: Number,
     department_id: Number,
     paper_empty_msg: String,
     paper_jam_msg: String,
     paper_error_msg: String,
+    voucher_config: {
+      type: Object,
+      default: () => ({})
+    },
     labels: {
       type: Object,
       default: () => ({})
@@ -184,6 +267,8 @@ export default {
       },
       ticketType: 1,
       ticketScore: 0,
+      reprintOrderId: '',
+      reprintOrderInfo: null,
       selectedPlayerId: null,
       playerOptions: [],
       playerSearching: false,
@@ -191,6 +276,8 @@ export default {
       playerPage: 1,
       playerHasMore: true,
       playerKeyword: '',
+      playerBetInfo: null,
+      betInfoLoading: false,
       hexCommand: '',
       remark: '',
       logExpanded: false,
@@ -198,6 +285,127 @@ export default {
       receiveBuffer: [],
       pendingResolve: null,
     };
+  },
+  computed: {
+    // 检查活动是否在有效期内
+    isActivityActive() {
+      const config = this.voucher_config;
+      if (!config || !config.activity) return true;
+
+      // 强制开启
+      if (config.activity.force_enable) return true;
+
+      // 检查结束时间
+      const endTime = config.activity.end_time;
+      if (!endTime) return true;
+
+      return new Date() < new Date(endTime);
+    },
+
+    // 计算福利卷/体验卷的可选分数选项
+    voucherScoreOptions() {
+      if (!this.playerBetInfo || !this.isActivityActive) return [];
+
+      const todayBet = this.playerBetInfo.today_bet_amount || 0;
+      const yesterdayBet = this.playerBetInfo.yesterday_bet_amount || 0;
+      const config = this.voucher_config;
+      const options = [];
+
+      // 从 labels 获取翻译，如果不存在则使用默认值
+      const welfareLabel = this.labels.type_welfare || '福利券';
+      const experienceLabel = this.labels.type_experience || '体验券';
+      const scoreUnit = this.labels.score_unit || '分';
+      const todayPrefix = this.labels.today_bet_prefix || '今日打分';
+      const yesterdayPrefix = this.labels.yesterday_bet_prefix || '昨日打分';
+      const claimedToday = this.labels.claimed_today || '今日已领取';
+      const newMemberClaim = this.labels.new_member_claim || '新会员可领取';
+
+      if (this.ticketType === 4 && config.welfare) {
+        // 福利券规则（从配置读取）- 显示所有档位
+
+        // 今日打码量福利券规则（value使用负数区分）
+        if (config.today_welfare && config.today_welfare.enabled) {
+          config.today_welfare.rules.forEach(rule => {
+            options.push({
+              value: -rule.score,  // 负数表示今日规则
+              score: rule.score,   // 实际分数
+              ruleType: 'today',   // 规则类型
+              label: `${welfareLabel} ${rule.score} ${scoreUnit} (${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
+              disabled: todayBet < rule.bet_amount || this.isWelfareClaimed(rule.score, 'today'),
+              condition: `${todayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
+            });
+          });
+        }
+
+        // 昨日打码量福利券规则（value使用正数）
+        // 找到用户满足的最高档位
+        let maxQualifiedScore = 0;
+        if (config.welfare.rules) {
+          config.welfare.rules.forEach(rule => {
+            if (yesterdayBet >= rule.bet_amount && rule.score > maxQualifiedScore) {
+              maxQualifiedScore = rule.score;
+            }
+          });
+        }
+
+        // 显示所有档位，但禁用非最高档位
+        if (config.welfare.rules) {
+          config.welfare.rules.forEach(rule => {
+            const isQualified = yesterdayBet >= rule.bet_amount;
+            const isMaxTier = rule.score === maxQualifiedScore;
+            const isClaimed = this.isWelfareClaimed(rule.score, 'yesterday');
+
+            options.push({
+              value: rule.score,   // 正数表示昨日规则
+              score: rule.score,   // 实际分数
+              ruleType: 'yesterday', // 规则类型
+              label: `${welfareLabel} ${rule.score} ${scoreUnit} (${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)})`,
+              // 禁用条件：不满足打码量 或 不是最高档位 或 已领取
+              disabled: !isQualified || !isMaxTier || isClaimed,
+              condition: `${yesterdayPrefix}≥${this.formatBetAmount(rule.bet_amount)}`,
+            });
+          });
+        }
+      } else if (this.ticketType === 3 && config.experience) {
+        // 体验券规则（从配置读取）
+        const score = config.experience.score || 1000;
+        const claimedCount = this.playerBetInfo?.claimed_experience_count || 0;
+        const dailyLimit = config.experience.daily_limit || 1;
+        options.push({
+          value: score,
+          label: `${experienceLabel} ${score} ${scoreUnit}`,
+          disabled: claimedCount >= dailyLimit,
+          condition: claimedCount >= dailyLimit ? claimedToday : newMemberClaim,
+        });
+      }
+
+      return options;
+    }
+  },
+  watch: {
+    // 监听票据类型变化
+    ticketType(newType) {
+      this.ticketScore = 0;
+      if ((newType === 3 || newType === 4) && this.selectedPlayerId) {
+        this.loadPlayerBetInfo(this.selectedPlayerId);
+      } else {
+        this.playerBetInfo = null;
+      }
+    },
+    // 监听打码量信息变化，自动选择第一个可用选项
+    playerBetInfo(newInfo) {
+      if (newInfo && (this.ticketType === 3 || this.ticketType === 4)) {
+        // 延迟一帧等待 computed 更新
+        this.$nextTick(() => {
+          const firstAvailable = this.voucherScoreOptions.find(opt => !opt.disabled);
+          if (firstAvailable) {
+            this.ticketScore = firstAvailable.value;
+          } else {
+            this.ticketScore = 0;
+          }
+        });
+      }
+    }
   },
   methods: {
     // 翻译辅助
@@ -475,11 +683,13 @@ export default {
     async connect() {
       if (!('serial' in navigator)) {
         this.addLog('error', this.t('browser_not_supported'));
+        this.$message.error({ content: this.t('browser_not_supported'), duration: 3 });
         return;
       }
 
       if (!this.config.port) {
         this.addLog('error', this.t('no_port_selected'));
+        this.$message.error({ content: this.t('no_port_selected'), duration: 3 });
         return;
       }
 
@@ -493,6 +703,7 @@ export default {
         const selectedPort = this.availablePorts.find(p => p.path === this.config.port);
         if (!selectedPort) {
           this.addLog('error', this.t('port_not_found'));
+          this.$message.error({ content: this.t('port_not_found'), duration: 3 });
           return;
         }
 
@@ -572,10 +783,15 @@ export default {
 
           this.addLog('success', this.t('init_complete'));
         } else {
-          this.addLog('warn', this.t('device_no_response'));
+          // 心跳测试失败，断开连接
+          this.addLog('error', this.t('device_no_response'));
           this.addLog('warn', this.t('device_check_1'));
           this.addLog('warn', this.t('device_check_2'));
           this.addLog('warn', this.t('device_check_3'));
+
+          // 断开连接，防止后续操作
+          await this.disconnect();
+          return;
         }
 
         // 启动心跳
@@ -786,9 +1002,47 @@ export default {
 
     // 发送QR码
     async sendQrCode() {
-      if (!this.ticketScore || this.ticketScore <= 0) {
-        this.addLog('error', this.t('valid_score_required'));
+      // 检查出票机连接状态
+      if (!this.isConnected || !this.port) {
+        this.addLog('error', this.t('printer_not_connected'));
+        this.$message.error({ content: this.t('printer_not_connected'), duration: 3 });
         return;
+      }
+
+      // 重复打印：验证订单号
+      if (this.ticketType === 6) {
+        if (!this.reprintOrderId || this.reprintOrderId.trim() === '') {
+          this.addLog('error', this.t('order_id_required'));
+          this.$message.error({ content: this.t('order_id_required'), duration: 3 });
+          return;
+        }
+        if (!this.reprintOrderInfo) {
+          this.addLog('error', this.t('order_not_found'));
+          this.$message.error({ content: this.t('order_not_found'), duration: 3 });
+          return;
+        }
+      } else {
+        // 验证分数：福利券允许负数（今日规则），其他类型必须大于0
+        if (this.ticketType === 4) {
+          if (!this.ticketScore) {
+            this.addLog('error', this.t('valid_score_required'));
+            this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
+            return;
+          }
+        } else {
+          if (!this.ticketScore || this.ticketScore <= 0) {
+            this.addLog('error', this.t('valid_score_required'));
+            this.$message.error({ content: this.t('valid_score_required'), duration: 3 });
+            return;
+          }
+        }
+
+        // 福利卷和体验卷必须选择关联用户
+        if ((this.ticketType === 3 || this.ticketType === 4) && !this.selectedPlayerId) {
+          this.addLog('error', this.t('player_required_for_voucher'));
+          this.$message.error({ content: this.t('player_required_for_voucher'), duration: 3 });
+          return;
+        }
       }
 
       // 暂停心跳，避免干扰命令响应
@@ -798,8 +1052,24 @@ export default {
         this.addLog('info', this.t('heartbeat_paused'));
       }
 
-      // 先检测纸张状态（在入库之前）
+      // 先发送心跳测试连接状态（在入库之前）
       this.addLog('info', this.t('checking_paper'));
+      const heartbeatTest = await this.sendCommand(0x01, 0x01);
+      if (!heartbeatTest) {
+        // 出票机无响应，连接已断开
+        this.addLog('error', this.t('printer_connection_lost'));
+        this.$message.error({ content: this.t('printer_connection_lost'), duration: 3 });
+        // 标记为未连接
+        this.isConnected = false;
+        // 重启心跳
+        this.heartbeatTimer = setInterval(async () => {
+          await this.sendCommand(0x01, 0x01, [], true, true);
+        }, 10000);
+        return;
+      }
+      this.addLog('success', this.t('printer_connected'));
+
+      // 检测纸张状态
       const paperStatus = await this.sendCommand(0x01, 0x09, [0x00]);
       if (paperStatus && paperStatus.data && paperStatus.data.length > 0) {
         const paperCode = paperStatus.data[0];
@@ -823,52 +1093,68 @@ export default {
         this.addLog('warn', this.t('paper_query_no_response'));
       }
 
-      // 纸张正常，保存到数据库获取 order_id
-      if (!this.save_ticket_url) {
-        this.addLog('error', this.t('save_url_not_configured'));
-        return;
-      }
-
+      // 纸张正常，获取 order_id
       let orderId = '';
 
-      try {
-        this.addLog('info', this.t('saving_data', {id: this.selectedPlayerId}));
-
-        const saveRes = await this.$request({
-          url: this.save_ticket_url,
-          method: 'post',
-          data: {
-            store_name: this.config.storeName,
-            machine_no: this.config.machineNo,
-            score: this.ticketScore,
-            qr_code: 'auto_generated',
-            ticket_type: this.ticketType,
-            player_id: this.selectedPlayerId || 0,
-            store_admin_id: this.store_admin_id,
-            department_id: this.department_id,
-            remark: this.remark || '',
-          },
-        });
-
-        if (saveRes.code === 200) {
-          orderId = saveRes.data?.order_id || '';
-          this.remark = '';
-          this.addLog('success', this.t('ticket_saved', {order_id: orderId}));
-        } else {
-          this.addLog('error', this.t('ticket_save_failed', {error: (saveRes.message || '')}));
+      if (this.ticketType === 6) {
+        // 重复打印：直接使用已查询到的订单号
+        orderId = this.reprintOrderInfo.order_id;
+        this.addLog('info', this.t('order_query_success') + ': ' + orderId);
+      } else {
+        // 新建订单：保存到数据库获取 order_id
+        if (!this.save_ticket_url) {
+          this.addLog('error', this.t('save_url_not_configured'));
+          this.$message.error({ content: this.t('save_url_not_configured'), duration: 3 });
           return;
         }
-      } catch (e) {
-        this.addLog('error', this.t('ticket_save_exception', {error: (e.message || '')}));
-        return;
+
+        try {
+          this.addLog('info', this.t('saving_data', {id: this.selectedPlayerId}));
+
+          // 福利券传递原始score（负数表示今日规则，正数表示昨日规则）
+          // 后端会自动转换为绝对值并记录规则类型
+          const saveRes = await this.$request({
+            url: this.save_ticket_url,
+            method: 'post',
+            data: {
+              store_name: this.config.storeName,
+              machine_no: this.config.machineNo,
+              score: this.ticketScore,
+              qr_code: 'auto_generated',
+              ticket_type: this.ticketType,
+              player_id: this.selectedPlayerId || 0,
+              store_admin_id: this.store_admin_id,
+              department_id: this.department_id,
+              remark: this.remark || '',
+            },
+          });
+
+          if (saveRes.code === 200) {
+            orderId = saveRes.data?.order_id || '';
+            this.remark = '';
+            this.addLog('success', this.t('ticket_saved', {order_id: orderId}));
+          } else {
+            const errorMsg = this.t('ticket_save_failed', {error: (saveRes.message || '')});
+            this.addLog('error', errorMsg);
+            this.$message.error({ content: errorMsg, duration: 3 });
+            return;
+          }
+        } catch (e) {
+          const errorMsg = this.t('ticket_save_exception', {error: (e.message || '')});
+          this.addLog('error', errorMsg);
+          this.$message.error({ content: errorMsg, duration: 3 });
+          return;
+        }
       }
 
       // 设置UID为 order_id（16字节，不足补0）
+      let printSuccess = true;
       this.addLog('info', this.t('setting_uid_for_qr', {order_id: orderId}));
       const uid = orderId.padEnd(16, '0').substring(0, 16);
       const uidData = Array.from(uid).map(c => c.charCodeAt(0));
       const uidResult = await this.sendCommand(0x01, 0x03, uidData);
       this.addLog(uidResult ? 'success' : 'error', this.t(uidResult ? 'uid_set_success' : 'uid_set_failed', {uid: uid}));
+      if (!uidResult) printSuccess = false;
 
       // 等待设备处理
       await new Promise(r => setTimeout(r, 100));
@@ -880,12 +1166,24 @@ export default {
       this.addLog('info', this.t('send_serial_data', {serial: serialStr, len: serialData16.length}));
       const serialResult = await this.sendCommand(0x01, 0x06, serialData16);
       this.addLog(serialResult ? 'success' : 'error', this.t(serialResult ? 'serial_set_success' : 'serial_set_failed', {serial: serialStr}));
+      if (!serialResult) printSuccess = false;
 
       // 等待设备处理
       await new Promise(r => setTimeout(r, 100));
 
       // 先发送彩票数据（票数3字节 + 赠送1字节 + 码表数4字节 = 8字节）
-      const score = Math.floor(this.ticketScore);
+      // 处理分数：重复打印使用原订单分数，福利券取绝对值
+      let printScore;
+      if (this.ticketType === 6) {
+        // 重复打印：使用原订单的分数
+        printScore = this.reprintOrderInfo.score;
+      } else if (this.ticketType === 4) {
+        // 福利券：负数取绝对值
+        printScore = Math.abs(this.ticketScore);
+      } else {
+        printScore = this.ticketScore;
+      }
+      const score = Math.floor(printScore);
       const lotteryData = [
         (score >> 16) & 0xFF,  // 票数-高字节
         (score >> 8) & 0xFF,   // 票数-中字节
@@ -894,12 +1192,14 @@ export default {
         0, 0, 0, 0             // 码表数 = 0 (4字节)
       ];
       this.addLog('info', this.t('send_lottery_data', {score: score, hex: lotteryData.map(b => b.toString(16).padStart(2, '0')).join(' ')}));
-      await this.sendCommand(0x01, 0x07, lotteryData);
-      this.addLog('success', this.t('lottery_sent'));
+      const lotteryResult = await this.sendCommand(0x01, 0x07, lotteryData);
+      this.addLog(lotteryResult ? 'success' : 'error', lotteryResult ? this.t('lottery_sent') : this.t('send_failed', {error: ''}));
+      if (!lotteryResult) printSuccess = false;
 
       // 使用 order_id 作为QR码发送到出票机
       if (!orderId) {
         this.addLog('error', this.t('order_id_not_found'));
+        this.$message.error({ content: this.t('order_id_not_found'), duration: 3 });
         return;
       }
 
@@ -908,6 +1208,39 @@ export default {
       const data = [...Array.from(orderId).map(c => c.charCodeAt(0)), 0x20];
       await this.sendCommand(0x01, 0x08, data, false);
       this.addLog('success', this.t('qr_sent', {order_id: orderId, len: data.length}));
+
+      // 根据打印结果更新状态
+      if (!printSuccess) {
+        // 打印失败：更新记录状态为打印失败
+        this.addLog('warn', this.t('print_failed_marking'));
+        try {
+          await this.$request({
+            url: 'ex-admin/addons-webman-controller-ChannelIndexController/updateTicketStatus',
+            method: 'post',
+            data: { order_id: orderId, status: 5 },  // 5 = 打印失败
+          });
+        } catch (e) {
+          console.error('更新票据状态失败:', e);
+        }
+
+        // 尝试重新连接出票机
+        this.addLog('info', this.t('reconnecting_printer'));
+        await this.disconnect();
+        await new Promise(r => setTimeout(r, 1000)); // 等待1秒
+        await this.connect();
+      } else if (this.ticketType === 6 && this.reprintOrderInfo.status === 5) {
+        // 重复打印成功：如果原状态是打印失败，更新为正常
+        this.addLog('success', this.t('reprint_success'));
+        try {
+          await this.$request({
+            url: 'ex-admin/addons-webman-controller-ChannelIndexController/updateTicketStatus',
+            method: 'post',
+            data: { order_id: orderId, status: 1 },  // 1 = 正常
+          });
+        } catch (e) {
+          console.error('更新票据状态失败:', e);
+        }
+      }
 
       // 重启心跳
       this.heartbeatTimer = setInterval(async () => {
@@ -929,8 +1262,145 @@ export default {
         this.playerPage = 1;
         this.playerHasMore = true;
         this.playerOptions = [];
+        this.playerBetInfo = null;
         this.loadPlayers();
+      } else if (this.ticketType === 3 || this.ticketType === 4) {
+        // 福利卷/体验卷选择玩家时，获取打码量信息
+        this.loadPlayerBetInfo(value);
       }
+    },
+
+    // 票据类型变化
+    handleTicketTypeChange(value) {
+      if (value === 6) {
+        // 切换到重复打印时，清空相关数据
+        this.reprintOrderId = '';
+        this.reprintOrderInfo = null;
+      } else {
+        // 切换到其他类型时，清空重复打印数据
+        this.reprintOrderId = '';
+        this.reprintOrderInfo = null;
+      }
+    },
+
+    // 查询订单（重复打印用）
+    async queryOrderForReprint() {
+      if (!this.reprintOrderId || this.reprintOrderId.trim() === '') {
+        this.reprintOrderInfo = null;
+        return;
+      }
+
+      try {
+        this.addLog('info', this.t('querying_order'));
+        const res = await this.$request({
+          url: 'ex-admin/addons-webman-controller-ChannelIndexController/getTicketOrderInfo',
+          method: 'get',
+          params: { order_id: this.reprintOrderId.trim() },
+        });
+
+        // 兼容不同的响应格式
+        const code = res.code || res.status;
+        const data = res.data;
+        const message = res.message || res.msg;
+
+        if (code === 200 && data) {
+          this.reprintOrderInfo = data;
+          this.addLog('success', this.t('order_query_success'));
+        } else {
+          this.reprintOrderInfo = null;
+          const msg = message || this.t('order_not_found');
+          this.addLog('error', msg);
+          this.$message.error(msg);
+        }
+      } catch (e) {
+        this.reprintOrderInfo = null;
+        // 尝试从错误响应中获取消息
+        let errorMsg = this.t('order_not_found');
+        if (e.response && e.response.data) {
+          errorMsg = e.response.data.message || e.response.data.msg || errorMsg;
+        } else if (e.message) {
+          errorMsg = e.message;
+        }
+        this.addLog('error', errorMsg);
+        this.$message.error(errorMsg);
+      }
+    },
+
+    // 加载玩家打码量信息
+    async loadPlayerBetInfo(playerId) {
+      if (!this.player_bet_info_url || !playerId) {
+        this.playerBetInfo = null;
+        return;
+      }
+
+      this.betInfoLoading = true;
+      try {
+        const res = await this.$request({
+          url: this.player_bet_info_url,
+          method: 'get',
+          params: { player_id: playerId },
+        });
+
+        if (res.code === 200 && res.data) {
+          this.playerBetInfo = res.data;
+        } else {
+          this.playerBetInfo = null;
+        }
+      } catch (e) {
+        console.error('获取玩家打码量失败:', e);
+        this.playerBetInfo = null;
+      } finally {
+        this.betInfoLoading = false;
+      }
+    },
+
+    // 刷新玩家打码量信息
+    refreshPlayerBetInfo() {
+      if (this.selectedPlayerId) {
+        this.loadPlayerBetInfo(this.selectedPlayerId);
+      }
+    },
+
+    // 格式化数字
+    formatNumber(num) {
+      if (num === null || num === undefined) return '0.00';
+      return parseFloat(num).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+    },
+
+    // 格式化打码量显示（万）
+    formatBetAmount(amount) {
+      if (!amount) return '0';
+      const wan = amount / 10000;
+      if (wan >= 1) {
+        return wan + '萬';
+      }
+      return amount.toLocaleString();
+    },
+
+    // 检查福利券档位是否已领取（按规则类型区分）
+    isWelfareClaimed(score, ruleType = null) {
+      if (!this.playerBetInfo || !this.playerBetInfo.claimed_welfare_records) {
+        return false;
+      }
+
+      // 如果指定了规则类型，检查具体的规则
+      if (ruleType) {
+        return this.playerBetInfo.claimed_welfare_records.some(r => {
+          if (r.score !== score || !r.extra_data) return false;
+          try {
+            const extraData = JSON.parse(r.extra_data);
+            return extraData.rule_type === ruleType;
+          } catch {
+            return false;
+          }
+        });
+      }
+
+      // 否则检查所有规则
+      return this.playerBetInfo.claimed_welfare_records.some(r => r.score === score);
     },
 
     // 搜索玩家
@@ -961,7 +1431,7 @@ export default {
         if (res.code === 200 && res.data) {
           const newOptions = res.data.map(p => ({
             value: p.id,
-            label: p.name + (p.uuid ? ' (' + p.uuid + ')' : ''),
+            label: p.name + (p.phone ? ' (' + p.phone + ')' : ''),
           }));
 
           if (this.playerPage === 1) {

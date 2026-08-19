@@ -2,11 +2,11 @@
 
 return [
     // Page Title
-    'title' => 'Player List',
-    'create' => 'Add Player',
-    'add_device' => 'Add Player',
-    'edit_device' => 'Edit Player',
-    'edit' => 'Edit Player',
+    'title' => 'Device List',
+    'create' => 'Add Device',
+    'add_device' => 'Add Device',
+    'edit_device' => 'Edit Device',
+    'edit' => 'Edit Device',
     'ip_list' => 'IP Binding List',
     'ip_management' => 'IP Management',
     'add_ip' => 'Add IP',
@@ -19,6 +19,7 @@ return [
         'device_no' => 'Device Number',
         'device_no_help' => 'Unique identifier for Android device (e.g., Android ID, IMEI, etc.)',
         'device_model' => 'Device Model',
+        'voice_url' => 'Voice Broadcast',
         'channel_name' => 'Channel',
         'department_name' => 'Department',
         'agent_name' => 'Agent',
@@ -63,9 +64,21 @@ return [
     'batch_disable_failed' => 'Failed to batch disable devices',
     'no_device_selected' => 'Please select devices to disable',
 
+    // Voice Broadcast
+    'voice' => [
+        'not_generated' => 'Not Generated',
+        'generated' => 'Voice Generated',
+        'generate_failed' => 'Voice Generation Failed',
+        'generate_error' => 'Voice Generation Error',
+        'regenerate' => 'Regenerate Voice',
+        'regenerate_confirm' => 'Are you sure you want to regenerate the voice broadcast file?',
+        'regenerate_success' => 'Voice regenerated successfully',
+    ],
+
     // Messages
     'device_no_exists' => 'Device number already exists',
     'device_no_help' => 'Unique device number, cannot be duplicated',
+    'device_not_found' => 'Device not found',
     'invalid_ip_address' => 'Invalid IP address format',
     'ip_already_exists' => 'IP address already exists',
     'delete_confirm' => 'Are you sure you want to delete this device? All bound IP addresses will also be deleted.',

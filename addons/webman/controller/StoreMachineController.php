@@ -168,17 +168,26 @@ class StoreMachineController
                     ->precision(2)
             )->width(100)->align('center');
 
-            // 洗分配置
+            // 洗分配置（从配置表读取）
             $grid->column('wash_point_config', admin_trans('store_machine.fields.wash_point_config'))
-                ->display(function ($value) {
-                    return number_format(floatval($value ?? 0), 2);
+                ->display(function ($value, $data) {
+                    // 从洗分配置表获取
+                    $washSetting = \addons\webman\model\WashPointSetting::query()
+                        ->where('admin_user_id', $data['id'])
+                        ->first();
+
+                    if ($washSetting) {
+                        $effectiveWashPoint = $washSetting->getEffectiveWashPoint();
+                        return Tag::create(number_format($effectiveWashPoint, 2))->color('green');
+                    }
+
+                    // 兜底：显示admin_users表中的旧值（如果存在）
+                    if ($value > 0) {
+                        return Tag::create(number_format($value, 2))->color('orange');
+                    }
+
+                    return Tag::create('未配置')->color('default');
                 })
-                ->editable(
-                    (new Editable)->number('wash_point_config')
-                        ->min(0)
-                        ->max(999999.99)
-                        ->precision(2)
-                )
                 ->width(120)->align('center');
 
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
@@ -229,37 +238,37 @@ class StoreMachineController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 添加限红组配置按钮
-                $actions->append(
-                    Button::create('限红组')
-                        ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
-                        ->type('primary')
-                        ->size('small')
-                );
+                $dropdown = $actions->dropdown();
 
-                // 添加自动交班配置按钮
-                $actions->append(
-                    Button::create('自动交班配置')
-                        ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                // 限红组配置
+                $dropdown->prepend(admin_trans('store_machine.actions.limit_group'), 'fas fa-shield-alt')
+                    ->modal([$this, 'limitGroupForm'], ['store_id' => $data['id']])
+                    ->width('60%');
 
-                // 添加店家系统配置按钮
-                $actions->append(
-                    Button::create('系统配置')
-                        ->drawer([$this, 'storeSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                // 自动交班配置
+                $dropdown->prepend(admin_trans('store_machine.actions.auto_shift_config'), 'fas fa-clock')
+                    ->modal([$this, 'autoShiftConfigForm'], ['store_id' => $data['id']])
+                    ->width('60%');
 
-                // 添加店家开分配置按钮
-                $actions->append(
-                    Button::create('开分配置')
-                        ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
-                        ->type('default')
-                        ->size('small')
-                );
+                // 系统配置
+                $dropdown->prepend(admin_trans('store_machine.actions.system_setting'), 'fas fa-cog')
+                    ->modal([$this, 'storeSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
+
+                // 开分配置
+                $dropdown->prepend(admin_trans('store_machine.actions.open_score_setting'), 'fas fa-arrow-up')
+                    ->modal([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
+
+                // 洗分配置
+                $dropdown->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
+                    ->modal([$this, 'washPointSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
+
+                // 活动配置
+                $dropdown->prepend(admin_trans('store_machine.actions.activity_config'), 'fas fa-gift')
+                    ->modal([$this, 'activityConfigList'], ['store_id' => $data['id']])
+                    ->width('90%');
             });
 
             // 行展开 - 显示限红组配置信息
@@ -359,6 +368,7 @@ class StoreMachineController
 
             $grid->hideSelection();
             $grid->hideDelete();
+            $grid->hideAdd(); // 屏蔽添加按钮
             $grid->setForm()->drawer($this->createStoreMachineForm());
             $grid->expandFilter();
 
@@ -379,8 +389,8 @@ class StoreMachineController
                             return message_error(admin_trans('admin.not_found'));
                         }
 
-                        // 更新可编辑字段
-                        $updateableFields = ['wash_point_config', 'agent_commission', 'channel_commission'];
+                        // 更新可编辑字段（wash_point_config已改为使用配置表）
+                        $updateableFields = ['agent_commission', 'channel_commission'];
                         $updated = false;
                         foreach ($updateableFields as $field) {
                             if (array_key_exists($field, $data)) {
@@ -604,6 +614,30 @@ class StoreMachineController
             $autoShiftConfig->shift_time = '02:00:00'; // 默认凌晨2点交班
             $autoShiftConfig->auto_settlement = 1; // 自动结算
             $autoShiftConfig->save();
+
+            // 5. 创建默认开分配置
+            $openScoreSetting = new \addons\webman\model\OpenScoreSetting();
+            $openScoreSetting->admin_user_id = $adminUser->id;
+            $openScoreSetting->score_1 = 500;
+            $openScoreSetting->score_2 = 1000;
+            $openScoreSetting->score_3 = 3000;
+            $openScoreSetting->score_4 = 5000;
+            $openScoreSetting->score_5 = 10000;
+            $openScoreSetting->score_6 = 20000;
+            $openScoreSetting->default_scores = 500;
+            $openScoreSetting->save();
+
+            // 6. 创建默认洗分配置
+            $washPointSetting = new \addons\webman\model\WashPointSetting();
+            $washPointSetting->admin_user_id = $adminUser->id;
+            $washPointSetting->wash_1 = 1000;
+            $washPointSetting->wash_2 = 3000;
+            $washPointSetting->wash_3 = 5000;
+            $washPointSetting->wash_4 = 10000;
+            $washPointSetting->wash_5 = 30000;
+            $washPointSetting->wash_6 = 50000;
+            $washPointSetting->default_wash_point = 1000;
+            $washPointSetting->save();
 
             DB::commit();
 
@@ -1250,6 +1284,7 @@ class StoreMachineController
 
             $grid->hideDelete();
             $grid->hideSelection();
+            $grid->hideTrashed(); // 去掉回收站
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
                 $actions->hideEdit();
@@ -1395,10 +1430,14 @@ class StoreMachineController
             $grid->column('created_at', admin_trans('open_score_setting.fields.created_at'))->align('center');
             $grid->column('updated_at', admin_trans('open_score_setting.fields.updated_at'))->align('center');
 
+            $grid->hideCreate(); // 去掉添加
+            $grid->hideDelete(); // 去掉删除
+            $grid->hideTrashed(); // 去掉回收站
             $grid->setForm()->drawer($this->openScoreSettingForm($storeId));
             $grid->expandFilter();
             $grid->actions(function (Actions $actions) {
                 $actions->hideDetail();
+                $actions->hideDel(); // 去掉删除按钮
             })->align('center');
         });
     }
@@ -1421,6 +1460,7 @@ class StoreMachineController
                 ->default(0)
                 ->min(0)
                 ->max(1000000)
+                ->step(1)  // ⭐ 只允许整数
                 ->style(['width' => '100%'])
                 ->help(admin_trans('open_score_setting.help.default_scores'));
 
@@ -1432,6 +1472,7 @@ class StoreMachineController
                     ->default($this->getDefaultScore($i))
                     ->min(0)
                     ->max(1000000)
+                    ->step(1)  // ⭐ 只允许整数
                     ->style(['width' => '100%'])
                     ->help(admin_trans('open_score_setting.help.score'));
             }
@@ -1451,6 +1492,23 @@ class StoreMachineController
 
                 if ($exists->exists()) {
                     return message_error(admin_trans('open_score_setting.player_exists'));
+                }
+
+                // ⭐ 验证所有开分配置必须是正整数
+                $defaultScores = $form->input('default_scores');
+                if ($defaultScores !== null && $defaultScores !== '' && $defaultScores != 0) {
+                    if ($defaultScores != floor($defaultScores) || $defaultScores < 0) {
+                        return message_error(admin_trans('open_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('open_score_setting.fields.default_scores')]));
+                    }
+                }
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $score = $form->input('score_' . $i);
+                    if ($score !== null && $score !== '' && $score != 0) {
+                        if ($score != floor($score) || $score < 0) {
+                            return message_error(admin_trans('open_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('open_score_setting.fields.score_' . $i)]));
+                        }
+                    }
                 }
 
                 // 验证至少配置一个开分选项
@@ -1477,7 +1535,448 @@ class StoreMachineController
      */
     private function getDefaultScore(int $index): int
     {
-        $defaults = [100, 500, 1000, 5000, 10000, 20000];
+        $defaults = [500, 1000, 3000, 5000, 10000, 20000];
         return $defaults[$index - 1] ?? 0;
     }
+
+    /**
+     * 店家洗分配置列表
+     * @auth true
+     * @group channel
+     */
+    public function washPointSettingList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        return Grid::create(new \addons\webman\model\WashPointSetting(), function (Grid $grid) use ($store, $storeId) {
+            $grid->title('洗分配置 - ' . ($store->nickname ?: $store->username));
+            $grid->model()->where('admin_user_id', $storeId)->orderBy('id', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->column('wash_points', '洗分选项')
+                ->display(function ($val, $data) {
+                    $washPoints = [];
+                    for ($i = 1; $i <= 6; $i++) {
+                        $key = 'wash_' . $i;
+                        if ($data->$key > 0) {
+                            $washPoints[] = Tag::create(number_format($data->$key, 2))->color('cyan');
+                        }
+                    }
+                    return Html::create()->content($washPoints)->style([
+                        'display' => 'flex',
+                        'gap' => '5px',
+                        'flex-wrap' => 'wrap'
+                    ]);
+                })->align('center')->width('30%');
+
+            $grid->column('default_wash_point', '默认洗分基数')
+                ->display(function ($val) {
+                    if ($val > 0) {
+                        return Tag::create(number_format($val, 2))->color('orange');
+                    }
+                    return Tag::create('未设置')->color('default');
+                })->align('center');
+
+            $grid->column('created_at', '创建时间')->align('center');
+            $grid->column('updated_at', '更新时间')->align('center');
+
+            $grid->hideCreate(); // 去掉添加
+            $grid->hideDelete(); // 去掉删除
+            $grid->hideTrashed(); // 去掉回收站
+            $grid->setForm()->drawer($this->washPointSettingForm($storeId));
+            $grid->expandFilter();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDetail();
+                $actions->hideDel(); // 去掉删除按钮
+            })->align('center');
+        });
+    }
+
+    /**
+     * 店家洗分配置表单
+     * @auth true
+     * @group channel
+     * @param int $storeId
+     * @return Form
+     */
+    public function washPointSettingForm(int $storeId): Form
+    {
+        return Form::create(new \addons\webman\model\WashPointSetting(), function (Form $form) use ($storeId) {
+            $form->title('洗分配置');
+
+            $form->number('default_wash_point', '默认洗分基数')
+                ->default(100)
+                ->min(0)
+                ->max(999999)
+                ->step(1)  // ⭐ 只允许整数
+                ->style(['width' => '100%'])
+                ->help('默认的洗分基数（整数），玩家洗分时按此基数计算。特殊值：0 表示只洗整数部分，小数保留');
+
+            $form->divider()->content('洗分选项（可选）');
+
+            // 6个洗分选项
+            for ($i = 1; $i <= 6; $i++) {
+                $form->number('wash_' . $i, '洗分选项' . $i)
+                    ->default($this->getDefaultWashPoint($i))
+                    ->min(0)
+                    ->max(999999)
+                    ->step(1)  // ⭐ 只允许整数
+                    ->style(['width' => '100%'])
+                    ->help('玩家可选择的洗分基数（整数），留空表示不启用该选项');
+            }
+
+            $form->layout('vertical');
+
+            // 保存时验证
+            $form->saving(function (Form $form) use ($storeId) {
+                $form->input('admin_user_id', $storeId);
+
+                // 检查是否已存在配置（编辑时排除当前记录）
+                $exists = \addons\webman\model\WashPointSetting::query()->where('admin_user_id', $storeId);
+
+                if ($form->isEdit()) {
+                    $exists->where('id', '!=', $form->driver()->get('id'));
+                }
+
+                if ($exists->exists()) {
+                    return message_error('该店家已存在洗分配置，请直接编辑');
+                }
+
+                // ⭐ 验证所有洗分配置必须是非负整数（允许0）
+                $defaultWashPoint = $form->input('default_wash_point');
+                if ($defaultWashPoint !== null && $defaultWashPoint !== '') {
+                    if ($defaultWashPoint != floor($defaultWashPoint) || $defaultWashPoint < 0) {
+                        return message_error(admin_trans('wash_point_setting.error.must_be_non_negative_integer', null, ['field' => admin_trans('wash_point_setting.fields.default_wash_point')]));
+                    }
+                }
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $wash = $form->input('wash_' . $i);
+                    if ($wash !== null && $wash !== '' && $wash != 0) {
+                        if ($wash != floor($wash) || $wash < 0) {
+                            return message_error(admin_trans('wash_point_setting.error.must_be_non_negative_integer', null, ['field' => admin_trans('wash_point_setting.fields.wash_' . $i)]));
+                        }
+                    }
+                }
+
+                // 验证至少配置默认洗分基数或一个洗分选项
+                $hasWashOption = false;
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $wash = $form->input('wash_' . $i);
+                    if (!empty($wash) && $wash > 0) {
+                        $hasWashOption = true;
+                        break;
+                    }
+                }
+
+                // 允许 default_wash_point = 0（洗整数部分），或 > 0，或至少有一个洗分选项
+                if ($defaultWashPoint === null || $defaultWashPoint === '') {
+                    if (!$hasWashOption) {
+                        return message_error('请至少配置默认洗分基数或一个洗分选项');
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * 获取默认洗分基数
+     * @param int $index
+     * @return float
+     */
+    private function getDefaultWashPoint(int $index): float
+    {
+        $defaults = [1000, 3000, 5000, 10000, 30000, 50000];
+        return $defaults[$index - 1] ?? 0;
+    }
+
+    // =========================================================================
+    // 活动配置（福利券/体验券）
+    // =========================================================================
+
+    /**
+     * 店家活动配置列表
+     * @auth true
+     * @group channel
+     */
+    public function activityConfigList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        // 检查是否已有配置
+        $existingConfig = \addons\webman\model\StoreActivityConfig::query()
+            ->where('admin_user_id', $storeId)
+            ->whereNull('deleted_at')
+            ->first();
+
+        return Grid::create(new \addons\webman\model\StoreActivityConfig(), function (Grid $grid) use ($store, $storeId, $existingConfig) {
+            $grid->title(admin_trans('store_machine.activity_config.list_title') . ' - ' . ($store->nickname ?: $store->username));
+            $grid->model()->where('admin_user_id', $storeId)->orderBy('id', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            // 基础字段
+            $grid->column('id', 'ID')->width(60)->align('center');
+
+            // 时间范围
+            $grid->column('time_range', admin_trans('store_machine.activity_config.fields.start_time'))
+                ->display(function ($val, $data) {
+                    $start = $data->start_time ?: '-';
+                    $end = $data->end_time ?: '-';
+                    return "$start ~ $end";
+                })->width(200)->align('center');
+
+            // 状态
+            $grid->column('status', admin_trans('store_machine.activity_config.fields.status'))
+                ->switch()
+                ->align('center');
+
+            // 体验券状态
+            $grid->column('experience_enabled', admin_trans('store_machine.activity_config.label.experience_enabled'))
+                ->display(function ($val) {
+                    return $val
+                        ? Tag::create(admin_trans('store_machine.activity_config.status.1'))->color('green')
+                        : Tag::create(admin_trans('store_machine.activity_config.status.0'))->color('red');
+                })->align('center');
+
+            // 福利券状态
+            $grid->column('welfare_enabled', admin_trans('store_machine.activity_config.label.welfare_enabled'))
+                ->display(function ($val) {
+                    return $val
+                        ? Tag::create(admin_trans('store_machine.activity_config.status.1'))->color('green')
+                        : Tag::create(admin_trans('store_machine.activity_config.status.0'))->color('red');
+                })->align('center');
+
+            // 创建时间
+            $grid->column('created_at', admin_trans('store_machine.activity_config.fields.created_at'))->width(160)->align('center');
+
+            // 使用 drawer 方式处理表单（避免嵌套 modal）
+            $grid->setForm()->drawer($this->activityConfigForm($storeId))->width('50%');
+
+            // 操作
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+            })->align('center');
+
+            // 工具栏
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->hideTrashed();
+
+            // 如果已有配置，隐藏新增按钮（一个店铺只能有一个配置）
+            if ($existingConfig) {
+                $grid->hideCreate();
+            }
+        });
+    }
+
+    /**
+     * 活动配置表单（新增/编辑）
+     * @auth true
+     * @group channel
+     * @param int $storeId
+     * @return Form
+     */
+    public function activityConfigForm(int $storeId = 0): Form
+    {
+        $model = \addons\webman\model\StoreActivityConfig::class;
+
+        return Form::create(new $model(), function (Form $form) use ($storeId) {
+            $form->title(admin_trans('store_machine.activity_config.edit_title'));
+
+            $form->hidden('admin_user_id')->value($storeId);
+
+            // 获取店家的 department_id
+            $store = AdminUser::find($storeId);
+            if ($store) {
+                $form->hidden('department_id')->value($store->department_id);
+            }
+
+            // ========== 基本信息 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.basic'));
+
+            $form->row(function (Form $form) {
+                $form->dateTime('start_time', admin_trans('store_machine.activity_config.label.start_time'))
+                    ->help(admin_trans('store_machine.activity_config.help.start_time'))
+                    ->span(12);
+
+                $form->dateTime('end_time', admin_trans('store_machine.activity_config.label.end_time'))
+                    ->help(admin_trans('store_machine.activity_config.help.end_time'))
+                    ->span(12);
+            });
+
+            $form->row(function (Form $form) {
+                $form->switch('status', admin_trans('store_machine.activity_config.fields.status'))
+                    ->checkedValue(1)
+                    ->unCheckedValue(0)
+                    ->value(1)
+                    ->span(12);
+
+                $form->dateTime('activity_end_time', admin_trans('store_machine.activity_config.label.activity_end_time'))
+                    ->help(admin_trans('store_machine.activity_config.help.activity_end_time'))
+                    ->span(12);
+            });
+
+            // ========== 体验券配置 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.experience'));
+
+            $form->switch('experience_enabled', admin_trans('store_machine.activity_config.label.experience_enabled'))
+                ->checkedValue(1)
+                ->unCheckedValue(0)
+                ->value(1);
+
+            $form->row(function (Form $form) {
+                $form->dateTime('experience_register_after', admin_trans('store_machine.activity_config.label.experience_register_after'))
+                    ->help(admin_trans('store_machine.activity_config.help.experience_register_after'))
+                    ->span(12);
+
+                $form->number('experience_score', admin_trans('store_machine.activity_config.label.experience_score'))
+                    ->min(0)
+                    ->max(999999)
+                    ->value(1000)
+                    ->help(admin_trans('store_machine.activity_config.help.experience_score'))
+                    ->span(12);
+            });
+
+            $form->row(function (Form $form) {
+                $form->number('experience_daily_limit', admin_trans('store_machine.activity_config.label.experience_daily_limit'))
+                    ->min(0)
+                    ->max(999)
+                    ->value(1)
+                    ->help(admin_trans('store_machine.activity_config.help.experience_daily_limit'))
+                    ->span(12);
+
+                $form->number('experience_total_limit', admin_trans('store_machine.activity_config.label.experience_total_limit'))
+                    ->min(0)
+                    ->max(9999)
+                    ->value(6)
+                    ->help(admin_trans('store_machine.activity_config.help.experience_total_limit'))
+                    ->span(12);
+            });
+
+            $form->number('experience_expire_hours', admin_trans('store_machine.activity_config.label.experience_expire_hours'))
+                ->min(1)
+                ->max(720)
+                ->value(24)
+                ->help(admin_trans('store_machine.activity_config.help.experience_expire_hours'));
+
+            // ========== 福利券配置 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.welfare'));
+
+            $form->switch('welfare_enabled', admin_trans('store_machine.activity_config.label.welfare_enabled'))
+                ->checkedValue(1)
+                ->unCheckedValue(0)
+                ->value(1);
+
+            $form->row(function (Form $form) {
+                $form->number('welfare_daily_limit', admin_trans('store_machine.activity_config.label.welfare_daily_limit'))
+                    ->min(0)
+                    ->max(999)
+                    ->value(1)
+                    ->help(admin_trans('store_machine.activity_config.help.welfare_daily_limit'))
+                    ->span(12);
+
+                $form->number('welfare_expire_hours', admin_trans('store_machine.activity_config.label.welfare_expire_hours'))
+                    ->min(1)
+                    ->max(720)
+                    ->value(24)
+                    ->help(admin_trans('store_machine.activity_config.help.welfare_expire_hours'))
+                    ->span(12);
+            });
+
+            // 福利券档位规则（使用 hasMany 实现动态表格）
+            $form->divider()->content(admin_trans('store_machine.activity_config.label.welfare_rules'));
+            $form->help(admin_trans('store_machine.activity_config.help.welfare_rules'));
+
+            $form->hasMany('welfare_rules', admin_trans('store_machine.activity_config.rules.add_rule'), function (Form $form) {
+                $form->select('day_type', admin_trans('store_machine.activity_config.rules.day_type'))
+                    ->options([
+                        'yesterday' => admin_trans('store_machine.activity_config.rules.yesterday'),
+                        'today' => admin_trans('store_machine.activity_config.rules.today'),
+                    ])
+                    ->default('yesterday')
+                    ->required();
+                $form->number('bet_amount', admin_trans('store_machine.activity_config.rules.bet_amount'))
+                    ->min(0)
+                    ->max(99999999)
+                    ->required();
+                $form->number('score', admin_trans('store_machine.activity_config.rules.score'))
+                    ->min(0)
+                    ->max(999999)
+                    ->required();
+            });
+
+            // ========== 订单前缀配置 ==========
+            $form->divider()->content(admin_trans('store_machine.activity_config.section.order_prefix'));
+
+            $form->row(function (Form $form) {
+                $form->text('order_prefix_experience', admin_trans('store_machine.activity_config.label.order_prefix_experience'))
+                    ->maxlength(10)
+                    ->value('TY')
+                    ->span(6);
+
+                $form->text('order_prefix_welfare', admin_trans('store_machine.activity_config.label.order_prefix_welfare'))
+                    ->maxlength(10)
+                    ->value('FL')
+                    ->span(6);
+
+                $form->text('order_prefix_recharge', admin_trans('store_machine.activity_config.label.order_prefix_recharge'))
+                    ->maxlength(10)
+                    ->value('TK')
+                    ->span(6);
+
+                $form->text('order_prefix_withdraw', admin_trans('store_machine.activity_config.label.order_prefix_withdraw'))
+                    ->maxlength(10)
+                    ->value('TK')
+                    ->span(6);
+            });
+
+            $form->layout('vertical');
+
+            // 保存时设置 admin_user_id 和验证
+            $form->saving(function (Form $form) use ($storeId) {
+                $form->input('admin_user_id', $storeId);
+                // 设置 department_id
+                $store = AdminUser::find($storeId);
+                if ($store) {
+                    $form->input('department_id', $store->department_id);
+                }
+
+                // 新增时检查是否已有配置
+                if (!$form->isEdit()) {
+                    $exists = \addons\webman\model\StoreActivityConfig::query()
+                        ->where('admin_user_id', $storeId)
+                        ->whereNull('deleted_at')
+                        ->exists();
+                    if ($exists) {
+                        return message_error(admin_trans('store_machine.activity_config.error.already_exists'));
+                    }
+                }
+            });
+
+            // 保存成功后提示
+            $form->saved(function () {
+                return message_success(admin_trans('store_machine.activity_config.message.update_success'));
+            });
+        });
+    }
+
 }

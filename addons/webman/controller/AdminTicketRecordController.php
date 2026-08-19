@@ -35,7 +35,7 @@ class AdminTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示开分类型数据
+            // 只显示出票类型数据（开分票）
             $grid->model()
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->orderBy('created_at', 'desc');
@@ -150,12 +150,29 @@ class AdminTicketRecordController
             $grid->column('machine_no', admin_trans('ticket_machine.record.machine_no'))->align('center');
             $grid->column('score', admin_trans('ticket_machine.record.score'))->align('right');
             $grid->column('ticket_type', admin_trans('ticket_machine.record.ticket_type'))->display(function ($val) {
-                return $val == TicketRecord::TYPE_RECHARGE
-                    ? Tag::create(admin_trans('ticket_machine.record.type_recharge'))->color('blue')
-                    : Tag::create(admin_trans('ticket_machine.record.type_withdraw'))->color('green');
+                return match ($val) {
+                    TicketRecord::TYPE_RECHARGE => Tag::create(admin_trans('ticket_machine.record.type_recharge'))->color('blue'),
+                    TicketRecord::TYPE_WITHDRAW => Tag::create(admin_trans('ticket_machine.record.type_withdraw'))->color('green'),
+                    TicketRecord::TYPE_EXPERIENCE => Tag::create(admin_trans('ticket_machine.record.type_experience'))->color('purple'),
+                    TicketRecord::TYPE_WELFARE => Tag::create(admin_trans('ticket_machine.record.type_welfare'))->color('orange'),
+                    default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
+                };
             });
             $grid->column('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'))->copy();
-            $grid->column('status', admin_trans('ticket_machine.record.status'))->display(function ($val) {
+            $grid->column('status', admin_trans('ticket_machine.record.status'))->display(function ($val, $data) {
+                // 体验券和福利券：判断是否超过有效时间
+                if ($val == TicketRecord::STATUS_NORMAL
+                    && in_array($data['ticket_type'], [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE])) {
+                    $voucherConfig = config('voucher');
+                    $expireHours = $data['ticket_type'] == TicketRecord::TYPE_EXPERIENCE
+                        ? ($voucherConfig['experience']['expire_hours'] ?? 24)
+                        : ($voucherConfig['welfare']['expire_hours'] ?? 24);
+                    $createdAt = $data['created_at'] instanceof \DateTimeInterface ? $data['created_at']->getTimestamp() : strtotime($data['created_at']);
+                    $expireTime = $createdAt + ($expireHours * 3600);
+                    if (time() > $expireTime) {
+                        return Tag::create(admin_trans('ticket_machine.record.status_expired'))->color('default');
+                    }
+                }
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.record.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.record.status_normal'))->color('blue'),
@@ -172,7 +189,11 @@ class AdminTicketRecordController
             // 获取店名下拉选项
             $storeOptions = ['' => admin_trans('public_msg.all')];
             $stores = TicketRecord::query()
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->whereIn('ticket_type', [
+                    TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_EXPERIENCE,
+                    TicketRecord::TYPE_WELFARE,
+                ])
                 ->distinct()
                 ->pluck('store_name')
                 ->toArray();
@@ -197,6 +218,8 @@ class AdminTicketRecordController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
                         TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
+                        TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+                        TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->eq()->select('status')
@@ -209,9 +232,11 @@ class AdminTicketRecordController
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->form()->hidden('created_at_start');
-                $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end');
+                $filter->between()->dateTimeRange('created_at')
+                    ->placeholder([
+                        admin_trans('common.start_time'),
+                        admin_trans('common.end_time')
+                    ]);
             });
 
             $grid->hideDelete();
@@ -240,9 +265,13 @@ class AdminTicketRecordController
             $form->desc('machine_no', admin_trans('ticket_machine.record.machine_no'));
             $form->desc('score', admin_trans('ticket_machine.record.score'));
             $form->desc('ticket_type', admin_trans('ticket_machine.record.ticket_type'))->display(function ($val) {
-                return $val == TicketRecord::TYPE_RECHARGE
-                    ? admin_trans('ticket_machine.record.type_recharge')
-                    : admin_trans('ticket_machine.record.type_withdraw');
+                return match ($val) {
+                    TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
+                    TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
+                    TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+                    TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
+                    default => admin_trans('ticket_machine.record.status_unknown'),
+                };
             });
             $form->desc('qr_code', admin_trans('ticket_machine.record.qr_code'));
             $form->desc('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'));

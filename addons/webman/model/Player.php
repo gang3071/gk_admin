@@ -35,6 +35,7 @@ use support\Cache;
  * @property int machine_play_num 可遊玩台數
  * @property string phone 手机号
  * @property string name 姓名
+ * @property string real_name 真实姓名
  * @property string country_code 手机号国家编号
  * @property string recommended_code 输入推荐吗
  * @property string recommend_code 玩家推荐码

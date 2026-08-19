@@ -23,6 +23,22 @@ return [
     'artificial_withdrawal_error' => '手動洗分に失敗しました',
     'artificial_withdrawal_success' => '手動洗分成功',
     'insufficient_balance' => 'アカウント残高が不十分です',
+
+    // ベット統計
+    'bet_statistics' => 'ベット確認',
+    'bet_statistics_button' => 'ベット統計',
+    'bet_statistics_title' => '{name} - ベット統計',
+    'today_bet' => '今日のベット',
+    'week_bet' => '今週のベット',
+    'month_bet' => '今月のベット',
+    'machine_bet' => '実機',
+    'game_bet' => '電子ゲーム',
+    'bet_trend_15days' => '15日間のベット推移',
+    'month_bet_distribution' => '今月のベット分布',
+    'bet_amount_unit' => 'NT$',
+    'loading' => '読み込み中...',
+    'load_failed' => 'データの読み込みに失敗しました',
+
     'fields' => [
         'id' => 'ID',
         'phone' => '携帯電話番号（アカウント番号）',

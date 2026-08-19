@@ -86,6 +86,8 @@ const messages = {
       online_machine_info: '机台信息',
       lock: '锁定',
       open: '开启',
+      service_bell_call: '服务铃呼叫',
+      device_call_service: '呼叫服务',
     }
   },
   //英文
@@ -105,6 +107,8 @@ const messages = {
       online_machine_info: 'Machine information',
       lock: 'Lock',
       open: 'Open',
+      service_bell_call: 'Service Bell Call',
+      device_call_service: 'Call Service',
     }
   },
   jp: {
@@ -123,6 +127,8 @@ const messages = {
       online_machine_info: 'きょくだいじょうほう',
       lock: 'Lock',
       open: 'Open',
+      service_bell_call: 'サービスベル呼び出し',
+      device_call_service: 'サービスを呼び出す',
     }
   },
   // 繁体中文
@@ -142,6 +148,8 @@ const messages = {
       online_machine_info: '機台信息',
       lock: '鎖定',
       open: '開啟',
+      service_bell_call: '服務鈴呼叫',
+      device_call_service: '呼叫服務',
     }
   }
 }
@@ -178,7 +186,10 @@ export default {
       processed: '',
       untreated: '',
       adminChannelName: null,
-      groupChannelName: null
+      groupChannelName: null,
+      // 语音播报队列
+      voiceQueue: [],
+      isPlayingVoice: false
     };
   },
   //生命周期渲染完执行
@@ -242,6 +253,13 @@ export default {
         const content = JSON.parse(data.content);
         const lang = this.lang;
         let that = this;
+
+        // 处理服务铃消息
+        if (content.type === 'service_call') {
+          that.handleServiceCall(content);
+          return;
+        }
+
         switch (content.msg_type) {
           case 'machine_action_result':
             that.$notification.info({
@@ -274,6 +292,80 @@ export default {
         }
       } catch (e) {
       }
+    },
+
+    /**
+     * 处理服务铃消息
+     */
+    handleServiceCall(content) {
+      const lang = this.lang;
+
+      // 显示桌面通知
+      this.$notification.warning({
+        message: messages[lang].message.service_bell_call,
+        description: `${content.device_name}${messages[lang].message.device_call_service}`,
+        duration: 5,
+      });
+
+      // 添加到语音播报队列
+      if (content.voice_url) {
+        this.addToVoiceQueue(content.voice_url);
+      }
+    },
+
+    /**
+     * 添加语音到播报队列
+     */
+    addToVoiceQueue(voiceUrl) {
+      this.voiceQueue.push(voiceUrl);
+
+      // 如果当前没有在播报，立即开始播报
+      if (!this.isPlayingVoice) {
+        this.playNextVoice();
+      }
+    },
+
+    /**
+     * 播报下一个语音
+     */
+    playNextVoice() {
+      // 队列为空，停止播报
+      if (this.voiceQueue.length === 0) {
+        this.isPlayingVoice = false;
+        return;
+      }
+
+      // 标记正在播报
+      this.isPlayingVoice = true;
+
+      // 取出队列第一个语音
+      const voiceUrl = this.voiceQueue.shift();
+
+      // 创建音频元素
+      const audio = new Audio(voiceUrl);
+
+      // 播报结束后，等待3秒再播报下一个
+      audio.onended = () => {
+        setTimeout(() => {
+          this.playNextVoice();
+        }, 3000); // 间隔3秒
+      };
+
+      // 播报失败，直接播报下一个
+      audio.onerror = (error) => {
+        console.error('语音播报失败:', error);
+        setTimeout(() => {
+          this.playNextVoice();
+        }, 1000); // 失败后1秒播报下一个
+      };
+
+      // 开始播放
+      audio.play().catch((error) => {
+        console.error('播放语音失败:', error);
+        setTimeout(() => {
+          this.playNextVoice();
+        }, 1000);
+      });
     },
 
     handleGroupMessage(data) {

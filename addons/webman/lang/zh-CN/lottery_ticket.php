@@ -346,6 +346,7 @@ return [
         'amount_exceeded' => '派奖金额超出总奖金额度',
         'ticket_not_found_or_used' => '券号 {ticket_no} 不存在或已使用',
         'ticket_already_won' => '券号 {ticket_no} 已录入过中奖记录，不能重复录入',
+        'prize_sold_out' => '奖品「{prize_name}」已发放完毕（总数：{total_count}，已发放：{distributed_count}），无法继续录入',
         'prize_level_not_found_for_ticket' => '券号 {ticket_no} 的奖品等级不存在',
         'invalid_ticket_format' => '券号 {ticket_no} 格式错误，只能包含数字且不超过6位',
         'distribute_failed' => '券号 {ticket_no} 派奖失败：{reason}',  // ⭐ 新增：录入自动派奖失败提示
@@ -383,6 +384,7 @@ return [
         'duration_too_short' => '活动时长过短，至少需要 {min}',
         'duration_too_long' => '活动时长过长，最多 {max}',
         'cannot_edit_started' => '只能编輯未开始的活动',
+        'cannot_edit_ended' => '已结束或已关闭的活动不能编辑',
         'invalid_file' => '无效的文件',
         'invalid_image_type' => '只支持 jpg、png 格式图片',
         'file_too_large' => '文件大小不能超过2MB',

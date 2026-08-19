@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
 use addons\webman\model\Player;
@@ -350,6 +351,31 @@ class StoreTicketRedeemController
                 };
             });
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
+            $grid->column('scanned_at', admin_trans('ticket_machine.redeem.scanned_at'))
+                ->display(function ($val) {
+                    return $val ?: '-';
+                });
+            $grid->column('scanned_by', admin_trans('ticket_machine.redeem.scanned_by'))
+                ->display(function ($val, $data) {
+                    if (empty($val)) {
+                        return '-';
+                    }
+                    // 根据 status 区分核销来源
+                    if ($data['status'] == TicketRecord::STATUS_BACKEND_USED) {
+                        // 后台核销：查询 admin_user
+                        $adminUser = AdminUser::query()->where('id', $val)->first();
+                        return $adminUser
+                            ? Tag::create($adminUser->username)->color('orange')
+                            : Tag::create('ID:' . $val)->color('default');
+                    } elseif ($data['status'] == TicketRecord::STATUS_MACHINE_USED) {
+                        // 机台核销：查询 player
+                        $player = Player::query()->where('id', $val)->first();
+                        return $player
+                            ? Tag::create($player->name ?? $player->uuid)->color('purple')
+                            : Tag::create('ID:' . $val)->color('default');
+                    }
+                    return Tag::create('ID:' . $val)->color('default');
+                });
 
             // 备注（可编辑）
             $grid->column('remark', admin_trans('ticket_machine.redeem.remark'))
@@ -396,9 +422,11 @@ class StoreTicketRedeemController
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->form()->hidden('created_at_start');
-                $filter->form()->hidden('created_at_end');
-                $filter->form()->dateTimeRange('created_at_start', 'created_at_end');
+                $filter->between()->dateTimeRange('created_at')
+                    ->placeholder([
+                        admin_trans('common.start_time'),
+                        admin_trans('common.end_time')
+                    ]);
             });
 
             // 处理可编辑列的保存
@@ -523,11 +551,11 @@ class StoreTicketRedeemController
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
         }
 
-        // 更新状态为已使用
+        // 更新状态为已使用（后台核销）
         $record->update([
             'status' => TicketRecord::STATUS_BACKEND_USED,
             'scanned_at' => date('Y-m-d H:i:s'),
-            'scanned_by' => 'admin_' . $admin->id,
+            'scanned_by' => $admin->id,
         ]);
 
         return json_encode(['code' => 0, 'msg' => admin_trans('ticket_machine.redeem.redeem_success')]);
@@ -578,7 +606,7 @@ class StoreTicketRedeemController
         // 更新扫码信息
         $record->update([
             'scanned_at' => date('Y-m-d H:i:s'),
-            'scanned_by' => 'admin_' . $admin->id,
+            'scanned_by' => $admin->id,
         ]);
 
         // 通过 player_id 关联获取玩家信息
@@ -730,11 +758,11 @@ class StoreTicketRedeemController
             return message_error(admin_trans('ticket_machine.redeem.record_not_found'));
         }
 
-        // 更新状态为已使用
+        // 更新状态为已使用（后台核销）
         $record->update([
             'status' => TicketRecord::STATUS_BACKEND_USED,
             'scanned_at' => date('Y-m-d H:i:s'),
-            'scanned_by' => 'admin_' . $admin->id,
+            'scanned_by' => $admin->id,
         ]);
 
         return message_success(admin_trans('ticket_machine.redeem.redeem_success'));
@@ -803,6 +831,7 @@ class StoreTicketRedeemController
             });
             $form->desc('print_count', admin_trans('ticket_machine.redeem.print_count'));
             $form->desc('last_print_time', admin_trans('ticket_machine.redeem.last_print_time'));
+            $form->desc('scanned_at', admin_trans('ticket_machine.redeem.scanned_at'));
             $form->desc('remark', admin_trans('ticket_machine.redeem.remark'));
             $form->desc('created_at', admin_trans('ticket_machine.redeem.created_at'));
 
@@ -896,11 +925,11 @@ class StoreTicketRedeemController
             return message_error(admin_trans('ticket_machine.redeem.record_not_found'));
         }
 
-        // 更新状态为已使用
+        // 更新状态为已使用（后台核销）
         $record->update([
             'status' => TicketRecord::STATUS_BACKEND_USED,
             'scanned_at' => date('Y-m-d H:i:s'),
-            'scanned_by' => 'admin_' . $admin->id,
+            'scanned_by' => $admin->id,
         ]);
 
         return message_success(admin_trans('ticket_machine.redeem.redeem_success'));

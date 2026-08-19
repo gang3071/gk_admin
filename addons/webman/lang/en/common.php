@@ -23,6 +23,7 @@ return [
     'load_failed' => 'Load failed',
     'invalid_game_points' => 'Invalid game points',
     'system_error' => 'System error',
+    'unknown_error' => 'Unknown error',
     'machine_in_test_mode' => 'Machine in test mode',
     'video_host_request_failed' => 'Video host request failed',
     'get_stream_info_failed' => 'Failed to get stream info',
@@ -73,6 +74,7 @@ return [
 
     // 彩池相关
     'pool_ratio_must_greater_than_zero' => 'Pool ratio must be greater than 0',
+    'pool_ratio_must_greater_than_or_equal_0_0001' => 'Pool ratio must be greater than or equal to 0.0001%',
     'pool_ratio_cannot_exceed_100' => 'Pool ratio cannot exceed 100%',
     'win_probability_must_greater_than_zero' => 'Win probability must be greater than 0',
     'win_probability_cannot_exceed_1' => 'Win probability cannot exceed 1 (100%)',

@@ -30,6 +30,8 @@ return [
         'present_in_amount' => '总转入点数',
         'third_recharge_amount' => '第三方总开分点数',
         'third_withdraw_amount' => '第三方总洗分点数',
+        'pending_cashback_amount' => '待领取反水',
+        'total_cashback_amount' => '总反水金额',
         'created_at' => '创建时间',
         'updated_at' => '更新时间',
         'total_money' => '总金额',

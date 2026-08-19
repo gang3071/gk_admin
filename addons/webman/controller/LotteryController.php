@@ -5,6 +5,7 @@ namespace addons\webman\controller;
 use addons\webman\model\GameType;
 use addons\webman\model\Lottery;
 use app\service\LotteryServices;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\field\Switches;
@@ -108,7 +109,7 @@ class LotteryController
             // 入池比值（固定和随机彩金都显示）
             $grid->column('pool_ratio', admin_trans('lottery.fields.pool_ratio'))->display(function ($val, Lottery $data) {
                 return Html::create()->content([
-                    Html::div()->content(floatval($val) . '%')
+                    Html::div()->content(number_format(floatval($val), 4, '.', '') . '%')  // ✅ 显示4位小数
                 ]);
             })->align('center');
 
@@ -142,34 +143,31 @@ class LotteryController
                 return '-';
             })->align('center');
 
-            // 保底金额（仅随机彩金显示）
+            // 保底金额（固定和随机彩金都显示）
             $grid->column('auto_refill_amount', admin_trans('lottery.fields.auto_refill_amount'))->display(function ($val, Lottery $data) {
-                if ($data->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
-                    if ($data->auto_refill_status == 1 && $val > 0) {
-                        return Html::create()->content([
-                            Html::div()
-                                ->content(number_format($val, 2))
-                                ->style(['color' => '#1890ff', 'font-weight' => 'bold']),
-                            Html::div()
-                                ->content(admin_trans('lottery.status_enabled_parenthesis'))
-                                ->style(['color' => '#52c41a', 'font-size' => '12px'])
-                        ]);
-                    } else {
-                        return Html::create()->content([
-                            Html::div()
-                                ->content(admin_trans('lottery.status_disabled'))
-                                ->style(['color' => '#999', 'font-size' => '12px'])
-                        ]);
-                    }
+                if ($data->auto_refill_status == 1 && $val > 0) {
+                    return Html::create()->content([
+                        Html::div()
+                            ->content(number_format($val, 2))
+                            ->style(['color' => '#1890ff', 'font-weight' => 'bold']),
+                        Html::div()
+                            ->content(admin_trans('lottery.status_enabled_parenthesis'))
+                            ->style(['color' => '#52c41a', 'font-size' => '12px'])
+                    ]);
+                } else {
+                    return Html::create()->content([
+                        Html::div()
+                            ->content(admin_trans('lottery.status_disabled'))
+                            ->style(['color' => '#999', 'font-size' => '12px'])
+                    ]);
                 }
-                return '-';
             })->align('center');
 
             // 新增：爆彩状态（仅随机彩金显示）
             $grid->column('burst_status', admin_trans('lottery.fields.burst_status'))->display(function ($val, Lottery $data) {
                 if ($data->lottery_type == Lottery::LOTTERY_TYPE_RANDOM) {
                     return Switches::create(null, $val)
-                        ->options([[1 => admin_trans('lottery.status_enabled')], [0 => admin_trans('common.status.0')]])
+                        ->options([[1 => admin_trans('lottery.status_enabled')], [0 => admin_trans('lottery.status_disabled')]])
                         ->field('burst_status')
                         ->url('ex-admin/addons-webman-controller-LotteryController/changeBurstStatus')
                         ->params(['id' => $data->id]);
@@ -216,6 +214,77 @@ class LotteryController
                 return $val > 0 ? $val : '';
             })->align('center');
             $grid->column('lottery_times', admin_trans('lottery.fields.lottery_times'))->align('center');
+
+            // 开奖统计（仅随机彩金）
+            $grid->column('lottery_stats', admin_trans('lottery.lottery_stats'))->display(function ($val, Lottery $data) {
+                // 固定彩金不显示统计
+                if ($data->lottery_type != Lottery::LOTTERY_TYPE_RANDOM) {
+                    return '-';
+                }
+
+                try {
+                    $redis = \support\Redis::connection()->client();
+                    $today = date('Y-m-d');
+
+                    // 获取清除时间（用于版本检查）
+                    $clearTimeKey = 'machine_lottery_stats:clear_time:' . $data->id;
+                    $clearTime = $redis->get($clearTimeKey);
+                    if (!$clearTime) {
+                        $clearTime = $redis->get('machine_lottery_stats:last_clear_time');
+                    }
+
+                    // 显示用的清除时间（可能包含翻译文本）
+                    $displayClearTime = $clearTime ?: admin_trans('lottery.stats_no_clear_time');
+
+                    // 惰性清理检查：读取版本键，如果不匹配清除时间，说明数据已过期
+                    $totalVersionKey = 'machine_lottery_stats:total:' . $data->id . ':version';
+                    $winVersionKey = 'machine_lottery_stats:win:' . $data->id . ':version';
+                    $totalVersion = $redis->get($totalVersionKey) ?: '';
+                    $winVersion = $redis->get($winVersionKey) ?: '';
+
+                    // 如果版本不匹配（且有清除时间），说明统计已清除但未重新累加，应显示为 0
+                    $totalNeedsClear = ($clearTime && $totalVersion !== $clearTime);
+                    $winNeedsClear = ($clearTime && $winVersion !== $clearTime);
+
+                    // 获取总统计（如果需要清除则显示 0）
+                    $totalChecks = $totalNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:total:' . $data->id) ?: 0);
+                    $totalWins = $winNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:win:' . $data->id) ?: 0);
+
+                    // 获取今日统计（如果需要清除则显示 0）
+                    $dailyChecks = $totalNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:daily:total:' . $data->id . ':' . $today) ?: 0);
+                    $dailyWins = $winNeedsClear ? 0 : ((int)$redis->get('machine_lottery_stats:daily:win:' . $data->id . ':' . $today) ?: 0);
+
+                    // 计算中奖率（保留8位小数以显示极低概率）
+                    $totalWinRate = $totalChecks > 0 ? round(($totalWins / $totalChecks) * 100, 8) : 0;
+                    $dailyWinRate = $dailyChecks > 0 ? round(($dailyWins / $dailyChecks) * 100, 8) : 0;
+
+                    $content = [
+                        // 统计开始时间
+                        Html::div()->content(admin_trans('lottery.stats_start_time') . ': ' . $displayClearTime)
+                            ->style(['font-size' => '11px', 'color' => '#999', 'margin-bottom' => '4px']),
+                    ];
+
+                    // 如果需要清除，显示提示
+                    if ($totalNeedsClear || $winNeedsClear) {
+                        $content[] = Html::div()->content('⏳ 待更新（下次抽奖时自动重置）')
+                            ->style(['font-size' => '11px', 'color' => '#fa8c16', 'margin-bottom' => '4px']);
+                    }
+
+                    $content[] = Html::div()->content(admin_trans('lottery.stats_total') . ': ' . number_format($totalChecks) . admin_trans('lottery.stats_times') . ' / ' . number_format($totalWins) . admin_trans('lottery.stats_win') . ' (' . $totalWinRate . '%)')
+                        ->style(['font-size' => '12px', 'color' => '#1890ff']);
+
+                    $content[] = Html::div()->content(admin_trans('lottery.stats_today') . ': ' . number_format($dailyChecks) . admin_trans('lottery.stats_times') . ' / ' . number_format($dailyWins) . admin_trans('lottery.stats_win') . ' (' . $dailyWinRate . '%)')
+                        ->style(['font-size' => '12px', 'color' => '#52c41a', 'margin-top' => '4px']);
+
+                    return Html::create()->content($content);
+                } catch (\Exception $e) {
+                    return Html::create()->content([
+                        Html::div()->content(admin_trans('lottery.stats_error'))
+                            ->style(['color' => '#ff4d4f', 'font-size' => '12px'])
+                    ]);
+                }
+            })->align('center');
+
             $grid->column('status', admin_trans('lottery.fields.status'))->display(function ($val, Lottery $data) use ($type) {
                 return Switches::create(null, $val)
                     ->options([[1 => admin_trans('admin.open')], [0 => admin_trans('admin.close')]])
@@ -229,6 +298,16 @@ class LotteryController
             $grid->column('created_at', admin_trans('lottery.fields.created_at'))->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
+
+            // 添加工具按钮（清除随机彩金统计）
+            $grid->tools([
+                Button::create(admin_trans('lottery.clear_stats'))
+                    ->icon(Icon::create('DeleteOutlined'))
+                    ->type('danger')
+                    ->confirm(admin_trans('lottery.clear_stats_confirm'), [$this, 'clearStats'])
+                    ->gridRefresh()
+            ]);
+
             $grid->setForm()->drawer($this->form($type));
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('name')->placeholder(admin_trans('lottery.fields.name'));
@@ -283,6 +362,21 @@ class LotteryController
 
             $maxRatio = $model->rate ?? 100;
 
+            // 编辑模式：计算显示金额（DB + Redis），仅用于展示
+            $displayAmount = $model->amount ?? 0;
+            if ($form->isEdit() && $model) {
+                try {
+                    $redis = \support\Redis::connection()->client();
+                    $redisKey = \app\service\LotteryServices::REDIS_KEY_LOTTERY_AMOUNT . $model->id;
+                    $redisAmount = $redis->get($redisKey);
+                    if ($redisAmount !== false && $redisAmount > 0) {
+                        $displayAmount = bcadd($model->amount, $redisAmount, 4);
+                    }
+                } catch (\Exception) {
+                    // Redis 异常时降级使用数据库金额
+                }
+            }
+
             // 使用模型方法获取爆彩配置（自动处理默认值和JSON解析）
             $burstMultiplierConfig = $model ? $model->getBurstMultiplierConfig() : [
                 'final' => 50,
@@ -316,14 +410,15 @@ class LotteryController
                 ->min(0)
                 ->max(10000000000)
                 ->precision(2)
+                ->value($displayAmount)
                 ->help(admin_trans('lottery.form_help.pool_amount'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_amount'));
 
             $form->number('pool_ratio', admin_trans('lottery.fields.pool_ratio'))
                 ->style(['width' => '100%'])
-                ->min(0)
+                ->min(0.0001)  // ✅ 最小值改为 0.0001
                 ->max(100)
-                ->precision(2)
+                ->precision(4)  // ✅ 精度改为4位小数
                 ->suffix('%')
                 ->help(admin_trans('lottery.form_help.pool_ratio'))
                 ->placeholder(admin_trans('lottery.form_placeholder.pool_ratio'))
@@ -357,13 +452,11 @@ class LotteryController
                             // 派彩比例配置
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
                             $maxRatio = 100;
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->default(100)
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
@@ -380,17 +473,39 @@ class LotteryController
                                 ->help(admin_trans('lottery.machine_lottery.slot_condition_help'))
                                 ->placeholder(admin_trans('lottery.machine_lottery.slot_condition_placeholder'))
                                 ->required();
+
+                            // ===== 保底金额配置 =====
+                            $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
+                            $form->html('<div style="padding: 10px; margin-bottom: 15px; background: #f0f5ff; border-left: 4px solid #597ef7;">
+                                <p style="margin: 0; font-size: 13px; color: #333; line-height: 1.6;">
+                                    <strong>说明：</strong>保底金额是彩池的最低维持金额，确保彩池始终有足够的资金进行派彩。<br>
+                                    <strong>工作原理：</strong><br>
+                                    • 派彩前：如果彩池不足派彩金额，自动补充到保底金额<br>
+                                    • 派彩后：如果彩池低于保底金额，自动补充到保底金额<br>
+                                    <strong>建议：</strong>保底金额应设置为最大派彩金额的1-2倍，确保随时有足够资金派彩
+                                </p>
+                            </div>');
+                            $form->row(function (Form $form) {
+                                $form->switch('auto_refill_status', admin_trans('lottery.auto_refill.status_label'))
+                                    ->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.status_help'))
+                                    ->span(12);
+                                $form->number('auto_refill_amount', admin_trans('lottery.auto_refill.amount_label'))
+                                    ->style(['width' => '100%'])
+                                    ->min(0)->max(10000000000)->precision(2)->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.amount_help'))
+                                    ->placeholder(admin_trans('lottery.auto_refill.amount_placeholder'))
+                                    ->span(12);
+                            });
                         })->when(GameType::TYPE_STEEL_BALL, function (Form $form) use ($gameType) {
                             // 派彩比例配置
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_payout_config'));
                             $maxRatio = 100;
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->default(100)
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
@@ -407,6 +522,30 @@ class LotteryController
                                 ->help(admin_trans('lottery.machine_lottery.steel_ball_condition_help'))
                                 ->placeholder(admin_trans('lottery.machine_lottery.steel_ball_condition_placeholder'))
                                 ->required();
+
+                            // ===== 保底金额配置 =====
+                            $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
+                            $form->html('<div style="padding: 10px; margin-bottom: 15px; background: #f0f5ff; border-left: 4px solid #597ef7;">
+                                <p style="margin: 0; font-size: 13px; color: #333; line-height: 1.6;">
+                                    <strong>说明：</strong>保底金额是彩池的最低维持金额，确保彩池始终有足够的资金进行派彩。<br>
+                                    <strong>工作原理：</strong><br>
+                                    • 派彩前：如果彩池不足派彩金额，自动补充到保底金额<br>
+                                    • 派彩后：如果彩池低于保底金额，自动补充到保底金额<br>
+                                    <strong>建议：</strong>保底金额应设置为最大派彩金额的1-2倍，确保随时有足够资金派彩
+                                </p>
+                            </div>');
+                            $form->row(function (Form $form) {
+                                $form->switch('auto_refill_status', admin_trans('lottery.auto_refill.status_label'))
+                                    ->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.status_help'))
+                                    ->span(12);
+                                $form->number('auto_refill_amount', admin_trans('lottery.auto_refill.amount_label'))
+                                    ->style(['width' => '100%'])
+                                    ->min(0)->max(10000000000)->precision(2)->default(0)
+                                    ->help(admin_trans('lottery.auto_refill.amount_help'))
+                                    ->placeholder(admin_trans('lottery.auto_refill.amount_placeholder'))
+                                    ->span(12);
+                            });
                         });
                 })->when(Lottery::LOTTERY_TYPE_RANDOM, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
                     $form->hidden('game_type')->bindAttr('value', $gameType)
@@ -414,13 +553,11 @@ class LotteryController
                             // ===== 新增：概率派彩配置 =====
                             $maxRatio = 100;
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
                                 ->placeholder(admin_trans('lottery.machine_lottery.payout_ratio_placeholder'))
@@ -451,6 +588,21 @@ class LotteryController
                                     ->style(['margin-left' => '10px'])
                                     ->span(11);
                             });
+
+                            // ===== 打码量配置 =====
+                            $form->divider()->content(admin_trans('lottery.divider_betting_config'));
+                            $form->number('bet_amount', admin_trans('lottery.base_bet_amount'))->style(['width' => '100%'])
+                                ->min(0)  // ✅ 允许0（不限制）
+                                ->max(100000000)
+                                ->precision(2)
+                                ->default(0)  // ✅ 默认0（不限制）
+                                ->rule([
+                                    'min:0' => admin_trans('lottery.rul.base_bet_amount_0'),
+                                    'max:100000000' => admin_trans('lottery.rul.base_bet_amount_100000000'),
+                                ])
+                                ->help(admin_trans('lottery.base_bet_amount_help'))
+                                ->placeholder(admin_trans('lottery.form_placeholder.required_betting_amount'));
+
                             // ===== 新增：爆彩功能配置 =====
                             $form->divider()->content(admin_trans('lottery.burst_config.divider_title'));
 
@@ -600,13 +752,11 @@ class LotteryController
                         })->when(GameType::TYPE_STEEL_BALL, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
                             $maxRatio = 100;
-                            $form->text('rate', admin_trans('lottery.fields.rate'))
-                                ->rulePattern('^[0-9]+(.[0-9]{1,2})?$', admin_trans('validator.twoDecimal'))
-                                ->rule([
-                                    'max:' . $maxRatio => admin_trans('validator.max', null, ['{max}' => $maxRatio]),
-                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                                    'regex:/^[0-9]+(.[0-9]{1,2})?$/' => admin_trans('validator.twoDecimal'),
-                                ])
+                            $form->number('rate', admin_trans('lottery.fields.rate'))
+                                ->style(['width' => '100%'])
+                                ->min(0)
+                                ->max($maxRatio)
+                                ->precision(2)
                                 ->suffix('%')
                                 ->default(100)
                                 ->help(admin_trans('lottery.machine_lottery.payout_ratio_help'))
@@ -639,6 +789,20 @@ class LotteryController
                                     ->style(['margin-left' => '10px'])
                                     ->span(11);
                             });
+
+                            // ===== 打码量配置 =====
+                            $form->divider()->content(admin_trans('lottery.divider_betting_config'));
+                            $form->number('bet_amount', admin_trans('lottery.base_bet_amount'))->style(['width' => '100%'])
+                                ->min(0)  // ✅ 允许0（不限制）
+                                ->max(100000000)
+                                ->precision(2)
+                                ->default(0)  // ✅ 默认0（不限制）
+                                ->rule([
+                                    'min:0' => admin_trans('lottery.rul.base_bet_amount_0'),
+                                    'max:100000000' => admin_trans('lottery.rul.base_bet_amount_100000000'),
+                                ])
+                                ->help(admin_trans('lottery.base_bet_amount_help'))
+                                ->placeholder(admin_trans('lottery.form_placeholder.required_betting_amount'));
 
                             // 保底金额配置
                             $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
@@ -895,8 +1059,8 @@ class LotteryController
                     $autoRefillStatus = $form->input('auto_refill_status');
                     $autoRefillAmount = $form->input('auto_refill_amount');
 
-                    if (empty($poolRatio) || $poolRatio <= 0) {
-                        return message_error(admin_trans('common.pool_ratio_must_greater_than_zero'));
+                    if (empty($poolRatio) || $poolRatio < 0.0001) {
+                        return message_error(admin_trans('common.pool_ratio_must_greater_than_or_equal_0_0001'));
                     }
                     if ($poolRatio > 100) {
                         return message_error(admin_trans('common.pool_ratio_cannot_exceed_100'));
@@ -909,6 +1073,12 @@ class LotteryController
                     }
                     if (empty($maxPoolAmount) || $maxPoolAmount <= 0) {
                         return message_error(admin_trans('common.max_pool_amount_must_greater_than_zero'));
+                    }
+
+                    // 验证彩池金额不能超过最大彩池金额
+                    $poolAmount = $form->input('amount');
+                    if (!empty($poolAmount) && $poolAmount > 0 && $poolAmount > $maxPoolAmount) {
+                        return message_error(admin_trans('lottery.error.amount_exceed_max_pool'));
                     }
 
                     // 验证保底金额
@@ -935,6 +1105,15 @@ class LotteryController
                         return message_error(admin_trans('common.distribution_ratio_range_error'));
                     }
 
+                    // 验证保底金额
+                    $autoRefillStatus = $form->input('auto_refill_status');
+                    $autoRefillAmount = $form->input('auto_refill_amount');
+                    if ($autoRefillStatus == 1) {
+                        if (empty($autoRefillAmount) || $autoRefillAmount <= 0) {
+                            return message_error(admin_trans('common.minimum_amount_must_greater_than_zero'));
+                        }
+                    }
+
                     // 固定彩金不需要随机彩金的字段，设置默认值
                     if (!$form->isEdit()) {
                         $form->input('pool_ratio', 0);
@@ -943,6 +1122,9 @@ class LotteryController
                         $form->input('burst_status', 0);
                     }
                 }
+
+                // 清除彩金列表缓存
+                \app\service\LotteryServices::clearLotteryListCache($gameType);
             });
         });
     }
@@ -1013,5 +1195,138 @@ class LotteryController
                 }
             });
         });
+    }
+
+    /**
+     * 切换彩金状态（启用/禁用）
+     * @auth true
+     * @group channel
+     */
+    public function changeStatus(int $id, array $data)
+    {
+        $status = $data['status'] ?? 0;
+
+        /** @var Lottery $lottery */
+        $lottery = Lottery::query()->where('id', $id)->first();
+        if (!$lottery) {
+            return message_error(admin_trans('lottery.error.not_found'));
+        }
+
+        $lottery->status = $status;
+        if ($lottery->save()) {
+            return message_success(admin_trans('common.save_success'));
+        }
+
+        return message_error(admin_trans('common.save_failed'));
+    }
+
+    /**
+     * 切换爆彩状态
+     * @auth true
+     * @group channel
+     */
+    public function changeBurstStatus(int $id, array $data)
+    {
+        $burstStatus = $data['burst_status'] ?? 0;
+
+        /** @var Lottery $lottery */
+        $lottery = Lottery::query()->where('id', $id)->first();
+        if (!$lottery) {
+            return message_error(admin_trans('lottery.error.not_found'));
+        }
+
+        // 只有随机彩金才支持爆彩
+        if ($lottery->lottery_type != Lottery::LOTTERY_TYPE_RANDOM) {
+            return message_error(admin_trans('lottery.error.only_random_support_burst'));
+        }
+
+        $lottery->burst_status = $burstStatus;
+        if ($lottery->save()) {
+            return message_success(admin_trans('common.save_success'));
+        }
+
+        return message_error(admin_trans('common.save_failed'));
+    }
+
+    /**
+     * 清理统计数据（惰性清理方案 - 只设置清除时间标记）
+     * 仅清除随机彩金的统计
+     * @auth true
+     * @return \ExAdmin\ui\support\Notification
+     */
+    public function clearStats(): \ExAdmin\ui\support\Notification
+    {
+        try {
+            $redis = \support\Redis::connection()->client();
+            $clearTime = date('Y-m-d H:i:s'); // 记录清除时间
+
+            // 获取所有启用的随机彩金ID
+            $lotteries = Lottery::query()
+                ->where('lottery_type', Lottery::LOTTERY_TYPE_RANDOM)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->pluck('id')
+                ->toArray();
+
+            $clearedCount = 0;
+            $details = [];
+
+            // 记录清除前的统计值
+            foreach ($lotteries as $id) {
+                $totalKey = 'machine_lottery_stats:total:' . $id;
+                $winKey = 'machine_lottery_stats:win:' . $id;
+
+                $beforeTotal = $redis->get($totalKey) ?: 0;
+                $beforeWin = $redis->get($winKey) ?: 0;
+
+                $details[] = [
+                    'lottery_id' => $id,
+                    'before_total' => $beforeTotal,
+                    'before_win' => $beforeWin,
+                ];
+
+                // 核心：只设置清除时间标记（惰性清理）
+                // 实际清理会在下次 incrementLotteryStats 时自动执行
+                $clearTimeKey = 'machine_lottery_stats:clear_time:' . $id;
+                $redis->set($clearTimeKey, $clearTime);
+
+                $clearedCount++;
+            }
+
+            // 记录全局清除时间（用于整体验证）
+            $redis->set('machine_lottery_stats:last_clear_time', $clearTime);
+
+            \support\Log::info(admin_trans('lottery.log.clear_stats_success'), [
+                'clear_time' => $clearTime,
+                'cleared_count' => $clearedCount,
+                'lazy_clear' => true, // 标记为惰性清理
+                'details' => $details
+            ]);
+
+            // 构建详细的清除信息
+            $detailsMessage = "\n\n清除详情:\n";
+            foreach ($details as $detail) {
+                $lottery = Lottery::find($detail['lottery_id']);
+                $lotteryName = $lottery ? $lottery->name : "ID:{$detail['lottery_id']}";
+                $detailsMessage .= "• {$lotteryName}:\n";
+                $detailsMessage .= "  清除前 - Total: " . number_format($detail['before_total']) . ", Win: " . number_format($detail['before_win']) . "\n";
+                $detailsMessage .= "  清除方式: 惰性清理（下次统计时自动重置为0）\n";
+            }
+
+            $detailsMessage .= "\n✅ 已设置清除标记（惰性清理模式）\n";
+            $detailsMessage .= "\n💡 说明: 统计值将在下次抽奖时自动重置为0，无需遍历大量键";
+
+            return notification_success(
+                admin_trans('lottery.clear_stats_success_title'),
+                admin_trans('lottery.clear_stats_success_message', null, ['{count}' => $clearedCount]) . "\n\n" . admin_trans('lottery.clear_stats_details') . "\n清除时间: {$clearTime}" . $detailsMessage
+            );
+
+        } catch (\Exception $e) {
+            \support\Log::error(admin_trans('lottery.log.clear_stats_error'), [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return notification_error(admin_trans('lottery.clear_stats_error_title'), $e->getMessage());
+        }
     }
 }

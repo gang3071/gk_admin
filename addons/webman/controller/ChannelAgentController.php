@@ -1640,27 +1640,7 @@ class ChannelAgentController
             }
             if (!empty($exAdminFilter['search_source'])) {
                 $searchSource = $exAdminFilter['search_source'];
-                $grid->model()->where(function ($query) use ($searchSource) {
-                    $query->where([
-                        ['code', 'like', '%' . $searchSource . '%', 'or'],
-                        ['machine_name', 'like', '%' . $searchSource . '%', 'or']
-                    ])->orWhere(function ($query) use ($searchSource) {
-                        $query->where([
-                            ['source', 'like', '%' . $searchSource . '%', 'and'],
-                        ])->whereIn('type',
-                            [PlayerDeliveryRecord::TYPE_PRESENT_IN, PlayerDeliveryRecord::TYPE_PRESENT_OUT]);
-                    })->orWhere(function ($query) use ($searchSource) {
-                        $query->whereHas('gamePlatform', function ($query) use ($searchSource) {
-                            $query->where([
-                                ['name', 'like', '%' . $searchSource . '%', 'or'],
-                            ]);
-                        })->whereIn('type',
-                            [
-                                PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT,
-                                PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN
-                            ]);
-                    });
-                });
+                $grid->model()->where('source', $searchSource);
             }
             if (!empty($exAdminFilter['activity'])) {
                 $target_id = PlayerMoneyEditLog::query()
@@ -1770,20 +1750,20 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
                     case PlayerDeliveryRecord::TYPE_SPECIAL:
                     case PlayerDeliveryRecord::TYPE_MACHINE:
-                        return Tag::create(admin_trans('message.source.' . $val))->color('red');
+                        return Tag::create($translatedText)->color('red');
                     case PlayerDeliveryRecord::TYPE_PRESENT_IN:
                     case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
-                        return Tag::create($val)->color('green');
+                        return Tag::create($translatedText)->color('green');
                     case PlayerDeliveryRecord::TYPE_BET:
                     case PlayerDeliveryRecord::TYPE_CANCEL_BET:
                     case PlayerDeliveryRecord::TYPE_SETTLEMENT:
                     case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
-                        return Tag::create($val)->color('blue');
+                        return Tag::create($translatedText)->color('blue');
                     case PlayerDeliveryRecord::TYPE_GIFT:
-                        return Tag::create($val)->color('pink');
+                        return Tag::create($translatedText)->color('pink');
                     case PlayerDeliveryRecord::TYPE_PREPAY:
                     case PlayerDeliveryRecord::TYPE_REFUND:
-                        return Tag::create($val)->color('cyan');
+                        return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_MACHINE_UP:
                     case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
                         if ($data->machine) {
@@ -1798,14 +1778,14 @@ class ChannelAgentController
                         break;
                     case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
                     case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD: // ⭐ 摸奖券奖励
-                        return Tag::create(admin_trans('message.source.' . $val))->color('blue');
+                        return Tag::create($translatedText)->color('blue');
                     case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
                     case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
                         return Tag::create($translatedText)->color('#eb2f96');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL:
-                        return Tag::create(admin_trans('message.source.' . $val))->color('purple');
+                        return Tag::create($translatedText)->color('purple');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
@@ -1814,7 +1794,7 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
                     case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
                     case PlayerDeliveryRecord::TYPE_LOTTERY:
-                        return Tag::create(admin_trans('message.source.' . $val))->color('orange');
+                        return Tag::create($translatedText)->color('orange');
                     case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
                         /** @var PlayerWalletTransfer $playerWalletTransfer */
                         $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
@@ -1823,7 +1803,7 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_AGENT_IN:
                         return Tag::create($data->player->channel->name)->color('orange');
                     default:
-                        return '';
+                        return $translatedText ? Tag::create($translatedText)->color('default') : '';
                 }
             })->align('center');
             $grid->column('type', admin_trans('player_delivery_record.fields.type'))
@@ -1980,7 +1960,13 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_BET:
                     case PlayerDeliveryRecord::TYPE_GIFT:
                     case PlayerDeliveryRecord::TYPE_PREPAY:
+                    case PlayerDeliveryRecord::COIN_DEDUCT:
                         return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                    case PlayerDeliveryRecord::TYPE_SPECIAL:
+                        if ($data->amount_after < $data->amount_before) {
+                            return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                        }
+                        return Html::create()->content(['+' . $val])->style(['color' => 'green']);
                     case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
                         // 重新结算根据金额正负显示
                         if ($val < 0) {
@@ -2000,7 +1986,8 @@ class ChannelAgentController
                 $name = admin_trans('channel_agent.player');
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
-                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
+                    PlayerDeliveryRecord::TYPE_SPECIAL,
                 ])) {
                     $name = $data->user_name ?? admin_trans('channel_agent.admin');
                 }
@@ -2022,7 +2009,50 @@ class ChannelAgentController
             $grid->filter(function (Filter $filter) use ($admin) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.device_uuid'));
-                $filter->like()->text('search_source')->placeholder(admin_trans('player_delivery_record.fields.source'));
+                $filter->eq()->select('search_source')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_delivery_record.fields.source'))
+                    ->options([
+                        'modified_amount_add' => admin_trans('message.target.modified_amount_add'),
+                        'modified_amount_deduct' => admin_trans('message.target.modified_amount_deduct'),
+                        'wallet_modify' => admin_trans('message.target.wallet_modify'),
+                        'artificial_recharge' => admin_trans('message.target.artificial_recharge'),
+                        'self_recharge' => admin_trans('message.target.self_recharge'),
+                        'gb_recharge' => admin_trans('message.target.gb_recharge'),
+                        'coin_recharge' => admin_trans('message.target.coin_recharge'),
+                        'talk_recharge' => admin_trans('message.target.talk_recharge'),
+                        'channel_withdrawal' => admin_trans('message.target.channel_withdrawal'),
+                        'artificial_withdrawal' => admin_trans('message.target.artificial_withdrawal'),
+                        'gb_withdrawal' => admin_trans('message.target.gb_withdrawal'),
+                        'talk_withdrawal' => admin_trans('message.target.talk_withdrawal'),
+                        'withdrawal_back' => admin_trans('message.target.withdrawal_back'),
+                        'ticket_open_score' => admin_trans('message.target.ticket_open_score'),
+                        'ticket_redeem' => admin_trans('message.target.ticket_redeem'),
+                        'lottery_game' => admin_trans('message.target.lottery_game'),
+                        'lottery_random' => admin_trans('message.target.lottery_random'),
+                        'lottery_fixed' => admin_trans('message.target.lottery_fixed'),
+                        'lottery_ticket_reward' => admin_trans('message.target.lottery_ticket_reward'),
+                        'machine_up' => admin_trans('message.target.machine_up'),
+                        'machine_down' => admin_trans('message.target.machine_down'),
+                        'birthday_bonus' => admin_trans('message.target.birthday_bonus'),
+                        'vip_upgrade_bonus' => admin_trans('message.target.vip_upgrade_bonus'),
+                        'activity_bonus' => admin_trans('message.target.activity_bonus'),
+                        'register_present' => admin_trans('message.target.register_present'),
+                        'profit' => admin_trans('message.target.profit'),
+                        'national_invite' => admin_trans('message.target.national_invite'),
+                        'national_promoter' => admin_trans('message.target.national_promoter'),
+                        'player_recharge_record' => admin_trans('message.target.player_recharge_record'),
+                        'damage_rebate' => admin_trans('message.target.damage_rebate'),
+                        'reverse_water' => admin_trans('message.target.reverse_water'),
+                        'reverse_water_pool' => admin_trans('message.target.reverse_water_pool'),
+                        'machine_put_coins' => admin_trans('message.target.machine_put_coins'),
+                        'coin_add' => admin_trans('message.target.coin_add'),
+                        'coin_deduct' => admin_trans('message.target.coin_deduct'),
+                        'agent_in' => admin_trans('message.target.agent_in'),
+                        'agent_out' => admin_trans('message.target.agent_out'),
+                    ]);
                 $filter->select('search_type')
                     ->showSearch()
                     ->style(['width' => '200px'])
@@ -2090,6 +2120,9 @@ class ChannelAgentController
                         PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RE_SETTLEMENT),
                         PlayerDeliveryRecord::TYPE_PREPAY => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY),
                         PlayerDeliveryRecord::TYPE_REFUND => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND),
+                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD),
+                        PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS),
+                        PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS),
                     ]);
             });
             $grid->expandFilter();

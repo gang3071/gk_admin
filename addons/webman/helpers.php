@@ -31,6 +31,7 @@ use addons\webman\service\FishServices;
 use addons\webman\service\JackpotService;
 use addons\webman\service\MediaServer;
 use addons\webman\service\SlotService;
+use addons\webman\service\WalletService;
 use addons\webman\validator\ValidatorFactory;
 use app\service\ActivityServices;
 use app\service\LotteryServices;
@@ -599,10 +600,10 @@ if (!function_exists('machineWashRemainder')) {
             $game_amount = floor($floor_money * ($machine->odds_x ?? 1) / ($machine->odds_y ?? 1));
 
             // ✅ 从 Redis 读取实时余额（废弃函数，已修复但建议使用 machineWashZero）
-            $beforeGameAmount = \addons\webman\service\WalletService::getBalance($player->id);
+            $beforeGameAmount = WalletService::getBalance($player->id);
 
             // ✅ 使用 WalletService 原子加款
-            $afterGameAmount = \addons\webman\service\WalletService::add($player->id, $game_amount);
+            $afterGameAmount = WalletService::add($player->id, $game_amount);
 
             if (!empty($gameRecord)) {
                 $gameRecord->wash_point = bcadd($gameRecord->wash_point, $wash_point, 2);
@@ -738,7 +739,7 @@ if (!function_exists('machineWashZero')) {
                 ->first();
 
             // ✅ 从 Redis 读取实时余额（Redis 作为唯一实时标准）
-            $beforeGameAmount = \addons\webman\service\WalletService::getBalance($player->id);
+            $beforeGameAmount = WalletService::getBalance($player->id);
 
             if ($money > 0) {
                 //api洗分
@@ -747,7 +748,7 @@ if (!function_exists('machineWashZero')) {
                 $game_amount = floor($money * ($machine->odds_x ?? 1) / ($machine->odds_y ?? 1));
 
                 // ✅ 使用 Lua 原子操作加款（Redis 作为唯一实时标准）
-                $afterGameAmount = \addons\webman\service\WalletService::add($player->id, $game_amount);
+                $afterGameAmount = WalletService::add($player->id, $game_amount);
                 if (!empty($gameRecord)) {
                     $gameRecord->wash_point = bcadd($gameRecord->wash_point, $wash_point, 2);
                     $gameRecord->wash_amount = bcadd($gameRecord->wash_amount, $game_amount, 2);
@@ -810,7 +811,7 @@ if (!function_exists('machineWashZero')) {
                 $services->player_wash_point = bcadd($services->player_wash_point, $wash_point);
 
                 // ✅ 余额变化后更新爆机状态
-                \addons\webman\service\WalletService::checkMachineCrash($player->id, $beforeGameAmount, $afterGameAmount);
+                WalletService::checkMachineCrash($player->id, $beforeGameAmount, $afterGameAmount);
             } else {
                 //添加机台点数转换记录
                 $playerGameLog = addPlayerGameLog($player, $machine, $gameRecord, $control_open_point);
@@ -1182,6 +1183,7 @@ if (!function_exists('playerManualSystem')) {
             }
             if (!in_array($data['deduct_action'], [
                 PlayerMoneyEditLog::OTHER,
+                PlayerMoneyEditLog::ADMIN_DEDUCT,
                 PlayerMoneyEditLog::ADMIN_DEDUCT_OTHER,
                 PlayerMoneyEditLog::ACTIVITY,
                 PlayerMoneyEditLog::COIN_DEDUCT,
@@ -1194,7 +1196,7 @@ if (!function_exists('playerManualSystem')) {
         /** @var Player $player */
         $player = Player::find($data['id']);
         $tradeno = date('YmdHis') . rand(10000, 99999);
-        $originMoney = \addons\webman\service\WalletService::getBalance($player->id);
+        $originMoney = WalletService::getBalance($player->id);
 
         $playerMoneyEditLog = new PlayerMoneyEditLog;
         $playerMoneyEditLog->player_id = $player->id;
@@ -1255,12 +1257,12 @@ if (!function_exists('playerUpdateMoney')) {
         }
 
         // ✅ 从 Redis 读取主玩家余额（操作前）
-        $originMoney = \addons\webman\service\WalletService::getBalance($player->id);
+        $originMoney = WalletService::getBalance($player->id);
 
         // ✅ 主玩家加/扣款（使用 WalletService 原子操作）
         if ($type == PlayerMoneyEditLog::TYPE_INCREASE) {
             // ✅ 使用 WalletService 原子加款
-            $afterMoney = \addons\webman\service\WalletService::add($player->id, $money);
+            $afterMoney = WalletService::add($player->id, $money);
 
             // 首充激活全民代理 + 推荐人返佣 + 邀请奖励
             if (isset($player->national_promoter->status) && $player->national_promoter->status == 0 && in_array($deliveryType, [PlayerDeliveryRecord::TYPE_PRESENT_IN, PlayerDeliveryRecord::TYPE_RECHARGE])) {
@@ -1278,10 +1280,10 @@ if (!function_exists('playerUpdateMoney')) {
                         $rechargeRebate = $recommendPlayer->national_promoter->level_list->recharge_ratio;
 
                         // ✅ 从 Redis 读取推荐人余额（返佣前）
-                        $beforeRechargeAmount = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+                        $beforeRechargeAmount = WalletService::getBalance($recommendPlayer->id);
 
                         // ✅ 使用 WalletService 原子加款（推荐人返佣）
-                        $afterRechargeAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $rechargeRebate);
+                        $afterRechargeAmount = WalletService::add($recommendPlayer->id, $rechargeRebate);
 
                         //寫入首充金流明細
                         $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -1310,10 +1312,10 @@ if (!function_exists('playerUpdateMoney')) {
                             $inviteMoney = $national_invite->money;
 
                             // ✅ 从 Redis 读取推荐人余额（邀请奖励前）
-                            $amount_before = \addons\webman\service\WalletService::getBalance($recommendPlayer->id);
+                            $amount_before = WalletService::getBalance($recommendPlayer->id);
 
                             // ✅ 使用 WalletService 原子加款（邀请奖励）
-                            $afterInviteAmount = \addons\webman\service\WalletService::add($recommendPlayer->id, $inviteMoney);
+                            $afterInviteAmount = WalletService::add($recommendPlayer->id, $inviteMoney);
 
                             // 寫入金流明細
                             $playerDeliveryRecord = new PlayerDeliveryRecord;
@@ -1349,7 +1351,7 @@ if (!function_exists('playerUpdateMoney')) {
             }
 
             // ✅ 使用 WalletService 原子扣款
-            $afterMoney = \addons\webman\service\WalletService::deduct($player->id, $money);
+            $afterMoney = WalletService::deduct($player->id, $money);
         }
 
         // ✅ 删除数据库操作和手动 updateCache() 调用
@@ -2237,7 +2239,7 @@ if (!function_exists('addPlayerExtend')) {
         );
 
         // 第二步：设置 Redis 钱包余额为 0（确保缓存与数据库一致）
-        \addons\webman\service\WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
+        WalletService::updateCache($player->id, PlayerPlatformCash::PLATFORM_SELF, 0);
 
         // 第三步：创建/更新玩家扩展信息（支持传入初始数据，避免二次更新）
         $extendAttributes = [];
@@ -2261,7 +2263,7 @@ if (!function_exists('addPlayerExtend')) {
 
         if ($registerPresent > 0) {
             // 使用 WalletService 原子加款（同时更新数据库和 Redis）
-            $afterAmount = \addons\webman\service\WalletService::add($player->id, $registerPresent);
+            $afterAmount = WalletService::add($player->id, $registerPresent);
 
             // 添加玩家钱包日志
             $playerMoneyEditLog = new PlayerMoneyEditLog;
@@ -2386,7 +2388,7 @@ if (!function_exists('checkMachineCrash')) {
 
         // 缓存未命中或 Redis 故障，从 Redis 读取实时余额 + 数据库读取爆机状态
         // ✅ Redis 作为余额的"唯一实时标准"
-        $currentAmount = \addons\webman\service\WalletService::getBalance($player->id);
+        $currentAmount = WalletService::getBalance($player->id);
 
         // 仅从数据库读取爆机状态标记
         $wallet = PlayerPlatformCash::where('player_id', $player->id)
@@ -2514,7 +2516,7 @@ if (!function_exists('calculateAllowedWithdrawAmount')) {
     function calculateAllowedWithdrawAmount(Player $player, float $requestedAmount): array
     {
         $crashCheck = checkMachineCrash($player);
-        $currentAmount = \addons\webman\service\WalletService::getBalance($player->id);
+        $currentAmount = WalletService::getBalance($player->id);
         $allowedAmount = $requestedAmount;
         $isLimited = false;
 
@@ -2620,7 +2622,7 @@ if (!function_exists('clearMachineCrashCache')) {
     function clearMachineCrashCache(int $playerId): bool
     {
         // 使用 WalletService 统一管理缓存
-        return \addons\webman\service\WalletService::clearCrashCache($playerId);
+        return WalletService::clearCrashCache($playerId);
     }
 
     /**
@@ -2634,7 +2636,7 @@ if (!function_exists('clearMachineCrashCache')) {
      */
     function getPlayerBalance(int $playerId, int $platformId = 1): float
     {
-        return \addons\webman\service\WalletService::getBalance($playerId, $platformId);
+        return WalletService::getBalance($playerId, $platformId);
     }
 
     /**

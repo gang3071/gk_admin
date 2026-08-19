@@ -135,10 +135,10 @@ return [
     'max_amount_100000000' => '最大派彩金额最大设置为1亿',
     'pool_ratio' => '入池比值',
     'pool_ratio_help' => '电子游戏每次押注,将会有一定比值的金额进入该奖池',
-    'base_bet_amount' => '押注金额限制',
-    'base_bet_amount_0' => '押注金额限制最小设置为0',
-    'base_bet_amount_100000000' => '押注金额限制最大设置为1亿',
-    'base_bet_amount_help' => '押注金额限制, 每笔押注金额大于等该设置才能参与拉彩',
+    'base_bet_amount' => '累计打码量限制',
+    'base_bet_amount_0' => '累计打码量限制最小设置为0（不限制）',
+    'base_bet_amount_100000000' => '累计打码量限制最大设置为1亿',
+    'base_bet_amount_help' => '玩家必须累计达到此打码量才能参与抽奖。设置为0表示不限制（每次下注都检查）。例如：设置20，玩家需累计下注20元以上才有资格中奖',
 
     // 状态显示
     'status_enabled_parenthesis' => '(已启用)',
@@ -307,5 +307,12 @@ return [
         'steel_ball_condition_placeholder' => '请输入次数，如：50',
         'win_ratio_label' => '中奖概率',
         'minutes_suffix' => '分钟',
+    ],
+
+    // 错误信息
+    'error' => [
+        'not_found' => '彩金不存在',
+        'only_random_support_burst' => '只有随机彩金才支持爆彩功能',
+        'amount_exceed_max_pool' => '彩池金额不能超过最大彩池金额',
     ],
 ];

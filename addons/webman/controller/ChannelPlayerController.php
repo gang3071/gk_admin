@@ -109,6 +109,7 @@ class ChannelPlayerController
         $this->playerDeliveryRecord = plugin()->webman->config('database.player_delivery_record_model');
         $this->playerBank = plugin()->webman->config('database.player_bank_model');
         $this->playGameRecord = plugin()->webman->config('database.play_game_record_model');
+        $this->playerBetStatistics = \addons\webman\model\PlayerBetStatistics::class;
     }
 
     /**
@@ -198,6 +199,9 @@ class ChannelPlayerController
             'player_extend.withdraw_amount',
             'player_extend.machine_put_point',
             'player_extend.remark',
+            'player_extend.pending_cashback_amount',
+            'player_extend.total_cashback_amount',
+            'player_extend.id_number',  // 添加：身份证号
             'channel.name as channel_name',
             'recommend_promoter.uuid as recommend_promoter_uuid',
             'recommend_promoter.phone as recommend_promoter_phone',
@@ -370,7 +374,22 @@ class ChannelPlayerController
                     $data['is_test'] == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : ''
                 ]);
             })->fixed(true)->align('center');
-            $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center');
+            $grid->column('uuid', admin_trans('player.fields.device_uuid'))->fixed(true)->ellipsis(true)->align('center')->copy();
+
+            // 身份证号
+            $grid->column('id_number', admin_trans('player_extend.fields.id_number'))->display(function ($val) {
+                return $val ? $val : '-';
+            })->ellipsis(true)->align('center')->copy();
+
+            // 手机号码
+            $grid->column('phone', admin_trans('player.fields.phone'))->display(function ($val) {
+                return $val ? $val : '-';
+            })->ellipsis(true)->align('center')->copy();
+
+            // 真实姓名
+            $grid->column('real_name', admin_trans('player.fields.real_name'))->display(function ($val) {
+                return $val ? $val : '-';
+            })->ellipsis(true)->align('center')->copy();
 
             // 线下渠道：使用 player_type 字段显示玩家类型
             if ($channel && $channel->is_offline == 1) {
@@ -546,6 +565,14 @@ class ChannelPlayerController
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
             })->width(120)->align('center');
 
+            $grid->column('pending_cashback_amount',
+                admin_trans('player_extend.fields.pending_cashback_amount'))->display(function ($val) {
+                return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => '#fa8c16']) : '0.0000';
+            })->sortable()->align('center');
+            $grid->column('total_cashback_amount',
+                admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
+                return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => 'green']) : '0.0000';
+            })->sortable()->align('center');
             $grid->column('remark', admin_trans('player_extend.fields.remark'))->display(function ($value) {
                 return ToolTip::create(Str::of($value)->limit(30, ' (...)'))->title($value);
             })->editable(
@@ -626,6 +653,8 @@ class ChannelPlayerController
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
                 $filter->like()->text('uuid')->placeholder(admin_trans('player.fields.device_uuid'));
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->like()->text('real_name')->placeholder(admin_trans('player.fields.real_name'));
+                $filter->like()->text('id_number')->placeholder(admin_trans('player_extend.fields.id_number'));
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
@@ -737,6 +766,11 @@ class ChannelPlayerController
                         'money' => $data['money'] ?? 0,
                         'is_crashed' => $data['is_crashed'] ?? 0,
                     ])->width('600px');
+                // 打码统计
+                $dropdown->prepend('打码统计', 'LineChartOutlined')
+                    ->modal($this->betStatistics($data['id']))
+                    ->width('1200px')
+                    ->title('打码统计 - ' . $data['name']);
                 // 电子游戏禁用
                 $dropdown->prepend(admin_trans('offline_channel.electronic_game_disabled'), 'fas fa-gamepad')
                     ->modal([$this, 'playerGameList'], ['player_id' => $data['id']])
@@ -902,6 +936,10 @@ class ChannelPlayerController
             }
             if (!empty($requestFilter['remark'])) {
                 $query->where('player_extend.remark', 'like', '%' . $requestFilter['remark'] . '%');
+            }
+            // 身份证号筛选
+            if (!empty($requestFilter['id_number'])) {
+                $query->where('player_extend.id_number', 'like', '%' . $requestFilter['id_number'] . '%');
             }
             if (!empty($requestFilter['ip'])) {
                 $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
@@ -4472,6 +4510,15 @@ class ChannelPlayerController
             $storeSettingCrashAmount->status = 0; // 默认不开启
             $storeSettingCrashAmount->save();
 
+            // 菜单图片
+            $storeSettingImage = new StoreSetting();
+            $storeSettingImage->department_id = $departmentId;
+            $storeSettingImage->admin_user_id = $adminUser->id;
+            $storeSettingImage->feature = 'menu_image';
+            $storeSettingImage->num = 0;
+            $storeSettingImage->status = 0;
+            $storeSettingImage->save();
+
             // 5. 创建默认自动交班配置（一个店家一条记录）
             // 修复：唯一索引 uk_dept_admin (department_id, bind_admin_user_id) 限制一个店家只能有一条配置
             $autoShiftConfig = new StoreAutoShiftConfig();
@@ -6054,4 +6101,142 @@ class ChannelPlayerController
             return message_error(admin_trans('common.error.operation_failed') . ': ' . $e->getMessage());
         }
     }
+
+    /**
+     * 查看打码统计
+     * @auth true
+     * @param int $playerId
+     */
+    public function betStatistics(int $playerId)
+    {
+        // ✅ 准备翻译对象
+        $trans = [
+            'loading' => admin_trans('player.loading'),
+            'today_bet' => admin_trans('player.today_bet'),
+            'week_bet' => admin_trans('player.week_bet'),
+            'month_bet' => admin_trans('player.month_bet'),
+            'machine_bet' => admin_trans('player.machine_bet'),
+            'game_bet' => admin_trans('player.game_bet'),
+            'bet_amount_unit' => admin_trans('player.bet_amount_unit'),
+            'bet_trend_15days' => admin_trans('player.bet_trend_15days'),
+            'month_bet_distribution' => admin_trans('player.month_bet_distribution'),
+            'load_failed' => admin_trans('player.load_failed'),
+            'unknown_error' => admin_trans('common.unknown_error'),
+        ];
+
+        return \ExAdmin\ui\component\layout\Space::create()
+            ->style(['width' => '100%', 'display' => 'block'])
+            ->content(admin_view(plugin()->webman->getPath() . '/views/player_bet_statistics.vue')->attrs([
+                'player-id' => $playerId,
+                'trans' => $trans,  // ✅ 传递翻译对象
+            ]));
+    }
+
+    /**
+     * 获取玩家打码统计数据
+     * @auth true
+     * @param int $playerId
+     * @return \support\Response
+     */
+    public function getBetStatisticsData(int $playerId): \support\Response
+    {
+        try {
+            $redis = \support\Redis::connection('default')->client();
+            $today = date('Y-m-d');
+            $thisWeek = date('o-\WW');
+            $thisMonth = date('Y-m');
+
+            // ✅ 从 Redis 读取实时数据
+            // Redis key 格式: gk_work:player_bet_stats:{player_id}:{stat_type}:{dimension}:{stat_date}
+
+            // 今日数据
+            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
+            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+            $todayMachineData = $redis->hGetAll($todayMachineKey);
+            $todayGameData = $redis->hGetAll($todayGameKey);
+
+            // 本周数据
+            $weekMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:weekly:{$thisWeek}";
+            $weekGameKey = "gk_work:player_bet_stats:{$playerId}:game:weekly:{$thisWeek}";
+            $weekMachineData = $redis->hGetAll($weekMachineKey);
+            $weekGameData = $redis->hGetAll($weekGameKey);
+
+            // 本月数据
+            $monthMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:monthly:{$thisMonth}";
+            $monthGameKey = "gk_work:player_bet_stats:{$playerId}:game:monthly:{$thisMonth}";
+            $monthMachineData = $redis->hGetAll($monthMachineKey);
+            $monthGameData = $redis->hGetAll($monthGameKey);
+
+            // ✅ Redis 存储的是"分"，需要除以100转为"元"
+            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
+            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
+            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
+            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
+            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
+            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
+
+            // ✅ 获取最近15天每日打码量（用于曲线图）
+            // 策略：今日从Redis，历史从数据库
+            $dailyTrend = [
+                'dates' => [],
+                'machine' => [],
+                'game' => [],
+            ];
+
+            // 准备日期列表
+            $last15Days = [];
+            for ($i = 14; $i >= 0; $i--) {
+                $last15Days[] = date('Y-m-d', strtotime("-{$i} days"));
+            }
+
+            // 从数据库批量查询历史数据（排除今天）
+            $historyDates = array_filter($last15Days, fn($date) => $date !== $today);
+            $historyData = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->whereIn('stat_date', $historyDates)
+                ->get()
+                ->keyBy(function($item) {
+                    return $item->stat_date . '_' . $item->stat_type;
+                });
+
+            // 构建曲线图数据
+            foreach ($last15Days as $date) {
+                $dailyTrend['dates'][] = date('m-d', strtotime($date));
+
+                if ($date === $today) {
+                    // ✅ 今日数据从 Redis 读取（实时）
+                    $dailyTrend['machine'][] = $todayMachineAmount;
+                    $dailyTrend['game'][] = $todayGameAmount;
+                } else {
+                    // ✅ 历史数据从数据库读取
+                    $machineKey = $date . '_machine';
+                    $gameKey = $date . '_game';
+                    $dailyTrend['machine'][] = isset($historyData[$machineKey]) ? floatval($historyData[$machineKey]->bet_amount) : 0;
+                    $dailyTrend['game'][] = isset($historyData[$gameKey]) ? floatval($historyData[$gameKey]->bet_amount) : 0;
+                }
+            }
+
+            return jsonSuccessResponse('', [
+                'today' => [
+                    'machine' => $todayMachineAmount,
+                    'game' => $todayGameAmount,
+                    'total' => $todayMachineAmount + $todayGameAmount,
+                ],
+                'week' => [
+                    'machine' => $weekMachineAmount,
+                    'game' => $weekGameAmount,
+                    'total' => $weekMachineAmount + $weekGameAmount,
+                ],
+                'month' => [
+                    'machine' => $monthMachineAmount,
+                    'game' => $monthGameAmount,
+                    'total' => $monthMachineAmount + $monthGameAmount,
+                ],
+                'dailyTrend' => $dailyTrend,
+            ]);
+        } catch (\Exception $e) {
+            return jsonFailResponse($e->getMessage());
+        }
+    }
+
 }

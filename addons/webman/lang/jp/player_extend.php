@@ -29,6 +29,8 @@ return [
         'present_in_amount' => '合計移行ポイント',
         'third_recharge_amount' => 'サードパーティの合計開分ポイント',
         'third_withdraw_amount' => '第三者の洗分ポイントの合計',
+        'pending_cashback_amount' => '受け取り待ちキャッシュバック',
+        'total_cashback_amount' => '合計キャッシュバック額',
         'created_at' => '作成時刻',
         'updated_at' => '更新時刻',
         'machine_put_amount' => '総紙幣数',

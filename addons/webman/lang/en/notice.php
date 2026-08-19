@@ -16,6 +16,7 @@ return [
         Notice::TYPE_MACHINE_CRASH => 'Device Crash Notification',
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP Level Upgraded',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP Level Downgraded',
+        Notice::TYPE_SERVICE_CALL => 'Device Service Bell Call',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => 'New open score order pending review, player: {player_name}, open score game points: {point} open score amount: {money}!',
@@ -30,5 +31,6 @@ return [
         Notice::TYPE_MACHINE_CRASH => 'Device crashed: Player {player_name} (UID:{player_uuid}) balance reached {current_amount}, exceeded crash amount {crash_amount}, please contact administrator!',
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'Congratulations! Your VIP level has been upgraded from {old_level} to {new_level}',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'Unfortunately, your VIP level has been downgraded from {old_level} to {new_level}',
+        Notice::TYPE_SERVICE_CALL => 'Device {device_name} call service',
     ],
 ];

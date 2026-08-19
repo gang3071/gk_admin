@@ -10,8 +10,8 @@ use Workerman\Crontab\Crontab;
  * VIP反水补算定时任务
  *
  * 功能：
- * - 每5分钟检查一次已结算但未计算反水的游戏记录
- * - 自动补算VIP反水金额
+ * - 每1分钟检查一次已结算但未计算反水的游戏记录
+ * - 自动补算VIP反水金额（三方游戏）
  * - 更新玩家总打码量
  */
 class VipCashbackTask
@@ -29,16 +29,16 @@ class VipCashbackTask
         $this->log = Log::channel('vip');
 
         $this->log->info('VipCashbackTask 进程已启动', [
-            'schedule' => '30/* * * * *',
+            'schedule' => '0 */1 * * * *',
             'pid' => getmypid(),
         ]);
 
-        echo "VipCashbackTask: VIP反水补算任务已启动，每5分钟执行一次\n";
+        echo "VipCashbackTask: VIP反水补算任务已启动，每1分钟执行一次\n";
 
         // 进程启动时立即执行一次
         $this->doWork();
 
-        // 每5分钟执行一次（Cron 表达式：秒 分 时 日 月 周）
+        // 每1分钟执行一次（Cron 表达式：秒 分 时 日 月 周）
         new Crontab('0 */1 * * * *', function () {
             $this->doWork();
         });
@@ -53,7 +53,7 @@ class VipCashbackTask
 
         $startTime = microtime(true);
 
-        // 动态计算起始日期（昨天00:00:00）  todo 后续优化成往前10分钟 用于过滤禁用期间的数据
+        // 动态计算起始日期（昨天00:00:00）
         $sinceDate = date('Y-m-d 00:00:00', strtotime('-1 day'));
 
         try {
@@ -62,6 +62,8 @@ class VipCashbackTask
                 'memory' => memory_get_usage(true),
             ]);
 
+            // 处理三方游戏反水
+            $this->log->info('开始处理三方游戏反水');
             $service = new VipCashbackService();
             $service->setSinceDate($sinceDate);
             $result = $service->execute();
@@ -69,22 +71,25 @@ class VipCashbackTask
             $elapsed = round(microtime(true) - $startTime, 3);
 
             $this->log->info('VipCashbackTask 执行完成', [
-                'processed' => $result['processed'],
-                'updated' => $result['updated'],
-                'skipped' => $result['skipped'],
-                'errors' => $result['errors'],
+                '三方游戏' => [
+                    'processed' => $result['processed'],
+                    'updated' => $result['updated'],
+                    'skipped' => $result['skipped'],
+                    'errors' => $result['errors'],
+                ],
                 'elapsed_seconds' => $elapsed,
                 'memory_peak' => memory_get_peak_usage(true),
             ]);
 
             if ($result['errors'] > 0) {
                 $this->log->warning('VipCashbackTask 存在错误', [
-                    'errors' => $result['errors'],
+                    '三方游戏_errors' => $result['errors'],
                 ]);
             }
 
             if ($result['processed'] > 0) {
-                echo "[VipCashback] 处理完成 - processed: {$result['updated']}, updated: {$result['updated']}, skipped: {$result['skipped']}, errors: {$result['errors']}, elapsed: {$elapsed}s\n";
+                echo "[VipCashback] 三方游戏: processed={$result['processed']}, updated={$result['updated']}, errors={$result['errors']}\n";
+                echo "[VipCashback] 总耗时: {$elapsed}s\n";
             }
 
             unset($service, $result);

@@ -83,7 +83,7 @@ return [
         'channel_coin_merchant_recharge_records' => '幣商開分記錄',
         'channel_coin_merchant_transaction_records' => '幣商交易記錄',
 //设备管理
-        'channel_device_manage' => '玩家管理',
+        'channel_device_manage' => '設備管理',
         'channel_device_list' => '設備列表',
 //玩家管理
         'channel_player_manage' => '玩家管理',
@@ -265,12 +265,12 @@ return [
         'store_manage' => '店機後台',
         'agent_center' => '代理中心',
         'store_list' => '店家列表',
-        'device_list_tw' => '設備列表',
+        'device_list_tw' => '玩家列表',
         'store_center' => '店機中心',
         'store_machine_manage' => '店機管理',
         'lottery_receive' => '彩金領取',
         'financial_management' => '財務管理',
-        'device_manage' => '玩家管理',
+        'device_manage' => '設備管理',
         'device_list' => '設備列表',
         'shift_handover_record' => '交班記錄',
         'limit_management' => '限紅管理',

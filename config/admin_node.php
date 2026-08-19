@@ -856,6 +856,15 @@ return [
         'title' => '获取店家选项',
     ],
     [
+        'id' => 'addons\webman\controller\AdminDeviceController\regenerateVoice',
+        'pid' => 'addons\webman\controller\AdminDeviceController\index',
+        'action' => 'regenerateVoice',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminDeviceController/regenerateVoice',
+        'title' => '重新生成语音',
+    ],
+    [
         'id' => 'ex-admin\addons-webman-controller-PlayerController\playerGameWallet',
         'pid' => 'addons\webman\controller\PlayerController\index',
         'action' => 'playerGameWallet',
@@ -1070,6 +1079,15 @@ return [
         'group' => 'department',
         'url' => 'ex-admin/addons-webman-controller-LotteryController/changeStatus',
         'title' => '(开启/关闭)彩金',
+    ],
+    [
+        'id' => 'addons\webman\controller\LotteryController\changeBurstStatus',
+        'pid' => 'addons\webman\controller\LotteryController\index',
+        'action' => 'changeBurstStatus',
+        'method' => '',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-LotteryController/changeBurstStatus',
+        'title' => '(开启/关闭)爆彩',
     ],
     [
         'id' => 'addons\webman\controller\LotteryController\editLotteryPool',

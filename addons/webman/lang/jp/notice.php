@@ -16,6 +16,7 @@ return [
         Notice::TYPE_MACHINE_CRASH => 'デバイスクラッシュ通知',
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIPレベルアップ',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIPレベルダウングレード',
+        Notice::TYPE_SERVICE_CALL => 'デバイスサービスベル呼び出し',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新しい開分注文は審査待ちです、プレイヤー: {player_name}、開分 ゲーム ポイント: {point} 開分金額: {money}!',
@@ -30,5 +31,6 @@ return [
         Notice::TYPE_MACHINE_CRASH => 'デバイスがクラッシュしました: プレイヤー {player_name} (UID:{player_uuid}) の残高が {current_amount} に達し、クラッシュ金額 {crash_amount} を超えました。管理者に連絡してください!',
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'おめでとうございます！VIPレベルが{old_level}から{new_level}にアップグレードしました',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => '残念ながら、VIPレベルが{old_level}から{new_level}にダウングレードしました',
+        Notice::TYPE_SERVICE_CALL => 'デバイス {device_name} がサービスを呼び出す',
     ],
 ];

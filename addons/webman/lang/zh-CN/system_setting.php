@@ -31,7 +31,10 @@ return [
         'jackpot_screen_domain' => '大屏彩金Domain',
         'turn_relay_ip' => 'TURN中继IP',
         'high_score_broadcast_threshold' => '高分广播阈值',
+        'steel_ball_broadcast_threshold' => '钢珠下珠数报喜阈值',
         'device_collect' => '店机跨店登录',
+        'electronic_game_rebate' => '电子游戏反水',
+        'machine_rebate' => '实体机台反水',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字符',
@@ -55,5 +58,15 @@ return [
     'time_range' => '日期范围',
     'master' => '总配置',
     'points' => '分',
-    'disabled' => '已禁用'
+    'balls' => '珠',
+    'disabled' => '已禁用',
+    // 反水配置
+    'rebate' => [
+        'electronic_game_rebate' => '电子游戏反水',
+        'machine_rebate' => '实体机台反水',
+        'enabled' => '已启用',
+        'disabled' => '已停用',
+        'electronic_game_rebate_help' => '控制电子游戏是否开启反水功能',
+        'machine_rebate_help' => '控制实体机台是否开启反水功能',
+    ],
 ];

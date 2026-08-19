@@ -85,6 +85,7 @@ class ChannelOpenScoreSettingController
                 ->default(0)
                 ->min(0)
                 ->max(1000000)
+                ->step(1)  // ⭐ 只允许整数
                 ->style(['width' => '100%'])
                 ->help(admin_trans('open_score_setting.help.default_scores'));
 
@@ -96,6 +97,7 @@ class ChannelOpenScoreSettingController
                     ->default($this->getDefaultScore($i))
                     ->min(0)
                     ->max(1000000)
+                    ->step(1)  // ⭐ 只允许整数
                     ->style([
                         'width' => '100%',
                     ])
@@ -118,6 +120,23 @@ class ChannelOpenScoreSettingController
 
                 if ($exists->exists()) {
                     return message_error(admin_trans('open_score_setting.player_exists'));
+                }
+
+                // ⭐ 验证所有开分配置必须是正整数
+                $defaultScores = $form->input('default_scores');
+                if ($defaultScores !== null && $defaultScores !== '' && $defaultScores != 0) {
+                    if ($defaultScores != floor($defaultScores) || $defaultScores < 0) {
+                        return message_error(admin_trans('open_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('open_score_setting.fields.default_scores')]));
+                    }
+                }
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $score = $form->input('score_' . $i);
+                    if ($score !== null && $score !== '' && $score != 0) {
+                        if ($score != floor($score) || $score < 0) {
+                            return message_error(admin_trans('open_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('open_score_setting.fields.score_' . $i)]));
+                        }
+                    }
                 }
 
                 // 验证至少配置一个开分选项
@@ -144,7 +163,7 @@ class ChannelOpenScoreSettingController
      */
     protected function getDefaultScore(int $index): int
     {
-        $defaults = [100, 500, 1000, 5000, 10000, 20000];
+        $defaults = [500, 1000, 3000, 5000, 10000, 20000];
         return $defaults[$index - 1] ?? 0;
     }
 }

@@ -239,7 +239,7 @@ class ChannelMachineController
         return admin_view(plugin()->webman->getPath() . '/views/info_list.vue')->attrs([
             'cate_options' => $this->getCateListOptions(),
             'department_id' => Admin::user()->department_id,
-            'ws' => env('WS_URL', ''),
+            'ws' => config('app.ws_url', ''), // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
             'btn_text' => admin_trans('machine_media.btn_text'),
             'play_address' => admin_trans('machine_media.play_address'),
             'slot_action_list' => getChannelMachineAction(1, Machine::CONTROL_TYPE_MEI),

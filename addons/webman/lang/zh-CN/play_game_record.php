@@ -20,6 +20,9 @@ return [
         'platform_action_at' => '结算时间(游戏平台)',
         'action_at' => '结算时间',
         'create_at' => '创建时间',
+        'vip_level_id' => 'VIP等级',
+        'cashback_ratio' => '反水比例',
+        'cashback_amount' => '反水金额',
     ],
     'status' => [
         PlayGameRecord::STATUS_UNSETTLED => '未分润',

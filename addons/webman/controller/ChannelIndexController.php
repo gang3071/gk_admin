@@ -2202,12 +2202,13 @@ class ChannelIndexController
         ];
 
         // 核销记录统计（洗分类型，排除禁用状态）
+        // 使用 scanned_at（核销时间）作为时间筛选，而非 created_at（出票时间）
         $ticketRedeemQuery = \addons\webman\model\TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
             ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
-                $query->where(getDateWhere($dateType, 'created_at'));
+                $query->where(getDateWhere($dateType, 'scanned_at'));
             })
             ->selectRaw(
                 'sum(score) as total_score, count(*) as total_count, '
@@ -3412,8 +3413,16 @@ class ChannelIndexController
                                 THEN player_delivery_record.amount ELSE 0 END) AS upgrade_bonus_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND player_delivery_record.source = 'artificial_recharge'
+                                THEN player_delivery_record.amount ELSE 0 END) AS open_score_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND player_delivery_record.source = 'ticket_open_score'
+                                THEN player_delivery_record.amount ELSE 0 END) AS ticket_open_score_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS withdrawal_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND player_delivery_record.source = 'channel_withdrawal'
+                                THEN player_delivery_record.amount ELSE 0 END) AS channel_withdrawal_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND player_delivery_record.source = 'ticket_redeem'
+                                THEN player_delivery_record.amount ELSE 0 END) AS ticket_redeem_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS modified_add_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT . "
@@ -3428,7 +3437,11 @@ class ChannelIndexController
                         'activity_bonus_amount' => 0,
                         'lottery_ticket_reward_amount' => 0,
                         'recharge_amount' => 0,
+                        'open_score_amount' => 0,
+                        'ticket_open_score_amount' => 0,
                         'withdrawal_amount' => 0,
+                        'channel_withdrawal_amount' => 0,
+                        'ticket_redeem_amount' => 0,
                         'modified_add_amount' => 0,
                         'modified_deduct_amount' => 0,
                     ];
@@ -3488,6 +3501,73 @@ class ChannelIndexController
                         ->where('player_delivery_record.created_at', '>', $startTime)
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->sum('player_delivery_record.amount');
+
+                    // 5.7 统计洗票未核销（出票记录，type=洗分，status=1正常状态）
+                    $ticketUnredeemedAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_NORMAL)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.8 统计体验券（ticket_type=3）
+                    $experienceCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.9 统计福利券（ticket_type=4）
+                    $welfareCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+                    $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.11 统计开票已使用金额（用于入票计算，status=3机台使用）
+                    $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.12 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
+                    // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
+                    $redeemAmountExport = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.13 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
+                    // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
+                    $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.14 统计入票金额（开票机台使用 + 核销机台使用）
+                    $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemAmount, 2);
 
                     // 7. 获取货币配置并验证（在事务外）
                     // 验证管理员关联数据
@@ -3552,17 +3632,20 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->machine_point =
                         $playerDeliveryRecord['machine_put_point'] ?? 0;
 
-                    // 计算总收入（开分 + 后台加点）
+                    // 开票金额（不需要status条件）
+                    $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
+
+                    // 计算总收入（开分 + 开票）
                     $storeAgentShiftHandoverRecord->total_in = bcadd(
-                        $playerDeliveryRecord['recharge_amount'] ?? 0,
-                        $playerDeliveryRecord['modified_add_amount'] ?? 0,
+                        $playerDeliveryRecord['open_score_amount'] ?? 0,
+                        $actualTicketOpenScoreAmount,
                         2
                     );
 
-                    // 计算总支出（洗分 + 后台扣点）
+                    // 计算总支出（洗分 + 核销-导出用）
                     $storeAgentShiftHandoverRecord->total_out = bcadd(
-                        $playerDeliveryRecord['withdrawal_amount'] ?? 0,
-                        $playerDeliveryRecord['modified_deduct_amount'] ?? 0,
+                        $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0,
+                        $redeemAmountExport ?? 0,
                         2
                     );
 
@@ -3589,8 +3672,29 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->birthday_bonus_amount = $birthdayBonusAmount ?? 0;
                     $storeAgentShiftHandoverRecord->upgrade_bonus_amount = $upgradeBonusAmount ?? 0;
 
-                    // 计算利润（投钞 + 总收入 - 总支出）
-                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(bcadd($storeAgentShiftHandoverRecord->machine_point, $storeAgentShiftHandoverRecord->total_in, 2), $storeAgentShiftHandoverRecord->total_out, 2);
+                    // 新增字段：按source细分的金额
+                    $storeAgentShiftHandoverRecord->open_score_amount = $playerDeliveryRecord['open_score_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->ticket_open_score_amount = $actualTicketOpenScoreAmount;
+                    $storeAgentShiftHandoverRecord->incoming_ticket_amount = $incomingTicketAmount ?? 0;
+                    // 导出用核销（status=2后台核销）
+                    $storeAgentShiftHandoverRecord->redeem_amount = $redeemAmountExport ?? 0;
+                    $storeAgentShiftHandoverRecord->channel_withdrawal_amount = $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0;
+                    $storeAgentShiftHandoverRecord->ticket_redeem_amount = $playerDeliveryRecord['ticket_redeem_amount'] ?? 0;
+                    // 未核销 = 出卷 - 核销（使用导出用核销）
+                    $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = bcsub(
+                        $playerDeliveryRecord['ticket_redeem_amount'] ?? 0,
+                        $redeemAmountExport ?? 0,
+                        2
+                    );
+                    $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->welfare_coupon_amount = $welfareCouponAmount ?? 0;
+
+                    // 计算利润（总收入 - 总支出）
+                    $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
+                        $storeAgentShiftHandoverRecord->total_in,
+                        $storeAgentShiftHandoverRecord->total_out,
+                        2
+                    );
                     $storeAgentShiftHandoverRecord->save();
 
                     // 8.5 保存设备明细
@@ -3770,16 +3874,44 @@ class ChannelIndexController
         $logLabels['field_remark'] = admin_trans('ticket_machine.field.remark');
         $logLabels['remark_placeholder'] = admin_trans('ticket_machine.field.remark_placeholder');
 
+        // 补充验证消息标签
+        $logLabels['player_required_for_voucher'] = admin_trans('ticket_machine.message.player_required_for_voucher');
+
+        // 补充玩家打码量信息标签
+        $logLabels['player_bet_info'] = admin_trans('ticket_machine.record.player_bet_info');
+        $logLabels['player_name'] = admin_trans('ticket_machine.record.player_name');
+        $logLabels['today_bet_amount'] = admin_trans('ticket_machine.record.today_bet_amount');
+        $logLabels['yesterday_bet_amount'] = admin_trans('ticket_machine.record.yesterday_bet_amount');
+        $logLabels['refresh'] = admin_trans('ticket_machine.record.refresh');
+
+        // 补充下拉选项标签
+        $logLabels['type_welfare'] = admin_trans('ticket_machine.record.type_welfare');
+        $logLabels['type_experience'] = admin_trans('ticket_machine.record.type_experience');
+        $logLabels['score_unit'] = admin_trans('ticket_machine.record.score_unit');
+        $logLabels['today_bet_prefix'] = admin_trans('ticket_machine.record.today_bet_prefix');
+        $logLabels['yesterday_bet_prefix'] = admin_trans('ticket_machine.record.yesterday_bet_prefix');
+        $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
+        $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
+
+        // 补充连接状态标签
+        $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
+        $logLabels['printer_connected'] = admin_trans('ticket_machine.message.printer_connected');
+
+        // 获取福利券和体验券配置
+        $voucherConfig = config('voucher');
+
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
             'default_store_name' => $storeName,
             'default_store_uid' => $storeUid,
             'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
+            'player_bet_info_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/getPlayerBetInfo',
             'store_admin_id' => $store->id ?? 0,
             'department_id' => $store->department_id ?? 0,
             'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
             'paper_jam_msg' => admin_trans('ticket_machine.paper.jam_msg'),
             'paper_error_msg' => admin_trans('ticket_machine.paper.error_msg'),
+            'voucher_config' => $voucherConfig,
             'labels' => $logLabels,
             'log_title' => admin_trans('ticket_machine.log.title'),
             'log_clear' => admin_trans('ticket_machine.log.clear'),
@@ -3851,6 +3983,134 @@ class ChannelIndexController
     }
 
     /**
+     * 获取玩家打码量信息（纯数据库查询）
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function getPlayerBetInfo(): Response
+    {
+        try {
+            $playerId = (int) request()->input('player_id', 0);
+
+            if ($playerId <= 0) {
+                return json(['code' => 400, 'message' => '玩家ID不能为空']);
+            }
+
+            // 获取玩家信息
+            $player = \addons\webman\model\Player::query()
+                ->where('id', $playerId)
+                ->first();
+
+            if (!$player) {
+                return json(['code' => 404, 'message' => '玩家不存在']);
+            }
+
+            // 时间区间：以每天08:00:00作为分界点
+            // 今日：今日 08:00:00 ~ 隔天 07:59:59
+            // 昨日：昨日 08:00:00 ~ 今日 07:59:59
+            $now = Carbon::now();
+            $today8am = Carbon::today()->setTime(8, 0, 0);
+            $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
+            $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
+
+            // 判断当前时间是否在今日08:00之后
+            if ($now->gte($today8am)) {
+                // 当前在今日08:00之后，今日区间 = 今日08:00 ~ 隔天08:00
+                $todayStart = $today8am->toDateTimeString();
+                $todayEnd = $tomorrow8am->toDateTimeString();
+                // 昨日区间 = 昨日08:00 ~ 今日08:00
+                $yesterdayStart = $yesterday8am->toDateTimeString();
+                $yesterdayEnd = $today8am->toDateTimeString();
+            } else {
+                // 当前在今日08:00之前（凌晨），今日区间 = 昨日08:00 ~ 今日08:00（实际是昨天的"今日"）
+                $todayStart = $yesterday8am->toDateTimeString();
+                $todayEnd = $today8am->toDateTimeString();
+                // 昨日区间 = 前天08:00 ~ 昨日08:00
+                $yesterdayStart = Carbon::parse('-2 days')->setTime(8, 0, 0)->toDateTimeString();
+                $yesterdayEnd = $yesterday8am->toDateTimeString();
+            }
+
+            $todayBetAmount = 0;
+            $yesterdayBetAmount = 0;
+
+            // 今日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
+            $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                ->where('stat_type', 'game')
+                ->where('dimension', 'daily')
+                ->where('stat_date', $now->gte($today8am) ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day')))
+                ->first();
+
+            if ($todayData) {
+                $todayBetAmount = floatval($todayData->bet_amount);
+            } else {
+                // 统计表无数据，降级从游戏记录表实时查询
+                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd)
+                    ->sum('bet');
+            }
+
+            // 昨日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
+            $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                ->where('stat_type', 'game')
+                ->where('dimension', 'daily')
+                ->where('stat_date', $now->gte($today8am) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d', strtotime('-2 days')))
+                ->first();
+
+            if ($yesterdayData) {
+                $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
+            } else {
+                // 统计表无数据，降级从游戏记录表实时查询
+                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('created_at', '>=', $yesterdayStart)
+                    ->where('created_at', '<', $yesterdayEnd)
+                    ->sum('bet');
+            }
+
+            // 查询今日已领取的福利券记录（包含规则类型）
+            // 时间范围与打码量同步，以08:00作为分界点
+            $claimedWelfareRecords = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
+                ->whereNull('deleted_at')
+                ->select('score', 'extra_data')
+                ->get()
+                ->toArray();
+
+            // 查询今日已领取的体验券次数
+            // 时间范围与打码量同步，以08:00作为分界点
+            $claimedExperienceCount = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
+                ->whereNull('deleted_at')
+                ->count();
+
+            return json([
+                'code' => 200,
+                'data' => [
+                    'player_id' => $player->id,
+                    'player_name' => $player->name ?? '',
+                    'player_uuid' => $player->uuid ?? '',
+                    'player_phone' => $player->phone ?? '',
+                    'today_bet_amount' => $todayBetAmount,
+                    'yesterday_bet_amount' => $yesterdayBetAmount,
+                    'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
+                    'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '获取玩家打码量失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
      * 保存出票记录
      * @group channel
      * @auth true
@@ -3873,8 +4133,15 @@ class ChannelIndexController
             }
 
             // 验证必填参数
-            if ($score <= 0) {
-                return json(['code' => 400, 'message' => '分数/金额必须大于0']);
+            // 福利券允许负数（负数表示今日规则），其他类型必须大于0
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE) {
+                if ($score == 0) {
+                    return json(['code' => 400, 'message' => '分数/金额不能为0']);
+                }
+            } else {
+                if ($score <= 0) {
+                    return json(['code' => 400, 'message' => '分数/金额必须大于0']);
+                }
             }
             if (empty($storeAdminId)) {
                 return json(['code' => 400, 'message' => '店家管理员ID不能为空']);
@@ -3883,7 +4150,228 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => '部门ID不能为空']);
             }
 
-            $orderId = \addons\webman\model\TicketRecord::generateOrderId();
+            // 福利券和体验券必须选择关联用户
+            if (($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE
+                || $ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                && $playerId <= 0) {
+                return json(['code' => 400, 'message' => '福利券和体验券必须选择关联玩家才能出票']);
+            }
+
+            // 获取配置
+            $voucherConfig = config('voucher');
+
+            // 验证活动是否在有效期内
+            if (isset($voucherConfig['activity']['end_time'])) {
+                $endTime = $voucherConfig['activity']['end_time'];
+                $forceEnable = $voucherConfig['activity']['force_enable'] ?? false;
+                if (!$forceEnable && $endTime && date('Y-m-d H:i:s') > $endTime) {
+                    return json(['code' => 400, 'message' => '活动已结束，暂不发放福利券和体验券']);
+                }
+            }
+
+            // 体验券验证
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE && $playerId > 0) {
+                $expConfig = $voucherConfig['experience'] ?? [];
+                if (empty($expConfig['enabled'])) {
+                    return json(['code' => 400, 'message' => '体验券功能未启用']);
+                }
+
+                // 检查是否是新用户（注册时间在配置时间之后）
+                $player = \addons\webman\model\Player::query()->where('id', $playerId)->first();
+                $registerAfter = $expConfig['register_after'] ?? '2026-07-01 00:00:00';
+                if (!$player || $player->created_at < $registerAfter) {
+                    return json(['code' => 400, 'message' => '只有新会员才能领取体验券']);
+                }
+
+                // 检查每日领取次数（排除已删除的记录）
+                // 时间范围与打码量同步，以08:00作为分界点
+                $dailyLimit = $expConfig['daily_limit'] ?? 1;
+                $now = Carbon::now();
+                $today8am = Carbon::today()->setTime(8, 0, 0);
+                $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
+                $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
+
+                // 判断当前时间是否在今日08:00之后
+                if ($now->gte($today8am)) {
+                    $todayStart = $today8am->toDateTimeString();
+                    $todayEnd = $tomorrow8am->toDateTimeString();
+                } else {
+                    $todayStart = $yesterday8am->toDateTimeString();
+                    $todayEnd = $today8am->toDateTimeString();
+                }
+
+                $todayQuery = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd);
+                $todayCount = $todayQuery->count();
+
+                // 调试日志
+                \support\Log::info('体验券每日领取检查', [
+                    'player_id' => $playerId,
+                    'ticket_type' => \addons\webman\model\TicketRecord::TYPE_EXPERIENCE,
+                    'today_start' => $todayStart,
+                    'today_end' => $todayEnd,
+                    'daily_limit' => $dailyLimit,
+                    'today_count' => $todayCount,
+                    'sql' => $todayQuery->toSql(),
+                    'bindings' => $todayQuery->getBindings(),
+                ]);
+
+                if ($todayCount >= $dailyLimit) {
+                    return json([
+                        'code' => 400,
+                        'message' => '今日体验券领取次数已用完',
+                        'debug' => [
+                            'player_id' => $playerId,
+                            'today_count' => $todayCount,
+                            'daily_limit' => $dailyLimit,
+                        ]
+                    ]);
+                }
+
+                // 检查总领取次数（排除已删除的记录）
+                $totalLimit = $expConfig['total_limit'] ?? 6;
+                $totalCount = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                    ->count();
+                if ($totalCount >= $totalLimit) {
+                    return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
+                }
+            }
+
+            // 福利券验证（按档位+规则类型分别限制）
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && $playerId > 0) {
+                $welfareConfig = $voucherConfig['welfare'] ?? [];
+                if (empty($welfareConfig['enabled'])) {
+                    return json(['code' => 400, 'message' => '福利券功能未启用']);
+                }
+
+                // 根据前端传递的score正负确定规则类型
+                // 负数 = 今日规则，正数 = 昨日规则
+                $ruleType = $score < 0 ? 'today' : 'yesterday';
+                $actualScore = abs($score);
+
+                // 检查打码量是否满足该档位要求
+                // 时间区间：以每天08:00:00作为分界点
+                $now = Carbon::now();
+                $today8am = Carbon::today()->setTime(8, 0, 0);
+                $yesterday8am = Carbon::yesterday()->setTime(8, 0, 0);
+                $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
+
+                // 判断当前时间是否在今日08:00之后
+                if ($now->gte($today8am)) {
+                    // 当前在今日08:00之后，今日区间 = 今日08:00 ~ 隔天08:00
+                    $todayStart = $today8am->toDateTimeString();
+                    $todayEnd = $tomorrow8am->toDateTimeString();
+                    // 昨日区间 = 昨日08:00 ~ 今日08:00
+                    $yesterdayStart = $yesterday8am->toDateTimeString();
+                    $yesterdayEnd = $today8am->toDateTimeString();
+                } else {
+                    // 当前在今日08:00之前（凌晨），今日区间 = 昨日08:00 ~ 今日08:00
+                    $todayStart = $yesterday8am->toDateTimeString();
+                    $todayEnd = $today8am->toDateTimeString();
+                    // 昨日区间 = 前天08:00 ~ 昨日08:00
+                    $yesterdayStart = Carbon::parse('-2 days')->setTime(8, 0, 0)->toDateTimeString();
+                    $yesterdayEnd = $yesterday8am->toDateTimeString();
+                }
+
+                if ($ruleType === 'today') {
+                    // 今日规则：检查今日打码量
+                    $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $todayStart)
+                        ->where('created_at', '<', $todayEnd)
+                        ->sum('bet');
+
+                    $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
+                    $valid = false;
+                    foreach ($todayWelfareRules as $rule) {
+                        if ($rule['score'] == $actualScore && $todayBetAmount >= $rule['bet_amount']) {
+                            $valid = true;
+                            break;
+                        }
+                    }
+                    if (!$valid) {
+                        return json(['code' => 400, 'message' => '今日打码量不满足该档位福利券领取条件']);
+                    }
+                } else {
+                    // 昨日规则：检查昨日打码量
+                    $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $yesterdayStart)
+                        ->where('created_at', '<', $yesterdayEnd)
+                        ->sum('bet');
+
+                    $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
+
+                    // 找到用户满足的最高档位
+                    $maxQualifiedScore = 0;
+                    foreach ($yesterdayWelfareRules as $rule) {
+                        if ($yesterdayBetAmount >= $rule['bet_amount'] && $rule['score'] > $maxQualifiedScore) {
+                            $maxQualifiedScore = $rule['score'];
+                        }
+                    }
+
+                    // 检查是否满足该档位
+                    if ($actualScore > $maxQualifiedScore) {
+                        return json(['code' => 400, 'message' => '昨日打码量不满足该档位福利券领取条件']);
+                    }
+
+                    // 检查是否只能领取最高档位（不能领取低档位）
+                    if ($actualScore < $maxQualifiedScore) {
+                        return json(['code' => 400, 'message' => '昨日打码量满足更高档位，只能领取' . $maxQualifiedScore . '分福利券']);
+                    }
+
+                    // 检查今日是否已领取过昨日规则的任何档位
+                    // 时间范围与打码量同步，以08:00作为分界点
+                    $yesterdayClaimedCount = \addons\webman\model\TicketRecord::query()
+                        ->where('player_id', $playerId)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                        ->where('created_at', '>=', $todayStart)
+                        ->where('created_at', '<', $todayEnd)
+                        ->whereNull('deleted_at')
+                        ->get()
+                        ->filter(function ($record) {
+                            if (empty($record->extra_data)) return false;
+                            $extraData = json_decode($record->extra_data, true);
+                            return isset($extraData['rule_type']) && $extraData['rule_type'] === 'yesterday';
+                        })
+                        ->count();
+                    if ($yesterdayClaimedCount > 0) {
+                        return json(['code' => 400, 'message' => '今日已领取过昨日规则福利券，只能领取一次']);
+                    }
+                }
+
+                // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
+                // 时间范围与打码量同步，以08:00作为分界点
+                $todayCount = \addons\webman\model\TicketRecord::query()
+                    ->where('player_id', $playerId)
+                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                    ->where('score', $actualScore)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<', $todayEnd)
+                    ->whereNull('deleted_at')
+                    ->get()
+                    ->filter(function ($record) use ($ruleType) {
+                        if (empty($record->extra_data)) return false;
+                        $extraData = json_decode($record->extra_data, true);
+                        return isset($extraData['rule_type']) && $extraData['rule_type'] === $ruleType;
+                    })
+                    ->count();
+                if ($todayCount > 0) {
+                    $ruleName = $ruleType === 'today' ? '今日' : '昨日';
+                    return json(['code' => 400, 'message' => "该档位福利券({$ruleName}规则)今日已领取过"]);
+                }
+
+                // 将规则类型传递给后续保存逻辑
+                $welfareRuleType = $ruleType;
+                $score = $actualScore;  // 转换为正数
+            }
+
+            $orderId = \addons\webman\model\TicketRecord::generateOrderId($ticketType);
             $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
 
             // 获取玩家名称
@@ -3897,6 +4385,12 @@ class ChannelIndexController
 
             $remark = request()->input('remark', '');
 
+            // 构建extra_data
+            $extraData = null;
+            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && !empty($welfareRuleType)) {
+                $extraData = json_encode(['rule_type' => $welfareRuleType, 'score' => abs($score)]);
+            }
+
             $record = \addons\webman\model\TicketRecord::create([
                 'order_id'           => $orderId,
                 'department_id'      => $departmentId,
@@ -3905,11 +4399,12 @@ class ChannelIndexController
                 'machine_no'         => $machineNo,
                 'player_id'          => $playerId > 0 ? $playerId : null,
                 'player_name'        => $playerName,
-                'score'              => $score,
+                'score'              => abs($score),  // 使用绝对值
                 'qr_code'            => $orderId,
                 'qr_code_no'         => $qrCodeNo,
                 'encrypted_content'  => $orderId,
                 'ticket_type'        => $ticketType,
+                'extra_data'         => $extraData,
                 'status'             => \addons\webman\model\TicketRecord::STATUS_NORMAL,
                 'remark'             => $remark,
             ]);
@@ -3925,6 +4420,107 @@ class ChannelIndexController
             ]);
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 更新票据状态（用于标记打印失败等）
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function updateTicketStatus(): Response
+    {
+        try {
+            $orderId = request()->input('order_id', '');
+            $status = (int) request()->input('status', 0);
+
+            if (empty($orderId)) {
+                return json(['code' => 400, 'message' => '订单号不能为空']);
+            }
+
+            $admin = Admin::user();
+            $record = \addons\webman\model\TicketRecord::query()
+                ->where('order_id', $orderId)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+
+            if (!$record) {
+                return json(['code' => 404, 'message' => '记录不存在']);
+            }
+
+            $record->status = $status;
+            $record->save();
+
+            return json(['code' => 200, 'message' => '状态更新成功']);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '更新失败: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 查询订单状态（用于重复打印）
+     * @group channel
+     * @auth true
+     * @return Response
+     */
+    public function getTicketOrderInfo(): Response
+    {
+        try {
+            $orderId = request()->input('order_id', '');
+
+            if (empty($orderId)) {
+                return json(['code' => 400, 'message' => '订单号不能为空']);
+            }
+
+            $admin = Admin::user();
+            $record = \addons\webman\model\TicketRecord::query()
+                ->where('order_id', $orderId)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+
+            if (!$record) {
+                return json(['code' => 404, 'message' => '订单不存在']);
+            }
+
+            // 检查是否可以重复打印：只有未使用(1)和打印失败(5)的订单可以重复打印
+            $reprintableStatuses = [
+                \addons\webman\model\TicketRecord::STATUS_NORMAL,        // 1 = 未使用
+                \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED,  // 5 = 打印失败
+            ];
+
+            if (!in_array($record->status, $reprintableStatuses)) {
+                return json(['code' => 400, 'message' => '该订单状态不允许重复打印（仅支持未使用和打印失败的订单）']);
+            }
+
+            // 获取玩家信息
+            $playerName = $record->player_name ?? '';
+            if (!empty($record->player_id)) {
+                $player = \addons\webman\model\Player::query()->where('id', $record->player_id)->first();
+                if ($player) {
+                    $playerName = $player->name ?? $playerName;
+                }
+            }
+
+            return json([
+                'code' => 200,
+                'message' => '订单查询成功',
+                'data' => [
+                    'id' => $record->id,
+                    'order_id' => $record->order_id,
+                    'store_name' => $record->store_name,
+                    'machine_no' => $record->machine_no,
+                    'score' => $record->score,
+                    'ticket_type' => $record->ticket_type,
+                    'status' => $record->status,
+                    'player_id' => $record->player_id,
+                    'player_name' => $playerName,
+                    'qr_code' => $record->qr_code,
+                    'created_at' => $record->created_at instanceof \DateTimeInterface ? $record->created_at->format('Y-m-d H:i:s') : (string) ($record->created_at ?? ''),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return json(['code' => 500, 'message' => '查询失败: ' . $e->getMessage()]);
         }
     }
 
@@ -3958,7 +4554,7 @@ class ChannelIndexController
             ->orderBy('id', 'desc')
             ->skip(($page - 1) * $pageSize)
             ->take($pageSize)
-            ->get(['id', 'name', 'uuid']);
+            ->get(['id', 'name', 'uuid', 'phone']);
 
         return json(['code' => 200, 'data' => $players]);
     }
@@ -4055,7 +4651,7 @@ class ChannelIndexController
             ->map(fn($v) => (float)$v);
 
         foreach ($players as $player) {
-            // 统计该设备在此时间段的数据
+            // 统计该设备在此时间段的数据（按 source 细分开分/开票、洗分/洗票）
             $result = PlayerDeliveryRecord::query()
                 ->selectRaw('
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ' THEN amount ELSE 0 END) as machine_point,
@@ -4065,7 +4661,11 @@ class ChannelIndexController
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . ' THEN amount ELSE 0 END) as birthday_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . ' THEN amount ELSE 0 END) as upgrade_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' THEN amount ELSE 0 END) as recharge_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'artificial_recharge\' THEN amount ELSE 0 END) as open_score_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' THEN amount ELSE 0 END) as withdrawal_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' AND source = \'channel_withdrawal\' THEN amount ELSE 0 END) as channel_withdrawal_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' AND source = \'ticket_redeem\' THEN amount ELSE 0 END) as ticket_redeem_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD . ' THEN amount ELSE 0 END) as modified_add_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT . ' THEN amount ELSE 0 END) as modified_deduct_amount
                 ')
@@ -4082,7 +4682,11 @@ class ChannelIndexController
                 'birthday_bonus_amount' => 0,
                 'upgrade_bonus_amount' => 0,
                 'recharge_amount' => 0,
+                'open_score_amount' => 0,
+                'ticket_open_score_amount' => 0,
                 'withdrawal_amount' => 0,
+                'channel_withdrawal_amount' => 0,
+                'ticket_redeem_amount' => 0,
                 'modified_add_amount' => 0,
                 'modified_deduct_amount' => 0,
             ];
@@ -4091,16 +4695,106 @@ class ChannelIndexController
             $electronicGameBet = $electronicGameBetMap[$player->id] ?? 0;
             $machineBet = $machineBetMap[$player->id] ?? 0;
 
-            // 计算总收入、总支出、利润
-            // 注意：彩金和活动奖励只用于展示，不参与利润计算（发放后客户洗分会洗掉）
-            $totalIn = bcadd($data['recharge_amount'], $data['modified_add_amount'], 2);
-            $totalOut = bcadd($data['withdrawal_amount'], $data['modified_deduct_amount'], 2);
-            $profit = bcsub(bcadd($data['machine_point'], $totalIn, 2), $totalOut, 2);
+            // 统计洗票未核销（该设备的出票记录，type=洗分，status=1正常状态）
+            $ticketUnredeemedAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_NORMAL)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计体验券（ticket_type=3）
+            $experienceCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计福利券（ticket_type=4）
+            $welfareCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+            $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计开票已使用金额（用于入票计算，status=3机台使用）
+            $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
+            // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
+            $redeemAmountExport = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
+            // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
+            $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
+                ->sum('score');
+
+            // 统计入票金额（开票机台使用 + 核销机台使用）
+            $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemAmount, 2);
+
+            // 计算总收入、总支出、利润（新公式）
+            $actualTicketOpenScoreAmount = $ticketOpenScoreAmount;
+            // 总收入 = 开分 + 开票
+            $totalIn = bcadd($data['open_score_amount'] ?? 0, $actualTicketOpenScoreAmount, 2);
+            // 总支出 = 洗分 + 核销（导出用）
+            $totalOut = bcadd($data['channel_withdrawal_amount'] ?? 0, $redeemAmountExport, 2);
+            // 利润 = 总收入 - 总支出
+            $profit = bcsub($totalIn, $totalOut, 2);
 
             // 只保存有数据的设备（至少有一项不为0）
-            if ($data['machine_point'] > 0 || $data['recharge_amount'] > 0 || $data['withdrawal_amount'] > 0 ||
-                $data['modified_add_amount'] > 0 || $data['modified_deduct_amount'] > 0 || $data['lottery_amount'] > 0 ||
-                $electronicGameBet > 0 || $machineBet > 0) {
+            // 根据导出栏目判断：投钞、收入(开分+开票)、支出(洗分+核销)、拉彩、活动、打码量、票券等
+            $hasData = $data['machine_point'] > 0                              // 投钞点数
+                || $data['recharge_amount'] > 0                                // 开分
+                || $data['open_score_amount'] > 0                              // 人工储值
+                || $actualTicketOpenScoreAmount > 0                            // 开票金额
+                || $data['withdrawal_amount'] > 0                              // 洗分
+                || $data['channel_withdrawal_amount'] > 0                      // 渠道洗分
+                || $redeemAmountExport > 0                                     // 核销金额（后台核销）
+                || $redeemAmount > 0                                           // 核销金额（机台核销）
+                || $ticketUnredeemedAmount > 0                                 // 未核销金额
+                || $data['lottery_amount'] > 0                                 // 拉彩金额
+                || $data['activity_bonus_amount'] > 0                          // 活动礼金
+                || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
+                || $data['birthday_bonus_amount'] > 0                          // 生日礼金
+                || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
+                || $data['modified_add_amount'] > 0                            // 调账增加
+                || $data['modified_deduct_amount'] > 0                         // 调账扣除
+                || $electronicGameBet > 0                                      // 电子游戏打码量
+                || $machineBet > 0                                             // 机器打码量
+                || $experienceCouponAmount > 0                                 // 体验券
+                || $welfareCouponAmount > 0;                                   // 福利券
+
+            if ($hasData) {
 
                 StoreShiftDeviceDetail::create([
                     'shift_record_id' => $shiftRecordId,
@@ -4111,7 +4805,18 @@ class ChannelIndexController
                     'player_phone' => $player->phone,
                     'machine_point' => (int)$data['machine_point'],
                     'recharge_amount' => (float)$data['recharge_amount'],
+                    'open_score_amount' => (float)($data['open_score_amount'] ?? 0),
+                    'ticket_open_score_amount' => (float)$actualTicketOpenScoreAmount,
+                    'incoming_ticket_amount' => (float)$incomingTicketAmount,
+                    // 导出用核销（status=2后台核销）
+                    'redeem_amount' => (float)$redeemAmountExport,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
+                    'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
+                    'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
+                    // 未核销 = 出卷 - 核销（使用导出用核销）
+                    'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+                    'experience_coupon_amount' => $experienceCouponAmount,
+                    'welfare_coupon_amount' => $welfareCouponAmount,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],

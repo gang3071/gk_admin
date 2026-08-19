@@ -2,11 +2,11 @@
 
 return [
     // 页面标题
-    'title' => '玩家列表',
-    'create' => '新增玩家',
-    'add_device' => '添加玩家',
-    'edit_device' => '编辑玩家',
-    'edit' => '编辑玩家',
+    'title' => '设备列表',
+    'create' => '新增设备',
+    'add_device' => '添加设备',
+    'edit_device' => '编辑设备',
+    'edit' => '编辑设备',
     'ip_list' => 'IP绑定列表',
     'ip_management' => 'IP管理',
     'add_ip' => '添加IP',
@@ -19,6 +19,7 @@ return [
         'device_no' => '设备号',
         'device_no_help' => '安卓设备的唯一标识符（如：Android ID、IMEI等）',
         'device_model' => '设备型号',
+        'voice_url' => '语音播报',
         'channel_name' => '所属渠道',
         'department_name' => '所属部门',
         'agent_name' => '所属代理',
@@ -63,9 +64,21 @@ return [
     'batch_disable_failed' => '批量关闭设备失败',
     'no_device_selected' => '请先选择要关闭的设备',
 
+    // 语音播报
+    'voice' => [
+        'not_generated' => '未生成',
+        'generated' => '语音已生成',
+        'generate_failed' => '语音生成失败',
+        'generate_error' => '语音生成异常',
+        'regenerate' => '重新生成语音',
+        'regenerate_confirm' => '确定要重新生成语音播报文件吗？',
+        'regenerate_success' => '语音重新生成成功',
+    ],
+
     // 消息提示
     'device_no_exists' => '设备号已存在',
     'device_no_help' => '设备的唯一编号，不可重复',
+    'device_not_found' => '设备不存在',
     'invalid_ip_address' => 'IP地址格式不正确',
     'ip_already_exists' => 'IP地址已存在',
     'delete_confirm' => '确定要删除该设备吗？删除后将同时删除所有绑定的IP地址。',

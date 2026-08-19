@@ -24,6 +24,22 @@ return [
     'artificial_withdrawal_error' => 'Manual wash score failed',
     'artificial_withdrawal_success' => 'Manual wash score successful',
     'insufficient_balance' => 'Insufficient account balance',
+
+    // Bet Statistics
+    'bet_statistics' => 'View Bets',
+    'bet_statistics_button' => 'Bet Stats',
+    'bet_statistics_title' => '{name} - Bet Statistics',
+    'today_bet' => 'Today\'s Bets',
+    'week_bet' => 'This Week\'s Bets',
+    'month_bet' => 'This Month\'s Bets',
+    'machine_bet' => 'Physical Machines',
+    'game_bet' => 'Electronic Games',
+    'bet_trend_15days' => '15-Day Bet Trend',
+    'month_bet_distribution' => 'Monthly Bet Distribution',
+    'bet_amount_unit' => 'NT$',
+    'loading' => 'Loading...',
+    'load_failed' => 'Failed to load data',
+
     'fields' => [
         'id' => 'ID',
         'phone' => 'Mobile phone number (account number)',

@@ -99,7 +99,7 @@ class VipLevelCashback extends Model
         if ($bet <= 0 || $cashbackRatio <= 0) {
             return 0;
         }
-        return round($bet * $cashbackRatio / 100, 2);
+        return round($bet * $cashbackRatio / 100, 4);
     }
 
     /**

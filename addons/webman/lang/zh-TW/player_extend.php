@@ -29,6 +29,8 @@ return [
         'present_in_amount' => '總轉入金額',
         'third_recharge_amount' => '第三方總開分金額',
         'third_withdraw_amount' => '第三方總洗分金額',
+        'pending_cashback_amount' => '待領取反水',
+        'total_cashback_amount' => '總反水金額',
         'created_at' => '創建時間',
         'updated_at' => '更新時間',
         'machine_put_amount' => '總投鈔數',

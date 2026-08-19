@@ -143,6 +143,84 @@ class ChannelMarqueeController
         });
     }
 
+    /**
+     * 电子游戏反水开关
+     * @group channel
+     * @auth true
+     */
+    public function electronicGameRebate(): Grid
+    {
+        return Grid::create(new $this->model(), function (Grid $grid) {
+            $grid->title(admin_trans('system_setting.rebate.electronic_game_rebate'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->model()->where('feature', 'electronic_game_rebate');
+
+            $grid->column('id', 'ID')->width(80)->align('center');
+            $grid->column('department_id', admin_trans('system_setting.fields.department_id'))->width(100)->align('center');
+            $grid->column('feature', admin_trans('system_setting.fields.feature'))
+                ->display(function () {
+                    return admin_trans('system_setting.rebate.electronic_game_rebate');
+                })->align('center');
+            $grid->column('status', admin_trans('system_setting.fields.status'))
+                ->switch([
+                    'onValue' => 1,
+                    'offValue' => 0,
+                    'checkedChildren' => admin_trans('system_setting.rebate.enabled'),
+                    'unCheckedChildren' => admin_trans('system_setting.rebate.disabled'),
+                ])->align('center');
+            $grid->column('created_at', admin_trans('system_setting.fields.created_at'))->width(180)->align('center');
+            $grid->column('updated_at', admin_trans('system_setting.fields.updated_at'))->width(180)->align('center');
+
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+        });
+    }
+
+    /**
+     * 实体机台反水开关
+     * @group channel
+     * @auth true
+     */
+    public function machineRebate(): Grid
+    {
+        return Grid::create(new $this->model(), function (Grid $grid) {
+            $grid->title(admin_trans('system_setting.rebate.machine_rebate'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->model()->where('feature', 'machine_rebate');
+
+            $grid->column('id', 'ID')->width(80)->align('center');
+            $grid->column('department_id', admin_trans('system_setting.fields.department_id'))->width(100)->align('center');
+            $grid->column('feature', admin_trans('system_setting.fields.feature'))
+                ->display(function () {
+                    return admin_trans('system_setting.rebate.machine_rebate');
+                })->align('center');
+            $grid->column('status', admin_trans('system_setting.fields.status'))
+                ->switch([
+                    'onValue' => 1,
+                    'offValue' => 0,
+                    'checkedChildren' => admin_trans('system_setting.rebate.enabled'),
+                    'unCheckedChildren' => admin_trans('system_setting.rebate.disabled'),
+                ])->align('center');
+            $grid->column('created_at', admin_trans('system_setting.fields.created_at'))->width(180)->align('center');
+            $grid->column('updated_at', admin_trans('system_setting.fields.updated_at'))->width(180)->align('center');
+
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+        });
+    }
+
     public function resetPassword($id)
     {
         SystemSetting::query()->where('id',$id)->update(['content'=>mt_rand(10000,99999)]);

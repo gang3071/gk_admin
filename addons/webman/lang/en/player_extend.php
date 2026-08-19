@@ -29,6 +29,8 @@ return [
         'present_in_amount' => 'Total transferred points',
         'third_recharge_amount' => 'Total third-party open score points',
         'third_withdraw_amount' => 'Total third-party wash score points',
+        'pending_cashback_amount' => 'Pending Cashback',
+        'total_cashback_amount' => 'Total Cashback',
         'created_at' => 'Creation time',
         'updated_at' => 'Update time',
         'machine_put_amount' => 'Total number of banknotes dispensed',

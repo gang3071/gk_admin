@@ -7,6 +7,7 @@ use addons\webman\model\Machine;
 use addons\webman\model\MachineCategory;
 use addons\webman\model\MachineCategoryExtend;
 use ExAdmin\ui\component\common\Html;
+use support\Cache;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\form\Watch;
 use ExAdmin\ui\component\grid\card\Card;
@@ -95,7 +96,7 @@ class MachineCategoryController
                     (new Editable)->text('keep_minutes')
                         ->style(['width' => '100%'])
                         ->rule([
-                            'integer' => admin_trans('validator.integer'),
+                            'numeric' => admin_trans('validator.numeric'),
                             'max:600' => admin_trans('validator.max', null, ['{max}' => 600]),
                             'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
                         ])
@@ -168,6 +169,7 @@ class MachineCategoryController
                 ]);
             })->align('center');
             $grid->column('name', admin_trans('machine_category.fields.name'))->align('center');
+            $grid->column('turn_used_point', admin_trans('machine_category.fields.turn_used_point'))->align('center');
             $grid->column('picture_url', admin_trans('machine_category.fields.picture_url'))->display(function ($val, $data) {
                 $image = Image::create()
                     ->width(50)
@@ -189,7 +191,7 @@ class MachineCategoryController
                     (new Editable)->text('keep_minutes')
                         ->style(['width' => '100%'])
                         ->rule([
-                            'integer' => admin_trans('validator.integer'),
+                            'numeric' => admin_trans('validator.numeric'),
                             'max:600' => admin_trans('validator.max', null, ['{max}' => 600]),
                             'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
                         ])
@@ -280,7 +282,7 @@ class MachineCategoryController
                     (new Editable)->text('keep_minutes')
                         ->style(['width' => '100%'])
                         ->rule([
-                            'integer' => admin_trans('validator.integer'),
+                            'numeric' => admin_trans('validator.numeric'),
                             'max:600' => admin_trans('validator.max', null, ['{max}' => 600]),
                             'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
                         ])
@@ -351,7 +353,7 @@ class MachineCategoryController
                 admin_trans('machine_category.fields.turn_used_point'))->style(['width' => '100%']);
             $form->text('keep_minutes', admin_trans('machine_category.fields.keep_minutes'))
                 ->rule([
-                    'integer' => admin_trans('validator.integer'),
+                    'numeric' => admin_trans('validator.numeric'),
                     'max:600' => admin_trans('validator.max', null, ['{max}' => 600]),
                     'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
                 ])

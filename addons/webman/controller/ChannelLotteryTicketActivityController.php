@@ -347,6 +347,19 @@ class ChannelLotteryTicketActivityController
 
         $activityArray = $activity->toArray();
 
+        // ✅ 调试日志：检查返回的奖品等级顺序
+        Log::info('[奖品等级数据] getActivityDetail', [
+            'activity_id' => $id,
+            'prize_levels' => array_map(function($level) {
+                return [
+                    'id' => $level['id'],
+                    'level_rank' => $level['level_rank'],
+                    'level_name' => $level['level_name'],
+                    'sort_order' => $level['sort_order'],
+                ];
+            }, $activityArray['prize_levels'] ?? [])
+        ]);
+
         // 添加额外的统计字段
         // ✅ 已发最大券号 - 查询实际最大券号（保留6位格式）
         $maxNo = \addons\webman\model\LotteryTicket::where('activity_id', $activity->id)
@@ -354,9 +367,19 @@ class ChannelLotteryTicketActivityController
             ->value('max_no');
         $activityArray['max_ticket_no'] = $maxNo ? str_pad($maxNo, 6, '0', STR_PAD_LEFT) : '000000';
 
-        // ⭐ 统计已派奖记录数量
-        $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+        // ⭐ 统计总发放数量（从 LotteryTicket 表统计实际发券数）
+        $activityArray['total_tickets'] = \addons\webman\model\LotteryTicket::where('activity_id', $activity->id)->count();
+
+        // ⭐ 统计已使用数量（已派奖的记录数量）
+        $activityArray['used_tickets'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
             ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_CLAIMED)
+            ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
+            ->where('prize_amount', '>', 0)
+            ->count();
+
+        // ⭐ 统计待发放数量
+        $activityArray['pending_count'] = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activity->id)
+            ->where('status', \addons\webman\model\LotteryTicketRecord::STATUS_PENDING)
             ->where('prize_type', '!=', \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_EMPTY)
             ->where('prize_amount', '>', 0)
             ->count();
@@ -506,43 +529,32 @@ class ChannelLotteryTicketActivityController
                     throw new \Exception(admin_trans('common.no_permission'));
                 }
 
-                // ⭐ 已结束、待开奖、开奖中、已关闭的活动不能编辑
+                // ⭐ 只有已结束、已关闭的活动不能编辑
                 if (in_array($activity->status, [
                     LotteryTicketActivity::STATUS_ENDED,
-                    LotteryTicketActivity::STATUS_PENDING_DRAW,
-                    LotteryTicketActivity::STATUS_DRAWING,
                     LotteryTicketActivity::STATUS_CLOSED
                 ])) {
-                    throw new \Exception(admin_trans('lottery_ticket.error.cannot_edit_started'));
+                    throw new \Exception(admin_trans('lottery_ticket.error.cannot_edit_ended'));
                 }
 
-                // ⭐ 进行中的活动只能编辑名称、说明、封面图
-                if ($activity->status == LotteryTicketActivity::STATUS_ONGOING) {
-                    $activity->update([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'cover_image' => $data['cover_image'] ?? '',
-                    ]);
-                } else {
-                    // ⭐ 未开始的活动可以编辑所有字段
-                    // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
-                    $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
-                    if ($conflictActivity) {
-                        throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
-                            'name' => $conflictActivity->name,
-                            'start_time' => $conflictActivity->start_time,
-                            'end_time' => $conflictActivity->end_time,
-                        ]));
-                    }
-
-                    $activity->update([
-                        'name' => $data['name'],
-                        'description' => $data['description'] ?? '',
-                        'cover_image' => $data['cover_image'] ?? '',
-                        'start_time' => $data['start_time'],
-                        'end_time' => $data['end_time'],
-                    ]);
+                // ⭐ 所有未结束的活动都可以编辑基本信息
+                // ⭐ 编辑活动时，检查新时间段是否与其他活动冲突（排除自己）
+                $conflictActivity = $this->checkActivityTimeConflict($departmentId, $startTime, $endTime, $activity->id);
+                if ($conflictActivity) {
+                    throw new \Exception(admin_trans('lottery_ticket.error.time_conflict_with_activity', null, [
+                        'name' => $conflictActivity->name,
+                        'start_time' => $conflictActivity->start_time,
+                        'end_time' => $conflictActivity->end_time,
+                    ]));
                 }
+
+                $activity->update([
+                    'name' => $data['name'],
+                    'description' => $data['description'] ?? '',
+                    'cover_image' => $data['cover_image'] ?? '',
+                    'start_time' => $data['start_time'],
+                    'end_time' => $data['end_time'],
+                ]);
 
                 // ⭐ 防御性初始化：如果 Redis key 不存在，则初始化
                 // 这是为了修复老活动（修复代码前创建的）
@@ -588,25 +600,12 @@ class ChannelLotteryTicketActivityController
                 ]);
             }
 
-            // ⭐ 编辑进行中的活动：只能更新奖项名称，不能修改金额、数量等
-            // ⭐ 创建新活动：无论状态如何，都允许保存完整配置（因为是新建，不存在已发券的情况）
-            $isEditingOngoingActivity = !empty($data['id']) && $activity->status == LotteryTicketActivity::STATUS_ONGOING;
+            // ⭐ 判断编辑模式
+            // - 未开始的活动：可以完全修改（删除重建奖品等级）
+            // - 进行中/待开奖/开奖中的活动：只能更新名称和数量，不能修改金额（保护已发券）
+            $isEditingNotStartedActivity = !empty($data['id']) && $activity->status == LotteryTicketActivity::STATUS_NOT_STARTED;
 
-            if ($isEditingOngoingActivity) {
-                // 只更新奖项名称
-                foreach ($prizeLevels as $level) {
-                    if (isset($level['id'])) {
-                        $prizeLevel = LotteryTicketPrizeLevel::where('id', $level['id'])
-                            ->where('activity_id', $activity->id)
-                            ->first();
-
-                        if ($prizeLevel) {
-                            $prizeLevel->level_name = $level['level_name'];
-                            $prizeLevel->save();
-                        }
-                    }
-                }
-            } else {
+            if ($isEditingNotStartedActivity || empty($data['id'])) {
                 // 创建新活动 或 编辑未开始的活动：可以完全更新配置
                 // 保存 VIP 配置
                 if (!empty($data['vip_configs'])) {
@@ -640,6 +639,22 @@ class ChannelLotteryTicketActivityController
                         'prize_amount' => $level['prize_amount'],
                         'prize_count' => $level['prize_count'] ?? 0,
                     ]);
+                }
+            } else {
+                // ⭐ 编辑进行中/待开奖/开奖中的活动：只能更新名称和数量，不能修改金额
+                foreach ($prizeLevels as $level) {
+                    if (isset($level['id'])) {
+                        $prizeLevel = LotteryTicketPrizeLevel::where('id', $level['id'])
+                            ->where('activity_id', $activity->id)
+                            ->first();
+
+                        if ($prizeLevel) {
+                            $prizeLevel->level_name = $level['level_name'];
+                            $prizeLevel->prize_count = $level['prize_count'] ?? $prizeLevel->prize_count;
+                            // ⚠️ prize_amount 不更新（保护已发券）
+                            $prizeLevel->save();
+                        }
+                    }
                 }
             }
 
@@ -2852,8 +2867,9 @@ class ChannelLotteryTicketActivityController
             return Response::success([], admin_trans('lottery_ticket.error.ticket_already_recorded'), 409);
         }
 
-        // 查询玩家信息
+        // 查询玩家信息（预加载店家关系）
         $player = Player::query()
+            ->with(['storeAdmin'])
             ->where('id', $ticket->player_id)
             ->first();
 
@@ -2861,15 +2877,86 @@ class ChannelLotteryTicketActivityController
             return Response::success([], admin_trans('lottery_ticket.error.player_not_found_for_ticket'), 404);
         }
 
-        // ✅ 成功：返回玩家信息
+        // ⭐ 获取店家信息
+        $storeName = '-';
+        $storeId = null;
+        if ($player->storeAdmin) {
+            // 优先使用 nickname，没有则使用 username
+            $storeName = $player->storeAdmin->nickname ?? $player->storeAdmin->username ?? '-';
+            $storeId = $player->storeAdmin->id;
+        }
+
+        // ✅ 成功：返回玩家信息（包含店家信息）
         return Response::success([
             'player_id' => $player->id,
             'player_uuid' => $player->uuid,
             'player_name' => $player->name,
             'player_account' => $player->phone ?? '-',  // 玩家账号（phone字段）
+            'store_id' => $storeId,                     // ⭐ 新增：店家ID
+            'store_name' => $storeName,                  // ⭐ 新增：店家名称
             'ticket_no' => $ticketNo,
             'ticket_id' => $ticket->id
         ], '', 200);
+    }
+
+    /**
+     * 获取活动奖品等级的发放统计（剩余数量）
+     * @group channel
+     * @auth true
+     */
+    public function getPrizeLevelStats()
+    {
+        $activityId = Request::input('activity_id');
+
+        if (!$activityId) {
+            return Response::success([
+                'success' => false,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
+        }
+
+        // 验证活动权限
+        $activity = LotteryTicketActivity::where('id', $activityId)
+            ->where('department_id', Admin::user()->department_id)
+            ->first();
+
+        if (!$activity) {
+            return Response::success([
+                'success' => false,
+                'message' => admin_trans('lottery_ticket.error.activity_not_exist')
+            ]);
+        }
+
+        // 获取所有奖品等级
+        $prizeLevels = LotteryTicketPrizeLevel::where('activity_id', $activityId)
+            ->where('status', LotteryTicketPrizeLevel::STATUS_ENABLED)
+            ->orderBy('sort_order')
+            ->orderBy('level_rank')
+            ->get();
+
+        // 统计每个等级的已发放数量
+        $stats = [];
+        foreach ($prizeLevels as $level) {
+            $distributedCount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+                ->where('prize_level_id', $level->id)
+                ->count();
+
+            $stats[] = [
+                'prize_level_id' => $level->id,
+                'level_name' => $level->level_name,
+                'level_rank' => $level->level_rank,
+                'prize_amount' => $level->prize_amount,
+                'total_count' => $level->prize_count,
+                'distributed_count' => $distributedCount,
+                'remaining_count' => max(0, $level->prize_count - $distributedCount),
+                'is_sold_out' => $distributedCount >= $level->prize_count
+            ];
+        }
+
+        return Response::success([
+            'success' => true,
+            'stats' => $stats
+        ]);
     }
 
     /**
@@ -2885,7 +2972,10 @@ class ChannelLotteryTicketActivityController
 
         // 验证参数
         if (!$activityId || !$prizeLevelId || !$ticketNo) {
-            return Response::success([], admin_trans('lottery_ticket.error.invalid_params'), 400);
+            return Response::success([
+                'success' => false,
+                'message' => admin_trans('lottery_ticket.error.invalid_params')
+            ]);
         }
 
         // 格式化券号（补齐6位）
@@ -2901,15 +2991,53 @@ class ChannelLotteryTicketActivityController
 
             if (!$activity) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.activity_not_exist'), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.activity_not_exist')
+                ]);
             }
 
             // 验证奖品等级
             $prizeLevel = LotteryTicketPrizeLevel::find($prizeLevelId);
             if (!$prizeLevel || $prizeLevel->activity_id != $activityId) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo]), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.prize_level_not_found_for_ticket', null, ['ticket_no' => $ticketNo])
+                ]);
             }
+
+            // ⭐ 检查奖品数量是否已超发
+            $distributedCount = \addons\webman\model\LotteryTicketRecord::where('activity_id', $activityId)
+                ->where('prize_level_id', $prizeLevelId)  // ⭐ 使用 prize_level_id 精确匹配
+                ->count();
+
+            if ($distributedCount >= $prizeLevel->prize_count) {
+                Db::rollBack();
+                // ⚠️ 返回 code: 200，但通过 success: false 标记为失败
+                // 这样前端不会进入 catch 块，可以正常读取错误信息
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.prize_sold_out', null, [
+                        'prize_name' => $prizeLevel->level_name,
+                        'total_count' => $prizeLevel->prize_count,
+                        'distributed_count' => $distributedCount
+                    ])
+                ]);
+            }
+
+            // ✅ 记录调试日志：查看实际选择的奖品等级
+            Log::info('[派奖调试] 录入中奖记录', [
+                'activity_id' => $activityId,
+                'ticket_no' => $ticketNo,
+                'prize_level_id' => $prizeLevelId,
+                'prize_level_rank' => $prizeLevel->level_rank,
+                'prize_level_name' => $prizeLevel->level_name,
+                'prize_amount' => $prizeLevel->prize_amount,
+                'prize_count' => $prizeLevel->prize_count,
+                'distributed_count' => $distributedCount,
+                'operator' => Admin::user()->username ?? Admin::user()->id,
+            ]);
 
             // 查找券号（必须是未使用状态）
             $ticket = LotteryTicket::where('ticket_no', $ticketNo)
@@ -2920,7 +3048,10 @@ class ChannelLotteryTicketActivityController
 
             if (!$ticket) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo]), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.ticket_not_found_or_used', null, ['ticket_no' => $ticketNo])
+                ]);
             }
 
             // 双重检查：防止重复录入
@@ -2930,7 +3061,10 @@ class ChannelLotteryTicketActivityController
 
             if ($existingRecord) {
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo]), 400);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.ticket_already_won', null, ['ticket_no' => $ticketNo])
+                ]);
             }
 
             // 创建中奖记录
@@ -2940,6 +3074,7 @@ class ChannelLotteryTicketActivityController
                 'department_id' => $ticket->department_id,
                 'ticket_id' => $ticket->id,
                 'ticket_no' => $ticketNo,
+                'prize_level_id' => $prizeLevelId,  // ⭐ 保存奖品等级ID
                 'prize_type' => \addons\webman\model\LotteryTicketRecord::PRIZE_TYPE_CASH,  // ⭐ 固定为现金类型
                 'prize_name' => $prizeLevel->level_name,  // ⭐ 使用 prize_name 存储奖品等级名称
                 'prize_amount' => $prizeLevel->prize_amount,
@@ -3009,20 +3144,24 @@ class ChannelLotteryTicketActivityController
                 $record->save();
 
                 Db::rollBack();
-                return Response::success([], admin_trans('lottery_ticket.error.distribute_failed', null, [
-                    'ticket_no' => $ticketNo,
-                    'reason' => $e->getMessage()
-                ]), 500);
+                return Response::success([
+                    'success' => false,
+                    'message' => admin_trans('lottery_ticket.error.distribute_failed', null, [
+                        'ticket_no' => $ticketNo,
+                        'reason' => $e->getMessage()
+                    ])
+                ]);
             }
 
             Db::commit();
 
             // ✅ 成功返回
             return Response::success([
+                'success' => true,
                 'message' => admin_trans('lottery_ticket.message.record_success'),
                 'record_id' => $record->id,
                 'prize_amount' => $prizeLevel->prize_amount
-            ], '', 200);
+            ]);
 
         } catch (\Exception $e) {
             Db::rollBack();
@@ -3031,7 +3170,10 @@ class ChannelLotteryTicketActivityController
                 'ticket_no' => $ticketNo,
                 'error' => $e->getMessage()
             ]);
-            return Response::success([], $e->getMessage(), 500);
+            return Response::success([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
         }
     }
 }

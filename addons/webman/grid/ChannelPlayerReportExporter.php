@@ -40,6 +40,7 @@ class ChannelPlayerReportExporter extends Excel
                 \support\Log::info('步骤2: 开始构建查询');
                 $baseQuery = Player::query()->withTrashed();
                 $playGameRecordBaseQuery = PlayGameRecord::query()
+                    ->where('play_game_record.settlement_status', PlayGameRecord::SETTLEMENT_STATUS_SETTLED)  // ✅ 只统计已结算记录
                     ->when(!empty($exAdminFilter['uuid']) || !empty($exAdminFilter['real_name']) || !empty($exAdminFilter['phone']) || !empty($exAdminFilter['recommend_promoter']['name']) || (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) || !empty($exAdminFilter['search_type']), function (Builder $q) use ($exAdminFilter) {
                         $q->leftjoin('player', 'play_game_record.player_id', '=', 'player.id');
                     });
@@ -84,7 +85,7 @@ class ChannelPlayerReportExporter extends Excel
                 SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " and player_delivery_record.source = 'artificial_recharge' THEN player_delivery_record.amount ELSE 0 END) AS artificial_recharge_total,
                 SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.source in ('channel_withdrawal', 'gb_withdrawal') and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS channel_withdrawal_total,
                 SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.source = 'artificial_withdrawal' and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS artificial_withdrawal_total,
-                SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN player_delivery_record.amount ELSE 0 END) + SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS total_amount
+                SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN player_delivery_record.amount ELSE 0 END) + SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN player_delivery_record.amount ELSE 0 END) + SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " and player_delivery_record.withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN -player_delivery_record.amount ELSE 0 END) AS total_amount
             ");
 
                 \support\Log::info('步骤3: 查询玩家数据');
@@ -107,16 +108,18 @@ class ChannelPlayerReportExporter extends Excel
 
                 // 获取电子游戏数据
                 \support\Log::info('步骤5: 查询电子游戏数据');
-                $formattedRecords = $playGameRecordBaseQuery
-                    ->whereIn('player_id', array_column($list, 'id'))
-                    ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
-                    ->groupBy('play_game_record.player_id')
-                    ->get()
-                    ->toArray();
-
                 $playGameRecord = [];
-                foreach ($formattedRecords as $record) {
-                    $playGameRecord[$record['player_id']] = $record;
+                if (!empty($list)) {
+                    $formattedRecords = $playGameRecordBaseQuery
+                        ->whereIn('player_id', array_column($list, 'id'))
+                        ->selectRaw('player_id,SUM(bet) AS bet_total,SUM(diff) AS diff_total')
+                        ->groupBy('play_game_record.player_id')
+                        ->get()
+                        ->toArray();
+
+                    foreach ($formattedRecords as $record) {
+                        $playGameRecord[$record['player_id']] = $record;
+                    }
                 }
 
                 // 准备导出数据
@@ -423,22 +426,28 @@ class ChannelPlayerReportExporter extends Excel
         }
 
         if (!empty($exAdminFilter['uuid'])) {
-            $baseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
+            // 注意：baseQuery 主表是 player，无需加前缀（虽然加了也能工作）
+            $baseQuery->where('uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
             $playGameRecordBaseQuery->where('player.uuid', 'like', '%' . $exAdminFilter['uuid'] . '%');
         }
 
         if (!empty($exAdminFilter['real_name'])) {
-            $baseQuery->where('player.real_name', 'like', '%' . $exAdminFilter['real_name'] . '%');
+            $baseQuery->where('real_name', 'like', '%' . $exAdminFilter['real_name'] . '%');
             $playGameRecordBaseQuery->where('player.real_name', 'like', '%' . $exAdminFilter['real_name'] . '%');
         }
 
         if (!empty($exAdminFilter['phone'])) {
-            $baseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
+            $baseQuery->where('phone', 'like', '%' . $exAdminFilter['phone'] . '%');
             $playGameRecordBaseQuery->where('player.phone', 'like', '%' . $exAdminFilter['phone'] . '%');
         }
 
         if (!empty($exAdminFilter['recommend_promoter']['name'])) {
-            $baseQuery->leftjoin('player as rp', 'player.recommend_id', '=', 'rp.id')
+            // ⚡ 修复：推广员筛选逻辑错误
+            // player.recommend_id 关联的是 player_promoter.player_id，不是 player.id
+            // 正确的 JOIN：player.recommend_id → player_promoter.player_id → player.id
+            $baseQuery
+                ->leftJoin('player_promoter as bp', 'player.recommend_id', '=', 'bp.player_id')
+                ->leftJoin('player as rp', 'bp.player_id', '=', 'rp.id')
                 ->where(function ($q) use ($exAdminFilter) {
                     $q->where('rp.uuid', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%')
                         ->orWhere('rp.name', 'like', '%' . $exAdminFilter['recommend_promoter']['name'] . '%');
@@ -451,14 +460,14 @@ class ChannelPlayerReportExporter extends Excel
         }
 
         if (!empty($exAdminFilter['search_is_promoter']) && in_array($exAdminFilter['search_is_promoter'], [0, 1])) {
-            $baseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
-            $playGameRecordBaseQuery->whereHas('player', function ($q) use ($exAdminFilter) {
-                $q->where('is_promoter', $exAdminFilter['search_is_promoter']);
-            });
+            $baseQuery->where('is_promoter', $exAdminFilter['search_is_promoter']);
+            // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where 而不是 whereHas
+            $playGameRecordBaseQuery->where('player.is_promoter', $exAdminFilter['search_is_promoter']);
         }
 
         if (!empty($exAdminFilter['search_type'])) {
-            $baseQuery->where('player.is_test', $exAdminFilter['search_type']);
+            $baseQuery->where('is_test', $exAdminFilter['search_type']);
+            // ⚡ 性能优化：由于已经 leftJoin('player')，直接使用 where
             $playGameRecordBaseQuery->where('player.is_test', $exAdminFilter['search_type']);
         }
 

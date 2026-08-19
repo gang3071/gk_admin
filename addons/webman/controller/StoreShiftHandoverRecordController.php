@@ -3,11 +3,14 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\grid\ShiftReportExporter;
 use addons\webman\model\AdminUser;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
+use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -15,6 +18,9 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\response\Response;
+use support\Cache;
+use support\Log;
 
 /**
  * 店家后台 - 交班记录
@@ -221,6 +227,19 @@ class StoreShiftHandoverRecordController
                     ->placeholder([admin_trans('shift_handover.filter.start_time'), admin_trans('shift_handover.filter.end_time')]);
             });
 
+            // 工具栏 - 添加导出配置按钮
+            $grid->tools([
+                Button::create(admin_trans('shift_handover.export.select_columns'))
+                    ->type('default')
+                    ->modal(
+                        admin_url([
+                            'addons-webman-controller-StoreShiftHandoverRecordController',
+                            'exportConfig'
+                        ])
+                    )
+                    ->width('50%')
+            ]);
+
             // 操作列
             $grid->actions(function (Actions $actions) {
                 $actions->hideEdit();
@@ -232,7 +251,25 @@ class StoreShiftHandoverRecordController
             $grid->hideDeleteSelection();
 
             // 导出功能（权限通过 store_node.php 和 @auth true 控制）
-            $grid->export(new \addons\webman\grid\ShiftReportExporter())
+            $exporter = new ShiftReportExporter();
+
+            // 从缓存获取用户选择的导出列
+            $adminId = Admin::id();
+            $cacheKey = "export_columns_{$adminId}";
+            $selectedColumns = Cache::get($cacheKey);
+
+            Log::info("index 读取导出列缓存", [
+                'admin_id' => $adminId,
+                'cache_key' => $cacheKey,
+                'selected_columns' => $selectedColumns,
+                'has_cache' => Cache::has($cacheKey),
+            ]);
+
+            if (!empty($selectedColumns)) {
+                $exporter->setSelectedColumns($selectedColumns);
+            }
+
+            $grid->export($exporter)
                 ->filename('shift_report_' . date('YmdHis'));
         });
     }
@@ -246,7 +283,67 @@ class StoreShiftHandoverRecordController
     public function export()
     {
         // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
-        // ExAdmin 会自动调用 ShiftReportExporter
+    }
+
+    /**
+     * 导出配置 - 选择导出列
+     * @group store
+     * @auth true
+     */
+    public function exportConfig(): Form
+    {
+        return Form::create([], function (Form $form) {
+            $form->title(admin_trans('shift_handover.export.select_columns'));
+
+            // 获取所有可导出的列
+            $exporter = new ShiftReportExporter();
+            $columns = $exporter->getAvailableColumns();
+
+            // 获取用户之前的选择（默认全选）
+            $adminId = Admin::id();
+            $cacheKey = "export_columns_{$adminId}";
+            $selectedColumns = Cache::get($cacheKey, array_keys($columns));
+
+            Log::info("exportConfig 读取缓存", [
+                'admin_id' => $adminId,
+                'cache_key' => $cacheKey,
+                'selected_columns' => $selectedColumns,
+                'has_cache' => Cache::has($cacheKey),
+            ]);
+
+            // 复选框组选择列
+            $form->checkbox('columns', admin_trans('shift_handover.export.columns'))
+                ->options($columns)
+                ->default($selectedColumns)
+                ->required()
+                ->help(admin_trans('shift_handover.export.select_columns_help'));
+
+            $form->saving(function (Form $form) use ($cacheKey) {
+                $input = $form->input();
+                $selectedColumns = $input['columns'] ?? [];
+
+                Log::info("exportConfig 保存缓存", [
+                    'cache_key' => $cacheKey,
+                    'input' => $input,
+                    'selected_columns' => $selectedColumns,
+                ]);
+
+                if (empty($selectedColumns)) {
+                    return message_error(admin_trans('shift_handover.export.no_column_selected'));
+                }
+
+                // 保存到缓存（永久）
+                $result = Cache::set($cacheKey, $selectedColumns);
+
+                Log::info("exportConfig 缓存保存结果", [
+                    'cache_key' => $cacheKey,
+                    'result' => $result,
+                    'verify_cache' => Cache::get($cacheKey),
+                ]);
+
+                return message_success(admin_trans('shift_handover.export.config_saved'));
+            });
+        });
     }
 
     /**

@@ -58,6 +58,24 @@ class System extends SystemAbstract
      */
     public function logoHref(): ?string
     {
+        // 根据当前用户类型返回不同的首页路径
+        $user = Admin::user();
+        if ($user) {
+            // 渠道管理员 -> /channel
+            if ($user->isChannel()) {
+                return '/channel';
+            }
+            // 代理管理员 -> /agent
+            if ($user->isAgent()) {
+                return '/agent';
+            }
+            // 店家管理员 -> /store
+            if ($user->isStore()) {
+                return '/store';
+            }
+        }
+
+        // 超级管理员或其他类型 -> /admin
         return plugin()->webman->config('route.prefix');
     }
     
@@ -67,38 +85,55 @@ class System extends SystemAbstract
      */
     public function navbarRight(): array
     {
-        $ws = env('WS_URL', '');
+        $ws = config('app.ws_url', ''); // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
+
+        // 根据用户类型确定 WebSocket 频道类型
+        $user = Admin::user();
+        if ($user->isStore()) {
+            $socketType = 'store';
+        } elseif ($user->isAgent()) {
+            $socketType = 'agent';
+        } elseif ($user->type == 1) {
+            $socketType = 'admin';
+        } else {
+            $socketType = 'channel';
+        }
+
+        // 店家和代理后台需要实时接收服务铃消息，始终启用机台推送
+        $isStoreOrAgent = $user->isStore() || $user->isAgent();
+
         return [
             admin_view(plugin()->webman->getPath() . '/views/socket.vue')->attrs([
                 'id' => Admin::id(),
-                'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
+                'type' => $socketType,
                 'department_id' => Admin::user()->department_id,
                 'count' => 0,
                 'lang' => Container::getInstance()->translator->getLocale(),
                 'ws' => $ws,
                 'title' => admin_trans('admin.system_messages'),
-                'examine_withdraw' => Admin::check(ChannelWithdrawRecordController::class, 'reject',
-                        '') || Admin::check(ChannelWithdrawRecordController::class, 'pass', ''),
-                'examine_recharge' => Admin::check(ChannelRechargeRecordController::class, 'reject',
-                        '') || Admin::check(ChannelRechargeRecordController::class, 'pass', ''),
-                'examine_activity' => Admin::check(PlayerActivityRecordController::class, 'reject',
-                        '') || Admin::check(PlayerActivityRecordController::class, 'pass',
-                        '') || Admin::check(PlayerActivityRecordController::class, 'bathPass',
-                        '') || Admin::check(PlayerActivityRecordController::class, 'bathReject',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'reject',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'pass',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'bathReject',
-                        '') || Admin::check(ChannelPlayerActivityRecordController::class, 'bathPass', ''),
-                'examine_lottery' => Admin::check(PlayerLotteryRecordController::class, 'reject',
-                        '') || Admin::check(PlayerLotteryRecordController::class, 'pass',
-                        '') || Admin::check(PlayerLotteryRecordController::class, 'bathPass',
-                        '') || Admin::check(PlayerLotteryRecordController::class, 'bathReject',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'reject',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'pass',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathPass',
-                        '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', ''),
-                'machine' => Admin::check(MachineController::class, 'form',
-                        'post') || Admin::check(MachineController::class, 'form', 'put'),
+                'examine_withdraw' => Admin::check(ChannelWithdrawRecordController::class, 'reject', '')
+                        || Admin::check(ChannelWithdrawRecordController::class, 'pass', ''),
+                'examine_recharge' => Admin::check(ChannelRechargeRecordController::class, 'reject', '')
+                        || Admin::check(ChannelRechargeRecordController::class, 'pass', ''),
+                'examine_activity' => Admin::check(PlayerActivityRecordController::class, 'reject', '')
+                        || Admin::check(PlayerActivityRecordController::class, 'pass', '')
+                        || Admin::check(PlayerActivityRecordController::class, 'bathPass', '')
+                        || Admin::check(PlayerActivityRecordController::class, 'bathReject', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'reject', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'pass', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'bathReject', '')
+                        || Admin::check(ChannelPlayerActivityRecordController::class, 'bathPass', ''),
+                'examine_lottery' => Admin::check(PlayerLotteryRecordController::class, 'reject', '')
+                        || Admin::check(PlayerLotteryRecordController::class, 'pass', '')
+                        || Admin::check(PlayerLotteryRecordController::class, 'bathPass', '')
+                        || Admin::check(PlayerLotteryRecordController::class, 'bathReject', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'reject', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'pass', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathPass', '')
+                        || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', ''),
+                'machine' => $isStoreOrAgent  // 店家和代理始终启用（用于接收服务铃消息）
+                        || Admin::check(MachineController::class, 'form', 'post')
+                        || Admin::check(MachineController::class, 'form', 'put'),
             ])
         ];
     }
@@ -221,6 +256,12 @@ class System extends SystemAbstract
             $typeArr[] = Notice::TYPE_MACHINE_LOCK;
             $typeArr[] = Notice::TYPE_MACHINE_CRASH;
         }
+
+        // 店家后台：显示服务铃消息
+        if (Admin::user()->isStore()) {
+            $typeArr[] = Notice::TYPE_SERVICE_CALL;
+        }
+
         $list = [];
         if (Admin::user()->type == AdminDepartment::TYPE_DEPARTMENT && !empty($typeArr)) {
             $list = Notice::where('receiver', Notice::RECEIVER_ADMIN)->whereIN('type', $typeArr)
@@ -229,7 +270,17 @@ class System extends SystemAbstract
                 ->get();
         }
         if (Admin::user()->type == AdminDepartment::TYPE_CHANNEL && !empty($typeArr)) {
-            $list = Notice::whereIN('type', $typeArr)
+            $list = Notice::where('department_id', Admin::user()->department_id)  // 筛选当前渠道
+                ->whereIN('type', $typeArr)
+                ->latest()
+                ->forPage($page, $size)
+                ->get();
+        }
+        // 店家后台：查询当前店家管理员的消息
+        if (Admin::user()->isStore() && !empty($typeArr)) {
+            $list = Notice::where('admin_id', Admin::id())
+                ->where('department_id', Admin::user()->department_id)  // 二次校验：防止串消息
+                ->whereIN('type', $typeArr)
                 ->latest()
                 ->forPage($page, $size)
                 ->get();
@@ -378,6 +429,25 @@ class System extends SystemAbstract
                         'machine_status' => $hasLock,
                         'url' => admin_url([MachineController::class, 'infoList'])
                     ];
+                    break;
+                case Notice::TYPE_SERVICE_CALL:
+                    /** @var \addons\webman\model\AdminDevice $device */
+                    $device = \addons\webman\model\AdminDevice::find($item->source_id);
+                    if ($device) {
+                        $content = admin_trans('notice.content.' . $item->type, '', [
+                            '{device_name}' => $device->device_name,
+                        ]);
+                        $data[] = [
+                            'id' => $item->id,
+                            'source_id' => $item->source_id,
+                            'title' => $title,
+                            'content' => $content,
+                            'type' => $item->type,
+                            'created_at' => $createTime,
+                            'status' => true, // 服务铃消息始终显示为活跃
+                            'url' => '' // 服务铃消息不需要跳转
+                        ];
+                    }
                     break;
                 case Notice::TYPE_MACHINE_CRASH:
                     // 爆机通知直接使用保存的 content，因为已经包含了所有必要信息

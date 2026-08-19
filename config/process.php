@@ -69,6 +69,23 @@ return [
         'reloadable' => true,
         'constructor' => []
     ],
+
+    // ⚠️ 游戏记录归档任务已废弃，改用分区表方案（PartitionMaintenanceTask）
+    // 旧方案：每天DELETE归档（42-83分钟）
+    // 新方案：每月DROP PARTITION（0.1秒）
+    // 'play_game_record_archive' => [
+    //     'handler' => process\PlayGameRecordArchiveTask::class,
+    //     'reloadable' => true,
+    //     'constructor' => []
+    // ],
+
+    // 游戏记录分区维护任务（每月1日自动归档+删除旧分区）
+    'play_game_record_partition_maintenance' => [
+        'handler' => process\PartitionMaintenanceTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
     // ✅ 内存监控进程已禁用（问题已解决，不再需要监控）
     // 'memory_monitor' => [
     //     'handler' => process\MemoryMonitor::class,

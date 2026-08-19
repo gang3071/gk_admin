@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $device_name 设备名称
  * @property string $device_no 设备号（安卓设备唯一标识）
  * @property string $device_model 设备型号
+ * @property string|null $voice_url 语音播报文件URL（Google TTS生成）
  * @property int $status 状态(0:禁用,1:启用)
  * @property string $remark 备注
  * @property string $created_at 创建时间
@@ -51,6 +52,7 @@ class AdminDevice extends Model
         'device_name',
         'device_no',
         'device_model',
+        'voice_url',
         'status',
         'remark',
     ];

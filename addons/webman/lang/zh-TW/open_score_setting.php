@@ -32,4 +32,7 @@ return [
         'score' => '請輸入開分金額，0表示不啟用該選項',
         'default_scores' => '設置默認開分數值（0=標準, 100=基礎, 200=中級, 500=高級），用於恢復默認配置時使用',
     ],
+    'error' => [
+        'must_be_positive_integer' => ':field 必須是正整數',
+    ],
 ];
