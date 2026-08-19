@@ -130,6 +130,7 @@ return [
         'printer_not_connected' => '出票機未連接，請先連接出票機',
         'printer_connection_lost' => '出票機連接已斷開，請重新連接',
         'printer_connected' => '出票機連接正常',
+        'no_activity_config' => '請先配置活動參數後再發放福利券和體驗券',
         'order_id_required' => '請輸入訂單號',
         'order_not_found' => '訂單不存在',
         'order_not_reprintable' => '該訂單狀態不允許重複列印（僅支持未使用和列印失敗的訂單）',

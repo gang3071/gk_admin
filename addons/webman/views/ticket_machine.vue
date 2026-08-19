@@ -1281,6 +1281,29 @@ export default {
         this.reprintOrderId = '';
         this.reprintOrderInfo = null;
       }
+
+      // 检查福利券和体验券是否有活动配置
+      if (value === 3 || value === 4) {
+        const voucherConfig = this.voucher_config || {};
+        if (!voucherConfig.has_config) {
+          this.$message.warning(this.labels.no_activity_config || '请先配置活动参数后再发放福利券和体验券');
+          // 自动切回开分类型
+          this.ticketType = 1;
+          return;
+        }
+
+        // 检查对应的券是否启用
+        if (value === 3 && !voucherConfig.experience?.enabled) {
+          this.$message.warning('体验券功能未启用');
+          this.ticketType = 1;
+          return;
+        }
+        if (value === 4 && !voucherConfig.welfare?.enabled) {
+          this.$message.warning('福利券功能未启用');
+          this.ticketType = 1;
+          return;
+        }
+      }
     },
 
     // 查询订单（重复打印用）

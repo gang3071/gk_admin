@@ -130,6 +130,7 @@ return [
         'printer_not_connected' => '出票机未连接，请先连接出票机',
         'printer_connection_lost' => '出票机连接已断开，请重新连接',
         'printer_connected' => '出票机连接正常',
+        'no_activity_config' => '请先配置活动参数后再发放福利券和体验券',
         'order_id_required' => '请输入订单号',
         'order_not_found' => '订单不存在',
         'order_not_reprintable' => '该订单状态不允许重复打印（仅支持未使用和打印失败的订单）',

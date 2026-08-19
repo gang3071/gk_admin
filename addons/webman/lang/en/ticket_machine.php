@@ -130,6 +130,7 @@ return [
         'printer_not_connected' => 'Printer not connected, please connect first',
         'printer_connection_lost' => 'Printer connection lost, please reconnect',
         'printer_connected' => 'Printer connected',
+        'no_activity_config' => 'Please configure activity parameters before issuing welfare and experience vouchers',
         'order_id_required' => 'Please enter order ID',
         'order_not_found' => 'Order not found',
         'order_not_reprintable' => 'This order cannot be reprinted (only unused and print-failed orders are supported)',

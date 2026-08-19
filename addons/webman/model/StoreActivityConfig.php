@@ -4,6 +4,8 @@ namespace addons\webman\model;
 
 use support\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use addons\webman\traits\HasDateTimeFormatter;
+use Carbon\Carbon;
 
 /**
  * 店机活动配置模型（福利券/体验券）
@@ -38,9 +40,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class StoreActivityConfig extends Model
 {
-    use SoftDeletes;
+    use SoftDeletes, HasDateTimeFormatter;
 
     protected $table = 'store_activity_config';
+    protected $dateFormat = 'Y-m-d H:i:s';
     protected $primaryKey = 'id';
 
     /**
@@ -117,7 +120,7 @@ class StoreActivityConfig extends Model
             return false;
         }
 
-        $now = now();
+        $now = Carbon::now();
 
         if ($this->start_time && $now < $this->start_time) {
             return false;

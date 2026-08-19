@@ -196,7 +196,7 @@ return [
 
         // Error messages
         'error' => [
-            'already_exists' => 'This store already has an activity configuration, please edit directly',
+            'already_exists' => 'This store already has an active activity configuration, please disable it first',
         ],
 
         // Messages

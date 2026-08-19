@@ -1711,6 +1711,11 @@ class StoreMachineController
      */
     public function activityConfigList()
     {
+        // 处理 PUT 请求（switch 编辑更新）
+        if (request()->method() === 'PUT') {
+            return $this->updateActivityConfig();
+        }
+
         $storeId = request()->input('store_id');
 
         // 获取店家信息
@@ -1721,9 +1726,10 @@ class StoreMachineController
             });
         }
 
-        // 检查是否已有配置
+        // 检查是否已有启用的配置
         $existingConfig = \addons\webman\model\StoreActivityConfig::query()
             ->where('admin_user_id', $storeId)
+            ->where('status', 1)
             ->whereNull('deleted_at')
             ->first();
 
@@ -1781,11 +1787,56 @@ class StoreMachineController
             $grid->hideSelection();
             $grid->hideTrashed();
 
-            // 如果已有配置，隐藏新增按钮（一个店铺只能有一个配置）
+            // 如果已有启用的配置，隐藏新增按钮
             if ($existingConfig) {
                 $grid->hideCreate();
             }
         });
+    }
+
+    /**
+     * 更新活动配置状态
+     * @auth true
+     * @group channel
+     */
+    private function updateActivityConfig()
+    {
+        $request = request();
+        $body = $request->rawBody();
+        $requestData = json_decode($body, true);
+
+        // ExAdmin 格式：{"ex_admin_action":"update","ids":[1],"data":{"status":0}}
+        $ids = $requestData['ids'] ?? [];
+        $updateData = $requestData['data'] ?? [];
+
+        if (empty($ids)) {
+            return json(['status' => false, 'msg' => '配置ID不能为空']);
+        }
+
+        $id = $ids[0];
+
+        // 查询配置
+        $config = \addons\webman\model\StoreActivityConfig::find($id);
+
+        if (!$config) {
+            return json(['status' => false, 'msg' => '配置不存在']);
+        }
+
+        // 批量更新字段
+        foreach ($updateData as $field => $value) {
+            $config->$field = $value;
+        }
+
+        try {
+            if ($config->isDirty()) {
+                $config->save();
+                return json(['status' => true, 'msg' => '保存成功']);
+            } else {
+                return json(['status' => true, 'msg' => '数据未变化']);
+            }
+        } catch (\Exception $e) {
+            return json(['status' => false, 'msg' => '保存失败：' . $e->getMessage()]);
+        }
     }
 
     /**
@@ -1924,31 +1975,6 @@ class StoreMachineController
                     ->required();
             });
 
-            // ========== 订单前缀配置 ==========
-            $form->divider()->content(admin_trans('store_machine.activity_config.section.order_prefix'));
-
-            $form->row(function (Form $form) {
-                $form->text('order_prefix_experience', admin_trans('store_machine.activity_config.label.order_prefix_experience'))
-                    ->maxlength(10)
-                    ->value('TY')
-                    ->span(6);
-
-                $form->text('order_prefix_welfare', admin_trans('store_machine.activity_config.label.order_prefix_welfare'))
-                    ->maxlength(10)
-                    ->value('FL')
-                    ->span(6);
-
-                $form->text('order_prefix_recharge', admin_trans('store_machine.activity_config.label.order_prefix_recharge'))
-                    ->maxlength(10)
-                    ->value('TK')
-                    ->span(6);
-
-                $form->text('order_prefix_withdraw', admin_trans('store_machine.activity_config.label.order_prefix_withdraw'))
-                    ->maxlength(10)
-                    ->value('TK')
-                    ->span(6);
-            });
-
             $form->layout('vertical');
 
             // 保存时设置 admin_user_id 和验证
@@ -1960,10 +1986,11 @@ class StoreMachineController
                     $form->input('department_id', $store->department_id);
                 }
 
-                // 新增时检查是否已有配置
+                // 新增时检查是否已有启用的配置
                 if (!$form->isEdit()) {
                     $exists = \addons\webman\model\StoreActivityConfig::query()
                         ->where('admin_user_id', $storeId)
+                        ->where('status', 1)
                         ->whereNull('deleted_at')
                         ->exists();
                     if ($exists) {

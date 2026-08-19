@@ -130,6 +130,7 @@ return [
         'printer_not_connected' => 'プリンター未接続です。先に接続してください',
         'printer_connection_lost' => 'プリンター接続が切れました。再接続してください',
         'printer_connected' => 'プリンター接続正常',
+        'no_activity_config' => '福利バウチャーと体験バウチャーを発行する前に、アクティビティパラメータを設定してください',
         'order_id_required' => '注文番号を入力してください',
         'order_not_found' => '注文が見つかりません',
         'order_not_reprintable' => 'この注文は再印刷できません（未使用と印刷失敗の注文のみ対応）',

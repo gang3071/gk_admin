@@ -3897,8 +3897,62 @@ class ChannelIndexController
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
         $logLabels['printer_connected'] = admin_trans('ticket_machine.message.printer_connected');
 
-        // 获取福利券和体验券配置
-        $voucherConfig = config('voucher');
+        // 获取店铺的活动配置（福利券/体验券）
+        $storeId = $store->id ?? 0;
+        $activityConfig = \addons\webman\model\StoreActivityConfig::query()
+            ->where('admin_user_id', $storeId)
+            ->where('status', 1)
+            ->whereNull('deleted_at')
+            ->first();
+
+        // 转换为前端需要的格式
+        $voucherConfig = null;
+        if ($activityConfig && $activityConfig->isActive()) {
+            $voucherConfig = [
+                'has_config' => true,
+                'activity' => [
+                    'end_time' => $activityConfig->activity_end_time,
+                ],
+                'experience' => [
+                    'enabled' => (bool) $activityConfig->experience_enabled,
+                    'register_after' => $activityConfig->experience_register_after,
+                    'daily_limit' => $activityConfig->experience_daily_limit,
+                    'total_limit' => $activityConfig->experience_total_limit,
+                    'score' => $activityConfig->experience_score,
+                    'expire_hours' => $activityConfig->experience_expire_hours,
+                ],
+                'welfare' => [
+                    'enabled' => (bool) $activityConfig->welfare_enabled,
+                    'daily_limit' => $activityConfig->welfare_daily_limit,
+                    'rules' => $activityConfig->welfare_rules ?? [],
+                    'expire_hours' => $activityConfig->welfare_expire_hours,
+                ],
+            ];
+        } else {
+            $voucherConfig = [
+                'has_config' => false,
+                'activity' => [
+                    'end_time' => null,
+                ],
+                'experience' => [
+                    'enabled' => false,
+                    'register_after' => null,
+                    'daily_limit' => 0,
+                    'total_limit' => 0,
+                    'score' => 0,
+                    'expire_hours' => 24,
+                ],
+                'welfare' => [
+                    'enabled' => false,
+                    'daily_limit' => 0,
+                    'rules' => [],
+                    'expire_hours' => 24,
+                ],
+            ];
+        }
+
+        // 添加提示消息标签
+        $logLabels['no_activity_config'] = admin_trans('ticket_machine.message.no_activity_config');
 
         return admin_view(plugin()->webman->getPath() . '/views/ticket_machine.vue')->attrs([
             'default_baud_rate' => $defaultBaudRate,
@@ -3906,7 +3960,7 @@ class ChannelIndexController
             'default_store_uid' => $storeUid,
             'save_ticket_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/saveTicketRecord',
             'player_bet_info_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/getPlayerBetInfo',
-            'store_admin_id' => $store->id ?? 0,
+            'store_admin_id' => $storeId,
             'department_id' => $store->department_id ?? 0,
             'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
             'paper_jam_msg' => admin_trans('ticket_machine.paper.jam_msg'),
@@ -4157,35 +4211,45 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => '福利券和体验券必须选择关联玩家才能出票']);
             }
 
-            // 获取配置
-            $voucherConfig = config('voucher');
+            // 获取店铺的活动配置
+            $activityConfig = \addons\webman\model\StoreActivityConfig::query()
+                ->where('admin_user_id', $storeAdminId)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->first();
+
+            // 检查是否有活动配置
+            if (!$activityConfig || !$activityConfig->isActive()) {
+                // 如果是福利券或体验券，需要有活动配置
+                if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE
+                    || $ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE) {
+                    return json(['code' => 400, 'message' => '请先配置活动参数后再发放福利券和体验券']);
+                }
+            }
 
             // 验证活动是否在有效期内
-            if (isset($voucherConfig['activity']['end_time'])) {
-                $endTime = $voucherConfig['activity']['end_time'];
-                $forceEnable = $voucherConfig['activity']['force_enable'] ?? false;
-                if (!$forceEnable && $endTime && date('Y-m-d H:i:s') > $endTime) {
+            if ($activityConfig && $activityConfig->activity_end_time) {
+                if (date('Y-m-d H:i:s') > $activityConfig->activity_end_time) {
                     return json(['code' => 400, 'message' => '活动已结束，暂不发放福利券和体验券']);
                 }
             }
 
             // 体验券验证
             if ($ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE && $playerId > 0) {
-                $expConfig = $voucherConfig['experience'] ?? [];
-                if (empty($expConfig['enabled'])) {
+                if (!$activityConfig || !$activityConfig->experience_enabled) {
                     return json(['code' => 400, 'message' => '体验券功能未启用']);
                 }
 
                 // 检查是否是新用户（注册时间在配置时间之后）
                 $player = \addons\webman\model\Player::query()->where('id', $playerId)->first();
-                $registerAfter = $expConfig['register_after'] ?? '2026-07-01 00:00:00';
+                $registerAfter = $activityConfig->experience_register_after ?? '2026-07-01 00:00:00';
                 if (!$player || $player->created_at < $registerAfter) {
                     return json(['code' => 400, 'message' => '只有新会员才能领取体验券']);
                 }
 
                 // 检查每日领取次数（排除已删除的记录）
                 // 时间范围与打码量同步，以08:00作为分界点
-                $dailyLimit = $expConfig['daily_limit'] ?? 1;
+                $dailyLimit = $activityConfig->experience_daily_limit ?? 1;
                 $now = Carbon::now();
                 $today8am = Carbon::today()->setTime(8, 0, 0);
                 $tomorrow8am = Carbon::tomorrow()->setTime(8, 0, 0);
@@ -4232,7 +4296,7 @@ class ChannelIndexController
                 }
 
                 // 检查总领取次数（排除已删除的记录）
-                $totalLimit = $expConfig['total_limit'] ?? 6;
+                $totalLimit = $activityConfig->experience_total_limit ?? 6;
                 $totalCount = \addons\webman\model\TicketRecord::query()
                     ->where('player_id', $playerId)
                     ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
@@ -4244,10 +4308,10 @@ class ChannelIndexController
 
             // 福利券验证（按档位+规则类型分别限制）
             if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && $playerId > 0) {
-                $welfareConfig = $voucherConfig['welfare'] ?? [];
-                if (empty($welfareConfig['enabled'])) {
+                if (!$activityConfig || !$activityConfig->welfare_enabled) {
                     return json(['code' => 400, 'message' => '福利券功能未启用']);
                 }
+                $welfareRules = $activityConfig->welfare_rules ?? [];
 
                 // 根据前端传递的score正负确定规则类型
                 // 负数 = 今日规则，正数 = 昨日规则
@@ -4278,6 +4342,11 @@ class ChannelIndexController
                     $yesterdayEnd = $yesterday8am->toDateTimeString();
                 }
 
+                // 筛选当前规则类型的档位
+                $currentRules = array_filter($welfareRules, function ($rule) use ($ruleType) {
+                    return ($rule['day_type'] ?? 'yesterday') === $ruleType;
+                });
+
                 if ($ruleType === 'today') {
                     // 今日规则：检查今日打码量
                     $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
@@ -4286,9 +4355,8 @@ class ChannelIndexController
                         ->where('created_at', '<', $todayEnd)
                         ->sum('bet');
 
-                    $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
                     $valid = false;
-                    foreach ($todayWelfareRules as $rule) {
+                    foreach ($currentRules as $rule) {
                         if ($rule['score'] == $actualScore && $todayBetAmount >= $rule['bet_amount']) {
                             $valid = true;
                             break;
@@ -4305,11 +4373,9 @@ class ChannelIndexController
                         ->where('created_at', '<', $yesterdayEnd)
                         ->sum('bet');
 
-                    $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
-
                     // 找到用户满足的最高档位
                     $maxQualifiedScore = 0;
-                    foreach ($yesterdayWelfareRules as $rule) {
+                    foreach ($currentRules as $rule) {
                         if ($yesterdayBetAmount >= $rule['bet_amount'] && $rule['score'] > $maxQualifiedScore) {
                             $maxQualifiedScore = $rule['score'];
                         }
