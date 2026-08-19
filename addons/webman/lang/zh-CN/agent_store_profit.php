@@ -54,6 +54,13 @@ return [
 
     // 统计数据
     'stats' => [
+        'panel_header' => '查看统计数据',
+        'loading' => '数据加载中...',
+        'refresh' => '刷新数据',
+        'load_error' => '数据加载失败',
+        'retry' => '重试',
+        'click_to_view' => '点击展开查看统计数据',
+        'load_failed_msg' => '数据加载失败，请重试',
         'total_recharge' => '总开分',
         'total_withdraw' => '总洗分',
         'total_machine_put' => '总投钞',

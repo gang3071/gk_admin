@@ -59,6 +59,13 @@ return [
 
     // Statistics
     'stats' => [
+        'panel_header' => 'View Statistics',
+        'loading' => 'Loading...',
+        'refresh' => 'Refresh',
+        'load_error' => 'Failed to load data',
+        'retry' => 'Retry',
+        'click_to_view' => 'Click to view statistics',
+        'load_failed_msg' => 'Failed to load data, please retry',
         'total_recharge' => 'Total Open Score',
         'total_withdraw' => 'Total Wash Score',
         'total_machine_put' => 'Total Coin Deposit',

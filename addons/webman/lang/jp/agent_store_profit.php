@@ -54,6 +54,13 @@ return [
 
     // 統計データ
     'stats' => [
+        'panel_header' => '統計データを表示',
+        'loading' => 'データ読み込み中...',
+        'refresh' => '更新',
+        'load_error' => 'データの読み込みに失敗しました',
+        'retry' => '再試行',
+        'click_to_view' => 'クリックして統計データを表示',
+        'load_failed_msg' => 'データの読み込みに失敗しました。再試行してください',
         'total_recharge' => '総開分',
         'total_withdraw' => '総洗分',
         'total_machine_put' => '総投鈔',

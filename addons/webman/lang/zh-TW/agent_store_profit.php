@@ -54,6 +54,13 @@ return [
 
     // 統計數據
     'stats' => [
+        'panel_header' => '查看統計數據',
+        'loading' => '數據載入中...',
+        'refresh' => '刷新數據',
+        'load_error' => '數據載入失敗',
+        'retry' => '重試',
+        'click_to_view' => '點擊展開查看統計數據',
+        'load_failed_msg' => '數據載入失敗，請重試',
         'total_recharge' => '總開分',
         'total_withdraw' => '總洗分',
         'total_machine_put' => '總投鈔',
