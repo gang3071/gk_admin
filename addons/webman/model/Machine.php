@@ -21,6 +21,7 @@ use support\Cache;
  * @property string name 機台名称
  * @property string picture_url 图片
  * @property int type 机台类型
+ * @property int play_type 精灵球玩法类型 0=无 1=一球多燈 2=三球 3=三關
  * @property string domain domain
  * @property string ip 機台ip 機台控制IP
  * @property string port 機台port
@@ -85,6 +86,7 @@ use support\Cache;
  * @property MachineStrategy machine_strategy
  * @property MachineProducer producer
  * @property MachineLabel machineLabel
+ * @property PokemonBallPlayRule[] pokemonBallPlayRules
  * @package addons\webman\model
  */
 class Machine extends Model
@@ -270,5 +272,14 @@ class Machine extends Model
     {
         return $this->belongsTo(plugin()->webman->config('database.machine_producer_model'),
             'producer_id')->withTrashed();
+    }
+
+    /**
+     * 精灵球玩法规则
+     * @return HasMany
+     */
+    public function pokemonBallPlayRules(): HasMany
+    {
+        return $this->hasMany(PokemonBallPlayRule::class, 'machine_id');
     }
 }

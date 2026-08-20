@@ -39,6 +39,7 @@ class MachineCategoryController
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_SLOT), $this->slotCateList())
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL), $this->jackPotCateList())
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_FISH), $this->fishCateList())
+            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL), $this->pokemonBallCateList())
             ->type('card')
             ->destroyInactiveTabPane()
         );
@@ -328,6 +329,104 @@ class MachineCategoryController
     }
 
     /**
+     * 精灵球类别列表
+     * @return Grid
+     */
+    public function pokemonBallCateList(): Grid
+    {
+        return Grid::create(new $this->model(), function (Grid $grid) {
+            $grid->model()->with(['gameType'])
+                ->whereHas('gameType', function ($query) {
+                    $query->where('type', GameType::TYPE_POKEMON_BALL);
+                })
+                ->orderBy('sort', 'desc')
+                ->orderBy('status', 'desc');
+            $grid->title(admin_trans('machine_category.title'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+            $grid->column('id', admin_trans('machine_category.fields.id'))->align('center');
+            $grid->column('game_id', admin_trans('machine_category.fields.game_id'))->display(function ($val, $data) {
+                return Html::create()->content([
+                    $data->gameType->name ?? '',
+                ]);
+            })->align('center');
+            $grid->column('type', admin_trans('machine_category.fields.type'))->display(function ($val) {
+                return Html::create()->content([
+                    admin_trans('game_type.game_type.' . $val)
+                ]);
+            })->align('center');
+            $grid->column('name', admin_trans('machine_category.fields.name'))->align('center');
+            $grid->column('turn_used_point', admin_trans('machine_category.fields.turn_used_point'))->align('center');
+            $grid->column('picture_url', admin_trans('machine_category.fields.picture_url'))->display(function (
+                $val,
+                $data
+            ) {
+                $image = Image::create()
+                    ->width(50)
+                    ->height(50)
+                    ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
+                    ->src($data['picture_url']);
+                return Html::create()->content([
+                    $image,
+                ]);
+            })->align('center');
+            $grid->column('keep_minutes', admin_trans('machine_category.fields.keep_minutes'))
+                ->display(function ($val) {
+                    if (!empty($val)) {
+                        return $val . admin_trans('machine_category.fields.second');
+                    }
+                    return '';
+                })
+                ->editable(
+                    (new Editable)->text('keep_minutes')
+                        ->style(['width' => '100%'])
+                        ->rule([
+                            'numeric' => admin_trans('validator.numeric'),
+                            'max:600' => admin_trans('validator.max', null, ['{max}' => 600]),
+                            'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                        ])
+                        ->addonAfter(admin_trans('machine_category.fields.second'))
+                        ->required()
+                )->width(150)->align('center');
+            $grid->column('lottery_point', admin_trans('machine_category.fields.lottery_point'))->display(function ($val
+            ) {
+                return Html::create()->content([
+                    $val > 0 ? $val : '',
+                ]);
+            })->align('center');
+            $grid->column('lottery_add_status',
+                admin_trans('machine_category.fields.lottery_add_status'))->switch()->align('center');
+            $grid->column('lottery_rate', admin_trans('machine_category.fields.lottery_rate'))->display(function ($val
+            ) {
+                return Html::create()->content([
+                    $val > 0 ? $val : '',
+                ]);
+            })->align('center');
+            $grid->column('lottery_assign_status',
+                admin_trans('machine_category.fields.lottery_assign_status'))->switch()->align('center');
+            $grid->column('type', admin_trans('machine_category.fields.type'))->display(function (
+                $val,
+                MachineCategory $data
+            ) {
+                $typeName = getGameTypeName($data->gameType->type);
+                return Html::create()->content([
+                    $typeName,
+                ]);
+            })->align('center');
+            $grid->sortInput('sort', admin_trans('machine_category.fields.sort'))->align('center');
+            $grid->column('status', admin_trans('machine_category.fields.status'))->switch()->align('center');
+            $grid->expandFilter();
+            $grid->setForm()->drawer($this->form());
+            $grid->hideDelete();
+            $grid->deling(function ($ids) {
+                if (Machine::query()->where('cate_id', $ids)->first()) {
+                    return message_error(admin_trans('machine_category.delete_has_machine_error'));
+                }
+            });
+        });
+    }
+
+    /**
      * 机台类别
      * @auth true
      * @return Form
@@ -448,6 +547,13 @@ class MachineCategoryController
                         $form->text('give_rule_num', admin_trans('machine_category.opening_gift.give_rule_num'))->style(['width' => '80px'])
                             ->default(1);
                     })->sortField('sort')->table()->defaultRow(0);
+                })->when(GameType::TYPE_POKEMON_BALL, function (Form $form) use ($gameType) {
+                    $form->hasMany('machineCategoryGiveRule', admin_trans('machine_category.opening_gift.opening_gift'), function (Form $form) {
+                        $form->text('open_num', admin_trans('machine_category.opening_gift.open_num'))->style(['width' => '100px']);
+                        $form->text('give_num', admin_trans('machine_category.opening_gift.give_num'))->style(['width' => '100px']);
+                        $form->text('give_rule_num', admin_trans('machine_category.opening_gift.give_rule_num'))->style(['width' => '100px'])
+                            ->default(1);
+                    })->sortField('sort')->table()->defaultRow(0);
                 });
             $form->watch([
                 'game_id' => function ($value, Watch $watch) {
@@ -465,6 +571,7 @@ class MachineCategoryController
                 if (!empty($machineCategoryGiveRule)) {
                     $slotKeys = ['open_num', 'give_num'];
                     $steelBallKeys = $slotKeys;
+                    $pokemonBallKeys = $slotKeys;
                     array_unshift($slotKeys, 'condition');
                     foreach ($machineCategoryGiveRule as $key => $val) {
                         $machineCategoryGiveRule[$key]['sort'] = $key;
@@ -477,6 +584,7 @@ class MachineCategoryController
                                 }
                                 break;
                             case GameType::TYPE_STEEL_BALL:
+                            case GameType::TYPE_POKEMON_BALL:
                                 foreach ($steelBallKeys as $sVal) {
                                     if (empty($val[$sVal])) {
                                         return message_error('Validation fail:' . admin_trans('machine_category.opening_gift.' . $sVal));

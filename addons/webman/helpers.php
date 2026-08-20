@@ -117,7 +117,8 @@ if (!function_exists('getGameTypeOptions')) {
         return [
             GameType::TYPE_SLOT => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT),
             GameType::TYPE_STEEL_BALL => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL),
-            GameType::TYPE_FISH => admin_trans('game_type.game_type.' . GameType::TYPE_FISH)
+            GameType::TYPE_FISH => admin_trans('game_type.game_type.' . GameType::TYPE_FISH),
+            GameType::TYPE_POKEMON_BALL => admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL)
         ];
     }
 }
@@ -1467,6 +1468,13 @@ if (!function_exists('getCateListOptions')) {
                     'pid' => -GameType::TYPE_FISH
                 ];
             }
+            if ($item->gameType->type == GameType::TYPE_POKEMON_BALL) {
+                $optionList[] = [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'pid' => -GameType::TYPE_POKEMON_BALL
+                ];
+            }
         }
         if (empty($data) || ($data['type'] == GameType::TYPE_SLOT)) {
             $optionList[] = [
@@ -1487,6 +1495,13 @@ if (!function_exists('getCateListOptions')) {
             $optionList[] = [
                 'id' => -GameType::TYPE_FISH,
                 'name' => admin_trans('game_type.game_type.' . GameType::TYPE_FISH),
+                'pid' => 0
+            ];
+        }
+        if (empty($data) || ($data['type'] == GameType::TYPE_POKEMON_BALL)) {
+            $optionList[] = [
+                'id' => -GameType::TYPE_POKEMON_BALL,
+                'name' => admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL),
                 'pid' => 0
             ];
         }

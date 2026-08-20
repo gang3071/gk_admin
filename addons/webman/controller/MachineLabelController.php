@@ -36,6 +36,7 @@ class MachineLabelController
         return Card::create(Tabs::create()
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_SLOT), $this->slotLabelList())
             ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL), $this->jackPotLabelList())
+            ->pane(admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL), $this->pokemonBallLabelList())
             ->type('card')
             ->destroyInactiveTabPane()
         );
@@ -114,6 +115,7 @@ class MachineLabelController
                     GameType::TYPE_SLOT => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT),
                     GameType::TYPE_STEEL_BALL => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL),
                     GameType::TYPE_FISH => admin_trans('game_type.game_type.' . GameType::TYPE_FISH),
+                    GameType::TYPE_POKEMON_BALL => admin_trans('game_type.game_type.' . GameType::TYPE_POKEMON_BALL),
                 ])
                 ->required();
             $form->number('sort',
@@ -151,6 +153,24 @@ class MachineLabelController
                         ])->required()->default(0)->span(11)->style(['margin-left' => '10px']);
                     });
                     $form->text('courtyard', admin_trans('machine_label.fields.courtyard'))->maxlength(80)->required();
+                })->when(GameType::TYPE_POKEMON_BALL, function (Form $form) use ($gameType) {
+                    $form->row(function (Form $form) {
+                        $form->text('point', admin_trans('machine_label.fields.point'))->rule([
+                            'integer' => admin_trans('validator.integer'),
+                            'max:10000000' => admin_trans('validator.max', null, ['{max}' => 10000000]),
+                            'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                        ])->required()->default(0)->span(11);
+                        $form->text('turn', admin_trans('machine_label.fields.turn'))->rule([
+                            'integer' => admin_trans('validator.integer'),
+                            'max:10000000' => admin_trans('validator.max', null, ['{max}' => 10000000]),
+                            'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                        ])->required()->default(0)->span(11)->style(['margin-left' => '10px']);
+                    });
+                    $form->text('correct_rate', admin_trans('machine_label.fields.correct_rate'))->rule([
+                        'integer' => admin_trans('validator.integer'),
+                        'max:10000' => admin_trans('validator.max', null, ['{max}' => 10000]),
+                        'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                    ])->required();
                 });
             $form->row(function (Form $form) {
                 $langList = plugin()->webman->config('ui.lang.list');
@@ -221,6 +241,61 @@ class MachineLabelController
         return Grid::create(new $this->model(), function (Grid $grid) {
             $grid->model()
                 ->where('type', GameType::TYPE_STEEL_BALL)
+                ->orderBy('sort', 'desc')
+                ->orderBy('status', 'desc');
+            $grid->title(admin_trans('machine_label.title'));
+            $grid->autoHeight();
+            $grid->bordered(true);
+            $grid->column('id', admin_trans('machine_label.fields.id'))->align('center');
+            $grid->column('name', admin_trans('machine_label.fields.name'))->align('center');
+            $grid->column('picture_url', admin_trans('machine_label.fields.picture_url'))->display(function (
+                $val,
+                $data
+            ) {
+                $image = Image::create()
+                    ->width(50)
+                    ->height(50)
+                    ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
+                    ->src($data['picture_url']);
+                return Html::create()->content([
+                    $image,
+                ]);
+            })->align('center');
+            $grid->column('score', admin_trans('machine_label.fields.score'))->display(function (
+                $val,
+                MachineLabel $data
+            ) {
+                return Html::create()->content([
+                    $data->point . admin_trans('machine_label.fields.score'),
+                    $data->turn . admin_trans('machine_label.fields.turn'),
+                ]);
+            })->align('center');
+            $grid->column('correct_rate', admin_trans('machine_label.fields.correct_rate'))->align('center');
+            $grid->sortInput('sort', admin_trans('machine_label.fields.sort'))->align('center');
+            $grid->column('status', admin_trans('machine_label.fields.status'))->switch()->align('center');
+            $grid->expandFilter();
+            $grid->setForm()->drawer($this->form());
+            $grid->filter(function (Filter $filter) {
+                $filter->like()->text('name')->placeholder(admin_trans('machine_label.fields.name'));
+            });
+            $grid->hideDelete();
+            $grid->deling(function ($ids) {
+                if (Machine::query()->where('label_id', $ids)->first()) {
+                    return message_error(admin_trans('machine_label.delete_has_machine_error'));
+                }
+            });
+        });
+    }
+
+    /**
+     * 精灵球机台标签列表
+     * @return Grid
+     */
+    public function pokemonBallLabelList(): Grid
+    {
+        return Grid::create(new $this->model(), function (Grid $grid) {
+            $grid->model()
+                ->where('type', GameType::TYPE_POKEMON_BALL)
                 ->orderBy('sort', 'desc')
                 ->orderBy('status', 'desc');
             $grid->title(admin_trans('machine_label.title'));

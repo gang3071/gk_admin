@@ -15,6 +15,7 @@ use addons\webman\model\MachineStrategy;
 use addons\webman\model\MachineTencentPlay;
 use addons\webman\model\Notice;
 use addons\webman\model\Player;
+use addons\webman\model\PokemonBallPlayRule;
 use addons\webman\service\MediaServer;
 use addons\webman\service\WalletService;
 use app\service\machine\Jackpot;
@@ -513,6 +514,69 @@ class MachineController
                                     ->required()
                                     ->style(['margin-left' => '10px']);
                             });
+                            // 精灵球玩法配置
+                            $playType = $form->getBindField('play_type');
+                            $form->select('play_type', admin_trans('pokemon_ball_play.fields.play_type'))
+                                ->style(['width' => '200px'])
+                                ->options(\addons\webman\model\PokemonBallPlayRule::getPlayTypeOptions())
+                                ->placeholder(admin_trans('pokemon_ball_play.placeholder.select_play_type'))
+                                ->required();
+                            // 根据玩法类型显示规则配置
+                            $form->hidden('play_type')->bindAttr('value', $playType)
+                                ->when(\addons\webman\model\PokemonBallPlayRule::PLAY_TYPE_ONE_BALL_MULTI_LIGHT, function (Form $form) {
+                                    $form->hasMany('pokemonBallPlayRules', admin_trans('pokemon_ball_play.title'), function (Form $form) {
+                                        $form->text('light_count', admin_trans('pokemon_ball_play.fields.light_count'))
+                                            ->style(['width' => '100px'])
+                                            ->required()
+                                            ->rule([
+                                                'integer' => admin_trans('validator.integer'),
+                                                'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                            ]);
+                                        $form->text('multiplier', admin_trans('pokemon_ball_play.fields.multiplier'))
+                                            ->style(['width' => '100px'])
+                                            ->required()
+                                            ->rule([
+                                                'numeric' => admin_trans('validator.numeric'),
+                                                'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
+                                            ]);
+                                    })->sortField('sort')->table()->defaultRow(5);
+                                })
+                                ->when(\addons\webman\model\PokemonBallPlayRule::PLAY_TYPE_THREE_BALL, function (Form $form) {
+                                    $form->hasMany('pokemonBallPlayRules', admin_trans('pokemon_ball_play.title'), function (Form $form) {
+                                        $form->text('light_count', admin_trans('pokemon_ball_play.fields.light_count'))
+                                            ->style(['width' => '100px'])
+                                            ->required()
+                                            ->rule([
+                                                'integer' => admin_trans('validator.integer'),
+                                                'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                            ]);
+                                        $form->text('multiplier', admin_trans('pokemon_ball_play.fields.multiplier'))
+                                            ->style(['width' => '100px'])
+                                            ->required()
+                                            ->rule([
+                                                'numeric' => admin_trans('validator.numeric'),
+                                                'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
+                                            ]);
+                                    })->sortField('sort')->table()->defaultRow(4);
+                                })
+                                ->when(\addons\webman\model\PokemonBallPlayRule::PLAY_TYPE_THREE_GUAN, function (Form $form) {
+                                    $form->hasMany('pokemonBallPlayRules', admin_trans('pokemon_ball_play.title'), function (Form $form) {
+                                        $form->text('light_count', admin_trans('pokemon_ball_play.fields.light_count'))
+                                            ->style(['width' => '100px'])
+                                            ->required()
+                                            ->rule([
+                                                'integer' => admin_trans('validator.integer'),
+                                                'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                            ]);
+                                        $form->text('multiplier', admin_trans('pokemon_ball_play.fields.multiplier'))
+                                            ->style(['width' => '100px'])
+                                            ->required()
+                                            ->rule([
+                                                'numeric' => admin_trans('validator.numeric'),
+                                                'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
+                                            ]);
+                                    })->sortField('sort')->table()->defaultRow(3);
+                                });
                         });
 
                     $form->row(function (Form $form) {
@@ -726,6 +790,7 @@ class MachineController
         $machine->cate_id = $form->input('cate_id');
         $machine->producer_id = $form->input('producer_id');
         $machine->type = $form->input('type');
+        $machine->play_type = $form->input('play_type') ?? 0;
         $machine->picture_url = $form->input('picture_url');
         $machine->code = $form->input('code');
         $machine->domain = $form->input('domain');
@@ -747,6 +812,29 @@ class MachineController
         $machine->label_id = $form->input('label_id');
         $machine->is_special = $form->input('is_special');
         $machine->save();
+
+        // 保存精灵球玩法规则
+        if ($machine->type == GameType::TYPE_POKEMON_BALL && !empty($form->input('play_type'))) {
+            $pokemonBallPlayRules = $form->input('pokemonBallPlayRules', []);
+            // 编辑时删除旧规则
+            if ($isEdit) {
+                PokemonBallPlayRule::where('machine_id', $machine->id)->delete();
+            }
+            // 保存新规则
+            if (!empty($pokemonBallPlayRules)) {
+                foreach ($pokemonBallPlayRules as $key => $rule) {
+                    if (!empty($rule['light_count']) && !empty($rule['multiplier'])) {
+                        PokemonBallPlayRule::create([
+                            'machine_id' => $machine->id,
+                            'play_type' => $form->input('play_type'),
+                            'light_count' => $rule['light_count'],
+                            'multiplier' => $rule['multiplier'],
+                            'sort' => $key,
+                        ]);
+                    }
+                }
+            }
+        }
         //保存修改时进行缓存处理
         // 格式化缓存key
         $cacheKey = sprintf('machine:domain:%s:port:%s:type:%s',
