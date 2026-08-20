@@ -253,6 +253,11 @@ class AutoShiftService
             // 新增字段
             $shiftRecord->open_score_amount = $statistics['open_score_amount'];
             $shiftRecord->ticket_open_score_amount = $statistics['ticket_open_score_amount'];
+            $shiftRecord->incoming_ticket_amount = $statistics['incoming_ticket_amount'];
+            // 导出用核销（status=2后台核销）
+            $shiftRecord->redeem_amount = $statistics['redeem_amount'];
+            // 机台核销（status=3机台使用）
+            $shiftRecord->redeem_machine_amount = $statistics['redeem_machine_amount'];
             $shiftRecord->channel_withdrawal_amount = $statistics['channel_withdrawal_amount'];
             $shiftRecord->ticket_redeem_amount = $statistics['ticket_redeem_amount'];
             $shiftRecord->ticket_unredeemed_amount = $statistics['ticket_unredeemed_amount'];

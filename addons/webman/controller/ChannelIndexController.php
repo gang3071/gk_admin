@@ -3682,10 +3682,10 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->redeem_machine_amount = $redeemAmount ?? 0;
                     $storeAgentShiftHandoverRecord->channel_withdrawal_amount = $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->ticket_redeem_amount = $playerDeliveryRecord['ticket_redeem_amount'] ?? 0;
-                    // 未核销 = 出卷 - 核销（使用导出用核销）
+                    // 未核销 = 出卷 - 后台核销 - 机台核销
                     $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = bcsub(
-                        $playerDeliveryRecord['ticket_redeem_amount'] ?? 0,
-                        $redeemAmountExport ?? 0,
+                        bcsub($playerDeliveryRecord['ticket_redeem_amount'] ?? 0, $redeemAmountExport ?? 0, 2),
+                        $redeemAmount ?? 0,
                         2
                     );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
@@ -4817,8 +4817,8 @@ class ChannelIndexController
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 核销（使用导出用核销）
-                    'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销
+                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
                     'experience_coupon_amount' => $experienceCouponAmount,
                     'welfare_coupon_amount' => $welfareCouponAmount,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
