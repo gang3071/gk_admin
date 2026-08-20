@@ -590,8 +590,8 @@ class AutoShiftService
             'redeem_machine_amount' => (float)$redeemAmount,
             'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
             'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-            // 未核销 = 出卷 - 核销（使用导出用核销）
-            'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+            // 未核销 = 出卷 - 后台核销 - 机台核销
+            'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
             // 详细分类数据（保留原有字段）
@@ -838,8 +838,8 @@ class AutoShiftService
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 核销（使用导出用核销）
-                    'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销
+                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
                     'experience_coupon_amount' => $experienceCoupon,
                     'welfare_coupon_amount' => $welfareCoupon,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
