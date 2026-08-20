@@ -94,6 +94,12 @@ return [
         'vip_max_level' => '已达最高等级',
         'agent_admin_id' => '所属代理商',
         'store_admin_id' => '所属店家',
+        'audit_status' => '审核',
+    ],
+    'audit' => [
+        'pending' => '未审核',
+        'approved' => '已通过',
+        'rejected' => '未通过',
     ],
     'player_no_change' => '玩家沒有變動',
     'not_fount' => '未找到该玩家',

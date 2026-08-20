@@ -391,6 +391,15 @@ class ChannelPlayerController
                 return $val ? $val : '-';
             })->ellipsis(true)->align('center')->copy();
 
+            // 审核状态
+            $grid->column('audit_status', admin_trans('player.fields.audit_status'))->display(function ($val) {
+                return match($val) {
+                    Player::AUDIT_STATUS_APPROVED => Tag::create(admin_trans('player.audit.approved'))->color('green'),
+                    Player::AUDIT_STATUS_REJECTED => Tag::create(admin_trans('player.audit.rejected'))->color('red'),
+                    default => Tag::create(admin_trans('player.audit.pending'))->color('default'),
+                };
+            })->align('center');
+
             // 线下渠道：使用 player_type 字段显示玩家类型
             if ($channel && $channel->is_offline == 1) {
                 $grid->column('type', admin_trans('player.fields.type'))->display(function ($val, $data) {
@@ -659,6 +668,16 @@ class ChannelPlayerController
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
 
+                // 审核状态筛选
+                $filter->eq()->select('audit_status')
+                    ->placeholder(admin_trans('player.fields.audit_status'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        Player::AUDIT_STATUS_PENDING => admin_trans('player.audit.pending'),
+                        Player::AUDIT_STATUS_APPROVED => admin_trans('player.audit.approved'),
+                        Player::AUDIT_STATUS_REJECTED => admin_trans('player.audit.rejected'),
+                    ]);
+
                 // VIP等级筛选
                 $filter->eq()->select('vip_level_id')
                     ->placeholder(admin_trans('player.fields.vip_level'))
@@ -901,6 +920,9 @@ class ChannelPlayerController
         }
         if (!empty($requestFilter['real_name'])) {
             $query->where('player.real_name', 'like', '%' . $requestFilter['real_name'] . '%');
+        }
+        if (isset($requestFilter['audit_status']) && $requestFilter['audit_status'] !== '') {
+            $query->where('player.audit_status', (int)$requestFilter['audit_status']);
         }
         if (!empty($requestFilter['department_id'])) {
             $query->where('player.department_id', $requestFilter['department_id']);
@@ -2503,7 +2525,7 @@ class ChannelPlayerController
                         return message_success(admin_trans('form.save_success'));
                     }
                 }
-                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
+                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']) || isset($data['audit_status']))) {
                     if (Player::query()->where('id', $ids[0])->update(
                         $data
                     )) {

@@ -94,6 +94,12 @@ return [
         'vip_max_level' => 'Max Level Reached',
         'agent_admin_id' => 'Agent',
         'store_admin_id' => 'Store',
+        'audit_status' => 'Audit',
+    ],
+    'audit' => [
+        'pending' => 'Pending',
+        'approved' => 'Approved',
+        'rejected' => 'Rejected',
     ],
     'player_no_change' => 'The player has not changed',
     'not_fount' => 'The player was not found',

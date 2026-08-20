@@ -93,6 +93,12 @@ return [
         'vip_max_level' => '最高レベルに達しました',
         'agent_admin_id' => '所属エージェント',
         'store_admin_id' => '所属店舗',
+        'audit_status' => '審査',
+    ],
+    'audit' => [
+        'pending' => '未審査',
+        'approved' => '承認済み',
+        'rejected' => '却下',
     ],
     'player_no_change' => 'プレイヤーは変更されていません',
     'not_fount' => 'プレーヤーが見つかりませんでした',
