@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $ticket_open_score_amount 开票金额(source=ticket_open_score)
  * @property float $incoming_ticket_amount 入票金额(原开票+后台核销)
  * @property float $redeem_amount 核销金额(后台核销)
+ * @property float $redeem_machine_amount 机台核销金额(核销金额-入票用)
  * @property float $withdrawal_amount 洗分金额
  * @property float $channel_withdrawal_amount 洗分金额(source=channel_withdrawal)
  * @property float $ticket_redeem_amount 出卷金额(source=ticket_redeem)
@@ -72,6 +73,7 @@ class StoreShiftDeviceDetail extends Model
         'ticket_open_score_amount',
         'incoming_ticket_amount',
         'redeem_amount',
+        'redeem_machine_amount',
         'withdrawal_amount',
         'channel_withdrawal_amount',
         'ticket_redeem_amount',
@@ -99,6 +101,7 @@ class StoreShiftDeviceDetail extends Model
         'ticket_open_score_amount' => 'float',
         'incoming_ticket_amount' => 'float',
         'redeem_amount' => 'float',
+        'redeem_machine_amount' => 'float',
         'withdrawal_amount' => 'float',
         'channel_withdrawal_amount' => 'float',
         'ticket_redeem_amount' => 'float',

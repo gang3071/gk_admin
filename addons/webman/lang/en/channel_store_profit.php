@@ -19,6 +19,7 @@ return [
         'ticket_redeem_amount' => 'Ticket Redeem',
         'ticket_open_score_amount' => 'Ticket Open Score',
         'redeem_amount' => 'Redeem',
+        'redeem_machine_amount' => 'Machine Redeem',
         'ticket_unredeemed_amount' => 'Unredeemed',
         'experience_coupon_amount' => 'Experience Coupon',
         'welfare_coupon_amount' => 'Welfare Coupon',

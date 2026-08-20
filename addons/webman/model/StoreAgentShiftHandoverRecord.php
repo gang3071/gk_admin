@@ -24,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $ticket_open_score_amount 开票金额汇总
  * @property float $incoming_ticket_amount 入票金额汇总(原开票+后台核销)
  * @property float $redeem_amount 核销金额汇总(后台核销)
+ * @property float $redeem_machine_amount 机台核销金额汇总(核销金额-入票用)
  * @property float $channel_withdrawal_amount 洗分金额汇总
  * @property float $ticket_redeem_amount 出卷金额汇总
  * @property float $ticket_unredeemed_amount 未核销汇总(出卷-核销)

@@ -586,6 +586,8 @@ class AutoShiftService
             'incoming_ticket_amount' => (float)$incomingTicketAmount,
             // 导出用核销（status=2后台核销）
             'redeem_amount' => (float)$redeemAmountExport,
+            // 机台核销（status=3机台使用）
+            'redeem_machine_amount' => (float)$redeemAmount,
             'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
             'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
             // 未核销 = 出卷 - 核销（使用导出用核销）
@@ -831,6 +833,8 @@ class AutoShiftService
                     'incoming_ticket_amount' => (float)$incomingTicketAmount,
                     // 导出用核销（status=2后台核销）
                     'redeem_amount' => (float)$redeemAmountExport,
+                    // 机台核销（status=3机台使用）
+                    'redeem_machine_amount' => (float)$redeemAmount,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),

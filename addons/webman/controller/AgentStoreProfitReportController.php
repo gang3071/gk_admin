@@ -174,6 +174,7 @@ class AgentStoreProfitReportController
                 'ticket_redeem_amount' => $ticketRedeemAmount,
                 'ticket_open_score_amount' => $ticketOpenScoreAmount,
                 'redeem_amount' => $redeemAmount,
+                'redeem_machine_amount' => $redeemMachineAmount,
                 'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
                 'experience_coupon_amount' => $experienceCouponAmount,
                 'welfare_coupon_amount' => $welfareCouponAmount,
@@ -474,7 +475,7 @@ class AgentStoreProfitReportController
         $amountColumns = [
             'open_score_amount', 'withdraw_amount', 'machine_put_point',
             'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
-            'redeem_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
+            'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
             'welfare_coupon_amount', 'lottery_amount', 'activity_total',
             'electronic_game_bet_amount', 'machine_bet_amount',
             'total_income', 'total_expense',
