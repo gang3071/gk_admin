@@ -842,7 +842,6 @@ class ChannelPlayerController
 
             // 行内编辑更新处理
             $grid->updateing(function ($ids, $data) {
-                Log::info('editable update', ['ids' => $ids, 'data' => $data]);
                 // 处理 player_extend 字段（编辑弹窗保存）
                 if (isset($ids[0]) && isset($data['player_extend'])) {
                     if (PlayerExtend::updateOrCreate(
