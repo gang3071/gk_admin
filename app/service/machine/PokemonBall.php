@@ -134,6 +134,20 @@ class PokemonBall extends AbstractMachineService implements BaseMachine
     const GAME_ENABLE_VALUE = 0x01;     // 可进行游戏
     const GAME_DISABLE_VALUE = 0x00;    // 不可进行游戏
 
+    // ==================== 兼容性常量（用于MachineController）====================
+    // 这些常量是为了兼容 Slot/Jackpot 的操作接口
+    const MOVE_POINT_ON = 'add_score';      // 移分ON -> 加分
+    const MOVE_POINT_OFF = 'sub_score';     // 移分OFF -> 减分
+    const PRESSURE = 'query_account';       // 压分 -> 查询帐目
+    const START = 'start_game';             // 启动
+    const OUT_ON = 'auto_start';            // 自动ON -> 自动启动
+    const OUT_OFF = 'game_end';             // 自动OFF -> 游戏结束
+    const STOP_ONE = 'start_game';          // 停1 -> 启动
+    const STOP_TWO = 'start_game';          // 停2 -> 启动
+    const STOP_THREE = 'start_game';        // 停3 -> 启动
+    const GET_AUTO_STATUS = 'query_account'; // 获取自动状态 -> 查询帐目
+    const WASH_POINT = 'wash_zero';         // 洗分 -> 洗分清零
+
     /**
      * 构造函数
      *

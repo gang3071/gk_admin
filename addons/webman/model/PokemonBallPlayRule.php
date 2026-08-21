@@ -32,7 +32,7 @@ class PokemonBallPlayRule extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setTable('yjb_pokemon_ball_play_rule');
+        $this->setTable('pokemon_ball_play_rule');
     }
 
     /**

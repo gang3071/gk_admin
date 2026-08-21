@@ -1751,13 +1751,16 @@ class MachineController
                     );
                     break;
                 case 'start': // 開始(斯洛)
-                    if (($services->auto ?? 0) == 1) {
-                        throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                    if ($machine->type != GameType::TYPE_POKEMON_BALL) {
+                        // 斯洛/钢珠
+                        if (($services->auto ?? 0) == 1) {
+                            throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                        }
+                        if (($services->move_point ?? 0) == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
+                            $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
+                        }
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::PRESSURE, 0, Admin::id());
                     }
-                    if (($services->move_point ?? 0) == 0 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
-                        $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
-                    }
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::PRESSURE, 0, Admin::id());
                     $this->sendMachineCmdViaApi($machine, $cmdClass::START, 0, Admin::id());
                     break;
                 case 'auto': // 自動ON(斯洛)
@@ -1766,13 +1769,26 @@ class MachineController
                         if ($machine->control_type == Machine::CONTROL_TYPE_MEI) {
                             $this->sendMachineCmdViaApi($machine, $cmdClass::GET_AUTO_STATUS, 0, Admin::id());
                         }
+                    } elseif ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        // 精灵球：自动启动
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::AUTO_START, 0, Admin::id());
                     }
                     break;
                 case 'move_on': // 移分ON(斯洛)
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
+                    if ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        // 精灵球：加分
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::ADD_SCORE, 0, Admin::id());
+                    } else {
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
+                    }
                     break;
                 case 'move_off': // 移分OFF(斯洛)
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_OFF, 0, Admin::id());
+                    if ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        // 精灵球：减分
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::SUB_SCORE, 0, Admin::id());
+                    } else {
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_OFF, 0, Admin::id());
+                    }
                     break;
                 case 'pressure': // 總壓分(斯洛)
                 case 'score': // 總得分(斯洛)
@@ -1808,28 +1824,45 @@ class MachineController
                     break;
 
                 case 'stop_1': // A(斯洛)
-                    if (($services->auto ?? 0) == 1) {
-                        throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                    if ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        // 精灵球：加分
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::ADD_SCORE, 0, Admin::id());
+                    } else {
+                        if (($services->auto ?? 0) == 1) {
+                            throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                        }
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_ONE, 0, Admin::id());
                     }
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_ONE, 0, Admin::id());
                     break;
                 case 'stop_2': // B(斯洛)
-                    if (($services->auto ?? 0) == 1) {
-                        throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                    if ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        // 精灵球：减分
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::SUB_SCORE, 0, Admin::id());
+                    } else {
+                        if (($services->auto ?? 0) == 1) {
+                            throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                        }
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_TWO, 0, Admin::id());
                     }
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_TWO, 0, Admin::id());
                     break;
                 case 'stop_3': // C(斯洛)
-                    if (($services->auto ?? 0) == 1) {
-                        throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                    if ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        // 精灵球：启动
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::START_GAME, 0, Admin::id());
+                    } else {
+                        if (($services->auto ?? 0) == 1) {
+                            throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
+                        }
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_THREE, 0, Admin::id());
                     }
-                    $this->sendMachineCmdViaApi($machine, $cmdClass::STOP_THREE, 0, Admin::id());
                     break;
                 case 'stop_auto': // 自動OFF(斯洛)
                     if ($machine->type == GameType::TYPE_STEEL_BALL) {
                         $this->sendMachineCmdViaApi($machine, $cmdClass::AUTO_UP_TURN, 0, Admin::id());
                     } elseif ($machine->type == GameType::TYPE_SLOT) {
                         $this->sendMachineCmdViaApi($machine, $cmdClass::OUT_OFF, 0, Admin::id());
+                    } elseif ($machine->type == GameType::TYPE_POKEMON_BALL) {
+                        $this->sendMachineCmdViaApi($machine, $cmdClass::GAME_ENABLE_OFF, 0, Admin::id());
                     } else {
                         throw new Exception(admin_trans('machine.action.action_game_type_error'));
                     }
@@ -1840,13 +1873,19 @@ class MachineController
             }
 
             // 记录操作日志
+            $machineType = match($machine->type) {
+                GameType::TYPE_SLOT => '斯洛',
+                GameType::TYPE_STEEL_BALL => '钢珠',
+                GameType::TYPE_POKEMON_BALL => '精灵球',
+                default => '未知',
+            };
             Log::info('【机台操作】执行成功', [
                 'operator_type' => 'admin',
                 'admin_id' => Admin::id(),
                 'admin_username' => Admin::user()->username ?? '',
                 'machine_id' => $machine->id,
                 'machine_code' => $machine->code,
-                'machine_type' => $machine->type == GameType::TYPE_SLOT ? '斯洛' : '钢珠',
+                'machine_type' => $machineType,
                 'control_type' => $machine->control_type == Machine::CONTROL_TYPE_MEI ? '双美' : '小淞',
                 'player_id' => $player->id ?? 0,
                 'player_name' => $player->name ?? '',
