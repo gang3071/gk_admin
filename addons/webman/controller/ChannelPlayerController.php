@@ -319,27 +319,34 @@ class ChannelPlayerController
             unset($item);
         }
 
-        // 计算每个设备的彩金和小计
-        foreach ($list as &$item) {
-            // 查询该设备的累计彩金
-            $lotteryAmount = PlayerLotteryRecord::query()
-                ->where('player_id', $item['id'])
+        // ✅ 优化：批量查询彩金，避免 N+1 查询
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+
+            // 批量查询每个玩家的累计彩金
+            $lotteryAmounts = PlayerLotteryRecord::query()
+                ->whereIn('player_id', $playerIds)
                 ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                ->sum('amount') ?? 0;
+                ->selectRaw('player_id, SUM(amount) as total_amount')
+                ->groupBy('player_id')
+                ->pluck('total_amount', 'player_id')
+                ->toArray();
 
-            $item['lottery_amount'] = $lotteryAmount;
+            // 合并数据
+            foreach ($list as &$item) {
+                $lotteryAmount = $lotteryAmounts[$item['id']] ?? 0;
+                $item['lottery_amount'] = $lotteryAmount;
 
-            // 计算小计 = 开分 - 洗分
-            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
-            // 注意：洗分（withdraw_amount）不包含彩金，彩金已发放给客户，客户洗分会洗掉
-            $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
-            $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+                // 计算小计 = 开分 - 洗分
+                $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+                $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+                $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
 
-            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
-
-            // 存储纯开分金额（扣除投钞后），用于展示
-            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
-            $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+                // 存储纯开分金额（扣除投钞后），用于展示
+                $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
+                $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+            }
+            unset($item);
         }
 
         // 获取设备选项列表用于筛选器下拉选择（限制数量避免内存溢出）
@@ -398,7 +405,14 @@ class ChannelPlayerController
                     Player::AUDIT_STATUS_REJECTED => Tag::create(admin_trans('player.audit.rejected'))->color('red'),
                     default => Tag::create(admin_trans('player.audit.pending'))->color('default'),
                 };
-            })->align('center');
+            })->editable(
+                (new Editable)->select('audit_status')
+                    ->options([
+                        Player::AUDIT_STATUS_PENDING => admin_trans('player.audit.pending'),
+                        Player::AUDIT_STATUS_APPROVED => admin_trans('player.audit.approved'),
+                        Player::AUDIT_STATUS_REJECTED => admin_trans('player.audit.rejected'),
+                    ])
+            )->align('center');
 
             // 线下渠道：使用 player_type 字段显示玩家类型
             if ($channel && $channel->is_offline == 1) {
@@ -824,6 +838,63 @@ class ChannelPlayerController
 
 
                 // 百家禁用
+            });
+
+            // 行内编辑更新处理
+            $grid->updateing(function ($ids, $data) {
+                Log::info('editable update', ['ids' => $ids, 'data' => $data]);
+                // 处理 player_extend 字段（编辑弹窗保存）
+                if (isset($ids[0]) && isset($data['player_extend'])) {
+                    if (PlayerExtend::updateOrCreate(
+                        ['player_id' => $ids[0]],
+                        $data['player_extend']
+                    )) {
+                        return message_success(admin_trans('player.remark_edit_success'));
+                    }
+                }
+                // 处理备注字段（行内编辑）- 使用 DB 直接更新，绕过 SoftDeletes 限制
+                if (isset($ids[0]) && isset($data['remark'])) {
+                    $playerExtendTable = plugin()->webman->config('database.player_extend_table');
+                    $exists = Db::table($playerExtendTable)->where('player_id', $ids[0])->exists();
+                    if ($exists) {
+                        Db::table($playerExtendTable)->where('player_id', $ids[0])->update(['remark' => $data['remark']]);
+                    } else {
+                        Db::table($playerExtendTable)->insert([
+                            'player_id' => $ids[0],
+                            'remark' => $data['remark'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    return message_success(admin_trans('form.save_success'));
+                }
+                // 单独处理审核状态字段（行内编辑）
+                // 使用 offDataAuth() 绕过数据权限，因为 Grid 已在 index() 中控制可见范围
+                if (isset($ids[0]) && isset($data['audit_status']) && !isset($data['name']) && !isset($data['real_name'])) {
+                    $result = Player::offDataAuth()->where('id', $ids[0])->update(
+                        ['audit_status' => (int)$data['audit_status']]
+                    );
+                    if ($result) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
+                        $data
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+                if (isset($ids[0]) && isset($data['player_tag'])) {
+                    $playerTag = implode(',', $data['player_tag']);
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
+                        ['player_tag' => $playerTag]
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+
+                return message_error(admin_trans('form.save_failed'));
             });
 
             $grid->attr('is_mongo', true);
@@ -2510,6 +2581,8 @@ class ChannelPlayerController
                 $actions->edit()->modal($this->form())->width('60%');
             });
             $grid->updateing(function ($ids, $data) {
+                Log::info('editable update', ['ids' => $ids, 'data' => $data]);
+                // 处理 player_extend 字段（编辑弹窗保存）
                 if (isset($ids[0]) && isset($data['player_extend'])) {
                     if (PlayerExtend::updateOrCreate(
                         ['player_id' => $ids[0]],
@@ -2518,15 +2591,34 @@ class ChannelPlayerController
                         return message_success(admin_trans('player.remark_edit_success'));
                     }
                 }
+                // 处理备注字段（行内编辑）- 使用 DB 直接更新，绕过 SoftDeletes 限制
                 if (isset($ids[0]) && isset($data['remark'])) {
-                    if (PlayerExtend::query()->where('player_id', $ids[0])->update(
-                        ['remark' => $data['remark']]
-                    )) {
+                    $playerExtendTable = plugin()->webman->config('database.player_extend_table');
+                    $exists = Db::table($playerExtendTable)->where('player_id', $ids[0])->exists();
+                    if ($exists) {
+                        Db::table($playerExtendTable)->where('player_id', $ids[0])->update(['remark' => $data['remark']]);
+                    } else {
+                        Db::table($playerExtendTable)->insert([
+                            'player_id' => $ids[0],
+                            'remark' => $data['remark'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    return message_success(admin_trans('form.save_success'));
+                }
+                // 单独处理审核状态字段（行内编辑）
+                // 使用 offDataAuth() 绕过数据权限，因为 Grid 已在 index() 中控制可见范围
+                if (isset($ids[0]) && isset($data['audit_status']) && !isset($data['name']) && !isset($data['real_name'])) {
+                    $result = Player::offDataAuth()->where('id', $ids[0])->update(
+                        ['audit_status' => (int)$data['audit_status']]
+                    );
+                    if ($result) {
                         return message_success(admin_trans('form.save_success'));
                     }
                 }
-                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']) || isset($data['audit_status']))) {
-                    if (Player::query()->where('id', $ids[0])->update(
+                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
                         $data
                     )) {
                         return message_success(admin_trans('form.save_success'));
@@ -2534,7 +2626,7 @@ class ChannelPlayerController
                 }
                 if (isset($ids[0]) && isset($data['player_tag'])) {
                     $playerTag = implode(',', $data['player_tag']);
-                    if (Player::query()->where('id', $ids[0])->update(
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
                         ['player_tag' => $playerTag]
                     )) {
                         return message_success(admin_trans('form.save_success'));
