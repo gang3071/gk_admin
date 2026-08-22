@@ -1194,10 +1194,19 @@ class MachineController
                 $val,
                 Machine $data
             ) {
-                $services = $this->getMachineStatusViaApi($data);
-                return Switches::create(null, $services->has_lock ?? 0)
+                try {
+                    $service = \app\service\machine\MachineServices::createServices(
+                        $data,
+                        Container::getInstance()->translator->getLocale()
+                    );
+                    $hasLock = (int)($service->has_lock ?? 0);
+                } catch (\Exception $e) {
+                    $hasLock = 0;
+                }
+
+                return Switches::create(null, $hasLock)
                     ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/machine/changeLock')
+                    ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
                     ->field('has_lock')
                     ->params([
                         'id' => [$data->id],
@@ -1973,10 +1982,19 @@ class MachineController
                 $val,
                 Machine $data
             ) {
-                $services = $this->getMachineStatusViaApi($data);
-                return Switches::create(null, $services->has_lock ?? 0)
+                try {
+                    $service = \app\service\machine\MachineServices::createServices(
+                        $data,
+                        Container::getInstance()->translator->getLocale()
+                    );
+                    $hasLock = (int)($service->has_lock ?? 0);
+                } catch (\Exception $e) {
+                    $hasLock = 0;
+                }
+
+                return Switches::create(null, $hasLock)
                     ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/machine/changeLock')
+                    ->url('ex-admin/addons-webman-controller-MachineController/changeLock')
                     ->field('has_lock')
                     ->params([
                         'id' => [$data->id],
