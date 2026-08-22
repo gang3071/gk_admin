@@ -3,16 +3,14 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\controller\MachineStrategyController;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
-use addons\webman\model\MachineCategory;
-use addons\webman\model\MachineLabel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineProducer;
 use addons\webman\model\MachineStrategy;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Editable;
@@ -20,6 +18,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
+use Exception;
 use Illuminate\Support\Str;
 use support\Cache;
 
@@ -252,7 +251,19 @@ class AdminOfflineMachineController
         $grid->column('status', admin_trans('machine.fields.status'))->switch()->width(80)->align('center');
         $grid->column('is_use', admin_trans('machine.fields.is_use'))->switch()->width(80)->align('center');
         $grid->column('maintaining', admin_trans('machine.fields.maintaining'))->switch()->width(100)->align('center');
-
+        $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
+            $val,
+            Machine $data
+        ) {
+            $services = $this->getMachineStatusViaApi($data);
+            return Switches::create(null, $services->has_lock ?? 0)
+                ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
+                ->url('ex-admin/machine/changeLock')
+                ->field('has_lock')
+                ->params([
+                    'id' => [$data->id],
+                ]);
+        })->align('center');
         $grid->column('gaming', admin_trans('offline_machine.fields.gaming'))
             ->display(function ($val) {
                 return $val == 1
@@ -329,6 +340,53 @@ class AdminOfflineMachineController
 
         $grid->expandFilter();
         $grid->hideDelete();
+    }
+
+    /**
+     * 获取机台状态数据（通过 API）
+     *
+     * @param Machine $machine 机台对象
+     * @param string $lang 语言
+     * @return object 返回一个包含机台状态的对象
+     */
+    private function getMachineStatusViaApi(Machine $machine, string $lang = 'zh_CN')
+    {
+        try {
+            $result = MachineApiService::getMachineStatus($machine->id, $lang, Admin::id() ?? 0);
+            // 将 API 返回的数据转换为对象，模拟 MachineServices 的返回格式
+            $status = new \stdClass();
+
+            // 从 machine_info 中提取数据
+            if (isset($result['machine_info'])) {
+                foreach ($result['machine_info'] as $key => $value) {
+                    $status->$key = $value;
+                }
+            }
+
+            // 从 cache_data 中提取数据
+            if (isset($result['cache_data'])) {
+                foreach ($result['cache_data'] as $key => $value) {
+                    // 移除前缀
+                    $cleanKey = str_replace('machine_tcp_data_cache_' . $machine->id . '_', '', $key);
+                    $status->$cleanKey = $value;
+                }
+            }
+
+            // 调试日志：记录最终解析出的 keep_seconds
+            \support\Log::info('getMachineStatusViaApi parsed keep_seconds', [
+                'machine_id' => $machine->id,
+                'status_keep_seconds' => $status->keep_seconds ?? 'NOT_SET',
+            ]);
+
+            return $status;
+        } catch (Exception $e) {
+            \support\Log::error('Get machine status via API failed', [
+                'machine_id' => $machine->id,
+                'error' => $e->getMessage()
+            ]);
+            // 返回一个空对象，避免后续代码报错
+            return new \stdClass();
+        }
     }
 
     /**
