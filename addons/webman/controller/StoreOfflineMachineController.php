@@ -9,7 +9,6 @@ use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
-use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -107,21 +106,6 @@ class StoreOfflineMachineController
                         : Tag::create(admin_trans('admin.close'))->color('red');
                 })
                 ->width(80)->align('center');
-
-            $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
-                $val,
-                Machine $data
-            ) {
-                $services = $this->getMachineStatusViaApi($data);
-                return Switches::create(null, $services->has_lock ?? 0)
-                    ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
-                    ->url('ex-admin/machine/changeLock')
-                    ->field('has_lock')
-                    ->params([
-                        'id' => [$data->id],
-                    ]);
-            })->align('center');
-
             $grid->column('created_at', admin_trans('machine.fields.created_at'))->width(160)->align('center');
 
             // 严格按照 ChannelController::offlineMachineList 的配置顺序
