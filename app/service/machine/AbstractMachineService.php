@@ -9,7 +9,6 @@ use Exception;
 use Psr\Log\LoggerInterface;
 use support\Cache;
 use support\Log;
-use Webman\Push\PushException;
 
 /**
  * 机台服务抽象基类
@@ -159,9 +158,6 @@ abstract class AbstractMachineService implements BaseMachine
 
         // 使内存缓存失效
         $this->invalidateCache();
-
-        // 推送机台信息更新（可选，子类实现）
-        $this->pushMachineUpdate();
 
         // 子类特定推送逻辑（模板方法）
         $this->handleFieldUpdatePush($name, $value);
@@ -329,29 +325,6 @@ abstract class AbstractMachineService implements BaseMachine
     {
         $this->cachedAllData = null;
         $this->lastCacheTime = null;
-    }
-
-    /**
-     * 推送机台信息更新（子类可覆盖）
-     *
-     * @return void
-     */
-    protected function pushMachineUpdate(): void
-    {
-        // 默认实现：发送机台信息推送
-        try {
-            sendPushMsg($this->machine, $this->machineInfo, $this->lang);
-        } catch (PushException $e) {
-            $this->log->warning('推送机台信息失败', [
-                'machine_id' => $this->machine->id,
-                'error' => $e->getMessage()
-            ]);
-        } catch (Exception $e) {
-            $this->log->error('推送机台信息异常', [
-                'machine_id' => $this->machine->id,
-                'error' => $e->getMessage()
-            ]);
-        }
     }
 
     /**

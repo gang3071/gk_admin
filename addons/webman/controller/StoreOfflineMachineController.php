@@ -3,20 +3,19 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\model\ChannelMachine;
 use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use addons\webman\service\WalletService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
+use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\grid\card\Card;
-use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
-use ExAdmin\ui\component\grid\grid\FilterColumn;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -108,6 +107,20 @@ class StoreOfflineMachineController
                         : Tag::create(admin_trans('admin.close'))->color('red');
                 })
                 ->width(80)->align('center');
+
+            $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
+                $val,
+                Machine $data
+            ) {
+                $services = $this->getMachineStatusViaApi($data);
+                return Switches::create(null, $services->has_lock ?? 0)
+                    ->options([[1 => admin_trans('machine.lock')], [0 => admin_trans('machine.open')]])
+                    ->url('ex-admin/machine/changeLock')
+                    ->field('has_lock')
+                    ->params([
+                        'id' => [$data->id],
+                    ]);
+            })->align('center');
 
             $grid->column('created_at', admin_trans('machine.fields.created_at'))->width(160)->align('center');
 
@@ -499,7 +512,7 @@ class StoreOfflineMachineController
      * @auth true
      * @group store
      * @param array|null $selected 选中的机台 IDs（由 gridBatch 自动传递）
-     * @return Msg
+     * @return Html|Msg
      */
     public function batchQrCode($selected)
     {
