@@ -2,7 +2,7 @@
 
 namespace process;
 
-use Illuminate\Support\Facades\DB;
+use support\Db;
 use support\Log;
 use Workerman\Crontab\Crontab;
 
@@ -120,7 +120,7 @@ class PartitionMaintenanceTask
 
         try {
             // 检查分区是否已存在
-            $exists = DB::select("
+            $exists = Db::select("
                 SELECT PARTITION_NAME
                 FROM INFORMATION_SCHEMA.PARTITIONS
                 WHERE TABLE_SCHEMA = DATABASE()
@@ -135,7 +135,7 @@ class PartitionMaintenanceTask
             }
 
             // 重组分区：将 p_future 分区拆分为新月份分区 + 新的 p_future
-            DB::statement("
+            Db::statement("
                 ALTER TABLE play_game_record
                 REORGANIZE PARTITION p_future INTO (
                     PARTITION {$partitionName} VALUES LESS THAN (TO_DAYS('{$nextMonthEnd}')),
@@ -174,7 +174,7 @@ class PartitionMaintenanceTask
 
         try {
             // 检查分区是否存在
-            $partitionInfo = DB::select("
+            $partitionInfo = Db::select("
                 SELECT
                     PARTITION_NAME,
                     TABLE_ROWS,
@@ -197,7 +197,7 @@ class PartitionMaintenanceTask
             $archiveDate = date('Y-m-01', strtotime('-' . self::RETENTION_MONTHS . ' month'));
             $archiveEndDate = date('Y-m-01', strtotime('-' . (self::RETENTION_MONTHS - 1) . ' month'));
 
-            $existingCount = DB::selectOne("
+            $existingCount = Db::selectOne("
                 SELECT COUNT(*) AS count
                 FROM play_game_record_history
                 WHERE created_at >= ? AND created_at < ?
@@ -215,7 +215,7 @@ class PartitionMaintenanceTask
             // 归档分区数据到历史表
             $startTime = microtime(true);
 
-            DB::statement("
+            Db::statement("
                 INSERT INTO play_game_record_history
                 SELECT * FROM play_game_record PARTITION ({$partitionName})
             ");
@@ -256,7 +256,7 @@ class PartitionMaintenanceTask
 
         try {
             // 检查分区是否存在
-            $partitionInfo = DB::select("
+            $partitionInfo = Db::select("
                 SELECT
                     PARTITION_NAME,
                     TABLE_ROWS,
@@ -283,7 +283,7 @@ class PartitionMaintenanceTask
             $archiveDate = date('Y-m-01', strtotime('-' . self::RETENTION_MONTHS . ' month'));
             $archiveEndDate = date('Y-m-01', strtotime('-' . (self::RETENTION_MONTHS - 1) . ' month'));
 
-            $historyCount = DB::selectOne("
+            $historyCount = Db::selectOne("
                 SELECT COUNT(*) AS count
                 FROM play_game_record_history
                 WHERE created_at >= ? AND created_at < ?
@@ -303,7 +303,7 @@ class PartitionMaintenanceTask
             // 删除分区（极速：0.1 秒）
             $startTime = microtime(true);
 
-            DB::statement("ALTER TABLE play_game_record DROP PARTITION {$partitionName}");
+            Db::statement("ALTER TABLE play_game_record DROP PARTITION {$partitionName}");
 
             $duration = round(microtime(true) - $startTime, 2);
 
@@ -338,7 +338,7 @@ class PartitionMaintenanceTask
      */
     private function getPartitionInfo(): array
     {
-        return DB::select("
+        return Db::select("
             SELECT
                 PARTITION_NAME,
                 TABLE_ROWS,
