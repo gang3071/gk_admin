@@ -90,10 +90,9 @@ class StoreOfflineMachineController
             $grid->column('gaming_player', admin_trans('store_offline_machine.gaming_device'))
                 ->display(function ($val, Machine $data) {
                     if ($data->gamingPlayer) {
-                        return Html::create()->content([
-                            Html::div()->content($data->gamingPlayer->name),
-                            Html::small()->content('UUID: ' . $data->gamingPlayer->uuid)->style(['color' => '#999'])
-                        ]);
+                        $name = Html::create($data->gamingPlayer->name)->style(['display' => 'block', 'fontWeight' => 'bold']);
+                        $uuid = Html::create('UUID: ' . $data->gamingPlayer->uuid)->style(['display' => 'block', 'color' => '#999', 'fontSize' => '12px']);
+                        return Html::create()->content([$name, $uuid]);
                     }
                     return '-';
                 })
@@ -219,10 +218,9 @@ class StoreOfflineMachineController
             $grid->column('device_info', admin_trans('store_offline_machine.device_info'))
                 ->display(function ($val, Machine $data) {
                     if ($data->gamingPlayer) {
-                        return Html::create()->content([
-                            Html::div()->content($data->gamingPlayer->name)->style(['fontWeight' => 'bold']),
-                            Html::small()->content('UUID: ' . $data->gamingPlayer->uuid)->style(['color' => '#999'])
-                        ]);
+                        $name = Html::create($data->gamingPlayer->name)->style(['display' => 'block', 'fontWeight' => 'bold']);
+                        $uuid = Html::create('UUID: ' . $data->gamingPlayer->uuid)->style(['display' => 'block', 'color' => '#999', 'fontSize' => '12px']);
+                        return Html::create()->content([$name, $uuid]);
                     }
                     return '-';
                 })
@@ -327,10 +325,9 @@ class StoreOfflineMachineController
             $grid->column('device_info', admin_trans('store_offline_machine.device_info'))
                 ->display(function ($val, Machine $data) {
                     if ($data->gamingPlayer) {
-                        return Html::create()->content([
-                            Html::div()->content($data->gamingPlayer->name)->style(['fontWeight' => 'bold']),
-                            Html::small()->content('UUID: ' . $data->gamingPlayer->uuid)->style(['color' => '#999'])
-                        ]);
+                        $name = Html::create($data->gamingPlayer->name)->style(['display' => 'block', 'fontWeight' => 'bold']);
+                        $uuid = Html::create('UUID: ' . $data->gamingPlayer->uuid)->style(['display' => 'block', 'color' => '#999', 'fontSize' => '12px']);
+                        return Html::create()->content([$name, $uuid]);
                     }
                     return '-';
                 })
