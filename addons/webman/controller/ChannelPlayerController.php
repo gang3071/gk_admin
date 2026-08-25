@@ -215,6 +215,8 @@ class ChannelPlayerController
             Db::raw('COALESCE(vip_level.sort, channel_min_vip_level.sort) as vip_level_sort'),
             // 彩金累计（子查询，用于排序）
             Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_lottery_record WHERE player_lottery_record.player_id = player.id AND player_lottery_record.status = 1) as lottery_amount'),
+            // 钱包锁定状态（子查询）
+            Db::raw('(SELECT wallet_locked FROM player_platform_cash WHERE player_platform_cash.player_id = player.id AND player_platform_cash.platform_id = 1 LIMIT 1) as wallet_locked'),
             // 打码量相关字段
             'player.total_bet_amount',
             'vip_retain_period.period_bet_amount as period_bet_amount',
@@ -557,6 +559,15 @@ class ChannelPlayerController
                     return Tag::create(admin_trans('player.crashed'))->color('red');
                 } else {
                     return Tag::create(admin_trans('player.normal'))->color('green');
+                }
+            })->width(100)->align('center');
+
+            // 钱包锁定状态列
+            $grid->column('wallet_locked', admin_trans('player.wallet_locked_status'))->display(function ($val) {
+                if ($val == 1) {
+                    return Tag::create(admin_trans('player.wallet_locked'))->color('orange');
+                } else {
+                    return Tag::create(admin_trans('player.wallet_unlocked'))->color('green');
                 }
             })->width(100)->align('center');
 
