@@ -371,11 +371,16 @@ export default {
         const score = config.experience.score || 1000;
         const claimedCount = this.playerBetInfo?.claimed_experience_count || 0;
         const dailyLimit = config.experience.daily_limit || 1;
+        const claimedTotal = this.playerBetInfo?.claimed_experience_total || 0;
+        const totalLimit = config.experience.total_limit || 6;
+        const isDailyLimitReached = claimedCount >= dailyLimit;
+        const isTotalLimitReached = claimedTotal >= totalLimit;
+        const totalLimitLabel = this.labels.total_limit_reached || '总次数已用完';
         options.push({
           value: score,
           label: `${experienceLabel} ${score} ${scoreUnit}`,
-          disabled: claimedCount >= dailyLimit,
-          condition: claimedCount >= dailyLimit ? claimedToday : newMemberClaim,
+          disabled: isDailyLimitReached || isTotalLimitReached,
+          condition: isTotalLimitReached ? `${totalLimitLabel}(${claimedTotal}/${totalLimit})` : (isDailyLimitReached ? claimedToday : newMemberClaim),
         });
       }
 

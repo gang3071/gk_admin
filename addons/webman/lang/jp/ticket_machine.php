@@ -303,6 +303,7 @@ return [
         'yesterday_bet_prefix' => '昨日のベット',
         'claimed_today' => '本日受取済み',
         'new_member_claim' => '新規会員',
+        'total_limit_reached' => '合計回数終了',
     ],
 
     // チケット記録

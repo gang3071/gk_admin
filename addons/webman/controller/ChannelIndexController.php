@@ -3894,6 +3894,7 @@ class ChannelIndexController
         $logLabels['yesterday_bet_prefix'] = admin_trans('ticket_machine.record.yesterday_bet_prefix');
         $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
         $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
+        $logLabels['total_limit_reached'] = admin_trans('ticket_machine.record.total_limit_reached');
 
         // 补充连接状态标签
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
@@ -4094,6 +4095,13 @@ class ChannelIndexController
                 ->whereNull('deleted_at')
                 ->count();
 
+            // 查询体验券总领取次数（排除已删除的记录）
+            $claimedExperienceTotal = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->whereNull('deleted_at')
+                ->count();
+
             return json([
                 'code' => 200,
                 'data' => [
@@ -4105,6 +4113,7 @@ class ChannelIndexController
                     'yesterday_bet_amount' => $yesterdayBetAmount,
                     'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
                     'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
+                    'claimed_experience_total' => $claimedExperienceTotal,  // 体验券总领取次数
                 ]
             ]);
         } catch (\Exception $e) {
