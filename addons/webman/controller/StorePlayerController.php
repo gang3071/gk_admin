@@ -140,6 +140,12 @@ class StorePlayerController
             'vip_level.sort as vip_level_sort',
             'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
             'vip_retain_period.period_bet_amount as period_bet_amount',
+            // 彩金累计（子查询，用于排序）
+            Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_lottery_record WHERE player_lottery_record.player_id = player.id AND player_lottery_record.status = 1) as lottery_amount'),
+            // 摸奖券累计（子查询，用于排序）
+            Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_delivery_record WHERE player_delivery_record.player_id = player.id AND player_delivery_record.type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ') as lottery_ticket_reward_amount'),
+            // 小计 = 开分 - 洗分（用于排序）
+            Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0)) as subtotal'),
         ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
@@ -149,8 +155,22 @@ class StorePlayerController
                     ->on('player.vip_level_id', '=', 'vip_retain_period.vip_level_id')
                     ->where('vip_retain_period.period_type', '=', 'retain')
                     ->where('vip_retain_period.status', '=', 1);
-            })
-            ->orderBy('player.id', 'desc')
+            });
+
+        // 处理特殊排序字段映射
+        $exAdminSortField = Request::input('ex_admin_sort_field', '');
+        $exAdminSortBy = Request::input('ex_admin_sort_by', '');
+        $sortFieldMapping = [
+            'vip_level_name' => 'vip_level_sort',
+        ];
+        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+
+        $list = $query->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
+                function ($query) use ($actualSortField, $exAdminSortBy) {
+                    $query->orderBy($actualSortField, $exAdminSortBy);
+                }, function ($query) {
+                    $query->orderBy('player.id', 'desc');
+                })
             ->get()
             ->toArray();
 
@@ -215,20 +235,9 @@ class StorePlayerController
                 $lotteryByPlayer = $lotteryQuery->selectRaw('player_id, SUM(amount) as total_amount')
                     ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
             } else {
-                // 没有时间筛选，批量查询累计彩金
-                $lotteryByPlayer = PlayerLotteryRecord::query()
-                    ->whereIn('player_id', $playerIds)
-                    ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                    ->selectRaw('player_id, SUM(amount) as total_amount')
-                    ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
-
-                // 批量查询累计摸奖券
-                $lotteryTicketRewardByPlayer = PlayerDeliveryRecord::offDataAuth()
-                    ->whereIn('player_id', $playerIds)
-                    ->where('type', PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD)
-                    ->selectRaw('player_id, SUM(amount) as total_amount')
-                    ->groupBy('player_id')->pluck('total_amount', 'player_id')->toArray();
-
+                // 没有时间筛选时，彩金和摸奖券已在 SQL 子查询中获取，无需重复查询
+                $lotteryByPlayer = [];
+                $lotteryTicketRewardByPlayer = [];
                 $deliveryStatsByPlayer = [];
             }
 
@@ -300,15 +309,17 @@ class StorePlayerController
 
                 // 累计数据
                 if ($hasStatsTimeFilter) {
+                    // 有时间筛选：从账变记录统计
                     $stats = $deliveryStatsByPlayer[$playerId] ?? null;
                     $item['machine_put_point'] = floatval($stats['machine_put_point'] ?? 0);
                     $item['recharge_amount'] = floatval($stats['recharge_amount'] ?? 0);
                     $item['withdraw_amount'] = floatval($stats['withdraw_amount'] ?? 0);
                     $item['lottery_ticket_reward_amount'] = floatval($stats['lottery_ticket_reward_amount'] ?? 0);
+                    $item['lottery_amount'] = floatval($lotteryByPlayer[$playerId] ?? 0);
                 } else {
-                    $item['lottery_ticket_reward_amount'] = floatval($lotteryTicketRewardByPlayer[$playerId] ?? 0);
+                    // 无时间筛选：使用 SQL 子查询结果（已在 select 中获取）
+                    // lottery_amount 和 lottery_ticket_reward_amount 已从 SQL 子查询获取
                 }
-                $item['lottery_amount'] = floatval($lotteryByPlayer[$playerId] ?? 0);
 
                 // 计算累计小计
                 $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
@@ -491,7 +502,7 @@ class StorePlayerController
 
                     return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
                 })
-                ->width(180)->align('center');
+                ->sortable()->width(180)->align('center');
 
             $grid->column('wallet_money', admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function ($value) {
                 return Html::create(number_format(floatval($value), 2))->style([
@@ -515,21 +526,21 @@ class StorePlayerController
                     'fontSize' => '13px',
                     'fontWeight' => '500'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
                 return Html::create(number_format(floatval($value), 2))->style([
                     'fontSize' => '13px',
                     'fontWeight' => '500'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
                 return Html::create(number_format(floatval($value), 2))->style([
                     'fontSize' => '13px',
                     'fontWeight' => '500'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
 
             $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
@@ -537,7 +548,7 @@ class StorePlayerController
                     'fontSize' => '13px',
                     'fontWeight' => '500'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             $grid->column('pending_cashback_amount',
                 admin_trans('player_extend.fields.pending_cashback_amount'))->display(function ($val) {
@@ -546,7 +557,7 @@ class StorePlayerController
                     'fontWeight' => '500',
                     'color' => '#fa8c16'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             $grid->column('total_cashback_amount',
                 admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
@@ -555,7 +566,7 @@ class StorePlayerController
                     'fontWeight' => '500',
                     'color' => 'green'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             $grid->column('lottery_ticket_reward_amount', admin_trans('player.total_lottery_ticket_reward_amount'))->display(function ($value) {
                 return Html::create(number_format(floatval($value ?? 0), 2))->style([
@@ -563,7 +574,7 @@ class StorePlayerController
                     'fontWeight' => '500',
                     'color' => '#E6A23C'
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
@@ -572,7 +583,7 @@ class StorePlayerController
                     'fontWeight' => 'bold',
                     'color' => $color
                 ]);
-            })->width(110)->align('center');
+            })->sortable()->width(110)->align('center');
 
             // === 当前未交班数据列（合并显示） ===
             $grid->column('current_shift_stats', admin_trans('player.current_shift_stats'))->display(function ($value, $data) {
