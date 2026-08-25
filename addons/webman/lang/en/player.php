@@ -161,6 +161,11 @@ return [
         'artificial_withdrawal' => 'Manual wash score',
         'artificial_recharge_tip' => "Manual recharge, no manual intervention is required for review. After the recharge is completed, game points will be directly issued to the player's account and the recharge information will be recorded.",
         'artificial_withdrawal_tip' => "Manual withdrawal does not require manual intervention and review. After the withdrawal is completed, the player's wallet balance will be directly deducted and the withdrawal information will be recorded.",
+        'wallet_unlock' => 'Wallet Unlock',
+        'wallet_unlock_confirm' => 'Are you sure you want to unlock this player\'s wallet? After unlocking, the player can use wallet functions normally.',
+        'wallet_unlock_success' => 'Wallet unlocked successfully',
+        'wallet_unlock_failed' => 'Wallet unlock failed',
+        'wallet_not_locked' => 'This player\'s wallet is not locked',
         'wallet_type' => [
             PlayerMoneyEditLog::RECHARGE => 'Open Score',
             PlayerMoneyEditLog::VIP_RECHARGE => 'VIP open score',

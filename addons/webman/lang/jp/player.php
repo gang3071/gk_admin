@@ -160,6 +160,11 @@ return [
         'artificial_withdrawal' => '手動洗分',
         'artificial_recharge_tip' => '手動開分。開分が完了すると、ゲーム ポイントがプレーヤーのアカウントに直接発行され、開分情報が記録されます。',
         'artificial_withdrawal_tip' => '手動洗分には手動による介入や確認は必要ありません。洗分完了後、プレイヤーのウォレット残高が直接引き落とされ、洗分情報が記録されます。',
+        'wallet_unlock' => 'ウォレットロック解除',
+        'wallet_unlock_confirm' => 'このプレイヤーのウォレットのロックを解除しますか？解除後、プレイヤーはウォレット機能を正常使用できます。',
+        'wallet_unlock_success' => 'ウォレットのロック解除に成功しました',
+        'wallet_unlock_failed' => 'ウォレットのロック解除に失敗しました',
+        'wallet_not_locked' => 'このプレイヤーのウォレットはロックされていません',
 
         'wallet_type' => [
             PlayerMoneyEditLog::RECHARGE => '開分',

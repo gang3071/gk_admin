@@ -832,6 +832,10 @@ class ChannelPlayerController
                         ]))->width('600px');
                 }
 
+                // 钱包解锁
+                $dropdown->append(admin_trans('player.wallet.wallet_unlock'), 'UnlockOutlined')
+                    ->confirm(admin_trans('player.wallet.wallet_unlock_confirm'), [$this, 'walletUnlock'], ['id' => $data['id']])
+                    ->gridRefresh();
 
                 // 百家禁用
             });
@@ -1365,6 +1369,51 @@ class ChannelPlayerController
                 }
             });
         });
+    }
+
+    /**
+     * 钱包解锁
+     * @auth true
+     * @group channel
+     * @param $id
+     * @return Msg
+     */
+    public function walletUnlock($id): Msg
+    {
+        /** @var Player $player */
+        $player = Player::offDataAuth()->find($id);
+        if (empty($player)) {
+            return message_error(admin_trans('player.wallet.player_error'));
+        }
+
+        // 检查玩家是否有锁定状态的钱包
+        $platformCash = PlayerPlatformCash::where('player_id', $player->id)
+            ->where('wallet_locked', 1)
+            ->first();
+
+        if (empty($platformCash)) {
+            return message_error(admin_trans('player.wallet.wallet_not_locked'));
+        }
+
+        try {
+            // 解锁钱包：将 wallet_locked 设为 0
+            $platformCash->wallet_locked = 0;
+            $platformCash->save();
+
+            Log::info('Wallet unlock by admin', [
+                'player_id' => $player->id,
+                'player_name' => $player->name,
+                'admin_id' => Admin::id(),
+            ]);
+
+            return message_success(admin_trans('player.wallet.wallet_unlock_success'));
+        } catch (\Exception $e) {
+            Log::error('Wallet unlock failed', [
+                'player_id' => $player->id,
+                'error' => $e->getMessage(),
+            ]);
+            return message_error(admin_trans('player.wallet.wallet_unlock_failed'));
+        }
     }
 
     /**

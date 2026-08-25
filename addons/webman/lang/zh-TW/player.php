@@ -161,6 +161,11 @@ return [
         'artificial_withdrawal' => '人工洗分',
         'artificial_recharge_tip' => '人工開分,無需人工介入稽核,開分完成後遊戲點將直接發放給玩家帳戶,並記錄開分資訊.',
         'artificial_withdrawal_tip' => '人工洗分,無需人工介入稽核,洗分完成後將直接扣除玩家錢包餘額,並記錄洗分資訊.',
+        'wallet_unlock' => '錢包解鎖',
+        'wallet_unlock_confirm' => '確定要解鎖該玩家的錢包嗎？解鎖後玩家可正常使用錢包功能。',
+        'wallet_unlock_success' => '錢包解鎖成功',
+        'wallet_unlock_failed' => '錢包解鎖失敗',
+        'wallet_not_locked' => '該玩家錢包未鎖定',
         'wallet_type' => [
             PlayerMoneyEditLog::RECHARGE => '開分',
             PlayerMoneyEditLog::VIP_RECHARGE => 'VIP開分',

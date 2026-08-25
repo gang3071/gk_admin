@@ -161,6 +161,11 @@ return [
         'artificial_withdrawal' => '人工洗分',
         'artificial_recharge_tip' => '人工开分,无需人工介入审核,开分完成后游戏点将直接发放给玩家账户,并记录开分信息.',
         'artificial_withdrawal_tip' => '人工洗分,无需人工介入审核,洗分完成后将直接扣除玩家钱包余额,并记录洗分信息.',
+        'wallet_unlock' => '钱包解锁',
+        'wallet_unlock_confirm' => '确定要解锁该玩家的钱包吗？解锁后玩家可正常使用钱包功能。',
+        'wallet_unlock_success' => '钱包解锁成功',
+        'wallet_unlock_failed' => '钱包解锁失败',
+        'wallet_not_locked' => '该玩家钱包未锁定',
         'wallet_type' => [
             PlayerMoneyEditLog::RECHARGE => '开分',
             PlayerMoneyEditLog::VIP_RECHARGE => 'VIP开分',
