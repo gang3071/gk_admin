@@ -658,6 +658,17 @@ class Login extends LoginAbstract
                         $query->where('phone', 'like', '%' . $exAdminFilter['player_phone'] . '%');
                     });
                 }
+                // 支持嵌套格式筛选条件（代理/店家后台使用）
+                if (!empty($exAdminFilter['player']['uuid'])) {
+                    $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('uuid', 'like', $exAdminFilter['player']['uuid'] . '%');
+                    });
+                }
+                if (!empty($exAdminFilter['player']['name'])) {
+                    $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                        $query->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                    });
+                }
                 if (isset($exAdminFilter['date_type'])) {
                     $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                 }
@@ -681,6 +692,10 @@ class Login extends LoginAbstract
                     $query->whereHas('player', function ($q) use ($exAdminFilter) {
                         $q->where('store_admin_id', $exAdminFilter['player']['store_admin_id']);
                     });
+                }
+                // 状态筛选（店家后台使用）
+                if (isset($exAdminFilter['status']) && $exAdminFilter['status'] != null) {
+                    $query->where('status', $exAdminFilter['status']);
                 }
 
                 // ✅ 分状态统计
