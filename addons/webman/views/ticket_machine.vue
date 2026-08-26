@@ -86,7 +86,10 @@
             <a-select v-model:value="ticketType" style="width: 100%;" @change="handleTicketTypeChange">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
-              <a-select-option :value="3">{{ labels.type_experience || '體驗券' }}</a-select-option>
+              <a-select-option :value="3">
+                {{ labels.type_experience || '體驗券' }}
+                <span v-if="isExperienceBetCheckEnabled" style="color: #faad14; margin-left: 4px;">({{ labels.bet_check_on || '當前打開打碼量判定' }})</span>
+              </a-select-option>
               <a-select-option :value="4">{{ labels.type_welfare || '福利券' }}</a-select-option>
               <a-select-option :value="6">{{ labels.type_reprint || '重複列印' }}</a-select-option>
             </a-select>
@@ -300,6 +303,11 @@ export default {
       if (!endTime) return true;
 
       return new Date() < new Date(endTime);
+    },
+
+    // 检查是否开启体验券打码判定
+    isExperienceBetCheckEnabled() {
+      return this.playerBetInfo?.experience_bet_check_enabled || false;
     },
 
     // 计算福利卷/体验卷的可选分数选项
