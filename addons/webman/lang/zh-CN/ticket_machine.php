@@ -302,6 +302,7 @@ return [
         'yesterday_bet_prefix' => '昨日打分',
         'claimed_today' => '今日已领取',
         'new_member_claim' => '新会员可领取',
+        'total_limit_reached' => '总次数已用完',
     ],
 
     // 核销记录

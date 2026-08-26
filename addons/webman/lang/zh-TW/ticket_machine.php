@@ -303,6 +303,7 @@ return [
         'yesterday_bet_prefix' => '昨日打分',
         'claimed_today' => '今日已領取',
         'new_member_claim' => '新會員可領取',
+        'total_limit_reached' => '總次數已用完',
     ],
 
     // 核銷記錄

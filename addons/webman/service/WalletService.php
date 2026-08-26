@@ -596,6 +596,14 @@ LUA;
             // ✅ 触发爆机检测（余额增加后可能触发爆机）
             self::checkMachineCrash($playerId, $oldBalance, $newBalance);
 
+            // ✅ 新增：发布余额变化消息到 Redis Pub/Sub（触发钱包解锁）
+            self::publishBalanceChange($playerId, [
+                'reason' => 'admin_adjust',  // 后台调整
+                'old_balance' => $oldBalance,
+                'new_balance' => $newBalance,
+                'amount' => $amount,
+            ]);
+
             return $newBalance;
         } catch (\Throwable $e) {
             Log::error('WalletService: atomicIncrement failed', [
@@ -946,6 +954,59 @@ LUA;
                 'current_balance' => $currentBalance,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
+            ]);
+        }
+    }
+
+    /**
+     * 发布余额变化消息到 Redis Pub/Sub
+     *
+     * 用途：触发 gk_api 的钱包解锁功能
+     *
+     * @param int $playerId 玩家ID
+     * @param array $data 变化数据 ['reason' => string, 'old_balance' => float, 'new_balance' => float, 'amount' => float]
+     * @return void
+     */
+    private static function publishBalanceChange(int $playerId, array $data): void
+    {
+        try {
+            // ✅ 性能优化：余额没有变化时不推送（避免无意义的推送）
+            $oldBalance = (float)($data['old_balance'] ?? 0);
+            $newBalance = (float)($data['new_balance'] ?? 0);
+
+            if (abs($newBalance - $oldBalance) < 0.01) {
+                // 余额变化小于 0.01，视为无变化，不推送
+                return;
+            }
+
+            $message = json_encode([
+                'player_id' => $playerId,
+                'platform' => 'admin',  // 标识为后台操作
+                'reason' => $data['reason'] ?? 'admin_adjust',
+                'old_balance' => $oldBalance,
+                'new_balance' => $newBalance,
+                'order_no' => '',
+                'amount' => $data['amount'] ?? ($newBalance - $oldBalance),
+                'timestamp' => time(),
+            ], JSON_UNESCAPED_UNICODE);
+
+            // 发布到 Redis 频道（触发 gk_api 的钱包解锁）
+            // 不等待响应，延迟 < 2ms
+            Redis::publish('balance:change', $message);
+
+            Log::info('WalletService: 发布余额变化消息', [
+                'player_id' => $playerId,
+                'reason' => $data['reason'] ?? 'admin_adjust',
+                'old_balance' => $oldBalance,
+                'new_balance' => $newBalance,
+                'amount' => $data['amount'] ?? ($newBalance - $oldBalance),
+            ]);
+
+        } catch (\Throwable $e) {
+            // 推送失败不应影响核心业务，仅记录日志
+            Log::warning('WalletService: 余额变化消息发布失败', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
             ]);
         }
     }

@@ -3678,12 +3678,14 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->incoming_ticket_amount = $incomingTicketAmount ?? 0;
                     // 导出用核销（status=2后台核销）
                     $storeAgentShiftHandoverRecord->redeem_amount = $redeemAmountExport ?? 0;
+                    // 机台核销（status=3机台使用）
+                    $storeAgentShiftHandoverRecord->redeem_machine_amount = $redeemAmount ?? 0;
                     $storeAgentShiftHandoverRecord->channel_withdrawal_amount = $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->ticket_redeem_amount = $playerDeliveryRecord['ticket_redeem_amount'] ?? 0;
-                    // 未核销 = 出卷 - 核销（使用导出用核销）
+                    // 未核销 = 出卷 - 后台核销 - 机台核销
                     $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = bcsub(
-                        $playerDeliveryRecord['ticket_redeem_amount'] ?? 0,
-                        $redeemAmountExport ?? 0,
+                        bcsub($playerDeliveryRecord['ticket_redeem_amount'] ?? 0, $redeemAmountExport ?? 0, 2),
+                        $redeemAmount ?? 0,
                         2
                     );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
@@ -3892,6 +3894,7 @@ class ChannelIndexController
         $logLabels['yesterday_bet_prefix'] = admin_trans('ticket_machine.record.yesterday_bet_prefix');
         $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
         $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
+        $logLabels['total_limit_reached'] = admin_trans('ticket_machine.record.total_limit_reached');
 
         // 补充连接状态标签
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
@@ -4092,6 +4095,13 @@ class ChannelIndexController
                 ->whereNull('deleted_at')
                 ->count();
 
+            // 查询体验券总领取次数（排除已删除的记录）
+            $claimedExperienceTotal = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->whereNull('deleted_at')
+                ->count();
+
             return json([
                 'code' => 200,
                 'data' => [
@@ -4103,6 +4113,7 @@ class ChannelIndexController
                     'yesterday_bet_amount' => $yesterdayBetAmount,
                     'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
                     'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
+                    'claimed_experience_total' => $claimedExperienceTotal,  // 体验券总领取次数
                 ]
             ]);
         } catch (\Exception $e) {
@@ -4810,11 +4821,13 @@ class ChannelIndexController
                     'incoming_ticket_amount' => (float)$incomingTicketAmount,
                     // 导出用核销（status=2后台核销）
                     'redeem_amount' => (float)$redeemAmountExport,
+                    // 机台核销（status=3机台使用）
+                    'redeem_machine_amount' => (float)$redeemAmount,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 核销（使用导出用核销）
-                    'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销
+                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
                     'experience_coupon_amount' => $experienceCouponAmount,
                     'welfare_coupon_amount' => $welfareCouponAmount,
                     'modified_add_amount' => (float)$data['modified_add_amount'],

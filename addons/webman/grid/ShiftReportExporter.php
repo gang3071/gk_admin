@@ -32,6 +32,7 @@ class ShiftReportExporter extends Excel
         'ticket_redeem_amount' => 'shift_handover.ticket_redeem_amount',
         'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
         'redeem_amount' => 'shift_handover.redeem_amount',
+        'redeem_machine_amount' => 'shift_handover.redeem_machine_amount',
         'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
         'experience_coupon_amount' => 'shift_handover.experience_coupon_amount',
         'welfare_coupon_amount' => 'shift_handover.welfare_coupon_amount',
@@ -113,6 +114,7 @@ class ShiftReportExporter extends Excel
             'ticket_open_score_amount' => $detail ? ($detail->ticket_open_score_amount ?? 0) : 0,
             'incoming_ticket_amount' => $detail ? ($detail->incoming_ticket_amount ?? 0) : 0,
             'redeem_amount' => $detail ? ($detail->redeem_amount ?? 0) : 0,
+            'redeem_machine_amount' => $detail ? ($detail->redeem_machine_amount ?? 0) : 0,
             'channel_withdrawal_amount' => $detail ? ($detail->channel_withdrawal_amount ?? 0) : 0,
             'ticket_redeem_amount' => $detail ? ($detail->ticket_redeem_amount ?? 0) : 0,
             'ticket_unredeemed_amount' => $detail ? ($detail->ticket_unredeemed_amount ?? 0) : 0,
@@ -432,9 +434,9 @@ class ShiftReportExporter extends Excel
      */
     protected function setColumnWidths(array $activeColumns = [])
     {
-        // 列宽度定义（固定16列）
+        // 列宽度定义（固定17列）
         $columnWidths = [
-            'player_name' => 20,
+            'player_name' => 12,
             'player_phone' => 15,
             'open_score_amount' => 12,
             'channel_withdrawal_amount' => 12,
@@ -442,6 +444,7 @@ class ShiftReportExporter extends Excel
             'ticket_redeem_amount' => 12,
             'ticket_open_score_amount' => 12,
             'redeem_amount' => 12,
+            'redeem_machine_amount' => 12,
             'ticket_unredeemed_amount' => 12,
             'experience_coupon_amount' => 12,
             'welfare_coupon_amount' => 12,

@@ -258,8 +258,12 @@ class ChannelAgentController
                 'vip_level.sort as vip_level_sort',
                 'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
                 'vip_retain_period.period_bet_amount as period_bet_amount',
+                // 彩金累计（子查询，用于排序）
+                Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_lottery_record WHERE player_lottery_record.player_id = player.id AND player_lottery_record.status = 1) as lottery_amount'),
+                // 小计 = 开分 - 洗分（用于排序）
+                Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0)) as subtotal'),
             ])
-            ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
+            // 移除不必要的 channel JOIN（未在查询中使用）
             ->leftjoin('player_promoter', 'player.recommend_id', '=', 'player_promoter.player_id')
             ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
@@ -331,10 +335,17 @@ class ChannelAgentController
         }
         $totalNum = clone $query;
         $total = $totalNum->count();
+
+        // 处理特殊排序字段映射
+        $sortFieldMapping = [
+            'vip_level_name' => 'vip_level_sort',
+        ];
+        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+
         $list = $query->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
-                function ($query) use ($exAdminSortField, $exAdminSortBy) {
-                    $query->orderBy($exAdminSortField, $exAdminSortBy);
+                function ($query) use ($actualSortField, $exAdminSortBy) {
+                    $query->orderBy($actualSortField, $exAdminSortBy);
                 }, function ($query) {
                     $query->orderBy('id', 'asc');
                 })
@@ -353,33 +364,9 @@ class ChannelAgentController
             unset($item);
         }
 
-        // ✅ 优化：批量查询彩金（避免 N+1 查询问题）
-        if (!empty($list)) {
-            $playerIds = array_column($list, 'id');
-
-            // 一次性查询所有玩家的彩金总额
-            $lotteryAmounts = PlayerLotteryRecord::query()
-                ->whereIn('player_id', $playerIds)
-                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                ->select('player_id', Db::raw('COALESCE(SUM(amount), 0) as total_amount'))
-                ->groupBy('player_id')
-                ->pluck('total_amount', 'player_id')
-                ->toArray();
-        }
-
-        // 计算每个设备的彩金和小计
+        // 计算纯开分金额（扣除投钞后），用于展示
         foreach ($list as &$item) {
-            $item['lottery_amount'] = $lotteryAmounts[$item['id']] ?? 0;
-
-            // 计算小计 = 开分 - 洗分
-            // 注意：开分（recharge_amount）已包含投钞
-            // 注意：洗分（withdraw_amount）不包含彩金，彩金已发放给客户，客户洗分会洗掉
             $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
-            $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
-
-            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
-
-            // 存储纯开分金额（扣除投钞后），用于展示
             $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
             $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
         }
@@ -488,7 +475,7 @@ class ChannelAgentController
 
                     return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
                 })
-                ->align('center')->width(180);
+                ->sortable()->align('center')->width(180);
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
                 $val
@@ -510,20 +497,20 @@ class ChannelAgentController
                 // 累计开分需要扣除投钞金额（因为开分字段已包含投钞）
                 $pureRecharge = $data['pure_recharge_amount'] ?? 0;
                 return number_format(floatval($pureRecharge), 2);
-            })->width('100px')->align('center');
+            })->sortable()->width('100px')->align('center');
             $grid->column('withdraw_amount', admin_trans('channel_agent.fields.withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width('100px')->align('center');
+            })->sortable()->width('100px')->align('center');
             $grid->column('machine_put_point', admin_trans('channel_agent.fields.machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width('100px')->align('center');
+            })->sortable()->width('100px')->align('center');
             $grid->column('lottery_amount', admin_trans('channel_agent.fields.lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width('100px')->align('center');
+            })->sortable()->width('100px')->align('center');
             $grid->column('subtotal', admin_trans('channel_agent.fields.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
-            })->width('100px')->align('center');
+            })->sortable()->width('100px')->align('center');
             $grid->column('status', admin_trans('player.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('admin.close'))->color('red'),

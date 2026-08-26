@@ -101,6 +101,11 @@ class Player extends Model
     const PLAYER_SOURCE_ONLINE = 1; // 线上玩家
     const PLAYER_SOURCE_OFFLINE = 2; // 线下玩家
 
+    // 审核状态常量
+    const AUDIT_STATUS_PENDING = 0;   // 未审核
+    const AUDIT_STATUS_APPROVED = 1;  // 已通过
+    const AUDIT_STATUS_REJECTED = 2;  // 未通过
+
     //数据权限字段
     protected $dataAuth = ['department_id' => 'department_id'];
     //简写省略id，默认后台用户表的id

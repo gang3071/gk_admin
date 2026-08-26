@@ -17,6 +17,7 @@ return [
         'ticket_redeem_amount' => '出卷',
         'ticket_open_score_amount' => '开票',
         'redeem_amount' => '核销',
+        'redeem_machine_amount' => '机台核销',
         'ticket_unredeemed_amount' => '未核销',
         'experience_coupon_amount' => '体验券',
         'welfare_coupon_amount' => '福利券',

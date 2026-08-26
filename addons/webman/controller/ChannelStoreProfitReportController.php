@@ -161,8 +161,9 @@ class ChannelStoreProfitReportController
 
             // 入票 = 开票机台使用 + 核销机台使用
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
-            // 未核销 = 出卷 - 核销（后台核销）
-            $ticketUnredeemedAmount = bcsub($ticketRedeemAmount, $redeemAmount, 2);
+            // 未核销 = 出卷 - 后台核销 - 机台核销
+            $totalRedeem = bcadd($redeemAmount, $redeemMachineAmount, 2);
+            $ticketUnredeemedAmount = bcsub($ticketRedeemAmount, $totalRedeem, 2);
 
             // 拉彩数据
             $lotteryData = $lotteryDataByStore[$storeId] ?? null;
@@ -215,6 +216,7 @@ class ChannelStoreProfitReportController
                 'ticket_redeem_amount' => $ticketRedeemAmount,
                 'ticket_open_score_amount' => $ticketOpenScoreAmount,
                 'redeem_amount' => $redeemAmount,
+                'redeem_machine_amount' => $redeemMachineAmount,
                 'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
                 'experience_coupon_amount' => $experienceCouponAmount,
                 'welfare_coupon_amount' => $welfareCouponAmount,
@@ -381,14 +383,19 @@ class ChannelStoreProfitReportController
         $this->applyTimeFilter($query, 'created_at', $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
         $ticketData = $query->selectRaw("
-            store_admin_id,
+            CAST(store_admin_id AS UNSIGNED) as store_admin_id,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS welfare_coupon_amount
         ")->groupBy('store_admin_id')->get();
 
-        return $ticketData->keyBy('store_admin_id')->toArray();
+        // 确保键是整数类型
+        $result = [];
+        foreach ($ticketData as $item) {
+            $result[(int)$item->store_admin_id] = $item;
+        }
+        return $result;
     }
 
     /**
@@ -410,12 +417,17 @@ class ChannelStoreProfitReportController
         $this->applyTimeFilter($query, 'scanned_at', $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
         $redeemData = $query->selectRaw("
-            store_admin_id,
+            CAST(store_admin_id AS UNSIGNED) as store_admin_id,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount
         ")->groupBy('store_admin_id')->get();
 
-        return $redeemData->keyBy('store_admin_id')->toArray();
+        // 确保键是整数类型
+        $result = [];
+        foreach ($redeemData as $item) {
+            $result[(int)$item->store_admin_id] = $item;
+        }
+        return $result;
     }
 
     /**
@@ -508,12 +520,17 @@ class ChannelStoreProfitReportController
         }
 
         $betData = $query->selectRaw("
-            {$shiftTable}.bind_admin_user_id as store_admin_id,
+            CAST({$shiftTable}.bind_admin_user_id AS UNSIGNED) as store_admin_id,
             SUM(store_shift_device_detail.electronic_game_bet_amount) as electronic_game_bet_amount,
             SUM(store_shift_device_detail.machine_bet_amount) as machine_bet_amount
         ")->groupBy($shiftTable . '.bind_admin_user_id')->get();
 
-        return $betData->keyBy('store_admin_id')->toArray();
+        // 确保键是整数类型
+        $result = [];
+        foreach ($betData as $item) {
+            $result[(int)$item->store_admin_id] = $item;
+        }
+        return $result;
     }
 
     // ========== 筛选条件方法 ==========
@@ -650,7 +667,7 @@ class ChannelStoreProfitReportController
         $amountColumns = [
             'open_score_amount', 'withdraw_amount', 'machine_put_point',
             'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
-            'redeem_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
+            'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
             'welfare_coupon_amount', 'lottery_amount', 'activity_total',
             'electronic_game_bet_amount', 'machine_bet_amount',
             'total_income', 'total_expense',
