@@ -305,6 +305,7 @@ return [
         'total_limit_reached' => '总次数已用完',
         'bet_check_failed' => '昨日打码量不足10,000',
         'bet_check_on' => '当前打开打码量判定',
+        'used_experience_count' => '体验券已使用次数',
     ],
 
     // 核销记录

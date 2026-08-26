@@ -3895,6 +3895,7 @@ class ChannelIndexController
         $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
         $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
         $logLabels['total_limit_reached'] = admin_trans('ticket_machine.record.total_limit_reached');
+        $logLabels['used_experience_count'] = admin_trans('ticket_machine.record.used_experience_count');
 
         // 补充连接状态标签
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
@@ -4102,6 +4103,17 @@ class ChannelIndexController
                 ->whereNull('deleted_at')
                 ->count();
 
+            // 查询体验券已使用次数（状态为后台使用或机台使用）
+            $usedExperienceCount = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->whereIn('status', [
+                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
+                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED,
+                ])
+                ->whereNull('deleted_at')
+                ->count();
+
             // 获取当前店家的体验券打码判定开关配置
             $storeAdminId = Admin::id();
             $storeAdmin = \addons\webman\model\AdminUser::query()->where('id', $storeAdminId)->first();
@@ -4119,6 +4131,7 @@ class ChannelIndexController
                     'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
                     'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
                     'claimed_experience_total' => $claimedExperienceTotal,  // 体验券总领取次数
+                    'used_experience_count' => $usedExperienceCount,  // 体验券已使用次数
                     'experience_bet_check_enabled' => $experienceBetCheckEnabled,  // 体验券打码判定开关
                 ]
             ]);

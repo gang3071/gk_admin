@@ -160,6 +160,12 @@
                     <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.yesterday_bet_amount) }}
                   </a-tag>
                 </a-descriptions-item>
+                <!-- 体验券专用：已使用次数 -->
+                <a-descriptions-item v-if="ticketType === 3" :label="labels.used_experience_count || '體驗券已使用次數'">
+                  <a-tag color="purple">
+                    <check-circle-outlined /> {{ playerBetInfo.used_experience_count || 0 }} / {{ playerBetInfo.claimed_experience_total || 0 }}
+                  </a-tag>
+                </a-descriptions-item>
               </a-descriptions>
             </div>
           </div>
