@@ -1411,6 +1411,17 @@ class ChannelPlayerController
             $platformCash->wallet_locked = 0;
             $platformCash->save();
 
+            // ✅ 性能优化：同时从 Redis 锁定玩家集合移除（配合 gk_api 钱包解锁优化）
+            try {
+                \support\Redis::srem('wallet:locked_players', $player->id);
+            } catch (\Throwable $redisError) {
+                // Redis 失败不影响主流程，仅记录日志
+                Log::warning('Wallet unlock: Redis 同步失败', [
+                    'player_id' => $player->id,
+                    'error' => $redisError->getMessage(),
+                ]);
+            }
+
             Log::info('Wallet unlock by admin', [
                 'player_id' => $player->id,
                 'player_name' => $player->name,
