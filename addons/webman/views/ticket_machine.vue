@@ -384,11 +384,21 @@ export default {
         const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 10000;
         const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足10,000';
 
+        // 提示优先级：今日已领取 > 总次数已用完 > 打码量不足 > 新会员可领取
+        let condition = newMemberClaim;
+        if (isDailyLimitReached) {
+          condition = claimedToday;
+        } else if (isTotalLimitReached) {
+          condition = `${totalLimitLabel}(${claimedTotal}/${totalLimit})`;
+        } else if (!betCheckPassed) {
+          condition = betCheckFailedLabel;
+        }
+
         options.push({
           value: score,
           label: `${experienceLabel} ${score} ${scoreUnit}`,
           disabled: isDailyLimitReached || isTotalLimitReached || !betCheckPassed,
-          condition: !betCheckPassed ? betCheckFailedLabel : (isTotalLimitReached ? `${totalLimitLabel}(${claimedTotal}/${totalLimit})` : (isDailyLimitReached ? claimedToday : newMemberClaim)),
+          condition: condition,
         });
       }
 
