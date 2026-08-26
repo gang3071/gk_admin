@@ -306,6 +306,7 @@ return [
         'total_limit_reached' => '合計回数終了',
         'bet_check_failed' => '昨日のベット額が10,000未満',
         'bet_check_on' => 'ベットチェック有効',
+        'used_experience_count' => '体験バウチャー使用済み',
     ],
 
     // チケット記録
