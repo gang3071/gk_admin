@@ -304,6 +304,7 @@ return [
         'claimed_today' => 'Claimed today',
         'new_member_claim' => 'New member',
         'total_limit_reached' => 'Total limit reached',
+        'bet_check_failed' => 'Yesterday bet amount < 10,000',
     ],
 
     // Redeem Records

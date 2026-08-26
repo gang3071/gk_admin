@@ -303,6 +303,7 @@ return [
         'claimed_today' => '今日已领取',
         'new_member_claim' => '新会员可领取',
         'total_limit_reached' => '总次数已用完',
+        'bet_check_failed' => '昨日打码量不足10,000',
     ],
 
     // 核销记录

@@ -376,11 +376,19 @@ export default {
         const isDailyLimitReached = claimedCount >= dailyLimit;
         const isTotalLimitReached = claimedTotal >= totalLimit;
         const totalLimitLabel = this.labels.total_limit_reached || '总次数已用完';
+
+        // 体验券打码判定逻辑
+        const betCheckEnabled = this.playerBetInfo?.experience_bet_check_enabled || false;
+        const isFirstClaim = claimedTotal === 0;
+        const yesterdayBet = this.playerBetInfo?.yesterday_bet_amount || 0;
+        const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 10000;
+        const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足10,000';
+
         options.push({
           value: score,
           label: `${experienceLabel} ${score} ${scoreUnit}`,
-          disabled: isDailyLimitReached || isTotalLimitReached,
-          condition: isTotalLimitReached ? `${totalLimitLabel}(${claimedTotal}/${totalLimit})` : (isDailyLimitReached ? claimedToday : newMemberClaim),
+          disabled: isDailyLimitReached || isTotalLimitReached || !betCheckPassed,
+          condition: !betCheckPassed ? betCheckFailedLabel : (isTotalLimitReached ? `${totalLimitLabel}(${claimedTotal}/${totalLimit})` : (isDailyLimitReached ? claimedToday : newMemberClaim)),
         });
       }
 

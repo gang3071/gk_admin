@@ -304,6 +304,7 @@ return [
         'claimed_today' => '今日已領取',
         'new_member_claim' => '新會員可領取',
         'total_limit_reached' => '總次數已用完',
+        'bet_check_failed' => '昨日打碼量不足10,000',
     ],
 
     // 核銷記錄

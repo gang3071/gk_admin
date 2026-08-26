@@ -304,6 +304,7 @@ return [
         'claimed_today' => '本日受取済み',
         'new_member_claim' => '新規会員',
         'total_limit_reached' => '合計回数終了',
+        'bet_check_failed' => '昨日のベット額が10,000未満',
     ],
 
     // チケット記録

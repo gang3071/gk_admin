@@ -17,6 +17,7 @@ return [
         'agent_commission' => '代理手数料',
         'channel_commission' => 'チャネル手数料',
         'wash_point_config' => '洗分設定',
+        'experience_bet_check_enabled' => '体験バウチャーベットチェック',
         'status' => 'ステータス',
         'created_at' => '作成日時',
         'parent_agent' => '上位代理',
@@ -29,6 +30,7 @@ return [
     'status' => [
         'normal' => '正常',
         'disabled' => '無効',
+        'enabled' => '有効',
         'not_set' => '未設定',
     ],
 
