@@ -12,8 +12,8 @@ return [
         'key' => 'QoYEClMJsgOSWUBkSCq26yWkApqSuH3',
         //token有效时长
         'expire' => null,
-        //唯一登录
-        'unique' => true,
+        //唯一登录（false=允许多点登录，true=单点登录）
+        'unique' => false,
         //验证字段
         'auth_field' => ['password'],
 

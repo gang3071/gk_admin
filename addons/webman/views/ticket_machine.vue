@@ -86,7 +86,10 @@
             <a-select v-model:value="ticketType" style="width: 100%;" @change="handleTicketTypeChange">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
-              <a-select-option :value="3">{{ labels.type_experience || '體驗券' }}</a-select-option>
+              <a-select-option :value="3">
+                {{ labels.type_experience || '體驗券' }}
+                <span v-if="isExperienceBetCheckEnabled" style="color: #faad14; margin-left: 4px;">({{ labels.bet_check_on || '當前打開打碼量判定' }})</span>
+              </a-select-option>
               <a-select-option :value="4">{{ labels.type_welfare || '福利券' }}</a-select-option>
               <a-select-option :value="6">{{ labels.type_reprint || '重複列印' }}</a-select-option>
             </a-select>
@@ -155,6 +158,12 @@
                 <a-descriptions-item :label="labels.yesterday_bet_amount || '昨日電子總打碼量'">
                   <a-tag color="orange">
                     <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.yesterday_bet_amount) }}
+                  </a-tag>
+                </a-descriptions-item>
+                <!-- 体验券专用：已使用次数 -->
+                <a-descriptions-item v-if="ticketType === 3" :label="labels.used_experience_count || '體驗券已使用次數'">
+                  <a-tag color="purple">
+                    <check-circle-outlined /> {{ playerBetInfo.used_experience_count || 0 }} / {{ playerBetInfo.claimed_experience_total || 0 }}
                   </a-tag>
                 </a-descriptions-item>
               </a-descriptions>
@@ -302,6 +311,11 @@ export default {
       return new Date() < new Date(endTime);
     },
 
+    // 检查是否开启体验券打码判定
+    isExperienceBetCheckEnabled() {
+      return this.playerBetInfo?.experience_bet_check_enabled || false;
+    },
+
     // 计算福利卷/体验卷的可选分数选项
     voucherScoreOptions() {
       if (!this.playerBetInfo || !this.isActivityActive) return [];
@@ -376,11 +390,29 @@ export default {
         const isDailyLimitReached = claimedCount >= dailyLimit;
         const isTotalLimitReached = claimedTotal >= totalLimit;
         const totalLimitLabel = this.labels.total_limit_reached || '总次数已用完';
+
+        // 体验券打码判定逻辑
+        const betCheckEnabled = this.playerBetInfo?.experience_bet_check_enabled || false;
+        const isFirstClaim = claimedTotal === 0;
+        const yesterdayBet = this.playerBetInfo?.yesterday_bet_amount || 0;
+        const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 10000;
+        const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足10,000';
+
+        // 提示优先级：今日已领取 > 总次数已用完 > 打码量不足 > 新会员可领取
+        let condition = newMemberClaim;
+        if (isDailyLimitReached) {
+          condition = claimedToday;
+        } else if (isTotalLimitReached) {
+          condition = `${totalLimitLabel}(${claimedTotal}/${totalLimit})`;
+        } else if (!betCheckPassed) {
+          condition = betCheckFailedLabel;
+        }
+
         options.push({
           value: score,
           label: `${experienceLabel} ${score} ${scoreUnit}`,
-          disabled: isDailyLimitReached || isTotalLimitReached,
-          condition: isTotalLimitReached ? `${totalLimitLabel}(${claimedTotal}/${totalLimit})` : (isDailyLimitReached ? claimedToday : newMemberClaim),
+          disabled: isDailyLimitReached || isTotalLimitReached || !betCheckPassed,
+          condition: condition,
         });
       }
 

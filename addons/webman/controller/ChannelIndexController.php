@@ -3895,6 +3895,7 @@ class ChannelIndexController
         $logLabels['claimed_today'] = admin_trans('ticket_machine.record.claimed_today');
         $logLabels['new_member_claim'] = admin_trans('ticket_machine.record.new_member_claim');
         $logLabels['total_limit_reached'] = admin_trans('ticket_machine.record.total_limit_reached');
+        $logLabels['used_experience_count'] = admin_trans('ticket_machine.record.used_experience_count');
 
         // 补充连接状态标签
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
@@ -4102,6 +4103,22 @@ class ChannelIndexController
                 ->whereNull('deleted_at')
                 ->count();
 
+            // 查询体验券已使用次数（状态为后台使用或机台使用）
+            $usedExperienceCount = \addons\webman\model\TicketRecord::query()
+                ->where('player_id', $playerId)
+                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->whereIn('status', [
+                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
+                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED,
+                ])
+                ->whereNull('deleted_at')
+                ->count();
+
+            // 获取当前店家的体验券打码判定开关配置
+            $storeAdminId = Admin::id();
+            $storeAdmin = \addons\webman\model\AdminUser::query()->where('id', $storeAdminId)->first();
+            $experienceBetCheckEnabled = $storeAdmin?->experience_bet_check_enabled ?? false;
+
             return json([
                 'code' => 200,
                 'data' => [
@@ -4114,6 +4131,8 @@ class ChannelIndexController
                     'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录
                     'claimed_experience_count' => $claimedExperienceCount,  // 今日已领取的体验券次数
                     'claimed_experience_total' => $claimedExperienceTotal,  // 体验券总领取次数
+                    'used_experience_count' => $usedExperienceCount,  // 体验券已使用次数
+                    'experience_bet_check_enabled' => $experienceBetCheckEnabled,  // 体验券打码判定开关
                 ]
             ]);
         } catch (\Exception $e) {
@@ -4250,6 +4269,51 @@ class ChannelIndexController
                     ->count();
                 if ($totalCount >= $totalLimit) {
                     return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
+                }
+
+                // 体验券打码判定逻辑
+                // 如果不是第一次领取，且开启了打码判定开关，则需要验证用户昨日打码量
+                if ($totalCount > 0) {
+                    // 获取店家的打码判定开关配置
+                    $storeAdmin = \addons\webman\model\AdminUser::query()->where('id', $storeAdminId)->first();
+
+                    if ($storeAdmin && $storeAdmin->experience_bet_check_enabled) {
+                        // 计算用户昨日打码量
+                        $yesterdayStart = $now->gte($today8am)
+                            ? $yesterday8am->toDateTimeString()
+                            : Carbon::parse('-2 days')->setTime(8, 0, 0)->toDateTimeString();
+                        $yesterdayEnd = $now->gte($today8am)
+                            ? $today8am->toDateTimeString()
+                            : $yesterday8am->toDateTimeString();
+
+                        // 优先从统计表查询，降级从游戏记录表实时查询
+                        $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
+                            ->where('stat_type', 'game')
+                            ->where('dimension', 'daily')
+                            ->where('stat_date', $now->gte($today8am) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d', strtotime('-2 days')))
+                            ->first();
+
+                        $yesterdayBetAmount = 0;
+                        if ($yesterdayData) {
+                            $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
+                        } else {
+                            $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                                ->where('player_id', $playerId)
+                                ->where('created_at', '>=', $yesterdayStart)
+                                ->where('created_at', '<', $yesterdayEnd)
+                                ->sum('bet');
+                        }
+
+                        // 昨日打码量不足10000，拒绝领取
+                        if ($yesterdayBetAmount < 10000) {
+                            \support\Log::info('体验券打码判定失败', [
+                                'player_id' => $playerId,
+                                'yesterday_bet_amount' => $yesterdayBetAmount,
+                                'required_bet_amount' => 10000,
+                            ]);
+                            return json(['code' => 400, 'message' => '昨日打码量不足10,000，无法领取体验券']);
+                        }
+                    }
                 }
             }
 
