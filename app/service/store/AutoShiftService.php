@@ -737,8 +737,17 @@ class AutoShiftService
             // 从统计结果中获取该设备的数据
             $stat = $statistics->get($player->id);
 
-            if (!$stat) {
-                // 该设备在此时间段没有任何账变记录，跳过
+            // 先查询该设备的核销数据（洗分票核销，使用 scanned_at 时间筛选）
+            $redeemAmountExport = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', TicketRecord::STATUS_BACKEND_USED)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
+                ->sum('score');
+
+            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，则跳过
+            if (!$stat && $redeemAmountExport <= 0) {
                 continue;
             }
 
@@ -768,15 +777,6 @@ class AutoShiftService
                 ->where('status', TicketRecord::STATUS_MACHINE_USED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
-                ->sum('score');
-
-            // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
-            $redeemAmountExport = (float)TicketRecord::query()
-                ->where('player_id', $player->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->where('status', TicketRecord::STATUS_BACKEND_USED)
-                ->where('scanned_at', '>', $startTime)
-                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
