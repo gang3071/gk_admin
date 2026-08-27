@@ -17,6 +17,7 @@ return [
         'agent_commission' => 'Agent Commission',
         'channel_commission' => 'Channel Commission',
         'wash_point_config' => 'Wash Point Config',
+        'experience_bet_check_enabled' => 'Experience Bet Check',
         'status' => 'Status',
         'created_at' => 'Created At',
         'parent_agent' => 'Parent Agent',
@@ -29,6 +30,7 @@ return [
     'status' => [
         'normal' => 'Normal',
         'disabled' => 'Disabled',
+        'enabled' => 'Enabled',
         'not_set' => 'Not Set',
     ],
 

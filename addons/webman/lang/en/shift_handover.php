@@ -198,6 +198,7 @@ return [
     'ticket_open_score_amount' => 'Open Ticket',
     'incoming_ticket_amount' => 'Incoming Ticket',
     'redeem_amount' => 'Redeem',
+    'redeem_machine_amount' => 'Machine Redeem',
     'withdrawal_amount' => 'Wash Score',
     'channel_withdrawal_amount' => 'Channel Withdrawal',
     'ticket_redeem_amount' => 'Out Ticket',

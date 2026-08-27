@@ -211,6 +211,12 @@ class ChannelPlayerController
             'player_register_record.city_name',
             // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
             Db::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
+            // VIP等级排序字段（用于排序）
+            Db::raw('COALESCE(vip_level.sort, channel_min_vip_level.sort) as vip_level_sort'),
+            // 彩金累计（子查询，用于排序）
+            Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_lottery_record WHERE player_lottery_record.player_id = player.id AND player_lottery_record.status = 1) as lottery_amount'),
+            // 钱包锁定状态（子查询）
+            Db::raw('(SELECT wallet_locked FROM player_platform_cash WHERE player_platform_cash.player_id = player.id AND player_platform_cash.platform_id = 1 LIMIT 1) as wallet_locked'),
             // 打码量相关字段
             'player.total_bet_amount',
             'vip_retain_period.period_bet_amount as period_bet_amount',
@@ -287,11 +293,18 @@ class ChannelPlayerController
 
         // 执行 count 查询
         $total = $countQuery->count('player.id');
+        // 处理特殊排序字段映射
+        $sortFieldMapping = [
+            'vip_level_name' => 'vip_level_sort',
+            'subtotal' => Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0))'),
+        ];
+        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+
         // 执行分页查询
         $list = $query->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
-                function ($query) use ($exAdminSortField, $exAdminSortBy) {
-                    $query->orderBy($exAdminSortField, $exAdminSortBy);
+                function ($query) use ($actualSortField, $exAdminSortBy) {
+                    $query->orderBy($actualSortField, $exAdminSortBy);
                 }, function ($query) {
                     $query->orderBy('id', 'desc');
                 })
@@ -319,27 +332,19 @@ class ChannelPlayerController
             unset($item);
         }
 
-        // 计算每个设备的彩金和小计
-        foreach ($list as &$item) {
-            // 查询该设备的累计彩金
-            $lotteryAmount = PlayerLotteryRecord::query()
-                ->where('player_id', $item['id'])
-                ->where('status', PlayerLotteryRecord::STATUS_COMPLETE)
-                ->sum('amount') ?? 0;
+        // 计算小计和纯开分金额（彩金已在 SQL 子查询中获取）
+        if (!empty($list)) {
+            foreach ($list as &$item) {
+                // 计算小计 = 开分 - 洗分
+                $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
+                $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
+                $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
 
-            $item['lottery_amount'] = $lotteryAmount;
-
-            // 计算小计 = 开分 - 洗分
-            // 注意：开分（recharge_amount）已经包含了投钞金额，所以不需要再加投钞
-            // 注意：洗分（withdraw_amount）不包含彩金，彩金已发放给客户，客户洗分会洗掉
-            $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
-            $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
-
-            $item['subtotal'] = bcsub($rechargeAmount, $withdrawAmount, 2);
-
-            // 存储纯开分金额（扣除投钞后），用于展示
-            $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
-            $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+                // 存储纯开分金额（扣除投钞后），用于展示
+                $machinePutPoint = floatval($item['machine_put_point'] ?? 0);
+                $item['pure_recharge_amount'] = bcsub($rechargeAmount, $machinePutPoint, 2);
+            }
+            unset($item);
         }
 
         // 获取设备选项列表用于筛选器下拉选择（限制数量避免内存溢出）
@@ -390,6 +395,22 @@ class ChannelPlayerController
             $grid->column('real_name', admin_trans('player.fields.real_name'))->display(function ($val) {
                 return $val ? $val : '-';
             })->ellipsis(true)->align('center')->copy();
+
+            // 审核状态
+            $grid->column('audit_status', admin_trans('player.fields.audit_status'))->display(function ($val) {
+                return match($val) {
+                    Player::AUDIT_STATUS_APPROVED => Tag::create(admin_trans('player.audit.approved'))->color('green'),
+                    Player::AUDIT_STATUS_REJECTED => Tag::create(admin_trans('player.audit.rejected'))->color('red'),
+                    default => Tag::create(admin_trans('player.audit.pending'))->color('default'),
+                };
+            })->editable(
+                (new Editable)->select('audit_status')
+                    ->options([
+                        Player::AUDIT_STATUS_PENDING => admin_trans('player.audit.pending'),
+                        Player::AUDIT_STATUS_APPROVED => admin_trans('player.audit.approved'),
+                        Player::AUDIT_STATUS_REJECTED => admin_trans('player.audit.rejected'),
+                    ])
+            )->align('center');
 
             // 线下渠道：使用 player_type 字段显示玩家类型
             if ($channel && $channel->is_offline == 1) {
@@ -519,7 +540,7 @@ class ChannelPlayerController
 
                     return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
                 })
-                ->align('center')->width(180);
+                ->sortable()->align('center')->width(180);
 
             $grid->column('money',
                 admin_trans('player_platform_cash.platform_name.' . PlayerPlatformCash::PLATFORM_SELF))->display(function (
@@ -541,29 +562,38 @@ class ChannelPlayerController
                 }
             })->width(100)->align('center');
 
+            // 钱包锁定状态列
+            $grid->column('wallet_locked', admin_trans('player.wallet_locked_status'))->display(function ($val) {
+                if ($val == 1) {
+                    return Tag::create(admin_trans('player.wallet_locked'))->color('orange');
+                } else {
+                    return Tag::create(admin_trans('player.wallet_unlocked'))->color('green');
+                }
+            })->width(100)->align('center');
+
             $grid->column('recharge_amount', admin_trans('player.total_recharge_amount'))->display(function ($value, $data) {
                 // 累计开分需要扣除投钞金额（因为开分字段已包含投钞）
                 $pureRecharge = $data['pure_recharge_amount'] ?? 0;
                 return number_format(floatval($pureRecharge), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
             $grid->column('machine_put_point', admin_trans('player.total_machine_put_point'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
             $grid->column('withdraw_amount', admin_trans('player.total_withdraw_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
 
             $grid->column('lottery_amount', admin_trans('player.total_lottery_amount'))->display(function ($value) {
                 return number_format(floatval($value), 2);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
-            })->width(120)->align('center');
+            })->sortable()->width(120)->align('center');
 
             $grid->column('pending_cashback_amount',
                 admin_trans('player_extend.fields.pending_cashback_amount'))->display(function ($val) {
@@ -658,6 +688,16 @@ class ChannelPlayerController
                 $filter->like()->text('recommend_name')->placeholder(admin_trans('player.fields.recommend_promoter_name'));
                 $filter->like()->text('ip')->placeholder(admin_trans('player.login_ip'));
                 $filter->like()->text('remark')->placeholder(admin_trans('player_extend.fields.remark'));
+
+                // 审核状态筛选
+                $filter->eq()->select('audit_status')
+                    ->placeholder(admin_trans('player.fields.audit_status'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        Player::AUDIT_STATUS_PENDING => admin_trans('player.audit.pending'),
+                        Player::AUDIT_STATUS_APPROVED => admin_trans('player.audit.approved'),
+                        Player::AUDIT_STATUS_REJECTED => admin_trans('player.audit.rejected'),
+                    ]);
 
                 // VIP等级筛选
                 $filter->eq()->select('vip_level_id')
@@ -803,8 +843,68 @@ class ChannelPlayerController
                         ]))->width('600px');
                 }
 
+                // 钱包解锁
+                $dropdown->append(admin_trans('player.wallet.wallet_unlock'), 'UnlockOutlined')
+                    ->confirm(admin_trans('player.wallet.wallet_unlock_confirm'), [$this, 'walletUnlock'], ['id' => $data['id']])
+                    ->gridRefresh();
 
                 // 百家禁用
+            });
+
+            // 行内编辑更新处理
+            $grid->updateing(function ($ids, $data) {
+                // 处理 player_extend 字段（编辑弹窗保存）
+                if (isset($ids[0]) && isset($data['player_extend'])) {
+                    if (PlayerExtend::updateOrCreate(
+                        ['player_id' => $ids[0]],
+                        $data['player_extend']
+                    )) {
+                        return message_success(admin_trans('player.remark_edit_success'));
+                    }
+                }
+                // 处理备注字段（行内编辑）- 使用 DB 直接更新，绕过 SoftDeletes 限制
+                if (isset($ids[0]) && isset($data['remark'])) {
+                    $playerExtendTable = plugin()->webman->config('database.player_extend_table');
+                    $exists = Db::table($playerExtendTable)->where('player_id', $ids[0])->exists();
+                    if ($exists) {
+                        Db::table($playerExtendTable)->where('player_id', $ids[0])->update(['remark' => $data['remark']]);
+                    } else {
+                        Db::table($playerExtendTable)->insert([
+                            'player_id' => $ids[0],
+                            'remark' => $data['remark'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    return message_success(admin_trans('form.save_success'));
+                }
+                // 单独处理审核状态字段（行内编辑）
+                // 使用 offDataAuth() 绕过数据权限，因为 Grid 已在 index() 中控制可见范围
+                if (isset($ids[0]) && isset($data['audit_status']) && !isset($data['name']) && !isset($data['real_name'])) {
+                    $result = Player::offDataAuth()->where('id', $ids[0])->update(
+                        ['audit_status' => (int)$data['audit_status']]
+                    );
+                    if ($result) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+                if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
+                        $data
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+                if (isset($ids[0]) && isset($data['player_tag'])) {
+                    $playerTag = implode(',', $data['player_tag']);
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
+                        ['player_tag' => $playerTag]
+                    )) {
+                        return message_success(admin_trans('form.save_success'));
+                    }
+                }
+
+                return message_error(admin_trans('form.save_failed'));
             });
 
             $grid->attr('is_mongo', true);
@@ -901,6 +1001,9 @@ class ChannelPlayerController
         }
         if (!empty($requestFilter['real_name'])) {
             $query->where('player.real_name', 'like', '%' . $requestFilter['real_name'] . '%');
+        }
+        if (isset($requestFilter['audit_status']) && $requestFilter['audit_status'] !== '') {
+            $query->where('player.audit_status', (int)$requestFilter['audit_status']);
         }
         if (!empty($requestFilter['department_id'])) {
             $query->where('player.department_id', $requestFilter['department_id']);
@@ -1277,6 +1380,62 @@ class ChannelPlayerController
                 }
             });
         });
+    }
+
+    /**
+     * 钱包解锁
+     * @auth true
+     * @group channel
+     * @param $id
+     * @return Msg
+     */
+    public function walletUnlock($id): Msg
+    {
+        /** @var Player $player */
+        $player = Player::offDataAuth()->find($id);
+        if (empty($player)) {
+            return message_error(admin_trans('player.wallet.player_error'));
+        }
+
+        // 检查玩家是否有锁定状态的钱包
+        $platformCash = PlayerPlatformCash::where('player_id', $player->id)
+            ->where('wallet_locked', 1)
+            ->first();
+
+        if (empty($platformCash)) {
+            return message_error(admin_trans('player.wallet.wallet_not_locked'));
+        }
+
+        try {
+            // 解锁钱包：将 wallet_locked 设为 0
+            $platformCash->wallet_locked = 0;
+            $platformCash->save();
+
+            // ✅ 性能优化：同时从 Redis 锁定玩家集合移除（配合 gk_api 钱包解锁优化）
+            try {
+                \support\Redis::srem('wallet:locked_players', $player->id);
+            } catch (\Throwable $redisError) {
+                // Redis 失败不影响主流程，仅记录日志
+                Log::warning('Wallet unlock: Redis 同步失败', [
+                    'player_id' => $player->id,
+                    'error' => $redisError->getMessage(),
+                ]);
+            }
+
+            Log::info('Wallet unlock by admin', [
+                'player_id' => $player->id,
+                'player_name' => $player->name,
+                'admin_id' => Admin::id(),
+            ]);
+
+            return message_success(admin_trans('player.wallet.wallet_unlock_success'));
+        } catch (\Exception $e) {
+            Log::error('Wallet unlock failed', [
+                'player_id' => $player->id,
+                'error' => $e->getMessage(),
+            ]);
+            return message_error(admin_trans('player.wallet.wallet_unlock_failed'));
+        }
     }
 
     /**
@@ -2488,6 +2647,8 @@ class ChannelPlayerController
                 $actions->edit()->modal($this->form())->width('60%');
             });
             $grid->updateing(function ($ids, $data) {
+                Log::info('editable update', ['ids' => $ids, 'data' => $data]);
+                // 处理 player_extend 字段（编辑弹窗保存）
                 if (isset($ids[0]) && isset($data['player_extend'])) {
                     if (PlayerExtend::updateOrCreate(
                         ['player_id' => $ids[0]],
@@ -2496,15 +2657,34 @@ class ChannelPlayerController
                         return message_success(admin_trans('player.remark_edit_success'));
                     }
                 }
+                // 处理备注字段（行内编辑）- 使用 DB 直接更新，绕过 SoftDeletes 限制
                 if (isset($ids[0]) && isset($data['remark'])) {
-                    if (PlayerExtend::query()->where('player_id', $ids[0])->update(
-                        ['remark' => $data['remark']]
-                    )) {
+                    $playerExtendTable = plugin()->webman->config('database.player_extend_table');
+                    $exists = Db::table($playerExtendTable)->where('player_id', $ids[0])->exists();
+                    if ($exists) {
+                        Db::table($playerExtendTable)->where('player_id', $ids[0])->update(['remark' => $data['remark']]);
+                    } else {
+                        Db::table($playerExtendTable)->insert([
+                            'player_id' => $ids[0],
+                            'remark' => $data['remark'],
+                            'created_at' => date('Y-m-d H:i:s'),
+                            'updated_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                    return message_success(admin_trans('form.save_success'));
+                }
+                // 单独处理审核状态字段（行内编辑）
+                // 使用 offDataAuth() 绕过数据权限，因为 Grid 已在 index() 中控制可见范围
+                if (isset($ids[0]) && isset($data['audit_status']) && !isset($data['name']) && !isset($data['real_name'])) {
+                    $result = Player::offDataAuth()->where('id', $ids[0])->update(
+                        ['audit_status' => (int)$data['audit_status']]
+                    );
+                    if ($result) {
                         return message_success(admin_trans('form.save_success'));
                     }
                 }
                 if (isset($ids[0]) && (isset($data['name']) || isset($data['real_name']) || isset($data['switch_shop']) || isset($data['status_game_platform']) || isset($data['status_baccarat']) || isset($data['status_offline_open']) || isset($data['status']) || isset($data['status_transfer']) || isset($data['status_national']) || isset($data['status_reverse_water']) || isset($data['status_machine']))) {
-                    if (Player::query()->where('id', $ids[0])->update(
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
                         $data
                     )) {
                         return message_success(admin_trans('form.save_success'));
@@ -2512,7 +2692,7 @@ class ChannelPlayerController
                 }
                 if (isset($ids[0]) && isset($data['player_tag'])) {
                     $playerTag = implode(',', $data['player_tag']);
-                    if (Player::query()->where('id', $ids[0])->update(
+                    if (Player::offDataAuth()->where('id', $ids[0])->update(
                         ['player_tag' => $playerTag]
                     )) {
                         return message_success(admin_trans('form.save_success'));

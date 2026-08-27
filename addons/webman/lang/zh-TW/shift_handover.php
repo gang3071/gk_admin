@@ -197,6 +197,7 @@ return [
     'ticket_open_score_amount' => '開票',
     'incoming_ticket_amount' => '入票',
     'redeem_amount' => '核銷',
+    'redeem_machine_amount' => '機台核銷',
     'withdrawal_amount' => '洗分',
     'channel_withdrawal_amount' => '洗分',
     'ticket_redeem_amount' => '出卷',

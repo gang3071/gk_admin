@@ -17,6 +17,7 @@ return [
         'agent_commission' => '代理抽成',
         'channel_commission' => '管道抽成',
         'wash_point_config' => '洗分配置',
+        'experience_bet_check_enabled' => '體驗券打碼判定',
         'status' => '狀態',
         'created_at' => '建立時間',
         'parent_agent' => '上級代理',
@@ -29,6 +30,7 @@ return [
     'status' => [
         'normal' => '正常',
         'disabled' => '已停用',
+        'enabled' => '啟用',
         'not_set' => '未設定',
     ],
 

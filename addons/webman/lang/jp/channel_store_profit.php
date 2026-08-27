@@ -19,6 +19,7 @@ return [
         'ticket_redeem_amount' => '出卷',
         'ticket_open_score_amount' => '開票',
         'redeem_amount' => '核銷',
+        'redeem_machine_amount' => 'マシン消込',
         'ticket_unredeemed_amount' => '未核銷',
         'experience_coupon_amount' => '體驗券',
         'welfare_coupon_amount' => '福利券',
@@ -59,6 +60,13 @@ return [
 
     // Statistics
     'stats' => [
+        'panel_header' => '統計データを表示',
+        'loading' => 'データ読み込み中...',
+        'refresh' => '更新',
+        'load_error' => 'データの読み込みに失敗しました',
+        'retry' => '再試行',
+        'click_to_view' => 'クリックして統計データを表示',
+        'load_failed_msg' => 'データの読み込みに失敗しました。再試行してください',
         'total_recharge' => '総開分',
         'total_withdraw' => '総洗分',
         'total_machine_put' => '総コイン投入',

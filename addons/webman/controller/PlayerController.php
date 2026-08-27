@@ -206,6 +206,8 @@ class PlayerController
                 'national_promoter.level as level_sort',
                 // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
                 DB::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
+                // VIP等级排序字段（用于排序）
+                DB::raw('COALESCE(vip_level.sort, channel_min_vip_level.sort) as vip_level_sort'),
                 // 打码量相关字段
                 'player.total_bet_amount',
                 'vip_retain_period.period_bet_amount as period_bet_amount',
@@ -329,10 +331,16 @@ class PlayerController
         }
         // ✅ 优化：直接使用 count() 而不是 get()->count()，避免加载所有数据到内存
         $total = $query->count();
+        // 处理特殊排序字段映射
+        $sortFieldMapping = [
+            'vip_level_name' => 'vip_level_sort',
+        ];
+        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+
         $list = (clone $query)->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
-                function ($query) use ($exAdminSortField, $exAdminSortBy) {
-                    $query->orderBy($exAdminSortField, $exAdminSortBy);
+                function ($query) use ($actualSortField, $exAdminSortBy) {
+                    $query->orderBy($actualSortField, $exAdminSortBy);
                 }, function ($query) {
                     $query->orderBy('player.id', 'desc');
                 })
@@ -482,7 +490,7 @@ class PlayerController
 
                     return Html::create()->content($content)->style(['display' => 'flex', 'flex-direction' => 'column', 'align-items' => 'center']);
                 })
-                ->align('center')->width(180);
+                ->sortable()->align('center')->width(180);
             $grid->column('pending_amount',
                 admin_trans('national_promoter.fields.pending_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('settlement_amount',

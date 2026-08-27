@@ -17,6 +17,7 @@ return [
         'ticket_redeem_amount' => 'Ticket Redeem',
         'ticket_open_score_amount' => 'Ticket Open Score',
         'redeem_amount' => 'Redeem',
+        'redeem_machine_amount' => 'Machine Redeem',
         'ticket_unredeemed_amount' => 'Unredeemed',
         'experience_coupon_amount' => 'Experience Coupon',
         'welfare_coupon_amount' => 'Welfare Coupon',
@@ -54,6 +55,13 @@ return [
 
     // Statistics
     'stats' => [
+        'panel_header' => 'View Statistics',
+        'loading' => 'Loading...',
+        'refresh' => 'Refresh',
+        'load_error' => 'Failed to load data',
+        'retry' => 'Retry',
+        'click_to_view' => 'Click to view statistics',
+        'load_failed_msg' => 'Failed to load data, please retry',
         'total_recharge' => 'Total Open Score',
         'total_withdraw' => 'Total Wash Score',
         'total_machine_put' => 'Total Cash In',

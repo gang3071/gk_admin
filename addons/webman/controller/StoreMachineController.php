@@ -191,6 +191,11 @@ class StoreMachineController
                 })
                 ->width(120)->align('center');
 
+            // 体验券打码判定开关（可直接点击切换）
+            $grid->column('experience_bet_check_enabled', admin_trans('store_machine.fields.experience_bet_check_enabled'))
+                ->switch()
+                ->width(120)->align('center');
+
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),
@@ -395,7 +400,7 @@ class StoreMachineController
                         }
 
                         // 更新可编辑字段（wash_point_config已改为使用配置表）
-                        $updateableFields = ['agent_commission', 'channel_commission'];
+                        $updateableFields = ['agent_commission', 'channel_commission', 'experience_bet_check_enabled'];
                         $updated = false;
                         foreach ($updateableFields as $field) {
                             if (array_key_exists($field, $data)) {

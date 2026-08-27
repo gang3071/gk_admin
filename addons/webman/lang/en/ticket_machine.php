@@ -303,6 +303,10 @@ return [
         'yesterday_bet_prefix' => 'Yesterday bet',
         'claimed_today' => 'Claimed today',
         'new_member_claim' => 'New member',
+        'total_limit_reached' => 'Total limit reached',
+        'bet_check_failed' => 'Yesterday bet amount < 10,000',
+        'bet_check_on' => 'Bet check enabled',
+        'used_experience_count' => 'Experience Used',
     ],
 
     // Redeem Records

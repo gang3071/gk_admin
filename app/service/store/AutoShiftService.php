@@ -253,6 +253,11 @@ class AutoShiftService
             // 新增字段
             $shiftRecord->open_score_amount = $statistics['open_score_amount'];
             $shiftRecord->ticket_open_score_amount = $statistics['ticket_open_score_amount'];
+            $shiftRecord->incoming_ticket_amount = $statistics['incoming_ticket_amount'];
+            // 导出用核销（status=2后台核销）
+            $shiftRecord->redeem_amount = $statistics['redeem_amount'];
+            // 机台核销（status=3机台使用）
+            $shiftRecord->redeem_machine_amount = $statistics['redeem_machine_amount'];
             $shiftRecord->channel_withdrawal_amount = $statistics['channel_withdrawal_amount'];
             $shiftRecord->ticket_redeem_amount = $statistics['ticket_redeem_amount'];
             $shiftRecord->ticket_unredeemed_amount = $statistics['ticket_unredeemed_amount'];
@@ -586,10 +591,12 @@ class AutoShiftService
             'incoming_ticket_amount' => (float)$incomingTicketAmount,
             // 导出用核销（status=2后台核销）
             'redeem_amount' => (float)$redeemAmountExport,
+            // 机台核销（status=3机台使用）
+            'redeem_machine_amount' => (float)$redeemAmount,
             'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
             'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-            // 未核销 = 出卷 - 核销（使用导出用核销）
-            'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+            // 未核销 = 出卷 - 后台核销 - 机台核销
+            'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
             // 详细分类数据（保留原有字段）
@@ -635,6 +642,7 @@ class AutoShiftService
                 player_id,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as machine_point,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as activity_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as birthday_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as upgrade_bonus_amount,
@@ -649,6 +657,7 @@ class AutoShiftService
             ', [
                 PlayerDeliveryRecord::TYPE_MACHINE,
                 PlayerDeliveryRecord::TYPE_LOTTERY,
+                PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS,
                 PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
                 PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
@@ -803,7 +812,7 @@ class AutoShiftService
                 || $redeemAmount > 0                                           // 核销金额（机台核销）
                 || $ticketUnredeemed > 0                                       // 未核销金额
                 || $data['lottery_amount'] > 0                                 // 拉彩金额
-                || $data['activity_bonus_amount'] > 0                          // 活动礼金
+                || ($data['activity_bonus_amount'] ?? 0) > 0                   // 活动礼金
                 || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
                 || $data['birthday_bonus_amount'] > 0                          // 生日礼金
                 || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
@@ -829,16 +838,19 @@ class AutoShiftService
                     'incoming_ticket_amount' => (float)$incomingTicketAmount,
                     // 导出用核销（status=2后台核销）
                     'redeem_amount' => (float)$redeemAmountExport,
+                    // 机台核销（status=3机台使用）
+                    'redeem_machine_amount' => (float)$redeemAmount,
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 核销（使用导出用核销）
-                    'ticket_unredeemed_amount' => bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销
+                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
                     'experience_coupon_amount' => $experienceCoupon,
                     'welfare_coupon_amount' => $welfareCoupon,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
                     'modified_deduct_amount' => (float)$data['modified_deduct_amount'],
                     'lottery_amount' => (float)$data['lottery_amount'],
+                    'activity_bonus_amount' => (float)($data['activity_bonus_amount'] ?? 0),
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
                     'birthday_bonus_amount' => (float)($data['birthday_bonus_amount'] ?? 0),
                     'upgrade_bonus_amount' => (float)($data['upgrade_bonus_amount'] ?? 0),

@@ -17,6 +17,7 @@ return [
         'ticket_redeem_amount' => '出卷',
         'ticket_open_score_amount' => '开票',
         'redeem_amount' => '核销',
+        'redeem_machine_amount' => '机台核销',
         'ticket_unredeemed_amount' => '未核销',
         'experience_coupon_amount' => '体验券',
         'welfare_coupon_amount' => '福利券',
@@ -54,6 +55,13 @@ return [
 
     // 统计数据
     'stats' => [
+        'panel_header' => '查看统计数据',
+        'loading' => '数据加载中...',
+        'refresh' => '刷新数据',
+        'load_error' => '数据加载失败',
+        'retry' => '重试',
+        'click_to_view' => '点击展开查看统计数据',
+        'load_failed_msg' => '数据加载失败，请重试',
         'total_recharge' => '总开分',
         'total_withdraw' => '总洗分',
         'total_machine_put' => '总投钞',
