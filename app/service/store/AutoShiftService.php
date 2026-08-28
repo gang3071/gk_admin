@@ -751,7 +751,22 @@ class AutoShiftService
                 continue;
             }
 
-            $data = $stat->toArray();
+            $data = $stat ? $stat->toArray() : [
+                'machine_point' => 0,
+                'lottery_amount' => 0,
+                'activity_bonus_amount' => 0,
+                'lottery_ticket_reward_amount' => 0,
+                'birthday_bonus_amount' => 0,
+                'upgrade_bonus_amount' => 0,
+                'recharge_amount' => 0,
+                'open_score_amount' => 0,
+                'ticket_open_score_amount' => 0,
+                'withdrawal_amount' => 0,
+                'channel_withdrawal_amount' => 0,
+                'ticket_redeem_amount' => 0,
+                'modified_add_amount' => 0,
+                'modified_deduct_amount' => 0,
+            ];
 
             // 获取该设备的电子游戏打码量和机器打码量
             $electronicGameBet = (float)($electronicGameBetMap[$player->id] ?? 0);
