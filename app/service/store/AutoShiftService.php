@@ -746,8 +746,17 @@ class AutoShiftService
                 ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
-            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，则跳过
-            if (!$stat && $redeemAmountExport <= 0) {
+            // 获取该设备的电子游戏打码量和机器打码量
+            $electronicGameBet = (float)($electronicGameBetMap[$player->id] ?? 0);
+            $machineBet = (float)($machineBetMap[$player->id] ?? 0);
+
+            // 获取洗票未核销、体验券、福利券
+            $ticketUnredeemed = (float)($ticketUnredeemedMap[$player->id] ?? 0);
+            $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
+            $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
+
+            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，也没有票券记录，则跳过
+            if (!$stat && $redeemAmountExport <= 0 && $experienceCoupon <= 0 && $welfareCoupon <= 0 && $ticketUnredeemed <= 0) {
                 continue;
             }
 
@@ -767,15 +776,6 @@ class AutoShiftService
                 'modified_add_amount' => 0,
                 'modified_deduct_amount' => 0,
             ];
-
-            // 获取该设备的电子游戏打码量和机器打码量
-            $electronicGameBet = (float)($electronicGameBetMap[$player->id] ?? 0);
-            $machineBet = (float)($machineBetMap[$player->id] ?? 0);
-
-            // 获取洗票未核销、体验券、福利券
-            $ticketUnredeemed = (float)($ticketUnredeemedMap[$player->id] ?? 0);
-            $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
-            $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
 
             // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
             $ticketOpenScoreAmount = (float)TicketRecord::query()
