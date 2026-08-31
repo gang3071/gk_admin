@@ -2,9 +2,9 @@
 
 namespace addons\webman\controller;
 
+use addons\webman\model\AdminDevice;
 use addons\webman\model\AdminUser;
 use addons\webman\model\Channel;
-use addons\webman\model\AdminDevice;
 use addons\webman\service\GoogleTtsHttpService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -17,7 +17,6 @@ use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\response\Response;
 use ExAdmin\ui\support\Request;
-use support\Db;
 
 /**
  * 总后台设备管理控制器
@@ -56,8 +55,6 @@ class AdminDeviceController
                     if (empty($value)) {
                         return Tag::create(admin_trans('device.voice.not_generated'))->color('default');
                     }
-                    // 使用 Html::markdown 渲染 HTML（不会被转义）
-                    // 设置音频播放器固定宽度，防止撑开列
                     $audioHtml = '<audio controls style="width:180px;height:32px;"><source src="' . $value . '" type="audio/mpeg">您的浏览器不支持音频播放</audio>';
                     return Html::markdown($audioHtml);
                 })
