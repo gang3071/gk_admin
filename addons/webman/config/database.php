@@ -351,5 +351,17 @@ return [
         //VIP等级反水比例表
         'vip_level_cashback_table' => 'vip_level_cashback',
         'vip_level_cashback_model' => \addons\webman\model\VipLevelCashback::class,
+        // 餐點類別
+        'dish_category_table' => 'dish_category',
+        'dish_category_model' => \addons\webman\model\DishCategory::class,
+        // 餐點
+        'dish_table' => 'dish',
+        'dish_model' => \addons\webman\model\Dish::class,
+        // 餐點訂單
+        'dish_order_table' => 'dish_order',
+        'dish_order_model' => \addons\webman\model\DishOrder::class,
+        // 餐點訂單明細
+        'dish_order_item_table' => 'dish_order_item',
+        'dish_order_item_model' => \addons\webman\model\DishOrderItem::class,
     ],
 ];
