@@ -43,7 +43,6 @@ class AgentDepositBonusTaskController
             $grid->autoHeight();
             $grid->bordered(true);
 
-            // 只显示当前代理的任务
             $currentAdmin = Admin::user();
             $grid->model()->where('agent_id', $currentAdmin->id)
                 ->with(['player', 'order.activity'])
