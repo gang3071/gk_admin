@@ -691,6 +691,66 @@ return [
         ]
     ],
 
+    // ========== 储值机购分配置 ==========
+    [
+        'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController-',
+        'pid' => 0,
+        'url' => '',
+        'group' => 'store',
+        'title' => '储值机购分配置',
+        'children' => [
+            // 配置列表
+            [
+                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/index',
+                'title' => '配置列表',
+            ],
+            // 添加配置
+            [
+                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-get',
+                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+                'title' => '添加配置',
+            ],
+            [
+                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-post',
+                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+                'title' => '保存配置',
+            ],
+            // 编辑配置
+            [
+                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-put',
+                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'put',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+                'title' => '编辑配置',
+            ],
+            // 删除配置
+            [
+                'id' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\form-delete',
+                'pid' => 'addons\webman\controller\ChannelPurchaseScoreSettingController\index',
+                'action' => 'form',
+                'method' => 'delete',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-ChannelPurchaseScoreSettingController/form',
+                'title' => '删除配置',
+            ],
+        ]
+    ],
+
     // ========== 出票记录 ==========
     [
         'id' => 'addons\webman\controller\StoreTicketRecordController-',

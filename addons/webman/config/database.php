@@ -312,6 +312,9 @@ return [
         //店家开分配置
         'open_score_setting_table' => 'open_score_setting',
         'open_score_setting_model' => \addons\webman\model\OpenScoreSetting::class,
+        //储值机购分配置
+        'purchase_score_setting_table' => 'purchase_score_setting',
+        'purchase_score_setting_model' => \addons\webman\model\PurchaseScoreSetting::class,
         //充值满赠活动
         'deposit_bonus_activity_table' => 'deposit_bonus_activity',
         'deposit_bonus_activity_model' => \addons\webman\model\DepositBonusActivity::class,

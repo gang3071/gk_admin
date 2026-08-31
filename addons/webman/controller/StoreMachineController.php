@@ -265,6 +265,11 @@ class StoreMachineController
                     ->modal([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
                     ->width('90%');
 
+                // 储值机购分配置
+                $dropdown->prepend(admin_trans('store_machine.actions.purchase_score_setting'), 'fas fa-shopping-cart')
+                    ->modal([$this, 'purchaseScoreSettingList'], ['store_id' => $data['id']])
+                    ->width('90%');
+
                 // 洗分配置
                 $dropdown->prepend(admin_trans('store_machine.actions.wash_point_setting'), 'fas fa-arrow-down')
                     ->modal([$this, 'washPointSettingList'], ['store_id' => $data['id']])
@@ -631,6 +636,18 @@ class StoreMachineController
             $openScoreSetting->score_6 = 20000;
             $openScoreSetting->default_scores = 500;
             $openScoreSetting->save();
+
+            // 5.1 创建默认储值机购分配置
+            $purchaseScoreSetting = new \addons\webman\model\PurchaseScoreSetting();
+            $purchaseScoreSetting->store_admin_id = $adminUser->id;
+            $purchaseScoreSetting->score_1 = 500;
+            $purchaseScoreSetting->score_2 = 1000;
+            $purchaseScoreSetting->score_3 = 3000;
+            $purchaseScoreSetting->score_4 = 5000;
+            $purchaseScoreSetting->score_5 = 10000;
+            $purchaseScoreSetting->score_6 = 20000;
+            $purchaseScoreSetting->default_scores = 500;
+            $purchaseScoreSetting->save();
 
             // 6. 创建默认洗分配置
             $washPointSetting = new \addons\webman\model\WashPointSetting();
@@ -1702,6 +1719,167 @@ class StoreMachineController
     private function getDefaultWashPoint(int $index): float
     {
         $defaults = [1000, 3000, 5000, 10000, 30000, 50000];
+        return $defaults[$index - 1] ?? 0;
+    }
+
+    // =========================================================================
+    // 储值机购分配置
+    // =========================================================================
+
+    /**
+     * 储值机购分配置列表（渠道查看店家配置）
+     * @auth true
+     * @group channel
+     */
+    public function purchaseScoreSettingList()
+    {
+        $storeId = request()->input('store_id');
+
+        // 获取店家信息
+        $store = AdminUser::find($storeId);
+        if (!$store || $store->type != AdminUser::TYPE_STORE) {
+            return Grid::create([], function (Grid $grid) {
+                $grid->push(Html::markdown('><font size=3 color="#ff4d4f">店家不存在</font>'));
+            });
+        }
+
+        return Grid::create(new \addons\webman\model\PurchaseScoreSetting(), function (Grid $grid) use ($store, $storeId) {
+            $grid->title(admin_trans('purchase_score_setting.title') . ' - ' . ($store->nickname ?: $store->username));
+            $grid->model()->where('store_admin_id', $storeId)->orderBy('id', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            $grid->column('scores', admin_trans('purchase_score_setting.fields.scores'))
+                ->display(function ($val, $data) {
+                    $scores = [];
+                    for ($i = 1; $i <= 6; $i++) {
+                        $key = 'score_' . $i;
+                        if ($data->$key > 0) {
+                            $scores[] = Tag::create($data->$key)->color('cyan');
+                        }
+                    }
+                    return Html::create()->content($scores)->style([
+                        'display' => 'flex',
+                        'gap' => '5px',
+                        'flex-wrap' => 'wrap'
+                    ]);
+                })->align('center')->width('30%');
+
+            $grid->column('default_scores', admin_trans('purchase_score_setting.fields.default_scores'))
+                ->display(function ($val) {
+                    if ($val > 0) {
+                        return Tag::create($val)->color('orange');
+                    }
+                    return Tag::create(admin_trans('purchase_score_setting.not_set'))->color('default');
+                })->align('center');
+
+            $grid->column('created_at', admin_trans('purchase_score_setting.fields.created_at'))->align('center');
+            $grid->column('updated_at', admin_trans('purchase_score_setting.fields.updated_at'))->align('center');
+
+            $grid->hideCreate(); // 去掉添加
+            $grid->hideDelete(); // 去掉删除
+            $grid->hideTrashed(); // 去掉回收站
+            $grid->setForm()->drawer($this->purchaseScoreSettingForm($storeId));
+            $grid->expandFilter();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDetail();
+                $actions->hideDel(); // 去掉删除按钮
+            })->align('center');
+        });
+    }
+
+    /**
+     * 储值机购分配置表单（用于渠道管理）
+     * @auth true
+     * @group channel
+     * @param int $storeId
+     * @return Form
+     */
+    public function purchaseScoreSettingForm(int $storeId): Form
+    {
+        return Form::create(new \addons\webman\model\PurchaseScoreSetting(), function (Form $form) use ($storeId) {
+            $form->title(admin_trans('purchase_score_setting.title'));
+
+            $form->number('default_scores', admin_trans('purchase_score_setting.fields.default_scores'))
+                ->default(0)
+                ->min(0)
+                ->max(1000000)
+                ->step(1)
+                ->style(['width' => '100%'])
+                ->help(admin_trans('purchase_score_setting.help.default_scores'));
+
+            $form->divider()->content(admin_trans('purchase_score_setting.fields.default_scores'));
+
+            // 6个购分选项
+            for ($i = 1; $i <= 6; $i++) {
+                $form->number('score_' . $i, admin_trans('purchase_score_setting.fields.score_' . $i))
+                    ->default($this->getDefaultPurchaseScore($i))
+                    ->min(0)
+                    ->max(1000000)
+                    ->step(1)
+                    ->style(['width' => '100%'])
+                    ->help(admin_trans('purchase_score_setting.help.score'));
+            }
+
+            $form->layout('vertical');
+
+            // 保存时验证
+            $form->saving(function (Form $form) use ($storeId) {
+                $form->input('store_admin_id', $storeId);
+
+                // 检查是否已存在配置（编辑时排除当前记录）
+                $exists = \addons\webman\model\PurchaseScoreSetting::query()->where('store_admin_id', $storeId);
+
+                if ($form->isEdit()) {
+                    $exists->where('id', '!=', $form->driver()->get('id'));
+                }
+
+                if ($exists->exists()) {
+                    return message_error(admin_trans('purchase_score_setting.player_exists'));
+                }
+
+                // 验证所有购分配置必须是正整数
+                $defaultScores = $form->input('default_scores');
+                if ($defaultScores !== null && $defaultScores !== '' && $defaultScores != 0) {
+                    if ($defaultScores != floor($defaultScores) || $defaultScores < 0) {
+                        return message_error(admin_trans('purchase_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('purchase_score_setting.fields.default_scores')]));
+                    }
+                }
+
+                for ($i = 1; $i <= 6; $i++) {
+                    $score = $form->input('score_' . $i);
+                    if ($score !== null && $score !== '' && $score != 0) {
+                        if ($score != floor($score) || $score < 0) {
+                            return message_error(admin_trans('purchase_score_setting.error.must_be_positive_integer', null, ['field' => admin_trans('purchase_score_setting.fields.score_' . $i)]));
+                        }
+                    }
+                }
+
+                // 验证至少配置一个购分选项
+                $hasScore = false;
+                for ($i = 1; $i <= 6; $i++) {
+                    $score = $form->input('score_' . $i);
+                    if (!empty($score) && $score > 0) {
+                        $hasScore = true;
+                        break;
+                    }
+                }
+
+                if (!$hasScore) {
+                    return message_error(admin_trans('purchase_score_setting.at_least_one_score'));
+                }
+            });
+        });
+    }
+
+    /**
+     * 获取默认购分值
+     * @param int $index
+     * @return int
+     */
+    private function getDefaultPurchaseScore(int $index): int
+    {
+        $defaults = [500, 1000, 3000, 5000, 10000, 20000];
         return $defaults[$index - 1] ?? 0;
     }
 

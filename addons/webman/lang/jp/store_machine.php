@@ -103,6 +103,7 @@ return [
         'auto_shift_config' => '自動交代設定',
         'system_setting' => 'システム設定',
         'open_score_setting' => 'オープンスコア設定',
+        'purchase_score_setting' => '販売機スコア購入設定',
         'wash_point_setting' => 'ウォッシュポイント設定',
         'activity_config' => 'アクティビティ設定',
     ],
