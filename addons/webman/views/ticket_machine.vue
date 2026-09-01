@@ -85,7 +85,6 @@
             <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.ticket_type || '票據類型' }}</div>
             <a-select v-model:value="ticketType" style="width: 100%;" @change="handleTicketTypeChange">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
-              <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
               <a-select-option :value="3">
                 {{ labels.type_experience || '體驗券' }}
                 <span v-if="isExperienceBetCheckEnabled" style="color: #faad14; margin-left: 4px;">({{ labels.bet_check_on || '當前打開打碼量判定' }})</span>

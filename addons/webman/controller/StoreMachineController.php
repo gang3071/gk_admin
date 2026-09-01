@@ -275,10 +275,10 @@ class StoreMachineController
                     ->modal([$this, 'washPointSettingList'], ['store_id' => $data['id']])
                     ->width('90%');
 
-                // 活动配置
-                $dropdown->prepend(admin_trans('store_machine.actions.activity_config'), 'fas fa-gift')
-                    ->modal([$this, 'activityConfigList'], ['store_id' => $data['id']])
-                    ->width('90%');
+                // 活动配置（已隐藏）
+                // $dropdown->prepend(admin_trans('store_machine.actions.activity_config'), 'fas fa-gift')
+                //     ->modal([$this, 'activityConfigList'], ['store_id' => $data['id']])
+                //     ->width('90%');
             });
 
             // 行展开 - 显示限红组配置信息

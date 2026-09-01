@@ -377,8 +377,8 @@ class StoreTicketRecordController
                     ->options([
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
-                        TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
                         TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+                        TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
                         TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
                     ])
                     ->style(['width' => '150px']);

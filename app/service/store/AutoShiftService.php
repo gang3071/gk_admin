@@ -737,12 +737,14 @@ class AutoShiftService
             // 从统计结果中获取该设备的数据
             $stat = $statistics->get($player->id);
 
-            if (!$stat) {
-                // 该设备在此时间段没有任何账变记录，跳过
-                continue;
-            }
-
-            $data = $stat->toArray();
+            // 先查询该设备的核销数据（洗分票核销，使用 scanned_at 时间筛选）
+            $redeemAmountExport = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', TicketRecord::STATUS_BACKEND_USED)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
+                ->sum('score');
 
             // 获取该设备的电子游戏打码量和机器打码量
             $electronicGameBet = (float)($electronicGameBetMap[$player->id] ?? 0);
@@ -752,6 +754,28 @@ class AutoShiftService
             $ticketUnredeemed = (float)($ticketUnredeemedMap[$player->id] ?? 0);
             $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
             $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
+
+            // 如果没有 PlayerDeliveryRecord 记录，也没有核销记录，也没有票券记录，则跳过
+            if (!$stat && $redeemAmountExport <= 0 && $experienceCoupon <= 0 && $welfareCoupon <= 0 && $ticketUnredeemed <= 0) {
+                continue;
+            }
+
+            $data = $stat ? $stat->toArray() : [
+                'machine_point' => 0,
+                'lottery_amount' => 0,
+                'activity_bonus_amount' => 0,
+                'lottery_ticket_reward_amount' => 0,
+                'birthday_bonus_amount' => 0,
+                'upgrade_bonus_amount' => 0,
+                'recharge_amount' => 0,
+                'open_score_amount' => 0,
+                'ticket_open_score_amount' => 0,
+                'withdrawal_amount' => 0,
+                'channel_withdrawal_amount' => 0,
+                'ticket_redeem_amount' => 0,
+                'modified_add_amount' => 0,
+                'modified_deduct_amount' => 0,
+            ];
 
             // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
             $ticketOpenScoreAmount = (float)TicketRecord::query()
@@ -768,15 +792,6 @@ class AutoShiftService
                 ->where('status', TicketRecord::STATUS_MACHINE_USED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
-                ->sum('score');
-
-            // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
-            $redeemAmountExport = (float)TicketRecord::query()
-                ->where('player_id', $player->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->where('status', TicketRecord::STATUS_BACKEND_USED)
-                ->where('scanned_at', '>', $startTime)
-                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
