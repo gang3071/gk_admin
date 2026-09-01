@@ -61,6 +61,7 @@ return [
         'player_name' => 'プレイヤー名',
         'player_uuid' => 'プレイヤーUUID',
         'player_username' => 'プレイヤーアカウント',
+        'store_name' => '店舗',
         'ticket_no' => 'チケット番号',
         'prize_type' => '賞品タイプ',
         'prize_name' => '賞品名',

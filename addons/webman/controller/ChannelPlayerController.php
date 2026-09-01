@@ -518,7 +518,7 @@ class ChannelPlayerController
                     } else {
                         // 已是最高等级
                         $progress = 100;
-                        $progressText = admin_trans('player.vip_max_level');
+                        $progressText = admin_trans('player.fields.vip_max_level');
                     }
 
                     // 构建显示内容

@@ -61,6 +61,7 @@ return [
         'player_name' => 'Player Name',
         'player_uuid' => 'Player UUID',
         'player_username' => 'Player Account',
+        'store_name' => 'Store',
         'ticket_no' => 'Ticket No',
         'prize_type' => 'Prize Type',
         'prize_name' => 'Prize Name',
