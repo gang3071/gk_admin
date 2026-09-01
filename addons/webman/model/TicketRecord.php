@@ -29,6 +29,12 @@ use addons\webman\traits\HasDateTimeFormatter;
  * @property int $print_count 打印次数
  * @property string|null $last_print_time 最后打印时间
  * @property array|null $extra_data 扩展数据
+ * @property int|null $source_ticket_id 来源原票ID
+ * @property string|null $source_type 来源类型: split/merge
+ * @property array|null $related_ticket_ids 关联的新票ID数组
+ * @property int $operation_type 操作类型: 0=无操作, 1=拆分, 2=合并
+ * @property string|null $operated_at 操作时间
+ * @property int|null $operated_by 操作人ID
  * @property string $remark 备注
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
@@ -59,6 +65,17 @@ class TicketRecord extends Model
     const STATUS_BACKEND_USED = 2;   // 后台使用
     const STATUS_MACHINE_USED = 3;   // 机台使用
     const STATUS_PRINT_FAILED = 5;   // 打印失败
+    const STATUS_SPLIT = 6;          // 已拆分
+    const STATUS_MERGED = 7;         // 已合并
+
+    // 操作类型常量
+    const OPERATION_NONE = 0;        // 无操作
+    const OPERATION_SPLIT = 1;       // 拆分
+    const OPERATION_MERGE = 2;       // 合并
+
+    // 来源类型常量
+    const SOURCE_TYPE_SPLIT = 'split';    // 来源：拆分
+    const SOURCE_TYPE_MERGE = 'merge';    // 来源：合并
 
     /**
      * 获取票据类型名称
@@ -85,6 +102,8 @@ class TicketRecord extends Model
             self::STATUS_BACKEND_USED => '后台使用',
             self::STATUS_MACHINE_USED => '机台使用',
             self::STATUS_PRINT_FAILED => '打印失败',
+            self::STATUS_SPLIT => '已拆分',
+            self::STATUS_MERGED => '已合并',
             default => '未知',
         };
     }
