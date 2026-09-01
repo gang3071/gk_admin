@@ -51,6 +51,28 @@ class AdminDeviceController
                 ->align('center')
                 ->copyable();
 
+            // 设备类型
+            $grid->column('device_type', admin_trans('device.fields.device_type'))
+                ->width(100)
+                ->align('center')
+                ->display(function ($val) {
+                    $types = AdminDevice::getDeviceTypeList();
+                    $colors = [
+                        AdminDevice::TYPE_GAME_MACHINE => 'blue',
+                        AdminDevice::TYPE_VENDING_MACHINE => 'orange',
+                    ];
+                    return Tag::create($types[$val] ?? '-')
+                        ->color($colors[$val] ?? 'default');
+                });
+
+            // 设备型号
+            $grid->column('device_model', admin_trans('device.fields.device_model'))
+                ->width(120)
+                ->align('center')
+                ->display(function ($val) {
+                    return $val ?: '-';
+                });
+
             $grid->column('voice_url', admin_trans('device.fields.voice_url'))
                 ->display(function ($value, $data) {
                     if (empty($value)) {
@@ -65,22 +87,34 @@ class AdminDeviceController
                 ->align('center');
 
             $grid->column('channel.name', admin_trans('device.fields.channel_name'))
+                ->width(120)
+                ->align('center')
                 ->display(function ($value, $data) {
-                    return $value ?: '-';
-                })
-                ->align('center');
+                    if (empty($value)) {
+                        return Tag::create('-')->color('default');
+                    }
+                    return Tag::create($value)->color('cyan');
+                });
 
             $grid->column('agent.nickname', admin_trans('device.fields.agent_name'))
+                ->width(120)
+                ->align('center')
                 ->display(function ($value, $data) {
-                    return $value ?: admin_trans('device.no_agent');
-                })
-                ->align('center');
+                    if (empty($value)) {
+                        return Tag::create(admin_trans('device.no_agent'))->color('default');
+                    }
+                    return Tag::create($value)->color('geekblue');
+                });
 
             $grid->column('store.nickname', admin_trans('device.fields.store_name'))
+                ->width(120)
+                ->align('center')
                 ->display(function ($value, $data) {
-                    return $value ?: admin_trans('device.no_store');
-                })
-                ->align('center');
+                    if (empty($value)) {
+                        return Tag::create(admin_trans('device.no_store'))->color('default');
+                    }
+                    return Tag::create($value)->color('purple');
+                });
 
             $grid->column('created_at', admin_trans('device.fields.created_at'))
                 ->align('center')
@@ -106,6 +140,11 @@ class AdminDeviceController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('device_name')->placeholder(admin_trans('device.fields.device_name'));
                 $filter->like()->text('device_no')->placeholder(admin_trans('device.fields.device_no'));
+
+                // 设备类型筛选
+                $filter->eq()->select('device_type')
+                    ->placeholder(admin_trans('device.fields.device_type'))
+                    ->options(AdminDevice::getDeviceTypeList());
 
                 // 渠道筛选
                 $channelOptions = [];
@@ -205,6 +244,11 @@ class AdminDeviceController
 
             $form->text('device_model', admin_trans('device.fields.device_model'))
                 ->maxlength(100);
+
+            $form->select('device_type', admin_trans('device.fields.device_type'))
+                ->options(AdminDevice::getDeviceTypeList())
+                ->default(AdminDevice::TYPE_GAME_MACHINE)
+                ->required();
 
             $form->radio('status', admin_trans('device.fields.status'))
                 ->options(AdminDevice::getStatusList())
