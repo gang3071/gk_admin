@@ -82,7 +82,15 @@ class ChannelLotteryTicketRecordController
             $grid->column('player.storeAdmin.nickname', admin_trans('lottery_ticket.fields.store_name'))
                 ->width(120)
                 ->display(function ($val, $data) {
-                    return $val ?: ($data['player']['storeAdmin']['username'] ?? '-');
+                    $storeName = $val ?: ($data['player']['storeAdmin']['username'] ?? '-');
+                    if ($storeName === '-') {
+                        return Tag::create($storeName)->color('default');
+                    }
+                    // 根据门店ID分配固定颜色，便于区分不同门店
+                    $storeAdminId = $data['player']['storeAdmin']['id'] ?? 0;
+                    $colors = ['blue', 'cyan', 'geekblue', 'purple', 'volcano', 'magenta', 'gold', 'lime'];
+                    $colorIndex = $storeAdminId % count($colors);
+                    return Tag::create($storeName)->color($colors[$colorIndex]);
                 });
 
             $grid->column('player.uuid', admin_trans('lottery_ticket.fields.player_uuid'))
