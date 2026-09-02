@@ -299,6 +299,11 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票記錄',
         'ticket_redeem_list' => '核銷記錄',
+        // 餐點管理
+        'dish_manage' => '餐點管理',
+        'dish_category' => '餐點分類',
+        'dish' => '餐點列表',
+        'dish_order' => '餐點訂單',
     ],
     'help' => [
         'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',

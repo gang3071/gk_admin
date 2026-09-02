@@ -128,7 +128,7 @@ return [
         'promoter_list' => 'プロモーターリスト',
         'profit_record' => '利益レポート',
         'profit_settlement_record' => '利益決済レコード',
-        
+
         //ボーナス管理
         'lottery_management' => '宝くじ管理',
         'lottery_list' => '宝くじリスト',
@@ -300,6 +300,11 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票記録',
         'ticket_redeem_list' => 'チケット記録',
+        // メニュー管理
+        'dish_manage' => 'メニュー管理',
+        'dish_category' => 'メニューカテゴリ',
+        'dish' => 'メニュー一覧',
+        'dish_order' => '注文管理',
     ],
     'help' => [
         'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',

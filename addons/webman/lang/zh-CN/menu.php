@@ -300,6 +300,11 @@ return [
         'ticket_management' => '出票管理',
         'ticket_record_list' => '出票记录',
         'ticket_redeem_list' => '核销记录',
+        // 餐点管理
+        'dish_manage' => '餐点管理',
+        'dish_category' => '餐点分类',
+        'dish' => '餐点列表',
+        'dish_order' => '餐点订单',
     ],
     'help' => [
         'controlled_menu' => '此菜单受功能开关控制，名称不可修改',
