@@ -11,6 +11,7 @@ return [
     'machine_info' => 'マシン情報',
     'player_wallet_info' => 'プレイヤーウォレット',
     'machine_data' => 'マシンデータ',
+    'no_player' => 'プレイヤーなし（物理ボタン）',
     'fields' => [
         'id' => '番号',
         'game_id' => 'ゲーム分類',
@@ -36,6 +37,7 @@ return [
         'action_type' => 'アクションソース',
         'action' => 'アクション',
         'chip_amount' => '打ヤード量',
+        'source_type' => 'ソースタイプ',
     ],
     'total_data' => [
         'total_game_amount' => '総ゲームポイント',
@@ -57,5 +59,9 @@ return [
         PlayerGameLog::ACTION_OPEN => '開分',
         PlayerGameLog::ACTION_LEAVE => '廃棄',
         PlayerGameLog::ACTION_DOWN => '下分',
+    ],
+    'source_type' => [
+        PlayerGameLog::SOURCE_TYPE_ONLINE => 'オンラインシステム',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '物理ボタン',
     ]
 ];

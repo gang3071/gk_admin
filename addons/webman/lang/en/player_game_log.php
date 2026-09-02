@@ -11,6 +11,7 @@ return [
     'machine_info' => 'Machine information',
     'player_wallet_info' => 'Player wallet',
     'machine_data' => 'Machine data',
+    'no_player' => 'No Player (Physical Button)',
     'fields' => [
         'id' => 'number',
         'game_id' => 'Game classification',
@@ -37,6 +38,7 @@ return [
         'action' => 'operation',
         'chip_amount' => 'code quantity',
         'total_chip_amount' => 'Total coding volume',
+        'source_type' => 'Source Type',
     ],
     'total_data' => [
         'total_game_amount' => 'Total game points',
@@ -57,5 +59,9 @@ return [
         PlayerGameLog::ACTION_OPEN => 'Split',
         PlayerGameLog::ACTION_LEAVE => 'Abandoned',
         PlayerGameLog::ACTION_DOWN => 'Lower Score',
+    ],
+    'source_type' => [
+        PlayerGameLog::SOURCE_TYPE_ONLINE => 'Online System',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => 'Physical Button',
     ]
 ];

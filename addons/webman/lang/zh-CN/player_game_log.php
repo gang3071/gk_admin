@@ -11,6 +11,7 @@ return [
     'machine_info' => '机台信息',
     'player_wallet_info' => '玩家钱包',
     'machine_data' => '机台数据',
+    'no_player' => '无玩家（实体按键）',
     'fields' => [
         'id' => '编号',
         'game_id' => '游戏分类',
@@ -36,6 +37,7 @@ return [
         'action_type' => '操作来源',
         'action' => '操作',
         'chip_amount' => '打码量',
+        'source_type' => '来源类型',
     ],
     'total_data' => [
         'total_game_amount' => '总游戏点',
@@ -57,5 +59,9 @@ return [
         PlayerGameLog::ACTION_OPEN => '开分',
         PlayerGameLog::ACTION_LEAVE => '弃台',
         PlayerGameLog::ACTION_DOWN => '下分',
+    ],
+    'source_type' => [
+        PlayerGameLog::SOURCE_TYPE_ONLINE => '线上系统',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '线下实体按键',
     ]
 ];

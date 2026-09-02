@@ -11,6 +11,7 @@ return [
     'machine_info' => '機台資訊',
     'player_wallet_info' => '玩家錢包',
     'machine_data' => '機台數據',
+    'no_player' => '無玩家（實體按鍵）',
     'fields' => [
         'id' => '編號',
         'game_id' => '遊戲分類',
@@ -36,6 +37,7 @@ return [
         'action_type' => '操作來源',
         'action' => '操作',
         'chip_amount' => '打碼量',
+        'source_type' => '來源類型',
     ],
     'total_data' => [
         'total_game_amount' => '總遊戲點',
@@ -57,5 +59,9 @@ return [
         PlayerGameLog::ACTION_OPEN => '開分',
         PlayerGameLog::ACTION_LEAVE => '弃臺',
         PlayerGameLog::ACTION_DOWN => '下分',
+    ],
+    'source_type' => [
+        PlayerGameLog::SOURCE_TYPE_ONLINE => '線上系統',
+        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => '線下實體按鍵',
     ]
 ];

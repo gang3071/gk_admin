@@ -65,6 +65,9 @@ class PlayerGameLogController
             if (!empty($exAdminFilter['action'])) {
                 $grid->model()->where('action', $exAdminFilter['action']);
             }
+            if (!empty($exAdminFilter['source_type'])) {
+                $grid->model()->where('source_type', $exAdminFilter['source_type']);
+            }
             if (!empty($exAdminFilter['action_type'])) {
                 switch ($exAdminFilter['action_type']) {
                     case 'admin':
@@ -152,11 +155,19 @@ class PlayerGameLogController
                     $val,
                     PlayerGameLog $data
                 ) {
+                    if ($data->player_id == 0 || !$data->player) {
+                        return Html::create()->content([
+                            Tag::create(admin_trans('player_game_log.no_player'))->color('gray')->icon('fas fa-hand-pointer')
+                        ]);
+                    }
                     return Html::create()->content([
-                        Html::div()->content($data->player->uuid ?? '')
+                        Html::div()->content($data->player->uuid)
                     ]);
                 })->align('center');
                 $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerGameLog $data) {
+                    if ($data->player_id == 0 || !$data->player) {
+                        return '';
+                    }
                     return Html::create()->content([
                         (isset($data->player->is_test) && $data->player->is_test == 1) ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
                     ]);
@@ -295,6 +306,16 @@ class PlayerGameLogController
                         return '';
                 }
             })->align('center');
+            $grid->column('source_type', admin_trans('player_game_log.fields.source_type'))->display(function (
+                $val,
+                PlayerGameLog $data
+            ) {
+                if ($val == PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON) {
+                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#ff6b00')->icon('fas fa-hand-pointer');
+                } else {
+                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#52c41a')->icon('fas fa-desktop');
+                }
+            })->align('center');
             $grid->column('chip_amount',
                 admin_trans('player_game_log.fields.chip_amount'))->sortable()->align('center');
             $grid->column('created_at', admin_trans('player_game_log.fields.create_at'))->align('center');
@@ -359,6 +380,15 @@ class PlayerGameLogController
                         'system' => admin_trans('player_game_log.type.system'),
                         'admin' => admin_trans('player_game_log.type.admin'),
                         'player' => admin_trans('player_game_log.type.player')
+                    ]);
+                $filter->eq()->select('source_type')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_game_log.fields.source_type'))
+                    ->options([
+                        PlayerGameLog::SOURCE_TYPE_ONLINE => admin_trans('player_game_log.source_type.' . PlayerGameLog::SOURCE_TYPE_ONLINE),
+                        PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON => admin_trans('player_game_log.source_type.' . PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON)
                     ]);
                 SelectGroup::create();
                 $filter->in()->cascaderSingle('machine.cate_id')
