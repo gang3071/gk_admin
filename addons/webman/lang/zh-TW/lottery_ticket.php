@@ -60,6 +60,7 @@ return [
         'player_name' => '玩家名稱',
         'player_uuid' => '玩家UUID',
         'player_username' => '玩家賬號',
+        'store_name' => '門店',
         'ticket_no' => '券號',
         'prize_type' => '獎品類型',
         'prize_name' => '獎品名稱',
