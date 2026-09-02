@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property string content
  * @property string picture
  * @property float price 價格
+ * @property int daily_limit 每人每日限量 (0:不限量)
  * @property int status 0:停用 1:啟用
  * @property int top 0:沒置頂 1:置頂
  * @property int sort

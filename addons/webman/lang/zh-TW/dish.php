@@ -11,6 +11,7 @@ return [
         'content' => '內容',
         'picture' => '圖片',
         'price' => '價格',
+        'daily_limit' => '每人每日限量',
         'status' => '狀態',
         'top' => '置頂',
         'sort' => '排序',
@@ -21,5 +22,8 @@ return [
     'status' => [
         0 => '停用',
         1 => '啟用'
+    ],
+    'help' => [
+        'daily_limit' => '不限量請輸入 0'
     ]
 ];

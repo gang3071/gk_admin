@@ -32,29 +32,29 @@ class DishController
      */
     public function index(): Grid
     {
-        $adminType = Admin::user()->type;
+        $adminUser = Admin::user();
         $categories = self::getCategories();
         $stores = [];
 
         // 非門店角色可以看到對應的門店清單
-        if ($adminType != AdminDepartment::TYPE_STORE) {
-            $stores = self::getStores($adminType);
+        if ($adminUser->type != AdminDepartment::TYPE_STORE) {
+            $stores = self::getStores($adminUser->type);
         }
 
-        return Grid::create(new $this->model, function (Grid $grid) use ($adminType, $categories, $stores) {
+        return Grid::create(new $this->model, function (Grid $grid) use ($adminUser, $categories, $stores) {
             $grid->title(admin_trans('dish.title'));
-            $grid->hideSelection();
             $grid->hideDelete();
+            $grid->hideSelection();
             $grid->model()->orderBy('admin_user_id', 'asc')->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'asc');
 
-            if ($adminType != AdminDepartment::TYPE_STORE) {
+            if ($adminUser->type != AdminDepartment::TYPE_STORE) {
                 $grid->model()->whereIn('admin_user_id', array_keys($stores));
             } else {
-                $grid->model()->where('admin_user_id', Admin::user()->id);
+                $grid->model()->where('admin_user_id', $adminUser->id);
             }
 
             $grid->expandFilter();
-            $grid->filter(function (Filter $filter) use ($adminType, $categories, $stores) {
+            $grid->filter(function (Filter $filter) use ($adminUser, $categories, $stores) {
                 $filter->like()->text('title')->placeholder(admin_trans('dish.fields.title'));
                 $filter->eq()->select('status')
                     ->showSearch()
@@ -73,7 +73,7 @@ class DishController
                     ->placeholder(admin_trans('dish.fields.category_id'))
                     ->options($categories);
 
-                if ($adminType != AdminDepartment::TYPE_STORE) {
+                if ($adminUser->type != AdminDepartment::TYPE_STORE) {
                     $filter->eq()->select('admin_user_id')
                         ->showSearch()
                         ->style(['width' => '200px'])
@@ -85,8 +85,7 @@ class DishController
 
             $grid->column('id', admin_trans('dish.fields.id'))->align('center');
             $grid->column('title', admin_trans('dish.fields.title'))->align('center');
-            $grid->column('picture', admin_trans('dish.fields.picture'))
-                ->align('center')
+            $grid->column('picture', admin_trans('dish.fields.picture'))->align('center')
                 ->display(function ($value) {
                     $image = Image::create()
                         ->width(50)
@@ -97,18 +96,16 @@ class DishController
                     return Html::create()->content([$image]);
                 });
             $grid->column('price', admin_trans('dish.fields.price'))->align('center');
-            $grid->column('category_id', admin_trans('dish.fields.category_id'))
-                    ->align('center')
+            $grid->column('category_id', admin_trans('dish.fields.category_id'))->align('center')
                     ->display(function ($value) use ($categories) {
                         return $categories[$value] ?? '類別遺失';
                     });
             $grid->sortInput('sort', admin_trans('dish.fields.sort'))->align('center');
-            $grid->column('top', admin_trans('dish.fields.top'))->switch()->align('center');
-            $grid->column('status', admin_trans('dish.fields.status'))->switch()->align('center');
+            $grid->column('top', admin_trans('dish.fields.top'))->align('center')->switch();
+            $grid->column('status', admin_trans('dish.fields.status'))->align('center')->switch();
 
-            if ($adminType != AdminDepartment::TYPE_STORE) {
-                $grid->column('admin_user_id', admin_trans('dish.fields.admin_user_id'))
-                    ->align('center')
+            if ($adminUser->type != AdminDepartment::TYPE_STORE) {
+                $grid->column('admin_user_id', admin_trans('dish.fields.admin_user_id'))->align('center')
                     ->display(function ($value) use ($stores) {
                         return $stores[$value] ?? '門店遺失';
                     });
@@ -132,36 +129,36 @@ class DishController
         Form::extend('myEditor', MyEditor::class);
 
         return Form::create(new $this->model(), function (Form $form) {
-            $adminType = Admin::user()->type;
+            $adminUser = Admin::user();
             $form->title(admin_trans('dish.title'));
             $form->layout('vertical');
 
-            if ($adminType != AdminDepartment::TYPE_STORE) {
-                $form->select('admin_user_id', admin_trans('dish.fields.admin_user_id'))->options(self::getStores($adminType))->required();
+            if ($adminUser->type != AdminDepartment::TYPE_STORE) {
+                $form->select('admin_user_id', admin_trans('dish.fields.admin_user_id'))->options(self::getStores($adminUser->type))->required();
             } else {
-                $form->hidden('admin_user_id')->value(Admin::user()->id);
+                $form->hidden('admin_user_id')->value($adminUser->id);
             }
 
-            $form->hidden('department_id')->value(Admin::user()->department_id);
             $form->select('category_id', admin_trans('dish.fields.category_id'))->options(self::getCategories())->required();
             $form->text('title', admin_trans('dish.fields.title'))->maxlength(200)->required();
             $form->image('picture', admin_trans('dish.fields.picture'));
             $form->myEditor('content', admin_trans('dish.fields.content'))->maxlength(200);
             $form->number('price', admin_trans('dish.fields.price'))->default(0)->required();
+            $form->number('daily_limit', admin_trans('dish.fields.daily_limit'))->default(0)->required()->help(admin_trans('dish.help.daily_limit'));
             $form->number('sort', admin_trans('dish.fields.sort'))->default(0)->required();
             $form->switch('top', admin_trans('dish.fields.top'))->required();
             $form->switch('status', admin_trans('dish.fields.status'))->required();
             $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200);
 
-            $form->saving(function (Form $form) use ($adminType) {
-                $department_id = Admin::user()->department_id;
+            $form->saving(function (Form $form) use ($adminUser) {
+                $department_id = $adminUser->department_id;
 
                 // 當角色為非門店時，department_id 從門店獲取
-                if ($adminType != AdminDepartment::TYPE_STORE) {
-                    $adminUser = AdminUser::query()->where('id', $form->input('admin_user_id'))->first();
+                if ($adminUser->type != AdminDepartment::TYPE_STORE) {
+                    $store = AdminUser::query()->where('id', $form->input('admin_user_id'))->first();
 
-                    if ($adminUser) {
-                        $department_id = $adminUser->department_id;
+                    if ($store) {
+                        $department_id = $store->department_id;
                     }
                 }
 
