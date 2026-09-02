@@ -91,7 +91,6 @@ class ChannelIndexController
             'upgrade_bonus_amount' => $operationStatisticsQuery->upgrade_bonus_amount ?? 0,
         ];
 
-        // ✅ 拉彩统计数据（使用子查询，channelIndex 使用 department_id）
         $lotteryStatisticsQuery = PlayerLotteryRecord::query()
             ->whereExists(function ($query) use ($departmentId) {
                 $query->selectRaw(1)
