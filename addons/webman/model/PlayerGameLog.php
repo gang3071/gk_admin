@@ -112,6 +112,15 @@ class PlayerGameLog extends Model
     }
 
     /**
+     * 渠道信息
+     * @return BelongsTo
+     */
+    public function channel(): BelongsTo
+    {
+        return $this->belongsTo(plugin()->webman->config('database.channel_model'), 'department_id', 'department_id')->withTrashed();
+    }
+
+    /**
      * 模型的 "booted" 方法
      *
      * @return void

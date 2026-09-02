@@ -269,9 +269,9 @@ class AgentPlayerGameLogController
                 PlayerGameLog $data
             ) {
                 if ($val == PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON) {
-                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#ff6b00')->icon('fas fa-hand-pointer');
+                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#ff6b00');
                 } else {
-                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#52c41a')->icon('fas fa-desktop');
+                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#52c41a');
                 }
             })->align('center');
             $grid->column('chip_amount',

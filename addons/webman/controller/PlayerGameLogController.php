@@ -157,7 +157,7 @@ class PlayerGameLogController
                 ) {
                     if ($data->player_id == 0 || !$data->player) {
                         return Html::create()->content([
-                            Tag::create(admin_trans('player_game_log.no_player'))->color('gray')->icon('fas fa-hand-pointer')
+                            Tag::create(admin_trans('player_game_log.no_player'))->color('gray')
                         ]);
                     }
                     return Html::create()->content([
@@ -182,6 +182,12 @@ class PlayerGameLogController
                     $val,
                     PlayerGameLog $data
                 ) {
+                    // 优先从PlayerGameLog自己的channel关联获取（支持无玩家情况）
+                    // 无玩家时（player_id=0），机台已绑定门店，可通过department_id获取渠道
+                    if ($data->channel) {
+                        return $data->channel->name;
+                    }
+                    // 降级：从玩家的channel获取
                     return $data->player->channel->name ?? '';
                 })->width('150px')->align('center');
             }, admin_trans('player_game_log.player_info'));
@@ -311,9 +317,9 @@ class PlayerGameLogController
                 PlayerGameLog $data
             ) {
                 if ($val == PlayerGameLog::SOURCE_TYPE_OFFLINE_BUTTON) {
-                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#ff6b00')->icon('fas fa-hand-pointer');
+                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#ff6b00');
                 } else {
-                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#52c41a')->icon('fas fa-desktop');
+                    return Tag::create(admin_trans('player_game_log.source_type.' . $val))->color('#52c41a');
                 }
             })->align('center');
             $grid->column('chip_amount',
@@ -489,6 +495,12 @@ class PlayerGameLogController
                     $val,
                     PlayerGameLog $data
                 ) {
+                    // 优先从PlayerGameLog自己的channel关联获取（支持无玩家情况）
+                    // 无玩家时（player_id=0），机台已绑定门店，可通过department_id获取渠道
+                    if ($data->channel) {
+                        return $data->channel->name;
+                    }
+                    // 降级：从玩家的channel获取
                     return $data->player->channel->name ?? '';
                 })->width('150px')->align('center');
             }, admin_trans('player_game_log.player_info'));
