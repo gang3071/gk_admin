@@ -16,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property int agent_player_id 代理玩家id
  * @property int parent_player_id 上级玩家id
  * @property int department_id 部门/渠道id
+ * @property int|null store_id 门店ID（关联admin_users.id）
+ * @property int|null store_agent_id 门店代理ID（关联admin_users.id）
  * @property int game_id 游戏id
  * @property int machine_id 机台id
  * @property int game_record_id 游戏记录id
@@ -118,6 +120,24 @@ class PlayerGameLog extends Model
     public function channel(): BelongsTo
     {
         return $this->belongsTo(plugin()->webman->config('database.channel_model'), 'department_id', 'department_id')->withTrashed();
+    }
+
+    /**
+     * 门店信息（仅线下机台记录）
+     * @return BelongsTo
+     */
+    public function storeAdmin(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'store_id')->withTrashed();
+    }
+
+    /**
+     * 门店代理信息（仅线下机台记录）
+     * @return BelongsTo
+     */
+    public function storeAgent(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'store_agent_id')->withTrashed();
     }
 
     /**
