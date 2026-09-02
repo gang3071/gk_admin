@@ -26,7 +26,6 @@ class AgentLotteryTicketRecordController
     public function index(): Grid
     {
         return Grid::create(new LotteryTicketRecord(), function (Grid $grid) {
-            // 获取当前代理管理员信息
             $admin = Admin::user();
             $departmentId = $admin->department_id;
 
