@@ -45,6 +45,7 @@ class StoreTicketRedeemController
             // 使用子查询获取玩家头像，避免 join 导致字段冲突
             $grid->model()
                 ->selectRaw('qr_ticket_record.*, (SELECT avatar FROM player WHERE player.id = qr_ticket_record.player_id LIMIT 1) as player_avatar')
+                ->with(['player:id,name,uuid'])
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
@@ -340,16 +341,30 @@ class StoreTicketRedeemController
             $grid->column('store_name', admin_trans('ticket_machine.redeem.store_name'));
             $grid->column('machine_no', admin_trans('ticket_machine.redeem.machine_no'))->align('center');
             $grid->column('score', admin_trans('ticket_machine.redeem.score'))->align('right');
-            $grid->column('qr_code_no', admin_trans('ticket_machine.redeem.qr_code_no'))->copy();
             $grid->column('status', admin_trans('ticket_machine.redeem.status'))->display(function ($val) {
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.redeem.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.redeem.status_normal'))->color('blue'),
                     TicketRecord::STATUS_BACKEND_USED => Tag::create(admin_trans('ticket_machine.redeem.status_backend_used'))->color('orange'),
                     TicketRecord::STATUS_MACHINE_USED => Tag::create(admin_trans('ticket_machine.redeem.status_machine_used'))->color('purple'),
+                    TicketRecord::STATUS_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.status_split'))->color('cyan'),
+                    TicketRecord::STATUS_MERGED => Tag::create(admin_trans('ticket_machine.redeem.status_merged'))->color('geekblue'),
                     default => Tag::create(admin_trans('ticket_machine.redeem.status_unknown'))->color('default'),
                 };
             });
+
+            // 来源
+            $grid->column('source_type', admin_trans('ticket_machine.redeem.source_type'))
+                ->width(100)
+                ->align('center')
+                ->display(function ($val) {
+                    return match ($val) {
+                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.source_split'))->color('cyan'),
+                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.redeem.source_merge'))->color('geekblue'),
+                        default => Tag::create(admin_trans('ticket_machine.redeem.source_normal'))->color('default'),
+                    };
+                });
+
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
             $grid->column('scanned_at', admin_trans('ticket_machine.redeem.scanned_at'))
                 ->display(function ($val) {
@@ -405,7 +420,10 @@ class StoreTicketRedeemController
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
-                $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.redeem.qr_code_no'));
+                // 玩家姓名筛选（使用关系）
+                $filter->like()->text('player.name')->placeholder(admin_trans('ticket_machine.redeem.player_name'));
+                // 玩家UUID筛选（使用关系）
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('ticket_machine.redeem.player_uuid'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.redeem.machine_no'));
                 $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.redeem.remark'));
                 $filter->eq()->select('store_name')
@@ -420,6 +438,8 @@ class StoreTicketRedeemController
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
                         TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
+                        TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.redeem.status_split'),
+                        TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
@@ -826,6 +846,8 @@ class StoreTicketRedeemController
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
                     TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
+                    TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.redeem.status_split'),
+                    TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
                     default => admin_trans('ticket_machine.redeem.status_unknown'),
                 };
             });

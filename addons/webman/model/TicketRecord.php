@@ -72,6 +72,7 @@ class TicketRecord extends Model
     const OPERATION_NONE = 0;        // 无操作
     const OPERATION_SPLIT = 1;       // 拆分
     const OPERATION_MERGE = 2;       // 合并
+    const OPERATION_PURCHASE = 3;    // 购票
 
     // 来源类型常量
     const SOURCE_TYPE_SPLIT = 'split';    // 来源：拆分
