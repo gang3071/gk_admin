@@ -4304,14 +4304,14 @@ class ChannelIndexController
                                 ->sum('bet');
                         }
 
-                        // 昨日打码量不足10000，拒绝领取
-                        if ($yesterdayBetAmount < 10000) {
+                        // 昨日打码量不足20000，拒绝领取
+                        if ($yesterdayBetAmount < 20000) {
                             \support\Log::info('体验券打码判定失败', [
                                 'player_id' => $playerId,
                                 'yesterday_bet_amount' => $yesterdayBetAmount,
-                                'required_bet_amount' => 10000,
+                                'required_bet_amount' => 20000,
                             ]);
-                            return json(['code' => 400, 'message' => '昨日打码量不足10,000，无法领取体验券']);
+                            return json(['code' => 400, 'message' => '昨日打码量不足20,000，无法领取体验券']);
                         }
                     }
                 }

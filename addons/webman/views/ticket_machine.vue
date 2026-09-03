@@ -394,8 +394,8 @@ export default {
         const betCheckEnabled = this.playerBetInfo?.experience_bet_check_enabled || false;
         const isFirstClaim = claimedTotal === 0;
         const yesterdayBet = this.playerBetInfo?.yesterday_bet_amount || 0;
-        const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 10000;
-        const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足10,000';
+        const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 20000;
+        const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足20,000';
 
         // 提示优先级：今日已领取 > 总次数已用完 > 打码量不足 > 新会员可领取
         let condition = newMemberClaim;
