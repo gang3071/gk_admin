@@ -353,15 +353,17 @@ class StoreTicketRedeemController
                 };
             });
 
-            // 来源
-            $grid->column('source_type', admin_trans('ticket_machine.redeem.source_type'))
+            // 来源（根据 operation_type 判断）
+            $grid->column('operation_type', admin_trans('ticket_machine.redeem.operation_type'))
                 ->width(100)
                 ->align('center')
                 ->display(function ($val) {
                     return match ($val) {
-                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.source_split'))->color('cyan'),
-                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.redeem.source_merge'))->color('geekblue'),
-                        default => Tag::create(admin_trans('ticket_machine.redeem.source_normal'))->color('default'),
+                        TicketRecord::OPERATION_NONE => Tag::create(admin_trans('ticket_machine.redeem.operation_none'))->color('blue'),
+                        TicketRecord::OPERATION_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.operation_split'))->color('cyan'),
+                        TicketRecord::OPERATION_MERGE => Tag::create(admin_trans('ticket_machine.redeem.operation_merge'))->color('geekblue'),
+                        TicketRecord::OPERATION_PURCHASE => Tag::create(admin_trans('ticket_machine.redeem.operation_purchase'))->color('green'),
+                        default => Tag::create(admin_trans('ticket_machine.redeem.operation_none'))->color('blue'),
                     };
                 });
 
@@ -440,6 +442,16 @@ class StoreTicketRedeemController
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
                         TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.redeem.status_split'),
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
+                    ])
+                    ->style(['width' => '150px']);
+                $filter->eq()->select('operation_type')
+                    ->placeholder(admin_trans('ticket_machine.redeem.operation_type'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        TicketRecord::OPERATION_NONE => admin_trans('ticket_machine.redeem.operation_none'),
+                        TicketRecord::OPERATION_SPLIT => admin_trans('ticket_machine.redeem.operation_split'),
+                        TicketRecord::OPERATION_MERGE => admin_trans('ticket_machine.redeem.operation_merge'),
+                        TicketRecord::OPERATION_PURCHASE => admin_trans('ticket_machine.redeem.operation_purchase'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
@@ -849,6 +861,15 @@ class StoreTicketRedeemController
                     TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.redeem.status_split'),
                     TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
                     default => admin_trans('ticket_machine.redeem.status_unknown'),
+                };
+            });
+            $form->desc('operation_type', admin_trans('ticket_machine.redeem.operation_type'))->display(function ($val) {
+                return match ($val) {
+                    TicketRecord::OPERATION_NONE => admin_trans('ticket_machine.redeem.operation_none'),
+                    TicketRecord::OPERATION_SPLIT => admin_trans('ticket_machine.redeem.operation_split'),
+                    TicketRecord::OPERATION_MERGE => admin_trans('ticket_machine.redeem.operation_merge'),
+                    TicketRecord::OPERATION_PURCHASE => admin_trans('ticket_machine.redeem.operation_purchase'),
+                    default => admin_trans('ticket_machine.redeem.operation_none'),
                 };
             });
             $form->desc('print_count', admin_trans('ticket_machine.redeem.print_count'));
