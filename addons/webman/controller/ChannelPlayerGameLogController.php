@@ -147,42 +147,52 @@ class ChannelPlayerGameLogController
             $grid->title(admin_trans('player_game_log.point_title'));
             $grid->column('id', admin_trans('player_game_log.fields.id'))->align('center');
             $grid->column(function (Grid $grid) {
-                $grid->column('player.uuid', admin_trans('player.fields.uuid'))->display(function (
+                $grid->column('player_uuid', admin_trans('player.fields.uuid'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
+                    if (!$data->player) {
+                        return Html::create()->content([
+                            Html::div()->content('-')->style(['color' => '#999'])
+                        ]);
+                    }
                     return Html::create()->content([
                         Html::div()->content($data->player->uuid)
                     ]);
                 })->align('center');
-                $grid->column('player.type', admin_trans('player.fields.type'))->display(function (
+                $grid->column('player_type', admin_trans('player.fields.type'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
+                    if (!$data->player) {
+                        return Html::create()->content([
+                            Tag::create(admin_trans('common.deleted'))->color('gray')
+                        ]);
+                    }
                     return Html::create()->content([
                         $data->player->is_test == 1 ? Tag::create(admin_trans('player.fields.is_test'))->color('red') : Tag::create(admin_trans('player.player'))->color('green')
                     ]);
                 })->align('center');
-                $grid->column('player.phone', admin_trans('player.fields.phone'))->display(function (
+                $grid->column('player_phone', admin_trans('player.fields.phone'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->player->phone;
+                    return $data->player ? $data->player->phone : '-';
                 })->align('center');
-                $grid->column('player.channel.name', admin_trans('player.fields.department_id'))->display(function (
+                $grid->column('player_channel_name', admin_trans('player.fields.department_id'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->player->channel->name;
+                    return ($data->player && $data->player->channel) ? $data->player->channel->name : '-';
                 })->width('150px')->align('center');
             }, admin_trans('player_game_log.player_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('machine.machineLabel.name', admin_trans('machine.fields.name'))->display(function (
+                $grid->column('machine_label_name', admin_trans('machine.fields.name'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    if ($data->machine) {
-                        return Tag::create($val)->color('orange')->style(['cursor' => 'pointer'])->modal([
+                    if ($data->machine && $data->machine->machineLabel) {
+                        return Tag::create($data->machine->machineLabel->name)->color('orange')->style(['cursor' => 'pointer'])->modal([
                             'addons-webman-controller-PlayerDeliveryRecordController',
                             'machineInfo'
                         ],
@@ -190,17 +200,20 @@ class ChannelPlayerGameLogController
                     }
                     return '';
                 })->align('center');
-                $grid->column('machine.code', admin_trans('machine.fields.code'))->display(function (
+                $grid->column('machine_code', admin_trans('machine.fields.code'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->machine->code;
+                    return $data->machine ? $data->machine->code : '-';
                 })->align('center');
                 $grid->column('odds', admin_trans('player_game_log.fields.odds'))->align('center');
-                $grid->column('machine.producer_id', admin_trans('machine.fields.producer_id'))->display(function (
+                $grid->column('machine_producer_id', admin_trans('machine.fields.producer_id'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
+                    if (!$data->machine || !$data->machine->producer) {
+                        return '';
+                    }
                     return Html::create()->content([
                         !empty($data->machine->producer->name) ? Tag::create($data->machine->producer->name)->color('green') : ''
                     ]);
@@ -447,37 +460,37 @@ class ChannelPlayerGameLogController
             $grid->autoHeight();
             $grid->title(admin_trans('player_game_log.point_title'));
             $grid->column(function (Grid $grid) {
-                $grid->column('player.phone', admin_trans('player.fields.phone'))->display(function (
+                $grid->column('player_phone_alt', admin_trans('player.fields.phone'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->player->phone;
+                    return $data->player ? $data->player->phone : '-';
                 })->align('center');
-                $grid->column('player.uuid', admin_trans('player.fields.uuid'))->display(function (
+                $grid->column('player_uuid_alt', admin_trans('player.fields.uuid'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->player->uuid;
+                    return $data->player ? $data->player->uuid : '-';
                 })->align('center');
             }, admin_trans('player_game_log.player_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('machine.name', admin_trans('machine.fields.name'))->display(function (
+                $grid->column('machine_name_alt', admin_trans('machine.fields.name'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
                     if ($data->machine) {
-                        return Tag::create($val)->color('orange')->style(['cursor' => 'pointer'])->modal([
+                        return Tag::create($data->machine->name)->color('orange')->style(['cursor' => 'pointer'])->modal([
                             'addons-webman-controller-PlayerDeliveryRecordController',
                             'machineInfo'
                         ], ['data' => $data->machine->toArray()])->width('60%');
                     }
                     return '';
                 })->align('center');
-                $grid->column('machine.code', admin_trans('machine.fields.code'))->display(function (
+                $grid->column('machine_code_alt', admin_trans('machine.fields.code'))->display(function (
                     $val,
                     PlayerGameLog $data
                 ) {
-                    return $data->machine->code;
+                    return $data->machine ? $data->machine->code : '-';
                 })->align('center');
                 $grid->column('odds', admin_trans('player_game_log.fields.odds'))->align('center');
             }, admin_trans('player_game_log.machine_info'));
