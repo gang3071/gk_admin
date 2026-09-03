@@ -50,7 +50,7 @@ class DishCategoryController
 
             $grid->column('id', admin_trans('dish_category.fields.id'))->align('center');
             $grid->column('title', admin_trans('dish_category.fields.title'))->align('center');
-            $grid->column('picture', admin_trans('dish_category.fields.picture'))
+            /* $grid->column('picture', admin_trans('dish_category.fields.picture'))
                 ->align('center')
                 ->display(function ($value) {
                     $image = Image::create()
@@ -60,7 +60,7 @@ class DishCategoryController
                         ->src($value);
 
                     return Html::create()->content([$image]);
-                });
+                });*/
             $grid->sortInput('sort', admin_trans('dish_category.fields.sort'))->align('center');
             $grid->column('top', admin_trans('dish_category.fields.top'))->switch()->align('center');
             $grid->column('status', admin_trans('dish_category.fields.status'))->switch()->align('center');
@@ -87,8 +87,8 @@ class DishCategoryController
             $form->layout('vertical');
 
             $form->text('title', admin_trans('dish_category.fields.title'))->maxlength(200)->required();
-            $form->image('picture', admin_trans('dish_category.fields.picture'));
-            $form->myEditor('content', admin_trans('dish_category.fields.content'))->maxlength(200);
+            // $form->image('picture', admin_trans('dish_category.fields.picture'));
+            // $form->myEditor('content', admin_trans('dish_category.fields.content'))->maxlength(200);
             $form->number('sort', admin_trans('dish_category.fields.sort'))->default(0)->required();
             $form->switch('top', admin_trans('dish_category.fields.top'))->required();
             $form->switch('status', admin_trans('dish_category.fields.status'))->required();

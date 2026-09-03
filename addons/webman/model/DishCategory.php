@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * @property int id
  * @property string title
- * @property string content
- * @property string picture
  * @property int status 0:停用 1:啟用
  * @property int top 0:沒置頂 1:置頂
  * @property int sort
