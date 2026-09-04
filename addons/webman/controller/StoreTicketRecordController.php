@@ -329,17 +329,16 @@ class StoreTicketRecordController
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
             });
-            // 来源（根据 operation_type 判断）
-            $grid->column('operation_type', admin_trans('ticket_machine.record.operation_type'))
+            // 来源（根据 source_type 判断）
+            $grid->column('source_type', admin_trans('ticket_machine.record.source_type'))
                 ->width(100)
                 ->align('center')
                 ->display(function ($val) {
                     return match ($val) {
-                        TicketRecord::OPERATION_NONE => Tag::create(admin_trans('ticket_machine.record.operation_none'))->color('blue'),
-                        TicketRecord::OPERATION_SPLIT => Tag::create(admin_trans('ticket_machine.record.operation_split'))->color('cyan'),
-                        TicketRecord::OPERATION_MERGE => Tag::create(admin_trans('ticket_machine.record.operation_merge'))->color('geekblue'),
-                        TicketRecord::OPERATION_PURCHASE => Tag::create(admin_trans('ticket_machine.record.operation_purchase'))->color('green'),
-                        default => Tag::create(admin_trans('ticket_machine.record.operation_none'))->color('blue'),
+                        TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.record.source_purchase'))->color('green'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.record.source_split'))->color('cyan'),
+                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.record.source_merge'))->color('geekblue'),
+                        default => Tag::create(admin_trans('ticket_machine.record.source_backend'))->color('blue'),
                     };
                 });
             $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
@@ -408,14 +407,14 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->eq()->select('operation_type')
-                    ->placeholder(admin_trans('ticket_machine.record.operation_type'))
+                $filter->eq()->select('source_type')
+                    ->placeholder(admin_trans('ticket_machine.record.source_type'))
                     ->options([
                         '' => admin_trans('public_msg.all'),
-                        TicketRecord::OPERATION_NONE => admin_trans('ticket_machine.record.operation_none'),
-                        TicketRecord::OPERATION_SPLIT => admin_trans('ticket_machine.record.operation_split'),
-                        TicketRecord::OPERATION_MERGE => admin_trans('ticket_machine.record.operation_merge'),
-                        TicketRecord::OPERATION_PURCHASE => admin_trans('ticket_machine.record.operation_purchase'),
+                        'null' => admin_trans('ticket_machine.record.source_backend'),
+                        TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.record.source_purchase'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.record.source_split'),
+                        TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.record.source_merge'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
@@ -531,13 +530,12 @@ class StoreTicketRecordController
                     default => admin_trans('ticket_machine.record.status_unknown'),
                 };
             });
-            $form->desc('operation_type', admin_trans('ticket_machine.record.operation_type'))->display(function ($val) {
+            $form->desc('source_type', admin_trans('ticket_machine.record.source_type'))->display(function ($val) {
                 return match ($val) {
-                    TicketRecord::OPERATION_NONE => admin_trans('ticket_machine.record.operation_none'),
-                    TicketRecord::OPERATION_SPLIT => admin_trans('ticket_machine.record.operation_split'),
-                    TicketRecord::OPERATION_MERGE => admin_trans('ticket_machine.record.operation_merge'),
-                    TicketRecord::OPERATION_PURCHASE => admin_trans('ticket_machine.record.operation_purchase'),
-                    default => admin_trans('ticket_machine.record.operation_none'),
+                    TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.record.source_purchase'),
+                    TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.record.source_split'),
+                    TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.record.source_merge'),
+                    default => admin_trans('ticket_machine.record.source_backend'),
                 };
             });
             $form->desc('print_count', admin_trans('ticket_machine.record.print_count'));

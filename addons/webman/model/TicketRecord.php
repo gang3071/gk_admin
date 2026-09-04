@@ -75,8 +75,9 @@ class TicketRecord extends Model
     const OPERATION_PURCHASE = 3;    // 购票
 
     // 来源类型常量
-    const SOURCE_TYPE_SPLIT = 'split';    // 来源：拆分
-    const SOURCE_TYPE_MERGE = 'merge';    // 来源：合并
+    const SOURCE_TYPE_SPLIT = 'split';      // 来源：拆分
+    const SOURCE_TYPE_MERGE = 'merge';      // 来源：合并
+    const SOURCE_TYPE_PURCHASE = 'purchase'; // 来源：购票
 
     /**
      * 获取票据类型名称

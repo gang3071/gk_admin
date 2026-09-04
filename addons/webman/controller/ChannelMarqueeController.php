@@ -131,7 +131,27 @@ class ChannelMarqueeController
                             ->icon(Icon::create('fas fa-chalkboard'))
                             ->confirm(admin_trans('player.reset_password'),
                                 [$this,'resetPassword'],['id'=>$data->id])->gridRefresh();
-                })->width('20%')->align('center');
+                })->width('20%')->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'ticket_machine_version';
+                })->editable(
+                    (new Editable)->text('content')
+                        ->rule([
+                            'integer' => admin_trans('validator.integer'),
+                            'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                        ])
+                        ->required()
+                )->display(function ($val, SystemSetting $data) {
+                    return $data->content ?? '--';
+                })->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'ticket_machine_download_url';
+                })->editable(
+                    (new Editable)->text('content')
+                        ->required()
+                )->display(function ($val, SystemSetting $data) {
+                    return $data->content ?? '--';
+                })->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');
             $grid->hideDelete();

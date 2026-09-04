@@ -35,6 +35,8 @@ return [
         'device_collect' => '店舗クロスストアログイン',
         'electronic_game_rebate' => '電子ゲームリベート',
         'machine_rebate' => '物理マシンリベート',
+        'ticket_machine_version' => 'チケットマシンバージョン',
+        'ticket_machine_download_url' => 'チケットマシンダウンロードURL',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
