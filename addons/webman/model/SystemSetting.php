@@ -57,10 +57,34 @@ class SystemSetting extends Model
         static::created(function (SystemSetting $setting) {
             $cacheKey = 'setting-' . $setting->feature . '-' . $setting->department_id;
             Cache::set($cacheKey, $setting);
+
+            // 储值机版本号创建后刷新缓存
+            if ($setting->feature === 'ticket_machine_version') {
+                $versionCacheKey = 'chuzhi_version_' . $setting->department_id;
+                Cache::set($versionCacheKey, $setting->content);
+            }
+
+            // 储值机下载链接创建后刷新缓存
+            if ($setting->feature === 'ticket_machine_download_url') {
+                $downloadCacheKey = 'chuzhi_download_' . $setting->department_id;
+                Cache::set($downloadCacheKey, $setting->content);
+            }
         });
         static::deleted(function (SystemSetting $setting) {
             $cacheKey = 'setting-' . $setting->feature . '-' . $setting->department_id;
             Cache::delete($cacheKey);
+
+            // 储值机版本号删除后清除缓存
+            if ($setting->feature === 'ticket_machine_version') {
+                $versionCacheKey = 'chuzhi_version_' . $setting->department_id;
+                Cache::delete($versionCacheKey);
+            }
+
+            // 储值机下载链接删除后清除缓存
+            if ($setting->feature === 'ticket_machine_download_url') {
+                $downloadCacheKey = 'chuzhi_download_' . $setting->department_id;
+                Cache::delete($downloadCacheKey);
+            }
         });
         static::updated(function (SystemSetting $setting) {
             $cacheKey = 'setting-' . $setting->feature . '-' . $setting->department_id;
@@ -68,6 +92,18 @@ class SystemSetting extends Model
 
             if($setting->feature === 'max_keeping_minutes'){
                 Cache::set($cacheKey, $setting->num);
+            }
+
+            // 储值机版本号更新后刷新缓存
+            if ($setting->feature === 'ticket_machine_version') {
+                $versionCacheKey = 'chuzhi_version_' . $setting->department_id;
+                Cache::set($versionCacheKey, $setting->content);
+            }
+
+            // 储值机下载链接更新后刷新缓存
+            if ($setting->feature === 'ticket_machine_download_url') {
+                $downloadCacheKey = 'chuzhi_download_' . $setting->department_id;
+                Cache::set($downloadCacheKey, $setting->content);
             }
 
             // 客户端维护配置更新后立即推送

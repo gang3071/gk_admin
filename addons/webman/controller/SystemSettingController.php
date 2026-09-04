@@ -317,7 +317,27 @@ class SystemSettingController
                             'fontWeight' => 'bold',
                             'fontSize' => '14px'
                         ]);
-                })->width('20%')->align('center');
+                })->width('20%')->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'ticket_machine_version';
+                })->editable(
+                    (new Editable)->text('content')
+                        ->rule([
+                            'required' => admin_trans('system_setting.fields.ticket_machine_version'),
+                            'integer' => admin_trans('validator.integer'),
+                            'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                        ])
+                )->display(function ($val, SystemSetting $data) {
+                    return $data->content;
+                })->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'ticket_machine_download_url';
+                })->editable(
+                    Editable::input('content')
+                        ->rule(['required' => admin_trans('system_setting.fields.ticket_machine_download_url')])
+                )->display(function ($val, SystemSetting $data) {
+                    return $data->content;
+                })->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');
             $grid->hideDelete();

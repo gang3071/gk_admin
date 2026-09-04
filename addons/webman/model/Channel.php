@@ -155,6 +155,16 @@ class Channel extends Model
                     'feature' => 'commission',
                     'created_at' => date('Y-m-d H:i:s'),
                 ],
+                [
+                    'department_id' => $channel->department_id,
+                    'feature' => 'ticket_machine_version',
+                    'created_at' => date('Y-m-d H:i:s'),
+                ],
+                [
+                    'department_id' => $channel->department_id,
+                    'feature' => 'ticket_machine_download_url',
+                    'created_at' => date('Y-m-d H:i:s'),
+                ],
             ]);
             ChannelRechargeMethod::insert([
                 [
