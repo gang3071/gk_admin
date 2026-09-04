@@ -315,7 +315,7 @@ return [
         'claimed_today' => '今日已领取',
         'new_member_claim' => '新会员可领取',
         'total_limit_reached' => '总次数已用完',
-        'bet_check_failed' => '昨日打码量不足10,000',
+        'bet_check_failed' => '昨日打码量不足20,000',
         'bet_check_on' => '当前打开打码量判定',
         'used_experience_count' => '体验券已使用次数',
     ],
