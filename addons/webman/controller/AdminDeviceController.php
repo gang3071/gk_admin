@@ -228,12 +228,12 @@ class AdminDeviceController
             // 代理选择（根据渠道动态加载）
             $agentField = $form->select('agent_admin_id', admin_trans('device.fields.agent_name'))
                 ->showSearch()
-                ->help(admin_trans('device.agent_help'));
+                ->help(admin_trans('device.fields.agent_help'));
 
             // 店家选择（根据代理动态加载）
             $storeField = $form->select('store_admin_id', admin_trans('device.fields.store_name'))
                 ->showSearch()
-                ->help(admin_trans('device.store_help'));
+                ->help(admin_trans('device.fields.store_help'));
 
             // 设置级联关系
             $departmentField->load($agentField, admin_url(['addons-webman-controller-AdminDeviceController', 'getAgentOptions']));
