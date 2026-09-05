@@ -156,7 +156,7 @@ return [
         'check_machine' => '故障排除',
         'chang_point_card_confirm' => '遊戲中的機台無法更換開分卡,歷史累計數據將會重新計算,你確定要執行操作嗎？',
         'clear_bet_confirm' => '清理機器壓分,系統將已設備記錄壓分為准,你確定要執行操作嗎？',
-        'check_machine_confirm' => '故障排除將清除機台故障標記，不影響任何數據，你確定要執行操作嗎？',
+        'check_machine_confirm' => '故障排除將清除機台故障標記和外部按鈕計數器（B5/B7），你確定要執行操作嗎？',
     ],
     'action' => [
         'action_error' => '操作失敗',
