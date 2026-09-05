@@ -317,20 +317,40 @@ class MachineController
                     [admin_trans('machine.btn.action'), Icon::create('DownOutlined')->style(['marginRight' => '5px'])])
             )->trigger(['click']);
 
-            $dropdown->item(admin_trans('machine.media') . ' ' . $data->code, 'fas fa-file-video')
-                ->modal([$this, 'mediaList'], ['id' => $data->id])
-                ->width('70%');
+            // 线上机台：显示媒体相关操作
+            if ($data->machine_source == Machine::MACHINE_SOURCE_ONLINE) {
+                $dropdown->item(admin_trans('machine.media') . ' ' . $data->code, 'fas fa-file-video')
+                    ->modal([$this, 'mediaList'], ['id' => $data->id])
+                    ->width('70%');
+            }
 
+            // 所有机台：更换开分卡
             $dropdown->item(admin_trans('machine.btn.chang_point_card'), 'reload-outlined')
                 ->confirm(admin_trans('machine.btn.chang_point_card_confirm'), [$this, 'changePointCard'],
                     ['id' => $data->id])
                 ->gridRefresh();
+
+            // 所有机台：压分清理
             $dropdown->item(admin_trans('machine.btn.clear_bet'), 'far fa-life-ring')
                 ->confirm(admin_trans('machine.btn.clear_bet_confirm'), [$this, 'clearBet'], ['id' => $data->id])
                 ->gridRefresh();
-            $dropdown->item(admin_trans('machine.media_recording') . ' ' . $data->code, 'fas fa-file-video')
-                ->modal([$this, 'mediaRecording'], ['id' => $data->id])
-                ->width('70%');
+
+            // 线下版小淞机台：故障排除
+            if ($data->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                && $data->control_type == Machine::CONTROL_TYPE_SONG) {
+                $dropdown->item(admin_trans('machine.btn.check_machine'), 'tool-outlined')
+                    ->confirm(admin_trans('machine.btn.check_machine_confirm'), [$this, 'checkMachine'],
+                        ['id' => $data->id])
+                    ->gridRefresh();
+            }
+
+            // 线上机台：录像相关操作
+            if ($data->machine_source == Machine::MACHINE_SOURCE_ONLINE) {
+                $dropdown->item(admin_trans('machine.media_recording') . ' ' . $data->code, 'fas fa-file-video')
+                    ->modal([$this, 'mediaRecording'], ['id' => $data->id])
+                    ->width('70%');
+            }
+
             $action->prepend(
                 $dropdown
             );
@@ -2721,12 +2741,16 @@ class MachineController
             // 通过 API 获取机台状态
             $services = $this->getMachineStatusViaApi($machine);
 
-            // 根据机台类型获取常量类
-            $cmdClass = match([$machine->type, $machine->control_type]) {
-                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => Slot::class,
-                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
-                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
-                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
+            // 根据机台类型和来源获取常量类
+            $cmdClass = match([$machine->type, $machine->control_type, $machine->machine_source]) {
+                // 线上机台
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_ONLINE] => Slot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => SongSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_ONLINE] => Jackpot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => SongJackpot::class,
+                // 线下机台（小淞）
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineJackpot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => SongSlot::class, // 线下斯洛暂用线上版类
                 default => Slot::class,
             };
 
@@ -2773,12 +2797,16 @@ class MachineController
         try {
             $adminId = Admin::id() ?? 0;
 
-            // 根据机台类型获取常量类
-            $cmdClass = match([$machine->type, $machine->control_type]) {
-                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI] => Slot::class,
-                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => SongSlot::class,
-                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI] => Jackpot::class,
-                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => SongJackpot::class,
+            // 根据机台类型和来源获取常量类
+            $cmdClass = match([$machine->type, $machine->control_type, $machine->machine_source]) {
+                // 线上机台
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_ONLINE] => Slot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => SongSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_ONLINE] => Jackpot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => SongJackpot::class,
+                // 线下机台（小淞）
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineJackpot::class,
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => SongSlot::class, // 线下斯洛暂用线上版类
                 default => Slot::class,
             };
 
@@ -2807,6 +2835,58 @@ class MachineController
         }
 
         return message_success(admin_trans('machine.action.action_success'));
+    }
+
+    /**
+     * 故障排除（小淞线下版专用）
+     * @param $id
+     * @return Msg
+     * @throws \Exception
+     */
+    public function checkMachine($id): Msg
+    {
+        /** @var Machine $machine */
+        $machine = $this->model::find($id);
+        if (empty($machine)) {
+            return message_error(admin_trans('machine.not_fount'));
+        }
+
+        // 仅支持小淞线下版
+        if ($machine->machine_source != Machine::MACHINE_SOURCE_OFFLINE
+            || $machine->control_type != Machine::CONTROL_TYPE_SONG) {
+            return message_error(admin_trans('machine.check_machine_not_support'));
+        }
+
+        try {
+            $adminId = Admin::id() ?? 0;
+
+            // 引入小淞线下版工控类
+            $cmdClass = match([$machine->type, $machine->control_type]) {
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG] => \app\service\machine\SongOfflineSlot::class,
+                [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG] => \app\service\machine\SongOfflineJackpot::class,
+                default => null,
+            };
+
+            if (!$cmdClass) {
+                return message_error(admin_trans('machine.check_machine_not_support'));
+            }
+
+            // 发送故障排除指令（46 CC B4）
+            // ✅ CHECK指令会清除外部按钮计数器（协议规定）
+            $this->sendMachineCmdViaApi($machine, $cmdClass::CHECK, 0, $adminId);
+
+            Log::info('[故障排除] 发送CHECK指令', [
+                'machine_id' => $machine->id,
+                'machine_code' => $machine->code,
+                'admin_id' => $adminId,
+                'note' => '故障排除会清除B5/B7外部按钮计数器'
+            ]);
+
+        } catch (Exception $e) {
+            return message_error(admin_trans('machine.action_error') . ':' . $e->getMessage());
+        }
+
+        return message_success(admin_trans('machine.check_machine_success'));
     }
 
     /**
