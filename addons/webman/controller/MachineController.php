@@ -2723,6 +2723,16 @@ class MachineController
 
     /**
      * 更换开分卡
+     *
+     * 使用场景：物理更换工控卡/主板/硬件升级
+     *
+     * 操作流程：
+     * 1. 查询当前WIN/BET数据（保存最后的累计值）
+     * 2. 记录更换操作到 machine_open_card 表
+     * 3. 历史累计数据将重新计算
+     *
+     * 注意：换卡前应先执行此操作，再进行物理换卡
+     *
      * @param $id
      * @return Msg
      * @throws \Exception
@@ -2783,6 +2793,19 @@ class MachineController
 
     /**
      * 压分异常清理
+     *
+     * 使用场景：服务端压分数据异常，需要以机台实际数据为准
+     *
+     * 操作流程：
+     * 1. 发送清理指令到机台（ALL_DOWN / CLEAR_LOG）
+     * 2. 清除服务端Redis缓存数据（bet/score/win_number等）
+     * 3. 强制以机台实际值为准重新同步
+     *
+     * 适用情况：
+     * - 服务端显示压分与机台不一致
+     * - Redis缓存数据错误
+     * - 网络中断导致数据未同步
+     *
      * @param $id
      * @return Msg
      * @throws \Exception
@@ -2839,6 +2862,28 @@ class MachineController
 
     /**
      * 故障排除（小淞线下版专用）
+     *
+     * 使用场景：仅清理板子上的异常状态（硬件层面问题）
+     *
+     * 操作内容：
+     * 1. 发送 46 CC B4 指令到机台
+     * 2. 清除B5/B7外部按钮计数器（硬件复位）
+     * 3. 清除机台故障标记
+     *
+     * 重要说明：
+     * - 不做任何数据记录
+     * - 不影响服务端数据
+     * - 仅用于硬件故障修复
+     *
+     * 适用情况：
+     * - 机台故障灯亮起
+     * - 工控板卡住不响应
+     * - 需要硬件复位
+     *
+     * 注意事项：
+     * - 如果是物理换卡，请使用"更换开分卡"操作
+     * - 如果是数据不同步，请使用"压分清理"操作
+     *
      * @param $id
      * @return Msg
      * @throws \Exception
@@ -2871,15 +2916,15 @@ class MachineController
                 return message_error(admin_trans('machine.check_machine_not_support'));
             }
 
-            // 发送故障排除指令（46 CC B4）
-            // ✅ CHECK指令会清除外部按钮计数器（协议规定）
+            // ✅ 发送故障排除指令（46 CC B4）
+            // ⚠️ 仅清理板子异常，不做任何数据处理
             $this->sendMachineCmdViaApi($machine, $cmdClass::CHECK, 0, $adminId);
 
-            Log::info('[故障排除] 发送CHECK指令', [
+            Log::info('[故障排除] 发送CHECK指令（仅硬件复位）', [
                 'machine_id' => $machine->id,
                 'machine_code' => $machine->code,
                 'admin_id' => $adminId,
-                'note' => '故障排除会清除B5/B7外部按钮计数器'
+                'note' => '清除B5/B7计数器，不影响服务端数据'
             ]);
 
         } catch (Exception $e) {
