@@ -2760,7 +2760,7 @@ class MachineController
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => SongJackpot::class,
                 // 线下机台（小淞）
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineJackpot::class,
-                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => SongSlot::class, // 线下斯洛暂用线上版类
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineSlot::class,
                 default => Slot::class,
             };
 
@@ -2829,7 +2829,7 @@ class MachineController
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => SongJackpot::class,
                 // 线下机台（小淞）
                 [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineJackpot::class,
-                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => SongSlot::class, // 线下斯洛暂用线上版类
+                [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineSlot::class,
                 default => Slot::class,
             };
 
