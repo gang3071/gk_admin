@@ -2,9 +2,12 @@
 
 namespace process;
 
+use addons\webman\model\LotteryTicket;
 use addons\webman\model\LotteryTicketActivity;
 use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\service\LotteryTicketBetProgressService;
+use addons\webman\service\LotteryTicketIssueService;
+use addons\webman\service\LotteryTicketPushService;
 use support\Db;
 use support\Log;
 use Workerman\Crontab\Crontab;
@@ -264,12 +267,16 @@ class LotteryActivityStatusTransitionTask
      * - 实时扫描间隔20秒，活动结束前最后20秒的打码可能未被统计
      * - 此方法确保活动期间所有打码量都被正确计入
      * - 使用覆盖方式重新计算，从活动开始到结束的所有打码
+     * - ✅ 重新计算后检查并发放摸奖券（新增）
      *
      * 场景示例：
      * 23:59:40 - 最后一次实时扫描
      * 23:59:45 - 玩家A打了500元 ⚠️ 未被扫描
+     * 23:59:50 - 玩家A达标应发券，但未发 ⚠️
      * 23:59:59 - 活动结束
-     * 24:00:00 - 此方法执行，确保500元被统计 ✅
+     * 24:00:00 - 此方法执行：
+     *            1. 重新计算打码量（500元被统计）✅
+     *            2. 检查并发券（玩家A获得券）✅
      *
      * @param LotteryTicketActivity $activity
      */
@@ -299,8 +306,11 @@ class LotteryActivityStatusTransitionTask
                 return;
             }
 
-            // 使用覆盖方式重新计算打码进度
+            // Step 1: 使用覆盖方式重新计算打码进度
             $recalculated = $this->recalculateBetProgress($activity->id, $playerBetAmounts);
+
+            // Step 2: ⭐ 检查并发放摸奖券（关键！）
+            $ticketsIssued = $this->checkAndIssueTickets($activity->id, array_keys($playerBetAmounts));
 
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
@@ -309,6 +319,7 @@ class LotteryActivityStatusTransitionTask
                 'activity_name' => $activity->name,
                 'players_recalculated' => $recalculated,
                 'total_players' => count($playerBetAmounts),
+                'tickets_issued' => $ticketsIssued,  // ✅ 新增
                 'duration_ms' => $duration,
             ]);
 
@@ -486,5 +497,178 @@ class LotteryActivityStatusTransitionTask
         }
 
         return $recalculated;
+    }
+
+    /**
+     * 检查并发券（批量处理）
+     *
+     * ⚠️ 关键说明：
+     * - 在重新计算打码量后调用此方法
+     * - 查询所有达标玩家并发放摸奖券
+     * - 使用乐观锁防止重复发券
+     *
+     * @param int $activityId 活动ID
+     * @param array $playerIds 玩家ID列表
+     * @return int 发放的券数
+     */
+    protected function checkAndIssueTickets(int $activityId, array $playerIds): int
+    {
+        if (empty($playerIds)) {
+            return 0;
+        }
+
+        $totalIssued = 0;
+
+        try {
+            // 安全处理：类型转换
+            $safePlayerIds = array_map('intval', $playerIds);
+            $playerIdsStr = implode(',', $safePlayerIds);
+
+            // 查询所有达标的玩家（打码量已达标且未发完券）
+            $readyPlayers = Db::select("
+                SELECT id, player_id, current_bet_amount, bet_amount_required,
+                       cycles_completed, ticket_count_per_cycle
+                FROM lottery_ticket_bet_progress
+                WHERE activity_id = ?
+                  AND player_id IN ({$playerIdsStr})
+                  AND status = " . LotteryTicketBetProgress::STATUS_ACTIVE . "
+                  AND current_bet_amount >= bet_amount_required
+                  AND FLOOR(current_bet_amount / bet_amount_required) > cycles_completed
+            ", [$activityId]);
+
+            if (empty($readyPlayers)) {
+                Log::debug('无达标玩家需要发券', [
+                    'activity_id' => $activityId,
+                    'checked_players' => count($playerIds),
+                ]);
+                return 0;
+            }
+
+            $issueService = new LotteryTicketIssueService();
+
+            Log::info('开始发券', [
+                'activity_id' => $activityId,
+                'ready_players_count' => count($readyPlayers),
+            ]);
+
+            // 逐个处理达标玩家
+            foreach ($readyPlayers as $progress) {
+                try {
+                    // 计算应发券数
+                    $newCycles = floor($progress->current_bet_amount / $progress->bet_amount_required);
+                    $cyclesToIssue = $newCycles - $progress->cycles_completed;
+
+                    if ($cyclesToIssue <= 0) {
+                        continue;
+                    }
+
+                    $ticketsToIssue = $cyclesToIssue * $progress->ticket_count_per_cycle;
+
+                    Db::beginTransaction();
+                    try {
+                        // 批量发券
+                        $result = $issueService->issueTicketsBatch(
+                            $activityId,
+                            $progress->player_id,
+                            $ticketsToIssue,
+                            LotteryTicket::SOURCE_BETTING
+                        );
+
+                        $issuedCount = $result['count'];
+
+                        // ⭐ 使用乐观锁更新进度记录
+                        $affected = Db::update("
+                            UPDATE lottery_ticket_bet_progress
+                            SET cycles_completed = ?,
+                                total_tickets_issued = total_tickets_issued + ?,
+                                last_issued_at = NOW(),
+                                updated_at = NOW()
+                            WHERE id = ?
+                              AND cycles_completed = ?
+                        ", [$newCycles, $issuedCount, $progress->id, $progress->cycles_completed]);
+
+                        if ($affected === 0) {
+                            // 乐观锁冲突，其他进程已经发券
+                            Db::rollBack();
+                            Log::warning('发券冲突：其他进程已发券', [
+                                'progress_id' => $progress->id,
+                                'player_id' => $progress->player_id,
+                            ]);
+                            continue;
+                        }
+
+                        Db::commit();
+
+                        $totalIssued += $issuedCount;
+
+                        Log::info('活动结束前发券成功', [
+                            'activity_id' => $activityId,
+                            'player_id' => $progress->player_id,
+                            'tickets_issued' => $issuedCount,
+                            'new_cycles' => $newCycles,
+                        ]);
+
+                        // 推送发券通知
+                        try {
+                            $activity = LotteryTicketActivity::find($activityId);
+                            if ($activity) {
+                                // 推送发券通知（弹窗）
+                                $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $issuedCount);
+                                LotteryTicketPushService::pushPlayerTicketsUpdate($progress->player_id, $message);
+
+                                // 推送打码进度更新（静默）
+                                $updatedProgress = LotteryTicketBetProgress::find($progress->id);
+                                if ($updatedProgress) {
+                                    LotteryTicketPushService::pushBetProgressUpdate(
+                                        $progress->player_id,
+                                        $activityId,
+                                        $updatedProgress->current_bet_amount,
+                                        $updatedProgress->bet_amount_required,
+                                        $updatedProgress->progress_percent,
+                                        $updatedProgress->remaining_bet_amount
+                                    );
+                                }
+                            }
+                        } catch (\Exception $e) {
+                            Log::warning('发券推送失败', [
+                                'player_id' => $progress->player_id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+
+                    } catch (\Exception $e) {
+                        Db::rollBack();
+                        throw $e;
+                    }
+
+                } catch (\Exception $e) {
+                    Log::error('单个玩家发券失败', [
+                        'progress_id' => $progress->id,
+                        'player_id' => $progress->player_id,
+                        'error' => $e->getMessage(),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ]);
+                }
+            }
+
+            if ($totalIssued > 0) {
+                Log::info('活动结束前发券完成', [
+                    'activity_id' => $activityId,
+                    'total_tickets_issued' => $totalIssued,
+                    'ready_players' => count($readyPlayers),
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            Log::error('检查并发券失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+        }
+
+        return $totalIssued;
     }
 }
