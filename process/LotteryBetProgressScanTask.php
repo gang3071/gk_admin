@@ -46,7 +46,7 @@ class LotteryBetProgressScanTask
         });
 
         // 全量补偿扫描（每1小时）- 重新计算所有打码量，修复遗漏数据
-        new Crontab('0 0 * * *', function () {
+        new Crontab('0 */1 * * *', function () {
             $this->fullScanAndRecalculate();
         });
 
