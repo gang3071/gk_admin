@@ -38,6 +38,16 @@ class LotteryBetProgressScanTask
      */
     const CACHE_KEY_ACTIVITY_LOCK = 'lottery_bet_scan_activity_';
 
+    /**
+     * 缓存键名：实时扫描任务锁（防止任务并发执行）
+     */
+    const CACHE_KEY_TASK_LOCK = 'lottery_bet_scan_task_lock';
+
+    /**
+     * 缓存键名：全量扫描任务锁（防止任务并发执行）
+     */
+    const CACHE_KEY_FULL_SCAN_LOCK = 'lottery_bet_full_scan_lock';
+
     public function onWorkerStart(Worker $worker)
     {
         // 实时增量扫描（每20秒）- 处理新增打码量
@@ -56,21 +66,36 @@ class LotteryBetProgressScanTask
     /**
      * 扫描并更新打码进度（优化版）
      * ⭐ 支持多活动并发处理
+     * ⭐ 任务级别锁：防止定时任务并发执行
      */
     protected function scanAndUpdateBetProgress()
     {
+        // ⭐ 任务级别锁：防止上次扫描未完成时，下次扫描就开始
+        $taskLockKey = self::CACHE_KEY_TASK_LOCK;
+
+        if (Cache::get($taskLockKey) === 'running') {
+            Log::warning('上次扫描任务尚未完成，跳过本次扫描', [
+                'lock_key' => $taskLockKey,
+            ]);
+            return;
+        }
+
+        // 获取所有进行中的活动（在设锁之前检查）
+        $activities = LotteryTicketActivity::query()
+            ->where('status', LotteryTicketActivity::STATUS_ONGOING)
+            ->get();
+
+        if ($activities->isEmpty()) {
+            Log::debug('暂无进行中的摸奖券活动');
+            return;
+        }
+
+        // 设置任务锁（60秒超时，正常情况下应该远小于20秒）
+        Cache::set($taskLockKey, 'running', 60);
+
         $startTime = microtime(true);
 
         try {
-            // 获取所有进行中的活动
-            $activities = LotteryTicketActivity::query()
-                ->where('status', LotteryTicketActivity::STATUS_ONGOING)
-                ->get();
-
-            if ($activities->isEmpty()) {
-                Log::debug('暂无进行中的摸奖券活动');
-                return;
-            }
 
             // 获取上次扫描时间
             $lastScanTime = Cache::get(self::CACHE_KEY_LAST_SCAN);
@@ -174,6 +199,9 @@ class LotteryBetProgressScanTask
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
+        } finally {
+            // ⭐ 释放任务锁（无论成功或失败都要释放）
+            Cache::delete($taskLockKey);
         }
     }
 
@@ -702,6 +730,7 @@ class LotteryBetProgressScanTask
      * - 从活动开始时间重新统计所有打码量
      * - 自动修复实时扫描可能遗漏的数据
      * - 确保 current_bet_amount 始终准确
+     * - ⭐ 任务级别锁：防止全量扫描并发执行
      *
      * 工作原理：
      * 1. 查询活动从开始到现在的所有打码记录
@@ -711,19 +740,34 @@ class LotteryBetProgressScanTask
      */
     protected function fullScanAndRecalculate()
     {
+        // ⭐ 全量扫描任务锁：防止并发执行
+        $fullScanLockKey = self::CACHE_KEY_FULL_SCAN_LOCK;
+
+        if (Cache::get($fullScanLockKey) === 'running') {
+            Log::warning('上次全量扫描尚未完成，跳过本次扫描', [
+                'lock_key' => $fullScanLockKey,
+            ]);
+            return;
+        }
+
         Log::info('========== 开始全量扫描并重新计算打码进度 ==========');
+
+        // 获取所有进行中的活动（在设锁之前检查）
+        $activities = LotteryTicketActivity::query()
+            ->where('status', LotteryTicketActivity::STATUS_ONGOING)
+            ->get();
+
+        if ($activities->isEmpty()) {
+            Log::info('暂无进行中的活动，跳过全量扫描');
+            return;
+        }
+
+        // 设置全量扫描锁（30分钟超时，因为全量扫描可能较慢）
+        Cache::set($fullScanLockKey, 'running', 1800);
+
         $startTime = microtime(true);
 
         try {
-            // 获取所有进行中的活动
-            $activities = LotteryTicketActivity::query()
-                ->where('status', LotteryTicketActivity::STATUS_ONGOING)
-                ->get();
-
-            if ($activities->isEmpty()) {
-                Log::info('暂无进行中的活动，跳过全量扫描');
-                return;
-            }
 
             $currentTime = date('Y-m-d H:i:s');
             $totalRecalculated = 0;
