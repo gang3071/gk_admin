@@ -867,6 +867,9 @@ class LotteryBetProgressScanTask
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
+        } finally {
+            // ⭐ 释放全量扫描锁（无论成功或失败都要释放）
+            Cache::delete($fullScanLockKey);
         }
     }
 
