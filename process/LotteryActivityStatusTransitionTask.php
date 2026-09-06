@@ -3,7 +3,9 @@
 namespace process;
 
 use addons\webman\model\LotteryTicketActivity;
+use addons\webman\model\LotteryTicketBetProgress;
 use addons\webman\service\LotteryTicketBetProgressService;
+use support\Db;
 use support\Log;
 use Workerman\Crontab\Crontab;
 use Workerman\Worker;
@@ -187,6 +189,11 @@ class LotteryActivityStatusTransitionTask
             'end_time' => $activity->end_time,
         ]);
 
+        // ⭐ 关键：在停止打码进度之前，先做最后一次全量扫描
+        // 原因：实时扫描间隔20秒，活动结束前最后20秒的打码量可能未被统计
+        // 确保活动期间所有打码量都被正确计算
+        $this->performFinalScan($activity);
+
         // 停止所有玩家的打码进度（不再发券）
         LotteryTicketBetProgressService::endActivityProgress($activity->id);
 
@@ -248,5 +255,236 @@ class LotteryActivityStatusTransitionTask
             $activity->id,
             sprintf('活動「%s」已完全結束', $activity->name)
         );
+    }
+
+    /**
+     * 执行活动结束前的最后一次全量扫描
+     *
+     * ⚠️ 关键说明：
+     * - 实时扫描间隔20秒，活动结束前最后20秒的打码可能未被统计
+     * - 此方法确保活动期间所有打码量都被正确计入
+     * - 使用覆盖方式重新计算，从活动开始到结束的所有打码
+     *
+     * 场景示例：
+     * 23:59:40 - 最后一次实时扫描
+     * 23:59:45 - 玩家A打了500元 ⚠️ 未被扫描
+     * 23:59:59 - 活动结束
+     * 24:00:00 - 此方法执行，确保500元被统计 ✅
+     *
+     * @param LotteryTicketActivity $activity
+     */
+    protected function performFinalScan(LotteryTicketActivity $activity)
+    {
+        $startTime = microtime(true);
+
+        try {
+            Log::info('========== 活动结束前最后全量扫描开始 ==========', [
+                'activity_id' => $activity->id,
+                'activity_name' => $activity->name,
+                'start_time' => $activity->start_time,
+                'end_time' => $activity->end_time,
+            ]);
+
+            // 从活动开始到结束，重新统计所有打码量
+            $playerBetAmounts = $this->getPlayerBetAmounts(
+                $activity->department_id,
+                $activity->start_time,
+                $activity->end_time
+            );
+
+            if (empty($playerBetAmounts)) {
+                Log::info('活动期间无打码数据', [
+                    'activity_id' => $activity->id,
+                ]);
+                return;
+            }
+
+            // 使用覆盖方式重新计算打码进度
+            $recalculated = $this->recalculateBetProgress($activity->id, $playerBetAmounts);
+
+            $duration = round((microtime(true) - $startTime) * 1000, 2);
+
+            Log::info('========== 活动结束前最后全量扫描完成 ==========', [
+                'activity_id' => $activity->id,
+                'activity_name' => $activity->name,
+                'players_recalculated' => $recalculated,
+                'total_players' => count($playerBetAmounts),
+                'duration_ms' => $duration,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('活动结束前最后全量扫描失败', [
+                'activity_id' => $activity->id,
+                'activity_name' => $activity->name,
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+        }
+    }
+
+    /**
+     * 获取玩家打码量聚合数据
+     * （复用LotteryBetProgressScanTask的逻辑）
+     *
+     * @param int $departmentId
+     * @param string $startTime
+     * @param string $endTime
+     * @return array [player_id => total_chip_amount]
+     */
+    protected function getPlayerBetAmounts(int $departmentId, string $startTime, string $endTime): array
+    {
+        $playerBetAmounts = [];
+
+        // 1. 统计机台游戏打码量
+        $machineSql = "
+            SELECT player_id, SUM(chip_amount) as total_chip
+            FROM player_game_log
+            WHERE department_id = ?
+              AND created_at >= ?
+              AND created_at < ?
+              AND chip_amount > 0
+            GROUP BY player_id
+        ";
+
+        $machineResults = Db::select($machineSql, [$departmentId, $startTime, $endTime]);
+
+        foreach ($machineResults as $row) {
+            $playerBetAmounts[$row->player_id] = floatval($row->total_chip);
+        }
+
+        // 2. 统计在线游戏打码量（电子游戏 + 真人游戏，排除体育平台）
+        $excludedPlatforms = config('platform_filter.lottery_excluded_platforms', [
+            'KYS', 'OB', 'SPS', 'SPS_DY'
+        ]);
+
+        if (empty($excludedPlatforms)) {
+            $excludedPlatforms = [''];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($excludedPlatforms), '?'));
+
+        $onlineSql = "
+            SELECT player_id, SUM(chip_amount) as total_bet
+            FROM player_platform_game_log
+            WHERE department_id = ?
+              AND created_at >= ?
+              AND created_at < ?
+              AND chip_amount > 0
+              AND platform_code NOT IN ({$placeholders})
+            GROUP BY player_id
+        ";
+
+        $params = array_merge(
+            [$departmentId, $startTime, $endTime],
+            $excludedPlatforms
+        );
+
+        $onlineResults = Db::select($onlineSql, $params);
+
+        foreach ($onlineResults as $row) {
+            $playerId = $row->player_id;
+            $betAmount = floatval($row->total_bet);
+
+            if (isset($playerBetAmounts[$playerId])) {
+                $playerBetAmounts[$playerId] += $betAmount;
+            } else {
+                $playerBetAmounts[$playerId] = $betAmount;
+            }
+        }
+
+        return $playerBetAmounts;
+    }
+
+    /**
+     * 重新计算打码进度（覆盖方式）
+     * （复用LotteryBetProgressScanTask的逻辑）
+     *
+     * @param int $activityId
+     * @param array $playerBetAmounts [player_id => total_bet_amount]
+     * @return int
+     */
+    protected function recalculateBetProgress(int $activityId, array $playerBetAmounts): int
+    {
+        if (empty($playerBetAmounts)) {
+            return 0;
+        }
+
+        $recalculated = 0;
+
+        try {
+            // 分批处理（每次最多500个）
+            $chunks = array_chunk($playerBetAmounts, 500, true);
+
+            foreach ($chunks as $chunk) {
+                $whenCases = [];
+                $playerIdsArray = [];
+
+                foreach ($chunk as $playerId => $totalBetAmount) {
+                    $safePlayerId = (int)$playerId;
+                    $safeTotalBet = round((float)$totalBetAmount, 2);
+
+                    $whenCases[] = "WHEN {$safePlayerId} THEN {$safeTotalBet}";
+                    $playerIdsArray[] = $safePlayerId;
+                }
+
+                if (empty($whenCases)) {
+                    continue;
+                }
+
+                $playerIdsStr = implode(',', $playerIdsArray);
+                $caseSql = implode(' ', $whenCases);
+
+                // 覆盖式更新
+                $sql = "
+                    UPDATE lottery_ticket_bet_progress
+                    SET current_bet_amount = CASE player_id {$caseSql} END,
+                        updated_at = NOW()
+                    WHERE activity_id = ?
+                      AND player_id IN ({$playerIdsStr})
+                      AND status = " . LotteryTicketBetProgress::STATUS_ACTIVE . "
+                ";
+
+                $affected = Db::update($sql, [$activityId]);
+                $recalculated += $affected;
+            }
+
+            // 处理新玩家（数据库中还没有记录的）
+            $existingPlayerIds = LotteryTicketBetProgress::query()
+                ->where('activity_id', $activityId)
+                ->whereIn('player_id', array_keys($playerBetAmounts))
+                ->pluck('player_id')
+                ->toArray();
+
+            $newPlayerIds = array_diff(array_keys($playerBetAmounts), $existingPlayerIds);
+
+            if (!empty($newPlayerIds)) {
+                foreach ($newPlayerIds as $playerId) {
+                    try {
+                        $progress = LotteryTicketBetProgressService::createProgressForPlayer($activityId, $playerId);
+
+                        if ($progress) {
+                            $progress->current_bet_amount = round($playerBetAmounts[$playerId], 2);
+                            $progress->save();
+                            $recalculated++;
+                        }
+                    } catch (\Exception $e) {
+                        Log::warning('创建新玩家进度失败', [
+                            'activity_id' => $activityId,
+                            'player_id' => $playerId,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+
+        } catch (\Exception $e) {
+            Log::error('重新计算打码进度失败', [
+                'activity_id' => $activityId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $recalculated;
     }
 }
