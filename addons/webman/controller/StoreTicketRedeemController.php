@@ -6,17 +6,17 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
+use addons\webman\model\Player;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
-use addons\webman\model\Player;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
@@ -463,35 +463,35 @@ class StoreTicketRedeemController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 核销按钮（放在最前面）
-                if ($data['status'] == TicketRecord::STATUS_NORMAL) {
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.redeem.redeem'))
-                            ->modal([$this, 'redeemModal'], ['id' => $data['id']])
-                            ->type('primary')
-                            ->size('small')
-                    );
-                }
-
-                if ($data['status'] == TicketRecord::STATUS_DISABLED) {
-                    // 已禁用 - 显示恢复按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.redeem.restore'))
-                            ->confirm(admin_trans('ticket_machine.redeem.restore_confirm'), [$this, 'restoreRecord'], ['id' => $data['id']])
-                            ->type('primary')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                } elseif ($data['status'] == TicketRecord::STATUS_NORMAL) {
-                    // 正常状态 - 显示禁用按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.redeem.disable'))
-                            ->confirm(admin_trans('ticket_machine.redeem.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
-                            ->type('danger')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                }
+//                // 核销按钮（放在最前面）
+//                if ($data['status'] == TicketRecord::STATUS_NORMAL) {
+//                    $actions->prepend(
+//                        Button::create(admin_trans('ticket_machine.redeem.redeem'))
+//                            ->modal([$this, 'redeemModal'], ['id' => $data['id']])
+//                            ->type('primary')
+//                            ->size('small')
+//                    );
+//                }
+//
+//                if ($data['status'] == TicketRecord::STATUS_DISABLED) {
+//                    // 已禁用 - 显示恢复按钮
+//                    $actions->prepend(
+//                        Button::create(admin_trans('ticket_machine.redeem.restore'))
+//                            ->confirm(admin_trans('ticket_machine.redeem.restore_confirm'), [$this, 'restoreRecord'], ['id' => $data['id']])
+//                            ->type('primary')
+//                            ->size('small')
+//                            ->gridRefresh()
+//                    );
+//                } elseif ($data['status'] == TicketRecord::STATUS_NORMAL) {
+//                    // 正常状态 - 显示禁用按钮
+//                    $actions->prepend(
+//                        Button::create(admin_trans('ticket_machine.redeem.disable'))
+//                            ->confirm(admin_trans('ticket_machine.redeem.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
+//                            ->type('danger')
+//                            ->size('small')
+//                            ->gridRefresh()
+//                    );
+//                }
             });
         });
     }
