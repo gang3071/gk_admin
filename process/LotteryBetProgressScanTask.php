@@ -217,16 +217,18 @@ class LotteryBetProgressScanTask
             $this->logSlowQuery('机台游戏打码统计', $machineDuration);
         }
 
-        // 2. 统计电子游戏打码量（只统计电子游戏平台，排除真人/体育平台）
+        // 2. 统计在线游戏打码量（电子游戏 + 真人游戏，排除体育平台）
         if ($config['include_online_game']) {
             $onlineStart = microtime(true);
 
             // ⭐ 使用原生SQL + FORCE INDEX + 平台过滤
-            // ✅ 剔除真人/体育平台，只保留电子游戏平台的下注计入打码量（从配置文件读取）
-            $excludedPlatforms = config('platform_filter.excluded_platforms', [
-                // 默认值（防止配置文件不存在）
-                'WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE',
-                'KY', 'KYS', 'OB', 'SPS', 'SPS_DY'
+            // ✅ 业务规则（2026-09-06更新）：
+            //    - 电子游戏（BTG, RSG, JDB 等）✅ 计入打码量
+            //    - 真人游戏（WM, DG, SA 等）✅ 计入打码量（新增）
+            //    - 体育投注（KYS, OB, SPS 等）❌ 不计入打码量
+            $excludedPlatforms = config('platform_filter.lottery_excluded_platforms', [
+                // 默认值（防止配置文件不存在）- 只排除体育平台
+                'KYS', 'OB', 'SPS', 'SPS_DY'
             ]);
 
             // 构建 NOT IN 子句的占位符
