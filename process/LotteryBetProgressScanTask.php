@@ -73,16 +73,16 @@ class LotteryBetProgressScanTask
         // ⭐ 任务级别锁：防止上次扫描未完成时，下次扫描就开始
         $taskLockKey = self::CACHE_KEY_TASK_LOCK;
 
-        // ⭐ 使用 add() 代替 set()，实现原子性加锁
-        // add() 只有在键不存在时才会设置，返回 true；如果键已存在，返回 false
-        $lockAcquired = Cache::add($taskLockKey, 'running', 60);
-
-        if (!$lockAcquired) {
-            Log::warning('上次扫描任务尚未完成，跳过本次扫描（锁获取失败）', [
+        // 检查任务锁
+        if (Cache::get($taskLockKey) === 'running') {
+            Log::warning('上次扫描任务尚未完成，跳过本次扫描', [
                 'lock_key' => $taskLockKey,
             ]);
             return;
         }
+
+        // 设置任务锁（60秒超时）
+        Cache::set($taskLockKey, 'running', 60);
 
         $startTime = microtime(true);
 
@@ -113,13 +113,14 @@ class LotteryBetProgressScanTask
             foreach ($activities as $activity) {
                 $lockKey = self::CACHE_KEY_ACTIVITY_LOCK . $activity->id;
 
-                // ⭐ 使用 add() 实现原子性加锁（活动级别锁，5分钟超时）
-                $activityLockAcquired = Cache::add($lockKey, 'running', 300);
-
-                if (!$activityLockAcquired) {
-                    Log::debug('活动正在处理中，跳过（锁获取失败）', ['activity_id' => $activity->id]);
+                // 检查活动是否正在处理
+                if (Cache::get($lockKey) === 'running') {
+                    Log::debug('活动正在处理中，跳过', ['activity_id' => $activity->id]);
                     continue;
                 }
+
+                // 活动级别锁（5分钟超时）
+                Cache::set($lockKey, 'running', 300);
 
                 try {
                     // 确保只处理活动期间的数据
@@ -742,16 +743,16 @@ class LotteryBetProgressScanTask
         // ⭐ 全量扫描任务锁：防止并发执行
         $fullScanLockKey = self::CACHE_KEY_FULL_SCAN_LOCK;
 
-        // ⭐ 使用 add() 代替 set()，实现原子性加锁
-        // add() 只有在键不存在时才会设置，返回 true；如果键已存在，返回 false
-        $lockAcquired = Cache::add($fullScanLockKey, 'running', 1800);
-
-        if (!$lockAcquired) {
-            Log::warning('上次全量扫描尚未完成，跳过本次扫描（锁获取失败）', [
+        // 检查全量扫描锁
+        if (Cache::get($fullScanLockKey) === 'running') {
+            Log::warning('上次全量扫描尚未完成，跳过本次扫描', [
                 'lock_key' => $fullScanLockKey,
             ]);
             return;
         }
+
+        // 设置全量扫描锁（30分钟超时）
+        Cache::set($fullScanLockKey, 'running', 1800);
 
         Log::info('========== 开始全量扫描并重新计算打码进度 ==========');
 
