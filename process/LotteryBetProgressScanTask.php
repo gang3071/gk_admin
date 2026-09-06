@@ -45,12 +45,12 @@ class LotteryBetProgressScanTask
             $this->scanAndUpdateBetProgress();
         });
 
-        // 全量补偿扫描（每2小时）- 重新计算所有打码量，修复遗漏数据
-        new Crontab('0 */2 * * *', function () {
+        // 全量补偿扫描（每1小时）- 重新计算所有打码量，修复遗漏数据
+        new Crontab('0 0 * * *', function () {
             $this->fullScanAndRecalculate();
         });
 
-        Log::info('摸奖券打码进度扫描任务已启动（实时20秒 + 全量2小时双轨制）');
+        Log::info('摸奖券打码进度扫描任务已启动（实时20秒 + 全量1小时双轨制）');
     }
 
     /**
@@ -695,7 +695,7 @@ class LotteryBetProgressScanTask
     }
 
     /**
-     * 全量扫描并重新计算（每2小时执行）
+     * 全量扫描并重新计算（每1小时执行）
      *
      * ⚠️ 重要说明：
      * - 使用覆盖方式更新打码量，而不是累加
