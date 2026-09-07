@@ -238,11 +238,11 @@ class VipCashbackService
     }
 
     /**
-     * 获取排除的平台ID列表（真人视讯和体育平台）
+     * 获取排除的平台ID列表（仅体育平台）
      *
-     * 使用配置文件统一管理平台过滤规则，替代原来的 JSON_CONTAINS 查询
-     * 原逻辑：whereRaw('JSON_CONTAINS(cate_id, CAST(? AS JSON))', [3])
-     * 新逻辑：whereIn('code', config('platform_filter.excluded_platforms'))
+     * 业务规则（2026-09-07）：
+     * - 真人平台 ✅ 参与VIP反水、打码量统计、经验值
+     * - 体育平台 ❌ 不参与VIP反水、打码量统计
      *
      * @return array 平台ID数组
      */
@@ -253,11 +253,10 @@ class VipCashbackService
             return $cache;
         }
 
-        // 从配置文件读取排除的平台代码
-        $excludedCodes = config('platform_filter.excluded_platforms', [
+        // 从配置文件读取排除的平台代码（仅体育平台）
+        $excludedCodes = config('platform_filter.lottery_excluded_platforms', [
             // 默认值（防止配置文件不存在）
-            'WM', 'DG', 'SA', 'RSGLIVE', 'MT', 'O8', 'TNINE',
-            'KY', 'KYS', 'OB', 'SPS', 'SPS_DY'
+            'KYS', 'OB', 'SPS', 'SPS_DY'
         ]);
 
         // 根据平台代码查询平台ID
