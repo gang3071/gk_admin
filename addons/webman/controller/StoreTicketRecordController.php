@@ -381,6 +381,7 @@ class StoreTicketRecordController
             // 筛选器
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
+                $filter->like()->text('player.name')->placeholder(admin_trans('ticket_machine.record.player_name'));
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.record.machine_no'));
                 $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.record.remark'));
