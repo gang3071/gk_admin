@@ -46,6 +46,19 @@ class AgentTicketRedeemController
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
 
+            // 处理 source_type 筛选
+            $exAdminFilter = request()->input('ex_admin_filter', []);
+            if (isset($exAdminFilter['source_type'])) {
+                $sourceType = $exAdminFilter['source_type'];
+                if ($sourceType === 'null' || $sourceType === null || $sourceType === 'NULL') {
+                    $grid->model()->where(function ($q) {
+                        $q->whereNull('source_type')->orWhere('source_type', '');
+                    });
+                } elseif ($sourceType !== '') {
+                    $grid->model()->where('source_type', $sourceType);
+                }
+            }
+
             // 统计数据（排除禁用状态）
             $totalData = TicketRecord::query()
                 ->whereIn('store_admin_id', $storeIds)

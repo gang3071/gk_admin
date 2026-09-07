@@ -52,6 +52,20 @@ class StoreTicketRecordController
                 ])
                 ->orderBy('created_at', 'desc');
 
+            // 处理 source_type 筛选（ExAdmin 的 where 回调不生效，直接在这里处理）
+            $exAdminFilter = request()->input('ex_admin_filter', []);
+            if (isset($exAdminFilter['source_type'])) {
+                $sourceType = $exAdminFilter['source_type'];
+                if ($sourceType === 'null' || $sourceType === null || $sourceType === 'NULL') {
+                    // 后台出票：source_type 为 NULL 或空字符串
+                    $grid->model()->where(function ($q) {
+                        $q->whereNull('source_type')->orWhere('source_type', '');
+                    });
+                } elseif ($sourceType !== '') {
+                    $grid->model()->where('source_type', $sourceType);
+                }
+            }
+
             // 统计数据（基于当前筛选条件，排除禁用状态）
             $query = clone $grid->model();
             $query->where('status', '!=', TicketRecord::STATUS_DISABLED);
@@ -408,16 +422,8 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->select('source_type')->where(function ($query, $value) {
-                    if ($value === 'null' || $value === null || $value === 'NULL') {
-                        // 后台出票：source_type 为 NULL 或空字符串
-                        $query->where(function ($q) {
-                            $q->whereNull('source_type')->orWhere('source_type', '');
-                        });
-                    } elseif ($value !== '') {
-                        $query->where('source_type', $value);
-                    }
-                })->placeholder(admin_trans('ticket_machine.record.source_type'))
+                $filter->select('source_type')
+                    ->placeholder(admin_trans('ticket_machine.record.source_type'))
                     ->options([
                         '' => admin_trans('public_msg.all'),
                         'null' => admin_trans('ticket_machine.record.source_backend'),
