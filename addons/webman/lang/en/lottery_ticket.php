@@ -140,10 +140,11 @@ return [
     // 来源
     'source' => [
         'betting' => 'Earned by Betting',
-        'recharge' => '充值贈送',
-        'activity' => '活动贈送',
-        'manual' => 'Manual Award Distribution',
-        'unknown' => '未知來源',
+        'recharge' => 'Recharge Bonus',
+        'activity' => 'Activity Reward',
+        'manual' => 'Manual Award',
+        'vip_upgrade' => 'Upgrade Reissue',
+        'unknown' => 'Unknown Source',
     ],
 
     // 中奖记录状态

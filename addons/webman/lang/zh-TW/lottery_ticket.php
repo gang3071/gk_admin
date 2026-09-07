@@ -142,6 +142,7 @@ return [
         'recharge' => '充值贈送',
         'activity' => '活動贈送',
         'manual' => '手動派獎',
+        'vip_upgrade' => '升級補發',
         'unknown' => '未知來源',
     ],
 

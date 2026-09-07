@@ -91,6 +91,7 @@ class LotteryTicket extends Model
             self::SOURCE_RECHARGE => admin_trans('lottery_ticket.source.recharge'),
             self::SOURCE_ACTIVITY => admin_trans('lottery_ticket.source.activity'),
             self::SOURCE_MANUAL => admin_trans('lottery_ticket.source.manual'),
+            self::SOURCE_VIP_UPGRADE => admin_trans('lottery_ticket.source.vip_upgrade'),
         ];
 
         return $sourceMap[$source] ?? admin_trans('lottery_ticket.source.unknown');
