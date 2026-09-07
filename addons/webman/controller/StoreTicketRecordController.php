@@ -409,7 +409,7 @@ class StoreTicketRecordController
                     ])
                     ->style(['width' => '150px']);
                 $filter->where(function ($query, $value) {
-                    if ($value === 'null') {
+                    if ($value === 'null' || $value === null) {
                         $query->whereNull('source_type');
                     } elseif ($value !== '') {
                         $query->where('source_type', $value);

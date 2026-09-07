@@ -143,6 +143,7 @@ return [
         'recharge' => '充值贈送',
         'activity' => '活动贈送',
         'manual' => 'Manual Award Distribution',
+        'vip_upgrade' => 'VIP Upgrade Supplement',
         'unknown' => '未知來源',
     ],
 
