@@ -3571,11 +3571,14 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.3 统计柜台核销（ticket_type=1开分类型或2洗分类型，status=2后台核销）
+                    // 5.9.3 统计柜台核销（ticket_type=1开分类型或2洗分类型，status=2后台核销，player_id为0或null）
                     $counterRedeemAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->whereIn('ticket_type', [\addons\webman\model\TicketRecord::TYPE_RECHARGE, \addons\webman\model\TicketRecord::TYPE_WITHDRAW])
                         ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where(function ($q) {
+                            $q->where('player_id', 0)->orWhereNull('player_id');
+                        })
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');

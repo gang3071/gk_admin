@@ -568,11 +568,14 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计柜台核销（ticket_type=1开分类型或2洗分类型，status=2后台核销）
+        // 统计柜台核销（ticket_type=1开分类型或2洗分类型，status=2后台核销，player_id为0或null）
         $counterRedeemAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->whereIn('ticket_type', [TicketRecord::TYPE_RECHARGE, TicketRecord::TYPE_WITHDRAW])
             ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->where(function ($q) {
+                $q->where('player_id', 0)->orWhereNull('player_id');
+            })
             ->where('scanned_at', '>', $startTime)
             ->where('scanned_at', '<=', $endTime)
             ->sum('score');
