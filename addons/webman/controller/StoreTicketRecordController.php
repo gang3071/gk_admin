@@ -409,7 +409,6 @@ class StoreTicketRecordController
                     ])
                     ->style(['width' => '150px']);
                 $filter->select('source_type')->where(function ($query, $value) {
-                    var_dump($value);
                     if ($value === 'null' || $value === null || $value === 'NULL') {
                         // 后台出票：source_type 为 NULL 或空字符串
                         $query->where(function ($q) {
