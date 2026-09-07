@@ -37,7 +37,7 @@ return [
         'daily_limit' => 1,
 
         // 总可领取次数
-        'total_limit' => 4,
+        'total_limit' => 5,
 
         // 每次领取的分数
         'score' => 1000,
