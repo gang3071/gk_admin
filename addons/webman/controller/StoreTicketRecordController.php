@@ -408,7 +408,8 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->where(function ($query, $value) {
+                $filter->select('source_type')->where(function ($query, $value) {
+                    var_dump($value);
                     if ($value === 'null' || $value === null || $value === 'NULL') {
                         // 后台出票：source_type 为 NULL 或空字符串
                         $query->where(function ($q) {
@@ -417,8 +418,7 @@ class StoreTicketRecordController
                     } elseif ($value !== '') {
                         $query->where('source_type', $value);
                     }
-                })->select('source_type')
-                    ->placeholder(admin_trans('ticket_machine.record.source_type'))
+                })->placeholder(admin_trans('ticket_machine.record.source_type'))
                     ->options([
                         '' => admin_trans('public_msg.all'),
                         'null' => admin_trans('ticket_machine.record.source_backend'),
