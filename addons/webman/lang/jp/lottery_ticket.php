@@ -139,7 +139,7 @@ return [
         'recharge' => 'チャージ特典',
         'activity' => 'アクティビティ特典',
         'manual' => '手動払い出し',
-        'vip_upgrade' => 'VIPアップグレード補充',
+        'vip_upgrade' => 'アップグレード補発',
         'unknown' => '不明な来源',
     ],
 

@@ -143,7 +143,7 @@ return [
         'recharge' => '充值贈送',
         'activity' => '活动贈送',
         'manual' => '手动发放',
-        'vip_upgrade' => '会员补发',
+        'vip_upgrade' => '升级补发',
         'unknown' => '未知來源',
     ],
 
