@@ -3456,6 +3456,18 @@ class ChannelIndexController
                         ->where('play_game_record.created_at', '<=', $endTime)
                         ->sum('play_game_record.bet');
 
+                    // 5.1.1 统计储值机储值（投钞类型，source=storage_recharge）
+                    $storageRecharge = (float)\addons\webman\model\PlayerDeliveryRecord::query()
+                        ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+                        ->where('player.department_id', $admin->department_id)
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player.is_promoter', 0)
+                        ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_MACHINE)
+                        ->where('player_delivery_record.source', 'storage_recharge')
+                        ->where('player_delivery_record.created_at', '>', $startTime)
+                        ->where('player_delivery_record.created_at', '<=', $endTime)
+                        ->sum('player_delivery_record.amount');
+
                     // 5.2 统计机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
                     $machineBetAmount = \addons\webman\model\PlayerGameLog::query()
                         ->join('player', 'player_game_log.player_id', '=', 'player.id')
@@ -3529,15 +3541,12 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0，source_type为null或purchase，player_id为0或null）
+                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0，source_type为null，player_id为0或null）
                     $counterTicketAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                         ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-                        ->where(function ($q) {
-                            $q->whereNull('source_type')
-                                ->orWhere('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE);
-                        })
+                        ->whereNull('source_type')
                         ->where(function ($q) {
                             $q->where('player_id', 0)
                                 ->orWhereNull('player_id');
@@ -3546,7 +3555,21 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.2 统计柜台核销（ticket_type=1开分类型，status=2后台核销）
+                    // 5.9.2 统计储值机购票（ticket_type=1开分类型，status!=0，source_type=purchase，player_id为0或null）
+                    $storageTicketPurchase = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE)
+                        ->where(function ($q) {
+                            $q->where('player_id', 0)
+                                ->orWhereNull('player_id');
+                        })
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.9.3 统计柜台核销（ticket_type=1开分类型，status=2后台核销）
                     $counterRedeemAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
@@ -3720,6 +3743,8 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->welfare_coupon_amount = $welfareCouponAmount ?? 0;
                     $storeAgentShiftHandoverRecord->counter_ticket_amount = $counterTicketAmount ?? 0;
                     $storeAgentShiftHandoverRecord->counter_redeem_amount = $counterRedeemAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->storage_ticket_purchase = $storageTicketPurchase ?? 0;
+                    $storeAgentShiftHandoverRecord->storage_recharge = $storageRecharge ?? 0;
 
                     // 计算利润（总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(

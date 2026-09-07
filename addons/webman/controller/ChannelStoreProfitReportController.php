@@ -145,6 +145,7 @@ class ChannelStoreProfitReportController
             $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
             $ticketRedeemAmount = floatval($deliveryData->ticket_redeem_amount ?? 0);
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
+            $storageRecharge = floatval($deliveryData->storage_recharge ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
 
             // 票务数据
@@ -152,6 +153,7 @@ class ChannelStoreProfitReportController
             $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
             $counterTicketAmount = floatval($ticketData->counter_ticket_amount ?? 0);
+            $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
             $counterRedeemAmount = floatval($ticketData->counter_redeem_amount ?? 0);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0);
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);
@@ -218,7 +220,9 @@ class ChannelStoreProfitReportController
                 'ticket_redeem_amount' => $ticketRedeemAmount,
                 'ticket_open_score_amount' => $ticketOpenScoreAmount,
                 'counter_ticket_amount' => $counterTicketAmount,
+                'storage_ticket_purchase' => $storageTicketPurchase,
                 'counter_redeem_amount' => $counterRedeemAmount,
+                'storage_recharge' => $storageRecharge,
                 'redeem_amount' => $redeemAmount,
                 'redeem_machine_amount' => $redeemMachineAmount,
                 'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
@@ -332,6 +336,7 @@ class ChannelStoreProfitReportController
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS withdraw_amount,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'ticket_redeem' THEN `amount` ELSE 0 END) AS ticket_redeem_amount,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
+            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND `source` = 'storage_recharge' THEN `amount` ELSE 0 END) AS storage_recharge,
             SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
         ")->groupBy('player_id')->get();
 
@@ -347,6 +352,7 @@ class ChannelStoreProfitReportController
                 'withdraw_amount' => 0,
                 'ticket_redeem_amount' => 0,
                 'machine_put_point' => 0,
+                'storage_recharge' => 0,
                 'activity_total' => 0,
             ];
 
@@ -358,6 +364,7 @@ class ChannelStoreProfitReportController
                     $storeData->withdraw_amount += floatval($playerData->withdraw_amount);
                     $storeData->ticket_redeem_amount += floatval($playerData->ticket_redeem_amount);
                     $storeData->machine_put_point += floatval($playerData->machine_put_point);
+                    $storeData->storage_recharge += floatval($playerData->storage_recharge);
                     $storeData->activity_total += floatval($playerData->activity_total);
                 }
             }
@@ -389,7 +396,8 @@ class ChannelStoreProfitReportController
         $ticketData = $query->selectRaw("
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "') AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS counter_ticket_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `source_type` IS NULL AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS counter_ticket_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "' AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS storage_ticket_purchase,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS counter_redeem_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
@@ -673,10 +681,10 @@ class ChannelStoreProfitReportController
         $amountColumns = [
             'open_score_amount', 'withdraw_amount', 'machine_put_point',
             'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
-            'counter_ticket_amount', 'counter_redeem_amount',
+            'counter_ticket_amount', 'storage_ticket_purchase', 'counter_redeem_amount',
             'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
             'welfare_coupon_amount', 'lottery_amount', 'activity_total',
-            'electronic_game_bet_amount', 'machine_bet_amount',
+            'electronic_game_bet_amount', 'machine_bet_amount', 'storage_recharge',
             'total_income', 'total_expense',
         ];
 

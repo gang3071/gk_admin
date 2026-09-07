@@ -213,7 +213,7 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
                 $this->currentRow++;
 
-                // 柜台开票和柜台核销金额行
+                // 第一行：柜台开票、柜台核销
                 $counterTicketLabel = admin_trans('shift_handover.counter_ticket_amount') . '：';
                 $counterTicketValue = number_format($originalRecord->counter_ticket_amount ?? 0, 2);
                 $counterRedeemLabel = admin_trans('shift_handover.counter_redeem_amount') . '：';
@@ -222,6 +222,22 @@ class ShiftReportExporter extends Excel
                 $this->sheet->setCellValue('B' . $this->currentRow, $counterTicketValue);
                 $this->sheet->setCellValue('C' . $this->currentRow, $counterRedeemLabel);
                 $this->sheet->setCellValue('D' . $this->currentRow, $counterRedeemValue);
+                $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
+                $this->currentRow++;
+
+                // 第二行：储值机购票、储值机储值
+                $storageTicketLabel = admin_trans('shift_handover.storage_ticket_purchase') . '：';
+                $storageTicketValue = number_format($originalRecord->storage_ticket_purchase ?? 0, 2);
+                $storageRechargeLabel = admin_trans('shift_handover.storage_recharge') . '：';
+                $storageRechargeValue = number_format($originalRecord->storage_recharge ?? 0, 2);
+                $this->sheet->setCellValue('A' . $this->currentRow, $storageTicketLabel);
+                $this->sheet->setCellValue('B' . $this->currentRow, $storageTicketValue);
+                $this->sheet->setCellValue('C' . $this->currentRow, $storageRechargeLabel);
+                $this->sheet->setCellValue('D' . $this->currentRow, $storageRechargeValue);
                 $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
                 $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
                 $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
