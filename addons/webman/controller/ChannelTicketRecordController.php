@@ -216,6 +216,7 @@ class ChannelTicketRecordController
             // 筛选器
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) use ($storeOptions) {
+                $filter->like()->text('player.name')->placeholder(admin_trans('ticket_machine.record.player_name'));
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));
                 $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.record.qr_code_no'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.record.machine_no'));
