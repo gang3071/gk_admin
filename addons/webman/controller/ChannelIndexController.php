@@ -3546,6 +3546,15 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
+                    // 5.9.2 统计柜台核销（ticket_type=1开分类型，status=2后台核销）
+                    $counterRedeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
+                        ->sum('score');
+
                     // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
                     $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
@@ -3710,6 +3719,7 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
                     $storeAgentShiftHandoverRecord->welfare_coupon_amount = $welfareCouponAmount ?? 0;
                     $storeAgentShiftHandoverRecord->counter_ticket_amount = $counterTicketAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->counter_redeem_amount = $counterRedeemAmount ?? 0;
 
                     // 计算利润（总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(

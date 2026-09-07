@@ -17,6 +17,7 @@ return [
         'ticket_redeem_amount' => '出卷',
         'ticket_open_score_amount' => '開票',
         'counter_ticket_amount' => 'カウンター発券',
+        'counter_redeem_amount' => 'カウンター消込',
         'redeem_amount' => '核銷',
         'redeem_machine_amount' => 'マシン消込',
         'ticket_unredeemed_amount' => '未核銷',

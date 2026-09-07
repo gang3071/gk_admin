@@ -17,6 +17,7 @@ return [
         'ticket_redeem_amount' => '出卷',
         'ticket_open_score_amount' => '开票',
         'counter_ticket_amount' => '柜台开票',
+        'counter_redeem_amount' => '柜台核销',
         'redeem_amount' => '核销',
         'redeem_machine_amount' => '机台核销',
         'ticket_unredeemed_amount' => '未核销',

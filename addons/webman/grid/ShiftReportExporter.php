@@ -213,13 +213,19 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
                 $this->currentRow++;
 
-                // 柜台开票金额行
+                // 柜台开票和柜台核销金额行
                 $counterTicketLabel = admin_trans('shift_handover.counter_ticket_amount') . '：';
                 $counterTicketValue = number_format($originalRecord->counter_ticket_amount ?? 0, 2);
+                $counterRedeemLabel = admin_trans('shift_handover.counter_redeem_amount') . '：';
+                $counterRedeemValue = number_format($originalRecord->counter_redeem_amount ?? 0, 2);
                 $this->sheet->setCellValue('A' . $this->currentRow, $counterTicketLabel);
                 $this->sheet->setCellValue('B' . $this->currentRow, $counterTicketValue);
+                $this->sheet->setCellValue('C' . $this->currentRow, $counterRedeemLabel);
+                $this->sheet->setCellValue('D' . $this->currentRow, $counterRedeemValue);
                 $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
                 $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
                 $this->currentRow++;
 
@@ -444,7 +450,7 @@ class ShiftReportExporter extends Excel
      */
     protected function setColumnWidths(array $activeColumns = [])
     {
-        // 列宽度定义（固定17列）
+        // 列宽度定义
         $columnWidths = [
             'player_name' => 12,
             'player_phone' => 15,

@@ -264,6 +264,7 @@ class AutoShiftService
             $shiftRecord->experience_coupon_amount = $statistics['experience_coupon_amount'];
             $shiftRecord->welfare_coupon_amount = $statistics['welfare_coupon_amount'];
             $shiftRecord->counter_ticket_amount = $statistics['counter_ticket_amount'];
+            $shiftRecord->counter_redeem_amount = $statistics['counter_redeem_amount'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
 
@@ -540,6 +541,15 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
+        // 统计柜台核销（ticket_type=1开分类型，status=2后台核销）
+        $counterRedeemAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->where('scanned_at', '>', $startTime)
+            ->where('scanned_at', '<=', $endTime)
+            ->sum('score');
+
         // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
         $ticketOpenScoreAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
@@ -620,6 +630,7 @@ class AutoShiftService
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
             'counter_ticket_amount' => $counterTicketAmount,
+            'counter_redeem_amount' => $counterRedeemAmount,
             // 详细分类数据（保留原有字段）
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],

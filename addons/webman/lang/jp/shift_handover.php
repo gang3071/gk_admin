@@ -205,6 +205,8 @@ return [
     'ticket_unredeemed_amount' => '未消込',
     'experience_coupon_amount' => '体験券',
     'welfare_coupon_amount' => '福祉券',
+    'counter_ticket_amount' => 'カウンター発券',
+    'counter_redeem_amount' => 'カウンター消込',
     'modified_add_amount' => '管理者追加',
     'modified_deduct_amount' => '管理者控除',
     'subtotal' => '小計',

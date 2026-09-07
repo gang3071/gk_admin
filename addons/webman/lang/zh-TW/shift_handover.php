@@ -204,6 +204,8 @@ return [
     'ticket_unredeemed_amount' => '未核銷',
     'experience_coupon_amount' => '體驗券',
     'welfare_coupon_amount' => '福利券',
+    'counter_ticket_amount' => '櫃台開票',
+    'counter_redeem_amount' => '櫃台核銷',
     'modified_add_amount' => '後台加點',
     'modified_deduct_amount' => '後台扣點',
     'subtotal' => '小計',

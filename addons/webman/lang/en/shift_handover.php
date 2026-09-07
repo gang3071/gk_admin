@@ -205,6 +205,8 @@ return [
     'ticket_unredeemed_amount' => 'Unredeemed',
     'experience_coupon_amount' => 'Experience Coupon',
     'welfare_coupon_amount' => 'Welfare Coupon',
+    'counter_ticket_amount' => 'Counter Ticket',
+    'counter_redeem_amount' => 'Counter Redeem',
     'modified_add_amount' => 'Admin Add',
     'modified_deduct_amount' => 'Admin Deduct',
     'subtotal' => 'Subtotal',
