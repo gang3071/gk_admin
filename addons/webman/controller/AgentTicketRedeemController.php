@@ -241,8 +241,11 @@ class AgentTicketRedeemController
                     ])
                     ->style(['width' => '150px']);
                 $filter->where(function ($query, $value) {
-                    if ($value === 'null') {
-                        $query->whereNull('source_type');
+                    if ($value === 'null' || $value === null || $value === 'NULL') {
+                        // 机台洗分：source_type 为 NULL 或空字符串
+                        $query->where(function ($q) {
+                            $q->whereNull('source_type')->orWhere('source_type', '');
+                        });
                     } elseif ($value !== '') {
                         $query->where('source_type', $value);
                     }
