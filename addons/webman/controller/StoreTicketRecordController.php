@@ -407,7 +407,13 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->eq()->select('source_type')
+                $filter->where(function ($query, $value) {
+                    if ($value === 'null') {
+                        $query->whereNull('source_type');
+                    } elseif ($value !== '') {
+                        $query->where('source_type', $value);
+                    }
+                })->select('source_type')
                     ->placeholder(admin_trans('ticket_machine.record.source_type'))
                     ->options([
                         '' => admin_trans('public_msg.all'),

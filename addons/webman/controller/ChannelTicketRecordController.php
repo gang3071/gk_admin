@@ -181,6 +181,18 @@ class ChannelTicketRecordController
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
             });
+            // 来源（根据 source_type 判断）
+            $grid->column('source_type', admin_trans('ticket_machine.record.source_type'))
+                ->width(100)
+                ->align('center')
+                ->display(function ($val) {
+                    return match ($val) {
+                        TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.record.source_purchase'))->color('green'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.record.source_split'))->color('cyan'),
+                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.record.source_merge'))->color('geekblue'),
+                        default => Tag::create(admin_trans('ticket_machine.record.source_backend'))->color('blue'),
+                    };
+                });
             $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
             $grid->column('remark', admin_trans('ticket_machine.record.remark'))->display(function ($value) {
                 return $value ?: '-';
@@ -230,6 +242,22 @@ class ChannelTicketRecordController
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
                         TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
+                    ])
+                    ->style(['width' => '150px']);
+                $filter->where(function ($query, $value) {
+                    if ($value === 'null') {
+                        $query->whereNull('source_type');
+                    } elseif ($value !== '') {
+                        $query->where('source_type', $value);
+                    }
+                })->select('source_type')
+                    ->placeholder(admin_trans('ticket_machine.record.source_type'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        'null' => admin_trans('ticket_machine.record.source_backend'),
+                        TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.record.source_purchase'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.record.source_split'),
+                        TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.record.source_merge'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
