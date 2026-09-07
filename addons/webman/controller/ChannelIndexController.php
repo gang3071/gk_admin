@@ -3590,13 +3590,14 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.11 统计开票已使用金额（用于入票计算，status=3机台使用）
+                    // 5.11 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
+                    // 使用 scanned_at（核销时间）作为筛选条件，因为出票可能在交班前，但使用在交班期间
                     $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                         ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
-                        ->where('created_at', '>', $startTime)
-                        ->where('created_at', '<=', $endTime)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.12 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
