@@ -93,7 +93,6 @@ class LotteryBetProgressScanTask
                 ->get();
 
             if ($activities->isEmpty()) {
-                Log::debug('暂无进行中的摸奖券活动');
                 return;
             }
 
