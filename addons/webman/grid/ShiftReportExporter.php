@@ -33,13 +33,13 @@ class ShiftReportExporter extends Excel
         'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
         'redeem_amount' => 'shift_handover.redeem_amount',
         'redeem_machine_amount' => 'shift_handover.redeem_machine_amount',
-        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
         'experience_coupon_amount' => 'shift_handover.experience_coupon_amount',
         'welfare_coupon_amount' => 'shift_handover.welfare_coupon_amount',
         'electronic_game_bet_amount' => 'shift_handover.electronic_game_bet_amount',
         'machine_bet_amount' => 'shift_handover.machine_bet_amount',
         'total_in' => 'shift_handover.total_in',
         'total_out' => 'shift_handover.total_out',
+        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
         'profit' => 'shift_handover.profit',
     ];
 
