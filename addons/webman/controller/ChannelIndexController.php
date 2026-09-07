@@ -3541,11 +3541,12 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0，source_type为null，player_id为0或null）
+                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，source_type为null，player_id为0或null）
                     $counterTicketAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                         ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
                         ->whereNull('source_type')
                         ->where(function ($q) {
                             $q->where('player_id', 0)
@@ -3555,11 +3556,12 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.2 统计储值机购票（ticket_type=1开分类型，status!=0，source_type=purchase，player_id为0或null）
+                    // 5.9.2 统计储值机购票（ticket_type=1开分类型，status!=0且!=5，source_type=purchase，player_id为0或null）
                     $storageTicketPurchase = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                         ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
                         ->where('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE)
                         ->where(function ($q) {
                             $q->where('player_id', 0)

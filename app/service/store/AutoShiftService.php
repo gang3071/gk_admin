@@ -538,11 +538,12 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计柜台开票（ticket_type=1开分类型，status!=0，source_type为null，player_id为0或null）
+        // 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，source_type为null，player_id为0或null）
         $counterTicketAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
             ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
             ->whereNull('source_type')
             ->where(function ($q) {
                 $q->where('player_id', 0)
@@ -552,11 +553,12 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计储值机购票（ticket_type=1开分类型，status!=0，source_type=purchase，player_id为0或null）
+        // 统计储值机购票（ticket_type=1开分类型，status!=0且!=5，source_type=purchase，player_id为0或null）
         $storageTicketPurchase = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
             ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
             ->where('source_type', TicketRecord::SOURCE_TYPE_PURCHASE)
             ->where(function ($q) {
                 $q->where('player_id', 0)
