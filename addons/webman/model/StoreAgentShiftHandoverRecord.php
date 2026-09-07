@@ -30,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $ticket_unredeemed_amount 未核销汇总(出卷-核销)
  * @property float $experience_coupon_amount 体验券汇总
  * @property float $welfare_coupon_amount 福利券汇总
+ * @property float $counter_ticket_amount 柜台开票金额
  * @property float $lottery_amount 彩金发放金额（TYPE_LOTTERY=13）
  * @property float $activity_bonus_amount 活动奖励金额（TYPE_ACTIVITY_BONUS=10）
  * @property float $lottery_ticket_reward_amount 摸奖券中奖奖励金额（TYPE_LOTTERY_TICKET_REWARD=33）

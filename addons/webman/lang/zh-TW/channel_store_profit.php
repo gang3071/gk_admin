@@ -18,6 +18,7 @@ return [
         'incoming_ticket_amount' => '入票',
         'ticket_redeem_amount' => '出卷',
         'ticket_open_score_amount' => '開票',
+        'counter_ticket_amount' => '櫃台開票',
         'redeem_amount' => '核銷',
         'redeem_machine_amount' => '機台核銷',
         'ticket_unredeemed_amount' => '未核銷',

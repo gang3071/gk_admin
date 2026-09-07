@@ -151,6 +151,7 @@ class ChannelStoreProfitReportController
             $ticketData = $ticketDataByStore[$storeId] ?? null;
             $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
+            $counterTicketAmount = floatval($ticketData->counter_ticket_amount ?? 0);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0);
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);
 
@@ -215,6 +216,7 @@ class ChannelStoreProfitReportController
                 'incoming_ticket_amount' => $incomingTicketAmount,
                 'ticket_redeem_amount' => $ticketRedeemAmount,
                 'ticket_open_score_amount' => $ticketOpenScoreAmount,
+                'counter_ticket_amount' => $counterTicketAmount,
                 'redeem_amount' => $redeemAmount,
                 'redeem_machine_amount' => $redeemMachineAmount,
                 'ticket_unredeemed_amount' => $ticketUnredeemedAmount,
@@ -384,7 +386,8 @@ class ChannelStoreProfitReportController
 
         $ticketData = $query->selectRaw("
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "') AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS counter_ticket_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS welfare_coupon_amount
@@ -667,6 +670,7 @@ class ChannelStoreProfitReportController
         $amountColumns = [
             'open_score_amount', 'withdraw_amount', 'machine_put_point',
             'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
+            'counter_ticket_amount',
             'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
             'welfare_coupon_amount', 'lottery_amount', 'activity_total',
             'electronic_game_bet_amount', 'machine_bet_amount',

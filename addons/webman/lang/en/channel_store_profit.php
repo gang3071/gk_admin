@@ -18,6 +18,7 @@ return [
         'incoming_ticket_amount' => 'Incoming Ticket',
         'ticket_redeem_amount' => 'Ticket Redeem',
         'ticket_open_score_amount' => 'Ticket Open Score',
+        'counter_ticket_amount' => 'Counter Ticket',
         'redeem_amount' => 'Redeem',
         'redeem_machine_amount' => 'Machine Redeem',
         'ticket_unredeemed_amount' => 'Unredeemed',

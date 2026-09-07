@@ -3529,10 +3529,29 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0，source_type为null或purchase，player_id为0或null）
+                    $counterTicketAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where(function ($q) {
+                            $q->whereNull('source_type')
+                                ->orWhere('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE);
+                        })
+                        ->where(function ($q) {
+                            $q->where('player_id', 0)
+                                ->orWhereNull('player_id');
+                        })
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
                     $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
@@ -3690,6 +3709,7 @@ class ChannelIndexController
                     );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
                     $storeAgentShiftHandoverRecord->welfare_coupon_amount = $welfareCouponAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->counter_ticket_amount = $counterTicketAmount ?? 0;
 
                     // 计算利润（总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
@@ -4797,10 +4817,12 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
             $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');

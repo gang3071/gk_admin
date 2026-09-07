@@ -263,6 +263,7 @@ class AutoShiftService
             $shiftRecord->ticket_unredeemed_amount = $statistics['ticket_unredeemed_amount'];
             $shiftRecord->experience_coupon_amount = $statistics['experience_coupon_amount'];
             $shiftRecord->welfare_coupon_amount = $statistics['welfare_coupon_amount'];
+            $shiftRecord->counter_ticket_amount = $statistics['counter_ticket_amount'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
 
@@ -522,10 +523,29 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+        // 统计柜台开票（ticket_type=1开分类型，status!=0，source_type为null或purchase，player_id为0或null）
+        $counterTicketAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where(function ($q) {
+                $q->whereNull('source_type')
+                    ->orWhere('source_type', TicketRecord::SOURCE_TYPE_PURCHASE);
+            })
+            ->where(function ($q) {
+                $q->where('player_id', 0)
+                    ->orWhereNull('player_id');
+            })
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
         $ticketOpenScoreAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
             ->sum('score');
@@ -599,6 +619,7 @@ class AutoShiftService
             'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
+            'counter_ticket_amount' => $counterTicketAmount,
             // 详细分类数据（保留原有字段）
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],
@@ -777,10 +798,12 @@ class AutoShiftService
                 'modified_deduct_amount' => 0,
             ];
 
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
             $ticketOpenScoreAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
