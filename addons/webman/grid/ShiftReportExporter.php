@@ -336,8 +336,8 @@ class ShiftReportExporter extends Excel
                                 $counterRowValues[$column] = admin_trans('shift_handover.counter');
                             } elseif ($column === 'player_phone') {
                                 $counterRowValues[$column] = '-';
-                            } elseif ($column === 'open_score_amount') {
-                                // 柜台开票放到开分栏
+                            } elseif ($column === 'ticket_open_score_amount') {
+                                // 柜台开票放到开票栏
                                 $counterRowValues[$column] = $counterTicketAmount;
                             } elseif ($column === 'redeem_amount') {
                                 // 柜台核销放到核销栏
