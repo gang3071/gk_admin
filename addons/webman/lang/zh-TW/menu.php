@@ -307,6 +307,11 @@ return [
         'store_offline_machine' => '線下機台',
         'store_offline_machine_list' => '機台列表',
         'store_offline_machine_info' => '機台資訊',
+        // 餐點管理
+        'dish_manage' => '餐點管理',
+        'dish_category' => '餐點分類',
+        'dish' => '餐點列表',
+        'dish_order' => '餐點訂單',
     ],
     'help' => [
         'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',

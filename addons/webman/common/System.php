@@ -42,7 +42,7 @@ class System extends SystemAbstract
     {
         return admin_sysconf('web_name');
     }
-    
+
     /**
      * 网站logo
      * @return string
@@ -51,7 +51,7 @@ class System extends SystemAbstract
     {
         return admin_sysconf('web_logo');
     }
-    
+
     /**
      * 网站logo跳转地址
      * @return string
@@ -78,7 +78,7 @@ class System extends SystemAbstract
         // 超级管理员或其他类型 -> /admin
         return plugin()->webman->config('route.prefix');
     }
-    
+
     /**
      * 头部导航右侧
      * @return array
@@ -137,7 +137,7 @@ class System extends SystemAbstract
             ])
         ];
     }
-    
+
     /**
      * 头部点击用户信息下拉菜单
      * @return array
@@ -151,7 +151,7 @@ class System extends SystemAbstract
                 ->modal([AdminController::class, 'updatePassword'], ['id' => Admin::id()]),
         ];
     }
-    
+
     /**
      * 用户信息
      * @return array
@@ -173,7 +173,7 @@ class System extends SystemAbstract
             ->setVisible(['id', 'nickname', 'avatar'])
             ->toArray();
     }
-    
+
     /**
      * 菜单
      * @return array
@@ -182,7 +182,7 @@ class System extends SystemAbstract
     {
         return Arr::tree(admin_menu()->all());
     }
-    
+
     /**
      * 上传写入数据库
      * @param $data
@@ -196,8 +196,8 @@ class System extends SystemAbstract
         ]);
         return Response::success();
     }
-    
-    
+
+
     /**
      * 验证权限
      * @param $class
@@ -209,7 +209,7 @@ class System extends SystemAbstract
     {
         return Admin::check($class, $function, $method);
     }
-    
+
     /**
      * 获取新的消息
      * @param $page
@@ -219,14 +219,18 @@ class System extends SystemAbstract
     public function noticeList($page, $size): Response
     {
         $typeArr = [];
+        $list = [];
+
         if (Admin::check(ChannelWithdrawRecordController::class, 'reject',
                 '') || Admin::check(ChannelWithdrawRecordController::class, 'pass', '')) {
             $typeArr[] = Notice::TYPE_EXAMINE_WITHDRAW;
         }
+
         if (Admin::check(ChannelRechargeRecordController::class, 'reject',
                 '') || Admin::check(ChannelRechargeRecordController::class, 'pass', '')) {
             $typeArr[] = Notice::TYPE_EXAMINE_RECHARGE;
         }
+
         if (Admin::check(PlayerActivityRecordController::class, 'reject',
                 '') || Admin::check(PlayerActivityRecordController::class, 'pass',
                 '') || Admin::check(PlayerActivityRecordController::class, 'bathPass',
@@ -237,6 +241,7 @@ class System extends SystemAbstract
                 '') || Admin::check(ChannelPlayerActivityRecordController::class, 'bathReject', '')) {
             $typeArr[] = Notice::TYPE_EXAMINE_ACTIVITY;
         }
+
         if (Admin::check(PlayerLotteryRecordController::class, 'reject',
                 '') || Admin::check(PlayerLotteryRecordController::class, 'pass',
                 '') || Admin::check(PlayerLotteryRecordController::class, 'bathPass',
@@ -247,6 +252,7 @@ class System extends SystemAbstract
                 '') || Admin::check(ChannelPlayerLotteryRecordController::class, 'bathReject', '')) {
             $typeArr[] = Notice::TYPE_EXAMINE_LOTTERY;
         }
+
         if (Admin::check(MachineController::class, 'form', 'post') || Admin::check(MachineController::class, 'form',
                 'put')) {
             $typeArr[] = Notice::TYPE_MACHINE;
@@ -257,18 +263,19 @@ class System extends SystemAbstract
             $typeArr[] = Notice::TYPE_MACHINE_CRASH;
         }
 
-        // 店家后台：显示服务铃消息
+        // 店家后台：显示服务铃消息 & 餐點訂單
         if (Admin::user()->isStore()) {
             $typeArr[] = Notice::TYPE_SERVICE_CALL;
+            $typeArr[] = Notice::TYPE_DISH_ORDER;
         }
 
-        $list = [];
         if (Admin::user()->type == AdminDepartment::TYPE_DEPARTMENT && !empty($typeArr)) {
             $list = Notice::where('receiver', Notice::RECEIVER_ADMIN)->whereIN('type', $typeArr)
                 ->latest()
                 ->forPage($page, $size)
                 ->get();
         }
+
         if (Admin::user()->type == AdminDepartment::TYPE_CHANNEL && !empty($typeArr)) {
             $list = Notice::where('department_id', Admin::user()->department_id)  // 筛选当前渠道
                 ->whereIN('type', $typeArr)
@@ -276,6 +283,7 @@ class System extends SystemAbstract
                 ->forPage($page, $size)
                 ->get();
         }
+
         // 店家后台：查询当前店家管理员的消息
         if (Admin::user()->isStore() && !empty($typeArr)) {
             $list = Notice::where('admin_id', Admin::id())
@@ -285,6 +293,7 @@ class System extends SystemAbstract
                 ->forPage($page, $size)
                 ->get();
         }
+
         $data = [];
         /** @var Notice $item */
         foreach ($list as $item) {
@@ -463,11 +472,25 @@ class System extends SystemAbstract
                         'url' => admin_url(['addons\webman\controller\ChannelPlayerController', 'index'])
                     ];
                     break;
+
+                case Notice::TYPE_DISH_ORDER:
+                    $data[] = [
+                        'id' => $item->id,
+                        'source_id' => $item->source_id,
+                        'player_id' => $item->player_id,
+                        'title' => $title,
+                        'content' => $item->content,
+                        'type' => $item->type,
+                        'created_at' => $createTime,
+                        'status' => true,
+                        'url' => admin_url(['addons\webman\controller\DishOrderController', 'index'])
+                    ];
+                    break;
             }
         }
         return Response::success($data);
     }
-    
+
     /**
      * 执行机台操作
      * @param $cmd

@@ -128,7 +128,7 @@ return [
         'promoter_list' => 'プロモーターリスト',
         'profit_record' => '利益レポート',
         'profit_settlement_record' => '利益決済レコード',
-        
+
         //ボーナス管理
         'lottery_management' => '宝くじ管理',
         'lottery_list' => '宝くじリスト',
@@ -308,6 +308,11 @@ return [
         'store_offline_machine' => 'オフライン機台',
         'store_offline_machine_list' => '機台リスト',
         'store_offline_machine_info' => '機台情報',
+        // メニュー管理
+        'dish_manage' => 'メニュー管理',
+        'dish_category' => 'メニューカテゴリ',
+        'dish' => 'メニュー一覧',
+        'dish_order' => '注文管理',
     ],
     'help' => [
         'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',

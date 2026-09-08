@@ -308,6 +308,11 @@ return [
         'store_offline_machine' => '线下机台',
         'store_offline_machine_list' => '机台列表',
         'store_offline_machine_info' => '机台资讯',
+        // 餐点管理
+        'dish_manage' => '餐点管理',
+        'dish_category' => '餐点分类',
+        'dish' => '餐点列表',
+        'dish_order' => '餐点订单',
     ],
     'help' => [
         'controlled_menu' => '此菜单受功能开关控制，名称不可修改',

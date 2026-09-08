@@ -88,6 +88,7 @@ const messages = {
       open: '开启',
       service_bell_call: '服务铃呼叫',
       device_call_service: '呼叫服务',
+      dish_order_new: '有新的餐点订单',
     }
   },
   //英文
@@ -109,6 +110,7 @@ const messages = {
       open: 'Open',
       service_bell_call: 'Service Bell Call',
       device_call_service: 'Call Service',
+      dish_order_new: 'There are new dish orders',
     }
   },
   jp: {
@@ -129,6 +131,7 @@ const messages = {
       open: 'Open',
       service_bell_call: 'サービスベル呼び出し',
       device_call_service: 'サービスを呼び出す',
+      dish_order_new: '新規の食品注文を受け付けています',
     }
   },
   // 繁体中文
@@ -150,6 +153,7 @@ const messages = {
       open: '開啟',
       service_bell_call: '服務鈴呼叫',
       device_call_service: '呼叫服務',
+      dish_order_new: '有新的餐點訂單',
     }
   }
 }
@@ -260,6 +264,12 @@ export default {
           return;
         }
 
+        // 餐點訂單消息
+        if (content.type === 'dish_order_new') {
+          that.handleDishOrderNew(content);
+          return;
+        }
+
         switch (content.msg_type) {
           case 'machine_action_result':
             that.$notification.info({
@@ -304,6 +314,25 @@ export default {
       this.$notification.warning({
         message: messages[lang].message.service_bell_call,
         description: `${content.device_name}${messages[lang].message.device_call_service}`,
+        duration: 5,
+      });
+
+      // 添加到语音播报队列
+      if (content.voice_url) {
+        this.addToVoiceQueue(content.voice_url);
+      }
+    },
+
+    /**
+     * 处理餐點訂單消息
+     */
+    handleDishOrderNew(content) {
+      const lang = this.lang;
+
+      // 显示桌面通知
+      this.$notification.warning({
+        message: messages[lang].message.dish_order_new,
+        description: `${messages[lang].message.dish_order_new}`,
         duration: 5,
       });
 

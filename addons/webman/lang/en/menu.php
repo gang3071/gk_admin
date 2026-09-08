@@ -301,6 +301,11 @@ return [
         'ticket_management' => 'Ticket Management',
         'ticket_record_list' => 'Ticket Records',
         'ticket_redeem_list' => 'Redeem Records',
+        // Dish Management
+        'dish_manage' => 'Dish Management',
+        'dish_category' => 'Dish Categories',
+        'dish' => 'Dish List',
+        'dish_order' => 'Dish Orders',
         //Admin Offline Machine Management
         'offline_machine_manage' => 'Offline Machine Management',
         'offline_machine_list' => 'Offline Machines',
