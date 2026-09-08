@@ -336,9 +336,11 @@ class ShiftReportExporter extends Excel
                                 $counterRowValues[$column] = admin_trans('shift_handover.counter');
                             } elseif ($column === 'player_phone') {
                                 $counterRowValues[$column] = '-';
-                            } elseif ($column === 'incoming_ticket_amount') {
+                            } elseif ($column === 'open_score_amount') {
+                                // 柜台开票放到开分栏
                                 $counterRowValues[$column] = $counterTicketAmount;
-                            } elseif ($column === 'ticket_redeem_amount') {
+                            } elseif ($column === 'redeem_amount') {
+                                // 柜台核销放到核销栏
                                 $counterRowValues[$column] = $counterRedeemAmount;
                             } elseif ($column === 'total_in') {
                                 // 总收入包含柜台开票
@@ -386,12 +388,25 @@ class ShiftReportExporter extends Excel
                     $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $originalRecord->id . ')';
                     $this->sheet->setCellValue('A' . $this->currentRow, $subtotalLabel);
 
+                    // 储值机购票金额
+                    $storageTicketPurchase = $originalRecord->storage_ticket_purchase ?? 0;
+
                     // 写入小计数据
                     foreach ($activeColumns as $colIndex => $column) {
                         if (in_array($column, ['player_name', 'player_phone'])) {
                             $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, '');
                         } else {
                             $value = $subtotal[$column] ?? 0;
+                            // 总收入需要加上储值机购票
+                            if ($column === 'total_in') {
+                                $value = bcadd($value, $storageTicketPurchase, 2);
+                            }
+                            // 利润需要重新计算（总收入 - 总支出）
+                            if ($column === 'profit' && in_array('total_in', $activeColumns) && in_array('total_out', $activeColumns)) {
+                                $totalIn = bcadd($subtotal['total_in'] ?? 0, $storageTicketPurchase, 2);
+                                $totalOut = $subtotal['total_out'] ?? 0;
+                                $value = bcsub($totalIn, $totalOut, 2);
+                            }
                             $formattedValue = $this->formatColumnValue($column, $value);
                             $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
                         }
@@ -409,8 +424,15 @@ class ShiftReportExporter extends Excel
                     if (in_array('profit', $activeColumns)) {
                         $profitColIndex = array_search('profit', $activeColumns);
                         $profitLetter = $this->getColumnLetter($profitColIndex);
-                        $subtotalProfit = $subtotal['profit'] ?? 0;
-                        $subtotalProfitColor = $subtotalProfit >= 0 ? '3f8600' : 'cf1322';
+                        // 重新计算利润（包含储值机购票）
+                        if (in_array('total_in', $activeColumns) && in_array('total_out', $activeColumns)) {
+                            $totalIn = bcadd($subtotal['total_in'] ?? 0, $storageTicketPurchase, 2);
+                            $totalOut = $subtotal['total_out'] ?? 0;
+                            $subtotalProfit = bcsub($totalIn, $totalOut, 2);
+                        } else {
+                            $subtotalProfit = $subtotal['profit'] ?? 0;
+                        }
+                        $subtotalProfitColor = bccomp($subtotalProfit, '0', 2) >= 0 ? '3f8600' : 'cf1322';
                         $this->sheet->getStyle($profitLetter . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
                     }
 
