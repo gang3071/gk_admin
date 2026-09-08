@@ -19,6 +19,7 @@ return [
         'device_no' => '設備號',
         'device_no_help' => '安卓設備的唯一標識符（如：Android ID、IMEI等）',
         'device_model' => '設備型號',
+        'device_type' => '設備類型',
         'voice_url' => '語音播報',
         'channel_name' => '所屬渠道',
         'department_name' => '所屬部門',
@@ -45,6 +46,12 @@ return [
     'status' => [
         'disabled' => '禁用',
         'enabled' => '啟用',
+    ],
+
+    // 設備類型
+    'type' => [
+        'game_machine' => '遊戲機',
+        'vending_machine' => '儲值機',
     ],
 
     // 訪問日誌

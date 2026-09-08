@@ -155,6 +155,7 @@ return [
         //店舗設定
         'store_setting_manage' => '店舗システム設定',
         'store_open_score_setting' => '店舗チャージ設定',
+        'store_purchase_score_setting' => '販売機スコア購入設定',
         'store_shift_handover_record' => '引継記録',
         //代理店管理
         'agent_management' => '代理店管理',

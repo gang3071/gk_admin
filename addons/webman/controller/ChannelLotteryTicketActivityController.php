@@ -1811,6 +1811,7 @@ class ChannelLotteryTicketActivityController
             'recharge' => admin_trans('lottery_ticket.source.recharge'),
             'activity' => admin_trans('lottery_ticket.source.activity'),
             'manual' => admin_trans('lottery_ticket.source.manual'),
+            'vip_upgrade' => admin_trans('lottery_ticket.source.vip_upgrade'),
         ];
         return $map[$source] ?? admin_trans('lottery_ticket.source.unknown');
     }

@@ -6,17 +6,17 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
+use addons\webman\model\Player;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
-use addons\webman\model\Player;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
@@ -45,9 +45,23 @@ class StoreTicketRedeemController
             // 使用子查询获取玩家头像，避免 join 导致字段冲突
             $grid->model()
                 ->selectRaw('qr_ticket_record.*, (SELECT avatar FROM player WHERE player.id = qr_ticket_record.player_id LIMIT 1) as player_avatar')
+                ->with(['player:id,name,uuid'])
                 ->where('store_admin_id', $admin->id)
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
+
+            // 处理 source_type 筛选
+            $exAdminFilter = request()->input('ex_admin_filter', []);
+            if (isset($exAdminFilter['source_type'])) {
+                $sourceType = $exAdminFilter['source_type'];
+                if ($sourceType === 'null' || $sourceType === null || $sourceType === 'NULL') {
+                    $grid->model()->where(function ($q) {
+                        $q->whereNull('source_type')->orWhere('source_type', '');
+                    });
+                } elseif ($sourceType !== '') {
+                    $grid->model()->where('source_type', $sourceType);
+                }
+            }
 
             // 统计数据（使用独立查询，避免 join 和 group by 问题，排除禁用状态）
             $totalData = TicketRecord::query()
@@ -340,16 +354,31 @@ class StoreTicketRedeemController
             $grid->column('store_name', admin_trans('ticket_machine.redeem.store_name'));
             $grid->column('machine_no', admin_trans('ticket_machine.redeem.machine_no'))->align('center');
             $grid->column('score', admin_trans('ticket_machine.redeem.score'))->align('right');
-            $grid->column('qr_code_no', admin_trans('ticket_machine.redeem.qr_code_no'))->copy();
             $grid->column('status', admin_trans('ticket_machine.redeem.status'))->display(function ($val) {
                 return match ($val) {
                     TicketRecord::STATUS_DISABLED => Tag::create(admin_trans('ticket_machine.redeem.status_disabled'))->color('default'),
                     TicketRecord::STATUS_NORMAL => Tag::create(admin_trans('ticket_machine.redeem.status_normal'))->color('blue'),
                     TicketRecord::STATUS_BACKEND_USED => Tag::create(admin_trans('ticket_machine.redeem.status_backend_used'))->color('orange'),
                     TicketRecord::STATUS_MACHINE_USED => Tag::create(admin_trans('ticket_machine.redeem.status_machine_used'))->color('purple'),
+                    TicketRecord::STATUS_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.status_split'))->color('cyan'),
+                    TicketRecord::STATUS_MERGED => Tag::create(admin_trans('ticket_machine.redeem.status_merged'))->color('geekblue'),
                     default => Tag::create(admin_trans('ticket_machine.redeem.status_unknown'))->color('default'),
                 };
             });
+
+            // 来源（根据 source_type 判断）
+            $grid->column('source_type', admin_trans('ticket_machine.redeem.source_type'))
+                ->width(100)
+                ->align('center')
+                ->display(function ($val) {
+                    return match ($val) {
+                        TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.redeem.source_purchase'))->color('green'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.source_split'))->color('cyan'),
+                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.redeem.source_merge'))->color('geekblue'),
+                        default => Tag::create(admin_trans('ticket_machine.redeem.source_machine_wash'))->color('blue'),
+                    };
+                });
+
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
             $grid->column('scanned_at', admin_trans('ticket_machine.redeem.scanned_at'))
                 ->display(function ($val) {
@@ -405,7 +434,10 @@ class StoreTicketRedeemController
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.redeem.order_id'));
-                $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.redeem.qr_code_no'));
+                // 玩家姓名筛选（使用关系）
+                $filter->like()->text('player.name')->placeholder(admin_trans('ticket_machine.redeem.player_name'));
+                // 玩家UUID筛选（使用关系）
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('ticket_machine.redeem.player_uuid'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.redeem.machine_no'));
                 $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.redeem.remark'));
                 $filter->eq()->select('store_name')
@@ -420,6 +452,27 @@ class StoreTicketRedeemController
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
                         TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
+                        TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.redeem.status_split'),
+                        TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
+                    ])
+                    ->style(['width' => '150px']);
+                $filter->where(function ($query, $value) {
+                    if ($value === 'null' || $value === null || $value === 'NULL') {
+                        // 机台洗分：source_type 为 NULL 或空字符串
+                        $query->where(function ($q) {
+                            $q->whereNull('source_type')->orWhere('source_type', '');
+                        });
+                    } elseif ($value !== '') {
+                        $query->where('source_type', $value);
+                    }
+                })->select('source_type')
+                    ->placeholder(admin_trans('ticket_machine.redeem.source_type'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        'null' => admin_trans('ticket_machine.redeem.source_machine_wash'),
+                        TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.redeem.source_purchase'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.redeem.source_split'),
+                        TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.redeem.source_merge'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
@@ -463,35 +516,35 @@ class StoreTicketRedeemController
                 $actions->hideEdit();
                 $actions->hideDel();
 
-                // 核销按钮（放在最前面）
-                if ($data['status'] == TicketRecord::STATUS_NORMAL) {
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.redeem.redeem'))
-                            ->modal([$this, 'redeemModal'], ['id' => $data['id']])
-                            ->type('primary')
-                            ->size('small')
-                    );
-                }
-
-                if ($data['status'] == TicketRecord::STATUS_DISABLED) {
-                    // 已禁用 - 显示恢复按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.redeem.restore'))
-                            ->confirm(admin_trans('ticket_machine.redeem.restore_confirm'), [$this, 'restoreRecord'], ['id' => $data['id']])
-                            ->type('primary')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                } elseif ($data['status'] == TicketRecord::STATUS_NORMAL) {
-                    // 正常状态 - 显示禁用按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.redeem.disable'))
-                            ->confirm(admin_trans('ticket_machine.redeem.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
-                            ->type('danger')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                }
+//                // 核销按钮（放在最前面）
+//                if ($data['status'] == TicketRecord::STATUS_NORMAL) {
+//                    $actions->prepend(
+//                        Button::create(admin_trans('ticket_machine.redeem.redeem'))
+//                            ->modal([$this, 'redeemModal'], ['id' => $data['id']])
+//                            ->type('primary')
+//                            ->size('small')
+//                    );
+//                }
+//
+//                if ($data['status'] == TicketRecord::STATUS_DISABLED) {
+//                    // 已禁用 - 显示恢复按钮
+//                    $actions->prepend(
+//                        Button::create(admin_trans('ticket_machine.redeem.restore'))
+//                            ->confirm(admin_trans('ticket_machine.redeem.restore_confirm'), [$this, 'restoreRecord'], ['id' => $data['id']])
+//                            ->type('primary')
+//                            ->size('small')
+//                            ->gridRefresh()
+//                    );
+//                } elseif ($data['status'] == TicketRecord::STATUS_NORMAL) {
+//                    // 正常状态 - 显示禁用按钮
+//                    $actions->prepend(
+//                        Button::create(admin_trans('ticket_machine.redeem.disable'))
+//                            ->confirm(admin_trans('ticket_machine.redeem.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
+//                            ->type('danger')
+//                            ->size('small')
+//                            ->gridRefresh()
+//                    );
+//                }
             });
         });
     }
@@ -826,7 +879,17 @@ class StoreTicketRedeemController
                     TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
                     TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
+                    TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.redeem.status_split'),
+                    TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
                     default => admin_trans('ticket_machine.redeem.status_unknown'),
+                };
+            });
+            $form->desc('source_type', admin_trans('ticket_machine.redeem.source_type'))->display(function ($val) {
+                return match ($val) {
+                    TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.redeem.source_purchase'),
+                    TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.redeem.source_split'),
+                    TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.redeem.source_merge'),
+                    default => admin_trans('ticket_machine.redeem.source_machine_wash'),
                 };
             });
             $form->desc('print_count', admin_trans('ticket_machine.redeem.print_count'));

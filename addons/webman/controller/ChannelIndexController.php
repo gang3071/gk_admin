@@ -3455,6 +3455,18 @@ class ChannelIndexController
                         ->where('play_game_record.created_at', '<=', $endTime)
                         ->sum('play_game_record.bet');
 
+                    // 5.1.1 统计储值机储值（投钞类型，source=storage_recharge）
+                    $storageRecharge = (float)\addons\webman\model\PlayerDeliveryRecord::query()
+                        ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+                        ->where('player.department_id', $admin->department_id)
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player.is_promoter', 0)
+                        ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_MACHINE)
+                        ->where('player_delivery_record.source', 'storage_recharge')
+                        ->where('player_delivery_record.created_at', '>', $startTime)
+                        ->where('player_delivery_record.created_at', '<=', $endTime)
+                        ->sum('player_delivery_record.amount');
+
                     // 5.2 统计机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
                     $machineBetAmount = \addons\webman\model\PlayerGameLog::query()
                         ->join('player', 'player_game_log.player_id', '=', 'player.id')
@@ -3528,21 +3540,73 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
-                    $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，source_type为null，player_id为0或null）
+                    $counterTicketAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+                        ->whereNull('source_type')
+                        ->where(function ($q) {
+                            $q->where('player_id', 0)
+                                ->orWhereNull('player_id');
+                        })
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.11 统计开票已使用金额（用于入票计算，status=3机台使用）
+                    // 5.9.2 统计储值机购票（ticket_type=1开分类型，status!=0且!=5，source_type=purchase，player_id为0或null）
+                    $storageTicketPurchase = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+                        ->where('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE)
+                        ->where(function ($q) {
+                            $q->where('player_id', 0)
+                                ->orWhereNull('player_id');
+                        })
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.9.3 统计柜台核销
+                    // 开分票：所有后台核销
+                    // 洗分票：后台核销且无玩家关联
+                    $counterRedeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where(function ($q) {
+                            $q->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                                ->orWhere(function ($q2) {
+                                    $q2->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                                        ->where(function ($q3) {
+                                            $q3->where('player_id', 0)->orWhereNull('player_id');
+                                        });
+                                });
+                        })
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
+                    $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
+                    // 5.11 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
+                    // 使用 scanned_at（核销时间）作为筛选条件，因为出票可能在交班前，但使用在交班期间
                     $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                         ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
-                        ->where('created_at', '>', $startTime)
-                        ->where('created_at', '<=', $endTime)
+                        ->where('scanned_at', '>', $startTime)
+                        ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.12 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
@@ -3689,6 +3753,10 @@ class ChannelIndexController
                     );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
                     $storeAgentShiftHandoverRecord->welfare_coupon_amount = $welfareCouponAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->counter_ticket_amount = $counterTicketAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->counter_redeem_amount = $counterRedeemAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->storage_ticket_purchase = $storageTicketPurchase ?? 0;
+                    $storeAgentShiftHandoverRecord->storage_recharge = $storageRecharge ?? 0;
 
                     // 计算利润（总收入 - 总支出）
                     $storeAgentShiftHandoverRecord->total_profit_amount = bcsub(
@@ -4303,14 +4371,14 @@ class ChannelIndexController
                                 ->sum('bet');
                         }
 
-                        // 昨日打码量不足10000，拒绝领取
-                        if ($yesterdayBetAmount < 10000) {
+                        // 昨日打码量不足20000，拒绝领取
+                        if ($yesterdayBetAmount < 20000) {
                             \support\Log::info('体验券打码判定失败', [
                                 'player_id' => $playerId,
                                 'yesterday_bet_amount' => $yesterdayBetAmount,
-                                'required_bet_amount' => 10000,
+                                'required_bet_amount' => 20000,
                             ]);
-                            return json(['code' => 400, 'message' => '昨日打码量不足10,000，无法领取体验券']);
+                            return json(['code' => 400, 'message' => '昨日打码量不足20,000，无法领取体验券']);
                         }
                     }
                 }
@@ -4796,21 +4864,24 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
             $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计开票已使用金额（用于入票计算，status=3机台使用）
+            // 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
+            // 使用 scanned_at（核销时间）作为筛选条件
             $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
                 ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）

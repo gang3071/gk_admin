@@ -19,6 +19,7 @@ return [
         'device_no' => 'デバイス番号',
         'device_no_help' => 'Androidデバイスの一意識別子（例：Android ID、IMEIなど）',
         'device_model' => 'デバイスモデル',
+        'device_type' => 'デバイスタイプ',
         'voice_url' => '音声アナウンス',
         'channel_name' => '所属チャネル',
         'department_name' => '所属部門',
@@ -45,6 +46,12 @@ return [
     'status' => [
         'disabled' => '無効',
         'enabled' => '有効',
+    ],
+
+    // デバイスタイプ
+    'type' => [
+        'game_machine' => 'ゲーム機',
+        'vending_machine' => '販売機',
     ],
 
     // アクセスログ

@@ -19,6 +19,7 @@ return [
         'device_no' => 'Device Number',
         'device_no_help' => 'Unique identifier for Android device (e.g., Android ID, IMEI, etc.)',
         'device_model' => 'Device Model',
+        'device_type' => 'Device Type',
         'voice_url' => 'Voice Broadcast',
         'channel_name' => 'Channel',
         'department_name' => 'Department',
@@ -45,6 +46,12 @@ return [
     'status' => [
         'disabled' => 'Disabled',
         'enabled' => 'Enabled',
+    ],
+
+    // Device Type
+    'type' => [
+        'game_machine' => 'Game Machine',
+        'vending_machine' => 'Vending Machine',
     ],
 
     // Access Log

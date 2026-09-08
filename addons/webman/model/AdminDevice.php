@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property string $device_name 设备名称
  * @property string $device_no 设备号（安卓设备唯一标识）
  * @property string $device_model 设备型号
+ * @property int $device_type 设备类型: 1=游戏机, 2=储值机
  * @property string|null $voice_url 语音播报文件URL（Google TTS生成）
  * @property int $status 状态(0:禁用,1:启用)
  * @property string $remark 备注
@@ -52,6 +53,7 @@ class AdminDevice extends Model
         'device_name',
         'device_no',
         'device_model',
+        'device_type',
         'voice_url',
         'status',
         'remark',
@@ -66,6 +68,7 @@ class AdminDevice extends Model
         'department_id' => 'integer',
         'agent_admin_id' => 'integer',
         'store_admin_id' => 'integer',
+        'device_type' => 'integer',
         'status' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -77,6 +80,34 @@ class AdminDevice extends Model
      */
     const STATUS_DISABLED = 0; // 禁用
     const STATUS_ENABLED = 1;  // 启用
+
+    /**
+     * 设备类型常量
+     */
+    const TYPE_GAME_MACHINE = 1;    // 游戏机
+    const TYPE_VENDING_MACHINE = 2; // 储值机
+
+    /**
+     * 设备类型列表
+     * @return array
+     */
+    public static function getDeviceTypeList(): array
+    {
+        return [
+            self::TYPE_GAME_MACHINE => admin_trans('device.type.game_machine'),
+            self::TYPE_VENDING_MACHINE => admin_trans('device.type.vending_machine'),
+        ];
+    }
+
+    /**
+     * 获取设备类型文本
+     * @return string
+     */
+    public function getDeviceTypeTextAttribute(): string
+    {
+        $typeList = self::getDeviceTypeList();
+        return $typeList[$this->device_type] ?? '';
+    }
 
     /**
      * 状态列表

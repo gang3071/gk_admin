@@ -263,6 +263,10 @@ class AutoShiftService
             $shiftRecord->ticket_unredeemed_amount = $statistics['ticket_unredeemed_amount'];
             $shiftRecord->experience_coupon_amount = $statistics['experience_coupon_amount'];
             $shiftRecord->welfare_coupon_amount = $statistics['welfare_coupon_amount'];
+            $shiftRecord->counter_ticket_amount = $statistics['counter_ticket_amount'];
+            $shiftRecord->counter_redeem_amount = $statistics['counter_redeem_amount'];
+            $shiftRecord->storage_ticket_purchase = $statistics['storage_ticket_purchase'];
+            $shiftRecord->storage_recharge = $statistics['storage_recharge'];
             $shiftRecord->is_auto_shift = 1;
             $shiftRecord->save();
 
@@ -439,6 +443,18 @@ class AutoShiftService
         // 计算每台设备的明细统计
         $deviceDetails = $this->calculateDeviceDetails($admin->department_id, $bindAdminUserId, $startTime, $endTime);
 
+        // 统计储值机储值（投钞类型，source=storage_recharge）
+        $storageRecharge = (float)PlayerDeliveryRecord::query()
+            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
+            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE)
+            ->where('player_delivery_record.source', 'storage_recharge')
+            ->where('player_delivery_record.created_at', '>', $startTime)
+            ->where('player_delivery_record.created_at', '<=', $endTime)
+            ->sum('player_delivery_record.amount');
+
         // 计算电子游戏打码量（从 play_game_record 表的 bet 字段汇总）
         $electronicGameBetAmount = PlayGameRecord::query()
             ->join('player', 'play_game_record.player_id', '=', 'player.id')
@@ -522,21 +538,73 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
-        $ticketOpenScoreAmount = (float)TicketRecord::query()
+        // 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，source_type为null，player_id为0或null）
+        $counterTicketAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->whereNull('source_type')
+            ->where(function ($q) {
+                $q->where('player_id', 0)
+                    ->orWhereNull('player_id');
+            })
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计开票已使用金额（用于入票计算，status=3机台使用）
+        // 统计储值机购票（ticket_type=1开分类型，status!=0且!=5，source_type=purchase，player_id为0或null）
+        $storageTicketPurchase = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->where('source_type', TicketRecord::SOURCE_TYPE_PURCHASE)
+            ->where(function ($q) {
+                $q->where('player_id', 0)
+                    ->orWhereNull('player_id');
+            })
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 统计柜台核销
+        // 开分票：所有后台核销
+        // 洗分票：后台核销且无玩家关联
+        $counterRedeemAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
+            ->where(function ($q) {
+                $q->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                    ->orWhere(function ($q2) {
+                        $q2->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                            ->where(function ($q3) {
+                                $q3->where('player_id', 0)->orWhereNull('player_id');
+                            });
+                    });
+            })
+            ->where('scanned_at', '>', $startTime)
+            ->where('scanned_at', '<=', $endTime)
+            ->sum('score');
+
+        // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
+        $ticketOpenScoreAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
+        // 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
+        // 使用 scanned_at（核销时间）作为筛选条件，因为出票可能在交班前，但使用在交班期间
         $ticketOpenScoreUsedAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
             ->where('status', TicketRecord::STATUS_MACHINE_USED)
-            ->where('created_at', '>', $startTime)
-            ->where('created_at', '<=', $endTime)
+            ->where('scanned_at', '>', $startTime)
+            ->where('scanned_at', '<=', $endTime)
             ->sum('score');
 
         // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
@@ -599,6 +667,10 @@ class AutoShiftService
             'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
+            'counter_ticket_amount' => $counterTicketAmount,
+            'counter_redeem_amount' => $counterRedeemAmount,
+            'storage_ticket_purchase' => $storageTicketPurchase,
+            'storage_recharge' => $storageRecharge,
             // 详细分类数据（保留原有字段）
             'recharge_amount' => (float)$data['recharge_amount'],
             'withdrawal_amount' => (float)$data['withdrawal_amount'],
@@ -777,21 +849,24 @@ class AutoShiftService
                 'modified_deduct_amount' => 0,
             ];
 
-            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，不需要status条件）
+            // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
             $ticketOpenScoreAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
-            // 统计开票已使用金额（用于入票计算，status=3机台使用）
+            // 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
+            // 使用 scanned_at（核销时间）作为筛选条件
             $ticketOpenScoreUsedAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
                 ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                 ->where('status', TicketRecord::STATUS_MACHINE_USED)
-                ->where('created_at', '>', $startTime)
-                ->where('created_at', '<=', $endTime)
+                ->where('scanned_at', '>', $startTime)
+                ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
