@@ -930,7 +930,7 @@ return [
     ],
     [
         'id' => 'addons\webman\controller\DishOrderController\form-put',
-        'pid' => 'addons\webman\controller\DishController\index',
+        'pid' => 'addons\webman\controller\DishOrderController\index',
         'action' => 'form',
         'method' => 'put',
         'group' => 'store',
