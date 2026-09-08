@@ -52,11 +52,11 @@ class StoreTicketRecordController
                 ])
                 ->orderBy('created_at', 'desc');
 
-            // 处理 source_type 筛选（ExAdmin 的 where 回调不生效，直接在这里处理）
+            // 处理 source_type 筛选（手动处理，避免 ExAdmin 覆盖）
             $exAdminFilter = request()->input('ex_admin_filter', []);
-            if (isset($exAdminFilter['source_type'])) {
-                $sourceType = $exAdminFilter['source_type'];
-                if ($sourceType === 'null' || $sourceType === null || $sourceType === 'NULL') {
+            if (isset($exAdminFilter['source_type_custom'])) {
+                $sourceType = $exAdminFilter['source_type_custom'];
+                if ($sourceType === 'null' || $sourceType === 'NULL') {
                     // 后台出票：source_type 为 NULL 或空字符串
                     $grid->model()->where(function ($q) {
                         $q->whereNull('source_type')->orWhere('source_type', '');
@@ -356,12 +356,10 @@ class StoreTicketRecordController
                     };
                 });
             $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
-            $grid->column('scanned_at', admin_trans('ticket_machine.record.scanned_at'))
-                ->display(function ($val) {
+            $grid->column('scanned_at', admin_trans('ticket_machine.record.scanned_at'))->display(function ($val) {
                     return $val ?: '-';
                 });
-            $grid->column('scanned_by', admin_trans('ticket_machine.record.scanned_by'))
-                ->display(function ($val, $data) {
+            $grid->column('scanned_by', admin_trans('ticket_machine.record.scanned_by'))->display(function ($val, $data) {
                     if (empty($val)) {
                         return '-';
                     }
@@ -383,14 +381,9 @@ class StoreTicketRecordController
                 });
 
             // 备注（可编辑）
-            $grid->column('remark', admin_trans('ticket_machine.record.remark'))
-                ->display(function ($value) {
+            $grid->column('remark', admin_trans('ticket_machine.record.remark'))->display(function ($value) {
                     return $value ?: '-';
-                })
-                ->editable(
-                    (new Editable)->text('remark')->maxlength(255)
-                )
-                ->width(150)->ellipsis(true);
+                })->editable((new Editable)->text('remark')->maxlength(255))->width(150)->ellipsis(true);
 
             // 筛选器
             $grid->expandFilter();
@@ -422,7 +415,8 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->select('source_type')
+                // source_type 不用 ExAdmin filter，手动处理（避免被覆盖）
+                $filter->select('source_type_custom')
                     ->placeholder(admin_trans('ticket_machine.record.source_type'))
                     ->options([
                         '' => admin_trans('public_msg.all'),
