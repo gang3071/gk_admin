@@ -91,7 +91,7 @@ class DishCategoryController
             // $form->myEditor('content', admin_trans('dish_category.fields.content'))->maxlength(200);
             $form->number('sort', admin_trans('dish_category.fields.sort'))->default(0)->required();
             $form->switch('top', admin_trans('dish_category.fields.top'))->required();
-            $form->switch('status', admin_trans('dish_category.fields.status'))->required();
+            $form->switch('status', admin_trans('dish_category.fields.status'))->default(1)->required();
             $form->textarea('remark', admin_trans('dish_category.fields.remark'))->maxlength(200);
         });
     }
