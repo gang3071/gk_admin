@@ -147,7 +147,7 @@ class DishController
             $form->number('daily_limit', admin_trans('dish.fields.daily_limit'))->default(0)->required()->help(admin_trans('dish.help.daily_limit'));
             $form->number('sort', admin_trans('dish.fields.sort'))->default(0)->required();
             $form->switch('top', admin_trans('dish.fields.top'))->required();
-            $form->switch('status', admin_trans('dish.fields.status'))->required();
+            $form->switch('status', admin_trans('dish.fields.status'))->default(1)->required();
             $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200);
 
             $form->saving(function (Form $form) use ($adminUser) {
