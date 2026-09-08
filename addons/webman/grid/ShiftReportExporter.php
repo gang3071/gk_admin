@@ -213,23 +213,7 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
                 $this->currentRow++;
 
-                // 第一行：柜台开票、柜台核销
-                $counterTicketLabel = admin_trans('shift_handover.counter_ticket_amount') . '：';
-                $counterTicketValue = number_format($originalRecord->counter_ticket_amount ?? 0, 2);
-                $counterRedeemLabel = admin_trans('shift_handover.counter_redeem_amount') . '：';
-                $counterRedeemValue = number_format($originalRecord->counter_redeem_amount ?? 0, 2);
-                $this->sheet->setCellValue('A' . $this->currentRow, $counterTicketLabel);
-                $this->sheet->setCellValue('B' . $this->currentRow, $counterTicketValue);
-                $this->sheet->setCellValue('C' . $this->currentRow, $counterRedeemLabel);
-                $this->sheet->setCellValue('D' . $this->currentRow, $counterRedeemValue);
-                $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
-                $this->currentRow++;
-
-                // 第二行：储值机购票、储值机储值
+                // 储值机购票、储值机储值
                 $storageTicketLabel = admin_trans('shift_handover.storage_ticket_purchase') . '：';
                 $storageTicketValue = number_format($originalRecord->storage_ticket_purchase ?? 0, 2);
                 $storageRechargeLabel = admin_trans('shift_handover.storage_recharge') . '：';
@@ -340,6 +324,62 @@ class ShiftReportExporter extends Excel
 
                         $this->currentRow++;
                         $index++;
+                    }
+
+                    // 柜台行（柜台开票、柜台核销）
+                    $counterTicketAmount = $originalRecord->counter_ticket_amount ?? 0;
+                    $counterRedeemAmount = $originalRecord->counter_redeem_amount ?? 0;
+                    if ($counterTicketAmount > 0 || $counterRedeemAmount > 0) {
+                        $counterRowValues = [];
+                        foreach ($activeColumns as $column) {
+                            if ($column === 'player_name') {
+                                $counterRowValues[$column] = admin_trans('shift_handover.counter');
+                            } elseif ($column === 'player_phone') {
+                                $counterRowValues[$column] = '-';
+                            } elseif ($column === 'incoming_ticket_amount') {
+                                $counterRowValues[$column] = $counterTicketAmount;
+                            } elseif ($column === 'ticket_redeem_amount') {
+                                $counterRowValues[$column] = $counterRedeemAmount;
+                            } elseif ($column === 'total_in') {
+                                // 总收入包含柜台开票
+                                $counterRowValues[$column] = $counterTicketAmount;
+                            } elseif ($column === 'total_out') {
+                                // 总支出包含柜台核销
+                                $counterRowValues[$column] = $counterRedeemAmount;
+                            } elseif ($column === 'profit') {
+                                // 利润 = 总收入 - 总支出
+                                $counterRowValues[$column] = bcsub($counterTicketAmount, $counterRedeemAmount, 2);
+                            } else {
+                                $counterRowValues[$column] = 0;
+                            }
+                        }
+
+                        // 写入柜台行
+                        foreach ($activeColumns as $colIndex => $column) {
+                            $value = $counterRowValues[$column];
+                            $formattedValue = $this->formatColumnValue($column, $value);
+                            $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
+                        }
+
+                        // 数字列右对齐
+                        if ($columnCount > 2) {
+                            $this->sheet->getStyle($this->getColumnLetter(2) . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)
+                                ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                        }
+
+                        // 柜台行背景色
+                        $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
+                            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E6F3FF']],
+                            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+                        ]);
+
+                        // 累加小计
+                        foreach ($subtotal as $column => &$value) {
+                            $value += $counterRowValues[$column] ?? 0;
+                        }
+                        unset($value);
+
+                        $this->currentRow++;
                     }
 
                     // 小计行
