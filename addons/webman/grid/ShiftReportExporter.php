@@ -229,12 +229,12 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
                 $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
                 $this->sheet->getStyle('E' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('E' . $this->currentRow)->getFont()->setColor(['rgb' => '1890ff']);
+                $this->sheet->getStyle('E' . $this->currentRow)->getFont()->getColor()->setRGB('1890ff');
                 $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $this->sheet->getStyle('F' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
                 $this->sheet->getStyle('F' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('F' . $this->currentRow)->getFont()->setColor(['rgb' => '1890ff']);
+                $this->sheet->getStyle('F' . $this->currentRow)->getFont()->getColor()->setRGB('1890ff');
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
                 $this->currentRow++;
 
