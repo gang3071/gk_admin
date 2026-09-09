@@ -151,7 +151,8 @@ class AgentStoreProfitReportController
             // 计算汇总
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
-            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
+            // 总收入 = 开分 + 开票 + 储值机购票
+            $totalIncome = bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageTicketPurchase, 2);
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
 
@@ -707,7 +708,8 @@ class AgentStoreProfitReportController
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
+            // 总收入 = 开分 + 开票 + 储值机购票
+            $totalIncome = bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageTicketPurchase, 2);
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
 
