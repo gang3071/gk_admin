@@ -442,13 +442,13 @@ class AgentStoreProfitReportController
     private function applyTimeFilter($query, string $column, ?string $selectedShift, ?string $dateType, ?string $createdAtStart, ?string $createdAtEnd, ?array $shiftDateRange): void
     {
         if (!empty($selectedShift) && $shiftDateRange) {
-            $query->where($column, '>=', $shiftDateRange['start']->toDateTimeString())
-                  ->where($column, '<', $shiftDateRange['end']->toDateTimeString());
+            $query->where($column, '>', $shiftDateRange['start']->toDateTimeString())
+                  ->where($column, '<=', $shiftDateRange['end']->toDateTimeString());
         } elseif (!empty($dateType)) {
             $query->where(getDateWhere($dateType, $column));
         } else {
             if (!empty($createdAtStart)) {
-                $query->where($column, '>=', $createdAtStart);
+                $query->where($column, '>', $createdAtStart);
             }
             if (!empty($createdAtEnd)) {
                 $query->where($column, '<=', $createdAtEnd);
