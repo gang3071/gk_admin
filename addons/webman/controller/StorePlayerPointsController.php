@@ -50,23 +50,23 @@ class StorePlayerPointsController
      * 积分变动记录列表
      * @auth true
      */
-    public function index(Request $request): Response
+    public function index($data = []): Response
     {
-        $playerId = $request->input('player_id');
+        $playerId = $data['player_id'] ?? 0;
         if (!$playerId) {
-            return Msg::error(admin_trans('player_points.message.player_not_found'));
+            return message_error(admin_trans('player_points.message.player_not_found'));
         }
 
         // 验证权限
         $permissionFilter = $this->checkPlayerPermission($playerId);
         if ($permissionFilter === false) {
-            return Msg::error(admin_trans('player_points.message.permission_denied'));
+            return message_error(admin_trans('player_points.message.permission_denied'));
         }
 
         // 获取玩家信息
         $player = Player::find($playerId);
         if (!$player) {
-            return Msg::error(admin_trans('player_points.message.player_not_found'));
+            return message_error(admin_trans('player_points.message.player_not_found'));
         }
 
         // 获取参数
