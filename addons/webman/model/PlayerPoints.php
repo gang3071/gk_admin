@@ -15,7 +15,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $available_points
  * @property int $frozen_points
  * @property int $used_points
- * @property int $expired_points
  * @property int $version
  * @property string $created_at
  * @property string $updated_at
@@ -31,7 +30,6 @@ class PlayerPoints extends Model
         'available_points',
         'frozen_points',
         'used_points',
-        'expired_points',
         'version',
     ];
 
@@ -42,7 +40,6 @@ class PlayerPoints extends Model
         'available_points' => 'integer',
         'frozen_points' => 'integer',
         'used_points' => 'integer',
-        'expired_points' => 'integer',
         'version' => 'integer',
     ];
 
@@ -67,7 +64,6 @@ class PlayerPoints extends Model
                 'available_points' => 0,
                 'frozen_points' => 0,
                 'used_points' => 0,
-                'expired_points' => 0,
                 'version' => 0,
             ]
         );

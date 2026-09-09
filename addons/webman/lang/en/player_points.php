@@ -14,7 +14,6 @@ return [
         'available_points' => 'Available Points',
         'frozen_points' => 'Frozen Points',
         'used_points' => 'Used Points',
-        'expired_points' => 'Expired Points',
         'type' => 'Type',
         'source' => 'Source',
         'points' => 'Points Change',

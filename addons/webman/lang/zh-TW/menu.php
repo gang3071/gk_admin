@@ -49,6 +49,7 @@ return [
         'user_manage' => '玩家管理',
         'user_manage_list' => '玩家清單',
         'accounting_change_records' => '賬變記錄',
+        'player_points_records' => '積分記錄',
 //遊戲管理
         'game_manager' => '遊戲管理',
         'game_category' => '遊戲類別',

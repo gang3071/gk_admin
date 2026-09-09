@@ -14,7 +14,6 @@ return [
         'available_points' => '可用积分',
         'frozen_points' => '冻结积分',
         'used_points' => '已使用积分',
-        'expired_points' => '已过期积分',
         'type' => '类型',
         'source' => '来源',
         'points' => '积分变动',

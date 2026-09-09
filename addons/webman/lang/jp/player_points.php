@@ -14,7 +14,6 @@ return [
         'available_points' => '利用可能ポイント',
         'frozen_points' => '凍結ポイント',
         'used_points' => '使用済みポイント',
-        'expired_points' => '期限切れポイント',
         'type' => 'タイプ',
         'source' => 'ソース',
         'points' => 'ポイント変動',
