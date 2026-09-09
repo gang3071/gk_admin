@@ -432,7 +432,7 @@ class ChannelStoreProfitReportController
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
             SUM(CASE WHEN (`ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . ") OR (`ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " AND (`player_id` = 0 OR `player_id` IS NULL)) THEN `score` ELSE 0 END) AS counter_redeem_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
+            SUM(CASE WHEN `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount
         ")->groupBy('store_admin_id')->get();
 
