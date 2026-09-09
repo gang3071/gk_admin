@@ -47,7 +47,7 @@ class ChannelPlayerPointsController
      * 积分变动记录列表
      * @auth true
      */
-    public function index(array $params = []): Response
+    public function index(array $params = []): Grid
     {
         $playerId = $params['player_id'] ?? 0;
 
