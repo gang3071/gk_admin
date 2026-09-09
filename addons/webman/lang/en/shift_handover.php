@@ -207,6 +207,7 @@ return [
     'welfare_coupon_amount' => 'Welfare Coupon',
     'counter_ticket_amount' => 'Counter Ticket',
     'counter_redeem_amount' => 'Counter Redeem',
+    'counter' => 'Counter',
     'storage_ticket_purchase' => 'Storage Ticket Purchase',
     'storage_recharge' => 'Storage Recharge',
     'modified_add_amount' => 'Admin Add',

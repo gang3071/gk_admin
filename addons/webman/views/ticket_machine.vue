@@ -1283,6 +1283,28 @@ export default {
         await this.sendCommand(0x01, 0x01, [], true, true);
       }, 10000);
       this.addLog('info', this.t('heartbeat_restarted'));
+
+      // 打印成功后关闭弹窗并刷新页面
+      if (printSuccess) {
+        this.$message.success(this.t('ticket_saved', {order_id: orderId}));
+        setTimeout(() => {
+          this.closeModalAndRefresh();
+        }, 1000);
+      }
+    },
+
+    // 关闭弹窗并刷新页面
+    closeModalAndRefresh() {
+      this.$emit('success');
+      const el = this.$el;
+      const modalWrap = el.closest ? el.closest('.ant-modal-wrap') : null;
+      const closeBtn = modalWrap ? modalWrap.querySelector('.ant-modal-close') : null;
+      if (closeBtn) {
+        closeBtn.click();
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
     },
 
     // 本地过滤玩家选项

@@ -206,6 +206,7 @@ return [
     'welfare_coupon_amount' => '福利券',
     'counter_ticket_amount' => '櫃台開票',
     'counter_redeem_amount' => '櫃台核銷',
+    'counter' => '櫃台',
     'storage_ticket_purchase' => '儲值機購票',
     'storage_recharge' => '儲值機儲值',
     'modified_add_amount' => '後台加點',

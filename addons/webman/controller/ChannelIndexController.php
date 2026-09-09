@@ -3412,7 +3412,7 @@ class ChannelIndexController
                                 THEN player_delivery_record.amount ELSE 0 END) AS upgrade_bonus_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
-                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND player_delivery_record.source = 'artificial_recharge'
+                            SUM(CASE WHEN (player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND player_delivery_record.source = 'artificial_recharge') OR (player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND player_delivery_record.source = 'storage_recharge')
                                 THEN player_delivery_record.amount ELSE 0 END) AS open_score_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND player_delivery_record.source = 'ticket_open_score'
                                 THEN player_delivery_record.amount ELSE 0 END) AS ticket_open_score_amount,
@@ -4803,7 +4803,7 @@ class ChannelIndexController
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . ' THEN amount ELSE 0 END) as birthday_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . ' THEN amount ELSE 0 END) as upgrade_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' THEN amount ELSE 0 END) as recharge_amount,
-                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'artificial_recharge\' THEN amount ELSE 0 END) as open_score_amount,
+                    SUM(CASE WHEN (type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'artificial_recharge\') OR (type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ' AND source = \'storage_recharge\') THEN amount ELSE 0 END) as open_score_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' THEN amount ELSE 0 END) as withdrawal_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_WITHDRAWAL . ' AND source = \'channel_withdrawal\' THEN amount ELSE 0 END) as channel_withdrawal_amount,

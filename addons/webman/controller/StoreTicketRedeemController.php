@@ -50,10 +50,10 @@ class StoreTicketRedeemController
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
 
-            // 处理 source_type 筛选
+            // 处理 source_type 筛选（手动处理，避免 ExAdmin 覆盖）
             $exAdminFilter = request()->input('ex_admin_filter', []);
-            if (isset($exAdminFilter['source_type'])) {
-                $sourceType = $exAdminFilter['source_type'];
+            if (isset($exAdminFilter['source_type_custom'])) {
+                $sourceType = $exAdminFilter['source_type_custom'];
                 if ($sourceType === 'null' || $sourceType === null || $sourceType === 'NULL') {
                     $grid->model()->where(function ($q) {
                         $q->whereNull('source_type')->orWhere('source_type', '');
@@ -456,16 +456,7 @@ class StoreTicketRedeemController
                         TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.redeem.status_merged'),
                     ])
                     ->style(['width' => '150px']);
-                $filter->where(function ($query, $value) {
-                    if ($value === 'null' || $value === null || $value === 'NULL') {
-                        // 机台洗分：source_type 为 NULL 或空字符串
-                        $query->where(function ($q) {
-                            $q->whereNull('source_type')->orWhere('source_type', '');
-                        });
-                    } elseif ($value !== '') {
-                        $query->where('source_type', $value);
-                    }
-                })->select('source_type')
+                $filter->select('source_type_custom')
                     ->placeholder(admin_trans('ticket_machine.redeem.source_type'))
                     ->options([
                         '' => admin_trans('public_msg.all'),

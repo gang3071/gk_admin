@@ -207,6 +207,7 @@ return [
     'welfare_coupon_amount' => '福祉券',
     'counter_ticket_amount' => 'カウンター発券',
     'counter_redeem_amount' => 'カウンター消込',
+    'counter' => 'カウンター',
     'storage_ticket_purchase' => 'ストレージ購票',
     'storage_recharge' => 'ストレージ儲值',
     'modified_add_amount' => '管理者追加',
