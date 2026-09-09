@@ -47,9 +47,9 @@ class ChannelPlayerPointsController
      * 积分变动记录列表
      * @auth true
      */
-    public function index($data = []): Response
+    public function index(array $params = []): Response
     {
-        $playerId = $data['player_id'] ?? 0;
+        $playerId = $params['player_id'] ?? 0;
         if (!$playerId) {
             return message_error(admin_trans('player_points.message.player_not_found'));
         }
