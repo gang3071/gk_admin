@@ -647,12 +647,6 @@ class StoreTicketRedeemController
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.record_not_found')]);
         }
 
-        // 更新扫码信息
-        $record->update([
-            'scanned_at' => date('Y-m-d H:i:s'),
-            'scanned_by' => $admin->id,
-        ]);
-
         // 通过 player_id 关联获取玩家信息
         $playerName = '';
         $playerAvatar = '';
