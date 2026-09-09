@@ -121,12 +121,12 @@ class AgentStoreProfitReportController
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
             $counterTicketAmount = floatval($ticketData->counter_ticket_amount ?? 0);
             $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
-            $counterRedeemAmount = floatval($ticketData->counter_redeem_amount ?? 0);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0);
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);
 
             // 核销数据
             $redeemData = $redeemDataByStore[$storeId] ?? null;
+            $counterRedeemAmount = floatval($redeemData->counter_redeem_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
 
@@ -309,7 +309,7 @@ class AgentStoreProfitReportController
 
         $ticketData = $query->selectRaw("
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND ((`player_id` > 0) OR (`source_type` IS NULL AND (`player_id` = 0 OR `player_id` IS NULL))) THEN `score` ELSE 0 END) AS ticket_open_score_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND `source_type` IS NULL AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS counter_ticket_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "' AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS storage_ticket_purchase,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
@@ -506,7 +506,7 @@ class AgentStoreProfitReportController
         $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 
         $amountColumns = [
-            'open_score_amount', 'withdraw_amount', 'machine_put_point',
+            'open_score_amount', 'withdraw_amount',
             'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
             'counter_ticket_amount', 'counter_redeem_amount',
             'storage_ticket_purchase', 'storage_recharge',
