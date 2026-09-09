@@ -6,6 +6,7 @@ use addons\webman\model\Notice;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\VipLevel;
+use Monolog\Logger;
 use support\Log;
 use Workerman\Crontab\Crontab;
 
@@ -20,7 +21,7 @@ use Workerman\Crontab\Crontab;
 class VipBirthdayBonusTask
 {
     /**
-     * @var \Monolog\Logger|null
+     * @var Logger|null
      */
     private $log = null;
 
