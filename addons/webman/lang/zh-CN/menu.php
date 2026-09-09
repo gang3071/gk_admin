@@ -49,6 +49,7 @@ return [
         'user_manage' => '玩家管理',
         'user_manage_list' => '玩家列表',
         'accounting_change_records' => '账变记录',
+        'player_points_records' => '积分记录',
         //游戏管理
         'game_manager' => '游戏管理',
         'game_category' => '游戏类别',
@@ -89,6 +90,7 @@ return [
         'channel_player_manage' => '玩家管理',
         'channel_player_list' => '玩家列表',
         'channel_player_accounting_change_records' => '账变记录',
+        'player_points_records' => '积分记录',
         //机台管理
         'channel_machine_manage' => '机台管理',
         'channel_machine_information' => '机台资讯',
@@ -206,6 +208,7 @@ return [
         //店机后台设备管理
         'store_player' => '玩家管理',
         'store_player_list' => '玩家列表',
+        'player_points_records' => '积分记录',
         //店机后台开分满赠管理
         'store_deposit_bonus_manage' => '开分满赠管理',
         'store_deposit_bonus_activity' => '活动管理',

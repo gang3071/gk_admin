@@ -49,6 +49,7 @@ return [
         'user_manage' => 'Player management',
         'user_manage_list' => 'Player list',
         'accounting_change_records' => 'Accounting change records',
+        'player_points_records' => 'Points records',
         //game management
         'game_manager' => 'Game management',
         'game_category' => 'Game category',
@@ -89,6 +90,7 @@ return [
         'channel_player_manage' => 'Player management',
         'channel_player_list' => 'Player list',
         'channel_player_accounting_change_records' => 'Accounting change records',
+        'player_points_records' => 'Points records',
         //machine management
         'channel_machine_manage' => 'Machine management',
         'channel_machine_information' => 'Machine information',

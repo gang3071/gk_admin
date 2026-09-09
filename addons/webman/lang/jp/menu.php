@@ -49,6 +49,7 @@ return [
         'user_manage' => 'プレイヤー管理',
         'user_manage_list' => 'プレイヤーリスト',
         'accounting_change_records' => '会計変更レコード',
+        'player_points_records' => 'ポイント記録',
         //ゲーム管理
         'game_manager' => 'ゲーム管理',
         'game_category' => 'ゲームカテゴリ',
@@ -89,6 +90,7 @@ return [
         'channel_player_manage' => 'プレイヤー管理',
         'channel_player_list' => 'プレイヤーリスト',
         'channel_player_accounting_change_records' => '会計変更レコード',
+        'player_points_records' => 'ポイント記録',
         //マシン管理
         'channel_machine_manage' => 'マシン管理',
         'channel_machine_information' => 'マシン情報',
@@ -206,6 +208,7 @@ return [
         //店舗プレイヤー管理
         'store_player' => 'プレイヤー管理',
         'store_player_list' => 'プレイヤーリスト',
+        'player_points_records' => 'ポイント記録',
         //店舗入金ボーナス管理
         'store_deposit_bonus_manage' => '入金ボーナス管理',
         'store_deposit_bonus_activity' => '活動管理',
