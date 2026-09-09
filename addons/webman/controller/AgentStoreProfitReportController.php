@@ -131,8 +131,8 @@ class AgentStoreProfitReportController
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
 
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
-            // 未核销 = 出卷 - 后台核销 - 机台核销
-            $totalRedeem = bcadd($redeemAmount, $redeemMachineAmount, 2);
+            // 未核销 = 出卷 - 后台核销 - 机台核销 - 柜台核销
+            $totalRedeem = bcadd(bcadd($redeemAmount, $redeemMachineAmount, 2), $counterRedeemAmount, 2);
             $ticketUnredeemedAmount = bcsub($ticketRedeemAmount, $totalRedeem, 2);
 
             // 拉彩数据
