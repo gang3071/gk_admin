@@ -31,6 +31,8 @@ use addons\webman\model\PlayerGameRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PlayerPoints;
+use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerPromoter;
 use addons\webman\model\PlayerRechargeRecord;
@@ -213,6 +215,10 @@ class PlayerController
                 'vip_retain_period.period_bet_amount as period_bet_amount',
                 DB::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
                 'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
+                // 积分字段
+                'player_points.available_points',
+                'player_points.frozen_points',
+                'player_points.total_points',
             ])
             ->when(!empty($id), function ($query) use ($id) {
                 $query->where('player.recommend_id', $id);
@@ -220,6 +226,7 @@ class PlayerController
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
+            ->leftjoin('player_points', 'player.id', '=', 'player_points.player_id')
             ->leftjoin('national_promoter', 'player.id', '=', 'national_promoter.uid')
             ->leftjoin('level_list', 'national_promoter.level', '=', 'level_list.id')
             ->leftjoin('national_level', 'national_level.id', '=', 'level_list.level_id')
@@ -505,6 +512,16 @@ class PlayerController
                     'playerRecord'
                 ], ['id' => $data['id']])->width('70%')->title($data['name'] . ' ' . $data['uuid']);
             })->ellipsis(true)->align('center');
+            // 积分列
+            $grid->column('available_points', admin_trans('player_points.fields.available_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('green');
+            })->align('center')->width(100)->sortable();
+            $grid->column('frozen_points', admin_trans('player_points.fields.frozen_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('orange');
+            })->align('center')->width(100)->sortable();
+            $grid->column('total_points', admin_trans('player_points.fields.total_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('blue');
+            })->align('center')->width(100)->sortable();
             $grid->column('recharge_amount',
                 admin_trans('player_extend.fields.recharge_amount'))->ellipsis(true)->sortable()->align('center');
             $grid->column('withdraw_amount',
@@ -700,6 +717,28 @@ class PlayerController
                     ->modal($this->platformAccountList($data['id']))
                     ->width('90%')
                     ->title($data['name'] . ' (' . $data['uuid'] . ') - ' . admin_trans('player.platform_accounts'));
+                // 积分管理
+                $dropdown->divider();
+                $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
+                    ->modal([PlayerPointsController::class, 'index'], ['player_id' => $data['id']])
+                    ->width('90%')
+                    ->title($data['name'] . ' (' . ($data['uuid'] ?? '') . ') - ' . admin_trans('player_points.records_title'));
+                $dropdown->append(admin_trans('player_points.action.add_points'), 'PlusCircleOutlined')
+                    ->modal([PlayerPointsController::class, 'addPoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.add_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.deduct_points'), 'MinusCircleOutlined')
+                    ->modal([PlayerPointsController::class, 'deductPoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.deduct_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.freeze_points'), 'LockOutlined')
+                    ->modal([PlayerPointsController::class, 'freezePoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.freeze_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.unfreeze_points'), 'UnlockOutlined')
+                    ->modal([PlayerPointsController::class, 'unfreezePoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.unfreeze_points_title') . ' - ' . $data['name']);
             });
             $grid->updateing(function ($ids, $data) {
                 if (isset($ids[0]) && isset($data['player_extend'])) {

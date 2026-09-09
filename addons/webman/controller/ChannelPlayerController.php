@@ -30,6 +30,8 @@ use addons\webman\model\PlayerGamePlatform;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PlayerPoints;
+use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerPromoter;
 use addons\webman\model\PlayerRechargeRecord;
@@ -222,6 +224,10 @@ class ChannelPlayerController
             'vip_retain_period.period_bet_amount as period_bet_amount',
             Db::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
             'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
+            // 积分字段
+            'player_points.available_points',
+            'player_points.frozen_points',
+            'player_points.total_points',
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -240,6 +246,7 @@ class ChannelPlayerController
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select($selectFields)
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
+            ->leftjoin('player_points', 'player.id', '=', 'player_points.player_id')
             ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
@@ -603,6 +610,16 @@ class ChannelPlayerController
                 admin_trans('player_extend.fields.total_cashback_amount'))->display(function ($val) {
                 return $val > 0 ? Html::create()->content([number_format((float)$val, 4)])->style(['color' => 'green']) : '0.0000';
             })->sortable()->align('center');
+            // 积分列
+            $grid->column('available_points', admin_trans('player_points.fields.available_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('green');
+            })->align('center')->width(100)->sortable();
+            $grid->column('frozen_points', admin_trans('player_points.fields.frozen_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('orange');
+            })->align('center')->width(100)->sortable();
+            $grid->column('total_points', admin_trans('player_points.fields.total_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('blue');
+            })->align('center')->width(100)->sortable();
             $grid->column('remark', admin_trans('player_extend.fields.remark'))->display(function ($value) {
                 return ToolTip::create(Str::of($value)->limit(30, ' (...)'))->title($value);
             })->editable(
@@ -847,6 +864,29 @@ class ChannelPlayerController
                 $dropdown->append(admin_trans('player.wallet.wallet_unlock'), 'UnlockOutlined')
                     ->confirm(admin_trans('player.wallet.wallet_unlock_confirm'), [$this, 'walletUnlock'], ['id' => $data['id']])
                     ->gridRefresh();
+
+                // 积分管理
+                $dropdown->divider();
+                $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
+                    ->modal([ChannelPlayerPointsController::class, 'index'], ['player_id' => $data['id']])
+                    ->width('90%')
+                    ->title($data['name'] . ' (' . ($data['uuid'] ?? '') . ') - ' . admin_trans('player_points.records_title'));
+                $dropdown->append(admin_trans('player_points.action.add_points'), 'PlusCircleOutlined')
+                    ->modal([ChannelPlayerPointsController::class, 'addPoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.add_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.deduct_points'), 'MinusCircleOutlined')
+                    ->modal([ChannelPlayerPointsController::class, 'deductPoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.deduct_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.freeze_points'), 'LockOutlined')
+                    ->modal([ChannelPlayerPointsController::class, 'freezePoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.freeze_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.unfreeze_points'), 'UnlockOutlined')
+                    ->modal([ChannelPlayerPointsController::class, 'unfreezePoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.unfreeze_points_title') . ' - ' . $data['name']);
 
                 // 百家禁用
             });
