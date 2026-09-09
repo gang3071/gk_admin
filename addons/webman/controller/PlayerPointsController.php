@@ -29,14 +29,22 @@ class PlayerPointsController
     public function index(array $params = []): Response
     {
         $playerId = $params['player_id'] ?? 0;
+
+        // 验证玩家ID
         if (!$playerId) {
-            return message_error(admin_trans('player_points.message.player_not_found'));
+            return Grid::create([], function (Grid $grid) {
+                $grid->title(admin_trans('player_points.records_title'));
+                $grid->quickSearch(admin_trans('player_points.message.player_not_found'));
+            });
         }
 
         // 获取玩家信息
         $player = Player::find($playerId);
         if (!$player) {
-            return message_error(admin_trans('player_points.message.player_not_found'));
+            return Grid::create([], function (Grid $grid) {
+                $grid->title(admin_trans('player_points.records_title'));
+                $grid->quickSearch(admin_trans('player_points.message.player_not_found'));
+            });
         }
 
         // 获取参数
