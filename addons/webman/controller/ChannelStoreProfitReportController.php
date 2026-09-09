@@ -150,7 +150,6 @@ class ChannelStoreProfitReportController
 
             // 票务数据
             $ticketData = $ticketDataByStore[$storeId] ?? null;
-            $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
             $counterTicketAmount = floatval($ticketData->counter_ticket_amount ?? 0);
             $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
@@ -160,6 +159,7 @@ class ChannelStoreProfitReportController
             // 核销数据
             $redeemData = $redeemDataByStore[$storeId] ?? null;
             $counterRedeemAmount = floatval($redeemData->counter_redeem_amount ?? 0);
+            $ticketOpenScoreUsedAmount = floatval($redeemData->ticket_open_score_used_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
 
@@ -186,8 +186,8 @@ class ChannelStoreProfitReportController
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
 
-            // 总收入 = 开分 + 开票
-            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
+            // 总收入 = 开分 + 开票 + 储值机购票
+            $totalIncome = bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageTicketPurchase, 2);
             // 总支出 = 洗分 + 核销金额
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
             // 总利润 = 总收入 - 总支出
@@ -936,7 +936,7 @@ class ChannelStoreProfitReportController
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
+            $totalIncome = bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageTicketPurchase, 2);
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
 

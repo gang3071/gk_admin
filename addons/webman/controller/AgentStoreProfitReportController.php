@@ -117,7 +117,6 @@ class AgentStoreProfitReportController
 
             // 票务数据
             $ticketData = $ticketDataByStore[$storeId] ?? null;
-            $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
             $counterTicketAmount = floatval($ticketData->counter_ticket_amount ?? 0);
             $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
@@ -127,6 +126,7 @@ class AgentStoreProfitReportController
             // 核销数据
             $redeemData = $redeemDataByStore[$storeId] ?? null;
             $counterRedeemAmount = floatval($redeemData->counter_redeem_amount ?? 0);
+            $ticketOpenScoreUsedAmount = floatval($redeemData->ticket_open_score_used_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
 
