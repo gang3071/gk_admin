@@ -39,8 +39,8 @@ class ShiftReportExporter extends Excel
         'machine_bet_amount' => 'shift_handover.machine_bet_amount',
         'total_in' => 'shift_handover.total_in',
         'total_out' => 'shift_handover.total_out',
-        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
         'profit' => 'shift_handover.profit',
+        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
     ];
 
     // 用户选择的导出列
