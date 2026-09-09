@@ -117,23 +117,23 @@ class AgentStoreProfitReportController
 
             // 票务数据
             $ticketData = $ticketDataByStore[$storeId] ?? null;
-            $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
             $counterTicketAmount = floatval($ticketData->counter_ticket_amount ?? 0);
             $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
-            $counterRedeemAmount = floatval($ticketData->counter_redeem_amount ?? 0);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0);
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);
 
             // 核销数据
             $redeemData = $redeemDataByStore[$storeId] ?? null;
+            $counterRedeemAmount = floatval($redeemData->counter_redeem_amount ?? 0);
+            $ticketOpenScoreUsedAmount = floatval($redeemData->ticket_open_score_used_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
 
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
-            // 未核销 = 出卷 - 后台核销 - 机台核销
+            // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销
             $totalRedeem = bcadd($redeemAmount, $redeemMachineAmount, 2);
-            $ticketUnredeemedAmount = bcsub($ticketRedeemAmount, $totalRedeem, 2);
+            $ticketUnredeemedAmount = bcadd(bcsub($ticketRedeemAmount, $totalRedeem, 2), $counterRedeemAmount, 2);
 
             // 拉彩数据
             $lotteryData = $lotteryDataByStore[$storeId] ?? null;
@@ -151,7 +151,8 @@ class AgentStoreProfitReportController
             // 计算汇总
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
             $subtotal = bcsub($totalIn, $withdrawAmount, 2);
-            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
+            // 总收入 = 开分 + 开票 + 储值机购票
+            $totalIncome = bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageTicketPurchase, 2);
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
 
@@ -309,7 +310,7 @@ class AgentStoreProfitReportController
 
         $ticketData = $query->selectRaw("
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND ((`player_id` > 0) OR (`source_type` IS NULL AND (`player_id` = 0 OR `player_id` IS NULL))) THEN `score` ELSE 0 END) AS ticket_open_score_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND `source_type` IS NULL AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS counter_ticket_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "' AND (`player_id` = 0 OR `player_id` IS NULL) THEN `score` ELSE 0 END) AS storage_ticket_purchase,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
@@ -442,13 +443,13 @@ class AgentStoreProfitReportController
     private function applyTimeFilter($query, string $column, ?string $selectedShift, ?string $dateType, ?string $createdAtStart, ?string $createdAtEnd, ?array $shiftDateRange): void
     {
         if (!empty($selectedShift) && $shiftDateRange) {
-            $query->where($column, '>=', $shiftDateRange['start']->toDateTimeString())
-                  ->where($column, '<', $shiftDateRange['end']->toDateTimeString());
+            $query->where($column, '>', $shiftDateRange['start']->toDateTimeString())
+                  ->where($column, '<=', $shiftDateRange['end']->toDateTimeString());
         } elseif (!empty($dateType)) {
             $query->where(getDateWhere($dateType, $column));
         } else {
             if (!empty($createdAtStart)) {
-                $query->where($column, '>=', $createdAtStart);
+                $query->where($column, '>', $createdAtStart);
             }
             if (!empty($createdAtEnd)) {
                 $query->where($column, '<=', $createdAtEnd);
@@ -506,12 +507,13 @@ class AgentStoreProfitReportController
         $grid->column('store_username', admin_trans('agent_store_profit.fields.store_username'))->width(120)->align('center');
 
         $amountColumns = [
-            'open_score_amount', 'withdraw_amount', 'machine_put_point',
+            'open_score_amount', 'withdraw_amount',
             'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
-            'counter_ticket_amount', 'storage_ticket_purchase', 'counter_redeem_amount',
+            'counter_ticket_amount', 'counter_redeem_amount',
+            'storage_ticket_purchase', 'storage_recharge',
             'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
             'welfare_coupon_amount', 'lottery_amount', 'activity_total',
-            'electronic_game_bet_amount', 'machine_bet_amount', 'storage_recharge',
+            'electronic_game_bet_amount', 'machine_bet_amount',
             'total_income', 'total_expense',
         ];
 
@@ -706,7 +708,8 @@ class AgentStoreProfitReportController
             $rechargeAmount = bcsub($rechargeAmount, $ticketAmount, 2);
 
             $totalIn = bcadd($rechargeAmount, $machinePutPoint, 2);
-            $totalIncome = bcadd($openScoreAmount, $ticketOpenScoreAmount, 2);
+            // 总收入 = 开分 + 开票 + 储值机购票
+            $totalIncome = bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageTicketPurchase, 2);
             $totalExpense = bcadd($withdrawAmount, $redeemAmount, 2);
             $totalProfit = bcsub($totalIncome, $totalExpense, 2);
 
