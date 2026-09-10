@@ -154,7 +154,7 @@ class AgentPlayerPointsController
      * 增加积分表单
      * @auth true
      */
-    public function addPoints(): Response
+    public function addPoints(): Form
     {
         $data = Request::input();
 
@@ -207,7 +207,7 @@ class AgentPlayerPointsController
      * 扣除积分表单
      * @auth true
      */
-    public function deductPoints(): Response
+    public function deductPoints(): Form
     {
         $data = Request::input();
 
@@ -268,7 +268,7 @@ class AgentPlayerPointsController
      * 冻结积分表单
      * @auth true
      */
-    public function freezePoints(): Response
+    public function freezePoints(): Form
     {
         $data = Request::input();
 
@@ -321,7 +321,7 @@ class AgentPlayerPointsController
      * 解冻积分表单
      * @auth true
      */
-    public function unfreezePoints(): Response
+    public function unfreezePoints(): Form
     {
         $data = Request::input();
 
