@@ -1071,11 +1071,11 @@ class PlayerController
     /**
      * 玩家钱包
      * @auth true
+     * @param $data
      * @return Form
      */
-    public function playerWallet(): Form
+    public function playerWallet($data): Form
     {
-        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
             $form->row(function (Form $form) {
@@ -1139,11 +1139,11 @@ class PlayerController
     /**
      * 玩家钱包
      * @auth true
+     * @param $data
      * @return Form
      */
-    public function increase(): Form
+    public function increase($data): Form
     {
-        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
             $form->row(function (Form $form) {
@@ -1182,11 +1182,11 @@ class PlayerController
 
     /**
      * 钱包操作
+     * @param $data
      * @return Msg
      */
-    public function store(): Msg
+    public function store($data): Msg
     {
-        $data = \ExAdmin\ui\support\Request::input();
         try {
             DB::beginTransaction();
             playerManualSystem($data);
@@ -1203,11 +1203,11 @@ class PlayerController
     /**
      * 人工充值
      * @auth true
+     * @param $data
      * @return Form
      */
-    public function artificialRecharge(): Form
+    public function artificialRecharge($data): Form
     {
-        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->number('point', admin_trans('player_recharge_record.fields.point'))
                 ->min(0)
@@ -1386,11 +1386,11 @@ class PlayerController
     /**
      * 人工提现
      * @auth true
+     * @param $data
      * @return Form
      */
-    public function artificialWithdrawal(): Form
+    public function artificialWithdrawal($data): Form
     {
-        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->number('point', admin_trans('player_withdraw_record.fields.point'))
                 ->min(0)

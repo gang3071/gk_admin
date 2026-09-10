@@ -1104,11 +1104,11 @@ class ChannelAgentController
     /**
      * 玩家钱包
      * @auth true
+     * @param $data
      * @return Form
      */
-    public function presentNoPassword(): Form
+    public function presentNoPassword($data): Form
     {
-        $data = \ExAdmin\ui\support\Request::input();
 
         return Form::create([], function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);

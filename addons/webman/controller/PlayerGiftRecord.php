@@ -24,11 +24,11 @@ class PlayerGiftRecord
 
     /**
      * 开增记录
+     * @param $data
      * @return Detail
      */
-    public function detail(): Detail
+    public function detail($data): Detail
     {
-        $data = \ExAdmin\ui\support\Request::input();
         $detailArr = (new $this->model)::where('player_game_log_id', $data['id'])->first();
         return Detail::create($detailArr, function (Detail $detail) use ($data) {
             if (isset($data['id']) && $data['id']) {
