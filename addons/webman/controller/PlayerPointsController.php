@@ -121,8 +121,9 @@ class PlayerPointsController
      * 增加积分表单
      * @auth true
      */
-    public function addPoints($data): Form
+    public function addPoints(): Form
     {
+        $data = Request::input();
         $player = Player::find($data['player_id']);
         if (!$player) {
             return message_error(admin_trans('player_points.message.player_not_found'));
@@ -167,8 +168,9 @@ class PlayerPointsController
      * 扣除积分表单
      * @auth true
      */
-    public function deductPoints($data): Form
+    public function deductPoints(): Form
     {
+        $data = Request::input();
         $player = Player::find($data['player_id']);
         if (!$player) {
             return message_error(admin_trans('player_points.message.player_not_found'));
@@ -221,8 +223,9 @@ class PlayerPointsController
      * 冻结积分表单
      * @auth true
      */
-    public function freezePoints($data): Form
+    public function freezePoints(): Form
     {
+        $data = Request::input();
         $player = Player::find($data['player_id']);
         if (!$player) {
             return message_error(admin_trans('player_points.message.player_not_found'));
@@ -267,8 +270,9 @@ class PlayerPointsController
      * 解冻积分表单
      * @auth true
      */
-    public function unfreezePoints($data): Form
+    public function unfreezePoints(): Form
     {
+        $data = Request::input();
         $player = Player::find($data['player_id']);
         if (!$player) {
             return message_error(admin_trans('player_points.message.player_not_found'));

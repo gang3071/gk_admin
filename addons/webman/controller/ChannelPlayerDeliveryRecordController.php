@@ -599,11 +599,11 @@ class ChannelPlayerDeliveryRecordController
 
     /**
      * 机台信息
-     * @param $data
      * @return Card
      */
-    public function machineInfo($data): Card
+    public function machineInfo(): Card
     {
+        $data = \ExAdmin\ui\support\Request::input();
         $tabs = Tabs::create()
             ->pane(admin_trans('common.detail'), $this->detail($data))
             ->pane(admin_trans('common.chart'), $this->chart($data));
@@ -641,7 +641,7 @@ class ChannelPlayerDeliveryRecordController
      * @param $data
      * @return LineChart
      */
-    public function chart($data): LineChart
+    private function chart($data): LineChart
     {
         $range = Carbon::now()->subDays(15)->format('Y-m-d');
         $openPoint = PlayerGameLog::whereDate('created_at', '>=', $range)

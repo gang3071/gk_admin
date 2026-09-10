@@ -154,8 +154,10 @@ class StorePlayerPointsController
      * 增加积分表单
      * @auth true
      */
-    public function addPoints($data): Form
+    public function addPoints(): Response
     {
+        $data = Request::input();
+
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
             return message_error(admin_trans('player_points.message.permission_denied'));
@@ -205,8 +207,10 @@ class StorePlayerPointsController
      * 扣除积分表单
      * @auth true
      */
-    public function deductPoints($data): Form
+    public function deductPoints(): Response
     {
+        $data = Request::input();
+
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
             return message_error(admin_trans('player_points.message.permission_denied'));
@@ -264,8 +268,10 @@ class StorePlayerPointsController
      * 冻结积分表单
      * @auth true
      */
-    public function freezePoints($data): Form
+    public function freezePoints(): Response
     {
+        $data = Request::input();
+
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
             return message_error(admin_trans('player_points.message.permission_denied'));
@@ -315,8 +321,10 @@ class StorePlayerPointsController
      * 解冻积分表单
      * @auth true
      */
-    public function unfreezePoints($data): Form
+    public function unfreezePoints(): Response
     {
+        $data = Request::input();
+
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
             return message_error(admin_trans('player_points.message.permission_denied'));

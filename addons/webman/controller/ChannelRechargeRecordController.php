@@ -851,11 +851,11 @@ class ChannelRechargeRecordController
      * 查看付款凭证
      * @auth true
      * @group channel
-     * @param $data
      * @return Detail
      */
-    public function rechargeCertificate($data): Detail
+    public function rechargeCertificate(): Detail
     {
+        $data = \ExAdmin\ui\support\Request::input();
         return Detail::create($data, function (Detail $detail) {
             $detail->item('certificate')->display(function ($val) {
                 if (!empty($val)) {

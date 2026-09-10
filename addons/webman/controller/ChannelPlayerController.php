@@ -1482,11 +1482,11 @@ class ChannelPlayerController
      * 玩家钱包
      * @auth true
      * @group channel
-     * @param $data
      * @return Form
      */
-    public function playerWallet($data): Form
+    public function playerWallet(): Form
     {
+        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
             $form->row(function (Form $form) {
@@ -1554,11 +1554,11 @@ class ChannelPlayerController
 
     /**
      * 钱包操作
-     * @param $data
      * @return Msg
      */
-    public function store($data): Msg
+    public function store(): Msg
     {
+        $data = \ExAdmin\ui\support\Request::input();
         try {
             Db::beginTransaction();
             playerManualSystem($data);
@@ -1574,11 +1574,11 @@ class ChannelPlayerController
      * 人工充值
      * @auth true
      * @group channel
-     * @param $data
      * @return Form
      */
-    public function artificialRecharge($data): Form
+    public function artificialRecharge(): Form
     {
+        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->number('point', admin_trans('player_recharge_record.fields.point'))
                 ->min(0)
@@ -1758,11 +1758,11 @@ class ChannelPlayerController
      * 人工提现
      * @auth true
      * @group channel
-     * @param $data
      * @return Form
      */
-    public function artificialWithdrawal($data): Form
+    public function artificialWithdrawal(): Form
     {
+        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->number('point', admin_trans('player_withdraw_record.fields.point'))
                 ->min(0)
@@ -3929,11 +3929,11 @@ class ChannelPlayerController
     /**
      * 玩家钱包
      * @auth true
-     * @param $data
      * @return Form
      */
-    public function increase($data): Form
+    public function increase(): Form
     {
+        $data = \ExAdmin\ui\support\Request::input();
         return Form::create(new $this->model, function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
             $form->row(function (Form $form) {
@@ -5331,11 +5331,11 @@ class ChannelPlayerController
     /**
      * 玩家钱包
      * @auth true
-     * @param $data
      * @return Form
      */
-    public function presentNoPassword($data): Form
+    public function presentNoPassword(): Form
     {
+        $data = \ExAdmin\ui\support\Request::input();
 
         return Form::create([], function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
