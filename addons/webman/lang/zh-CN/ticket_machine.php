@@ -310,6 +310,7 @@ return [
         'today_bet_amount' => '今日电子总打分',
         'yesterday_bet_amount' => '昨日电子总打分',
         'player_bet_info' => '玩家打分信息',
+        'player_registered_at' => '注册时间',
         'refresh' => '刷新',
         'score_unit' => '分',
         'today_bet_prefix' => '今日打分',

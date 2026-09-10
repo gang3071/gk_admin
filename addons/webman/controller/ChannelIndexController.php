@@ -3950,6 +3950,7 @@ class ChannelIndexController
         // 补充玩家打码量信息标签
         $logLabels['player_bet_info'] = admin_trans('ticket_machine.record.player_bet_info');
         $logLabels['player_name'] = admin_trans('ticket_machine.record.player_name');
+        $logLabels['player_registered_at'] = admin_trans('ticket_machine.record.player_registered_at');
         $logLabels['today_bet_amount'] = admin_trans('ticket_machine.record.today_bet_amount');
         $logLabels['yesterday_bet_amount'] = admin_trans('ticket_machine.record.yesterday_bet_amount');
         $logLabels['refresh'] = admin_trans('ticket_machine.record.refresh');
@@ -4194,6 +4195,7 @@ class ChannelIndexController
                     'player_name' => $player->name ?? '',
                     'player_uuid' => $player->uuid ?? '',
                     'player_phone' => $player->phone ?? '',
+                    'player_registered_at' => $player->created_at ? $player->created_at->format('Y-m-d H:i:s') : '',  // 玩家注册时间
                     'today_bet_amount' => $todayBetAmount,
                     'yesterday_bet_amount' => $yesterdayBetAmount,
                     'claimed_welfare_records' => $claimedWelfareRecords,  // 今日已领取的福利券记录

@@ -314,6 +314,7 @@ return [
         'today_bet_amount' => 'Today Electronic Score',
         'yesterday_bet_amount' => 'Yesterday Electronic Score',
         'player_bet_info' => 'Player Score Info',
+        'player_registered_at' => 'Registered At',
         'refresh' => 'Refresh',
         'score_unit' => 'pts',
         'today_bet_prefix' => 'Today bet',
