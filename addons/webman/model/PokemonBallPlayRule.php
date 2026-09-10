@@ -25,6 +25,8 @@ class PokemonBallPlayRule extends Model
 {
     use HasDateTimeFormatter;
 
+    protected $guarded = [];
+
     const PLAY_TYPE_ONE_BALL_MULTI_LIGHT = 1; // 一球多燈
     const PLAY_TYPE_THREE_BALL = 2; // 三球
     const PLAY_TYPE_THREE_GUAN = 3; // 三關

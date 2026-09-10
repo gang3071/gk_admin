@@ -527,7 +527,7 @@ class MachineController
                                                 'numeric' => admin_trans('validator.numeric'),
                                                 'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
                                             ]);
-                                    })->sortField('sort')->table()->defaultRow(5);
+                                    })->sortField('sort')->table()->defaultRow(1);
                                 })
                                 ->when(\addons\webman\model\PokemonBallPlayRule::PLAY_TYPE_THREE_BALL, function (Form $form) {
                                     $form->hasMany('pokemonBallPlayRules', admin_trans('pokemon_ball_play.title'), function (Form $form) {
@@ -545,7 +545,7 @@ class MachineController
                                                 'numeric' => admin_trans('validator.numeric'),
                                                 'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
                                             ]);
-                                    })->sortField('sort')->table()->defaultRow(4);
+                                    })->sortField('sort')->table()->defaultRow(1);
                                 })
                                 ->when(\addons\webman\model\PokemonBallPlayRule::PLAY_TYPE_THREE_GUAN, function (Form $form) {
                                     $form->hasMany('pokemonBallPlayRules', admin_trans('pokemon_ball_play.title'), function (Form $form) {
@@ -563,7 +563,7 @@ class MachineController
                                                 'numeric' => admin_trans('validator.numeric'),
                                                 'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
                                             ]);
-                                    })->sortField('sort')->table()->defaultRow(3);
+                                    })->sortField('sort')->table()->defaultRow(1);
                                 });
                         });
 
@@ -865,8 +865,23 @@ class MachineController
             $form->actions()->hideResetButton();
             $form->layout('vertical');
             $form->saving(function (Form $form) {
+                // 调试日志：记录所有表单输入数据
+                $allInput = $form->input() ?? [];
+                \support\Log::info('MachineController saving callback', [
+                    'isEdit' => $form->isEdit(),
+                    'all_input' => $allInput,
+                    'pokemonBallPlayRules' => $form->input('pokemonBallPlayRules'),
+                    'play_type' => $form->input('play_type'),
+                    'game_type' => $form->input('game_type'),
+                    'type' => $form->input('type'),
+                    'cate_id' => $form->input('cate_id'),
+                    'input_keys' => array_keys($allInput),
+                ]);
                 if ($form->isEdit()) {
                     $orgData = $form->driver()->get();
+                    \support\Log::info('MachineController edit orgData', [
+                        'orgData' => $orgData,
+                    ]);
                     /** @var Machine $machine */
                     $machine = Machine::find($orgData['id']);
                     if (empty($machine)) {
@@ -878,6 +893,10 @@ class MachineController
                         DB::commit();
                     } catch (\Exception $e) {
                         DB::rollBack();
+                        \support\Log::error('MachineController edit save error', [
+                            'error' => $e->getMessage(),
+                            'trace' => $e->getTraceAsString(),
+                        ]);
                         return message_error($e->getMessage() ?? admin_trans('form.save_fail'));
                     }
                     return message_success(admin_trans('form.save_success'));
@@ -952,8 +971,23 @@ class MachineController
         $machine->save();
 
         // 保存精灵球玩法规则
+        \support\Log::info('addMachine debug', [
+            'machine_type' => $machine->type,
+            'TYPE_POKEMON_BALL' => GameType::TYPE_POKEMON_BALL,
+            'play_type' => $form->input('play_type'),
+            'is_pokemon' => $machine->type == GameType::TYPE_POKEMON_BALL,
+            'condition' => $machine->type == GameType::TYPE_POKEMON_BALL && !empty($form->input('play_type')),
+            'pokemonBallPlayRules' => $form->input('pokemonBallPlayRules'),
+            'all_input_keys' => array_keys($form->input() ?? []),
+            'isEdit' => $isEdit,
+        ]);
         if ($machine->type == GameType::TYPE_POKEMON_BALL && !empty($form->input('play_type'))) {
             $pokemonBallPlayRules = $form->input('pokemonBallPlayRules', []);
+            \support\Log::info('addMachine pokemonBallPlayRules data', [
+                'rules' => $pokemonBallPlayRules,
+                'is_array' => is_array($pokemonBallPlayRules),
+                'count' => is_array($pokemonBallPlayRules) ? count($pokemonBallPlayRules) : 0,
+            ]);
             // 编辑时删除旧规则
             if ($isEdit) {
                 PokemonBallPlayRule::where('machine_id', $machine->id)->delete();
@@ -961,13 +995,22 @@ class MachineController
             // 保存新规则
             if (!empty($pokemonBallPlayRules)) {
                 foreach ($pokemonBallPlayRules as $key => $rule) {
+                    \support\Log::info('addMachine processing rule', [
+                        'key' => $key,
+                        'rule' => $rule,
+                        'light_count_ok' => !empty($rule['light_count']),
+                        'multiplier_ok' => !empty($rule['multiplier']),
+                    ]);
                     if (!empty($rule['light_count']) && !empty($rule['multiplier'])) {
-                        PokemonBallPlayRule::create([
+                        $result = PokemonBallPlayRule::create([
                             'machine_id' => $machine->id,
                             'play_type' => $form->input('play_type'),
                             'light_count' => $rule['light_count'],
                             'multiplier' => $rule['multiplier'],
                             'sort' => $key,
+                        ]);
+                        \support\Log::info('addMachine rule created', [
+                            'result' => $result ? $result->toArray() : null,
                         ]);
                     }
                 }
