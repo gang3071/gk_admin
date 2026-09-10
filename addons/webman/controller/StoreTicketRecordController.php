@@ -477,38 +477,6 @@ class StoreTicketRecordController
             $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
-
-                // 核销按钮（开分票且状态为正常时显示）
-                if ($data['status'] == TicketRecord::STATUS_NORMAL && $data['ticket_type'] == TicketRecord::TYPE_RECHARGE) {
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.record.redeem'))
-                            ->modal([$this, 'scanRedeem'], ['id' => $data['id']])
-                            ->width('600px')
-                            ->type('primary')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                }
-
-                if ($data['status'] == TicketRecord::STATUS_DISABLED) {
-                    // 已禁用 - 显示恢复按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.record.restore'))
-                            ->confirm(admin_trans('ticket_machine.record.restore_confirm'), [$this, 'restoreRecord'], ['id' => $data['id']])
-                            ->type('primary')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                } elseif ($data['status'] == TicketRecord::STATUS_NORMAL) {
-                    // 正常状态 - 显示禁用按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.record.disable'))
-                            ->confirm(admin_trans('ticket_machine.record.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
-                            ->type('warning')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                }
             });
         });
     }

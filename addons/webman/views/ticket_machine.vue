@@ -149,6 +149,11 @@
                     <user-outlined /> {{ playerBetInfo.player_name }} ({{ playerBetInfo.player_phone || playerBetInfo.player_uuid }})
                   </a-tag>
                 </a-descriptions-item>
+                <a-descriptions-item :label="labels.player_registered_at || '註冊時間'">
+                  <a-tag color="cyan">
+                    <clock-circle-outlined /> {{ playerBetInfo.player_registered_at || '-' }}
+                  </a-tag>
+                </a-descriptions-item>
                 <a-descriptions-item :label="labels.today_bet_amount || '今日電子總打碼量'">
                   <a-tag color="green">
                     <dollar-outlined /> NT$ {{ formatNumber(playerBetInfo.today_bet_amount) }}

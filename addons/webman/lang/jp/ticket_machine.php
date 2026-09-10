@@ -314,6 +314,7 @@ return [
         'today_bet_amount' => '本日の電子スコア',
         'yesterday_bet_amount' => '昨日の電子スコア',
         'player_bet_info' => 'プレイヤースコア情報',
+        'player_registered_at' => '登録日時',
         'refresh' => '更新',
         'score_unit' => '点',
         'today_bet_prefix' => '本日のベット',
