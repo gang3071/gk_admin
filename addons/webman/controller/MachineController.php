@@ -502,18 +502,6 @@ class MachineController
                                     ->required()
                                     ->style(['margin-left' => '10px']);
                             });
-                            $form->row(function (Form $form) {
-                                $form->text('auto_card_domain',
-                                    admin_trans('machine.fields.auto_card_domain'))->maxlength(255)->required()->span(11);
-                                $form->text('auto_card_port', admin_trans('machine.fields.auto_card_port'))
-                                    ->rule([
-                                        'regex:/^([1-9]|[1-9][0-9]{1,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])$/' => admin_trans('validator.machine_port'),
-                                    ])
-                                    ->maxlength(6)
-                                    ->span(11)
-                                    ->required()
-                                    ->style(['margin-left' => '10px']);
-                            });
                             // 精灵球玩法配置
                             $playType = $form->getBindField('play_type');
                             $form->select('play_type', admin_trans('pokemon_ball_play.fields.play_type'))
@@ -579,80 +567,230 @@ class MachineController
                                 });
                         });
 
-                    $form->row(function (Form $form) {
-                        $form->text('control_open_point', admin_trans('machine.fields.control_open_point'))->rule([
-                            'integer' => admin_trans('validator.integer'),
-                            'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
-                            'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
-                        ])->required()->span(11);
-                        $form->text('sort', admin_trans('machine_category.fields.sort'))->rule([
-                            'integer' => admin_trans('validator.integer'),
-                            'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
-                            'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
-                        ])->span(11)->default($this->model::max('sort') + 1)->style(['margin-left' => '10px']);
-                    });
-                    $form->row(function (Form $form) {
-                        $form->number('odds_x', admin_trans('machine.fields.odds_x'))
-                            ->max(100000)
-                            ->min(0.01)
-                            ->precision(2)
-                            ->span(11)
-                            ->required()->style(['width' => '100%']);
-                        $form->number('odds_y', admin_trans('machine.fields.odds_y'))
-                            ->max(100000)
-                            ->min(0.01)
-                            ->precision(2)
-                            ->size('100%')
-                            ->span(11)->required()->style(['margin-left' => '10px', 'width' => '100%']);
-                    });
-
-                    $form->row(function (Form $form) {
-                        $form->text('min_point', admin_trans('machine.fields.min_point'))
-                            ->rule([
-                                'integer' => admin_trans('validator.integer'),
-                                'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
-                                'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
-                            ])->span(11)->required()->help(admin_trans('machine.help.min_point'));
-                        $form->text('max_point', admin_trans('machine.fields.max_point'))
-                            ->rule([
-                                'integer' => admin_trans('validator.integer'),
-                                'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
-                                'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
-                            ])->span(11)->required()->help(admin_trans('machine.help.max_point'))->style(['margin-left' => '10px']);
-                    });
-                    $form->row(function (Form $form) {
-                        $form->selectTable('strategy_id', admin_trans('machine.fields.strategy_id'))
-                            ->grid([MachineStrategyController::class, 'selectList'])
-                            ->display(function ($ids, $data) {
-                                if ($ids) {
-                                    /** @var MachineStrategy $strategy */
-                                    $strategy = MachineStrategy::find($ids[0]);
-                                    return Html::div()->content(admin_trans('machine.select') . $strategy->name);
-                                } else {
-                                    if ($data['strategy_id']) {
-                                        /** @var MachineStrategy $strategy */
-                                        $strategy = MachineStrategy::find($data['strategy_id']);
-                                        return Html::div()->content(admin_trans('machine.select') . $strategy->name);
-                                    }
-                                }
-                                return [];
-                            })->span(11);
-                        $producer = plugin()->webman->config('database.machine_producer_model');
-                        $options = $producer::where('status', 1)->select(['id', 'name'])->pluck('name', 'id')->all();
-                        $form->select('producer_id', admin_trans('machine.fields.producer_id'))
-                            ->options($options)
-                            ->span(11);
-                    });
-                    $form->hidden('game_type')->bindAttr('value', $gameType)->when(GameType::TYPE_STEEL_BALL,
-                        function (Form $form) {
+                    // 以下字段仅在非精灵球类型时显示
+                    $form->hidden('game_type')->bindAttr('value', $gameType)
+                        ->when(GameType::TYPE_SLOT, function (Form $form) {
+                            $form->row(function (Form $form) {
+                                $form->text('control_open_point', admin_trans('machine.fields.control_open_point'))->rule([
+                                    'integer' => admin_trans('validator.integer'),
+                                    'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                    'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                ])->required()->span(11);
+                                $form->text('sort', admin_trans('machine_category.fields.sort'))->rule([
+                                    'integer' => admin_trans('validator.integer'),
+                                    'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                                ])->span(11)->default($this->model::max('sort') + 1)->style(['margin-left' => '10px']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->number('odds_x', admin_trans('machine.fields.odds_x'))
+                                    ->max(100000)
+                                    ->min(0.01)
+                                    ->precision(2)
+                                    ->span(11)
+                                    ->required()->style(['width' => '100%']);
+                                $form->number('odds_y', admin_trans('machine.fields.odds_y'))
+                                    ->max(100000)
+                                    ->min(0.01)
+                                    ->precision(2)
+                                    ->size('100%')
+                                    ->span(11)->required()->style(['margin-left' => '10px', 'width' => '100%']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->text('min_point', admin_trans('machine.fields.min_point'))
+                                    ->rule([
+                                        'integer' => admin_trans('validator.integer'),
+                                        'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                        'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                    ])->span(11)->required()->help(admin_trans('machine.help.min_point'));
+                                $form->text('max_point', admin_trans('machine.fields.max_point'))
+                                    ->rule([
+                                        'integer' => admin_trans('validator.integer'),
+                                        'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                        'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                    ])->span(11)->required()->help(admin_trans('machine.help.max_point'))->style(['margin-left' => '10px']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->selectTable('strategy_id', admin_trans('machine.fields.strategy_id'))
+                                    ->grid([MachineStrategyController::class, 'selectList'])
+                                    ->display(function ($ids, $data) {
+                                        if ($ids) {
+                                            /** @var MachineStrategy $strategy */
+                                            $strategy = MachineStrategy::find($ids[0]);
+                                            return Html::div()->content(admin_trans('machine.select') . $strategy->name);
+                                        } else {
+                                            if ($data['strategy_id']) {
+                                                /** @var MachineStrategy $strategy */
+                                                $strategy = MachineStrategy::find($data['strategy_id']);
+                                                return Html::div()->content(admin_trans('machine.select') . $strategy->name);
+                                            }
+                                        }
+                                        return [];
+                                    })->span(11);
+                                $producer = plugin()->webman->config('database.machine_producer_model');
+                                $options = $producer::where('status', 1)->select(['id', 'name'])->pluck('name', 'id')->all();
+                                $form->select('producer_id', admin_trans('machine.fields.producer_id'))
+                                    ->options($options)
+                                    ->span(11);
+                            });
+                            $form->switch('is_special', admin_trans('machine.fields.is_special'))->default(false);
+                            $form->select('control_type', admin_trans('machine.fields.control_type'))
+                                ->required()
+                                ->options([
+                                    Machine::CONTROL_TYPE_MEI => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                                    Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                                ]);
+                        })
+                        ->when(GameType::TYPE_STEEL_BALL, function (Form $form) {
+                            $form->row(function (Form $form) {
+                                $form->text('control_open_point', admin_trans('machine.fields.control_open_point'))->rule([
+                                    'integer' => admin_trans('validator.integer'),
+                                    'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                    'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                ])->required()->span(11);
+                                $form->text('sort', admin_trans('machine_category.fields.sort'))->rule([
+                                    'integer' => admin_trans('validator.integer'),
+                                    'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                                ])->span(11)->default($this->model::max('sort') + 1)->style(['margin-left' => '10px']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->number('odds_x', admin_trans('machine.fields.odds_x'))
+                                    ->max(100000)
+                                    ->min(0.01)
+                                    ->precision(2)
+                                    ->span(11)
+                                    ->required()->style(['width' => '100%']);
+                                $form->number('odds_y', admin_trans('machine.fields.odds_y'))
+                                    ->max(100000)
+                                    ->min(0.01)
+                                    ->precision(2)
+                                    ->size('100%')
+                                    ->span(11)->required()->style(['margin-left' => '10px', 'width' => '100%']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->text('min_point', admin_trans('machine.fields.min_point'))
+                                    ->rule([
+                                        'integer' => admin_trans('validator.integer'),
+                                        'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                        'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                    ])->span(11)->required()->help(admin_trans('machine.help.min_point'));
+                                $form->text('max_point', admin_trans('machine.fields.max_point'))
+                                    ->rule([
+                                        'integer' => admin_trans('validator.integer'),
+                                        'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                        'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                    ])->span(11)->required()->help(admin_trans('machine.help.max_point'))->style(['margin-left' => '10px']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->selectTable('strategy_id', admin_trans('machine.fields.strategy_id'))
+                                    ->grid([MachineStrategyController::class, 'selectList'])
+                                    ->display(function ($ids, $data) {
+                                        if ($ids) {
+                                            /** @var MachineStrategy $strategy */
+                                            $strategy = MachineStrategy::find($ids[0]);
+                                            return Html::div()->content(admin_trans('machine.select') . $strategy->name);
+                                        } else {
+                                            if ($data['strategy_id']) {
+                                                /** @var MachineStrategy $strategy */
+                                                $strategy = MachineStrategy::find($data['strategy_id']);
+                                                return Html::div()->content(admin_trans('machine.select') . $strategy->name);
+                                            }
+                                        }
+                                        return [];
+                                    })->span(11);
+                                $producer = plugin()->webman->config('database.machine_producer_model');
+                                $options = $producer::where('status', 1)->select(['id', 'name'])->pluck('name', 'id')->all();
+                                $form->select('producer_id', admin_trans('machine.fields.producer_id'))
+                                    ->options($options)
+                                    ->span(11);
+                            });
                             $form->text('correct_rate', admin_trans('machine.fields.correct_rate'))->maxlength(50);
-                        })->when(GameType::TYPE_FISH, function (Form $form) {
-                        $form->text('identify_url',
-                            admin_trans('machine.fields.identify_url'))->maxlength(255)->required();
-                        $form->select('seat', admin_trans('machine.fields.seat'))
-                            ->options(getSeatOptions())
-                            ->required();
-                    });
+                            $form->switch('is_special', admin_trans('machine.fields.is_special'))->default(false);
+                            $form->select('control_type', admin_trans('machine.fields.control_type'))
+                                ->required()
+                                ->options([
+                                    Machine::CONTROL_TYPE_MEI => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                                    Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                                ]);
+                        })
+                        ->when(GameType::TYPE_FISH, function (Form $form) {
+                            $form->row(function (Form $form) {
+                                $form->text('control_open_point', admin_trans('machine.fields.control_open_point'))->rule([
+                                    'integer' => admin_trans('validator.integer'),
+                                    'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                    'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                ])->required()->span(11);
+                                $form->text('sort', admin_trans('machine_category.fields.sort'))->rule([
+                                    'integer' => admin_trans('validator.integer'),
+                                    'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                    'min:0' => admin_trans('validator.min', null, ['{min}' => 0]),
+                                ])->span(11)->default($this->model::max('sort') + 1)->style(['margin-left' => '10px']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->number('odds_x', admin_trans('machine.fields.odds_x'))
+                                    ->max(100000)
+                                    ->min(0.01)
+                                    ->precision(2)
+                                    ->span(11)
+                                    ->required()->style(['width' => '100%']);
+                                $form->number('odds_y', admin_trans('machine.fields.odds_y'))
+                                    ->max(100000)
+                                    ->min(0.01)
+                                    ->precision(2)
+                                    ->size('100%')
+                                    ->span(11)->required()->style(['margin-left' => '10px', 'width' => '100%']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->text('min_point', admin_trans('machine.fields.min_point'))
+                                    ->rule([
+                                        'integer' => admin_trans('validator.integer'),
+                                        'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                        'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                    ])->span(11)->required()->help(admin_trans('machine.help.min_point'));
+                                $form->text('max_point', admin_trans('machine.fields.max_point'))
+                                    ->rule([
+                                        'integer' => admin_trans('validator.integer'),
+                                        'max:100000' => admin_trans('validator.max', null, ['{max}' => 100000]),
+                                        'min:1' => admin_trans('validator.min', null, ['{min}' => 1]),
+                                    ])->span(11)->required()->help(admin_trans('machine.help.max_point'))->style(['margin-left' => '10px']);
+                            });
+                            $form->row(function (Form $form) {
+                                $form->selectTable('strategy_id', admin_trans('machine.fields.strategy_id'))
+                                    ->grid([MachineStrategyController::class, 'selectList'])
+                                    ->display(function ($ids, $data) {
+                                        if ($ids) {
+                                            /** @var MachineStrategy $strategy */
+                                            $strategy = MachineStrategy::find($ids[0]);
+                                            return Html::div()->content(admin_trans('machine.select') . $strategy->name);
+                                        } else {
+                                            if ($data['strategy_id']) {
+                                                /** @var MachineStrategy $strategy */
+                                                $strategy = MachineStrategy::find($data['strategy_id']);
+                                                return Html::div()->content(admin_trans('machine.select') . $strategy->name);
+                                            }
+                                        }
+                                        return [];
+                                    })->span(11);
+                                $producer = plugin()->webman->config('database.machine_producer_model');
+                                $options = $producer::where('status', 1)->select(['id', 'name'])->pluck('name', 'id')->all();
+                                $form->select('producer_id', admin_trans('machine.fields.producer_id'))
+                                    ->options($options)
+                                    ->span(11);
+                            });
+                            $form->text('identify_url',
+                                admin_trans('machine.fields.identify_url'))->maxlength(255)->required();
+                            $form->select('seat', admin_trans('machine.fields.seat'))
+                                ->options(getSeatOptions())
+                                ->required();
+                            $form->switch('is_special', admin_trans('machine.fields.is_special'))->default(false);
+                            $form->select('control_type', admin_trans('machine.fields.control_type'))
+                                ->required()
+                                ->options([
+                                    Machine::CONTROL_TYPE_MEI => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                                    Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                                ]);
+                        });
                     $form->watch([
                         'cate_id' => function ($value, Watch $watch) {
                             /** @var MachineCategory $cate */
@@ -660,13 +798,6 @@ class MachineController
                             $watch->set('game_type', $cate->gameType->type ?? 0);
                         }
                     ]);
-                    $form->switch('is_special', admin_trans('machine.fields.is_special'))->default(false);
-                    $form->select('control_type', admin_trans('machine.fields.control_type'))
-                        ->required()
-                        ->options([
-                            Machine::CONTROL_TYPE_MEI => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
-                            Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
-                        ]);
                     $form->textarea('remark', admin_trans('machine.fields.remark'))->maxlength(125)->bindAttr('rows',
                         3);
                 })
@@ -795,22 +926,29 @@ class MachineController
         $machine->code = $form->input('code');
         $machine->domain = $form->input('domain');
         $machine->port = $form->input('port');
-        $machine->auto_card_domain = $form->input('auto_card_domain');
-        $machine->auto_card_port = $form->input('auto_card_port');
+        // 精灵球类型不需要这些字段，编辑时保留原值
+        if ($machine->type != GameType::TYPE_POKEMON_BALL) {
+            $machine->auto_card_domain = $form->input('auto_card_domain');
+            $machine->auto_card_port = $form->input('auto_card_port');
+        }
         $machine->ip = $form->input('ip') ?? '';
         $machine->identify_url = $form->input('identify_url') ?? '';
         $machine->seat = $form->input('seat') ?? 0;
-        $machine->control_open_point = $form->input('control_open_point');
-        $machine->sort = $form->input('sort');
-        $machine->odds_x = $form->input('odds_x');
-        $machine->odds_y = $form->input('odds_y');
+        // 精灵球类型不需要这些字段，编辑时保留原值
+        if ($machine->type != GameType::TYPE_POKEMON_BALL) {
+            $machine->control_open_point = $form->input('control_open_point');
+            $machine->sort = $form->input('sort');
+            $machine->odds_x = $form->input('odds_x');
+            $machine->odds_y = $form->input('odds_y');
+            $machine->min_point = $form->input('min_point');
+            $machine->max_point = $form->input('max_point');
+            $machine->producer_id = $form->input('producer_id');
+            $machine->is_special = $form->input('is_special');
+            $machine->control_type = $form->input('control_type');
+        }
         $machine->strategy_id = empty($form->input('strategy_id')) ? 0 : $form->input('strategy_id');
-        $machine->min_point = $form->input('min_point');
-        $machine->max_point = $form->input('max_point');
-        $machine->control_type = $form->input('control_type');
         $machine->remark = $form->input('remark');
         $machine->label_id = $form->input('label_id');
-        $machine->is_special = $form->input('is_special');
         $machine->save();
 
         // 保存精灵球玩法规则
