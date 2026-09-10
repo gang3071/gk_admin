@@ -865,23 +865,12 @@ class MachineController
             $form->actions()->hideResetButton();
             $form->layout('vertical');
             $form->saving(function (Form $form) {
-                // 调试日志：记录所有表单输入数据
-                $allInput = $form->input() ?? [];
-                \support\Log::info('MachineController saving callback', [
-                    'isEdit' => $form->isEdit(),
-                    'all_input' => $allInput,
-                    'pokemonBallPlayRules' => $form->input('pokemonBallPlayRules'),
-                    'play_type' => $form->input('play_type'),
-                    'game_type' => $form->input('game_type'),
-                    'type' => $form->input('type'),
-                    'cate_id' => $form->input('cate_id'),
-                    'input_keys' => array_keys($allInput),
-                ]);
+                // 提前取出精灵球玩法规则数据，避免后续被清空
+                $pokemonBallPlayRules = $form->input('pokemonBallPlayRules', []);
+                $playType = $form->input('play_type');
+
                 if ($form->isEdit()) {
                     $orgData = $form->driver()->get();
-                    \support\Log::info('MachineController edit orgData', [
-                        'orgData' => $orgData,
-                    ]);
                     /** @var Machine $machine */
                     $machine = Machine::find($orgData['id']);
                     if (empty($machine)) {
@@ -889,14 +878,10 @@ class MachineController
                     }
                     DB::beginTransaction();
                     try {
-                        $this->addMachine($form, $machine, true);
+                        $this->addMachine($form, $machine, true, $pokemonBallPlayRules, $playType);
                         DB::commit();
                     } catch (\Exception $e) {
                         DB::rollBack();
-                        \support\Log::error('MachineController edit save error', [
-                            'error' => $e->getMessage(),
-                            'trace' => $e->getTraceAsString(),
-                        ]);
                         return message_error($e->getMessage() ?? admin_trans('form.save_fail'));
                     }
                     return message_success(admin_trans('form.save_success'));
@@ -914,7 +899,7 @@ class MachineController
                     DB::beginTransaction();
                     try {
                         $machine = new Machine();
-                        $this->addMachine($form, $machine);
+                        $this->addMachine($form, $machine, false, $pokemonBallPlayRules, $playType);
                         DB::commit();
                     } catch (\Exception $e) {
                         DB::rollBack();
@@ -935,8 +920,15 @@ class MachineController
      * @throws Exception
      * @throws \Exception
      */
-    protected function addMachine(Form $form, Machine $machine, bool $isEdit = false): void
+    protected function addMachine(Form $form, Machine $machine, bool $isEdit = false, array $pokemonBallPlayRules = [], ?int $playType = null): void
     {
+        \support\Log::info('addMachine called', [
+            'isEdit' => $isEdit,
+            'pokemonBallPlayRules_param' => $pokemonBallPlayRules,
+            'playType_param' => $playType,
+            'machine_type' => $machine->type,
+            'form_input_pokemonBallPlayRules' => $form->input('pokemonBallPlayRules'),
+        ]);
         $machine->cate_id = $form->input('cate_id');
         $machine->producer_id = $form->input('producer_id');
         $machine->type = $form->input('type');
@@ -970,51 +962,38 @@ class MachineController
         $machine->label_id = $form->input('label_id');
         $machine->save();
 
-        // 保存精灵球玩法规则
-        \support\Log::info('addMachine debug', [
+        // 保存精灵球玩法规则（数据通过参数传入，避免被 $machine->save() 清空）
+        \support\Log::info('addMachine before pokemon rules check', [
             'machine_type' => $machine->type,
-            'TYPE_POKEMON_BALL' => GameType::TYPE_POKEMON_BALL,
-            'play_type' => $form->input('play_type'),
-            'is_pokemon' => $machine->type == GameType::TYPE_POKEMON_BALL,
-            'condition' => $machine->type == GameType::TYPE_POKEMON_BALL && !empty($form->input('play_type')),
-            'pokemonBallPlayRules' => $form->input('pokemonBallPlayRules'),
-            'all_input_keys' => array_keys($form->input() ?? []),
-            'isEdit' => $isEdit,
+            'playType' => $playType,
+            'pokemonBallPlayRules' => $pokemonBallPlayRules,
+            'condition_type' => $machine->type == GameType::TYPE_POKEMON_BALL,
+            'condition_playtype' => !empty($playType),
         ]);
-        if ($machine->type == GameType::TYPE_POKEMON_BALL && !empty($form->input('play_type'))) {
-            $pokemonBallPlayRules = $form->input('pokemonBallPlayRules', []);
-            \support\Log::info('addMachine pokemonBallPlayRules data', [
-                'rules' => $pokemonBallPlayRules,
-                'is_array' => is_array($pokemonBallPlayRules),
-                'count' => is_array($pokemonBallPlayRules) ? count($pokemonBallPlayRules) : 0,
-            ]);
+        if ($machine->type == GameType::TYPE_POKEMON_BALL && !empty($playType)) {
             // 编辑时删除旧规则
             if ($isEdit) {
-                PokemonBallPlayRule::where('machine_id', $machine->id)->delete();
+                $deleted = PokemonBallPlayRule::where('machine_id', $machine->id)->delete();
+                \support\Log::info('addMachine deleted old rules', ['deleted' => $deleted]);
             }
             // 保存新规则
             if (!empty($pokemonBallPlayRules)) {
                 foreach ($pokemonBallPlayRules as $key => $rule) {
-                    \support\Log::info('addMachine processing rule', [
-                        'key' => $key,
-                        'rule' => $rule,
-                        'light_count_ok' => !empty($rule['light_count']),
-                        'multiplier_ok' => !empty($rule['multiplier']),
-                    ]);
                     if (!empty($rule['light_count']) && !empty($rule['multiplier'])) {
-                        $result = PokemonBallPlayRule::create([
+                        $created = PokemonBallPlayRule::create([
                             'machine_id' => $machine->id,
-                            'play_type' => $form->input('play_type'),
+                            'play_type' => $playType,
                             'light_count' => $rule['light_count'],
                             'multiplier' => $rule['multiplier'],
                             'sort' => $key,
                         ]);
-                        \support\Log::info('addMachine rule created', [
-                            'result' => $result ? $result->toArray() : null,
-                        ]);
+                        \support\Log::info('addMachine rule created', ['id' => $created->id ?? null]);
                     }
                 }
             }
+            // 验证保存结果
+            $count = PokemonBallPlayRule::where('machine_id', $machine->id)->count();
+            \support\Log::info('addMachine rules after save', ['count' => $count]);
         }
         //保存修改时进行缓存处理
         // 格式化缓存key
