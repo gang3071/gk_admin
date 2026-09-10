@@ -333,7 +333,7 @@ class AgentStoreProfitReportController
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
             SUM(CASE WHEN (`ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . ") OR (`ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " AND (`player_id` = 0 OR `player_id` IS NULL)) THEN `score` ELSE 0 END) AS counter_redeem_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS ticket_open_score_used_amount,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
+            SUM(CASE WHEN `status` = " . TicketRecord::STATUS_BACKEND_USED . " THEN `score` ELSE 0 END) AS redeem_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WITHDRAW . " AND `status` = " . TicketRecord::STATUS_MACHINE_USED . " THEN `score` ELSE 0 END) AS redeem_machine_amount
         ")->groupBy('store_admin_id')->get();
 
@@ -695,11 +695,12 @@ class AgentStoreProfitReportController
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
 
-            $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
+            $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0);
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);
 
+            $ticketOpenScoreUsedAmount = floatval($redeemData->ticket_open_score_used_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
 
             $lotteryAmount = floatval($lotteryData->lottery_amount ?? 0);

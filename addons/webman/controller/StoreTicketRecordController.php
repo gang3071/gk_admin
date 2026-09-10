@@ -437,6 +437,11 @@ class StoreTicketRecordController
                         admin_trans('common.start_time'),
                         admin_trans('common.end_time')
                     ]);
+                $filter->between()->dateTimeRange('scanned_at')
+                    ->placeholder([
+                        admin_trans('ticket_machine.record.scanned_at_start'),
+                        admin_trans('ticket_machine.record.scanned_at_end')
+                    ]);
             });
 
             // 处理可编辑列的保存
