@@ -922,11 +922,12 @@ class ChannelStoreProfitReportController
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
 
-            $ticketOpenScoreUsedAmount = floatval($ticketData->ticket_open_score_used_amount ?? 0);
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
+            $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
             $experienceCouponAmount = floatval($ticketData->experience_coupon_amount ?? 0);
             $welfareCouponAmount = floatval($ticketData->welfare_coupon_amount ?? 0);
 
+            $ticketOpenScoreUsedAmount = floatval($redeemData->ticket_open_score_used_amount ?? 0);
             $redeemAmount = floatval($redeemData->redeem_amount ?? 0);
             $redeemMachineAmount = floatval($redeemData->redeem_machine_amount ?? 0);
 
