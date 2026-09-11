@@ -23,6 +23,7 @@ use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\support\Container;
+use GatewayWorker\Lib\Gateway;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Log;
@@ -783,6 +784,15 @@ class AdminOfflineMachineController
             }
         }
 
+        // 检测机台 TCP 在线状态
+        $isOnline = false;
+        try {
+            $uid = $machine->domain . ':' . $machine->port;
+            $isOnline = Gateway::isUidOnline($uid);
+        } catch (\Exception $e) {
+            Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
+        }
+
         return admin_view(plugin()->webman->getPath() . '/views/command_test.vue')->attrs([
             'machine_id' => $machine->id,
             'machine_code' => $machine->code,
@@ -791,6 +801,9 @@ class AdminOfflineMachineController
             'control_type_name' => admin_trans('machine.control_type.' . $machine->control_type),
             'game_type' => $machine->type,
             'game_type_name' => $machine->type == GameType::TYPE_SLOT ? 'Slot' : '钢珠',
+            'is_online' => $isOnline,
+            'domain' => $machine->domain,
+            'port' => $machine->port,
             'command_list' => $commandList,
             // 多语言数据
             'lang' => [

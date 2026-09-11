@@ -1,27 +1,35 @@
 <template>
   <div class="command-test-container">
-    <!-- 机台信息卡片 -->
-    <a-card :bordered="false" class="machine-info-card">
-      <template #title>
-        <span style="font-size: 20px; font-weight: 600;">
-          <ApiOutlined /> {{ machine_code }} - 指令测试
-        </span>
-      </template>
-      <a-descriptions :column="4" size="small">
-        <a-descriptions-item label="机台名称">
-          <strong>{{ machine_name }}</strong>
-        </a-descriptions-item>
-        <a-descriptions-item label="控制类型">
-          <a-tag color="orange">{{ control_type_name }}</a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="游戏类型">
-          <a-tag color="blue">{{ game_type_name }}</a-tag>
-        </a-descriptions-item>
-        <a-descriptions-item label="机台来源">
-          <a-tag color="purple">线下版</a-tag>
-        </a-descriptions-item>
-      </a-descriptions>
-    </a-card>
+    <div class="content-wrapper">
+      <!-- 机台信息卡片 -->
+      <a-card :bordered="false" class="machine-info-card">
+        <template #title>
+          <div class="card-title">
+            <span class="title-text">
+              <ApiOutlined /> {{ machine_code }}
+            </span>
+            <a-badge :status="is_online ? 'processing' : 'error'" :text="is_online ? '在線' : '離線'" />
+          </div>
+        </template>
+        <a-descriptions :column="2" size="small" bordered>
+          <a-descriptions-item label="機台名稱">
+            <strong>{{ machine_name }}</strong>
+          </a-descriptions-item>
+          <a-descriptions-item label="連接狀態">
+            <a-tag :color="is_online ? 'success' : 'error'">
+              {{ is_online ? '✓ TCP已連接' : '✗ TCP未連接' }}
+            </a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="控制類型">
+            <a-tag color="orange">{{ control_type_name }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="遊戲類型">
+            <a-tag color="blue">{{ game_type_name }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="Domain">{{ domain }}</a-descriptions-item>
+          <a-descriptions-item label="Port">{{ port }}</a-descriptions-item>
+        </a-descriptions>
+      </a-card>
 
     <!-- 指令分类 -->
     <a-tabs v-model:activeKey="activeTab" class="command-tabs" type="card">
@@ -30,7 +38,7 @@
         :key="category"
         :tab="category"
       >
-        <a-space :size="12" direction="vertical" style="width: 100%;">
+        <a-space :size="8" direction="vertical" style="width: 100%;">
           <a-card
             v-for="(cmd, index) in commands"
             :key="index"
@@ -51,18 +59,19 @@
                 <div class="command-desc">{{ cmd.desc }}</div>
 
                 <!-- ✅ 参数输入框（开任意分等需要输入参数的指令） -->
-                <div v-if="cmd.has_input" class="command-input" style="margin-top: 12px;">
+                <div v-if="cmd.has_input" class="command-input">
                   <a-input-number
                     v-model:value="cmdInputValues[cmd.cmd]"
                     :min="1"
                     :max="99999"
                     :placeholder="cmd.input_label || '请输入参数'"
-                    style="width: 200px;"
+                    size="small"
+                    style="width: 180px;"
                   >
                     <template #addonBefore>{{ cmd.input_label || '参数' }}</template>
                   </a-input-number>
-                  <span style="margin-left: 8px; color: #8c8c8c; font-size: 12px;">
-                    默认: {{ cmd.default_value }}
+                  <span style="margin-left: 8px; color: #8c8c8c; font-size: 11px;">
+                    預設: {{ cmd.default_value }}
                   </span>
                 </div>
               </div>
@@ -111,6 +120,7 @@
         </a-space>
       </a-tab-pane>
     </a-tabs>
+    </div>
   </div>
 </template>
 
@@ -153,6 +163,18 @@ export default {
     lang: {
       type: Object,
       required: true
+    },
+    is_online: {
+      type: Boolean,
+      default: false
+    },
+    domain: {
+      type: String,
+      default: ''
+    },
+    port: {
+      type: [String, Number],
+      default: ''
     }
   },
   data() {
@@ -315,41 +337,88 @@ export default {
 
 <style scoped>
 .command-test-container {
-  padding: 20px;
+  padding: 16px;
   background: #f0f2f5;
   min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+.content-wrapper {
+  width: 100%;
+  max-width: 1200px;
 }
 
 .machine-info-card {
-  margin-bottom: 20px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border-radius: 8px;
 }
 
 .machine-info-card :deep(.ant-card-head) {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
+  padding: 12px 20px;
+  min-height: auto;
 }
 
 .machine-info-card :deep(.ant-card-head-title) {
   color: white;
+  padding: 0;
+}
+
+.machine-info-card :deep(.ant-card-body) {
+  padding: 16px 20px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.title-text {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.card-title :deep(.ant-badge-status-text) {
+  color: white;
+  font-size: 13px;
+  margin-left: 4px;
 }
 
 .command-tabs {
   background: white;
-  padding: 16px;
+  padding: 12px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+
+.command-tabs :deep(.ant-tabs-nav) {
+  margin-bottom: 12px;
+}
+
+.command-tabs :deep(.ant-tabs-tab) {
+  padding: 8px 16px;
+  font-size: 13px;
 }
 
 .command-card {
-  transition: all 0.3s;
+  transition: all 0.2s;
   border: 1px solid #e8e8e8;
+  border-radius: 6px;
+}
+
+.command-card :deep(.ant-card-body) {
+  padding: 14px 16px;
 }
 
 .command-card:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+  border-color: #d9d9d9;
 }
 
 .danger-command {
@@ -357,52 +426,109 @@ export default {
   background: #fff2f0;
 }
 
+.danger-command:hover {
+  border-color: #ffa39e;
+}
+
 .command-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .command-info {
   flex: 1;
+  min-width: 0;
 }
 
 .command-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: #1a202c;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .command-code {
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+}
+
+.command-code :deep(.ant-tag) {
+  font-size: 12px;
+  padding: 2px 8px;
 }
 
 .command-desc {
-  font-size: 14px;
+  font-size: 12px;
   color: #718096;
+  line-height: 1.5;
 }
 
 .command-action {
-  margin-left: 20px;
+  flex-shrink: 0;
+}
+
+.command-action :deep(.ant-btn) {
+  font-size: 13px;
+  height: 32px;
+  padding: 4px 15px;
+}
+
+.command-input {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #f0f0f0;
+}
+
+.command-input :deep(.ant-input-number) {
+  font-size: 12px;
+}
+
+.command-input :deep(.ant-input-number-group-addon) {
+  font-size: 12px;
+  padding: 0 8px;
 }
 
 /* ✅ 指令内部的结果区域 */
 .cmd-results {
-  margin-top: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e8e8e8;
+}
+
+.cmd-results :deep(.ant-divider) {
+  margin: 8px 0;
 }
 
 .result-list {
-  max-height: 400px;
+  max-height: 300px;
   overflow-y: auto;
+  padding-right: 4px;
+}
+
+.result-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.result-list::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+  border-radius: 3px;
+}
+
+.result-list::-webkit-scrollbar-thumb:hover {
+  background: #bfbfbf;
 }
 
 .result-item {
-  padding: 12px;
-  margin-bottom: 8px;
-  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 4px;
   border-left: 3px solid;
   background: #fafafa;
+  font-size: 12px;
 }
 
 .result-item.success {
@@ -416,20 +542,17 @@ export default {
 }
 
 .result-item.latest {
-  animation: highlight 1.2s ease-in-out;
+  animation: highlight 1s ease-in-out;
 }
 
 @keyframes highlight {
   0% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);
   }
   50% {
-    transform: scale(1.02);
-    box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.2);
+    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
   }
   100% {
-    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
   }
 }
@@ -437,9 +560,19 @@ export default {
 .result-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 4px;
   flex-wrap: wrap;
+}
+
+.result-header :deep(.ant-tag) {
+  font-size: 11px;
+  padding: 0 6px;
+  line-height: 18px;
+}
+
+.result-header :deep(.ant-badge) {
+  font-size: 11px;
 }
 
 .result-time {
@@ -448,26 +581,36 @@ export default {
 }
 
 .result-message {
-  font-size: 13px;
+  font-size: 12px;
   color: #595959;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   line-height: 1.5;
 }
 
 .result-data {
   background: #1a202c;
   color: #e2e8f0;
-  padding: 10px;
+  padding: 8px;
   border-radius: 4px;
   font-size: 11px;
   overflow-x: auto;
-  max-height: 300px;
+  max-height: 200px;
   overflow-y: auto;
+}
+
+.result-data::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.result-data::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 3px;
 }
 
 .result-data pre {
   margin: 0;
-  font-family: 'Courier New', monospace;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   line-height: 1.4;
 }
 </style>
