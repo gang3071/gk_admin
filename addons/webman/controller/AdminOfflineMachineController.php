@@ -761,21 +761,20 @@ class AdminOfflineMachineController
      * 发送指令（供指令测试页面调用）
      * @auth true
      */
+    /**
+     * 发送指令并等待解析回复（新增方法）
+     *
+     * 此方法会发送指令到机台，等待回复，并返回解析后的数据
+     *
+     * @return array
+     */
     public function sendCommand()
     {
         try {
             $machineId = request()->post('machine_id');
             $cmd = request()->post('cmd');
             $cmdName = request()->post('cmd_name');
-
-            // ✅ 调试日志：记录原始请求数据
-            \support\Log::debug('sendCommand 接收到的参数', [
-                'raw_post' => request()->post(),
-                'raw_body' => request()->rawBody(),
-                'machine_id' => $machineId,
-                'machine_id_type' => gettype($machineId),
-                'cmd' => $cmd,
-            ]);
+            $timeout = (int) request()->post('timeout', 5); // 超时时间，默认5秒
 
             if (!$machineId || !$cmd) {
                 \support\Log::error('sendCommand 缺少必要参数', [
@@ -785,79 +784,57 @@ class AdminOfflineMachineController
                 return json(['code' => 0, 'msg' => '缺少必要参数', 'data' => []]);
             }
 
-            // 尝试查找机台（添加详细日志）
+            // 查找机台
             $machine = Machine::find($machineId);
             if (!$machine) {
                 \support\Log::error('sendCommand 机台不存在', [
                     'machine_id' => $machineId,
-                    'machine_id_type' => gettype($machineId),
-                    'all_machines_count' => Machine::count(),
                 ]);
-                return json(['code' => 0, 'msg' => '机台不存在（ID: ' . $machineId . '）', 'data' => []]);
+                return json(['code' => 0, 'msg' => '机台不存在', 'data' => []]);
             }
 
             // 记录日志
-            \support\Log::info('线下机台指令测试', [
+            \support\Log::info('线下机台指令测试（等待回复）', [
                 'admin_id' => Admin::id(),
                 'machine_id' => $machineId,
                 'machine_code' => $machine->code,
                 'cmd' => $cmd,
                 'cmd_name' => $cmdName,
+                'timeout' => $timeout,
             ]);
 
-            // 调用gk_work API发送指令
-            try {
-                $result = MachineApiService::executeAction(
-                    $machineId,
-                    'send_raw_cmd',
-                    [
-                        'cmd' => $cmd,
-                        'data' => 0,
-                        'is_system' => 0,
-                    ],
-                    Admin::id()
-                );
+            // 调用 gk_work API 发送指令并等待解析回复
+            $result = MachineApiService::executeAction(
+                $machineId,
+                'send_raw_cmd_with_reply', // 使用新的 action
+                [
+                    'cmd' => $cmd,
+                    'data' => 0,
+                    'is_system' => 0,
+                    'timeout' => $timeout,
+                ],
+                Admin::id()
+            );
 
-                // 返回 API 结果，并补充指令信息
+            if ($result['timeout'] ?? false) {
                 return json([
-                    'code' => 1,
-                    'msg' => '指令发送成功',
-                    'data' => array_merge([
-                        'cmd' => $cmd,
-                        'cmd_name' => $cmdName,
-                        'machine_code' => $machine->code,
-                        'timestamp' => date('Y-m-d H:i:s'),
-                    ], is_array($result) ? $result : ['result' => $result])
+                    'code' => 0,
+                    'msg' => '指令发送成功，但等待回复超时',
+                    'data' => array_merge(
+                        ['cmd_name' => $cmdName],
+                        is_array($result) ? $result : ['result' => $result]
+                    )
                 ]);
-
-            } catch (\Exception $apiException) {
-                // gk_work API 返回 code=1 时，MachineApiService 会抛出异常
-                // 但消息中包含"操作成功"，这种情况应该视为成功
-                $errorMsg = $apiException->getMessage();
-                if (strpos($errorMsg, '操作成功') !== false || strpos($errorMsg, '成功') !== false) {
-                    \support\Log::info('线下机台指令发送成功（从异常消息判断）', [
-                        'admin_id' => Admin::id(),
-                        'machine_id' => $machineId,
-                        'cmd' => $cmd,
-                        'api_message' => $errorMsg,
-                    ]);
-                    return json([
-                        'code' => 1,
-                        'msg' => '指令发送成功',
-                        'data' => [
-                            'cmd' => $cmd,
-                            'cmd_name' => $cmdName,
-                            'machine_id' => $machineId,
-                            'machine_code' => $machine->code,
-                            'api_message' => $errorMsg,
-                            'timestamp' => date('Y-m-d H:i:s'),
-                        ]
-                    ]);
-                }
-
-                // 真正的失败
-                throw $apiException;
             }
+
+            return json([
+                'code' => 1,
+                'msg' => '指令发送成功，已收到回复',
+                'data' => array_merge(
+                    ['cmd_name' => $cmdName],
+                    is_array($result) ? $result : ['result' => $result]
+                )
+            ]);
 
         } catch (\Exception $e) {
             \support\Log::error('线下机台指令测试失败', [
