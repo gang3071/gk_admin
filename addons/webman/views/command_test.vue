@@ -193,27 +193,22 @@ export default {
       // 危险指令二次确认（使用 Ant Design Vue Modal）
       if (cmd.danger) {
         const self = this;
+
+        // 构建警告内容
+        const contentText = [
+          this.lang.danger_command_content.replace('{name}', cmd.name),
+          '',
+          this.lang.danger_command_desc.replace('{desc}', cmd.desc),
+          '',
+          this.lang.danger_command_confirm
+        ].join('\n');
+
         this.$confirm({
-          title: this.lang.danger_command_title,
-          content: () => {
-            return (
-              <div>
-                <p style="margin-bottom: 12px;">
-                  <strong>{self.lang.danger_command_content.replace('{name}', cmd.name)}</strong>
-                </p>
-                <p style="color: #8c8c8c; font-size: 13px;">
-                  {self.lang.danger_command_desc.replace('{desc}', cmd.desc)}
-                </p>
-                <p style="margin-top: 12px; color: #ff4d4f;">
-                  {self.lang.danger_command_confirm}
-                </p>
-              </div>
-            );
-          },
+          title: '⚠️ ' + this.lang.danger_command_title,
+          content: contentText,
           okText: this.lang.confirm,
           cancelText: this.lang.cancel,
           okType: 'danger',
-          icon: () => <span style="color: #ff4d4f;">⚠️</span>,
           onOk: async () => {
             await self.executeCommand(cmd);
           },
