@@ -806,18 +806,37 @@ class AdminOfflineMachineController
             ]);
 
             // 调用gk_work API发送指令
-            $result = MachineApiService::executeAction(
-                $machineId,
-                'send_raw_cmd',
-                [
-                    'cmd' => $cmd,
-                    'data' => 0,
-                    'is_system' => 0,
-                ],
-                Admin::id()
-            );
+            try {
+                $result = MachineApiService::executeAction(
+                    $machineId,
+                    'send_raw_cmd',
+                    [
+                        'cmd' => $cmd,
+                        'data' => 0,
+                        'is_system' => 0,
+                    ],
+                    Admin::id()
+                );
 
-            return json(['code' => 1, 'msg' => '指令发送成功', 'data' => $result]);
+                return json(['code' => 1, 'msg' => '指令发送成功', 'data' => $result]);
+
+            } catch (\Exception $apiException) {
+                // gk_work API 返回 code=1 时，MachineApiService 会抛出异常
+                // 但消息中包含"操作成功"，这种情况应该视为成功
+                $errorMsg = $apiException->getMessage();
+                if (strpos($errorMsg, '操作成功') !== false || strpos($errorMsg, '成功') !== false) {
+                    \support\Log::info('线下机台指令发送成功（从异常消息判断）', [
+                        'admin_id' => Admin::id(),
+                        'machine_id' => $machineId,
+                        'cmd' => $cmd,
+                        'api_message' => $errorMsg,
+                    ]);
+                    return json(['code' => 1, 'msg' => '指令发送成功', 'data' => []]);
+                }
+
+                // 真正的失败
+                throw $apiException;
+            }
 
         } catch (\Exception $e) {
             \support\Log::error('线下机台指令测试失败', [
