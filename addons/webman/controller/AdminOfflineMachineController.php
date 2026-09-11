@@ -25,6 +25,7 @@ use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\support\Container;
 use Illuminate\Support\Str;
 use support\Cache;
+use support\Log;
 
 /**
  * 管理后台 - 线下机台管理
@@ -662,23 +663,21 @@ class AdminOfflineMachineController
      * 指令测试页面
      * @auth true
      */
-    public function commandTest()
+    public function commandTest($machine_id, $game_type, $control_type)
     {
-        $machineId = request()->get('machine_id');
-        $gameType = request()->get('game_type');
-        $controlType = request()->get('control_type');
-
-        $machine = Machine::find($machineId);
+        // ✅ 参数从 modal() 的第二个参数传递过来，作为方法参数接收（不是 request()->get()）
+        $machine = Machine::find($machine_id);
         if (!$machine) {
-            return message_error('机台不存在');
+            Log::error('commandTest 机台不存在', ['machine_id' => $machine_id]);
+            return message_error('机台不存在（ID: ' . $machine_id . '）');
         }
 
         // 根据控制类型和游戏类型定义可用指令
         $commandList = [];
 
         // 小淞工控
-        if ($controlType === Machine::CONTROL_TYPE_SONG) {
-            if ($gameType == GameType::TYPE_SLOT) {
+        if ($control_type === Machine::CONTROL_TYPE_SONG) {
+            if ($game_type == GameType::TYPE_SLOT) {
                 // 小淞Slot（收账小卡协议）
                 $commandList = [
                     '查询指令' => [
@@ -709,8 +708,8 @@ class AdminOfflineMachineController
             }
         }
         // 双美工控
-        else if ($controlType === Machine::CONTROL_TYPE_MEI) {
-            if ($gameType == GameType::TYPE_SLOT) {
+        else if ($control_type === Machine::CONTROL_TYPE_MEI) {
+            if ($game_type == GameType::TYPE_SLOT) {
                 // 双美Slot
                 $commandList = [
                     '查询指令' => [
