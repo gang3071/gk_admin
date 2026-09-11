@@ -64,15 +64,15 @@
             </div>
 
             <!-- ✅ 该指令的执行结果（显示在指令下方） -->
-            <div v-if="cmdResults[cmd.cmd] && cmdResults[cmd.cmd].length > 0" class="cmd-results">
+            <div v-if="hasResults(cmd.cmd)" class="cmd-results">
               <a-divider style="margin: 16px 0 12px 0;">
                 <span style="font-size: 12px; color: #8c8c8c;">
-                  执行记录 ({{ cmdResults[cmd.cmd].length }})
+                  执行记录 ({{ getResults(cmd.cmd).length }})
                 </span>
               </a-divider>
               <div class="result-list">
                 <div
-                  v-for="(result, rIndex) in cmdResults[cmd.cmd]"
+                  v-for="(result, rIndex) in getResults(cmd.cmd)"
                   :key="rIndex"
                   :class="[result.success ? 'success' : 'error', rIndex === 0 ? 'latest' : '']"
                   class="result-item"
@@ -145,6 +145,16 @@ export default {
     };
   },
   methods: {
+    // 判断是否有执行结果
+    hasResults(cmdCode) {
+      return this.cmdResults[cmdCode] && Array.isArray(this.cmdResults[cmdCode]) && this.cmdResults[cmdCode].length > 0;
+    },
+
+    // 获取执行结果列表
+    getResults(cmdCode) {
+      return this.cmdResults[cmdCode] || [];
+    },
+
     async sendCommand(cmd) {
       this.currentCommand = cmd.cmd;
       this.loading = true;
@@ -180,15 +190,34 @@ export default {
         const result = await response.json();
 
         // ✅ 将结果添加到对应指令的结果列表（最新的在最前面）
-        if (!this.cmdResults[cmd.cmd]) {
-          this.$set(this.cmdResults, cmd.cmd, []);
-        }
-        this.cmdResults[cmd.cmd].unshift({
+        const resultData = {
           time: new Date().toLocaleString('zh-CN'),
           success: result.code === 1,
           message: result.msg,
           data: result.data
+        };
+
+        console.log('添加结果:', {
+          cmd: cmd.cmd,
+          cmdName: cmd.name,
+          resultData: resultData,
+          beforeCmdResults: JSON.parse(JSON.stringify(this.cmdResults))
         });
+
+        if (!this.cmdResults[cmd.cmd]) {
+          // 创建新数组并使用 $set 确保响应式
+          this.$set(this.cmdResults, cmd.cmd, [resultData]);
+          console.log('使用 $set 创建新数组');
+        } else {
+          // 已存在，直接添加到数组开头
+          this.cmdResults[cmd.cmd].unshift(resultData);
+          console.log('添加到已存在数组');
+        }
+
+        console.log('添加后的 cmdResults:', JSON.parse(JSON.stringify(this.cmdResults)));
+
+        // 强制更新视图（确保 v-if 条件重新计算）
+        this.$forceUpdate();
 
         if (result.code === 1) {
           this.$message.success(`指令执行成功: ${cmd.name}`);
@@ -198,15 +227,21 @@ export default {
 
       } catch (error) {
         // ✅ 将错误结果添加到对应指令的结果列表
-        if (!this.cmdResults[cmd.cmd]) {
-          this.$set(this.cmdResults, cmd.cmd, []);
-        }
-        this.cmdResults[cmd.cmd].unshift({
+        const errorData = {
           time: new Date().toLocaleString('zh-CN'),
           success: false,
           message: error.message,
           data: null
-        });
+        };
+
+        if (!this.cmdResults[cmd.cmd]) {
+          this.$set(this.cmdResults, cmd.cmd, [errorData]);
+        } else {
+          this.cmdResults[cmd.cmd].unshift(errorData);
+        }
+
+        // 强制更新视图
+        this.$forceUpdate();
 
         this.$message.error(`请求失败: ${error.message}`);
       } finally {
