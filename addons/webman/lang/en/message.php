@@ -331,7 +331,7 @@ return [
         'ticket_open_score' => 'Scan Open Score',
         'birthday_bonus' => 'VIP Birthday Bonus',
         'vip_upgrade_bonus' => 'VIP Upgrade Bonus',
-        'storage_recharge' => 'Ticket Purchase',
+        'storage_recharge' => 'Recharge Machine Top-up',
     ],
     'source' => [
         'system' => 'system',

@@ -330,7 +330,7 @@ return [
         'ticket_open_score' => 'スキャン開分',
         'birthday_bonus' => 'VIP誕生日ボーナス',
         'vip_upgrade_bonus' => 'VIPアップグレードボーナス',
-        'storage_recharge' => 'チケット購入',
+        'storage_recharge' => 'チャージ機チャージ',
     ],
     'source' => [
         'system' => 'システム',
