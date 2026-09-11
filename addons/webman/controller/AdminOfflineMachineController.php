@@ -711,30 +711,31 @@ class AdminOfflineMachineController
         else if ($control_type === Machine::CONTROL_TYPE_MEI) {
             if ($game_type == GameType::TYPE_SLOT) {
                 // 双美Slot（标准A2协议）
+                // 注意：指令已去掉A2前缀，sendCmd会自动添加
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '读取开分卡', 'cmd' => 'a221', 'desc' => 'A2 21 - 查询开分卡分数', 'danger' => false],
-                        ['name' => '读取CREDIT2', 'cmd' => 'a222', 'desc' => 'A2 22 - 查询CREDIT2分数', 'danger' => false],
-                        ['name' => '读取押分', 'cmd' => 'a223', 'desc' => 'A2 23 - 查询当前BET押分', 'danger' => false],
-                        ['name' => '读取得分', 'cmd' => 'a224', 'desc' => 'A2 24 - 查询当前WIN得分', 'danger' => false],
-                        ['name' => '读取BB', 'cmd' => 'a225', 'desc' => 'A2 25 - 查询BB次数', 'danger' => false],
-                        ['name' => '读取RB', 'cmd' => 'a226', 'desc' => 'A2 26 - 查询RB次数', 'danger' => false],
-                        ['name' => '读取开分表', 'cmd' => 'a227', 'desc' => 'A2 27 - 查询开分表数据', 'danger' => false],
-                        ['name' => '读取洗分表', 'cmd' => 'a228', 'desc' => 'A2 28 - 查询洗分表数据', 'danger' => false],
+                        ['name' => '读取开分卡', 'cmd' => '21', 'desc' => 'A2 21 - 查询开分卡分数', 'danger' => false],
+                        ['name' => '读取CREDIT2', 'cmd' => '22', 'desc' => 'A2 22 - 查询CREDIT2分数', 'danger' => false],
+                        ['name' => '读取押分', 'cmd' => '23', 'desc' => 'A2 23 - 查询当前BET押分', 'danger' => false],
+                        ['name' => '读取得分', 'cmd' => '24', 'desc' => 'A2 24 - 查询当前WIN得分', 'danger' => false],
+                        ['name' => '读取BB', 'cmd' => '25', 'desc' => 'A2 25 - 查询BB次数', 'danger' => false],
+                        ['name' => '读取RB', 'cmd' => '26', 'desc' => 'A2 26 - 查询RB次数', 'danger' => false],
+                        ['name' => '读取开分表', 'cmd' => '27', 'desc' => 'A2 27 - 查询开分表数据', 'danger' => false],
+                        ['name' => '读取洗分表', 'cmd' => '28', 'desc' => 'A2 28 - 查询洗分表数据', 'danger' => false],
                     ],
                     '开分指令' => [
-                        ['name' => '开分一次', 'cmd' => 'a241', 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
-                        ['name' => '开分10次', 'cmd' => 'a242', 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
-                        ['name' => '开分5次', 'cmd' => 'a249', 'desc' => 'A2 49 - 开分5次（500分）', 'danger' => false],
+                        ['name' => '开分一次', 'cmd' => '41', 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
+                        ['name' => '开分10次', 'cmd' => '42', 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
+                        ['name' => '开分5次', 'cmd' => '49', 'desc' => 'A2 49 - 开分5次（500分）', 'danger' => false],
                     ],
                     '控制指令' => [
-                        ['name' => '移分ON', 'cmd' => 'a245', 'desc' => 'A2 45 - 开启移分功能', 'danger' => false],
-                        ['name' => '移分OFF', 'cmd' => 'a246', 'desc' => 'A2 46 - 关闭移分功能', 'danger' => false],
+                        ['name' => '移分ON', 'cmd' => '45', 'desc' => 'A2 45 - 开启移分功能', 'danger' => false],
+                        ['name' => '移分OFF', 'cmd' => '46', 'desc' => 'A2 46 - 关闭移分功能', 'danger' => false],
                     ],
                     '管理指令' => [
-                        ['name' => '洗分', 'cmd' => 'a244', 'desc' => 'A2 44 - ⚠️ 洗分操作', 'danger' => true],
-                        ['name' => '洗分清零', 'cmd' => 'a243', 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
-                        ['name' => '清除统计', 'cmd' => 'a247', 'desc' => 'A2 47 - ⚠️ 清除BET/WIN/BB/RB统计', 'danger' => true],
+                        ['name' => '洗分', 'cmd' => '44', 'desc' => 'A2 44 - ⚠️ 洗分操作', 'danger' => true],
+                        ['name' => '洗分清零', 'cmd' => '43', 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
+                        ['name' => '清除统计', 'cmd' => '47', 'desc' => 'A2 47 - ⚠️ 清除BET/WIN/BB/RB统计', 'danger' => true],
                     ],
                 ];
             } else {
