@@ -603,6 +603,23 @@ class GameLotteryController
                     ->span(24);
             });
 
+            // 精灵球配置
+            $form->divider()->content(admin_trans('lottery.pokemon_ball_config.divider_title'));
+            $form->row(function (Form $form) {
+                $form->switch('pokemon_ball_status', admin_trans('lottery.pokemon_ball_config.status'))
+                    ->default(0)->span(8);
+                $pokemonMachines = \addons\webman\model\Machine::where('type', \addons\webman\model\GameType::TYPE_POKEMON_BALL)
+                    ->where('status', 1)
+                    ->select(['id', 'code', 'name'])
+                    ->get()
+                    ->mapWithKeys(fn($m) => [$m->id => $m->code . ' - ' . $m->name])
+                    ->all();
+                $form->select('pokemon_ball_machine_id', admin_trans('lottery.pokemon_ball_config.machine_id'))
+                    ->options($pokemonMachines)
+                    ->placeholder(admin_trans('lottery.pokemon_ball_config.select_machine'))
+                    ->span(16);
+            });
+
             $form->layout('vertical');
             $form->saving(function (Form $form) {
                 if (!$form->isEdit()) {

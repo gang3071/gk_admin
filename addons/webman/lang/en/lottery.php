@@ -233,6 +233,14 @@ return [
         'description' => '<strong>Description:</strong> Guaranteed amount is the minimum pool maintenance amount, ensuring pool always has sufficient funds for payouts.<br><strong>How it works:</strong><br>• Pool accumulation: If pool is insufficient for payout, auto-refill to guaranteed amount<br>• After payout: If pool is below guaranteed amount, auto-refill to guaranteed amount<br><strong>Example:</strong> Guaranteed amount set to 5000:<br>• Pool 3000, need payout 4000 → refill to 5000 first, payout 4000, remaining 1000 → refill to 5000 again<br>• Pool 6000, after payout of 2000 remaining 4000 → auto-refill to 5000<br><strong>Suggestion:</strong> Guaranteed amount should be 1-2x max payout amount to ensure sufficient funds anytime',
     ],
 
+    // Pokemon Ball configuration
+    'pokemon_ball_config' => [
+        'divider_title' => 'Pokemon Ball Configuration',
+        'status' => 'Pokemon Ball Switch',
+        'machine_id' => 'Bound Machine',
+        'select_machine' => 'Select Pokemon Ball Machine',
+    ],
+
     // Extended form help text and placeholders
     'form_help_extended' => [
         'current_pool_amount' => 'Current pool amount, deducted when player wins. E.g., pool has 5000, player wins 5000, pool clears to zero',

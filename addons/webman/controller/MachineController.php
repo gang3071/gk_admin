@@ -866,7 +866,7 @@ class MachineController
             $form->layout('vertical');
             $form->saving(function (Form $form) {
                 // 提前取出精灵球玩法规则数据，避免后续被清空
-                $pokemonBallPlayRules = $form->input('pokemonBallPlayRules', []);
+                $pokemonBallPlayRules = $form->input('pokemonBallPlayRules') ?? [];
                 $playType = $form->input('play_type');
 
                 if ($form->isEdit()) {
