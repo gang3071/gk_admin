@@ -769,14 +769,39 @@ class AdminOfflineMachineController
             $cmd = request()->post('cmd');
             $cmdName = request()->post('cmd_name');
 
+            // ✅ 调试日志：记录原始请求数据
+            \support\Log::debug('sendCommand 接收到的参数', [
+                'raw_post' => request()->post(),
+                'raw_body' => request()->rawBody(),
+                'machine_id' => $machineId,
+                'machine_id_type' => gettype($machineId),
+                'cmd' => $cmd,
+            ]);
+
             if (!$machineId || !$cmd) {
+                \support\Log::error('sendCommand 缺少必要参数', [
+                    'machine_id' => $machineId,
+                    'cmd' => $cmd,
+                ]);
                 return message_error('缺少必要参数');
+            }
+
+            // 尝试查找机台（添加详细日志）
+            $machine = Machine::find($machineId);
+            if (!$machine) {
+                \support\Log::error('sendCommand 机台不存在', [
+                    'machine_id' => $machineId,
+                    'machine_id_type' => gettype($machineId),
+                    'all_machines_count' => Machine::count(),
+                ]);
+                return message_error('机台不存在（ID: ' . $machineId . '）');
             }
 
             // 记录日志
             \support\Log::info('线下机台指令测试', [
                 'admin_id' => Admin::id(),
                 'machine_id' => $machineId,
+                'machine_code' => $machine->code,
                 'cmd' => $cmd,
                 'cmd_name' => $cmdName,
             ]);
