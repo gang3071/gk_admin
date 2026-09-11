@@ -818,17 +818,17 @@ class AdminOfflineMachineController
                     Admin::id()
                 );
 
-                // 补充额外信息
-                $responseData = [
-                    'cmd' => $cmd,
-                    'cmd_name' => $cmdName,
-                    'machine_id' => $machineId,
-                    'machine_code' => $machine->code,
-                    'timestamp' => date('Y-m-d H:i:s'),
-                    'api_result' => $result,
-                ];
-
-                return json(['code' => 1, 'msg' => '指令发送成功', 'data' => $responseData]);
+                // 返回 API 结果，并补充指令信息
+                return json([
+                    'code' => 1,
+                    'msg' => '指令发送成功',
+                    'data' => array_merge([
+                        'cmd' => $cmd,
+                        'cmd_name' => $cmdName,
+                        'machine_code' => $machine->code,
+                        'timestamp' => date('Y-m-d H:i:s'),
+                    ], is_array($result) ? $result : ['result' => $result])
+                ]);
 
             } catch (\Exception $apiException) {
                 // gk_work API 返回 code=1 时，MachineApiService 会抛出异常
