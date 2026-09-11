@@ -23,44 +23,6 @@
       </a-descriptions>
     </a-card>
 
-    <!-- 执行结果（移到顶部） -->
-    <a-card
-      v-if="results.length > 0"
-      ref="resultCard"
-      :bordered="false"
-      class="result-card"
-      title="📊 执行结果"
-    >
-      <div class="result-container">
-        <div
-          v-for="(result, index) in results"
-          :key="index"
-          :class="[result.success ? 'success' : 'error', index === 0 ? 'latest' : '']"
-          class="result-item"
-        >
-          <div class="result-header">
-            <span class="result-time">{{ result.time }}</span>
-            <span class="result-title">{{ result.cmdName }}</span>
-            <a-tag :color="result.success ? 'success' : 'error'">
-              {{ result.success ? '✅ 成功' : '❌ 失败' }}
-            </a-tag>
-            <a-badge v-if="index === 0" status="processing" text="最新" />
-          </div>
-          <div class="result-cmd">指令: {{ result.cmd }}</div>
-          <div v-if="result.message" class="result-message">{{ result.message }}</div>
-          <div v-if="result.data" class="result-data">
-            <pre>{{ JSON.stringify(result.data, null, 2) }}</pre>
-          </div>
-        </div>
-      </div>
-      <div style="text-align: center; margin-top: 16px;">
-        <a-button size="small" @click="clearResults">
-          <template #icon><ClearOutlined /></template>
-          清空记录
-        </a-button>
-      </div>
-    </a-card>
-
     <!-- 指令分类 -->
     <a-tabs v-model:activeKey="activeTab" class="command-tabs" type="card">
       <a-tab-pane
@@ -76,6 +38,7 @@
             :class="{ 'danger-command': cmd.danger }"
             class="command-card"
           >
+            <!-- 指令信息和操作按钮 -->
             <div class="command-item">
               <div class="command-info">
                 <div class="command-name">
@@ -97,6 +60,35 @@
                   <template #icon><ThunderboltOutlined /></template>
                   发送指令
                 </a-button>
+              </div>
+            </div>
+
+            <!-- ✅ 该指令的执行结果（显示在指令下方） -->
+            <div v-if="cmdResults[cmd.cmd] && cmdResults[cmd.cmd].length > 0" class="cmd-results">
+              <a-divider style="margin: 16px 0 12px 0;">
+                <span style="font-size: 12px; color: #8c8c8c;">
+                  执行记录 ({{ cmdResults[cmd.cmd].length }})
+                </span>
+              </a-divider>
+              <div class="result-list">
+                <div
+                  v-for="(result, rIndex) in cmdResults[cmd.cmd]"
+                  :key="rIndex"
+                  :class="[result.success ? 'success' : 'error', rIndex === 0 ? 'latest' : '']"
+                  class="result-item"
+                >
+                  <div class="result-header">
+                    <span class="result-time">{{ result.time }}</span>
+                    <a-tag :color="result.success ? 'success' : 'error'" size="small">
+                      {{ result.success ? '✅ 成功' : '❌ 失败' }}
+                    </a-tag>
+                    <a-badge v-if="rIndex === 0" status="processing" text="最新" />
+                  </div>
+                  <div v-if="result.message" class="result-message">{{ result.message }}</div>
+                  <div v-if="result.data" class="result-data">
+                    <pre>{{ JSON.stringify(result.data, null, 2) }}</pre>
+                  </div>
+                </div>
               </div>
             </div>
           </a-card>
@@ -148,7 +140,7 @@ export default {
       activeTab: Object.keys(this.command_list)[0] || '',
       loading: false,
       currentCommand: '',
-      results: [],
+      cmdResults: {}, // ✅ 改为对象结构：{ 'cmd1': [result1, result2], 'cmd2': [...] }
       commandList: this.command_list
     };
   },
@@ -187,24 +179,15 @@ export default {
 
         const result = await response.json();
 
-        // 添加结果到列表（最新的在最前面）
-        this.results.unshift({
+        // ✅ 将结果添加到对应指令的结果列表（最新的在最前面）
+        if (!this.cmdResults[cmd.cmd]) {
+          this.$set(this.cmdResults, cmd.cmd, []);
+        }
+        this.cmdResults[cmd.cmd].unshift({
           time: new Date().toLocaleString('zh-CN'),
-          cmdName: cmd.name,
-          cmd: cmd.cmd,
           success: result.code === 1,
           message: result.msg,
           data: result.data
-        });
-
-        // ✅ 自动滚动到结果区域
-        this.$nextTick(() => {
-          if (this.$refs.resultCard && this.$refs.resultCard.$el) {
-            this.$refs.resultCard.$el.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
-          }
         });
 
         if (result.code === 1) {
@@ -214,23 +197,15 @@ export default {
         }
 
       } catch (error) {
-        this.results.unshift({
+        // ✅ 将错误结果添加到对应指令的结果列表
+        if (!this.cmdResults[cmd.cmd]) {
+          this.$set(this.cmdResults, cmd.cmd, []);
+        }
+        this.cmdResults[cmd.cmd].unshift({
           time: new Date().toLocaleString('zh-CN'),
-          cmdName: cmd.name,
-          cmd: cmd.cmd,
           success: false,
           message: error.message,
           data: null
-        });
-
-        // ✅ 自动滚动到结果区域
-        this.$nextTick(() => {
-          if (this.$refs.resultCard && this.$refs.resultCard.$el) {
-            this.$refs.resultCard.$el.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
-          }
         });
 
         this.$message.error(`请求失败: ${error.message}`);
@@ -238,11 +213,6 @@ export default {
         this.loading = false;
         this.currentCommand = '';
       }
-    },
-
-    clearResults() {
-      this.results = [];
-      this.$message.info('已清空执行记录');
     }
   }
 };
@@ -322,89 +292,87 @@ export default {
   margin-left: 20px;
 }
 
-.result-card {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+/* ✅ 指令内部的结果区域 */
+.cmd-results {
+  margin-top: 16px;
 }
 
-.result-container {
-  max-height: 500px;
+.result-list {
+  max-height: 400px;
   overflow-y: auto;
 }
 
 .result-item {
-  padding: 16px;
-  margin-bottom: 12px;
-  border-radius: 8px;
-  border-left: 4px solid;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border-left: 3px solid;
+  background: #fafafa;
 }
 
 .result-item.success {
-  background: #f6ffed;
+  background: #f6ffed !important;
   border-left-color: #52c41a;
 }
 
 .result-item.error {
-  background: #fff2f0;
+  background: #fff2f0 !important;
   border-left-color: #ff4d4f;
 }
 
 .result-item.latest {
-  animation: highlight 1s ease-in-out;
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
+  animation: highlight 1.2s ease-in-out;
 }
 
 @keyframes highlight {
   0% {
+    transform: scale(1);
     box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 6px rgba(24, 144, 255, 0.2);
+    transform: scale(1.02);
+    box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.2);
   }
   100% {
-    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
   }
 }
 
 .result-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
 .result-time {
   color: #8c8c8c;
-  font-size: 12px;
-}
-
-.result-title {
-  font-weight: 600;
-  font-size: 14px;
-}
-
-.result-cmd {
-  font-size: 13px;
-  color: #595959;
-  font-family: 'Courier New', monospace;
-  margin-bottom: 8px;
+  font-size: 11px;
 }
 
 .result-message {
-  font-size: 14px;
+  font-size: 13px;
+  color: #595959;
   margin-bottom: 8px;
+  line-height: 1.5;
 }
 
 .result-data {
   background: #1a202c;
   color: #e2e8f0;
-  padding: 12px;
+  padding: 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .result-data pre {
   margin: 0;
   font-family: 'Courier New', monospace;
+  line-height: 1.4;
 }
 </style>
