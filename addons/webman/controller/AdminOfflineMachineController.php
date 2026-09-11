@@ -806,8 +806,10 @@ class AdminOfflineMachineController
         // 获取机台当前数据（使用 MachineApiService）
         $machineData = [];
         try {
-            $apiService = new MachineApiService();
-            $machineData = $apiService->getMachineData($machine->id);
+            $statusResult = MachineApiService::getMachineStatus($machine->id);
+            if (isset($statusResult['data'])) {
+                $machineData = $statusResult['data'];
+            }
         } catch (\Exception $e) {
             Log::warning('获取机台数据失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
         }
@@ -986,8 +988,10 @@ class AdminOfflineMachineController
             // 获取机台当前数据
             $machineData = [];
             try {
-                $apiService = new MachineApiService();
-                $machineData = $apiService->getMachineData($machine->id);
+                $statusResult = MachineApiService::getMachineStatus($machine->id);
+                if (isset($statusResult['data'])) {
+                    $machineData = $statusResult['data'];
+                }
             } catch (\Exception $e) {
                 Log::warning('获取机台数据失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
             }
