@@ -743,7 +743,6 @@ class AdminOfflineMachineController
                 // 双美钢珠（Jackpot）
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '测试连接', 'cmd' => '20', 'desc' => 'A2 20 - 测试机台连接', 'danger' => false],
                         ['name' => '读取当前分', 'cmd' => '21', 'desc' => 'A2 21 - 读取机台当前分数', 'danger' => false],
                         ['name' => '读取得分', 'cmd' => '22', 'desc' => 'A2 22 - 读取机台当前得分', 'danger' => false],
                         ['name' => '读取转数', 'cmd' => '23', 'desc' => 'A2 23 - 读取机台当前转数', 'danger' => false],
