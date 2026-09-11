@@ -667,4 +667,47 @@ class MachineApiService
             throw $e;
         }
     }
+
+    /**
+     * 执行机台操作（统一接口）
+     *
+     * @param int $machineId 机台ID
+     * @param string $action 操作名称（unlock=解锁, reset=归0）
+     * @param array $params 操作参数
+     * @param int $adminId 管理员ID
+     * @return array
+     * @throws Exception
+     */
+    public static function executeAction(int $machineId, string $action, array $params = [], int $adminId = 0): array
+    {
+        try {
+            $client = self::createClient($adminId);
+            $response = $client->post('/api/admin/machine/execute', [
+                'json' => [
+                    'machine_id' => $machineId,
+                    'action' => $action,
+                    'params' => $params,
+                ]
+            ]);
+
+            return self::handleResponse($response, "执行机台操作[{$action}]");
+
+        } catch (GuzzleException $e) {
+            Log::error('MachineApiService::executeAction failed', [
+                'machine_id' => $machineId,
+                'action' => $action,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw new Exception($e->getMessage(), $e->getCode(), $e);
+        } catch (Exception $e) {
+            Log::error('MachineApiService::executeAction failed', [
+                'machine_id' => $machineId,
+                'action' => $action,
+                'admin_id' => $adminId,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
 }

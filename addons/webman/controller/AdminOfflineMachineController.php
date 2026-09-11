@@ -9,7 +9,9 @@ use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineProducer;
 use addons\webman\model\MachineStrategy;
 use app\service\MachineApiService;
+use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
@@ -18,6 +20,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\support\Container;
 use Illuminate\Support\Str;
 use support\Cache;
@@ -289,6 +292,55 @@ class AdminOfflineMachineController
             ->display(function ($value, Machine $data) {
                 return Str::of($data->remark)->limit(35, ' (...)');
             })->width('180px')->align('center');
+
+        // ✅ 新增：操作按钮（解锁和归0）- 使用ExAdmin的Actions
+        $grid->actions(function ($action, Machine $data) use ($gameType) {
+            // 获取当前管理员权限
+            $permissions = Admin::permission();
+            $unlockPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/unlockMachine';
+            $resetPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/resetMachine';
+
+            // 编辑操作
+            if ($gameType == GameType::TYPE_SLOT) {
+                $action->edit()->drawer($this->slotForm());
+            } else {
+                $action->edit()->drawer($this->steelBallForm());
+            }
+
+            // 创建下拉菜单
+            $dropdown = Dropdown::create(
+                Button::create(
+                    ['操作', Icon::create('DownOutlined')->style(['marginLeft' => '5px'])]
+                )
+            )->trigger(['click']);
+
+            // 解锁按钮（仅锁定时显示 + 需要权限）
+            if ($data->has_lock == 1 && in_array($unlockPermission, $permissions)) {
+                $dropdown->item('解锁机台', 'unlock')
+                    ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'], ['machine_id' => $data->id])
+                    ->gridRefresh();
+            }
+
+            // 归0按钮（仅小淞线下版显示 + 需要权限）
+            if ($data->control_type === Machine::CONTROL_TYPE_SONG &&
+                $data->machine_source === Machine::MACHINE_SOURCE_OFFLINE &&
+                in_array($resetPermission, $permissions)) {
+                $dropdown->item('归0机板', 'reload')
+                    ->confirm(
+                        '确定要归0机板 ' . $data->code . ' 吗？' . "\n\n" .
+                        '⚠️ 注意：' . "\n" .
+                        '1. 会清除开分码表和洗分码表' . "\n" .
+                        '2. 会自动解锁机台' . "\n" .
+                        '3. 不会影响登入状态',
+                        [$this, 'resetMachine'],
+                        ['machine_id' => $data->id]
+                    )
+                    ->gridRefresh();
+            }
+
+            // 将下拉菜单添加到操作列
+            $action->prepend($dropdown);
+        });
 
         // 筛选器
         $grid->filter(function (Filter $filter) use ($gameType) {
@@ -604,5 +656,135 @@ class AdminOfflineMachineController
         // 因为 MachineLabel 本身已经通过 cate_id 关联到具体分类
         // 在创建表单时通过 cascaderSingle 选择分类会自动过滤对应的标签
         return getMachineLabelOptions();
+    }
+
+    /**
+     * ✅ 新增：解锁机台
+     * @group admin
+     * @auth true
+     */
+    public function unlockMachine(): array
+    {
+        try {
+            // ✅ 权限验证
+            $permissions = Admin::permission();
+            $requiredPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/unlockMachine';
+            if (!in_array($requiredPermission, $permissions)) {
+                \support\Log::warning('解锁机台权限不足', [
+                    'admin_id' => Admin::id(),
+                    'machine_id' => request()->post('machine_id'),
+                ]);
+                return message_error('权限不足，无法执行解锁操作');
+            }
+
+            $machineId = request()->post('machine_id');
+
+            if (!$machineId) {
+                return message_error('缺少机台ID');
+            }
+
+            // 调用gk_work API执行解锁操作
+            $result = MachineApiService::executeAction(
+                $machineId,
+                'unlock',
+                [],
+                Admin::id()
+            );
+
+            // 更新本地数据库
+            $machine = Machine::find($machineId);
+            if ($machine) {
+                $machine->has_lock = 0;
+                $machine->save();
+            }
+
+            // 记录操作日志
+            \support\Log::info('解锁机台成功', [
+                'admin_id' => Admin::id(),
+                'admin_username' => Admin::user()->username ?? '',
+                'machine_id' => $machineId,
+                'machine_code' => $machine->code ?? '',
+            ]);
+
+            return message_success('机台解锁成功', $result);
+
+        } catch (\Exception $e) {
+            \support\Log::error('解锁机台失败', [
+                'admin_id' => Admin::id(),
+                'machine_id' => request()->post('machine_id'),
+                'error' => $e->getMessage()
+            ]);
+            return message_error('解锁失败: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * ✅ 新增：归0机板
+     * @group admin
+     * @auth true
+     */
+    public function resetMachine(): array
+    {
+        try {
+            // ✅ 权限验证
+            $permissions = Admin::permission();
+            $requiredPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/resetMachine';
+            if (!in_array($requiredPermission, $permissions)) {
+                \support\Log::warning('归0机台权限不足', [
+                    'admin_id' => Admin::id(),
+                    'machine_id' => request()->post('machine_id'),
+                ]);
+                return message_error('权限不足，无法执行归0操作');
+            }
+
+            $machineId = request()->post('machine_id');
+
+            if (!$machineId) {
+                return message_error('缺少机台ID');
+            }
+
+            // 验证是否为小淞线下版
+            $machine = Machine::find($machineId);
+            if (!$machine) {
+                return message_error('机台不存在');
+            }
+
+            if ($machine->control_type !== Machine::CONTROL_TYPE_SONG ||
+                $machine->machine_source !== Machine::MACHINE_SOURCE_OFFLINE) {
+                return message_error('归0操作仅支持小淞线下版机台');
+            }
+
+            // 调用gk_work API执行归0操作
+            $result = MachineApiService::executeAction(
+                $machineId,
+                'reset',
+                [],
+                Admin::id()
+            );
+
+            // 归0操作会自动解锁，更新本地数据库
+            $machine->has_lock = 0;
+            $machine->save();
+
+            // 记录操作日志
+            \support\Log::info('归0机台成功', [
+                'admin_id' => Admin::id(),
+                'admin_username' => Admin::user()->username ?? '',
+                'machine_id' => $machineId,
+                'machine_code' => $machine->code,
+                'control_type' => $machine->control_type,
+                'machine_source' => $machine->machine_source,
+            ]);
+
+            return message_success('归0成功，机台已解锁', $result);
+
+        } catch (\Exception $e) {
+            \support\Log::error('归0机台失败', [
+                'admin_id' => Admin::id(),
+                'machine_id' => request()->post('machine_id'),
+                'error' => $e->getMessage()
+            ]);
+            return message_error('归0失败: ' . $e->getMessage());
+        }
     }
 }
