@@ -568,7 +568,7 @@ class ChannelMachineController
             return message_error(admin_trans('machine_media.not_fount'));
         }
 
-        return admin_view(plugin()->webman->getPath() . '/views/media_play.vue')->attrs([
+        `return admin_view(plugin()->webman->getPath() . '/views/media_play.vue')->attrs([
             'iframe_src' => 'https://' . $media->pull_ip . '/' . $media->media_app . '/play.html?id=' . $media->stream_name,
             'iframe_list' => $srcList,
             'btn_text' => admin_trans('machine_media.btn_text'),
@@ -576,7 +576,7 @@ class ChannelMachineController
             'action_list' => getChannelMachineAction($media->machine->type, $media->machine->control_type),
             'type' => $media->machine->type,
             'machine_id' => $media->machine_id,
-        ]);
+        ]);`
     }
 
     /**

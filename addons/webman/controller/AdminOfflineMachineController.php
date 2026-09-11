@@ -307,17 +307,39 @@ class AdminOfflineMachineController
                     ['操作', Icon::create('DownOutlined')->style(['marginRight' => '5px'])])
             )->trigger(['click']);
 
-            // 解锁机台
-            $dropdown->item('解锁机台', 'unlock')
-                ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'],
-                    ['machine_id' => $data->id])
-                ->gridRefresh();
+            // 解锁机台（仅锁定时显示）
+            if ($data->has_lock == 1) {
+                $dropdown->item('解锁机台', 'unlock')
+                    ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'],
+                        ['machine_id' => $data->id])
+                    ->gridRefresh();
+            }
 
-            // 归0机板
-            $dropdown->item('归0机板', 'reload-outlined')
-                ->confirm('确定要归0机板吗？', [$this, 'resetMachine'],
-                    ['machine_id' => $data->id])
-                ->gridRefresh();
+            // 归0机板（仅小淞线下版Slot机台显示）
+            if ($data->control_type === Machine::CONTROL_TYPE_SONG &&
+                $data->machine_source === Machine::MACHINE_SOURCE_OFFLINE &&
+                $data->type === GameType::TYPE_SLOT) {
+                $dropdown->item('归0机板', 'reload-outlined')
+                    ->confirm(
+                        '确定要归0机板 ' . $data->code . ' 吗？' . "\n\n" .
+                        '⚠️ 注意：' . "\n" .
+                        '1. 会清除开分码表和洗分码表' . "\n" .
+                        '2. 会自动解锁机台' . "\n" .
+                        '3. 不会影响登入状态',
+                        [$this, 'resetMachine'],
+                        ['machine_id' => $data->id]
+                    )
+                    ->gridRefresh();
+            }
+
+            // 指令测试（仅小淞线下版显示）
+            if ($data->control_type === Machine::CONTROL_TYPE_SONG &&
+                $data->machine_source === Machine::MACHINE_SOURCE_OFFLINE) {
+                $dropdown->item('指令测试', 'code')
+                    ->modal([$this, 'commandTest'], ['machine_id' => $data->id, 'game_type' => $gameType])
+                    ->width('80%');
+            }
+
             $action->prepend(
                 $dropdown
             );
@@ -637,6 +659,160 @@ class AdminOfflineMachineController
         // 因为 MachineLabel 本身已经通过 cate_id 关联到具体分类
         // 在创建表单时通过 cascaderSingle 选择分类会自动过滤对应的标签
         return getMachineLabelOptions();
+    }
+
+    /**
+     * 指令测试页面
+     * @auth true
+     */
+    public function commandTest()
+    {
+        $machineId = request()->get('machine_id');
+        $gameType = request()->get('game_type');
+
+        $machine = Machine::find($machineId);
+        if (!$machine) {
+            return message_error('机台不存在');
+        }
+
+        // 根据游戏类型定义可用指令
+        if ($gameType == GameType::TYPE_SLOT) {
+            $commandList = [
+                '查询指令' => [
+                    [
+                        'name' => '查询账目',
+                        'cmd' => 'eac4',
+                        'desc' => '查询开分码表+洗分码表+开分卡分数+机台分数',
+                        'danger' => false
+                    ],
+                    [
+                        'name' => '查询总玩总赢',
+                        'cmd' => 'ead8',
+                        'desc' => '查询总押分和总得分',
+                        'danger' => false
+                    ],
+                    [
+                        'name' => '查询机台情况',
+                        'cmd' => 'ead4',
+                        'desc' => '查询开分状态+洗分状态+转数',
+                        'danger' => false
+                    ],
+                ],
+                '登入指令' => [
+                    [
+                        'name' => '登入',
+                        'cmd' => 'eac3',
+                        'desc' => '玩家登入机台',
+                        'danger' => false
+                    ],
+                    [
+                        'name' => '查询登入状态',
+                        'cmd' => 'eac5',
+                        'desc' => '检查是否已登入',
+                        'danger' => false
+                    ],
+                ],
+                '管理指令' => [
+                    [
+                        'name' => '清除账目',
+                        'cmd' => 'eade',
+                        'desc' => '清除开洗分账+回补数',
+                        'danger' => true
+                    ],
+                    [
+                        'name' => '归0机板',
+                        'cmd' => 'a37005e0f8ce',
+                        'desc' => '重置机板（会清空所有数据，包括开分码表和洗分码表）',
+                        'danger' => true
+                    ],
+                ],
+            ];
+        } else {
+            // 钢珠机指令
+            $commandList = [
+                '查询指令' => [
+                    [
+                        'name' => '查询账目',
+                        'cmd' => 'b5',
+                        'desc' => '查询机台当前状态',
+                        'danger' => false
+                    ],
+                    [
+                        'name' => '查询分数',
+                        'cmd' => 'b7',
+                        'desc' => '查询机台分数',
+                        'danger' => false
+                    ],
+                ],
+                '管理指令' => [
+                    [
+                        'name' => '归0机板',
+                        'cmd' => 'b5',
+                        'desc' => '重置机板',
+                        'danger' => true
+                    ],
+                ],
+            ];
+        }
+
+        return admin_view(plugin()->webman->getPath() . '/views/command_test.vue')->attrs([
+            'machine_id' => $machine->id,
+            'machine_code' => $machine->code,
+            'machine_name' => $machine->machineLabel->name ?? '',
+            'control_type' => $machine->control_type,
+            'game_type' => $machine->type,
+            'game_type_name' => $machine->type == GameType::TYPE_SLOT ? 'Slot' : '钢珠',
+            'command_list' => $commandList,
+        ]);
+    }
+
+    /**
+     * 发送指令（供指令测试页面调用）
+     * @auth true
+     */
+    public function sendCommand(): array
+    {
+        try {
+            $machineId = request()->post('machine_id');
+            $cmd = request()->post('cmd');
+            $cmdName = request()->post('cmd_name');
+
+            if (!$machineId || !$cmd) {
+                return message_error('缺少必要参数');
+            }
+
+            // 记录日志
+            \support\Log::info('线下机台指令测试', [
+                'admin_id' => Admin::id(),
+                'machine_id' => $machineId,
+                'cmd' => $cmd,
+                'cmd_name' => $cmdName,
+            ]);
+
+            // 调用gk_work API发送指令
+            $result = MachineApiService::executeAction(
+                $machineId,
+                'send_raw_cmd',
+                [
+                    'cmd' => $cmd,
+                    'data' => 0,
+                    'is_system' => 0,
+                ],
+                Admin::id()
+            );
+
+            return message_success('指令发送成功', $result);
+
+        } catch (\Exception $e) {
+            \support\Log::error('线下机台指令测试失败', [
+                'admin_id' => Admin::id(),
+                'machine_id' => request()->post('machine_id'),
+                'cmd' => request()->post('cmd'),
+                'error' => $e->getMessage(),
+            ]);
+
+            return message_error('指令发送失败: ' . $e->getMessage());
+        }
     }
 
     /**
