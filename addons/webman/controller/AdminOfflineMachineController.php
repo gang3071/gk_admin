@@ -315,7 +315,7 @@ class AdminOfflineMachineController
                         'game_type' => $gameType,
                         'control_type' => $data->control_type
                     ])
-                    ->width('90%')
+                    ->width('70%')
             );
 
             // 操作下拉菜单

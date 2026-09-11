@@ -6,7 +6,7 @@
         <template #title>
           <div class="card-title">
             <span class="title-text">
-              <ApiOutlined /> {{ machine_code }}
+              🖥️ {{ machine_code }}
             </span>
             <div class="title-actions">
               <a-badge :status="currentIsOnline ? 'processing' : 'error'" :text="currentIsOnline ? '在線' : '離線'" />
@@ -17,8 +17,7 @@
                 style="color: white;"
                 @click="refreshData"
               >
-                <template #icon><ReloadOutlined /></template>
-                {{ refreshing ? lang.refreshing : lang.refresh }}
+                🔄 {{ refreshing ? lang.refreshing : lang.refresh }}
               </a-button>
             </div>
           </div>
@@ -54,7 +53,7 @@
                 <div class="status-title">{{ lang.player_status }}</div>
                 <div v-if="currentPlayerInfo" class="status-content">
                   <a-tag color="green">
-                    <UserOutlined /> {{ currentPlayerInfo.nickname || currentPlayerInfo.username }}
+                    👤 {{ currentPlayerInfo.nickname || currentPlayerInfo.username }}
                   </a-tag>
                   <span class="player-id">#{{ currentPlayerInfo.id }}</span>
                 </div>
@@ -127,8 +126,7 @@
                   type="primary"
                   @click="sendCommand(cmd)"
                 >
-                  <template #icon><ThunderboltOutlined /></template>
-                  发送指令
+                  ⚡ 发送指令
                 </a-button>
               </div>
             </div>
@@ -443,7 +441,6 @@ export default {
 
 .content-wrapper {
   width: 100%;
-  max-width: 1000px;
 }
 
 .machine-info-card {
