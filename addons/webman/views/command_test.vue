@@ -8,27 +8,72 @@
             <span class="title-text">
               <ApiOutlined /> {{ machine_code }}
             </span>
-            <a-badge :status="is_online ? 'processing' : 'error'" :text="is_online ? '在線' : '離線'" />
+            <div class="title-actions">
+              <a-badge :status="currentIsOnline ? 'processing' : 'error'" :text="currentIsOnline ? '在線' : '離線'" />
+              <a-button
+                :loading="refreshing"
+                size="small"
+                type="link"
+                style="color: white;"
+                @click="refreshData"
+              >
+                <template #icon><ReloadOutlined /></template>
+                {{ refreshing ? lang.refreshing : lang.refresh }}
+              </a-button>
+            </div>
           </div>
         </template>
-        <a-descriptions :column="2" size="small" bordered>
-          <a-descriptions-item label="機台名稱">
-            <strong>{{ machine_name }}</strong>
-          </a-descriptions-item>
-          <a-descriptions-item label="連接狀態">
-            <a-tag :color="is_online ? 'success' : 'error'">
-              {{ is_online ? '✓ TCP已連接' : '✗ TCP未連接' }}
-            </a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="控制類型">
-            <a-tag color="orange">{{ control_type_name }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="遊戲類型">
-            <a-tag color="blue">{{ game_type_name }}</a-tag>
-          </a-descriptions-item>
-          <a-descriptions-item label="Domain">{{ domain }}</a-descriptions-item>
-          <a-descriptions-item label="Port">{{ port }}</a-descriptions-item>
-        </a-descriptions>
+        <a-row :gutter="12">
+          <a-col :span="14">
+            <a-descriptions :column="2" size="small" bordered>
+              <a-descriptions-item label="機台名稱" :span="2">
+                <strong>{{ machine_name }}</strong>
+              </a-descriptions-item>
+              <a-descriptions-item label="控制類型">
+                <a-tag color="orange">{{ control_type_name }}</a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="遊戲類型">
+                <a-tag color="blue">{{ game_type_name }}</a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item label="TCP狀態">
+                <a-tag :color="currentIsOnline ? 'success' : 'error'" size="small">
+                  {{ currentIsOnline ? '✓ 已連接' : '✗ 未連接' }}
+                </a-tag>
+              </a-descriptions-item>
+              <a-descriptions-item :label="lang.machine_status">
+                <a-tag :color="currentIsGaming ? 'processing' : 'default'" size="small">
+                  {{ currentIsGaming ? lang.gaming : lang.idle }}
+                </a-tag>
+              </a-descriptions-item>
+            </a-descriptions>
+          </a-col>
+          <a-col :span="10">
+            <!-- 玩家状态和机台数据 -->
+            <div class="status-panel">
+              <div class="status-section">
+                <div class="status-title">{{ lang.player_status }}</div>
+                <div v-if="currentPlayerInfo" class="status-content">
+                  <a-tag color="green">
+                    <UserOutlined /> {{ currentPlayerInfo.nickname || currentPlayerInfo.username }}
+                  </a-tag>
+                  <span class="player-id">#{{ currentPlayerInfo.id }}</span>
+                </div>
+                <div v-else class="status-content no-player">
+                  {{ lang.no_player }}
+                </div>
+              </div>
+              <div v-if="currentMachineData && Object.keys(currentMachineData).length" class="status-section">
+                <div class="status-title">{{ lang.current_data }}</div>
+                <div class="status-content machine-data-grid">
+                  <div v-for="(value, key) in currentMachineData" :key="key" class="data-item">
+                    <span class="data-label">{{ key }}:</span>
+                    <span class="data-value">{{ value }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </a-col>
+        </a-row>
       </a-card>
 
     <!-- 指令分类 -->
@@ -175,6 +220,18 @@ export default {
     port: {
       type: [String, Number],
       default: ''
+    },
+    is_gaming: {
+      type: Boolean,
+      default: false
+    },
+    player_info: {
+      type: Object,
+      default: null
+    },
+    machine_data: {
+      type: Object,
+      default: () => ({})
     }
   },
   data() {
@@ -182,9 +239,15 @@ export default {
       activeTab: Object.keys(this.command_list)[0] || '',
       loading: false,
       currentCommand: '',
+      refreshing: false,
       cmdResults: {}, // ✅ 改为对象结构：{ 'cmd1': [result1, result2], 'cmd2': [...] }
       cmdInputValues: {}, // ✅ 指令参数输入值：{ 'cmd1': value1, 'cmd2': value2 }
-      commandList: this.command_list
+      commandList: this.command_list,
+      // 响应式状态数据（从 props 初始化，可以被修改）
+      currentIsOnline: this.is_online,
+      currentIsGaming: this.is_gaming,
+      currentPlayerInfo: this.player_info,
+      currentMachineData: this.machine_data
     };
   },
   mounted() {
@@ -198,6 +261,40 @@ export default {
     });
   },
   methods: {
+    // 刷新机台数据
+    async refreshData() {
+      this.refreshing = true;
+      try {
+        const response = await fetch('/ex-admin/addons-webman-controller-AdminOfflineMachineController/refreshMachineData', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: JSON.stringify({
+            machine_id: this.machine_id
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.code === 1) {
+          // 更新数据
+          this.currentIsOnline = result.data.is_online;
+          this.currentIsGaming = result.data.is_gaming;
+          this.currentPlayerInfo = result.data.player_info;
+          this.currentMachineData = result.data.machine_data;
+          this.$message.success(this.lang.refresh_success);
+        } else {
+          this.$message.error(result.msg || '刷新失败');
+        }
+      } catch (error) {
+        this.$message.error(this.lang.request_failed.replace('{error}', error.message));
+      } finally {
+        this.refreshing = false;
+      }
+    },
+
     // 判断是否有执行结果
     hasResults(cmdCode) {
       return this.cmdResults[cmdCode] && Array.isArray(this.cmdResults[cmdCode]) && this.cmdResults[cmdCode].length > 0;
@@ -346,7 +443,7 @@ export default {
 
 .content-wrapper {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1000px;
 }
 
 .machine-info-card {
@@ -383,10 +480,95 @@ export default {
   font-weight: 600;
 }
 
+.title-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.title-actions :deep(.ant-btn-link) {
+  padding: 0 8px;
+  height: 24px;
+  font-size: 12px;
+}
+
+.title-actions :deep(.ant-btn-link:hover) {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
 .card-title :deep(.ant-badge-status-text) {
   color: white;
   font-size: 13px;
   margin-left: 4px;
+}
+
+.status-panel {
+  background: #fafafa;
+  border: 1px solid #e8e8e8;
+  border-radius: 6px;
+  padding: 12px;
+  height: 100%;
+}
+
+.status-section {
+  margin-bottom: 12px;
+}
+
+.status-section:last-child {
+  margin-bottom: 0;
+}
+
+.status-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #595959;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.status-content {
+  font-size: 12px;
+  color: #262626;
+}
+
+.status-content.no-player {
+  color: #8c8c8c;
+  font-style: italic;
+}
+
+.player-id {
+  margin-left: 6px;
+  color: #8c8c8c;
+  font-size: 11px;
+}
+
+.machine-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+
+.data-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  background: white;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.data-label {
+  color: #8c8c8c;
+  font-weight: 500;
+}
+
+.data-value {
+  color: #1890ff;
+  font-weight: 600;
+  font-family: 'Consolas', monospace;
 }
 
 .command-tabs {

@@ -793,6 +793,25 @@ class AdminOfflineMachineController
             Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
         }
 
+        // 获取玩家信息
+        $playerInfo = null;
+        if ($machine->gaming_user_id && $machine->gamingPlayer) {
+            $playerInfo = [
+                'id' => $machine->gamingPlayer->id,
+                'username' => $machine->gamingPlayer->username,
+                'nickname' => $machine->gamingPlayer->nickname ?? $machine->gamingPlayer->username,
+            ];
+        }
+
+        // 获取机台当前数据（使用 MachineApiService）
+        $machineData = [];
+        try {
+            $apiService = new MachineApiService();
+            $machineData = $apiService->getMachineData($machine->id);
+        } catch (\Exception $e) {
+            Log::warning('获取机台数据失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
+        }
+
         return admin_view(plugin()->webman->getPath() . '/views/command_test.vue')->attrs([
             'machine_id' => $machine->id,
             'machine_code' => $machine->code,
@@ -802,8 +821,11 @@ class AdminOfflineMachineController
             'game_type' => $machine->type,
             'game_type_name' => $machine->type == GameType::TYPE_SLOT ? 'Slot' : '钢珠',
             'is_online' => $isOnline,
+            'is_gaming' => $machine->gaming == 1,
             'domain' => $machine->domain,
             'port' => $machine->port,
+            'player_info' => $playerInfo,
+            'machine_data' => $machineData,
             'command_list' => $commandList,
             // 多语言数据
             'lang' => [
@@ -816,6 +838,16 @@ class AdminOfflineMachineController
                 'success' => admin_trans('offline_machine.command_test.success'),
                 'failed' => admin_trans('offline_machine.command_test.failed'),
                 'request_failed' => admin_trans('offline_machine.command_test.request_failed'),
+                'machine_status' => admin_trans('offline_machine.command_test.machine_status'),
+                'player_status' => admin_trans('offline_machine.command_test.player_status'),
+                'current_data' => admin_trans('offline_machine.command_test.current_data'),
+                'idle' => admin_trans('offline_machine.command_test.idle'),
+                'gaming' => admin_trans('offline_machine.command_test.gaming'),
+                'player_name' => admin_trans('offline_machine.command_test.player_name'),
+                'refresh' => admin_trans('offline_machine.command_test.refresh'),
+                'refreshing' => admin_trans('offline_machine.command_test.refreshing'),
+                'refresh_success' => admin_trans('offline_machine.command_test.refresh_success'),
+                'no_player' => admin_trans('offline_machine.command_test.no_player'),
             ],
         ]);
     }
@@ -910,6 +942,73 @@ class AdminOfflineMachineController
             ]);
 
             return json(['code' => 0, 'msg' => '指令发送失败: ' . $e->getMessage(), 'data' => []]);
+        }
+    }
+
+    /**
+     * 刷新机台数据（供指令测试页面调用）
+     * @auth true
+     */
+    public function refreshMachineData()
+    {
+        try {
+            $machineId = request()->post('machine_id');
+
+            if (!$machineId) {
+                return json(['code' => 0, 'msg' => '缺少机台ID', 'data' => []]);
+            }
+
+            // 查找机台
+            $machine = Machine::with('gamingPlayer')->find($machineId);
+            if (!$machine) {
+                return json(['code' => 0, 'msg' => '机台不存在', 'data' => []]);
+            }
+
+            // 检测在线状态
+            $isOnline = false;
+            try {
+                $uid = $machine->domain . ':' . $machine->port;
+                $isOnline = Gateway::isUidOnline($uid);
+            } catch (\Exception $e) {
+                Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
+            }
+
+            // 获取玩家信息
+            $playerInfo = null;
+            if ($machine->gaming_user_id && $machine->gamingPlayer) {
+                $playerInfo = [
+                    'id' => $machine->gamingPlayer->id,
+                    'username' => $machine->gamingPlayer->username,
+                    'nickname' => $machine->gamingPlayer->nickname ?? $machine->gamingPlayer->username,
+                ];
+            }
+
+            // 获取机台当前数据
+            $machineData = [];
+            try {
+                $apiService = new MachineApiService();
+                $machineData = $apiService->getMachineData($machine->id);
+            } catch (\Exception $e) {
+                Log::warning('获取机台数据失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
+            }
+
+            return json([
+                'code' => 1,
+                'msg' => '刷新成功',
+                'data' => [
+                    'is_online' => $isOnline,
+                    'is_gaming' => $machine->gaming == 1,
+                    'player_info' => $playerInfo,
+                    'machine_data' => $machineData,
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('刷新机台数据失败', [
+                'machine_id' => request()->post('machine_id'),
+                'error' => $e->getMessage(),
+            ]);
+            return json(['code' => 0, 'msg' => '刷新失败: ' . $e->getMessage(), 'data' => []]);
         }
     }
 
