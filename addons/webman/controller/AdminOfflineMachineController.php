@@ -303,15 +303,18 @@ class AdminOfflineMachineController
                 $action->edit()->drawer([$this, 'steelBallForm']);
             }
 
-            // ✅ 指令测试按钮（独立按钮，所有线下机台都显示）
-            $action->button('指令测试', 'code')
-                ->modal([$this, 'commandTest'], [
-                    'machine_id' => $data->id,
-                    'game_type' => $gameType,
-                    'control_type' => $data->control_type
-                ])
-                ->width('90%')
-                ->type('primary');
+            // ✅ 指令测试按钮（独立按钮，所有线下机台显示）
+            $action->prepend(
+                Button::create('指令测试')
+                    ->type('primary')
+                    ->size('small')
+                    ->modal([$this, 'commandTest'], [
+                        'machine_id' => $data->id,
+                        'game_type' => $gameType,
+                        'control_type' => $data->control_type
+                    ])
+                    ->width('90%')
+            );
 
             // 操作下拉菜单
             $dropdown = Dropdown::create(
