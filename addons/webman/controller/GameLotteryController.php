@@ -610,9 +610,10 @@ class GameLotteryController
                     ->default(0)->span(8);
                 $pokemonMachines = \addons\webman\model\Machine::where('type', \addons\webman\model\GameType::TYPE_POKEMON_BALL)
                     ->where('status', 1)
-                    ->select(['id', 'code', 'name'])
+                    ->with('machineLabel')
+                    ->select(['id', 'code', 'label_id'])
                     ->get()
-                    ->mapWithKeys(fn($m) => [$m->id => $m->code . ' - ' . $m->name])
+                    ->mapWithKeys(fn($m) => [$m->id => $m->code . ' - ' . ($m->machineLabel->name ?? '')])
                     ->all();
                 $form->select('pokemon_ball_machine_id', admin_trans('lottery.pokemon_ball_config.machine_id'))
                     ->options($pokemonMachines)
