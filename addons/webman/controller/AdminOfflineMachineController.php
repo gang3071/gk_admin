@@ -782,7 +782,7 @@ class AdminOfflineMachineController
                     'machine_id' => $machineId,
                     'cmd' => $cmd,
                 ]);
-                return message_error('缺少必要参数');
+                return ['code' => 0, 'msg' => '缺少必要参数', 'data' => []];
             }
 
             // 尝试查找机台（添加详细日志）
@@ -793,7 +793,7 @@ class AdminOfflineMachineController
                     'machine_id_type' => gettype($machineId),
                     'all_machines_count' => Machine::count(),
                 ]);
-                return message_error('机台不存在（ID: ' . $machineId . '）');
+                return ['code' => 0, 'msg' => '机台不存在（ID: ' . $machineId . '）', 'data' => []];
             }
 
             // 记录日志
@@ -817,7 +817,7 @@ class AdminOfflineMachineController
                 Admin::id()
             );
 
-            return message_success('指令发送成功', $result);
+            return ['code' => 1, 'msg' => '指令发送成功', 'data' => $result];
 
         } catch (\Exception $e) {
             \support\Log::error('线下机台指令测试失败', [
@@ -827,7 +827,7 @@ class AdminOfflineMachineController
                 'error' => $e->getMessage(),
             ]);
 
-            return message_error('指令发送失败: ' . $e->getMessage());
+            return ['code' => 0, 'msg' => '指令发送失败: ' . $e->getMessage(), 'data' => []];
         }
     }
 
