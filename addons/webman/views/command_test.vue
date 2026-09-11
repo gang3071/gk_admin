@@ -49,6 +49,22 @@
                   <a-tag color="purple">{{ cmd.cmd }}</a-tag>
                 </div>
                 <div class="command-desc">{{ cmd.desc }}</div>
+
+                <!-- ✅ 参数输入框（开任意分等需要输入参数的指令） -->
+                <div v-if="cmd.has_input" class="command-input" style="margin-top: 12px;">
+                  <a-input-number
+                    v-model:value="cmdInputValues[cmd.cmd]"
+                    :min="1"
+                    :max="99999"
+                    :placeholder="cmd.input_label || '请输入参数'"
+                    style="width: 200px;"
+                  >
+                    <template #addonBefore>{{ cmd.input_label || '参数' }}</template>
+                  </a-input-number>
+                  <span style="margin-left: 8px; color: #8c8c8c; font-size: 12px;">
+                    默认: {{ cmd.default_value }}
+                  </span>
+                </div>
               </div>
               <div class="command-action">
                 <a-button
@@ -141,8 +157,19 @@ export default {
       loading: false,
       currentCommand: '',
       cmdResults: {}, // ✅ 改为对象结构：{ 'cmd1': [result1, result2], 'cmd2': [...] }
+      cmdInputValues: {}, // ✅ 指令参数输入值：{ 'cmd1': value1, 'cmd2': value2 }
       commandList: this.command_list
     };
+  },
+  mounted() {
+    // 初始化带输入框的指令的默认值
+    Object.keys(this.command_list).forEach(category => {
+      this.command_list[category].forEach(cmd => {
+        if (cmd.has_input && cmd.default_value) {
+          this.cmdInputValues[cmd.cmd] = cmd.default_value;
+        }
+      });
+    });
   },
   methods: {
     // 判断是否有执行结果
@@ -174,6 +201,11 @@ export default {
       }
 
       try {
+        // ✅ 获取指令参数（如果有输入框）
+        const cmdData = cmd.has_input
+          ? (this.cmdInputValues[cmd.cmd] || cmd.default_value || 0)
+          : 0;
+
         const response = await fetch('/ex-admin/addons-webman-controller-AdminOfflineMachineController/sendCommand', {
           method: 'POST',
           headers: {
@@ -183,7 +215,8 @@ export default {
           body: JSON.stringify({
             machine_id: this.machine_id,
             cmd: cmd.cmd,
-            cmd_name: cmd.name
+            cmd_name: cmd.name,
+            data: cmdData  // ✅ 传递参数值
           })
         });
 

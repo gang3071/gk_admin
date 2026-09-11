@@ -727,6 +727,7 @@ class AdminOfflineMachineController
                         ['name' => '开分一次', 'cmd' => '41', 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
                         ['name' => '开分10次', 'cmd' => '42', 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
                         ['name' => '开分5次', 'cmd' => '49', 'desc' => 'A2 49 - 开分5次（500分）', 'danger' => false],
+                        ['name' => '开任意分', 'cmd' => '4A', 'desc' => 'A2 4A - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
                     ],
                     '控制指令' => [
                         ['name' => '移分ON', 'cmd' => '45', 'desc' => 'A2 45 - 开启移分功能', 'danger' => false],
@@ -784,6 +785,7 @@ class AdminOfflineMachineController
             $machineId = request()->post('machine_id');
             $cmd = request()->post('cmd');
             $cmdName = request()->post('cmd_name');
+            $data = (int) request()->post('data', 0); // ✅ 指令参数（开任意分等需要）
             $timeout = (int) request()->post('timeout', 5); // 超时时间，默认5秒
 
             if (!$machineId || !$cmd) {
@@ -810,6 +812,7 @@ class AdminOfflineMachineController
                 'machine_code' => $machine->code,
                 'cmd' => $cmd,
                 'cmd_name' => $cmdName,
+                'data' => $data,  // ✅ 记录参数值
                 'timeout' => $timeout,
             ]);
 
@@ -819,7 +822,7 @@ class AdminOfflineMachineController
                 'send_raw_cmd_with_reply', // 使用新的 action
                 [
                     'cmd' => $cmd,
-                    'data' => 0,
+                    'data' => $data,  // ✅ 传递参数值（开任意分等需要）
                     'is_system' => 0,
                     'timeout' => $timeout,
                 ],
