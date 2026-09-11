@@ -740,17 +740,45 @@ class AdminOfflineMachineController
                     ],
                 ];
             } else {
-                // 双美钢珠
+                // 双美钢珠（Jackpot）
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '查询状态', 'cmd' => 'query_status', 'desc' => '查询机台当前状态', 'danger' => false],
+                        ['name' => '测试连接', 'cmd' => '20', 'desc' => 'A2 20 - 测试机台连接', 'danger' => false],
+                        ['name' => '读取当前分', 'cmd' => '21', 'desc' => 'A2 21 - 读取机台当前分数', 'danger' => false],
+                        ['name' => '读取得分', 'cmd' => '22', 'desc' => 'A2 22 - 读取机台当前得分', 'danger' => false],
+                        ['name' => '读取转数', 'cmd' => '23', 'desc' => 'A2 23 - 读取机台当前转数', 'danger' => false],
+                        ['name' => '读取对奖次数', 'cmd' => '24', 'desc' => 'A2 24 - 读取中洞对奖次数', 'danger' => false],
+                        ['name' => '读取总开分', 'cmd' => '25', 'desc' => 'A2 25 - 读取总开分', 'danger' => false],
+                        ['name' => '读取总下分', 'cmd' => '26', 'desc' => 'A2 26 - 读取总下分', 'danger' => false],
+                        ['name' => '读取BB Rush', 'cmd' => '2B', 'desc' => 'A2 2B - 读取BB Rush状态', 'danger' => false],
+                    ],
+                    '开分指令' => [
+                        ['name' => '开分一次', 'cmd' => '41', 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
+                        ['name' => '开分10次', 'cmd' => '42', 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
+                        ['name' => '开任意分', 'cmd' => '4A', 'desc' => 'A2 4A - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                    ],
+                    '转数操作' => [
+                        ['name' => '自动上转', 'cmd' => '45', 'desc' => 'A2 45 - 自动上转（开始游戏）', 'danger' => false],
+                        ['name' => '上转一次', 'cmd' => '49', 'desc' => 'A2 49 - 分数转转数（上转一次）', 'danger' => false],
+                        ['name' => '下转一次', 'cmd' => '48', 'desc' => 'A2 48 - 转数转分数（下转一次）', 'danger' => false],
+                        ['name' => '全部上转', 'cmd' => '4C', 'desc' => 'A2 4C - 全部上转', 'danger' => false],
+                        ['name' => '全部下转', 'cmd' => '47', 'desc' => 'A2 47 - 全部下转', 'danger' => false],
                     ],
                     '控制指令' => [
-                        ['name' => '启动', 'cmd' => 'start', 'desc' => '启动机台', 'danger' => false],
-                        ['name' => '停止', 'cmd' => 'stop', 'desc' => '停止机台', 'danger' => false],
+                        ['name' => '大赏灯切换', 'cmd' => '2D', 'desc' => 'A2 2D - 大赏灯切换', 'danger' => false],
+                        ['name' => 'PUSH停止', 'cmd' => '2E00', 'desc' => 'A2 2E 00 - 停止PUSH', 'danger' => false],
+                        ['name' => 'PUSH 1下', 'cmd' => '2E01', 'desc' => 'A2 2E 01 - PUSH 1下', 'danger' => false],
+                        ['name' => 'PUSH 2Hz', 'cmd' => '2E02', 'desc' => 'A2 2E 02 - PUSH 1秒2下', 'danger' => false],
+                        ['name' => 'PUSH 5Hz', 'cmd' => '2E03', 'desc' => 'A2 2E 03 - PUSH 1秒5下', 'danger' => false],
                     ],
                     '管理指令' => [
-                        ['name' => '清零', 'cmd' => 'reset', 'desc' => '⚠️ 重置机台', 'danger' => true],
+                        ['name' => '洗分清零', 'cmd' => '43', 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
+                        ['name' => '洗分留余数', 'cmd' => '44', 'desc' => 'A2 44 - ⚠️ 洗分清零留余数', 'danger' => true],
+                        ['name' => '重置预备转数', 'cmd' => '46', 'desc' => 'A2 46 - 重置预备转入的转数', 'danger' => false],
+                        ['name' => '得分转分数', 'cmd' => '4B', 'desc' => 'A2 4B - 得分转分数', 'danger' => false],
+                        ['name' => '开保转', 'cmd' => '4D', 'desc' => 'A2 4D - 开 OP_3 个保转', 'danger' => false],
+                        ['name' => '清除开赠要求', 'cmd' => '4E', 'desc' => 'A2 4E - 清除开赠要求', 'danger' => true],
+                        ['name' => '清除历史记录', 'cmd' => '4F', 'desc' => 'A2 4F - ⚠️ 清除历史记录', 'danger' => true],
                     ],
                 ];
             }
