@@ -105,17 +105,8 @@
 </template>
 
 <script>
-import {ref} from 'vue'
-import {message} from 'ant-design-vue'
-import {ApiOutlined, ClearOutlined, ThunderboltOutlined} from '@ant-design/icons-vue'
-
 export default {
   name: 'CommandTest',
-  components: {
-    ApiOutlined,
-    ThunderboltOutlined,
-    ClearOutlined
-  },
   props: {
     machine_id: {
       type: [String, Number],
@@ -150,15 +141,19 @@ export default {
       required: true
     }
   },
-  setup(props) {
-    const activeTab = ref(Object.keys(props.command_list)[0])
-    const loading = ref(false)
-    const currentCommand = ref('')
-    const results = ref([])
-
-    const sendCommand = async (cmd) => {
-      currentCommand.value = cmd.cmd
-      loading.value = true
+  data() {
+    return {
+      activeTab: Object.keys(this.command_list)[0] || '',
+      loading: false,
+      currentCommand: '',
+      results: [],
+      commandList: this.command_list
+    };
+  },
+  methods: {
+    async sendCommand(cmd) {
+      this.currentCommand = cmd.cmd;
+      this.loading = true;
 
       // 危险指令二次确认
       if (cmd.danger) {
@@ -166,11 +161,11 @@ export default {
           `⚠️ 警告：${cmd.name}\n\n` +
           `${cmd.desc}\n\n` +
           `确定要执行此指令吗？`
-        )
+        );
         if (!confirmed) {
-          loading.value = false
-          currentCommand.value = ''
-          return
+          this.loading = false;
+          this.currentCommand = '';
+          return;
         }
       }
 
@@ -182,62 +177,52 @@ export default {
             'X-Requested-With': 'XMLHttpRequest',
           },
           body: JSON.stringify({
-            machine_id: props.machine_id,
+            machine_id: this.machine_id,
             cmd: cmd.cmd,
             cmd_name: cmd.name
           })
-        })
+        });
 
-        const result = await response.json()
+        const result = await response.json();
 
         // 添加结果到列表（最新的在最前面）
-        results.value.unshift({
+        this.results.unshift({
           time: new Date().toLocaleString('zh-CN'),
           cmdName: cmd.name,
           cmd: cmd.cmd,
           success: result.code === 1,
           message: result.msg,
           data: result.data
-        })
+        });
 
         if (result.code === 1) {
-          message.success(`指令执行成功: ${cmd.name}`)
+          this.$message.success(`指令执行成功: ${cmd.name}`);
         } else {
-          message.error(`指令执行失败: ${result.msg || '未知错误'}`)
+          this.$message.error(`指令执行失败: ${result.msg || '未知错误'}`);
         }
 
       } catch (error) {
-        results.value.unshift({
+        this.results.unshift({
           time: new Date().toLocaleString('zh-CN'),
           cmdName: cmd.name,
           cmd: cmd.cmd,
           success: false,
           message: error.message,
           data: null
-        })
-        message.error(`请求失败: ${error.message}`)
+        });
+        this.$message.error(`请求失败: ${error.message}`);
       } finally {
-        loading.value = false
-        currentCommand.value = ''
+        this.loading = false;
+        this.currentCommand = '';
       }
-    }
+    },
 
-    const clearResults = () => {
-      results.value = []
-      message.info('已清空执行记录')
-    }
-
-    return {
-      activeTab,
-      loading,
-      currentCommand,
-      results,
-      commandList: props.command_list,
-      sendCommand,
-      clearResults
+    clearResults() {
+      this.results = [];
+      this.$message.info('已清空执行记录');
     }
   }
-}
+};
 </script>
 
 <style scoped>
