@@ -782,7 +782,7 @@ class AdminOfflineMachineController
                     'machine_id' => $machineId,
                     'cmd' => $cmd,
                 ]);
-                return response()->json(['code' => 0, 'msg' => '缺少必要参数', 'data' => []]);
+                return json(['code' => 0, 'msg' => '缺少必要参数', 'data' => []]);
             }
 
             // 尝试查找机台（添加详细日志）
@@ -793,7 +793,7 @@ class AdminOfflineMachineController
                     'machine_id_type' => gettype($machineId),
                     'all_machines_count' => Machine::count(),
                 ]);
-                return response()->json(['code' => 0, 'msg' => '机台不存在（ID: ' . $machineId . '）', 'data' => []]);
+                return json(['code' => 0, 'msg' => '机台不存在（ID: ' . $machineId . '）', 'data' => []]);
             }
 
             // 记录日志
@@ -817,7 +817,7 @@ class AdminOfflineMachineController
                 Admin::id()
             );
 
-            return response()->json(['code' => 1, 'msg' => '指令发送成功', 'data' => $result]);
+            return json(['code' => 1, 'msg' => '指令发送成功', 'data' => $result]);
 
         } catch (\Exception $e) {
             \support\Log::error('线下机台指令测试失败', [
@@ -827,7 +827,7 @@ class AdminOfflineMachineController
                 'error' => $e->getMessage(),
             ]);
 
-            return response()->json(['code' => 0, 'msg' => '指令发送失败: ' . $e->getMessage(), 'data' => []]);
+            return json(['code' => 0, 'msg' => '指令发送失败: ' . $e->getMessage(), 'data' => []]);
         }
     }
 
