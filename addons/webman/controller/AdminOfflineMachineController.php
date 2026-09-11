@@ -696,14 +696,39 @@ class AdminOfflineMachineController
                     ],
                 ];
             } else {
-                // 小淞钢珠（85x协议）
+                // 小淞钢珠（线下版 - 46协议）
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '查询机台状态', 'cmd' => 'b5', 'desc' => '查询机台当前状态和数据', 'danger' => false],
-                        ['name' => '查询分数', 'cmd' => 'b7', 'desc' => '查询机台分数信息', 'danger' => false],
+                        ['name' => '查询当前分', 'cmd' => '46cea2', 'desc' => '46 CE A2 - 查询机台目前分数', 'danger' => false],
+                        ['name' => '查询得分WIN', 'cmd' => '46cea5', 'desc' => '46 CE A5 - 查询机台目前得分WIN', 'danger' => false],
+                        ['name' => '查询剩余转数', 'cmd' => '46cea6', 'desc' => '46 CE A6 - 查询机台目前剩余转数', 'danger' => false],
+                        ['name' => '查询累积转数', 'cmd' => '46cea9', 'desc' => '46 CE A9 - 查询机台累积转数', 'danger' => false],
+                        ['name' => '查询外部码表', 'cmd' => '46ceac', 'desc' => '46 CE AC - 查询外部开洗分码表', 'danger' => false],
+                        ['name' => '查询大赏灯', 'cmd' => '46ceb8', 'desc' => '46 CE B8 - 查询大赏灯状态', 'danger' => false],
+                    ],
+                    '开分洗分' => [
+                        ['name' => '开任意分', 'cmd' => '46ca', 'desc' => '46 CA - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '洗分清零', 'cmd' => '46cc', 'desc' => '46 CC - ⚠️ 洗分并清零', 'danger' => true],
+                    ],
+                    '转数操作' => [
+                        ['name' => '分转转数1次', 'cmd' => '46cec1', 'desc' => '46 CE C1 - 分数变转数1次（上转）', 'danger' => false],
+                        ['name' => '分数全变转数', 'cmd' => '46cecb', 'desc' => '46 CE CB - 分数全部变为转数', 'danger' => false],
+                        ['name' => '转数转分1次', 'cmd' => '46ceca', 'desc' => '46 CE CA - 转数→分数（下转一次）', 'danger' => false],
+                        ['name' => '转数全换分数', 'cmd' => '46cec9', 'desc' => '46 CE C9 - 转数全部换回分数', 'danger' => false],
+                        ['name' => 'WIN换回分数', 'cmd' => '46cec8', 'desc' => '46 CE C8 - 得分WIN换回分数', 'danger' => false],
+                    ],
+                    '控制指令' => [
+                        ['name' => '启动机台', 'cmd' => '46cecd', 'desc' => '46 CE CD - 启动机台（开始游戏）', 'danger' => false],
+                        ['name' => '停止机台', 'cmd' => '46cece', 'desc' => '46 CE CE - 停止机台', 'danger' => false],
+                        ['name' => '连发PUSH', 'cmd' => '46ceb6', 'desc' => '46 CE B6 - 连发PUSH', 'danger' => false],
+                        ['name' => '单发PUSH', 'cmd' => '46ceb2', 'desc' => '46 CE B2 - 单发PUSH', 'danger' => false],
                     ],
                     '管理指令' => [
-                        ['name' => '归0机板', 'cmd' => 'b5归0', 'desc' => '⚠️ 重置机板数据', 'danger' => true],
+                        ['name' => '开机', 'cmd' => '46cebe', 'desc' => '46 CE BE - 开机', 'danger' => false],
+                        ['name' => '关机', 'cmd' => '46cebc', 'desc' => '46 CE BC - 关机', 'danger' => false],
+                        ['name' => '故障排除', 'cmd' => '46ccb4', 'desc' => '46 CC B4 - 故障排除', 'danger' => false],
+                        ['name' => '清除外部码表', 'cmd' => '46ccb3', 'desc' => '46 CC B3 - ⚠️ 清除外部按钮码表', 'danger' => true],
+                        ['name' => '清除押得数值', 'cmd' => '46ccba', 'desc' => '46 CC BA - ⚠️ 清除押得数值', 'danger' => true],
                     ],
                 ];
             }
