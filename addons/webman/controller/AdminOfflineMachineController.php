@@ -15,6 +15,7 @@ use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
@@ -294,52 +295,32 @@ class AdminOfflineMachineController
             })->width('180px')->align('center');
 
         // ✅ 新增：操作按钮（解锁和归0）- 使用ExAdmin的Actions
-        $grid->actions(function ($action, Machine $data) use ($gameType) {
-            // 获取当前管理员权限
-            $permissions = Admin::permission();
-            $unlockPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/unlockMachine';
-            $resetPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/resetMachine';
-
-            // 编辑操作
+        $grid->actions(function (Actions $action, Machine $data) use ($gameType) {
             if ($gameType == GameType::TYPE_SLOT) {
-                $action->edit()->drawer($this->slotForm());
+                $action->edit()->drawer([$this, 'slotForm']);
             } else {
-                $action->edit()->drawer($this->steelBallForm());
+                $action->edit()->drawer([$this, 'steelBallForm']);
             }
 
-            // 创建下拉菜单
             $dropdown = Dropdown::create(
                 Button::create(
-                    ['操作', Icon::create('DownOutlined')->style(['marginLeft' => '5px'])]
-                )
+                    ['操作', Icon::create('DownOutlined')->style(['marginRight' => '5px'])])
             )->trigger(['click']);
 
-            // 解锁按钮（仅锁定时显示 + 需要权限）
-            if ($data->has_lock == 1 && in_array($unlockPermission, $permissions)) {
-                $dropdown->item('解锁机台', 'unlock')
-                    ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'], ['machine_id' => $data->id])
-                    ->gridRefresh();
-            }
+            // 解锁机台
+            $dropdown->item('解锁机台', 'unlock')
+                ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'],
+                    ['machine_id' => $data->id])
+                ->gridRefresh();
 
-            // 归0按钮（仅小淞线下版显示 + 需要权限）
-            if ($data->control_type === Machine::CONTROL_TYPE_SONG &&
-                $data->machine_source === Machine::MACHINE_SOURCE_OFFLINE &&
-                in_array($resetPermission, $permissions)) {
-                $dropdown->item('归0机板', 'reload')
-                    ->confirm(
-                        '确定要归0机板 ' . $data->code . ' 吗？' . "\n\n" .
-                        '⚠️ 注意：' . "\n" .
-                        '1. 会清除开分码表和洗分码表' . "\n" .
-                        '2. 会自动解锁机台' . "\n" .
-                        '3. 不会影响登入状态',
-                        [$this, 'resetMachine'],
-                        ['machine_id' => $data->id]
-                    )
-                    ->gridRefresh();
-            }
-
-            // 将下拉菜单添加到操作列
-            $action->prepend($dropdown);
+            // 归0机板
+            $dropdown->item('归0机板', 'reload-outlined')
+                ->confirm('确定要归0机板吗？', [$this, 'resetMachine'],
+                    ['machine_id' => $data->id])
+                ->gridRefresh();
+            $action->prepend(
+                $dropdown
+            );
         });
 
         // 筛选器
