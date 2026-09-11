@@ -23,6 +23,44 @@
       </a-descriptions>
     </a-card>
 
+    <!-- 执行结果（移到顶部） -->
+    <a-card
+      v-if="results.length > 0"
+      ref="resultCard"
+      :bordered="false"
+      class="result-card"
+      title="📊 执行结果"
+    >
+      <div class="result-container">
+        <div
+          v-for="(result, index) in results"
+          :key="index"
+          :class="[result.success ? 'success' : 'error', index === 0 ? 'latest' : '']"
+          class="result-item"
+        >
+          <div class="result-header">
+            <span class="result-time">{{ result.time }}</span>
+            <span class="result-title">{{ result.cmdName }}</span>
+            <a-tag :color="result.success ? 'success' : 'error'">
+              {{ result.success ? '✅ 成功' : '❌ 失败' }}
+            </a-tag>
+            <a-badge v-if="index === 0" status="processing" text="最新" />
+          </div>
+          <div class="result-cmd">指令: {{ result.cmd }}</div>
+          <div v-if="result.message" class="result-message">{{ result.message }}</div>
+          <div v-if="result.data" class="result-data">
+            <pre>{{ JSON.stringify(result.data, null, 2) }}</pre>
+          </div>
+        </div>
+      </div>
+      <div style="text-align: center; margin-top: 16px;">
+        <a-button size="small" @click="clearResults">
+          <template #icon><ClearOutlined /></template>
+          清空记录
+        </a-button>
+      </div>
+    </a-card>
+
     <!-- 指令分类 -->
     <a-tabs v-model:activeKey="activeTab" class="command-tabs" type="card">
       <a-tab-pane
@@ -65,42 +103,6 @@
         </a-space>
       </a-tab-pane>
     </a-tabs>
-
-    <!-- 执行结果 -->
-    <a-card
-      v-if="results.length > 0"
-      :bordered="false"
-      class="result-card"
-      title="📊 执行结果"
-    >
-      <div class="result-container">
-        <div
-          v-for="(result, index) in results"
-          :key="index"
-          :class="result.success ? 'success' : 'error'"
-          class="result-item"
-        >
-          <div class="result-header">
-            <span class="result-time">{{ result.time }}</span>
-            <span class="result-title">{{ result.cmdName }}</span>
-            <a-tag :color="result.success ? 'success' : 'error'">
-              {{ result.success ? '✅ 成功' : '❌ 失败' }}
-            </a-tag>
-          </div>
-          <div class="result-cmd">指令: {{ result.cmd }}</div>
-          <div v-if="result.message" class="result-message">{{ result.message }}</div>
-          <div v-if="result.data" class="result-data">
-            <pre>{{ JSON.stringify(result.data, null, 2) }}</pre>
-          </div>
-        </div>
-      </div>
-      <div style="text-align: center; margin-top: 16px;">
-        <a-button size="small" @click="clearResults">
-          <template #icon><ClearOutlined /></template>
-          清空记录
-        </a-button>
-      </div>
-    </a-card>
   </div>
 </template>
 
@@ -195,6 +197,16 @@ export default {
           data: result.data
         });
 
+        // ✅ 自动滚动到结果区域
+        this.$nextTick(() => {
+          if (this.$refs.resultCard && this.$refs.resultCard.$el) {
+            this.$refs.resultCard.$el.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+
         if (result.code === 1) {
           this.$message.success(`指令执行成功: ${cmd.name}`);
         } else {
@@ -210,6 +222,17 @@ export default {
           message: error.message,
           data: null
         });
+
+        // ✅ 自动滚动到结果区域
+        this.$nextTick(() => {
+          if (this.$refs.resultCard && this.$refs.resultCard.$el) {
+            this.$refs.resultCard.$el.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        });
+
         this.$message.error(`请求失败: ${error.message}`);
       } finally {
         this.loading = false;
@@ -323,6 +346,23 @@ export default {
 .result-item.error {
   background: #fff2f0;
   border-left-color: #ff4d4f;
+}
+
+.result-item.latest {
+  animation: highlight 1s ease-in-out;
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
+}
+
+@keyframes highlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(24, 144, 255, 0.2);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.2);
+  }
 }
 
 .result-header {
