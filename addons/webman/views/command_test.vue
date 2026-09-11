@@ -170,7 +170,7 @@ export default {
       }
 
       try {
-        const response = await fetch('/admin/ex-admin/addons-webman-controller-AdminOfflineMachineController/sendCommand', {
+        const response = await fetch('/ex-admin/addons-webman-controller-AdminOfflineMachineController/sendCommand', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
