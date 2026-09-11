@@ -682,7 +682,8 @@ class MachineApiService
     {
         try {
             $client = self::createClient($adminId);
-            $response = $client->post('/api/admin/machine/execute', [
+            // ✅ 使用后台专用 endpoint（返回 code: 200）
+            $response = $client->post('/api/admin/machine/execute-admin', [
                 'json' => [
                     'machine_id' => $machineId,
                     'action' => $action,
