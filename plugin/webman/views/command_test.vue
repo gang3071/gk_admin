@@ -8,9 +8,11 @@
         </span>
       </template>
       <a-descriptions :column="4" size="small">
-        <a-descriptions-item label="机台名称">{{ machine_name }}</a-descriptions-item>
+        <a-descriptions-item label="机台名称">
+          <strong>{{ machine_name }}</strong>
+        </a-descriptions-item>
         <a-descriptions-item label="控制类型">
-          <a-tag color="orange">{{ control_type }}</a-tag>
+          <a-tag color="orange">{{ control_type_name }}</a-tag>
         </a-descriptions-item>
         <a-descriptions-item label="游戏类型">
           <a-tag color="blue">{{ game_type_name }}</a-tag>
@@ -128,6 +130,10 @@ export default {
       required: true
     },
     control_type: {
+      type: String,
+      required: true
+    },
+    control_type_name: {
       type: String,
       required: true
     },

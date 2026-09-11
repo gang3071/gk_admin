@@ -296,53 +296,47 @@ class AdminOfflineMachineController
 
         // ✅ 新增：操作按钮（解锁和归0）- 使用ExAdmin的Actions
         $grid->actions(function (Actions $action, Machine $data) use ($gameType) {
+            // 编辑按钮
             if ($gameType == GameType::TYPE_SLOT) {
                 $action->edit()->drawer([$this, 'slotForm']);
             } else {
                 $action->edit()->drawer([$this, 'steelBallForm']);
             }
 
+            // ✅ 指令测试按钮（独立按钮，所有线下机台都显示）
+            $action->button('指令测试', 'code')
+                ->modal([$this, 'commandTest'], [
+                    'machine_id' => $data->id,
+                    'game_type' => $gameType,
+                    'control_type' => $data->control_type
+                ])
+                ->width('90%')
+                ->type('primary');
+
+            // 操作下拉菜单
             $dropdown = Dropdown::create(
-                Button::create(
-                    ['操作', Icon::create('DownOutlined')->style(['marginRight' => '5px'])])
+                Button::create(['操作', Icon::create('DownOutlined')->style(['marginRight' => '5px'])])
             )->trigger(['click']);
 
             // 解锁机台（仅锁定时显示）
             if ($data->has_lock == 1) {
                 $dropdown->item('解锁机台', 'unlock')
-                    ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'],
-                        ['machine_id' => $data->id])
+                    ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'], ['machine_id' => $data->id])
                     ->gridRefresh();
             }
 
-            // 归0机板（仅小淞线下版Slot机台显示）
-            if ($data->control_type === Machine::CONTROL_TYPE_SONG &&
-                $data->machine_source === Machine::MACHINE_SOURCE_OFFLINE &&
-                $data->type === GameType::TYPE_SLOT) {
+            // 归0机板（仅小淞线下版Slot显示）
+            if ($data->control_type === Machine::CONTROL_TYPE_SONG && $gameType === GameType::TYPE_SLOT) {
                 $dropdown->item('归0机板', 'reload-outlined')
                     ->confirm(
-                        '确定要归0机板 ' . $data->code . ' 吗？' . "\n\n" .
-                        '⚠️ 注意：' . "\n" .
-                        '1. 会清除开分码表和洗分码表' . "\n" .
-                        '2. 会自动解锁机台' . "\n" .
-                        '3. 不会影响登入状态',
+                        '确定要归0机板 ' . $data->code . ' 吗？',
                         [$this, 'resetMachine'],
                         ['machine_id' => $data->id]
                     )
                     ->gridRefresh();
             }
 
-            // 指令测试（仅小淞线下版显示）
-            if ($data->control_type === Machine::CONTROL_TYPE_SONG &&
-                $data->machine_source === Machine::MACHINE_SOURCE_OFFLINE) {
-                $dropdown->item('指令测试', 'code')
-                    ->modal([$this, 'commandTest'], ['machine_id' => $data->id, 'game_type' => $gameType])
-                    ->width('80%');
-            }
-
-            $action->prepend(
-                $dropdown
-            );
+            $action->prepend($dropdown);
         });
 
         // 筛选器
@@ -669,90 +663,84 @@ class AdminOfflineMachineController
     {
         $machineId = request()->get('machine_id');
         $gameType = request()->get('game_type');
+        $controlType = request()->get('control_type');
 
         $machine = Machine::find($machineId);
         if (!$machine) {
             return message_error('机台不存在');
         }
 
-        // 根据游戏类型定义可用指令
-        if ($gameType == GameType::TYPE_SLOT) {
-            $commandList = [
-                '查询指令' => [
-                    [
-                        'name' => '查询账目',
-                        'cmd' => 'eac4',
-                        'desc' => '查询开分码表+洗分码表+开分卡分数+机台分数',
-                        'danger' => false
+        // 根据控制类型和游戏类型定义可用指令
+        $commandList = [];
+
+        // 小淞工控
+        if ($controlType === Machine::CONTROL_TYPE_SONG) {
+            if ($gameType == GameType::TYPE_SLOT) {
+                // 小淞Slot（收账小卡协议）
+                $commandList = [
+                    '查询指令' => [
+                        ['name' => '查询账目', 'cmd' => 'eac4', 'desc' => '查询开分码表+洗分码表+开分卡分数+机台分数', 'danger' => false],
+                        ['name' => '查询总玩总赢', 'cmd' => 'ead8', 'desc' => '查询总押分和总得分', 'danger' => false],
+                        ['name' => '查询机台情况', 'cmd' => 'ead4', 'desc' => '查询开分状态+洗分状态+转数', 'danger' => false],
                     ],
-                    [
-                        'name' => '查询总玩总赢',
-                        'cmd' => 'ead8',
-                        'desc' => '查询总押分和总得分',
-                        'danger' => false
+                    '登入指令' => [
+                        ['name' => '登入', 'cmd' => 'eac3', 'desc' => '玩家登入机台', 'danger' => false],
+                        ['name' => '查询登入状态', 'cmd' => 'eac5', 'desc' => '检查是否已登入', 'danger' => false],
                     ],
-                    [
-                        'name' => '查询机台情况',
-                        'cmd' => 'ead4',
-                        'desc' => '查询开分状态+洗分状态+转数',
-                        'danger' => false
+                    '管理指令' => [
+                        ['name' => '清除账目', 'cmd' => 'eade', 'desc' => '清除开洗分账+回补数', 'danger' => true],
+                        ['name' => '归0机板', 'cmd' => 'a37005e0f8ce', 'desc' => '⚠️ 重置机板（清空所有数据）', 'danger' => true],
                     ],
-                ],
-                '登入指令' => [
-                    [
-                        'name' => '登入',
-                        'cmd' => 'eac3',
-                        'desc' => '玩家登入机台',
-                        'danger' => false
+                ];
+            } else {
+                // 小淞钢珠（85x协议）
+                $commandList = [
+                    '查询指令' => [
+                        ['name' => '查询机台状态', 'cmd' => 'b5', 'desc' => '查询机台当前状态和数据', 'danger' => false],
+                        ['name' => '查询分数', 'cmd' => 'b7', 'desc' => '查询机台分数信息', 'danger' => false],
                     ],
-                    [
-                        'name' => '查询登入状态',
-                        'cmd' => 'eac5',
-                        'desc' => '检查是否已登入',
-                        'danger' => false
+                    '管理指令' => [
+                        ['name' => '归0机板', 'cmd' => 'b5归0', 'desc' => '⚠️ 重置机板数据', 'danger' => true],
                     ],
-                ],
-                '管理指令' => [
-                    [
-                        'name' => '清除账目',
-                        'cmd' => 'eade',
-                        'desc' => '清除开洗分账+回补数',
-                        'danger' => true
+                ];
+            }
+        }
+        // 双美工控
+        else if ($controlType === Machine::CONTROL_TYPE_MEI) {
+            if ($gameType == GameType::TYPE_SLOT) {
+                // 双美Slot
+                $commandList = [
+                    '查询指令' => [
+                        ['name' => '读取押分', 'cmd' => 'afcbc7', 'desc' => '查询当前押分金额', 'danger' => false],
+                        ['name' => '读取得分', 'cmd' => 'afcbc9', 'desc' => '查询当前得分金额', 'danger' => false],
+                        ['name' => '机台自检', 'cmd' => 'afcc00', 'desc' => '查询机台自检状态', 'danger' => false],
                     ],
-                    [
-                        'name' => '归0机板',
-                        'cmd' => 'a37005e0f8ce',
-                        'desc' => '重置机板（会清空所有数据，包括开分码表和洗分码表）',
-                        'danger' => true
+                    '控制指令' => [
+                        ['name' => '机台开始', 'cmd' => 'afcc01', 'desc' => '启动机台游戏', 'danger' => false],
+                        ['name' => '机台停止', 'cmd' => 'afcc02', 'desc' => '停止机台游戏', 'danger' => false],
+                        ['name' => '压分关闭', 'cmd' => 'afcc0a', 'desc' => '关闭压分功能', 'danger' => false],
+                        ['name' => '压分开启', 'cmd' => 'afcc0b', 'desc' => '开启压分功能', 'danger' => false],
                     ],
-                ],
-            ];
-        } else {
-            // 钢珠机指令
-            $commandList = [
-                '查询指令' => [
-                    [
-                        'name' => '查询账目',
-                        'cmd' => 'b5',
-                        'desc' => '查询机台当前状态',
-                        'danger' => false
+                    '管理指令' => [
+                        ['name' => '洗分清零', 'cmd' => 'afcc', 'desc' => '⚠️ 洗分并清零机台', 'danger' => true],
+                        ['name' => '强制清零', 'cmd' => 'afcc10', 'desc' => '⚠️ 强制清零所有数据', 'danger' => true],
                     ],
-                    [
-                        'name' => '查询分数',
-                        'cmd' => 'b7',
-                        'desc' => '查询机台分数',
-                        'danger' => false
+                ];
+            } else {
+                // 双美钢珠
+                $commandList = [
+                    '查询指令' => [
+                        ['name' => '查询状态', 'cmd' => 'query_status', 'desc' => '查询机台当前状态', 'danger' => false],
                     ],
-                ],
-                '管理指令' => [
-                    [
-                        'name' => '归0机板',
-                        'cmd' => 'b5',
-                        'desc' => '重置机板',
-                        'danger' => true
+                    '控制指令' => [
+                        ['name' => '启动', 'cmd' => 'start', 'desc' => '启动机台', 'danger' => false],
+                        ['name' => '停止', 'cmd' => 'stop', 'desc' => '停止机台', 'danger' => false],
                     ],
-                ],
-            ];
+                    '管理指令' => [
+                        ['name' => '清零', 'cmd' => 'reset', 'desc' => '⚠️ 重置机台', 'danger' => true],
+                    ],
+                ];
+            }
         }
 
         return admin_view(plugin()->webman->getPath() . '/views/command_test.vue')->attrs([
@@ -760,6 +748,7 @@ class AdminOfflineMachineController
             'machine_code' => $machine->code,
             'machine_name' => $machine->machineLabel->name ?? '',
             'control_type' => $machine->control_type,
+            'control_type_name' => admin_trans('machine.control_type.' . $machine->control_type),
             'game_type' => $machine->type,
             'game_type_name' => $machine->type == GameType::TYPE_SLOT ? 'Slot' : '钢珠',
             'command_list' => $commandList,
