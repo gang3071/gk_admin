@@ -2296,6 +2296,34 @@ class ChannelIndexController
             ->selectRaw('sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
             ->first();
 
+        // ✅ 当前班次统计：储值机储值（投钞类型，source=storage_recharge）
+        $currentShiftStorageRechargeQuery = \addons\webman\model\PlayerDeliveryRecord::query()
+            ->whereExists(function ($query) use ($store) {
+                $query->selectRaw(1)
+                    ->from('player')
+                    ->whereColumn('player.id', 'player_delivery_record.player_id')
+                    ->where('player.store_admin_id', $store->id)
+                    ->where('player.is_promoter', 0);
+            })
+            ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_MACHINE)
+            ->where('player_delivery_record.source', 'storage_recharge')
+            ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                $query->where('player_delivery_record.created_at', '>', $lastShiftTime);
+            })
+            ->sum('player_delivery_record.amount');
+
+        // ✅ 当前班次统计：储值机购票（开分类型，source_type=purchase，排除禁用和打印失败）
+        $currentShiftStorageTicketPurchaseQuery = \addons\webman\model\TicketRecord::query()
+            ->where('store_admin_id', $store->id)
+            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+            ->where('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE)
+            ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                $query->where('created_at', '>', $lastShiftTime);
+            })
+            ->sum('score');
+
         // 当前班次数据汇总
         $currentShiftStats = [
             'machine_put_point' => $currentShiftDeliveryQuery->machine_put_point ?? 0,
@@ -2311,6 +2339,8 @@ class ChannelIndexController
             'upgrade_bonus_amount' => $currentShiftDeliveryQuery->upgrade_bonus_amount ?? 0,
             'ticket_record_total_score' => floatval($currentShiftTicketRecordQuery->total_score ?? 0),
             'ticket_redeem_backend_used_score' => floatval($currentShiftTicketRedeemQuery->backend_used_score ?? 0),
+            'storage_recharge' => floatval($currentShiftStorageRechargeQuery ?? 0),
+            'storage_ticket_purchase' => floatval($currentShiftStorageTicketPurchaseQuery ?? 0),
         ];
 
         // 当前班次打码量统计
@@ -3129,6 +3159,52 @@ class ChannelIndexController
                 ])
             , 4);
 
+            // 储值机储值
+            $storageRecharge = floatval($currentShiftStats['storage_recharge'] ?? 0);
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('shift_handover.storage_recharge'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($storageRecharge, 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#67C23A',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 5);
+
+            // 储值机购票
+            $storageTicketPurchase = floatval($currentShiftStats['storage_ticket_purchase'] ?? 0);
+            $row->column(
+                Card::create([
+                    Html::div()->content([
+                        Html::div()->content(admin_trans('shift_handover.storage_ticket_purchase'))->style([
+                            'fontSize' => '12px',
+                            'color' => '#909399',
+                            'marginBottom' => '8px'
+                        ]),
+                        Html::div()->content(number_format($storageTicketPurchase, 2))->style([
+                            'fontSize' => '15px',
+                            'fontWeight' => 'bold',
+                            'color' => '#E6A23C',
+                            'wordBreak' => 'break-all'
+                        ])
+                    ])
+                ])->hoverable()->bodyStyle([
+                    'padding' => '12px 8px',
+                    'textAlign' => 'center'
+                ])
+            , 5);
+
             // 出票记录总金额
             $ticketRecordTotalScore = floatval($currentShiftStats['ticket_record_total_score'] ?? 0);
             $row->column(
@@ -3150,7 +3226,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 8);
+            , 5);
 
             // 核销记录后台使用金额
             $ticketRedeemBackendUsedScore = floatval($currentShiftStats['ticket_redeem_backend_used_score'] ?? 0);
@@ -3173,7 +3249,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 8);
+            , 4);
 
             // 小计（出票总金额 - 核销后台使用金额）
             $ticketSubtotal = bcsub($ticketRecordTotalScore, $ticketRedeemBackendUsedScore, 2);
@@ -3186,7 +3262,7 @@ class ChannelIndexController
                             'marginBottom' => '8px'
                         ]),
                         Html::div()->content(number_format(floatval($ticketSubtotal), 2))->style([
-                            'fontSize' => '16px',
+                            'fontSize' => '15px',
                             'fontWeight' => 'bold',
                             'color' => floatval($ticketSubtotal) >= 0 ? '#67C23A' : '#F56C6C',
                             'wordBreak' => 'break-all'
@@ -3198,7 +3274,7 @@ class ChannelIndexController
                     'backgroundColor' => floatval($ticketSubtotal) >= 0 ? '#f0f9ff' : '#fef0f0',
                     'borderLeft' => '3px solid ' . (floatval($ticketSubtotal) >= 0 ? '#67C23A' : '#F56C6C')
                 ])
-            , 8);
+            , 5);
 
             // ========== 图表区域 ==========
             $row->column(Card::create($this->openWashChart([$store->id]))->hoverable(), 16);

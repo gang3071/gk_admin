@@ -30,6 +30,8 @@ return [
     'electronic_game_bet_amount' => 'Electronic Game Bet',
     'machine_bet_amount' => 'Machine Bet',
     'ticket_redeem_current_shift' => 'Ticket & Redeem Statistics (Current Shift)',
+    'storage_recharge' => 'Recharge Machine Top-up',
+    'storage_ticket_purchase' => 'Recharge Machine Ticket Purchase',
     'ticket_record_total_score' => 'Ticket Record Total Amount',
     'ticket_redeem_backend_used_score' => 'Redeem Backend Used Amount',
     'ticket_subtotal' => 'Subtotal',

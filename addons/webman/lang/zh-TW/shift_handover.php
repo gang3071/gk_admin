@@ -29,6 +29,8 @@ return [
     'electronic_game_bet_amount' => '電子遊戲打碼量',
     'machine_bet_amount' => '機台打碼量',
     'ticket_redeem_current_shift' => '出票核銷統計（當前班次）',
+    'storage_recharge' => '儲值機儲值',
+    'storage_ticket_purchase' => '儲值機購票',
     'ticket_record_total_score' => '出票記錄總金額',
     'ticket_redeem_backend_used_score' => '核銷記錄後台使用金額',
     'ticket_subtotal' => '小計',
