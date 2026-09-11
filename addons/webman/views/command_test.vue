@@ -149,6 +149,10 @@ export default {
     command_list: {
       type: Object,
       required: true
+    },
+    lang: {
+      type: Object,
+      required: true
     }
   },
   data() {
@@ -186,20 +190,46 @@ export default {
       this.currentCommand = cmd.cmd;
       this.loading = true;
 
-      // 危险指令二次确认
+      // 危险指令二次确认（使用 Ant Design Vue Modal）
       if (cmd.danger) {
-        const confirmed = window.confirm(
-          `⚠️ 警告：${cmd.name}\n\n` +
-          `${cmd.desc}\n\n` +
-          `确定要执行此指令吗？`
-        );
-        if (!confirmed) {
-          this.loading = false;
-          this.currentCommand = '';
-          return;
-        }
+        const self = this;
+        this.$confirm({
+          title: this.lang.danger_command_title,
+          content: () => {
+            return (
+              <div>
+                <p style="margin-bottom: 12px;">
+                  <strong>{self.lang.danger_command_content.replace('{name}', cmd.name)}</strong>
+                </p>
+                <p style="color: #8c8c8c; font-size: 13px;">
+                  {self.lang.danger_command_desc.replace('{desc}', cmd.desc)}
+                </p>
+                <p style="margin-top: 12px; color: #ff4d4f;">
+                  {self.lang.danger_command_confirm}
+                </p>
+              </div>
+            );
+          },
+          okText: this.lang.confirm,
+          cancelText: this.lang.cancel,
+          okType: 'danger',
+          icon: () => <span style="color: #ff4d4f;">⚠️</span>,
+          onOk: async () => {
+            await self.executeCommand(cmd);
+          },
+          onCancel: () => {
+            self.loading = false;
+            self.currentCommand = '';
+          }
+        });
+        return;
       }
 
+      // 非危险指令直接执行
+      await this.executeCommand(cmd);
+    },
+
+    async executeCommand(cmd) {
       try {
         // ✅ 获取指令参数（如果有输入框）
         const cmdData = cmd.has_input
@@ -250,9 +280,9 @@ export default {
         console.log('添加后的 cmdResults:', JSON.parse(JSON.stringify(this.cmdResults)));
 
         if (result.code === 1) {
-          this.$message.success(`指令执行成功: ${cmd.name}`);
+          this.$message.success(this.lang.success.replace('{name}', cmd.name));
         } else {
-          this.$message.error(`指令执行失败: ${result.msg || '未知错误'}`);
+          this.$message.error(this.lang.failed.replace('{msg}', result.msg || '未知错误'));
         }
 
       } catch (error) {
@@ -278,7 +308,7 @@ export default {
 
         console.log('错误后的 cmdResults:', JSON.parse(JSON.stringify(this.cmdResults)));
 
-        this.$message.error(`请求失败: ${error.message}`);
+        this.$message.error(this.lang.request_failed.replace('{error}', error.message));
       } finally {
         this.loading = false;
         this.currentCommand = '';

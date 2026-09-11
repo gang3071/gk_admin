@@ -793,6 +793,18 @@ class AdminOfflineMachineController
             'game_type' => $machine->type,
             'game_type_name' => $machine->type == GameType::TYPE_SLOT ? 'Slot' : '钢珠',
             'command_list' => $commandList,
+            // 多语言数据
+            'lang' => [
+                'danger_command_title' => admin_trans('offline_machine.command_test.danger_command_title'),
+                'danger_command_content' => admin_trans('offline_machine.command_test.danger_command_content'),
+                'danger_command_desc' => admin_trans('offline_machine.command_test.danger_command_desc'),
+                'danger_command_confirm' => admin_trans('offline_machine.command_test.danger_command_confirm'),
+                'cancel' => admin_trans('offline_machine.command_test.cancel'),
+                'confirm' => admin_trans('offline_machine.command_test.confirm'),
+                'success' => admin_trans('offline_machine.command_test.success'),
+                'failed' => admin_trans('offline_machine.command_test.failed'),
+                'request_failed' => admin_trans('offline_machine.command_test.request_failed'),
+            ],
         ]);
     }
 

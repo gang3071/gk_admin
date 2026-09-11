@@ -31,4 +31,16 @@ return [
         'no_media_config' => '线下机台不支持直播流配置',
         'not_offline_machine' => '该机台不是线下机台，无法编辑',
     ],
+
+    'command_test' => [
+        'danger_command_title' => '危险指令警告',
+        'danger_command_content' => '您即将执行危险指令：{name}',
+        'danger_command_desc' => '指令说明：{desc}',
+        'danger_command_confirm' => '确定要执行此指令吗？',
+        'cancel' => '取消',
+        'confirm' => '确定执行',
+        'success' => '指令执行成功：{name}',
+        'failed' => '指令执行失败：{msg}',
+        'request_failed' => '请求失败：{error}',
+    ],
 ];

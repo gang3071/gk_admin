@@ -31,4 +31,16 @@ return [
         'no_media_config' => '線下機台不支持直播流配置',
         'not_offline_machine' => '該機台不是線下機台，無法編輯',
     ],
+
+    'command_test' => [
+        'danger_command_title' => '危險指令警告',
+        'danger_command_content' => '您即將執行危險指令：{name}',
+        'danger_command_desc' => '指令說明：{desc}',
+        'danger_command_confirm' => '確定要執行此指令嗎？',
+        'cancel' => '取消',
+        'confirm' => '確定執行',
+        'success' => '指令執行成功：{name}',
+        'failed' => '指令執行失敗：{msg}',
+        'request_failed' => '請求失敗：{error}',
+    ],
 ];
