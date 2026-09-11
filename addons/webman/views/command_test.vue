@@ -205,9 +205,9 @@ export default {
         });
 
         if (!this.cmdResults[cmd.cmd]) {
-          // 创建新数组并使用 $set 确保响应式
-          this.$set(this.cmdResults, cmd.cmd, [resultData]);
-          console.log('使用 $set 创建新数组');
+          // Vue 3 直接赋值即可，响应式会自动处理
+          this.cmdResults[cmd.cmd] = [resultData];
+          console.log('创建新数组');
         } else {
           // 已存在，直接添加到数组开头
           this.cmdResults[cmd.cmd].unshift(resultData);
@@ -215,9 +215,6 @@ export default {
         }
 
         console.log('添加后的 cmdResults:', JSON.parse(JSON.stringify(this.cmdResults)));
-
-        // 强制更新视图（确保 v-if 条件重新计算）
-        this.$forceUpdate();
 
         if (result.code === 1) {
           this.$message.success(`指令执行成功: ${cmd.name}`);
@@ -234,14 +231,19 @@ export default {
           data: null
         };
 
+        console.log('添加错误结果:', {
+          cmd: cmd.cmd,
+          errorData: errorData
+        });
+
         if (!this.cmdResults[cmd.cmd]) {
-          this.$set(this.cmdResults, cmd.cmd, [errorData]);
+          // Vue 3 直接赋值
+          this.cmdResults[cmd.cmd] = [errorData];
         } else {
           this.cmdResults[cmd.cmd].unshift(errorData);
         }
 
-        // 强制更新视图
-        this.$forceUpdate();
+        console.log('错误后的 cmdResults:', JSON.parse(JSON.stringify(this.cmdResults)));
 
         this.$message.error(`请求失败: ${error.message}`);
       } finally {
