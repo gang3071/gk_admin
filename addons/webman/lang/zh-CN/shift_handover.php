@@ -32,6 +32,7 @@ return [
     'ticket_redeem_current_shift' => '出票核销统计（当前班次）',
     'storage_recharge' => '储值机储值',
     'storage_ticket_purchase' => '储值机购票',
+    'storage_subtotal' => '储值机小计',
     'ticket_record_total_score' => '出票记录总金额',
     'ticket_redeem_backend_used_score' => '核销记录后台使用金额',
     'ticket_subtotal' => '小计',

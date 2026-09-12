@@ -2251,7 +2251,10 @@ class ChannelIndexController
             ->selectRaw("
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN `amount` ELSE 0 END) AS recharge_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND `source` = 'artificial_recharge' THEN `amount` ELSE 0 END) AS open_score_amount,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND `source` = 'ticket_open_score' THEN `amount` ELSE 0 END) AS ticket_open_score_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `withdraw_status` = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN `amount` ELSE 0 END) AS withdrawal_total,
+                SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'channel_withdrawal' THEN `amount` ELSE 0 END) AS channel_withdrawal_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . " THEN `amount` ELSE 0 END) AS birthday_bonus_amount,
                 SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . " THEN `amount` ELSE 0 END) AS upgrade_bonus_amount
@@ -2324,21 +2327,40 @@ class ChannelIndexController
             })
             ->sum('score');
 
+        // ✅ 当前班次统计：开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
+        // 包含：后台开分 + 储值机购票
+        $currentShiftTicketOpenScoreQuery = \addons\webman\model\TicketRecord::query()
+            ->where('store_admin_id', $store->id)
+            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+            ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
+                $query->where('created_at', '>', $lastShiftTime);
+            })
+            ->sum('score');
+
         // 当前班次数据汇总
+        // 开分金额（人工储值 + 储值机储值）
+        $openScoreAmount = floatval($currentShiftDeliveryQuery->open_score_amount ?? 0);
+        // 开票金额（后台开分 + 储值机购票，从TicketRecord表计算）
+        $ticketOpenScoreAmount = floatval($currentShiftTicketOpenScoreQuery ?? 0);
+        // 洗分金额
+        $channelWithdrawalAmount = floatval($currentShiftDeliveryQuery->channel_withdrawal_amount ?? 0);
+        // 核销金额（后台使用）
+        $redeemAmountExport = floatval($currentShiftTicketRedeemQuery->backend_used_score ?? 0);
+
         $currentShiftStats = [
             'machine_put_point' => $currentShiftDeliveryQuery->machine_put_point ?? 0,
-            'total_income' => bcadd(
-                $currentShiftDeliveryQuery->recharge_total ?? 0,
-                $currentShiftDeliveryQuery->machine_put_point ?? 0,
-                2
-            ),
-            'total_outcome' => $currentShiftDeliveryQuery->withdrawal_total ?? 0,
+            // 总收入 = 开分 + 开票
+            'total_income' => bcadd($openScoreAmount, $ticketOpenScoreAmount, 2),
+            // 总支出 = 洗分 + 核销
+            'total_outcome' => bcadd($channelWithdrawalAmount, $redeemAmountExport, 2),
             'lottery_amount' => $currentShiftLotteryQuery->lottery_amount ?? 0,
             'lottery_ticket_reward_amount' => $currentShiftDeliveryQuery->lottery_ticket_reward_amount ?? 0,
             'birthday_bonus_amount' => $currentShiftDeliveryQuery->birthday_bonus_amount ?? 0,
             'upgrade_bonus_amount' => $currentShiftDeliveryQuery->upgrade_bonus_amount ?? 0,
             'ticket_record_total_score' => floatval($currentShiftTicketRecordQuery->total_score ?? 0),
-            'ticket_redeem_backend_used_score' => floatval($currentShiftTicketRedeemQuery->backend_used_score ?? 0),
+            'ticket_redeem_backend_used_score' => $redeemAmountExport,
             'storage_recharge' => floatval($currentShiftStorageRechargeQuery ?? 0),
             'storage_ticket_purchase' => floatval($currentShiftStorageTicketPurchaseQuery ?? 0),
         ];
@@ -2366,9 +2388,10 @@ class ChannelIndexController
             })
             ->sum('player_game_log.chip_amount');
 
-        // 总利润 = (充值 + 投钞) - 洗分
-        // 注意：total_outcome 只包含洗分(withdrawal_total)，不包含彩金
-        // 彩金、摸奖券奖励只用于展示，不参与利润计算（已经发放给客户，客户洗分会洗掉）
+        // 总利润 = 总收入 - 总支出
+        // 总收入 = 开分 + 开票
+        // 总支出 = 洗分 + 核销
+        // 注意：彩金、摸奖券奖励只用于展示，不参与利润计算（已经发放给客户，客户洗分会洗掉）
         $currentShiftStats['total_profit'] = bcsub(
             $currentShiftStats['total_income'],
             $currentShiftStats['total_outcome'],
@@ -3022,30 +3045,8 @@ class ChannelIndexController
                 ])
             , 24);
 
-            // ========== 第五行：当前班次数据卡片（6个指标）==========
+            // ========== 第五行：当前班次数据卡片（5个指标）==========
             $currentShiftProfit = floatval($currentShiftStats['total_profit'] ?? 0);
-
-            // 机台投钞点数
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('shift_handover.machine_put_point'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format(floatval($currentShiftStats['machine_put_point'] ?? 0), 2))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#409EFF',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 4);
 
             // 总收入
             $row->column(
@@ -3067,7 +3068,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 5);
 
             // 总支出
             $row->column(
@@ -3089,7 +3090,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 5);
 
             // 彩金
             $row->column(
@@ -3111,7 +3112,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 5);
 
             // 摸奖券
             $row->column(
@@ -3133,7 +3134,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 4);
+            , 5);
 
             // 总利润（高亮显示）
             $row->column(
@@ -3180,7 +3181,7 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 5);
+            , 8);
 
             // 储值机购票
             $storageTicketPurchase = floatval($currentShiftStats['storage_ticket_purchase'] ?? 0);
@@ -3203,78 +3204,32 @@ class ChannelIndexController
                     'padding' => '12px 8px',
                     'textAlign' => 'center'
                 ])
-            , 5);
+            , 8);
 
-            // 出票记录总金额
-            $ticketRecordTotalScore = floatval($currentShiftStats['ticket_record_total_score'] ?? 0);
+            // 储值机小计（储值 + 购票）
+            $storageSubtotal = bcadd($storageRecharge, $storageTicketPurchase, 2);
             $row->column(
                 Card::create([
                     Html::div()->content([
-                        Html::div()->content(admin_trans('shift_handover.ticket_record_total_score'))->style([
+                        Html::div()->content(admin_trans('shift_handover.storage_subtotal'))->style([
                             'fontSize' => '12px',
                             'color' => '#909399',
                             'marginBottom' => '8px'
                         ]),
-                        Html::div()->content(number_format($ticketRecordTotalScore, 2))->style([
-                            'fontSize' => '15px',
+                        Html::div()->content(number_format(floatval($storageSubtotal), 2))->style([
+                            'fontSize' => '16px',
                             'fontWeight' => 'bold',
-                            'color' => '#67C23A',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 5);
-
-            // 核销记录后台使用金额
-            $ticketRedeemBackendUsedScore = floatval($currentShiftStats['ticket_redeem_backend_used_score'] ?? 0);
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('shift_handover.ticket_redeem_backend_used_score'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format($ticketRedeemBackendUsedScore, 2))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => '#F56C6C',
-                            'wordBreak' => 'break-all'
-                        ])
-                    ])
-                ])->hoverable()->bodyStyle([
-                    'padding' => '12px 8px',
-                    'textAlign' => 'center'
-                ])
-            , 4);
-
-            // 小计（出票总金额 - 核销后台使用金额）
-            $ticketSubtotal = bcsub($ticketRecordTotalScore, $ticketRedeemBackendUsedScore, 2);
-            $row->column(
-                Card::create([
-                    Html::div()->content([
-                        Html::div()->content(admin_trans('shift_handover.ticket_subtotal'))->style([
-                            'fontSize' => '12px',
-                            'color' => '#909399',
-                            'marginBottom' => '8px'
-                        ]),
-                        Html::div()->content(number_format(floatval($ticketSubtotal), 2))->style([
-                            'fontSize' => '15px',
-                            'fontWeight' => 'bold',
-                            'color' => floatval($ticketSubtotal) >= 0 ? '#67C23A' : '#F56C6C',
+                            'color' => '#409EFF',
                             'wordBreak' => 'break-all'
                         ])
                     ])
                 ])->hoverable()->bodyStyle([
                     'padding' => '12px 8px',
                     'textAlign' => 'center',
-                    'backgroundColor' => floatval($ticketSubtotal) >= 0 ? '#f0f9ff' : '#fef0f0',
-                    'borderLeft' => '3px solid ' . (floatval($ticketSubtotal) >= 0 ? '#67C23A' : '#F56C6C')
+                    'backgroundColor' => '#f0f9ff',
+                    'borderLeft' => '3px solid #409EFF'
                 ])
-            , 5);
+            , 8);
 
             // ========== 图表区域 ==========
             $row->column(Card::create($this->openWashChart([$store->id]))->hoverable(), 16);

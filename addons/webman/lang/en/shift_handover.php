@@ -32,6 +32,7 @@ return [
     'ticket_redeem_current_shift' => 'Ticket & Redeem Statistics (Current Shift)',
     'storage_recharge' => 'Recharge Machine Top-up',
     'storage_ticket_purchase' => 'Recharge Machine Ticket Purchase',
+    'storage_subtotal' => 'Recharge Machine Subtotal',
     'ticket_record_total_score' => 'Ticket Record Total Amount',
     'ticket_redeem_backend_used_score' => 'Redeem Backend Used Amount',
     'ticket_subtotal' => 'Subtotal',
