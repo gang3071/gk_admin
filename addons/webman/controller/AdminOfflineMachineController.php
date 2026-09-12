@@ -679,20 +679,24 @@ class AdminOfflineMachineController
         // 小淞工控
         if ($control_type === Machine::CONTROL_TYPE_SONG) {
             if ($game_type == GameType::TYPE_SLOT) {
-                // 小淞Slot（收账小卡协议）
+                // 小淞Slot（收账小卡协议 - GD 2026-07-30）
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '查询账目', 'cmd' => 'eac4', 'desc' => '查询开分码表+洗分码表+开分卡分数+机台分数', 'danger' => false],
-                        ['name' => '查询总玩总赢', 'cmd' => 'ead8', 'desc' => '查询总押分和总得分', 'danger' => false],
-                        ['name' => '查询机台情况', 'cmd' => 'ead4', 'desc' => '查询开分状态+洗分状态+转数', 'danger' => false],
+                        ['name' => '查询账目', 'cmd' => 'eac4', 'desc' => 'EA C4 - 查询开分码表+洗分码表+开分卡分数+机台分数', 'danger' => false],
+                        ['name' => '查询总玩总赢', 'cmd' => 'ead8', 'desc' => 'EA D8 - 查询总押分数+总赢分数', 'danger' => false],
+                        ['name' => '查询机台情况', 'cmd' => 'ead4', 'desc' => 'EA D4 - 查询开分状态+洗分状态+转数', 'danger' => false],
                     ],
-                    '登入指令' => [
-                        ['name' => '登入', 'cmd' => 'eac3', 'desc' => '玩家登入机台', 'danger' => false],
-                        ['name' => '查询登入状态', 'cmd' => 'eac5', 'desc' => '检查是否已登入', 'danger' => false],
+                    '登入登出' => [
+                        ['name' => '登入', 'cmd' => 'eac3', 'desc' => 'EA C3 - 玩家登入机台（必须登入才能上下分）', 'danger' => false],
+                        ['name' => '查询登入状态', 'cmd' => 'eac5', 'desc' => 'EA C5 - 检查是否已登入', 'danger' => false],
+                    ],
+                    '资金操作' => [
+                        ['name' => '上分', 'cmd' => 'a5xxc0', 'desc' => 'A5 XX C0 - 上分指令（XX=次数，100分/次，可输入总分数自动计算）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '下分', 'cmd' => 'a500c1', 'desc' => 'A5 00 C1 - 下分指令（全部洗分）', 'danger' => true],
                     ],
                     '管理指令' => [
-                        ['name' => '清除账目', 'cmd' => 'eade', 'desc' => '清除开洗分账+回补数', 'danger' => true],
-                        ['name' => '归0机板', 'cmd' => 'a37005e0f8ce', 'desc' => '⚠️ 重置机板（清空所有数据）', 'danger' => true],
+                        ['name' => '清除账目', 'cmd' => 'eade', 'desc' => 'EA DE - ⚠️ 清除开洗分账+回补数', 'danger' => true],
+                        ['name' => '归0机板', 'cmd' => 'a37005e0f8ce', 'desc' => 'A3 70 05 E0 F8 CE - ⚠️ 归0机板（清空所有数据，故障排除）', 'danger' => true],
                     ],
                 ];
             } else {
