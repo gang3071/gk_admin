@@ -53,4 +53,24 @@ return [
         'refresh_success' => '数据已刷新',
         'no_player' => '无玩家使用',
     ],
+
+    'one_way_verify' => [
+        // 46ccb4 - 故障排除
+        'fault_normal' => '机台状态正常，无故障',
+        'fault_cleared' => '故障已清除（DA正常状态）',
+        'fault_not_cleared' => '故障未清除，机台仍处于故障状态，请检查硬件',
+        'fault_abnormal' => '状态异常：原本正常但变为故障',
+
+        // 46ccb3 - 清除外部按钮码表
+        'external_already_zero' => '外部按钮计数器本来就是0，无需清除',
+        'external_cleared' => '外部按钮计数器已归0（B5={open}, B7={wash}）',
+        'external_both_not_cleared' => 'B5和B7计数器均未归0（B5={open}, B7={wash}）',
+        'external_open_not_cleared' => 'B5开分计数未归0（当前={count}）',
+        'external_wash_not_cleared' => 'B7洗分计数未归0（当前={count}）',
+
+        // 46ccba - 清除押得数值
+        'score_already_zero' => '押得数值本来就是0，无需清除',
+        'score_cleared' => '押得数值已归0',
+        'score_not_cleared' => '押得数值未归0（当前得分={score}）',
+    ],
 ];

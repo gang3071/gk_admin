@@ -53,4 +53,24 @@ return [
         'refresh_success' => 'Data refreshed',
         'no_player' => 'No Player',
     ],
+
+    'one_way_verify' => [
+        // 46ccb4 - Fault Troubleshooting
+        'fault_normal' => 'Machine status is normal, no fault',
+        'fault_cleared' => 'Fault cleared (DA normal status)',
+        'fault_not_cleared' => 'Fault not cleared, machine still in fault status, please check hardware',
+        'fault_abnormal' => 'Status abnormal: was normal but became faulty',
+
+        // 46ccb3 - Clear External Button Counter
+        'external_already_zero' => 'External button counter is already 0, no need to clear',
+        'external_cleared' => 'External button counter cleared to 0 (B5={open}, B7={wash})',
+        'external_both_not_cleared' => 'Both B5 and B7 counters not cleared (B5={open}, B7={wash})',
+        'external_open_not_cleared' => 'B5 open counter not cleared (current={count})',
+        'external_wash_not_cleared' => 'B7 wash counter not cleared (current={count})',
+
+        // 46ccba - Clear Bet Value
+        'score_already_zero' => 'Bet value is already 0, no need to clear',
+        'score_cleared' => 'Bet value cleared to 0',
+        'score_not_cleared' => 'Bet value not cleared (current score={score})',
+    ],
 ];

@@ -53,4 +53,24 @@ return [
         'refresh_success' => 'データ更新完了',
         'no_player' => 'プレイヤーなし',
     ],
+
+    'one_way_verify' => [
+        // 46ccb4 - 故障排除
+        'fault_normal' => '機台は正常、故障なし',
+        'fault_cleared' => '故障が解除されました（DA正常状態）',
+        'fault_not_cleared' => '故障が解除されていません、機台が故障状態にあります、ハードウェアを確認してください',
+        'fault_abnormal' => '状態異常：正常だったのに故障になりました',
+
+        // 46ccb3 - 外部ボタンカウンタクリア
+        'external_already_zero' => '外部ボタンカウンタは既に0です、クリア不要',
+        'external_cleared' => '外部ボタンカウンタが0にクリアされました（B5={open}, B7={wash}）',
+        'external_both_not_cleared' => 'B5とB7カウンタが共にクリアされていません（B5={open}, B7={wash}）',
+        'external_open_not_cleared' => 'B5開分カウントがクリアされていません（現在={count}）',
+        'external_wash_not_cleared' => 'B7洗分カウントがクリアされていません（現在={count}）',
+
+        // 46ccba - ベット値クリア
+        'score_already_zero' => 'ベット値は既に0です、クリア不要',
+        'score_cleared' => 'ベット値が0にクリアされました',
+        'score_not_cleared' => 'ベット値がクリアされていません（現在スコア={score}）',
+    ],
 ];
