@@ -30,7 +30,6 @@ use addons\webman\model\SystemSetting;
 use addons\webman\service\FishServices;
 use addons\webman\service\JackpotService;
 use addons\webman\service\MediaServer;
-use addons\webman\service\SlotService;
 use addons\webman\service\WalletService;
 use addons\webman\validator\ValidatorFactory;
 use app\service\ActivityServices;
@@ -1625,45 +1624,6 @@ if (!function_exists('getAdminUserListOptions')) {
             $optionList[$item->id] = $item->nickname;
         }
 
-        return $optionList;
-    }
-}
-
-if (!function_exists('getActionListOptions')) {
-    /**
-     * 获取机台操作
-     * @return array
-     */
-    function getActionListOptions(): array
-    {
-        $optionList = [
-            [
-                'id' => GameType::TYPE_SLOT,
-                'name' => admin_trans('game_type.game_type.' . GameType::TYPE_SLOT),
-                'pid' => 0
-            ],
-            [
-                'id' => GameType::TYPE_STEEL_BALL,
-                'name' => admin_trans('game_type.game_type.' . GameType::TYPE_STEEL_BALL),
-                'pid' => 0
-            ],
-        ];
-        $slotActionList = SlotService::getAction();
-        $jackPotActionList = JackpotService::getAction();
-        foreach ($slotActionList as $item) {
-            $optionList[] = [
-                'id' => $item . ',' . GameType::TYPE_SLOT,
-                'name' => admin_trans('machine_operation_log.action.slot.' . $item),
-                'pid' => GameType::TYPE_SLOT
-            ];
-        }
-        foreach ($jackPotActionList as $item) {
-            $optionList[] = [
-                'id' => $item . ',' . GameType::TYPE_STEEL_BALL,
-                'name' => admin_trans('machine_operation_log.action.jack_pot.' . $item),
-                'pid' => GameType::TYPE_STEEL_BALL
-            ];
-        }
         return $optionList;
     }
 }

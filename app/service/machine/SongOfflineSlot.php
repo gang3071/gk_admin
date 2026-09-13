@@ -7,7 +7,15 @@ use Exception;
 use support\Log;
 
 /**
- * Class SongSlot
+ * 小淞线下版 Slot 机台服务（收账小卡协议）
+ *
+ * 协议：GD 收账小卡协议（2026-07-30）
+ *
+ * ⚠️ 架构说明：
+ * - gk_admin: 只负责业务逻辑和数据读取（从 Redis）
+ * - gk_work: 负责与机台的 Gateway 通信和指令处理
+ * - 所有指令通过 MachineApiService 调用 gk_work
+ *
  * @property int $auto 自动状态
  * @property int $reward_status 开奖状态
  * @property int $play_start_time 开始游戏时间
@@ -18,14 +26,12 @@ use support\Log;
  * @property int $bet 机台压分
  * @property int $last_play_time 最后游戏时间
  * @property int $win 机台总得分
- * @property int $bb bb
- * @property int $rb rb
  * @property int $keep_seconds 保留时长
  * @property int $keeping 保留状态
  * @property int $keeping_user_id 保留玩家
  * @property int $last_keep_at 最后保留时间
- * @property int $player_pressure 玩家進入時原始壓分
- * @property int $player_score 玩家進入時原始得分
+ * @property int $player_pressure 玩家进入时原始压分
+ * @property int $player_score 玩家进入时原始得分
  * @property int $player_open_point 玩家开分
  * @property int $player_wash_point 玩家洗分
  * @property int $last_point_at 玩家最后上下分时间
@@ -36,40 +42,50 @@ use support\Log;
  * @property int $now_turn 当前转数
  * @property int $has_lock 机台锁
  * @property int $pre_wash_point 预洗分点数
+ * @property int $login_status 登入状态
+ * @property int $card_score 开分卡分数
+ * @property int $machine_score 机台分数
+ * @property int $total_bet 总押分数
+ * @property int $total_win 总得分数
+ * @property int $open_table 开分码表
+ * @property int $wash_table 洗分码表
  *
  * @package app\service\machine
  */
-class SongSlot extends AbstractMachineService implements BaseMachine
+class SongOfflineSlot extends AbstractMachineService implements BaseMachine
 {
-    const ALL = 'all'; //机台状态
-    const OPEN_ANY_POINT = 'afca'; //开任意数
-    const WASH_ZERO = 'afcc'; //洗分&清零
-    const TESTING = 'afc0'; //心跳
-    const TESTING2 = 'afc6'; //心跳
-    
-    const READ_SCORE = 'afcbc5'; //读取开分
-    const READ_WIN = 'afcbc9'; //讀取得分
-    const READ_BET = 'afcbc7'; //读取压分
-    const READ_STATUS = 'afcbc3'; //读取当前状态
-    
-    const GET_SCORE = 'afc5'; //读取开分卡分数
-    const GET_WIN = 'afc9'; //讀取 得分
-    const GET_BET = 'afc7'; //读取 BET
-    const GET_STATUS = 'afc3'; //读取当前状态
-    
-    const REWARD_SWITCH = 'afceb8'; //大賞燈切換
-    const CHECK = 'afcfb4'; //故排
-    const START = 'afceb2'; //启动
-    const OUT_ON = 'afceb6'; //启动自动
-    const OUT_OFF = 'afceb2'; //停止自动
-    const STOP_ONE = 'afceb3'; //停1
-    const STOP_TWO = 'afceb4'; //停2
-    const STOP_THREE = 'afceb5'; //停3
-    const MACHINE_OPEN = 'afcebe'; //开机
-    const MACHINE_CLOSE = 'afcebc'; //关机
-    const ALL_DOWN = 'afcfba'; //清除历史记录
+    // ========== 收账小卡协议常量（GD 2026-07-30）==========
 
-    // ✅ cacheData, expirationTime, log 已在基类 AbstractMachineService 中定义
+    const ALL = 'all'; // 机台状态
+
+    // 查询指令（EA 前缀）
+    const QUERY_ACCOUNT = 'eac4';        // EA C4 - 查询开分码表+洗分码表+开分卡分数+机台分数
+    const QUERY_TOTAL = 'ead8';          // EA D8 - 查询总押分数+总赢分数
+    const QUERY_STATUS = 'ead4';         // EA D4 - 查询开分状态+洗分状态+转数
+
+    // 登入登出（EA 前缀）
+    const LOGIN = 'eac3';                // EA C3 - 玩家登入机台（必须登入才能上下分）
+    const CHECK_LOGIN = 'eac5';          // EA C5 - 检查是否已登入
+
+    // 资金操作（A5 前缀）
+    const ADD_POINT = 'a5xxc0';          // A5 XX C0 - 上分指令（XX=次数，100分/次）
+    const WITHDRAW_POINT = 'a500c1';     // A5 00 C1 - 下分指令（全部洗分）
+
+    // 管理指令
+    const CLEAR_ACCOUNT = 'eade';        // EA DE - 清除开洗分账+回补数
+    const RESET_BOARD = 'a37005e0f8ce';  // A3 70 05 E0 F8 CE - 归0机板（清空所有数据，故障排除）
+
+    // 心跳指令
+    const TESTING = 'eac0';              // EA C0 - 心跳
+    const TESTING2 = 'eac6';             // EA C6 - 心跳备用
+
+    // ========== 兼容性别名（用于统一接口）==========
+    const READ_SCORE = 'eac4';           // 读取分数（映射到 QUERY_ACCOUNT）
+    const READ_WIN = 'ead8';             // 读取得分（映射到 QUERY_TOTAL）
+    const READ_BET = 'ead4';             // 读取押分（映射到 QUERY_STATUS）
+    const OPEN_ANY_POINT = 'a5xxc0';     // 开任意分（映射到 ADD_POINT）
+    const WASH_ZERO = 'a500c1';          // 洗分清零（映射到 WITHDRAW_POINT）
+    const ALL_DOWN = 'eade';             // 清除历史记录（映射到 CLEAR_ACCOUNT）
 
     public function __construct(Machine $machine, $lang = 'zh_CN')
     {
@@ -105,6 +121,13 @@ class SongSlot extends AbstractMachineService implements BaseMachine
             $this->cacheDataKey . '_now_turn',
             $this->cacheDataKey . '_has_lock',
             $this->cacheDataKey . '_pre_wash_point',
+            $this->cacheDataKey . '_login_status',
+            $this->cacheDataKey . '_card_score',
+            $this->cacheDataKey . '_machine_score',
+            $this->cacheDataKey . '_total_bet',
+            $this->cacheDataKey . '_total_win',
+            $this->cacheDataKey . '_open_table',
+            $this->cacheDataKey . '_wash_table',
         ];
     }
 
@@ -116,29 +139,15 @@ class SongSlot extends AbstractMachineService implements BaseMachine
             'bet',
             'win',
             'has_lock',
+            'login_status',
         ];
     }
 
     protected function initializeLogger(): \Psr\Log\LoggerInterface
     {
-        return Log::channel('song_slot_machine') ?? Log::channel('default');
+        return Log::channel('song_offline_slot_machine') ?? Log::channel('default');
     }
-    
-    // ✅ __get 方法已删除 - 使用 AbstractMachineService 的优化实现
-    // 基类提供：内存缓存、批量读取、自动重试
 
-    // ✅ __set 方法已删除 - 使用 AbstractMachineService 的优化实现
-    // 基类提供：自动重试、关键字段告警、统一推送
-    // SongSlot 特定推送逻辑已移至 handleFieldUpdatePush()
-
-    /**
-     * 处理字段更新后的推送逻辑
-     * 覆盖基类方法以实现 SongSlot 特定的推送逻辑
-     *
-     * @param string $name 字段名
-     * @param mixed $value 字段值
-     * @return void
-     */
     /**
      * 构建机台推送信息
      *
@@ -176,9 +185,18 @@ class SongSlot extends AbstractMachineService implements BaseMachine
             'change_point_card_status' => $machineCacheInfo[$this->cacheDataKey . '_change_point_card_status'] ?? 0,
             'now_turn' => $machineCacheInfo[$this->cacheDataKey . '_now_turn'] ?? 0,
             'has_lock' => $machineCacheInfo[$this->cacheDataKey . '_has_lock'] ?? 0,
+            'login_status' => $machineCacheInfo[$this->cacheDataKey . '_login_status'] ?? 0,
         ];
     }
 
+    /**
+     * 处理字段更新后的推送逻辑
+     * 覆盖基类方法以实现 SongOfflineSlot 特定的推送逻辑
+     *
+     * @param string $name 字段名
+     * @param mixed $value 字段值
+     * @return void
+     */
     protected function handleFieldUpdatePush(string $name, mixed $value): void
     {
         try {
@@ -209,6 +227,7 @@ class SongSlot extends AbstractMachineService implements BaseMachine
                 case 'last_point_at':
                 case 'keep_seconds':
                 case 'has_lock':
+                case 'login_status':
                     // 游戏信息变化推送
                     if (!empty($this->machine->gamingPlayer)) {
                         $this->sendMachineRealTimeInformation(
@@ -225,24 +244,13 @@ class SongSlot extends AbstractMachineService implements BaseMachine
                 $this->sendMachineNowInfoMessage($this->machine->gaming_user_id, $this->machine->id, $name, $info);
             }
         } catch (\Exception $e) {
-            $this->log->warning('SongSlot 推送逻辑异常', [
+            $this->log->warning('SongOfflineSlot 推送逻辑异常', [
                 'machine_id' => $this->machine->id,
                 'field' => $name,
                 'error' => $e->getMessage()
             ]);
         }
     }
-
-    // [已删除] 消息处理方法和辅助方法（共 306 行）
-    // 删除的方法：
-    // 1. slotCmd() - 机台消息处理（236行）
-    // 2. calculateS1() - S1校验位计算（9行）
-    // 3. calculateS2() - S2校验位计算（10行）
-    // 4. parseHeartbeat() - 心跳指令解析（16行）
-    // 5. parseScore() - 分数解析（9行）
-    //
-    // 原因：这些方法只在 gk_work 的 Gateway Events 中被调用
-    // gk_admin 不处理机台消息，统一通过 sendCmd() HTTP 调用 gk_work
 
     /**
      * 发送机台指令
@@ -262,7 +270,7 @@ class SongSlot extends AbstractMachineService implements BaseMachine
     public function sendCmd(
         string $cmd,
         int $data = 0,
-        string $source = 'admin',  // ← gk_admin 默认 admin
+        string $source = 'admin',
         int $source_id = 0,
         int $isSystem = 0
     ): bool {
@@ -271,12 +279,6 @@ class SongSlot extends AbstractMachineService implements BaseMachine
             $adminId = $source === 'admin' ? $source_id : 0;
 
             // ✅ 统一通过 MachineApiService 调用 gk_work
-            // gk_work 会处理：
-            // 1. 在线检查（Gateway::isUidOnline）
-            // 2. 机台锁检查
-            // 3. 指令格式化（createCmd）
-            // 4. Gateway 发送（sendToUid）
-            // 5. 轮询等待（openPoint、washPoint 逻辑）
             $result = \app\service\MachineApiService::sendCmd(
                 $this->machine->id,
                 $cmd,
@@ -285,18 +287,19 @@ class SongSlot extends AbstractMachineService implements BaseMachine
                 $this->lang
             );
 
-            $this->log->info('✅ 机台指令已发送到 gk_work', [
+            $this->log->info('✅ 小淞线下Slot指令已发送到 gk_work', [
                 'machine_id' => $this->machine->id,
                 'machine_code' => $this->machine->code,
                 'cmd' => $cmd,
                 'data' => $data,
-                'admin_id' => $adminId
+                'admin_id' => $adminId,
+                'protocol' => 'SongOfflineSlot (收账小卡协议)'
             ]);
 
             return true;
 
         } catch (Exception $e) {
-            $this->log->error('❌ 机台指令发送失败', [
+            $this->log->error('❌ 小淞线下Slot指令发送失败', [
                 'machine_id' => $this->machine->id,
                 'machine_code' => $this->machine->code,
                 'cmd' => $cmd,
@@ -308,20 +311,4 @@ class SongSlot extends AbstractMachineService implements BaseMachine
             throw $e;
         }
     }
-    
-    // ✅ getAllData 方法已删除 - 使用 AbstractMachineService 的优化实现
-    // 基类提供：内存缓存（1秒TTL）、批量读取（getMultiple）
-
-    // ✅ 已删除 5 个未使用的方法（约 75 行）
-    // 1. getDescription() - 获取机台操作描述（43行）
-    // 2. getActionVersion() - 获取操作版本号（5行）
-    // 3. scoreToBytes() - 分数转字节（16行）
-    // 4. toHexString() - 字节转十六进制（6行）
-    // 5. bytesToScore() - 字节转分数（16行）
-    // 6. getAllData() - 已使用基类实现（3行）
-    //
-    // 原因：这些方法在 gk_admin 中完全未被调用
-    // - getDescription/getActionVersion: 未被使用
-    // - scoreToBytes/toHexString/bytesToScore: 只在 gk_work 中用于指令格式化
-    // - getAllData: 基类已提供更优化的实现
 }
