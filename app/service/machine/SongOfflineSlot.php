@@ -54,38 +54,65 @@ use support\Log;
  */
 class SongOfflineSlot extends AbstractMachineService implements BaseMachine
 {
-    // ========== 收账小卡协议常量（GD 2026-07-30）==========
+    // ========================================
+    // 查询指令（统一命名规范：READ_*）- 重构后常量（2026-09-13）
+    // ========================================
+    const READ_SCORE = 'eac4';              // 读取分数（查询账目：开分码表、洗分码表、开分卡分数、机台分数）
+    const READ_BET = 'ead8';                // 读取押分（查询总押分+总得分）
+    const READ_STATUS = 'ead4';             // 读取状态（查询机台情况：开分状态、洗分状态、转数）
 
-    const ALL = 'all'; // 机台状态
+    // ========================================
+    // 登入/登出指令（线下版特有）
+    // ========================================
+    const LOGIN = 'eac3';                   // 登入（機板回傳 A7 C3 表示登入中）
+    const LOGOUT = 'eac5';                  // 登出（機板回傳 A7 C5 表示登出中）
 
-    // 查询指令（EA 前缀）
-    const QUERY_ACCOUNT = 'eac4';        // EA C4 - 查询开分码表+洗分码表+开分卡分数+机台分数
-    const QUERY_TOTAL = 'ead8';          // EA D8 - 查询总押分数+总赢分数
-    const QUERY_STATUS = 'ead4';         // EA D4 - 查询开分状态+洗分状态+转数
+    // ========================================
+    // 资金操作指令
+    // ========================================
+    const OPEN_POINT = 'a5';                // 上分前缀（需拼接次数：A5 XX C0 SUM1 SUM2）
+    const WASH_POINT = 'a500c1';            // 下分（全部洗分：A5 00 C1 SUM1 SUM2）
 
-    // 登入登出（EA 前缀）
-    const LOGIN = 'eac3';                // EA C3 - 玩家登入机台（必须登入才能上下分）
-    const CHECK_LOGIN = 'eac5';          // EA C5 - 检查是否已登入
+    // ========================================
+    // 管理指令（统一命名：ALL_DOWN/CHECK）
+    // ========================================
+    const ALL_DOWN = 'eade';                // 清除历史记录（清除开洗分账+回补数）
+    const CHECK = 'a37005e0f8ce';           // 故排（归0机板，固定指令）
+    const SSR_SIGNAL = 'eaec';              // SSR讯号10秒（线下特有：预留给smart-slot移出按钮）
 
-    // 资金操作（A5 前缀）
-    const ADD_POINT = 'a5xxc0';          // A5 XX C0 - 上分指令（XX=次数，100分/次）
-    const WITHDRAW_POINT = 'a500c1';     // A5 00 C1 - 下分指令（全部洗分）
+    // ========================================
+    // 心跳和开机（线下版特有）
+    // ========================================
+    const TESTING = 'b7';                   // 心跳标识
+    const BOOT = 'fa';                      // 开机标识
+    const POWER_ON = 'fah';                 // 开机信号（机版主动发送）
 
-    // 管理指令
-    const CLEAR_ACCOUNT = 'eade';        // EA DE - 清除开洗分账+回补数
-    const RESET_BOARD = 'a37005e0f8ce';  // A3 70 05 E0 F8 CE - 归0机板（清空所有数据，故障排除）
+    // ========================================
+    // 回复头部（内部识别用）
+    // ========================================
+    const REPLY_A3 = 'a3';                  // 归0回复头部
+    const REPLY_A5 = 'a5';                  // 操作回复头部
+    const REPLY_A6 = 'a6';                  // 账目回复头部
+    const REPLY_A7 = 'a7';                  // 状态回复头部
 
-    // 心跳指令
-    const TESTING = 'eac0';              // EA C0 - 心跳
-    const TESTING2 = 'eac6';             // EA C6 - 心跳备用
+    // ========================================
+    // 回复状态
+    // ========================================
+    const RESET_COMPLETE = 'ef';            // 完整归0完成（E1时发归0指令）
+    const RESET_CLEAR = 'ee';               // 清除账目完成（未有E1时发归0指令）
 
-    // ========== 兼容性别名（用于统一接口）==========
-    const READ_SCORE = 'eac4';           // 读取分数（映射到 QUERY_ACCOUNT）
-    const READ_WIN = 'ead8';             // 读取得分（映射到 QUERY_TOTAL）
-    const READ_BET = 'ead4';             // 读取押分（映射到 QUERY_STATUS）
-    const OPEN_ANY_POINT = 'a5xxc0';     // 开任意分（映射到 ADD_POINT）
-    const WASH_ZERO = 'a500c1';          // 洗分清零（映射到 WITHDRAW_POINT）
-    const ALL_DOWN = 'eade';             // 清除历史记录（映射到 CLEAR_ACCOUNT）
+    // ========================================
+    // 状态标志（异常状态检测用）
+    // ========================================
+    const FLAG_REWARDING = 'cb';            // 开奖中（开分码表异常，正常时为C9）
+    const FLAG_FAULT = 'ee';                // 故障（开分卡分数异常，正常时为E9）
+
+    // ========================================
+    // 业务限制常量
+    // ========================================
+    const MAX_SCORE = 99999999;             // 最大分数（4字节BCD = 99,999,999）
+    const OPEN_UNIT = 100;                  // 上分单位（固定100分）
+    const MAX_OPEN_TIMES = 255;             // 最大开分次数（1字节 = 0-255）
 
     public function __construct(Machine $machine, $lang = 'zh_CN')
     {
