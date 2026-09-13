@@ -673,66 +673,82 @@ class AdminOfflineMachineController
             return message_error('机台不存在（ID: ' . $machine_id . '）');
         }
 
+        // ✅ 根据机台类型获取对应的服务类（用于引用常量）
+        $serviceClass = match([$machine->type, $machine->control_type, $machine->machine_source]) {
+            // 线上机台
+            [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_ONLINE] => \app\service\machine\Slot::class,
+            [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => \app\service\machine\SongSlot::class,
+            [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_ONLINE] => \app\service\machine\Jackpot::class,
+            [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_ONLINE] => \app\service\machine\SongJackpot::class,
+            // 线下机台
+            [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\Slot::class,
+            [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_MEI, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\Jackpot::class,
+            [GameType::TYPE_STEEL_BALL, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineJackpot::class,
+            [GameType::TYPE_SLOT, Machine::CONTROL_TYPE_SONG, Machine::MACHINE_SOURCE_OFFLINE] => \app\service\machine\SongOfflineSlot::class,
+            default => \app\service\machine\Slot::class,
+        };
+
         // 根据控制类型和游戏类型定义可用指令
         $commandList = [];
 
         // 小淞工控
         if ($control_type === Machine::CONTROL_TYPE_SONG) {
             if ($game_type == GameType::TYPE_SLOT) {
-                // 小淞Slot（收账小卡协议 - GD 2026-07-30）
+                // ✅ 小淞线下Slot（收账小卡协议 - GD 2026-07-30）- 使用服务类常量
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '查询账目', 'cmd' => 'eac4', 'desc' => 'EA C4 - 查询开分码表+洗分码表+开分卡分数+机台分数', 'danger' => false],
-                        ['name' => '查询总玩总赢', 'cmd' => 'ead8', 'desc' => 'EA D8 - 查询总押分数+总赢分数', 'danger' => false],
-                        ['name' => '查询机台情况', 'cmd' => 'ead4', 'desc' => 'EA D4 - 查询开分状态+洗分状态+转数', 'danger' => false],
+                        ['name' => '读取分数', 'cmd' => $serviceClass::READ_SCORE, 'desc' => 'EA C4 - 查询开分码表+洗分码表+开分卡分数+机台分数', 'danger' => false],
+                        ['name' => '读取押分', 'cmd' => $serviceClass::READ_BET, 'desc' => 'EA D8 - 查询总押分数+总得分数', 'danger' => false],
+                        ['name' => '读取状态', 'cmd' => $serviceClass::READ_STATUS, 'desc' => 'EA D4 - 查询开分状态+洗分状态+转数+回补次数', 'danger' => false],
                     ],
                     '登入登出' => [
-                        ['name' => '登入', 'cmd' => 'eac3', 'desc' => 'EA C3 - 玩家登入机台（必须登入才能上下分）', 'danger' => false],
-                        ['name' => '查询登入状态', 'cmd' => 'eac5', 'desc' => 'EA C5 - 检查是否已登入', 'danger' => false],
+                        ['name' => '登入', 'cmd' => $serviceClass::LOGIN, 'desc' => 'EA C3 - 玩家登入机台（必须登入才能上下分）', 'danger' => false],
+                        ['name' => '登出', 'cmd' => $serviceClass::LOGOUT, 'desc' => 'EA C5 - 玩家登出机台', 'danger' => false],
                     ],
                     '资金操作' => [
-                        ['name' => '上分', 'cmd' => 'a5xxc0', 'desc' => 'A5 XX C0 - 上分指令（XX=次数，100分/次，可输入总分数自动计算）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
-                        ['name' => '下分', 'cmd' => 'a500c1', 'desc' => 'A5 00 C1 - 下分指令（全部洗分）', 'danger' => true],
+                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_POINT, 'desc' => 'A5 XX C0 - 上分指令（100分/次，输入总分数自动计算次数）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '下分', 'cmd' => $serviceClass::WASH_POINT, 'desc' => 'A5 00 C1 - 下分指令（全部洗分）', 'danger' => true],
                     ],
                     '管理指令' => [
-                        ['name' => '清除账目', 'cmd' => 'eade', 'desc' => 'EA DE - ⚠️ 清除开洗分账+回补数', 'danger' => true],
-                        ['name' => '归0机板', 'cmd' => 'a37005e0f8ce', 'desc' => 'A3 70 05 E0 F8 CE - ⚠️ 归0机板（清空所有数据，故障排除）', 'danger' => true],
+                        ['name' => '清除历史记录', 'cmd' => $serviceClass::ALL_DOWN, 'desc' => 'EA DE - ⚠️ 清除开洗分账+回补数', 'danger' => true],
+                        ['name' => '故排（归0机板）', 'cmd' => $serviceClass::CHECK, 'desc' => 'A3 70 05 E0 F8 CE - ⚠️ 归0机板（保持登入状态）', 'danger' => true],
+                        ['name' => 'SSR讯号10秒', 'cmd' => $serviceClass::SSR_SIGNAL, 'desc' => 'EA EC - 给SSR讯号10秒（smart-slot移出按钮）', 'danger' => false],
                     ],
                 ];
             } else {
-                // 小淞钢珠（线下版 - 46协议）
+                // ✅ 小淞钢珠（线下版 - 46协议）- 使用服务类常量
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '查询当前分', 'cmd' => '46cea2', 'desc' => '46 CE A2 - 查询机台目前分数', 'danger' => false],
-                        ['name' => '查询得分WIN', 'cmd' => '46cea5', 'desc' => '46 CE A5 - 查询机台目前得分WIN', 'danger' => false],
-                        ['name' => '查询剩余转数', 'cmd' => '46cea6', 'desc' => '46 CE A6 - 查询机台目前剩余转数', 'danger' => false],
-                        ['name' => '查询累积转数', 'cmd' => '46cea9', 'desc' => '46 CE A9 - 查询机台累积转数', 'danger' => false],
-                        ['name' => '查询外部码表', 'cmd' => '46ceac', 'desc' => '46 CE AC - 查询外部开洗分码表', 'danger' => false],
-                        ['name' => '查询大赏灯', 'cmd' => '46ceb8', 'desc' => '46 CE B8 - 查询大赏灯状态', 'danger' => false],
+                        ['name' => '查询当前分', 'cmd' => $serviceClass::MACHINE_POINT, 'desc' => '46 CE A2 - 查询机台目前分数', 'danger' => false],
+                        ['name' => '查询得分WIN', 'cmd' => $serviceClass::MACHINE_SCORE, 'desc' => '46 CE A5 - 查询机台目前得分WIN', 'danger' => false],
+                        ['name' => '查询剩余转数', 'cmd' => $serviceClass::MACHINE_TURN, 'desc' => '46 CE A6 - 查询机台目前剩余转数', 'danger' => false],
+                        ['name' => '查询累积转数', 'cmd' => $serviceClass::WIN_NUMBER, 'desc' => '46 CE A9 - 查询机台累积转数', 'danger' => false],
+                        ['name' => '查询外部码表', 'cmd' => $serviceClass::QUERY_EXTERNAL_TABLE, 'desc' => '46 CE AC - 查询外部开洗分码表', 'danger' => false],
+                        ['name' => '查询大赏灯', 'cmd' => $serviceClass::QUERY_REWARD_LIGHT, 'desc' => '46 CE B8 - 查询大赏灯状态', 'danger' => false],
                     ],
                     '开分洗分' => [
-                        ['name' => '开任意分', 'cmd' => '46ca', 'desc' => '46 CA - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
-                        ['name' => '洗分清零', 'cmd' => '46cc', 'desc' => '46 CC - ⚠️ 洗分并清零', 'danger' => true],
+                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => '46 CA - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '洗分清零', 'cmd' => $serviceClass::WASH_ZERO, 'desc' => '46 CC - ⚠️ 洗分并清零', 'danger' => true],
                     ],
                     '转数操作' => [
-                        ['name' => '分转转数1次', 'cmd' => '46cec1', 'desc' => '46 CE C1 - 分数变转数1次（上转）', 'danger' => false],
-                        ['name' => '分数全变转数', 'cmd' => '46cecb', 'desc' => '46 CE CB - 分数全部变为转数', 'danger' => false],
-                        ['name' => '转数转分1次', 'cmd' => '46ceca', 'desc' => '46 CE CA - 转数→分数（下转一次）', 'danger' => false],
-                        ['name' => '转数全换分数', 'cmd' => '46cec9', 'desc' => '46 CE C9 - 转数全部换回分数', 'danger' => false],
-                        ['name' => 'WIN换回分数', 'cmd' => '46cec8', 'desc' => '46 CE C8 - 得分WIN换回分数', 'danger' => false],
+                        ['name' => '分转转数1次', 'cmd' => $serviceClass::POINT_TO_TURN, 'desc' => '46 CE C1 - 分数变转数1次（上转）', 'danger' => false],
+                        ['name' => '分数全变转数', 'cmd' => $serviceClass::TURN_UP_ALL, 'desc' => '46 CE CB - 分数全部变为转数', 'danger' => false],
+                        ['name' => '转数转分1次', 'cmd' => $serviceClass::TURN_TO_POINT, 'desc' => '46 CE CA - 转数→分数（下转一次）', 'danger' => false],
+                        ['name' => '转数全换分数', 'cmd' => $serviceClass::TURN_DOWN_ALL, 'desc' => '46 CE C9 - 转数全部换回分数', 'danger' => false],
+                        ['name' => 'WIN换回分数', 'cmd' => $serviceClass::SCORE_TO_POINT, 'desc' => '46 CE C8 - 得分WIN换回分数', 'danger' => false],
                     ],
                     '控制指令' => [
-                        ['name' => '启动机台', 'cmd' => '46cecd', 'desc' => '46 CE CD - 启动机台（开始游戏）', 'danger' => false],
-                        ['name' => '停止机台', 'cmd' => '46cece', 'desc' => '46 CE CE - 停止机台', 'danger' => false],
-                        ['name' => '连发PUSH', 'cmd' => '46ceb6', 'desc' => '46 CE B6 - 连发PUSH', 'danger' => false],
-                        ['name' => '单发PUSH', 'cmd' => '46ceb2', 'desc' => '46 CE B2 - 单发PUSH', 'danger' => false],
+                        ['name' => '启动机台', 'cmd' => $serviceClass::AUTO_UP_TURN, 'desc' => '46 CE CD - 启动机台（开始游戏）', 'danger' => false],
+                        ['name' => '停止机台', 'cmd' => $serviceClass::AUTO_STOP, 'desc' => '46 CE CE - 停止机台', 'danger' => false],
+                        ['name' => '连发PUSH', 'cmd' => $serviceClass::PUSH_THREE, 'desc' => '46 CE B6 - 连发PUSH', 'danger' => false],
+                        ['name' => '单发PUSH', 'cmd' => $serviceClass::PUSH_ONE, 'desc' => '46 CE B2 - 单发PUSH', 'danger' => false],
                     ],
                     '管理指令' => [
-                        ['name' => '开机', 'cmd' => '46cebe', 'desc' => '46 CE BE - 开机', 'danger' => false],
-                        ['name' => '关机', 'cmd' => '46cebc', 'desc' => '46 CE BC - 关机', 'danger' => false],
-                        ['name' => '故障排除', 'cmd' => '46ccb4', 'desc' => '46 CC B4 - 故障排除', 'danger' => false],
-                        ['name' => '清除外部码表', 'cmd' => '46ccb3', 'desc' => '46 CC B3 - ⚠️ 清除外部按钮码表', 'danger' => true],
-                        ['name' => '清除押得数值', 'cmd' => '46ccba', 'desc' => '46 CC BA - ⚠️ 清除押得数值', 'danger' => true],
+                        ['name' => '开机', 'cmd' => $serviceClass::MACHINE_OPEN, 'desc' => '46 CE BE - 开机', 'danger' => false],
+                        ['name' => '关机', 'cmd' => $serviceClass::MACHINE_CLOSE, 'desc' => '46 CE BC - 关机', 'danger' => false],
+                        ['name' => '故障排除', 'cmd' => $serviceClass::CHECK, 'desc' => '46 CF B4 - 故障排除', 'danger' => false],
+                        ['name' => '清除外部码表', 'cmd' => $serviceClass::CLEAR_EXTERNAL_BUTTON, 'desc' => '46 CC B3 - ⚠️ 清除外部按钮码表', 'danger' => true],
+                        ['name' => '清除押得数值', 'cmd' => $serviceClass::CLEAR_LOG, 'desc' => '46 CC BA - ⚠️ 清除押得数值', 'danger' => true],
                     ],
                 ];
             }
@@ -740,74 +756,74 @@ class AdminOfflineMachineController
         // 双美工控
         else if ($control_type === Machine::CONTROL_TYPE_MEI) {
             if ($game_type == GameType::TYPE_SLOT) {
-                // 双美Slot（标准A2协议）
+                // ✅ 双美Slot（标准A2协议）- 使用服务类常量
                 // 注意：指令已去掉A2前缀，sendCmd会自动添加
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '读取开分卡', 'cmd' => '21', 'desc' => 'A2 21 - 查询开分卡分数', 'danger' => false],
-                        ['name' => '读取CREDIT2', 'cmd' => '22', 'desc' => 'A2 22 - 查询CREDIT2分数', 'danger' => false],
-                        ['name' => '读取押分', 'cmd' => '23', 'desc' => 'A2 23 - 查询当前BET押分', 'danger' => false],
-                        ['name' => '读取得分', 'cmd' => '24', 'desc' => 'A2 24 - 查询当前WIN得分', 'danger' => false],
-                        ['name' => '读取BB', 'cmd' => '25', 'desc' => 'A2 25 - 查询BB次数', 'danger' => false],
-                        ['name' => '读取RB', 'cmd' => '26', 'desc' => 'A2 26 - 查询RB次数', 'danger' => false],
-                        ['name' => '读取开分表', 'cmd' => '27', 'desc' => 'A2 27 - 查询开分表数据', 'danger' => false],
-                        ['name' => '读取洗分表', 'cmd' => '28', 'desc' => 'A2 28 - 查询洗分表数据', 'danger' => false],
+                        ['name' => '读取开分卡', 'cmd' => $serviceClass::READ_SCORE, 'desc' => 'A2 21 - 查询开分卡分数', 'danger' => false],
+                        ['name' => '读取CREDIT2', 'cmd' => $serviceClass::READ_CREDIT2, 'desc' => 'A2 22 - 查询CREDIT2分数', 'danger' => false],
+                        ['name' => '读取押分', 'cmd' => $serviceClass::READ_BET, 'desc' => 'A2 23 - 查询当前BET押分', 'danger' => false],
+                        ['name' => '读取得分', 'cmd' => $serviceClass::READ_WIN, 'desc' => 'A2 24 - 查询当前WIN得分', 'danger' => false],
+                        ['name' => '读取BB', 'cmd' => $serviceClass::READ_BB, 'desc' => 'A2 25 - 查询BB次数', 'danger' => false],
+                        ['name' => '读取RB', 'cmd' => $serviceClass::READ_RB, 'desc' => 'A2 26 - 查询RB次数', 'danger' => false],
+                        ['name' => '读取开分表', 'cmd' => $serviceClass::OPEN_TABLE, 'desc' => 'A2 27 - 查询开分表数据', 'danger' => false],
+                        ['name' => '读取洗分表', 'cmd' => $serviceClass::WASH_TABLE, 'desc' => 'A2 28 - 查询洗分表数据', 'danger' => false],
                     ],
                     '开分指令' => [
-                        ['name' => '开分一次', 'cmd' => '41', 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
-                        ['name' => '开分10次', 'cmd' => '42', 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
-                        ['name' => '开分5次', 'cmd' => '49', 'desc' => 'A2 49 - 开分5次（500分）', 'danger' => false],
-                        ['name' => '开任意分', 'cmd' => '4A', 'desc' => 'A2 4A - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '开分一次', 'cmd' => $serviceClass::OPEN_ONE, 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
+                        ['name' => '开分10次', 'cmd' => $serviceClass::OPEN_TEN, 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
+                        ['name' => '开分5次', 'cmd' => $serviceClass::OPEN_FIVE, 'desc' => 'A2 49 - 开分5次（500分）', 'danger' => false],
+                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => 'A2 4A - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
                     ],
                     '控制指令' => [
-                        ['name' => '移分ON', 'cmd' => '45', 'desc' => 'A2 45 - 开启移分功能', 'danger' => false],
-                        ['name' => '移分OFF', 'cmd' => '46', 'desc' => 'A2 46 - 关闭移分功能', 'danger' => false],
+                        ['name' => '移分ON', 'cmd' => $serviceClass::MOVE_POINT_ON, 'desc' => 'A2 45 - 开启移分功能', 'danger' => false],
+                        ['name' => '移分OFF', 'cmd' => $serviceClass::MOVE_POINT_OFF, 'desc' => 'A2 46 - 关闭移分功能', 'danger' => false],
                     ],
                     '管理指令' => [
-                        ['name' => '洗分', 'cmd' => '44', 'desc' => 'A2 44 - ⚠️ 洗分操作', 'danger' => true],
-                        ['name' => '洗分清零', 'cmd' => '43', 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
-                        ['name' => '清除统计', 'cmd' => '47', 'desc' => 'A2 47 - ⚠️ 清除BET/WIN/BB/RB统计', 'danger' => true],
+                        ['name' => '洗分', 'cmd' => $serviceClass::WASH_POINT, 'desc' => 'A2 44 - ⚠️ 洗分操作', 'danger' => true],
+                        ['name' => '洗分清零', 'cmd' => $serviceClass::WASH_ZERO, 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
+                        ['name' => '清除统计', 'cmd' => $serviceClass::ALL_DOWN, 'desc' => 'A2 47 - ⚠️ 清除BET/WIN/BB/RB统计', 'danger' => true],
                     ],
                 ];
             } else {
-                // 双美钢珠（Jackpot）
+                // ✅ 双美钢珠（Jackpot）- 使用服务类常量
                 $commandList = [
                     '查询指令' => [
-                        ['name' => '读取当前分', 'cmd' => '21', 'desc' => 'A2 21 - 读取机台当前分数', 'danger' => false],
-                        ['name' => '读取得分', 'cmd' => '22', 'desc' => 'A2 22 - 读取机台当前得分', 'danger' => false],
-                        ['name' => '读取转数', 'cmd' => '23', 'desc' => 'A2 23 - 读取机台当前转数', 'danger' => false],
-                        ['name' => '读取对奖次数', 'cmd' => '24', 'desc' => 'A2 24 - 读取中洞对奖次数', 'danger' => false],
-                        ['name' => '读取总开分', 'cmd' => '25', 'desc' => 'A2 25 - 读取总开分', 'danger' => false],
-                        ['name' => '读取总下分', 'cmd' => '26', 'desc' => 'A2 26 - 读取总下分', 'danger' => false],
-                        ['name' => '读取BB Rush', 'cmd' => '2B', 'desc' => 'A2 2B - 读取BB Rush状态', 'danger' => false],
+                        ['name' => '读取当前分', 'cmd' => $serviceClass::MACHINE_POINT, 'desc' => 'A2 21 - 读取机台当前分数', 'danger' => false],
+                        ['name' => '读取得分', 'cmd' => $serviceClass::MACHINE_SCORE, 'desc' => 'A2 22 - 读取机台当前得分', 'danger' => false],
+                        ['name' => '读取转数', 'cmd' => $serviceClass::MACHINE_TURN, 'desc' => 'A2 23 - 读取机台当前转数', 'danger' => false],
+                        ['name' => '读取对奖次数', 'cmd' => $serviceClass::WIN_NUMBER, 'desc' => 'A2 24 - 读取中洞对奖次数', 'danger' => false],
+                        ['name' => '读取总开分', 'cmd' => $serviceClass::READ_OPEN_POINT, 'desc' => 'A2 25 - 读取总开分', 'danger' => false],
+                        ['name' => '读取总下分', 'cmd' => $serviceClass::READ_WASH_POINT, 'desc' => 'A2 26 - 读取总下分', 'danger' => false],
+                        ['name' => '读取BB Rush', 'cmd' => $serviceClass::BB_RUSH, 'desc' => 'A2 2B - 读取BB Rush状态', 'danger' => false],
                     ],
                     '开分指令' => [
-                        ['name' => '开分一次', 'cmd' => '41', 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
-                        ['name' => '开分10次', 'cmd' => '42', 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
-                        ['name' => '开任意分', 'cmd' => '4A', 'desc' => 'A2 4A - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '开分一次', 'cmd' => $serviceClass::OPEN_ONE, 'desc' => 'A2 41 - 开分1次（100分）', 'danger' => false],
+                        ['name' => '开分10次', 'cmd' => $serviceClass::OPEN_TEN, 'desc' => 'A2 42 - 开分10次（1000分）', 'danger' => false],
+                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => 'A2 4A - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
                     ],
                     '转数操作' => [
-                        ['name' => '自动上转', 'cmd' => '45', 'desc' => 'A2 45 - 自动上转（开始游戏）', 'danger' => false],
-                        ['name' => '上转一次', 'cmd' => '49', 'desc' => 'A2 49 - 分数转转数（上转一次）', 'danger' => false],
-                        ['name' => '下转一次', 'cmd' => '48', 'desc' => 'A2 48 - 转数转分数（下转一次）', 'danger' => false],
-                        ['name' => '全部上转', 'cmd' => '4C', 'desc' => 'A2 4C - 全部上转', 'danger' => false],
-                        ['name' => '全部下转', 'cmd' => '47', 'desc' => 'A2 47 - 全部下转', 'danger' => false],
+                        ['name' => '自动上转', 'cmd' => $serviceClass::AUTO_UP_TURN, 'desc' => 'A2 45 - 自动上转（开始游戏）', 'danger' => false],
+                        ['name' => '上转一次', 'cmd' => $serviceClass::POINT_TO_TURN, 'desc' => 'A2 49 - 分数转转数（上转一次）', 'danger' => false],
+                        ['name' => '下转一次', 'cmd' => $serviceClass::TURN_TO_POINT, 'desc' => 'A2 48 - 转数转分数（下转一次）', 'danger' => false],
+                        ['name' => '全部上转', 'cmd' => $serviceClass::TURN_UP_ALL, 'desc' => 'A2 4C - 全部上转', 'danger' => false],
+                        ['name' => '全部下转', 'cmd' => $serviceClass::TURN_DOWN_ALL, 'desc' => 'A2 47 - 全部下转', 'danger' => false],
                     ],
                     '控制指令' => [
-                        ['name' => '大赏灯切换', 'cmd' => '2D', 'desc' => 'A2 2D - 大赏灯切换', 'danger' => false],
-                        ['name' => 'PUSH停止', 'cmd' => '2E00', 'desc' => 'A2 2E 00 - 停止PUSH', 'danger' => false],
-                        ['name' => 'PUSH 1下', 'cmd' => '2E01', 'desc' => 'A2 2E 01 - PUSH 1下', 'danger' => false],
-                        ['name' => 'PUSH 2Hz', 'cmd' => '2E02', 'desc' => 'A2 2E 02 - PUSH 1秒2下', 'danger' => false],
-                        ['name' => 'PUSH 5Hz', 'cmd' => '2E03', 'desc' => 'A2 2E 03 - PUSH 1秒5下', 'danger' => false],
+                        ['name' => '大赏灯切换', 'cmd' => $serviceClass::REWARD_SWITCH, 'desc' => 'A2 2D - 大赏灯切换', 'danger' => false],
+                        ['name' => 'PUSH停止', 'cmd' => $serviceClass::PUSH . $serviceClass::PUSH_STOP, 'desc' => 'A2 2E 00 - 停止PUSH', 'danger' => false],
+                        ['name' => 'PUSH 1下', 'cmd' => $serviceClass::PUSH . $serviceClass::PUSH_ONE, 'desc' => 'A2 2E 01 - PUSH 1下', 'danger' => false],
+                        ['name' => 'PUSH 2Hz', 'cmd' => $serviceClass::PUSH . $serviceClass::PUSH_TWO, 'desc' => 'A2 2E 02 - PUSH 1秒2下', 'danger' => false],
+                        ['name' => 'PUSH 5Hz', 'cmd' => $serviceClass::PUSH . $serviceClass::PUSH_THREE, 'desc' => 'A2 2E 03 - PUSH 1秒5下', 'danger' => false],
                     ],
                     '管理指令' => [
-                        ['name' => '洗分清零', 'cmd' => '43', 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
-                        ['name' => '洗分留余数', 'cmd' => '44', 'desc' => 'A2 44 - ⚠️ 洗分清零留余数', 'danger' => true],
-                        ['name' => '重置预备转数', 'cmd' => '46', 'desc' => 'A2 46 - 重置预备转入的转数', 'danger' => false],
-                        ['name' => '得分转分数', 'cmd' => '4B', 'desc' => 'A2 4B - 得分转分数', 'danger' => false],
-                        ['name' => '开保转', 'cmd' => '4D', 'desc' => 'A2 4D - 开 OP_3 个保转', 'danger' => false],
-                        ['name' => '清除开赠要求', 'cmd' => '4E', 'desc' => 'A2 4E - 清除开赠要求', 'danger' => true],
-                        ['name' => '清除历史记录', 'cmd' => '4F', 'desc' => 'A2 4F - ⚠️ 清除历史记录', 'danger' => true],
+                        ['name' => '洗分清零', 'cmd' => $serviceClass::WASH_ZERO, 'desc' => 'A2 43 - ⚠️ 洗分并清零', 'danger' => true],
+                        ['name' => '洗分留余数', 'cmd' => $serviceClass::WASH_ZERO_REMAINDER, 'desc' => 'A2 44 - ⚠️ 洗分清零留余数', 'danger' => true],
+                        ['name' => '重置预备转数', 'cmd' => $serviceClass::RESET_READY_TURN, 'desc' => 'A2 46 - 重置预备转入的转数', 'danger' => false],
+                        ['name' => '得分转分数', 'cmd' => $serviceClass::SCORE_TO_POINT, 'desc' => 'A2 4B - 得分转分数', 'danger' => false],
+                        ['name' => '开保转', 'cmd' => $serviceClass::OP_3, 'desc' => 'A2 4D - 开 OP_3 个保转', 'danger' => false],
+                        ['name' => '清除开赠要求', 'cmd' => $serviceClass::CLEAR_GIVE, 'desc' => 'A2 4E - 清除开赠要求', 'danger' => true],
+                        ['name' => '清除历史记录', 'cmd' => $serviceClass::CLEAR_LOG, 'desc' => 'A2 4F - ⚠️ 清除历史记录', 'danger' => true],
                     ],
                 ];
             }
