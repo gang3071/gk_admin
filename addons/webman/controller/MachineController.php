@@ -2714,7 +2714,7 @@ class MachineController
             'iframe_list' => $srcList,
             'btn_text' => admin_trans('machine_media.btn_text'),
             'play_address' => admin_trans('machine_media.play_address'),
-            'action_list' => getMachineAction($media->machine->type, $media->machine->control_type),
+            'action_list' => getMachineAction($media->machine->type, $media->machine->control_type, $media->machine->machine_source),
             'open_any_point_cmd' => getMachineOpenAny($media->machine->type, $media->machine->control_type),
             'type' => $media->machine->type,
             'machine_id' => $media->machine_id,

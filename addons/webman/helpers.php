@@ -1631,19 +1631,20 @@ if (!function_exists('getAdminUserListOptions')) {
 if (!function_exists('getMachineAction')) {
     /**
      * 获取机台工控操作
-     * @param $type
-     * @param $controlType
+     * @param $type 机台类型
+     * @param $controlType 控制类型
+     * @param $machineSource 机台来源（null=线上，Machine::MACHINE_SOURCE_OFFLINE=线下）
      * @return array
      */
-    function getMachineAction($type, $controlType): array
+    function getMachineAction($type, $controlType, $machineSource = null): array
     {
         $data = [];
         switch ($type) {
             case GameType::TYPE_SLOT:
-                $data = MachineServices::getSlotAction($controlType);
+                $data = MachineServices::getSlotAction($controlType, $machineSource);
                 break;
             case GameType::TYPE_STEEL_BALL:
-                $data = MachineServices::getJackpotAction($controlType);
+                $data = MachineServices::getJackpotAction($controlType, $machineSource);
                 break;
         }
         $optionList = [];
