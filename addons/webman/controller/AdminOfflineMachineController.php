@@ -908,7 +908,7 @@ class AdminOfflineMachineController
             $cmd = request()->post('cmd');
             $cmdName = request()->post('cmd_name');
             $data = (int) request()->post('data', 0); // ✅ 指令参数（开任意分等需要）
-            $timeout = (int) request()->post('timeout', 5); // 超时时间，默认5秒
+            $timeout = (int) request()->post('timeout', 10); // 超时时间，默认10秒（增加容忍TCP分包延迟）
 
             if (!$machineId || !$cmd) {
                 \support\Log::error('sendCommand 缺少必要参数', [
