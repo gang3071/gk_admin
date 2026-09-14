@@ -930,9 +930,9 @@ class AdminOfflineMachineController
             // ✅ 小淞线下Slot特殊处理：上分指令输入次数需转换为分数
             // 条件：Slot机台 + 小淞工控 + 线下版 + 上分指令(a5)
             $originalData = $data;
-            if ($machine->type == \app\model\GameType::TYPE_SLOT
-                && $machine->control_type == \app\model\Machine::CONTROL_TYPE_SONG
-                && $machine->machine_source == \app\model\Machine::MACHINE_SOURCE_OFFLINE
+            if ($machine->type == GameType::TYPE_SLOT
+                && $machine->control_type == Machine::CONTROL_TYPE_SONG
+                && $machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
                 && $cmd === 'a5') {
                 // 输入的是次数，需要转换为分数（100分/次）
                 $data = $data * 100;
