@@ -25,9 +25,6 @@ class ClientMaintainTask
         new Crontab('0 */1 * * * *', function () {
             $this->checkMaintenanceTime();
         });
-
-        echo "ClientMaintainTask: 客户端维护时间监听任务已启动，每分钟检查一次\n";
-
         // 启动时立即执行一次检查
         $this->checkMaintenanceTime();
     }

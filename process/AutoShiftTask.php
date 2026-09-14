@@ -26,8 +26,6 @@ class AutoShiftTask
         new Crontab('0 */1 * * * *', function () {
             $this->checkAndExecuteAutoShift();
         });
-
-        echo "AutoShiftTask: 自动交班定时任务已启动，每分钟检查一次\n";
     }
 
     /**

@@ -11,7 +11,6 @@ use addons\webman\model\MachineStrategy;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
@@ -21,7 +20,6 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
-use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\support\Container;
 use GatewayWorker\Lib\Gateway;
 use Illuminate\Support\Str;
@@ -70,6 +68,7 @@ class AdminOfflineMachineController
             $grid->bordered(true);
 
             // 只显示线下斯洛机台
+            // ✅ 确保 machine_source 和 control_type 字段被加载（用于 createServices 判断）
             $grid->model()
                 ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
                 ->where('type', GameType::TYPE_SLOT)
@@ -109,6 +108,7 @@ class AdminOfflineMachineController
             $grid->bordered(true);
 
             // 只显示线下钢珠机台
+            // ✅ 确保 machine_source 和 control_type 字段被加载（用于 createServices 判断）
             $grid->model()
                 ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
                 ->where('type', GameType::TYPE_STEEL_BALL)
@@ -262,12 +262,28 @@ class AdminOfflineMachineController
             Machine $data
         ) {
             try {
+                // ✅ 诊断日志：检查 machine_source 字段是否被加载
+                \support\Log::debug('[Grid has_lock] 机台数据检查', [
+                    'machine_id' => $data->id,
+                    'machine_code' => $data->code ?? 'N/A',
+                    'type' => $data->type ?? 'NULL',
+                    'control_type' => $data->control_type ?? 'NULL',
+                    'machine_source' => $data->machine_source ?? 'NULL',
+                    'has_attribute_machine_source' => isset($data->machine_source),
+                    'attributes_keys' => array_keys($data->getAttributes()),
+                ]);
+
                 $service = \app\service\machine\MachineServices::createServices(
                     $data,
                     Container::getInstance()->translator->getLocale()
                 );
                 $hasLock = (int)($service->has_lock ?? 0);
             } catch (\Exception $e) {
+                Log::error('创建机台服务失败', [
+                    'machine_id' => $data->id ?? 'N/A',
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
+                ]);
                 $hasLock = 0;
             }
 
@@ -317,31 +333,6 @@ class AdminOfflineMachineController
                     ])
                     ->width('70%')
             );
-
-            // 操作下拉菜单
-            $dropdown = Dropdown::create(
-                Button::create(['操作', Icon::create('DownOutlined')->style(['marginRight' => '5px'])])
-            )->trigger(['click']);
-
-            // 解锁机台（仅锁定时显示）
-            if ($data->has_lock == 1) {
-                $dropdown->item('解锁机台', 'unlock')
-                    ->confirm('确定要解锁此机台吗？', [$this, 'unlockMachine'], ['machine_id' => $data->id])
-                    ->gridRefresh();
-            }
-
-            // 归0机板（仅小淞线下版Slot显示）
-            if ($data->control_type === Machine::CONTROL_TYPE_SONG && $gameType === GameType::TYPE_SLOT) {
-                $dropdown->item('归0机板', 'reload-outlined')
-                    ->confirm(
-                        '确定要归0机板 ' . $data->code . ' 吗？',
-                        [$this, 'resetMachine'],
-                        ['machine_id' => $data->id]
-                    )
-                    ->gridRefresh();
-            }
-
-            $action->prepend($dropdown);
         });
 
         // 筛选器
@@ -1058,136 +1049,6 @@ class AdminOfflineMachineController
                 'error' => $e->getMessage(),
             ]);
             return json(['code' => 0, 'msg' => '刷新失败: ' . $e->getMessage(), 'data' => []]);
-        }
-    }
-
-    /**
-     * ✅ 新增：解锁机台
-     * @group admin
-     * @auth true
-     */
-    public function unlockMachine(): array
-    {
-        try {
-            // ✅ 权限验证
-            $permissions = Admin::permission();
-            $requiredPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/unlockMachine';
-            if (!in_array($requiredPermission, $permissions)) {
-                \support\Log::warning('解锁机台权限不足', [
-                    'admin_id' => Admin::id(),
-                    'machine_id' => request()->post('machine_id'),
-                ]);
-                return message_error('权限不足，无法执行解锁操作');
-            }
-
-            $machineId = request()->post('machine_id');
-
-            if (!$machineId) {
-                return message_error('缺少机台ID');
-            }
-
-            // 调用gk_work API执行解锁操作
-            $result = MachineApiService::executeAction(
-                $machineId,
-                'unlock',
-                [],
-                Admin::id()
-            );
-
-            // 更新本地数据库
-            $machine = Machine::find($machineId);
-            if ($machine) {
-                $machine->has_lock = 0;
-                $machine->save();
-            }
-
-            // 记录操作日志
-            \support\Log::info('解锁机台成功', [
-                'admin_id' => Admin::id(),
-                'admin_username' => Admin::user()->username ?? '',
-                'machine_id' => $machineId,
-                'machine_code' => $machine->code ?? '',
-            ]);
-
-            return message_success('机台解锁成功', $result);
-
-        } catch (\Exception $e) {
-            \support\Log::error('解锁机台失败', [
-                'admin_id' => Admin::id(),
-                'machine_id' => request()->post('machine_id'),
-                'error' => $e->getMessage()
-            ]);
-            return message_error('解锁失败: ' . $e->getMessage());
-        }
-    }
-
-    /**
-     * ✅ 新增：归0机板
-     * @group admin
-     * @auth true
-     */
-    public function resetMachine(): array
-    {
-        try {
-            // ✅ 权限验证
-            $permissions = Admin::permission();
-            $requiredPermission = 'ex-admin/addons-webman-controller-AdminOfflineMachineController/resetMachine';
-            if (!in_array($requiredPermission, $permissions)) {
-                \support\Log::warning('归0机台权限不足', [
-                    'admin_id' => Admin::id(),
-                    'machine_id' => request()->post('machine_id'),
-                ]);
-                return message_error('权限不足，无法执行归0操作');
-            }
-
-            $machineId = request()->post('machine_id');
-
-            if (!$machineId) {
-                return message_error('缺少机台ID');
-            }
-
-            // 验证是否为小淞线下版
-            $machine = Machine::find($machineId);
-            if (!$machine) {
-                return message_error('机台不存在');
-            }
-
-            if ($machine->control_type !== Machine::CONTROL_TYPE_SONG ||
-                $machine->machine_source !== Machine::MACHINE_SOURCE_OFFLINE) {
-                return message_error('归0操作仅支持小淞线下版机台');
-            }
-
-            // 调用gk_work API执行归0操作
-            $result = MachineApiService::executeAction(
-                $machineId,
-                'reset',
-                [],
-                Admin::id()
-            );
-
-            // 归0操作会自动解锁，更新本地数据库
-            $machine->has_lock = 0;
-            $machine->save();
-
-            // 记录操作日志
-            \support\Log::info('归0机台成功', [
-                'admin_id' => Admin::id(),
-                'admin_username' => Admin::user()->username ?? '',
-                'machine_id' => $machineId,
-                'machine_code' => $machine->code,
-                'control_type' => $machine->control_type,
-                'machine_source' => $machine->machine_source,
-            ]);
-
-            return message_success('归0成功，机台已解锁', $result);
-
-        } catch (\Exception $e) {
-            \support\Log::error('归0机台失败', [
-                'admin_id' => Admin::id(),
-                'machine_id' => request()->post('machine_id'),
-                'error' => $e->getMessage()
-            ]);
-            return message_error('归0失败: ' . $e->getMessage());
         }
     }
 }

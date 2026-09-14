@@ -32,9 +32,6 @@ class VipCashbackTask
             'schedule' => '0 */1 * * * *',
             'pid' => getmypid(),
         ]);
-
-        echo "VipCashbackTask: VIP反水补算任务已启动，每1分钟执行一次\n";
-
         // 进程启动时立即执行一次
         $this->doWork();
 
@@ -57,13 +54,6 @@ class VipCashbackTask
         $sinceDate = date('Y-m-d 00:00:00', strtotime('-1 day'));
 
         try {
-            $this->log->info('VipCashbackTask 开始执行', [
-                'since_date' => $sinceDate,
-                'memory' => memory_get_usage(true),
-            ]);
-
-            // 处理三方游戏反水
-            $this->log->info('开始处理三方游戏反水');
             $service = new VipCashbackService();
             $service->setSinceDate($sinceDate);
             $result = $service->execute();
@@ -106,7 +96,6 @@ class VipCashbackTask
                 'elapsed_seconds' => $elapsed,
             ]);
 
-            echo "[VipCashback] 执行异常 - Error: {$e->getMessage()}\n";
             gc_collect_cycles();
         }
     }

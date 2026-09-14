@@ -37,13 +37,6 @@ class VipBirthdayBonusTask
     {
         $this->log = Log::channel('vip');
 
-        $this->log->info('VipBirthdayBonusTask 进程已启动', [
-            'schedule' => '0 0 1 * * *',
-            'pid' => getmypid(),
-        ]);
-
-        echo "VipBirthdayBonusTask: VIP生日礼金任务已启动，每天凌晨1点执行\n";
-
         // 进程启动时先执行一次
         $this->doWork();
 
@@ -59,8 +52,6 @@ class VipBirthdayBonusTask
     private function doWork(): void
     {
         if (self::$running) {
-            $this->log->warning('VipBirthdayBonusTask 跳过：上一次仍在执行');
-            echo "[VipBirthday] 跳过：上一次仍在执行\n";
             return;
         }
         self::$running = true;
@@ -71,11 +62,6 @@ class VipBirthdayBonusTask
         $today = date('m-d'); // 月-日格式，用于匹配生日
 
         try {
-            $this->log->info('VipBirthdayBonusTask 开始执行', [
-                'today' => $today,
-                'memory' => memory_get_usage(true),
-            ]);
-
             // 获取所有启用的VIP等级（带生日礼金配置）
             $vipLevels = VipLevel::query()
                 ->where('status', VipLevel::STATUS_ENABLED)
@@ -84,7 +70,6 @@ class VipBirthdayBonusTask
                 ->keyBy('id');
 
             if ($vipLevels->isEmpty()) {
-                $this->log->info('VipBirthdayBonusTask 无VIP等级配置生日礼金');
                 return;
             }
 
@@ -100,7 +85,6 @@ class VipBirthdayBonusTask
                 ->get();
 
             if ($players->isEmpty()) {
-                $this->log->info('VipBirthdayBonusTask 今天无玩家生日', ['today' => $today]);
                 return;
             }
 
@@ -151,24 +135,10 @@ class VipBirthdayBonusTask
 
                 } catch (\Throwable $e) {
                     $result['errors']++;
-                    $this->log->error('VipBirthdayBonusTask 单个玩家处理失败', [
-                        'player_id' => $player->id,
-                        'error' => $e->getMessage(),
-                    ]);
                 }
             }
 
             $elapsed = round(microtime(true) - $startTime, 3);
-
-            $this->log->info('VipBirthdayBonusTask 执行完成', [
-                'today' => $today,
-                'total' => $result['total'],
-                'success' => $result['success'],
-                'skipped' => $result['skipped'],
-                'errors' => $result['errors'],
-                'elapsed_seconds' => $elapsed,
-                'memory_peak' => memory_get_peak_usage(true),
-            ]);
 
             if ($result['success'] > 0) {
                 echo "[VipBirthday] 执行完成 - total: {$result['total']}, success: {$result['success']}, skipped: {$result['skipped']}, errors: {$result['errors']}, elapsed: {$elapsed}s\n";
@@ -184,8 +154,6 @@ class VipBirthdayBonusTask
                 'trace' => $e->getTraceAsString(),
                 'elapsed_seconds' => $elapsed,
             ]);
-
-            echo "[VipBirthday] 执行异常 - Error: {$e->getMessage()}\n";
         } finally {
             self::$running = false;
         }
@@ -233,12 +201,5 @@ class VipBirthdayBonusTask
 
         // 推送消息
         sendSocketMessage('player-' . $player->id, $pushMessage);
-
-        $this->log->info('VipBirthdayBonusTask 通知已发送', [
-            'player_id' => $player->id,
-            'vip_level' => $vipLevel->name,
-            'amount' => $bonusAmount,
-            'notice_id' => $notice->id,
-        ]);
     }
 }

@@ -31,6 +31,16 @@ class MachineServices
      */
     public static function createServices(Machine $machine, string $lang = 'zh_CN')
     {
+        // ✅ 调试日志：记录机台信息以诊断服务类选择问题
+        \support\Log::debug('[MachineServices] 创建服务类', [
+            'machine_id' => $machine->id,
+            'machine_code' => $machine->code ?? 'N/A',
+            'type' => $machine->type,
+            'control_type' => $machine->control_type,
+            'machine_source' => $machine->machine_source ?? 'NULL',
+            'attributes' => $machine->getAttributes(), // 查看所有已加载的字段
+        ]);
+
         switch ($machine->type) {
             case GameType::TYPE_SLOT:
                 switch ($machine->control_type) {

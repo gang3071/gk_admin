@@ -51,10 +51,6 @@ class PartitionMaintenanceTask
         new Crontab('0 0 1 * * *', function () {
             $this->maintainPartitions();
         });
-
-        echo "PartitionMaintenanceTask: 分区维护任务已启动，每月 1 日凌晨 1:00 执行\n";
-        echo "📅 保留策略：主表保留最近 " . self::RETENTION_MONTHS . " 个月数据\n";
-        echo "⚡ 删除速度：2400 万条数据仅需 0.1 秒\n";
     }
 
     /**
