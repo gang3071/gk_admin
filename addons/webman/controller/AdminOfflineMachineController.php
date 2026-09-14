@@ -697,7 +697,7 @@ class AdminOfflineMachineController
                         ['name' => '登出', 'cmd' => $serviceClass::LOGOUT, 'desc' => 'EA C5 - 玩家登出机台', 'danger' => false],
                     ],
                     '资金操作' => [
-                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_POINT, 'desc' => 'A5 XX C0 - 上分指令（100分/次，输入总分数自动计算次数）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_POINT, 'desc' => 'A5 XX C0 - 上分指令（100分/次，输入开分次数）', 'danger' => false, 'has_input' => true, 'input_label' => '次数', 'default_value' => 1],
                         ['name' => '下分', 'cmd' => $serviceClass::WASH_POINT, 'desc' => 'A5 00 C1 - 下分指令（全部洗分）', 'danger' => true],
                     ],
                     '管理指令' => [
@@ -927,6 +927,23 @@ class AdminOfflineMachineController
                 return json(['code' => 0, 'msg' => '机台不存在', 'data' => []]);
             }
 
+            // ✅ 小淞线下Slot特殊处理：上分指令输入次数需转换为分数
+            // 条件：Slot机台 + 小淞工控 + 线下版 + 上分指令(a5)
+            $originalData = $data;
+            if ($machine->type == \app\model\GameType::TYPE_SLOT
+                && $machine->control_type == \app\model\Machine::CONTROL_TYPE_SONG
+                && $machine->machine_source == \app\model\Machine::MACHINE_SOURCE_OFFLINE
+                && $cmd === 'a5') {
+                // 输入的是次数，需要转换为分数（100分/次）
+                $data = $data * 100;
+
+                \support\Log::info('小淞线下Slot上分次数转换', [
+                    'machine_id' => $machineId,
+                    'input_times' => $originalData,
+                    'converted_score' => $data,
+                ]);
+            }
+
             // 记录日志
             \support\Log::info('线下机台指令测试（等待回复）', [
                 'admin_id' => Admin::id(),
@@ -934,7 +951,8 @@ class AdminOfflineMachineController
                 'machine_code' => $machine->code,
                 'cmd' => $cmd,
                 'cmd_name' => $cmdName,
-                'data' => $data,  // ✅ 记录参数值
+                'data' => $data,  // ✅ 记录参数值（已转换）
+                'original_data' => $originalData,  // 记录原始输入
                 'timeout' => $timeout,
             ]);
 
