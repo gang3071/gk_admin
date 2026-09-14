@@ -3572,7 +3572,7 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，player_id为0或null）
+                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，player_id为0或null，source_type为null或购票）
                     $counterTicketAmount = (float)\addons\webman\model\TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
                         ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
@@ -3581,6 +3581,10 @@ class ChannelIndexController
                         ->where(function ($q) {
                             $q->where('player_id', 0)
                                 ->orWhereNull('player_id');
+                        })
+                        ->where(function ($q) {
+                            $q->whereNull('source_type')
+                                ->orWhere('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE);
                         })
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)

@@ -538,7 +538,7 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
-        // 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，player_id为0或null）
+        // 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，player_id为0或null，source_type为null或购票）
         $counterTicketAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
@@ -547,6 +547,10 @@ class AutoShiftService
             ->where(function ($q) {
                 $q->where('player_id', 0)
                     ->orWhereNull('player_id');
+            })
+            ->where(function ($q) {
+                $q->whereNull('source_type')
+                    ->orWhere('source_type', TicketRecord::SOURCE_TYPE_PURCHASE);
             })
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
