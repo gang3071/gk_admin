@@ -141,13 +141,20 @@ class DishController
 
             $form->select('category_id', admin_trans('dish.fields.category_id'))->options(self::getCategories())->required();
             $form->text('title', admin_trans('dish.fields.title'))->maxlength(200)->required();
-            $form->image('picture', admin_trans('dish.fields.picture'));
-            $form->myEditor('content', admin_trans('dish.fields.content'))->maxlength(200);
+            $form->image('picture', admin_trans('dish.fields.picture'))->required();
+
+            // 修改時不能修改內容，只有新增的時候可以
+            if ($form->isEdit()) {
+                $form->myEditor('content_show', admin_trans('dish.fields.content'))->value($form->input('content'));
+            } else {
+                $form->myEditor('content', admin_trans('dish.fields.content'))->maxlength(200);
+            }
+
             $form->number('price', admin_trans('dish.fields.price'))->default(0)->required();
-            $form->number('daily_limit', admin_trans('dish.fields.daily_limit'))->default(0)->required()->help(admin_trans('dish.help.daily_limit'));
-            $form->number('sort', admin_trans('dish.fields.sort'))->default(0)->required();
-            $form->switch('top', admin_trans('dish.fields.top'))->required();
-            $form->switch('status', admin_trans('dish.fields.status'))->default(1)->required();
+            $form->number('daily_limit', admin_trans('dish.fields.daily_limit'))->default(0)->help(admin_trans('dish.help.daily_limit'));
+            $form->number('sort', admin_trans('dish.fields.sort'))->default(0);
+            $form->switch('top', admin_trans('dish.fields.top'))->default(0);
+            $form->switch('status', admin_trans('dish.fields.status'))->default(1);
             $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200);
 
             $form->saving(function (Form $form) use ($adminUser) {
