@@ -1704,6 +1704,12 @@ class MachineController
                     );
                     break;
                 case 'start': // 開始(斯洛)
+                    // ✅ 线下小淞机台不支持 MOVE_POINT_ON/PRESSURE/START 指令
+                    if ($machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                        && $machine->control_type == Machine::CONTROL_TYPE_SONG) {
+                        throw new Exception('线下小淞机台不支持开始指令');
+                    }
+
                     if (($services->auto ?? 0) == 1) {
                         throw new Exception(admin_trans('machine.action.slot_machine_must_stop_auto'));
                     }
@@ -1714,6 +1720,12 @@ class MachineController
                     $this->sendMachineCmdViaApi($machine, $cmdClass::START, 0, Admin::id());
                     break;
                 case 'auto': // 自動ON(斯洛)
+                    // ✅ 线下小淞机台不支持 OUT_ON 指令
+                    if ($machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                        && $machine->control_type == Machine::CONTROL_TYPE_SONG) {
+                        throw new Exception('线下小淞机台不支持自动指令');
+                    }
+
                     if ($machine->type == GameType::TYPE_SLOT) {
                         $this->sendMachineCmdViaApi($machine, $cmdClass::OUT_ON, 0, Admin::id());
                         if ($machine->control_type == Machine::CONTROL_TYPE_MEI) {
@@ -1722,9 +1734,21 @@ class MachineController
                     }
                     break;
                 case 'move_on': // 移分ON(斯洛)
+                    // ✅ 线下小淞机台不支持 MOVE_POINT_ON 指令
+                    if ($machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                        && $machine->control_type == Machine::CONTROL_TYPE_SONG) {
+                        throw new Exception('线下小淞机台不支持移分指令');
+                    }
+
                     $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_ON, 0, Admin::id());
                     break;
                 case 'move_off': // 移分OFF(斯洛)
+                    // ✅ 线下小淞机台不支持 MOVE_POINT_OFF 指令
+                    if ($machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                        && $machine->control_type == Machine::CONTROL_TYPE_SONG) {
+                        throw new Exception('线下小淞机台不支持移分指令');
+                    }
+
                     $this->sendMachineCmdViaApi($machine, $cmdClass::MOVE_POINT_OFF, 0, Admin::id());
                     break;
                 case 'pressure': // 總壓分(斯洛)
