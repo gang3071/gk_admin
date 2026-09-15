@@ -605,7 +605,7 @@ class GameLotteryController
 
             // 精灵球配置
             $form->divider()->content(admin_trans('lottery.pokemon_ball_config.divider_title'));
-            $form->row(function (Form $form) {
+            $form->row(function (Form $form) use ($model) {
                 $form->switch('pokemon_ball_status', admin_trans('lottery.pokemon_ball_config.status'))
                     ->default(0)->span(8);
                 $pokemonMachines = \addons\webman\model\Machine::where('type', \addons\webman\model\GameType::TYPE_POKEMON_BALL)
@@ -615,8 +615,29 @@ class GameLotteryController
                     ->get()
                     ->mapWithKeys(fn($m) => [$m->id => $m->code . ' - ' . ($m->machineLabel->name ?? '')])
                     ->all();
+
+                // 获取已绑定其他彩金的机台ID（排除当前彩金自身绑定的）
+                $boundMachineIds = GameLottery::query()
+                    ->where('pokemon_ball_status', 1)
+                    ->whereNotNull('pokemon_ball_machine_id')
+                    ->where('pokemon_ball_machine_id', '>', 0)
+                    ->when($model->id, fn($q) => $q->where('id', '!=', $model->id))
+                    ->pluck('pokemon_ball_machine_id')
+                    ->toArray();
+
+                // 过滤掉已绑定的机台
+                $availableMachines = [];
+                foreach ($pokemonMachines as $id => $name) {
+                    if (!in_array($id, $boundMachineIds)) {
+                        $availableMachines[$id] = $name;
+                    }
+                }
+
+                // 添加"无"选项用于取消绑定
+                $options = [0 => admin_trans('lottery.pokemon_ball_config.none')] + $availableMachines;
+
                 $form->select('pokemon_ball_machine_id', admin_trans('lottery.pokemon_ball_config.machine_id'))
-                    ->options($pokemonMachines)
+                    ->options($options)
                     ->placeholder(admin_trans('lottery.pokemon_ball_config.select_machine'))
                     ->span(16);
             });
@@ -627,6 +648,22 @@ class GameLotteryController
                     $count = GameLottery::query()->where('status', 1)->whereNull('deleted_at')->count();
                     if ($count > 5) {
                         return message_error(admin_trans('lottery.rul.max_count_five'));
+                    }
+                }
+
+                // 验证精灵球机台一对一绑定关系
+                $pokemonBallStatus = $form->input('pokemon_ball_status');
+                $pokemonBallMachineId = $form->input('pokemon_ball_machine_id');
+                if ($pokemonBallStatus == 1 && !empty($pokemonBallMachineId) && $pokemonBallMachineId > 0) {
+                    $currentId = $form->isEdit() ? $form->driver()->get('id') : 0;
+                    $exists = GameLottery::query()
+                        ->where('pokemon_ball_status', 1)
+                        ->where('pokemon_ball_machine_id', $pokemonBallMachineId)
+                        ->where('id', '!=', $currentId)
+                        ->whereNull('deleted_at')
+                        ->exists();
+                    if ($exists) {
+                        return message_error(admin_trans('lottery.pokemon_ball_config.machine_already_bound'));
                     }
                 }
 

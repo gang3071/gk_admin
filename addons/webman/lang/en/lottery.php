@@ -239,6 +239,8 @@ return [
         'status' => 'Pokemon Ball Switch',
         'machine_id' => 'Bound Machine',
         'select_machine' => 'Select Pokemon Ball Machine',
+        'none' => 'None (Unbind)',
+        'machine_already_bound' => 'This machine is already bound to another lottery, please select another machine',
     ],
 
     // Extended form help text and placeholders

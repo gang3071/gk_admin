@@ -252,6 +252,8 @@ return [
         'status' => '精靈球開關',
         'machine_id' => '綁定機台',
         'select_machine' => '請選擇精靈球機台',
+        'none' => '無（不綁定）',
+        'machine_already_bound' => '該機台已被其他彩金綁定，請選擇其他機台',
     ],
 
     // 額外的表單幫助文本和佔位符

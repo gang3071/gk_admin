@@ -253,6 +253,8 @@ return [
         'status' => '精灵球开关',
         'machine_id' => '绑定机台',
         'select_machine' => '请选择精灵球机台',
+        'none' => '无（不绑定）',
+        'machine_already_bound' => '该机台已被其他彩金绑定，请选择其他机台',
     ],
 
     // 额外的表单帮助文本和占位符
