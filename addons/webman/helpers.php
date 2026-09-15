@@ -398,15 +398,21 @@ if (!function_exists('machineWash')) {
                     }
                     break;
                 case GameType::TYPE_SLOT:
-                    if ($services->move_point == 1 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
+                    // ✅ 线下小淞机台不需要发送 MOVE_POINT_OFF/OUT_OFF/STOP_ONE/TWO/THREE 指令
+                    $isOfflineSong = ($machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                        && $machine->control_type == Machine::CONTROL_TYPE_SONG);
+
+                    if (!$isOfflineSong && $services->move_point == 1 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
                         $services->sendCmd($services::MOVE_POINT_OFF, 0, 'player', $player->id, $is_system);
                     }
-                    if ($services->auto == 1) {
+                    if (!$isOfflineSong && $services->auto == 1) {
                         $services->sendCmd($services::OUT_OFF, 0, 'player', $player->id, $is_system);
                     }
-                    $services->sendCmd($services::STOP_ONE, 0, 'player', $player->id, $is_system);
-                    $services->sendCmd($services::STOP_TWO, 0, 'player', $player->id, $is_system);
-                    $services->sendCmd($services::STOP_THREE, 0, 'player', $player->id, $is_system);
+                    if (!$isOfflineSong) {
+                        $services->sendCmd($services::STOP_ONE, 0, 'player', $player->id, $is_system);
+                        $services->sendCmd($services::STOP_TWO, 0, 'player', $player->id, $is_system);
+                        $services->sendCmd($services::STOP_THREE, 0, 'player', $player->id, $is_system);
+                    }
                     $services->sendCmd($services::READ_SCORE, 0, 'player', $player->id, $is_system);
                     Log::channel('song_slot_machine')->info('slot -> wash', [
                         'point' => $money,
@@ -1025,15 +1031,21 @@ if (!function_exists('resetMachineTrans')) {
                         }
                         break;
                     case GameType::TYPE_SLOT:
-                        if ($services->move_point == 1 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
+                        // ✅ 线下小淞机台不需要发送 MOVE_POINT_OFF/OUT_OFF/STOP_ONE/TWO/THREE 指令
+                        $isOfflineSong = ($machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+                            && $machine->control_type == Machine::CONTROL_TYPE_SONG);
+
+                        if (!$isOfflineSong && $services->move_point == 1 && $machine->control_type == Machine::CONTROL_TYPE_MEI) {
                             $services->sendCmd($services::MOVE_POINT_OFF, 0, 'player', $player->id);
                         }
-                        if ($services->auto == 1) {
-                            $services->sendCmd($services::OUT_OFF, 0, 'player', $player->id);
-                        } else {
-                            $services->sendCmd($services::STOP_ONE, 0, 'player', $player->id);
-                            $services->sendCmd($services::STOP_TWO, 0, 'player', $player->id);
-                            $services->sendCmd($services::STOP_THREE, 0, 'player', $player->id);
+                        if (!$isOfflineSong) {
+                            if ($services->auto == 1) {
+                                $services->sendCmd($services::OUT_OFF, 0, 'player', $player->id);
+                            } else {
+                                $services->sendCmd($services::STOP_ONE, 0, 'player', $player->id);
+                                $services->sendCmd($services::STOP_TWO, 0, 'player', $player->id);
+                                $services->sendCmd($services::STOP_THREE, 0, 'player', $player->id);
+                            }
                         }
                         break;
                 }
