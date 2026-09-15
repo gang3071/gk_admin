@@ -24,6 +24,8 @@ return [
         'created_at' => '創建時間',
         'audit_at' => '稽核時間',
         'source' => '來源',
+        'distribute_type' => '派發類型',
+        'pokemon_ball_machine_id' => '精靈球機台',
     ],
     'double' => '雙倍',
     'btn' => [
@@ -48,6 +50,10 @@ return [
         PlayerLotteryRecord::SOURCE_MACHINE => '實體機器',
         PlayerLotteryRecord::SOURCE_GAME => '電子遊戲',
         PlayerLotteryRecord::SOURCE_MANUAL => '手動發放',
+    ],
+    'distribute_type' => [
+        0 => '正常派發',
+        1 => '精靈球派發',
     ],
 
     // 站內信消息

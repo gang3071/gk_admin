@@ -24,6 +24,8 @@ return [
         'created_at' => '创建时间',
         'audit_at' => '审核时间',
         'source' => '来源',
+        'distribute_type' => '派发类型',
+        'pokemon_ball_machine_id' => '精灵球机台',
     ],
     'double' => '双倍',
     'btn' => [
@@ -48,6 +50,10 @@ return [
         PlayerLotteryRecord::SOURCE_MACHINE => '实体机台',
         PlayerLotteryRecord::SOURCE_GAME => '电子游戏',
         PlayerLotteryRecord::SOURCE_MANUAL => '手动发放',
+    ],
+    'distribute_type' => [
+        0 => '正常派发',
+        1 => '精灵球派发',
     ],
 
     // 站内信消息

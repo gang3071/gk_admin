@@ -24,6 +24,8 @@ return [
         'created_at' => '作成時刻',
         'audit_at' => '監査時間',
         'source' => 'ソース',
+        'distribute_type' => '配布タイプ',
+        'pokemon_ball_machine_id' => 'ポケモンボールマシン',
     ],
     'double' => 'ダブル',
     'btn' => [
@@ -48,6 +50,10 @@ return [
         PlayerLotteryRecord::SOURCE_MACHINE => 'アーケードゲーム機',
         PlayerLotteryRecord::SOURCE_GAME => 'ビデオゲーム',
         PlayerLotteryRecord::SOURCE_MANUAL => '手動配布',
+    ],
+    'distribute_type' => [
+        0 => '通常配布',
+        1 => 'ポケモンボール配布',
     ],
 
     // お知らせメッセージ

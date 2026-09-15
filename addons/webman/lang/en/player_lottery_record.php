@@ -24,6 +24,8 @@ return [
         'created_at' => 'Creation time',
         'audit_at' => 'Audit time',
         'source' => 'Source',
+        'distribute_type' => 'Distribute Type',
+        'pokemon_ball_machine_id' => 'Pokemon Ball Machine',
     ],
     'double' => 'double',
     'btn' => [
@@ -48,6 +50,10 @@ return [
         PlayerLotteryRecord::SOURCE_MACHINE => 'Physical Machine',
         PlayerLotteryRecord::SOURCE_GAME => 'Electronic Game',
         PlayerLotteryRecord::SOURCE_MANUAL => 'Manual Distribution',
+    ],
+    'distribute_type' => [
+        0 => 'Normal Distribution',
+        1 => 'Pokemon Ball Distribution',
     ],
 
     // Notice messages

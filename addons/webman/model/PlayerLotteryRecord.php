@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string machine_code 机台code
  * @property int game_type 机台类型
  * @property int source 来源
+ * @property int distribute_type 派发类型 0=正常派发 1=精灵球派发
+ * @property int pokemon_ball_machine_id 精灵球机台ID
  * @property int play_game_record_id 电子游戏记录id
  * @property int player_game_record_id 机台游戏记录id
  * @property string odds 比值

@@ -99,6 +99,9 @@ class PlayerLotteryRecordController
             if (!empty($requestFilter['department_id'])) {
                 $grid->model()->where('department_id', $requestFilter['department_id']);
             }
+            if (isset($requestFilter['distribute_type']) && $requestFilter['distribute_type'] !== '') {
+                $grid->model()->where('distribute_type', $requestFilter['distribute_type']);
+            }
 
             // 排序
             $grid->model()->orderBy('created_at', 'desc');
@@ -177,6 +180,20 @@ class PlayerLotteryRecordController
                 return Html::create()->content([
                     Tag::create(admin_trans('player_lottery_record.source.' . $val))->color($val == Lottery::LOTTERY_TYPE_FIXED ? '#108ee9' : '#f50')
                 ]);
+            })->align('center')->align('center');
+            $grid->column('distribute_type', admin_trans('player_lottery_record.fields.distribute_type'))->display(function ($val) {
+                $color = $val == 1 ? '#722ed1' : '#52c41a';
+                return Html::create()->content([
+                    Tag::create(admin_trans('player_lottery_record.distribute_type.' . $val))->color($color)
+                ]);
+            })->align('center')->align('center');
+            $grid->column('pokemon_ball_machine_id', admin_trans('player_lottery_record.fields.pokemon_ball_machine_id'))->display(function ($val, PlayerLotteryRecord $data) {
+                if ($val > 0 && $data->machine) {
+                    return Html::create()->content([
+                        Html::div()->content($data->machine->code . ' - ' . ($data->machine->name ?? ''))
+                    ]);
+                }
+                return '-';
             })->align('center')->align('center');
             $grid->column('machine_name', admin_trans('player_lottery_record.fields.machine_name'))
                 ->display(function ($val, PlayerLotteryRecord $data) {
@@ -285,6 +302,15 @@ class PlayerLotteryRecordController
                     ->options([
                         Lottery::LOTTERY_TYPE_FIXED => admin_trans('player_lottery_record.source.' . PlayerLotteryRecord::SOURCE_MACHINE),
                         Lottery::LOTTERY_TYPE_RANDOM => admin_trans('player_lottery_record.source.' . PlayerLotteryRecord::SOURCE_GAME),
+                    ]);
+                $filter->eq()->select('distribute_type')
+                    ->placeholder(admin_trans('player_lottery_record.fields.distribute_type'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options([
+                        0 => admin_trans('player_lottery_record.distribute_type.0'),
+                        1 => admin_trans('player_lottery_record.distribute_type.1'),
                     ]);
                 $filter->in()->cascaderSingle('cate_id')
                     ->showSearch()
