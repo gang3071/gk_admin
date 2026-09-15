@@ -103,6 +103,7 @@ return [
         'auto_shift_config' => 'Auto Shift Config',
         'system_setting' => 'System Settings',
         'open_score_setting' => 'Open Score Config',
+        'purchase_score_setting' => 'Vending Machine Score Purchase Config',
         'wash_point_setting' => 'Wash Point Config',
         'activity_config' => 'Activity Config',
     ],

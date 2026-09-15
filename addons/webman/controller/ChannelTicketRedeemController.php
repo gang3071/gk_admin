@@ -41,6 +41,19 @@ class ChannelTicketRedeemController
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->orderBy('created_at', 'desc');
 
+            // 处理 source_type 筛选（手动处理，避免 ExAdmin 覆盖）
+            $exAdminFilter = request()->input('ex_admin_filter', []);
+            if (isset($exAdminFilter['source_type_custom'])) {
+                $sourceType = $exAdminFilter['source_type_custom'];
+                if ($sourceType === 'null' || $sourceType === null || $sourceType === 'NULL') {
+                    $grid->model()->where(function ($q) {
+                        $q->whereNull('source_type')->orWhere('source_type', '');
+                    });
+                } elseif ($sourceType !== '') {
+                    $grid->model()->where('source_type', $sourceType);
+                }
+            }
+
             // 统计数据（排除禁用状态）
             $totalData = TicketRecord::query()
                 ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
@@ -184,6 +197,18 @@ class ChannelTicketRedeemController
                     default => Tag::create(admin_trans('ticket_machine.redeem.status_unknown'))->color('default'),
                 };
             });
+            // 来源（根据 source_type 判断）
+            $grid->column('source_type', admin_trans('ticket_machine.redeem.source_type'))
+                ->width(100)
+                ->align('center')
+                ->display(function ($val) {
+                    return match ($val) {
+                        TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.redeem.source_purchase'))->color('green'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.source_split'))->color('cyan'),
+                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.redeem.source_merge'))->color('geekblue'),
+                        default => Tag::create(admin_trans('ticket_machine.redeem.source_machine_wash'))->color('blue'),
+                    };
+                });
             $grid->column('created_at', admin_trans('ticket_machine.redeem.created_at'))->sortable();
             $grid->column('remark', admin_trans('ticket_machine.redeem.remark'))->display(function ($value) {
                 return $value ?: '-';
@@ -219,6 +244,16 @@ class ChannelTicketRedeemController
                         TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.redeem.status_normal'),
                         TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.redeem.status_backend_used'),
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.redeem.status_machine_used'),
+                    ])
+                    ->style(['width' => '150px']);
+                $filter->select('source_type_custom')
+                    ->placeholder(admin_trans('ticket_machine.redeem.source_type'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        'null' => admin_trans('ticket_machine.redeem.source_machine_wash'),
+                        TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.redeem.source_purchase'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.redeem.source_split'),
+                        TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.redeem.source_merge'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')

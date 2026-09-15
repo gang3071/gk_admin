@@ -480,7 +480,7 @@ class StorePlayerController
                     } elseif (!$nextLevel) {
                         // 已是最高等级
                         $progress = 100;
-                        $progressText = admin_trans('player.vip_max_level');
+                        $progressText = admin_trans('player.fields.vip_max_level');
                     } else {
                         $progressText = number_format($periodBetAmount, 0);
                     }

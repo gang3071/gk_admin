@@ -453,7 +453,7 @@ class ChannelAgentController
                     } elseif (!$nextLevel) {
                         // 已是最高等级
                         $progress = 100;
-                        $progressText = admin_trans('player.vip_max_level');
+                        $progressText = admin_trans('player.fields.vip_max_level');
                     } else {
                         $progressText = number_format($periodBetAmount, 0);
                     }
@@ -2039,6 +2039,7 @@ class ChannelAgentController
                         'coin_deduct' => admin_trans('message.target.coin_deduct'),
                         'agent_in' => admin_trans('message.target.agent_in'),
                         'agent_out' => admin_trans('message.target.agent_out'),
+                        'storage_recharge' => admin_trans('message.target.storage_recharge'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()

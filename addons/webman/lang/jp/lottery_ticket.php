@@ -61,6 +61,7 @@ return [
         'player_name' => 'プレイヤー名',
         'player_uuid' => 'プレイヤーUUID',
         'player_username' => 'プレイヤーアカウント',
+        'store_name' => '店舗',
         'ticket_no' => 'チケット番号',
         'prize_type' => '賞品タイプ',
         'prize_name' => '賞品名',
@@ -138,6 +139,7 @@ return [
         'recharge' => 'チャージ特典',
         'activity' => 'アクティビティ特典',
         'manual' => '手動払い出し',
+        'vip_upgrade' => 'アップグレード補発',
         'unknown' => '不明な来源',
     ],
 

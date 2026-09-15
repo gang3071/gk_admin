@@ -35,6 +35,8 @@ return [
         'device_collect' => 'Store Cross-Store Login',
         'electronic_game_rebate' => 'Electronic Game Rebate',
         'machine_rebate' => 'Physical Machine Rebate',
+        'ticket_machine_version' => 'Ticket Machine Version',
+        'ticket_machine_download_url' => 'Ticket Machine Download URL',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',

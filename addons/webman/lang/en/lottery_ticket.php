@@ -61,6 +61,7 @@ return [
         'player_name' => 'Player Name',
         'player_uuid' => 'Player UUID',
         'player_username' => 'Player Account',
+        'store_name' => 'Store',
         'ticket_no' => 'Ticket No',
         'prize_type' => 'Prize Type',
         'prize_name' => 'Prize Name',
@@ -139,10 +140,11 @@ return [
     // 来源
     'source' => [
         'betting' => 'Earned by Betting',
-        'recharge' => '充值贈送',
-        'activity' => '活动贈送',
-        'manual' => 'Manual Award Distribution',
-        'unknown' => '未知來源',
+        'recharge' => 'Recharge Bonus',
+        'activity' => 'Activity Reward',
+        'manual' => 'Manual Award',
+        'vip_upgrade' => 'Upgrade Reissue',
+        'unknown' => 'Unknown Source',
     ],
 
     // 中奖记录状态

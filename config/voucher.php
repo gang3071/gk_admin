@@ -16,7 +16,7 @@ return [
     'activity' => [
         // 活动结束时间（到达此时间后，福利券和体验券暂停发放）
         // 格式：Y-m-d H:i:s
-        'end_time' => '2026-09-01 08:00:00',
+        'end_time' => '2026-12-01 08:00:00',
 
         // 是否强制开启（忽略结束时间限制，用于测试）
         'force_enable' => false,
@@ -37,7 +37,7 @@ return [
         'daily_limit' => 1,
 
         // 总可领取次数
-        'total_limit' => 6,
+        'total_limit' => 5,
 
         // 每次领取的分数
         'score' => 1000,

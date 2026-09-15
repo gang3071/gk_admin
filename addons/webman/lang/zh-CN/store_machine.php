@@ -103,6 +103,7 @@ return [
         'auto_shift_config' => '自动交班配置',
         'system_setting' => '系统配置',
         'open_score_setting' => '开分配置',
+        'purchase_score_setting' => '储值机购分配置',
         'wash_point_setting' => '洗分配置',
         'activity_config' => '活动配置',
     ],

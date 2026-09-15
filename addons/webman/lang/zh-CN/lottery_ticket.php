@@ -61,6 +61,7 @@ return [
         'player_name' => '玩家名称',
         'player_uuid' => '玩家UUID',
         'player_username' => '玩家账号',
+        'store_name' => '门店',
         'ticket_no' => '券号',
         'prize_type' => '奖品类型',
         'prize_name' => '奖品名称',
@@ -142,6 +143,7 @@ return [
         'recharge' => '充值贈送',
         'activity' => '活动贈送',
         'manual' => '手动发放',
+        'vip_upgrade' => '升级补发',
         'unknown' => '未知來源',
     ],
 

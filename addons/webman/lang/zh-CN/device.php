@@ -19,6 +19,7 @@ return [
         'device_no' => '设备号',
         'device_no_help' => '安卓设备的唯一标识符（如：Android ID、IMEI等）',
         'device_model' => '设备型号',
+        'device_type' => '设备类型',
         'voice_url' => '语音播报',
         'channel_name' => '所属渠道',
         'department_name' => '所属部门',
@@ -45,6 +46,12 @@ return [
     'status' => [
         'disabled' => '禁用',
         'enabled' => '启用',
+    ],
+
+    // 设备类型
+    'type' => [
+        'game_machine' => '游戏机',
+        'vending_machine' => '储值机',
     ],
 
     // 访问日志

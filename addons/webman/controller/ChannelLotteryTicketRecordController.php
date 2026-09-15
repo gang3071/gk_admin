@@ -63,7 +63,8 @@ class ChannelLotteryTicketRecordController
             $grid->model()
                 ->with([
                     'activity:id,name',  // 活动名称
-                    'player:id,name,phone,uuid'  // 玩家信息
+                    'player:id,name,phone,uuid,store_admin_id',  // 玩家信息
+                    'player.storeAdmin:id,nickname,username'  // 门店信息
                 ])
                 ->where('department_id', $departmentId)
                 ->orderBy('created_at', 'desc');
@@ -76,6 +77,21 @@ class ChannelLotteryTicketRecordController
 
             // ⭐ 使用Eloquent关系显示玩家信息
             $grid->column('player.name', admin_trans('lottery_ticket.fields.player_name'))->width(120);
+
+            // ⭐ 门店名称（玩家所属门店）
+            $grid->column('player.storeAdmin.nickname', admin_trans('lottery_ticket.fields.store_name'))
+                ->width(120)
+                ->display(function ($val, $data) {
+                    $storeName = $val ?: ($data['player']['storeAdmin']['username'] ?? '-');
+                    if ($storeName === '-') {
+                        return Tag::create($storeName)->color('default');
+                    }
+                    // 根据门店ID分配固定颜色，便于区分不同门店
+                    $storeAdminId = $data['player']['storeAdmin']['id'] ?? 0;
+                    $colors = ['blue', 'cyan', 'geekblue', 'purple', 'volcano', 'magenta', 'gold', 'lime'];
+                    $colorIndex = $storeAdminId % count($colors);
+                    return Tag::create($storeName)->color($colors[$colorIndex]);
+                });
 
             $grid->column('player.uuid', admin_trans('lottery_ticket.fields.player_uuid'))
                 ->width(150)->copyable();
@@ -145,6 +161,10 @@ class ChannelLotteryTicketRecordController
                 // 玩家账号筛选（使用关系）
                 $filter->like()->text('player.phone')
                     ->placeholder(admin_trans('lottery_ticket.fields.player_username'));
+
+                // 门店筛选（使用关系）
+                $filter->like()->text('player.storeAdmin.nickname')
+                    ->placeholder(admin_trans('lottery_ticket.fields.store_name'));
 
                 // 券号筛选
                 $filter->like()->text('ticket_no')

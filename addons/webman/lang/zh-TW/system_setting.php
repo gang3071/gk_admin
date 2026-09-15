@@ -35,6 +35,8 @@ return [
         'device_collect' => '店機跨店登入',
         'electronic_game_rebate' => '電子遊戲反水',
         'machine_rebate' => '實體機台反水',
+        'ticket_machine_version' => '儲值機版本號',
+        'ticket_machine_download_url' => '儲值機客戶端下載鏈接',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字元',

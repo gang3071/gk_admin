@@ -85,7 +85,6 @@
             <div style="font-weight: 500; margin-bottom: 4px;">{{ labels.ticket_type || '票據類型' }}</div>
             <a-select v-model:value="ticketType" style="width: 100%;" @change="handleTicketTypeChange">
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
-              <a-select-option :value="2">{{ labels.type_withdraw || '洗分' }}</a-select-option>
               <a-select-option :value="3">
                 {{ labels.type_experience || '體驗券' }}
                 <span v-if="isExperienceBetCheckEnabled" style="color: #faad14; margin-left: 4px;">({{ labels.bet_check_on || '當前打開打碼量判定' }})</span>
@@ -148,6 +147,11 @@
                 <a-descriptions-item :label="labels.player_name || '玩家名稱'">
                   <a-tag color="blue">
                     <user-outlined /> {{ playerBetInfo.player_name }} ({{ playerBetInfo.player_phone || playerBetInfo.player_uuid }})
+                  </a-tag>
+                </a-descriptions-item>
+                <a-descriptions-item :label="labels.player_registered_at || '註冊時間'">
+                  <a-tag color="cyan">
+                    <clock-circle-outlined /> {{ playerBetInfo.player_registered_at || '-' }}
                   </a-tag>
                 </a-descriptions-item>
                 <a-descriptions-item :label="labels.today_bet_amount || '今日電子總打碼量'">
@@ -395,8 +399,8 @@ export default {
         const betCheckEnabled = this.playerBetInfo?.experience_bet_check_enabled || false;
         const isFirstClaim = claimedTotal === 0;
         const yesterdayBet = this.playerBetInfo?.yesterday_bet_amount || 0;
-        const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 10000;
-        const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足10,000';
+        const betCheckPassed = !betCheckEnabled || isFirstClaim || yesterdayBet >= 20000;
+        const betCheckFailedLabel = this.labels.bet_check_failed || '昨日打码量不足20,000';
 
         // 提示优先级：今日已领取 > 总次数已用完 > 打码量不足 > 新会员可领取
         let condition = newMemberClaim;
@@ -1284,6 +1288,28 @@ export default {
         await this.sendCommand(0x01, 0x01, [], true, true);
       }, 10000);
       this.addLog('info', this.t('heartbeat_restarted'));
+
+      // 打印成功后关闭弹窗并刷新页面
+      if (printSuccess) {
+        this.$message.success(this.t('ticket_saved', {order_id: orderId}));
+        setTimeout(() => {
+          this.closeModalAndRefresh();
+        }, 1000);
+      }
+    },
+
+    // 关闭弹窗并刷新页面
+    closeModalAndRefresh() {
+      this.$emit('success');
+      const el = this.$el;
+      const modalWrap = el.closest ? el.closest('.ant-modal-wrap') : null;
+      const closeBtn = modalWrap ? modalWrap.querySelector('.ant-modal-close') : null;
+      if (closeBtn) {
+        closeBtn.click();
+      }
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
     },
 
     // 本地过滤玩家选项

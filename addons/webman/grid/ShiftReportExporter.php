@@ -33,7 +33,6 @@ class ShiftReportExporter extends Excel
         'ticket_open_score_amount' => 'shift_handover.ticket_open_score_amount',
         'redeem_amount' => 'shift_handover.redeem_amount',
         'redeem_machine_amount' => 'shift_handover.redeem_machine_amount',
-        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
         'experience_coupon_amount' => 'shift_handover.experience_coupon_amount',
         'welfare_coupon_amount' => 'shift_handover.welfare_coupon_amount',
         'electronic_game_bet_amount' => 'shift_handover.electronic_game_bet_amount',
@@ -41,6 +40,7 @@ class ShiftReportExporter extends Excel
         'total_in' => 'shift_handover.total_in',
         'total_out' => 'shift_handover.total_out',
         'profit' => 'shift_handover.profit',
+        'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
     ];
 
     // 用户选择的导出列
@@ -213,6 +213,31 @@ class ShiftReportExporter extends Excel
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
                 $this->currentRow++;
 
+                // 储值机购票、储值机储值、小计
+                $storageTicketLabel = admin_trans('shift_handover.storage_ticket_purchase') . '：';
+                $storageTicketValue = number_format($originalRecord->storage_ticket_purchase ?? 0, 2);
+                $storageRechargeLabel = admin_trans('shift_handover.storage_recharge') . '：';
+                $storageRechargeValue = number_format($originalRecord->storage_recharge ?? 0, 2);
+                $storageSubtotalLabel = admin_trans('shift_handover.subtotal') . '：';
+                $storageSubtotalValue = number_format(($originalRecord->storage_ticket_purchase ?? 0) + ($originalRecord->storage_recharge ?? 0), 2);
+                $this->sheet->setCellValue('A' . $this->currentRow, $storageTicketLabel);
+                $this->sheet->setCellValue('B' . $this->currentRow, $storageTicketValue);
+                $this->sheet->setCellValue('C' . $this->currentRow, $storageRechargeLabel);
+                $this->sheet->setCellValue('D' . $this->currentRow, $storageRechargeValue);
+                $this->sheet->setCellValue('E' . $this->currentRow, $storageSubtotalLabel);
+                $this->sheet->setCellValue('F' . $this->currentRow, $storageSubtotalValue);
+                $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('E' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('E' . $this->currentRow)->getFont()->getColor()->setRGB('1890ff');
+                $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->sheet->getStyle('F' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                $this->sheet->getStyle('F' . $this->currentRow)->getFont()->setBold(true);
+                $this->sheet->getStyle('F' . $this->currentRow)->getFont()->getColor()->setRGB('1890ff');
+                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
+                $this->currentRow++;
+
                 // 获取设备明细
                 $deviceDetails = StoreShiftDeviceDetail::where('shift_record_id', $originalRecord->id)->get();
 
@@ -310,6 +335,62 @@ class ShiftReportExporter extends Excel
                         $index++;
                     }
 
+                    // 柜台行（柜台开票、柜台核销）
+                    $counterTicketAmount = $originalRecord->counter_ticket_amount ?? 0;
+                    $counterRedeemAmount = $originalRecord->counter_redeem_amount ?? 0;
+                    $counterRowValues = [];
+                    foreach ($activeColumns as $column) {
+                        if ($column === 'player_name') {
+                            $counterRowValues[$column] = admin_trans('shift_handover.counter');
+                        } elseif ($column === 'player_phone') {
+                            $counterRowValues[$column] = '-';
+                        } elseif ($column === 'ticket_open_score_amount') {
+                            // 柜台开票放到开票栏
+                            $counterRowValues[$column] = $counterTicketAmount;
+                        } elseif ($column === 'redeem_amount') {
+                            // 柜台核销放到核销栏
+                            $counterRowValues[$column] = $counterRedeemAmount;
+                        } elseif ($column === 'total_in') {
+                            // 总收入包含柜台开票
+                            $counterRowValues[$column] = $counterTicketAmount;
+                        } elseif ($column === 'total_out') {
+                            // 总支出包含柜台核销
+                            $counterRowValues[$column] = $counterRedeemAmount;
+                        } elseif ($column === 'profit') {
+                            // 利润 = 总收入 - 总支出
+                            $counterRowValues[$column] = bcsub($counterTicketAmount, $counterRedeemAmount, 2);
+                        } else {
+                            $counterRowValues[$column] = 0;
+                        }
+                    }
+
+                    // 写入柜台行
+                    foreach ($activeColumns as $colIndex => $column) {
+                        $value = $counterRowValues[$column];
+                        $formattedValue = $this->formatColumnValue($column, $value);
+                        $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
+                    }
+
+                    // 数字列右对齐
+                    if ($columnCount > 2) {
+                        $this->sheet->getStyle($this->getColumnLetter(2) . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)
+                            ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+                    }
+
+                    // 柜台行背景色
+                    $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E6F3FF']],
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+                    ]);
+
+                    // 累加小计
+                    foreach ($subtotal as $column => &$value) {
+                        $value += $counterRowValues[$column] ?? 0;
+                    }
+                    unset($value);
+
+                    $this->currentRow++;
+
                     // 小计行
                     $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $originalRecord->id . ')';
                     $this->sheet->setCellValue('A' . $this->currentRow, $subtotalLabel);
@@ -338,7 +419,7 @@ class ShiftReportExporter extends Excel
                         $profitColIndex = array_search('profit', $activeColumns);
                         $profitLetter = $this->getColumnLetter($profitColIndex);
                         $subtotalProfit = $subtotal['profit'] ?? 0;
-                        $subtotalProfitColor = $subtotalProfit >= 0 ? '3f8600' : 'cf1322';
+                        $subtotalProfitColor = bccomp($subtotalProfit, '0', 2) >= 0 ? '3f8600' : 'cf1322';
                         $this->sheet->getStyle($profitLetter . $this->currentRow)->getFont()->getColor()->setRGB($subtotalProfitColor);
                     }
 
@@ -434,7 +515,7 @@ class ShiftReportExporter extends Excel
      */
     protected function setColumnWidths(array $activeColumns = [])
     {
-        // 列宽度定义（固定17列）
+        // 列宽度定义
         $columnWidths = [
             'player_name' => 12,
             'player_phone' => 15,

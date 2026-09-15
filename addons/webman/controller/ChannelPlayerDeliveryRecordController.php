@@ -513,6 +513,7 @@ class ChannelPlayerDeliveryRecordController
                         'coin_deduct' => admin_trans('message.target.coin_deduct'),
                         'agent_in' => admin_trans('message.target.agent_in'),
                         'agent_out' => admin_trans('message.target.agent_out'),
+                        'storage_recharge' => admin_trans('message.target.storage_recharge'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()

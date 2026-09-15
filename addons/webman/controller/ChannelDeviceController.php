@@ -71,23 +71,50 @@ class ChannelDeviceController
                 ->align('center')
                 ->copyable();
 
+            // 设备类型
+            $grid->column('device_type', admin_trans('device.fields.device_type'))
+                ->width(100)
+                ->align('center')
+                ->display(function ($val) {
+                    $types = AdminDevice::getDeviceTypeList();
+                    $colors = [
+                        AdminDevice::TYPE_GAME_MACHINE => 'blue',
+                        AdminDevice::TYPE_VENDING_MACHINE => 'orange',
+                    ];
+                    return Tag::create($types[$val] ?? '-')
+                        ->color($colors[$val] ?? 'default');
+                });
+
+            // 设备型号
+            $grid->column('device_model', admin_trans('device.fields.device_model'))
+                ->width(120)
+                ->align('center')
+                ->display(function ($val) {
+                    return $val ?: '-';
+                });
+
             // 线下渠道：显示代理和店家
             if ($channel && $channel->is_offline == 1) {
                 $grid->column('agent.nickname', admin_trans('device.fields.agent_name'))
+                    ->width(120)
+                    ->align('center')
                     ->display(function ($value) {
-                        return $value ?: admin_trans('device.no_agent');
-                    })
-                    ->align('center');
+                        if (empty($value)) {
+                            return Tag::create(admin_trans('device.no_agent'))->color('default');
+                        }
+                        return Tag::create($value)->color('geekblue');
+                    });
 
                 $grid->column('store.nickname', admin_trans('device.fields.store_name'))
+                    ->width(120)
+                    ->align('center')
                     ->display(function ($value) {
-                        return $value ?: admin_trans('device.no_store');
-                    })
-                    ->align('center');
+                        if (empty($value)) {
+                            return Tag::create(admin_trans('device.no_store'))->color('default');
+                        }
+                        return Tag::create($value)->color('purple');
+                    });
             }
-
-            $grid->column('device_model', admin_trans('device.fields.device_model'))
-                ->align('center');
 
             $grid->column('status', admin_trans('device.fields.status'))
                 ->display(function ($val) {
@@ -124,6 +151,11 @@ class ChannelDeviceController
             $grid->filter(function (Filter $filter) use ($departmentId) {
                 $filter->like()->text('device_name')->placeholder(admin_trans('device.fields.device_name'));
                 $filter->like()->text('device_no')->placeholder(admin_trans('device.fields.device_no'));
+
+                // 设备类型筛选
+                $filter->eq()->select('device_type')
+                    ->placeholder(admin_trans('device.fields.device_type'))
+                    ->options(AdminDevice::getDeviceTypeList());
 
                 // 代理筛选（静态加载选项，与 AdminDeviceController 一致）
                 $agentOptions = [0 => admin_trans('device.no_agent')];
@@ -230,6 +262,11 @@ class ChannelDeviceController
 
             $form->text('device_model', admin_trans('device.fields.device_model'))
                 ->maxlength(100);
+
+            $form->select('device_type', admin_trans('device.fields.device_type'))
+                ->options(AdminDevice::getDeviceTypeList())
+                ->default(AdminDevice::TYPE_GAME_MACHINE)
+                ->required();
 
             $form->radio('status', admin_trans('device.fields.status'))
                 ->options(AdminDevice::getStatusList())

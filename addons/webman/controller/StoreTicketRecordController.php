@@ -52,6 +52,20 @@ class StoreTicketRecordController
                 ])
                 ->orderBy('created_at', 'desc');
 
+            // 处理 source_type 筛选（手动处理，避免 ExAdmin 覆盖）
+            $exAdminFilter = request()->input('ex_admin_filter', []);
+            if (isset($exAdminFilter['source_type_custom'])) {
+                $sourceType = $exAdminFilter['source_type_custom'];
+                if ($sourceType === 'null' || $sourceType === 'NULL') {
+                    // 后台出票：source_type 为 NULL 或空字符串
+                    $grid->model()->where(function ($q) {
+                        $q->whereNull('source_type')->orWhere('source_type', '');
+                    });
+                } elseif ($sourceType !== '') {
+                    $grid->model()->where('source_type', $sourceType);
+                }
+            }
+
             // 统计数据（基于当前筛选条件，排除禁用状态）
             $query = clone $grid->model();
             $query->where('status', '!=', TicketRecord::STATUS_DISABLED);
@@ -262,13 +276,19 @@ class StoreTicketRecordController
                     , 5);
             })->style(['background' => '#f6ffed']);
 
-            // 添加出票机控制按钮和统计布局（合并到一次调用）
+            // 添加出票机控制按钮、核销按钮和统计布局（合并到一次调用）
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.title'))
                     ->modal([ChannelIndexController::class, 'ticketMachineControl'])
                     ->width('900px')
                     ->type('primary')
                     ->icon('PrinterOutlined'),
+                Button::create(admin_trans('ticket_machine.record.redeem'))
+                    ->modal([$this, 'scanRedeemModal'])
+                    ->width('700px')
+                    ->type('primary')
+                    ->icon('QrcodeOutlined')
+                    ->gridRefresh(),
                 $layout
             ]);
 
@@ -304,7 +324,6 @@ class StoreTicketRecordController
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
             });
-            $grid->column('qr_code_no', admin_trans('ticket_machine.record.qr_code_no'))->copy();
             $grid->column('status', admin_trans('ticket_machine.record.status'))->display(function ($val, $data) {
                 // 体验券和福利券：判断是否超过有效时间
                 if ($val == TicketRecord::STATUS_NORMAL
@@ -325,16 +344,28 @@ class StoreTicketRecordController
                     TicketRecord::STATUS_BACKEND_USED => Tag::create(admin_trans('ticket_machine.record.status_backend_used'))->color('orange'),
                     TicketRecord::STATUS_MACHINE_USED => Tag::create(admin_trans('ticket_machine.record.status_machine_used'))->color('purple'),
                     TicketRecord::STATUS_PRINT_FAILED => Tag::create(admin_trans('ticket_machine.record.status_print_failed'))->color('red'),
+                    TicketRecord::STATUS_SPLIT => Tag::create(admin_trans('ticket_machine.record.status_split'))->color('cyan'),
+                    TicketRecord::STATUS_MERGED => Tag::create(admin_trans('ticket_machine.record.status_merged'))->color('geekblue'),
                     default => Tag::create(admin_trans('ticket_machine.record.status_unknown'))->color('default'),
                 };
             });
-            $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
-            $grid->column('scanned_at', admin_trans('ticket_machine.record.scanned_at'))
+            // 来源（根据 source_type 判断）
+            $grid->column('source_type', admin_trans('ticket_machine.record.source_type'))
+                ->width(100)
+                ->align('center')
                 ->display(function ($val) {
+                    return match ($val) {
+                        TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.record.source_purchase'))->color('green'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.record.source_split'))->color('cyan'),
+                        TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.record.source_merge'))->color('geekblue'),
+                        default => Tag::create(admin_trans('ticket_machine.record.source_backend'))->color('blue'),
+                    };
+                });
+            $grid->column('created_at', admin_trans('ticket_machine.record.created_at'))->sortable();
+            $grid->column('scanned_at', admin_trans('ticket_machine.record.scanned_at'))->display(function ($val) {
                     return $val ?: '-';
                 });
-            $grid->column('scanned_by', admin_trans('ticket_machine.record.scanned_by'))
-                ->display(function ($val, $data) {
+            $grid->column('scanned_by', admin_trans('ticket_machine.record.scanned_by'))->display(function ($val, $data) {
                     if (empty($val)) {
                         return '-';
                     }
@@ -356,20 +387,15 @@ class StoreTicketRecordController
                 });
 
             // 备注（可编辑）
-            $grid->column('remark', admin_trans('ticket_machine.record.remark'))
-                ->display(function ($value) {
+            $grid->column('remark', admin_trans('ticket_machine.record.remark'))->display(function ($value) {
                     return $value ?: '-';
-                })
-                ->editable(
-                    (new Editable)->text('remark')->maxlength(255)
-                )
-                ->width(150)->ellipsis(true);
+                })->editable((new Editable)->text('remark')->maxlength(255))->width(150)->ellipsis(true);
 
             // 筛选器
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
+                $filter->like()->text('player.name')->placeholder(admin_trans('ticket_machine.record.player_name'));
                 $filter->like()->text('order_id')->placeholder(admin_trans('ticket_machine.record.order_id'));
-                $filter->like()->text('qr_code_no')->placeholder(admin_trans('ticket_machine.record.qr_code_no'));
                 $filter->like()->text('machine_no')->placeholder(admin_trans('ticket_machine.record.machine_no'));
                 $filter->like()->text('remark')->placeholder(admin_trans('ticket_machine.record.remark'));
                 $filter->eq()->select('ticket_type')
@@ -377,8 +403,8 @@ class StoreTicketRecordController
                     ->options([
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
-                        TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
                         TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+                        TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
                         TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
                     ])
                     ->style(['width' => '150px']);
@@ -391,12 +417,30 @@ class StoreTicketRecordController
                         TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
                         TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
                         TicketRecord::STATUS_PRINT_FAILED => admin_trans('ticket_machine.record.status_print_failed'),
+                        TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.record.status_split'),
+                        TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
+                    ])
+                    ->style(['width' => '150px']);
+                // source_type 不用 ExAdmin filter，手动处理（避免被覆盖）
+                $filter->select('source_type_custom')
+                    ->placeholder(admin_trans('ticket_machine.record.source_type'))
+                    ->options([
+                        '' => admin_trans('public_msg.all'),
+                        'null' => admin_trans('ticket_machine.record.source_backend'),
+                        TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.record.source_purchase'),
+                        TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.record.source_split'),
+                        TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.record.source_merge'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
                     ->placeholder([
                         admin_trans('common.start_time'),
                         admin_trans('common.end_time')
+                    ]);
+                $filter->between()->dateTimeRange('scanned_at')
+                    ->placeholder([
+                        admin_trans('ticket_machine.record.scanned_at_start'),
+                        admin_trans('ticket_machine.record.scanned_at_end')
                     ]);
             });
 
@@ -433,26 +477,6 @@ class StoreTicketRecordController
             $grid->actions(function ($actions, $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
-
-                if ($data['status'] == TicketRecord::STATUS_DISABLED) {
-                    // 已禁用 - 显示恢复按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.record.restore'))
-                            ->confirm(admin_trans('ticket_machine.record.restore_confirm'), [$this, 'restoreRecord'], ['id' => $data['id']])
-                            ->type('primary')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                } elseif ($data['status'] == TicketRecord::STATUS_NORMAL) {
-                    // 正常状态 - 显示禁用按钮
-                    $actions->prepend(
-                        Button::create(admin_trans('ticket_machine.record.disable'))
-                            ->confirm(admin_trans('ticket_machine.record.delete_confirm'), [$this, 'disableRecord'], ['id' => $data['id']])
-                            ->type('warning')
-                            ->size('small')
-                            ->gridRefresh()
-                    );
-                }
             });
         });
     }
@@ -490,7 +514,17 @@ class StoreTicketRecordController
                     TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
                     TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
                     TicketRecord::STATUS_PRINT_FAILED => admin_trans('ticket_machine.record.status_print_failed'),
+                    TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.record.status_split'),
+                    TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
                     default => admin_trans('ticket_machine.record.status_unknown'),
+                };
+            });
+            $form->desc('source_type', admin_trans('ticket_machine.record.source_type'))->display(function ($val) {
+                return match ($val) {
+                    TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.record.source_purchase'),
+                    TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.record.source_split'),
+                    TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.record.source_merge'),
+                    default => admin_trans('ticket_machine.record.source_backend'),
                 };
             });
             $form->desc('print_count', admin_trans('ticket_machine.record.print_count'));
@@ -559,6 +593,170 @@ class StoreTicketRecordController
         $record->update(['status' => TicketRecord::STATUS_NORMAL]);
 
         return message_success(admin_trans('ticket_machine.record.restore_success'));
+    }
+
+    /**
+     * 扫码核销弹窗（开分票）
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function scanRedeemModal()
+    {
+        return admin_view(plugin()->webman->getPath() . '/views/scan_record_redeem_modal.vue')->attrs([
+            'query_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/getRecordByQrCode',
+            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemRecord',
+            'labels' => [
+                'input_qr_code' => admin_trans('ticket_machine.record.input_qr_code'),
+                'scan_qr_code_placeholder' => admin_trans('ticket_machine.record.scan_qr_code_placeholder'),
+                'order_id' => admin_trans('ticket_machine.record.order_id'),
+                'store_name' => admin_trans('ticket_machine.record.store_name'),
+                'machine_no' => admin_trans('ticket_machine.record.machine_no'),
+                'score' => admin_trans('ticket_machine.record.score'),
+                'status' => admin_trans('ticket_machine.record.status'),
+                'ticket_type' => admin_trans('ticket_machine.record.ticket_type'),
+                'qr_code_no' => admin_trans('ticket_machine.record.qr_code_no'),
+                'created_at' => admin_trans('ticket_machine.record.created_at'),
+                'redeem_confirm' => admin_trans('ticket_machine.record.redeem_confirm'),
+            ],
+        ]);
+    }
+
+    /**
+     * 根据二维码查询记录（开分票）
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function getRecordByQrCode()
+    {
+        $qrCodeNo = request()->input('qr_code_no', '');
+
+        if (empty($qrCodeNo)) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.record.qr_code_required')]);
+        }
+
+        $admin = Admin::user();
+
+        // 直接使用 order_id 查询
+        $record = TicketRecord::query()
+            ->where('order_id', $qrCodeNo)
+            ->where('store_admin_id', $admin->id)
+            ->first();
+
+        // 如果未找到，回退到 qr_code_no 查询
+        if (empty($record)) {
+            $record = TicketRecord::query()
+                ->where('qr_code_no', $qrCodeNo)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+        }
+
+        // 尝试通过 encrypted_content 字段匹配
+        if (empty($record)) {
+            $record = TicketRecord::query()
+                ->where('encrypted_content', $qrCodeNo)
+                ->where('store_admin_id', $admin->id)
+                ->first();
+        }
+
+        if (empty($record)) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.record.record_not_found')]);
+        }
+
+        // 获取状态名称
+        $statusNames = [
+            TicketRecord::STATUS_DISABLED => admin_trans('ticket_machine.record.status_disabled'),
+            TicketRecord::STATUS_NORMAL => admin_trans('ticket_machine.record.status_normal'),
+            TicketRecord::STATUS_BACKEND_USED => admin_trans('ticket_machine.record.status_backend_used'),
+            TicketRecord::STATUS_MACHINE_USED => admin_trans('ticket_machine.record.status_machine_used'),
+            TicketRecord::STATUS_PRINT_FAILED => admin_trans('ticket_machine.record.status_print_failed'),
+            TicketRecord::STATUS_SPLIT => admin_trans('ticket_machine.record.status_split'),
+            TicketRecord::STATUS_MERGED => admin_trans('ticket_machine.record.status_merged'),
+        ];
+
+        $ticketTypeNames = [
+            TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
+            TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
+            TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
+            TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
+        ];
+
+        $data = $record->toArray();
+        $data['status_name'] = $statusNames[$record->status] ?? admin_trans('ticket_machine.record.status_unknown');
+        $data['ticket_type_name'] = $ticketTypeNames[$record->ticket_type] ?? admin_trans('ticket_machine.record.status_unknown');
+
+        return json_encode(['code' => 0, 'data' => $data]);
+    }
+
+    /**
+     * 核销弹窗
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function scanRedeem()
+    {
+        $id = request()->input('id', 0);
+        $admin = Admin::user();
+
+        // 获取记录详情
+        $record = TicketRecord::query()
+            ->where('id', $id)
+            ->where('store_admin_id', $admin->id)
+            ->first();
+
+        return admin_view(plugin()->webman->getPath() . '/views/scan_record_redeem.vue')->attrs([
+            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemRecord',
+            'record_data' => $record ? $record->toArray() : null,
+            'labels' => [
+                'order_id' => admin_trans('ticket_machine.record.order_id'),
+                'store_name' => admin_trans('ticket_machine.record.store_name'),
+                'machine_no' => admin_trans('ticket_machine.record.machine_no'),
+                'score' => admin_trans('ticket_machine.record.score'),
+                'status' => admin_trans('ticket_machine.record.status'),
+                'ticket_type' => admin_trans('ticket_machine.record.ticket_type'),
+                'qr_code_no' => admin_trans('ticket_machine.record.qr_code_no'),
+                'created_at' => admin_trans('ticket_machine.record.created_at'),
+                'redeem_confirm' => admin_trans('ticket_machine.record.redeem_confirm'),
+            ],
+        ]);
+    }
+
+    /**
+     * 核销记录（开分票）
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function redeemRecord()
+    {
+        $id = request()->input('id', 0);
+
+        if (empty($id)) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.invalid_parameter')]);
+        }
+
+        $admin = Admin::user();
+        $record = TicketRecord::query()
+            ->where('id', $id)
+            ->where('store_admin_id', $admin->id)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', TicketRecord::STATUS_NORMAL)
+            ->first();
+
+        if (empty($record)) {
+            return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.record.record_not_found')]);
+        }
+
+        // 更新状态为已使用（后台核销）
+        $record->update([
+            'status' => TicketRecord::STATUS_BACKEND_USED,
+            'scanned_at' => date('Y-m-d H:i:s'),
+            'scanned_by' => $admin->id,
+        ]);
+
+        return json_encode(['code' => 0, 'msg' => admin_trans('ticket_machine.record.redeem_success')]);
     }
 
     /**
