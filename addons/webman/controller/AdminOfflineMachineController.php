@@ -697,7 +697,7 @@ class AdminOfflineMachineController
                         ['name' => '登出', 'cmd' => $serviceClass::LOGOUT, 'desc' => 'EA C5 - 玩家登出机台', 'danger' => false],
                     ],
                     '资金操作' => [
-                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_POINT, 'desc' => 'A5 XX C0 - 上分指令（100分/次，输入开分次数）', 'danger' => false, 'has_input' => true, 'input_label' => '次数', 'default_value' => 1],
+                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => 'A5 XX C0 - 上分指令（100分/次，输入开分次数）', 'danger' => false, 'has_input' => true, 'input_label' => '次数', 'default_value' => 1],
                         ['name' => '下分', 'cmd' => $serviceClass::WASH_POINT, 'desc' => 'A5 00 C1 - 下分指令（全部洗分）', 'danger' => true],
                     ],
                     '管理指令' => [
