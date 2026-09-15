@@ -64,10 +64,14 @@ class PlayerLotteryRecord extends Model
     const STATUS_REJECT = 1; // 未审核
     const STATUS_PASS = 2; // 未通过
     const STATUS_COMPLETE = 3; // 通过
+    const STATUS_POKEMON_BALL_FAILED = 5; // 精灵球派发失败（可重发）
 
     const SOURCE_MACHINE = 1;// 实体机台
     const SOURCE_GAME = 2;// 电子游戏
     const SOURCE_MANUAL = 3;// 手动发放
+
+    const DISTRIBUTE_TYPE_NORMAL = 0; // 正常派发
+    const DISTRIBUTE_TYPE_POKEMON_BALL = 1; // 精灵球派发
     protected $dataAuth = ['department_id' => 'department_id']; // 已完成
     
     public function __construct(array $attributes = [])

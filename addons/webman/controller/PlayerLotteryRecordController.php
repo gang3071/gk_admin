@@ -165,6 +165,9 @@ class PlayerLotteryRecordController
                     case PlayerLotteryRecord::STATUS_COMPLETE:
                         $tag = Tag::create(admin_trans('player_lottery_record.status.' . $val))->color('#cd201f');
                         break;
+                    case PlayerLotteryRecord::STATUS_POKEMON_BALL_FAILED:
+                        $tag = Tag::create(admin_trans('player_lottery_record.status.' . $val))->color('#faad14');
+                        break;
                 }
                 return Html::create()->content([
                     $tag
@@ -263,9 +266,20 @@ class PlayerLotteryRecordController
                 admin_trans('player_lottery_record.fields.created_at'))->fixed('right')->sortable()->align('center');
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, PlayerLotteryRecord $data) {
                 $actions->hideDel();
                 $actions->hideEdit();
+                // 精灵球派发失败时显示重新派发按钮
+                if ($data->status == PlayerLotteryRecord::STATUS_POKEMON_BALL_FAILED && $data->distribute_type == PlayerLotteryRecord::DISTRIBUTE_TYPE_POKEMON_BALL) {
+                    $actions->prepend(
+                        Button::create(admin_trans('player_lottery_record.btn.retry_pokemon_ball'))
+                            ->icon(Icon::create('ReloadOutlined'))
+                            ->type('primary')
+                            ->size('small')
+                            ->confirm(admin_trans('player_lottery_record.btn.retry_pokemon_ball_confirm'), [$this, 'retryPokemonBall'], ['id' => $data->id])
+                            ->gridRefresh()
+                    );
+                }
             });
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('machine_name')->placeholder(admin_trans('player_lottery_record.fields.machine_name'));
@@ -284,6 +298,7 @@ class PlayerLotteryRecordController
                         PlayerLotteryRecord::STATUS_REJECT => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_REJECT),
                         PlayerLotteryRecord::STATUS_PASS => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_PASS),
                         PlayerLotteryRecord::STATUS_COMPLETE => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_COMPLETE),
+                        PlayerLotteryRecord::STATUS_POKEMON_BALL_FAILED => admin_trans('player_lottery_record.status.' . PlayerLotteryRecord::STATUS_POKEMON_BALL_FAILED),
                     ]);
                 $filter->eq()->select('lottery_type')
                     ->placeholder(admin_trans('lottery.fields.lottery_type'))
@@ -948,5 +963,74 @@ class PlayerLotteryRecordController
                 return message_success(admin_trans('player_lottery_record.action_success'));
             });
         });
+    }
+
+    /**
+     * 重新派发精灵球彩金
+     * @auth true
+     * @param $id
+     * @return Msg
+     */
+    public function retryPokemonBall($id): Msg
+    {
+        /** @var PlayerLotteryRecord $record */
+        $record = $this->model::find($id);
+        if (empty($record)) {
+            return message_error(admin_trans('player_lottery_record.not_fount'));
+        }
+
+        // 验证是否为精灵球派发失败的记录
+        if ($record->status != PlayerLotteryRecord::STATUS_POKEMON_BALL_FAILED) {
+            return message_error(admin_trans('player_lottery_record.lottery_record_error'));
+        }
+
+        if ($record->distribute_type != PlayerLotteryRecord::DISTRIBUTE_TYPE_POKEMON_BALL) {
+            return message_error(admin_trans('player_lottery_record.lottery_record_error'));
+        }
+
+        try {
+            // 获取精灵球机台ID
+            $machineId = $record->pokemon_ball_machine_id;
+            if (empty($machineId)) {
+                // 如果记录中没有机台ID，从彩金配置中获取
+                $lottery = GameLottery::find($record->lottery_id);
+                if ($lottery) {
+                    $machineId = $lottery->pokemon_ball_machine_id;
+                }
+            }
+
+            if (empty($machineId)) {
+                return message_error(admin_trans('player_lottery_record.action_error'));
+            }
+
+            // 重新发送WS消息
+            sendSocketMessage('player-' . $record->player_id, [
+                'msg_type' => 'game_lottery_pokemon_ball',
+                'player_id' => $record->player_id,
+                'lottery_id' => $record->lottery_id,
+                'lottery_name' => $record->lottery_name,
+                'machine_id' => $machineId,
+                'amount' => $record->amount,
+                'message' => '恭喜中奖！请前往精灵球机台游玩以领取彩金。',
+                'record_id' => $record->id,
+            ]);
+
+            \support\Log::info('精灵球彩金重新派发成功', [
+                'record_id' => $record->id,
+                'player_id' => $record->player_id,
+                'lottery_id' => $record->lottery_id,
+                'machine_id' => $machineId,
+                'amount' => $record->amount,
+            ]);
+
+            return message_success(admin_trans('player_lottery_record.retry_success'));
+        } catch (\Exception $e) {
+            \support\Log::error('精灵球彩金重新派发失败', [
+                'record_id' => $record->id,
+                'player_id' => $record->player_id,
+                'error' => $e->getMessage(),
+            ]);
+            return message_error(admin_trans('player_lottery_record.action_error'));
+        }
     }
 }
