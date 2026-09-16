@@ -34,6 +34,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int burst_duration 爆彩持续时长（分钟）
  * @property string|array burst_multiplier_config 爆彩倍数配置JSON
  * @property string|array burst_trigger_config 爆彩触发概率配置JSON
+ * @property int pokemon_ball_status 精灵球开关：1启用 0禁用
+ * @property int pokemon_ball_machine_id 精灵球机台ID（一对一绑定）
  * @property int auto_refill_status 自动补充状态：1启用 0禁用
  * @property float auto_refill_amount 自动补充目标金额(彩池不足时补充到此金额)
  * @property string created_at 创建时间
