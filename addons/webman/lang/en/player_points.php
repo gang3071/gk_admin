@@ -32,6 +32,10 @@ return [
         PlayerPointsRecord::TYPE_ADMIN_ADJUST => 'Admin Adjust',
         PlayerPointsRecord::TYPE_ACTIVITY => 'Activity Reward',
         PlayerPointsRecord::TYPE_REFUND => 'Refund',
+        PlayerPointsRecord::TYPE_POINTS_ADD => 'Add Points',
+        PlayerPointsRecord::TYPE_POINTS_DEDUCT => 'Deduct Points',
+        PlayerPointsRecord::TYPE_POINTS_FREEZE => 'Freeze Points',
+        PlayerPointsRecord::TYPE_POINTS_UNFREEZE => 'Unfreeze Points',
     ],
 
     'action' => [

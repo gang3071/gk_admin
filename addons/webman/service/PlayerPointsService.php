@@ -64,8 +64,13 @@ class PlayerPointsService
         int $playerId,
         int $points,
         string $remark,
-        array $adminInfo
+        array $adminInfo,
+        ?int $type = null,
+        ?string $source = null
     ): array {
+        $type = $type ?? PlayerPointsRecord::TYPE_POINTS_ADD;
+        $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
+
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
@@ -107,8 +112,8 @@ class PlayerPointsService
             PlayerPointsRecord::create([
                 'player_id' => $playerId,
                 'department_id' => $playerPoints->department_id,
-                'type' => PlayerPointsRecord::TYPE_ADMIN_ADJUST,
-                'source' => PlayerPointsRecord::SOURCE_ADMIN,
+                'type' => $type,
+                'source' => $source,
                 'points' => $points,
                 'points_before' => $pointsBefore,
                 'points_after' => $playerPoints->available_points,
@@ -152,8 +157,13 @@ class PlayerPointsService
         int $playerId,
         int $points,
         string $remark,
-        array $adminInfo
+        array $adminInfo,
+        ?int $type = null,
+        ?string $source = null
     ): bool {
+        $type = $type ?? PlayerPointsRecord::TYPE_POINTS_DEDUCT;
+        $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
+
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
@@ -193,8 +203,8 @@ class PlayerPointsService
             PlayerPointsRecord::create([
                 'player_id' => $playerId,
                 'department_id' => $playerPoints->department_id,
-                'type' => PlayerPointsRecord::TYPE_ADMIN_ADJUST,
-                'source' => PlayerPointsRecord::SOURCE_ADMIN,
+                'type' => $type,
+                'source' => $source,
                 'points' => -$points,
                 'points_before' => $pointsBefore,
                 'points_after' => $pointsBefore - $points,
@@ -232,8 +242,14 @@ class PlayerPointsService
     public static function freezePoints(
         int $playerId,
         int $points,
-        string $remark
+        string $remark,
+        array $adminInfo = [],
+        ?int $type = null,
+        ?string $source = null
     ): bool {
+        $type = $type ?? PlayerPointsRecord::TYPE_POINTS_FREEZE;
+        $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
+
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
@@ -273,12 +289,15 @@ class PlayerPointsService
             PlayerPointsRecord::create([
                 'player_id' => $playerId,
                 'department_id' => $playerPoints->department_id,
-                'type' => PlayerPointsRecord::TYPE_EXCHANGE,
-                'source' => PlayerPointsRecord::SOURCE_EXCHANGE,
-                'points' => 0,  // 冻结不改变总积分
+                'type' => $type,
+                'source' => $source,
+                'points' => -$points,
                 'points_before' => $availableBefore,
                 'points_after' => $availableBefore - $points,
                 'remark' => admin_trans('player_points.action.freeze_points') . ' - ' . $remark,
+                'admin_id' => $adminInfo['admin_id'] ?? null,
+                'admin_name' => $adminInfo['admin_name'] ?? null,
+                'admin_ip' => $adminInfo['admin_ip'] ?? null,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 
@@ -309,8 +328,14 @@ class PlayerPointsService
     public static function unfreezePoints(
         int $playerId,
         int $points,
-        string $remark
+        string $remark,
+        array $adminInfo = [],
+        ?int $type = null,
+        ?string $source = null
     ): bool {
+        $type = $type ?? PlayerPointsRecord::TYPE_POINTS_UNFREEZE;
+        $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
+
         if ($points <= 0) {
             throw new Exception(admin_trans('player_points.message.invalid_points_amount'));
         }
@@ -350,12 +375,15 @@ class PlayerPointsService
             PlayerPointsRecord::create([
                 'player_id' => $playerId,
                 'department_id' => $playerPoints->department_id,
-                'type' => PlayerPointsRecord::TYPE_EXCHANGE,
-                'source' => PlayerPointsRecord::SOURCE_EXCHANGE,
-                'points' => 0,  // 解冻不改变总积分
+                'type' => $type,
+                'source' => $source,
+                'points' => $points,
                 'points_before' => $availableBefore,
                 'points_after' => $availableBefore + $points,
                 'remark' => admin_trans('player_points.action.unfreeze_points') . ' - ' . $remark,
+                'admin_id' => $adminInfo['admin_id'] ?? null,
+                'admin_name' => $adminInfo['admin_name'] ?? null,
+                'admin_ip' => $adminInfo['admin_ip'] ?? null,
                 'created_at' => date('Y-m-d H:i:s'),
             ]);
 

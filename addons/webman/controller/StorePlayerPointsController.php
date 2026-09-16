@@ -8,6 +8,7 @@ use addons\webman\model\PlayerPointsRecord;
 use addons\webman\service\PlayerPointsService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\response\Msg;
@@ -98,6 +99,7 @@ class StorePlayerPointsController
             $grid->title(admin_trans('player_points.records_title'));
             $grid->autoHeight();
             $grid->bordered(true);
+            $grid->hideDelete();
 
             // 设置分页数据
             $grid->attr('is_mongo', true);
@@ -150,8 +152,16 @@ class StorePlayerPointsController
                         PlayerPointsRecord::TYPE_ADMIN_ADJUST => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_ADMIN_ADJUST),
                         PlayerPointsRecord::TYPE_ACTIVITY => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_ACTIVITY),
                         PlayerPointsRecord::TYPE_REFUND => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_REFUND),
+                        PlayerPointsRecord::TYPE_POINTS_ADD => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_ADD),
+                        PlayerPointsRecord::TYPE_POINTS_DEDUCT => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_DEDUCT),
+                        PlayerPointsRecord::TYPE_POINTS_FREEZE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_FREEZE),
+PlayerPointsRecord::TYPE_POINTS_UNFREEZE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_UNFREEZE),
                     ]);
             });
+
+            $grid->actions(function (Actions $actions, $data) {
+                $actions->hideDel();
+            })->align('center');
         });
     }
 
@@ -201,7 +211,9 @@ class StorePlayerPointsController
                         (int)$data['player_id'],
                         abs((int)($data['points'] ?? 0)),
                         $data['remark'] ?? admin_trans('player_points.action.add_points'),
-                        $adminInfo
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_ADD,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
                 return message_success(admin_trans('player_points.message.add_success'));
                 } catch (Exception $e) {
@@ -265,7 +277,9 @@ class StorePlayerPointsController
                         (int)$data['player_id'],
                         abs((int)($data['points'] ?? 0)),
                         $data['remark'] ?? admin_trans('player_points.action.deduct_points'),
-                        $adminInfo
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_DEDUCT,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
                 return message_success(admin_trans('player_points.message.deduct_success'));
                 } catch (Exception $e) {
@@ -318,10 +332,20 @@ class StorePlayerPointsController
 
             $form->saving(function (Form $form) use ($data) {
                 try {
+                    $admin = Admin::user();
+                    $adminInfo = [
+                        'admin_id' => $admin['id'] ?? 0,
+                        'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
+                        'admin_ip' => request()->getRealIp(),
+                    ];
+
                     PlayerPointsService::freezePoints(
                         (int)$data['player_id'],
                         abs((int)($data['points'] ?? 0)),
-                        $data['remark'] ?? admin_trans('player_points.action.freeze_points')
+                        $data['remark'] ?? admin_trans('player_points.action.freeze_points'),
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_FREEZE,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
                 return message_success(admin_trans('player_points.message.freeze_success'));
                 } catch (Exception $e) {
@@ -374,10 +398,20 @@ class StorePlayerPointsController
 
             $form->saving(function (Form $form) use ($data) {
                 try {
+                    $admin = Admin::user();
+                    $adminInfo = [
+                        'admin_id' => $admin['id'] ?? 0,
+                        'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
+                        'admin_ip' => request()->getRealIp(),
+                    ];
+
                     PlayerPointsService::unfreezePoints(
                         (int)$data['player_id'],
                         abs((int)($data['points'] ?? 0)),
-                        $data['remark'] ?? admin_trans('player_points.action.unfreeze_points')
+                        $data['remark'] ?? admin_trans('player_points.action.unfreeze_points'),
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_UNFREEZE,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
                 return message_success(admin_trans('player_points.message.unfreeze_success'));
                 } catch (Exception $e) {
