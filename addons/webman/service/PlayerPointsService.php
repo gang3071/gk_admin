@@ -93,7 +93,7 @@ class PlayerPointsService
                     'total_points' => Db::raw('total_points + ' . (int)$points),
                     'available_points' => Db::raw('available_points + ' . (int)$points),
                     'version' => $currentVersion + 1,
-                    'updated_at' => now(),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 ]);
 
             if ($affected === 0) {
@@ -116,7 +116,7 @@ class PlayerPointsService
                 'admin_id' => $adminInfo['admin_id'] ?? null,
                 'admin_name' => $adminInfo['admin_name'] ?? null,
                 'admin_ip' => $adminInfo['admin_ip'] ?? null,
-                'created_at' => now(),
+                'created_at' => date('Y-m-d H:i:s'),
             ]);
 
             Db::commit();
@@ -182,7 +182,7 @@ class PlayerPointsService
                     'available_points' => Db::raw('available_points - ' . (int)$points),
                     'used_points' => Db::raw('used_points + ' . (int)$points),
                     'version' => $currentVersion + 1,
-                    'updated_at' => now(),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 ]);
 
             if ($affected === 0) {
@@ -202,7 +202,7 @@ class PlayerPointsService
                 'admin_id' => $adminInfo['admin_id'] ?? null,
                 'admin_name' => $adminInfo['admin_name'] ?? null,
                 'admin_ip' => $adminInfo['admin_ip'] ?? null,
-                'created_at' => now(),
+                'created_at' => date('Y-m-d H:i:s'),
             ]);
 
             Db::commit();
@@ -262,7 +262,7 @@ class PlayerPointsService
                     'available_points' => Db::raw('available_points - ' . (int)$points),
                     'frozen_points' => Db::raw('frozen_points + ' . (int)$points),
                     'version' => $currentVersion + 1,
-                    'updated_at' => now(),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 ]);
 
             if ($affected === 0) {
@@ -279,7 +279,7 @@ class PlayerPointsService
                 'points_before' => $availableBefore,
                 'points_after' => $availableBefore - $points,
                 'remark' => admin_trans('player_points.action.freeze_points') . ' - ' . $remark,
-                'created_at' => now(),
+                'created_at' => date('Y-m-d H:i:s'),
             ]);
 
             Db::commit();
@@ -339,7 +339,7 @@ class PlayerPointsService
                     'frozen_points' => Db::raw('frozen_points - ' . (int)$points),
                     'available_points' => Db::raw('available_points + ' . (int)$points),
                     'version' => $currentVersion + 1,
-                    'updated_at' => now(),
+                    'updated_at' => date('Y-m-d H:i:s'),
                 ]);
 
             if ($affected === 0) {
@@ -356,7 +356,7 @@ class PlayerPointsService
                 'points_before' => $availableBefore,
                 'points_after' => $availableBefore + $points,
                 'remark' => admin_trans('player_points.action.unfreeze_points') . ' - ' . $remark,
-                'created_at' => now(),
+                'created_at' => date('Y-m-d H:i:s'),
             ]);
 
             Db::commit();
