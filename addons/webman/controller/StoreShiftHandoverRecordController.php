@@ -253,10 +253,25 @@ class StoreShiftHandoverRecordController
             // 导出功能（权限通过 store_node.php 和 @auth true 控制）
             $exporter = new ShiftReportExporter();
 
-            // 从缓存获取用户选择的导出列
+            // 从缓存获取用户选择的导出列（默认指定列）
             $adminId = Admin::id();
             $cacheKey = "export_columns_{$adminId}";
-            $selectedColumns = Cache::get($cacheKey);
+            $defaultColumns = [
+                'player_name',
+                'player_phone',
+                'open_score_amount',
+                'incoming_ticket_amount',
+                'ticket_redeem_amount',
+                'experience_coupon_amount',
+                'welfare_coupon_amount',
+                'electronic_game_bet_amount',
+                'machine_bet_amount',
+                'total_in',
+                'total_out',
+                'profit',
+                'ticket_unredeemed_amount',
+            ];
+            $selectedColumns = Cache::get($cacheKey, $defaultColumns);
 
             Log::info("index 读取导出列缓存", [
                 'admin_id' => $adminId,
