@@ -45,7 +45,7 @@ class DishController
             $grid->title(admin_trans('dish.title'));
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->model()->orderBy('admin_user_id', 'asc')->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'asc');
+            $grid->model()->orderBy('admin_user_id', 'asc')->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'desc');
 
             if ($adminUser->type != AdminDepartment::TYPE_STORE) {
                 $grid->model()->whereIn('admin_user_id', array_keys($stores));
@@ -205,7 +205,7 @@ class DishController
     {
         $dishCategory = DishCategory::query()
             ->orderBy('top', 'desc')
-            ->orderBy('sort', 'asc')
+            ->orderBy('sort', 'desc')
             ->pluck('title','id')
             ->toArray();
 

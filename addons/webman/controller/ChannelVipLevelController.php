@@ -9,7 +9,6 @@ use addons\webman\model\VipLevelCashback;
 use addons\webman\model\VipLevelPoint;
 use addons\webman\service\VipLevelService;
 use ExAdmin\ui\component\common\Button;
-use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;

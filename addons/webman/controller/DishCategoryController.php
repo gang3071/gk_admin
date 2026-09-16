@@ -32,7 +32,7 @@ class DishCategoryController
             $grid->title(admin_trans('dish_category.title'));
             $grid->hideSelection();
             $grid->hideDelete();
-            $grid->model()->orderBy('top', 'desc')->orderBy('sort', 'asc');
+            $grid->model()->orderBy('top', 'desc')->orderBy('sort', 'desc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {

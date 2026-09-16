@@ -61,13 +61,7 @@ class DishOrderController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('dish_order.fields.status'))
-                    ->options([
-                        DishOrder::STATUS_PENDING => admin_trans('dish_order.status.' . DishOrder::STATUS_PENDING),
-                        DishOrder::STATUS_CONFIRMED => admin_trans('dish_order.status.' . DishOrder::STATUS_CONFIRMED),
-                        DishOrder::STATUS_COOKING => admin_trans('dish_order.status.' . DishOrder::STATUS_COOKING),
-                        DishOrder::STATUS_COMPLETED => admin_trans('dish_order.status.' . DishOrder::STATUS_COMPLETED),
-                        DishOrder::STATUS_CANCELLED => admin_trans('dish_order.status.' . DishOrder::STATUS_CANCELLED)
-                    ]);
+                    ->options(DishOrder::getStatusDescription());
 
                 if ($adminUser->type != AdminDepartment::TYPE_STORE) {
                     $filter->eq()->select('admin_user_id')
@@ -155,16 +149,21 @@ class DishOrderController
             })
             ->disabled();
 
-            $form->radio('status', admin_trans('dish_order.fields.status'))
-                ->button()
-                ->required()
-                ->options([
-                        DishOrder::STATUS_PENDING => admin_trans('dish_order.status.' . DishOrder::STATUS_PENDING),
-                        DishOrder::STATUS_CONFIRMED => admin_trans('dish_order.status.' . DishOrder::STATUS_CONFIRMED),
-                        DishOrder::STATUS_COOKING => admin_trans('dish_order.status.' . DishOrder::STATUS_COOKING),
-                        DishOrder::STATUS_COMPLETED => admin_trans('dish_order.status.' . DishOrder::STATUS_COMPLETED),
-                        DishOrder::STATUS_CANCELLED => admin_trans('dish_order.status.' . DishOrder::STATUS_CANCELLED)
-                ]);
+            if (in_array($form->input('status'), [DishOrder::STATUS_COMPLETED, DishOrder::STATUS_CANCELLED])) {
+                $form->radio('status', admin_trans('dish_order.fields.status'))
+                    ->disabled()
+                    ->button()
+                    ->required()
+                    ->options(DishOrder::getStatusDescription());
+
+                $form->actions()->hideSubmitButton();
+                $form->actions()->hideResetButton();
+            } else {
+                $form->radio('status', admin_trans('dish_order.fields.status'))
+                    ->button()
+                    ->required()
+                    ->options(DishOrder::getStatusDescription());
+            }
         });
     }
 
