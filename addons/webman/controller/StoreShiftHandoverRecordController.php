@@ -299,17 +299,25 @@ class StoreShiftHandoverRecordController
             $exporter = new ShiftReportExporter();
             $columns = $exporter->getAvailableColumns();
 
-            // 获取用户之前的选择（默认全选）
+            // 获取用户之前的选择（默认指定列）
             $adminId = Admin::id();
             $cacheKey = "export_columns_{$adminId}";
-            $selectedColumns = Cache::get($cacheKey, array_keys($columns));
-
-            Log::info("exportConfig 读取缓存", [
-                'admin_id' => $adminId,
-                'cache_key' => $cacheKey,
-                'selected_columns' => $selectedColumns,
-                'has_cache' => Cache::has($cacheKey),
-            ]);
+            $defaultColumns = [
+                'player_name',
+                'player_phone',
+                'open_score_amount',
+                'incoming_ticket_amount',
+                'ticket_redeem_amount',
+                'experience_coupon_amount',
+                'welfare_coupon_amount',
+                'electronic_game_bet_amount',
+                'machine_bet_amount',
+                'total_in',
+                'total_out',
+                'profit',
+                'ticket_unredeemed_amount',
+            ];
+            $selectedColumns = Cache::get($cacheKey, $defaultColumns);
 
             // 复选框组选择列
             $form->checkbox('columns', admin_trans('shift_handover.export.columns'))
@@ -322,24 +330,13 @@ class StoreShiftHandoverRecordController
                 $input = $form->input();
                 $selectedColumns = $input['columns'] ?? [];
 
-                Log::info("exportConfig 保存缓存", [
-                    'cache_key' => $cacheKey,
-                    'input' => $input,
-                    'selected_columns' => $selectedColumns,
-                ]);
 
                 if (empty($selectedColumns)) {
                     return message_error(admin_trans('shift_handover.export.no_column_selected'));
                 }
 
                 // 保存到缓存（永久）
-                $result = Cache::set($cacheKey, $selectedColumns);
-
-                Log::info("exportConfig 缓存保存结果", [
-                    'cache_key' => $cacheKey,
-                    'result' => $result,
-                    'verify_cache' => Cache::get($cacheKey),
-                ]);
+                Cache::set($cacheKey, $selectedColumns);
 
                 return message_success(admin_trans('shift_handover.export.config_saved'));
             });
