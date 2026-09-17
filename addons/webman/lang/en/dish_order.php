@@ -20,6 +20,7 @@ return [
         2 => 'Preparing',
         3 => 'Completed',
         4 => 'Cancelled'
-    ]
+    ],
+    'cancel_refund' => 'Order cancelled - Points refunded'
 ];
 

@@ -52,4 +52,18 @@ class DishOrder extends Model
     {
         return $this->hasMany(DishOrderItem::class, 'order_id');
     }
+
+    /**
+     * 狀態描述
+     */
+    public static function getStatusDescription(): array
+    {
+        return [
+            self::STATUS_PENDING => admin_trans('dish_order.status.' . self::STATUS_PENDING),
+            self::STATUS_CONFIRMED => admin_trans('dish_order.status.' . self::STATUS_CONFIRMED),
+            self::STATUS_COOKING => admin_trans('dish_order.status.' . self::STATUS_COOKING),
+            self::STATUS_COMPLETED => admin_trans('dish_order.status.' . self::STATUS_COMPLETED),
+            self::STATUS_CANCELLED => admin_trans('dish_order.status.' . self::STATUS_CANCELLED)
+        ];
+    }
 }

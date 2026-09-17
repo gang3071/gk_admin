@@ -6,12 +6,15 @@ use addons\webman\Admin;
 use addons\webman\model\AdminDepartment;
 use addons\webman\model\AdminUser;
 use addons\webman\model\DishOrder;
+use addons\webman\model\PlayerPointsRecord;
+use addons\webman\service\PlayerPointsService;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use support\Db;
 
 /**
  * 餐點訂單
@@ -61,13 +64,7 @@ class DishOrderController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('dish_order.fields.status'))
-                    ->options([
-                        DishOrder::STATUS_PENDING => admin_trans('dish_order.status.' . DishOrder::STATUS_PENDING),
-                        DishOrder::STATUS_CONFIRMED => admin_trans('dish_order.status.' . DishOrder::STATUS_CONFIRMED),
-                        DishOrder::STATUS_COOKING => admin_trans('dish_order.status.' . DishOrder::STATUS_COOKING),
-                        DishOrder::STATUS_COMPLETED => admin_trans('dish_order.status.' . DishOrder::STATUS_COMPLETED),
-                        DishOrder::STATUS_CANCELLED => admin_trans('dish_order.status.' . DishOrder::STATUS_CANCELLED)
-                    ]);
+                    ->options(DishOrder::getStatusDescription());
 
                 if ($adminUser->type != AdminDepartment::TYPE_STORE) {
                     $filter->eq()->select('admin_user_id')
@@ -155,16 +152,74 @@ class DishOrderController
             })
             ->disabled();
 
-            $form->radio('status', admin_trans('dish_order.fields.status'))
-                ->button()
-                ->required()
-                ->options([
-                        DishOrder::STATUS_PENDING => admin_trans('dish_order.status.' . DishOrder::STATUS_PENDING),
-                        DishOrder::STATUS_CONFIRMED => admin_trans('dish_order.status.' . DishOrder::STATUS_CONFIRMED),
-                        DishOrder::STATUS_COOKING => admin_trans('dish_order.status.' . DishOrder::STATUS_COOKING),
-                        DishOrder::STATUS_COMPLETED => admin_trans('dish_order.status.' . DishOrder::STATUS_COMPLETED),
-                        DishOrder::STATUS_CANCELLED => admin_trans('dish_order.status.' . DishOrder::STATUS_CANCELLED)
-                ]);
+            if (in_array($form->input('status'), [DishOrder::STATUS_COMPLETED, DishOrder::STATUS_CANCELLED])) {
+                $form->radio('status', admin_trans('dish_order.fields.status'))
+                    ->disabled()
+                    ->button()
+                    ->required()
+                    ->options(DishOrder::getStatusDescription());
+
+                $form->actions()->hideSubmitButton();
+                $form->actions()->hideResetButton();
+            } else {
+                $form->radio('status', admin_trans('dish_order.fields.status'))
+                    ->button()
+                    ->required()
+                    ->options(DishOrder::getStatusDescription());
+            }
+
+            // 取消訂單時退積分
+            $form->saving(function (Form $form) {
+                $newStatus = $form->input('status');
+                $orderId = (int)$form->input('id');
+
+                if ($newStatus != DishOrder::STATUS_CANCELLED || empty($orderId)) {
+                    return;
+                }
+
+                Db::beginTransaction();
+                try {
+                    // 使用悲觀鎖（FOR UPDATE）防止並發取消，鎖內再檢查狀態避免競態
+                    $order = DishOrder::query()
+                        ->where('id', $orderId)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$order || $order->status == DishOrder::STATUS_CANCELLED) {
+                        Db::rollBack();
+                        return;
+                    }
+
+                    // 在鎖內更新狀態為已取消
+                    $order->status = DishOrder::STATUS_CANCELLED;
+                    $order->save();
+
+                    // 退款總額大於 0 才退積分
+                    $pointsToReturn = (int)$order->total_amount;
+                    if ($pointsToReturn > 0) {
+                        $admin = Admin::user();
+                        $adminInfo = [
+                            'admin_id' => $admin['id'] ?? 0,
+                            'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
+                            'admin_ip' => request()->getRealIp(),
+                        ];
+
+                        PlayerPointsService::addPoints(
+                            (int)$order->player_id,
+                            $pointsToReturn,
+                            admin_trans('dish_order.cancel_refund') . ' ' . $order->order_no,
+                            $adminInfo,
+                            PlayerPointsRecord::TYPE_REFUND,
+                            PlayerPointsRecord::SOURCE_REFUND
+                        );
+                    }
+
+                    Db::commit();
+                } catch (\Throwable $e) {
+                    Db::rollBack();
+                    throw $e;
+                }
+            });
         });
     }
 

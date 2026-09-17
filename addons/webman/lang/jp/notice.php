@@ -17,6 +17,7 @@ return [
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIPレベルアップ',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIPレベルダウングレード',
         Notice::TYPE_SERVICE_CALL => 'デバイスサービスベル呼び出し',
+        Notice::TYPE_DISH_ORDER => '新規の食品注文を受け付けています',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新しい開分注文は審査待ちです、プレイヤー: {player_name}、開分 ゲーム ポイント: {point} 開分金額: {money}!',

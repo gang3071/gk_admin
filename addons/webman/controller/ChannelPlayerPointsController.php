@@ -6,7 +6,9 @@ use addons\webman\Admin;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerPointsRecord;
 use addons\webman\service\PlayerPointsService;
+use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\response\Msg;
@@ -49,7 +51,7 @@ class ChannelPlayerPointsController
      */
     public function index(array $params = []): Grid
     {
-        $playerId = $params['player_id'] ?? 0;
+        $playerId = (int)(Request::input('player_id') ?? ($params['player_id'] ?? 0));
 
         // 验证玩家ID
         if (!$playerId) {
@@ -87,13 +89,14 @@ class ChannelPlayerPointsController
 
         // 查询数据（应用权限过滤）
         $result = PlayerPointsService::getRecords($playerId, $page, $size, $type !== '' ? $type : null, $permissionFilter);
-        $list = $result['list'] ?? [];
+        $list = ($result['list'] ?? collect())->toArray();
         $total = $result['total'] ?? 0;
 
         return Grid::create($list, function (Grid $grid) use ($player, $pointsData, $total, $list) {
             $grid->title(admin_trans('player_points.records_title'));
             $grid->autoHeight();
             $grid->bordered(true);
+            $grid->hideDelete();
 
             // 设置分页数据
             $grid->attr('is_mongo', true);
@@ -118,11 +121,11 @@ class ChannelPlayerPointsController
                 ->align('center')
                 ->display(function ($value) {
                     if ($value > 0) {
-                        return "<span style='color: #52c41a; font-weight: bold'>+{$value}</span>";
+                        return Html::raw("<span style='color: #52c41a; font-weight: bold'>+{$value}</span>");
                     } elseif ($value < 0) {
-                        return "<span style='color: #ff4d4f; font-weight: bold'>{$value}</span>";
+                        return Html::raw("<span style='color: #ff4d4f; font-weight: bold'>{$value}</span>");
                     } else {
-                        return "<span>{$value}</span>";
+                        return Html::raw("<span>{$value}</span>");
                     }
                 });
             $grid->column('points_before', admin_trans('player_points.fields.points_before'))->width(120)->align('center');
@@ -134,16 +137,28 @@ class ChannelPlayerPointsController
 
             // 筛选器
             $grid->filter(function (Filter $filter) {
-                $filter->equal('type', admin_trans('player_points.fields.type'))->select([
-                    '' => admin_trans('player_points.filter.all_types'),
-                    PlayerPointsRecord::TYPE_BETTING_SUMMARY => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_BETTING_SUMMARY),
-                    PlayerPointsRecord::TYPE_EXCHANGE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_EXCHANGE),
-                    PlayerPointsRecord::TYPE_EXPIRE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_EXPIRE),
-                    PlayerPointsRecord::TYPE_ADMIN_ADJUST => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_ADMIN_ADJUST),
-                    PlayerPointsRecord::TYPE_ACTIVITY => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_ACTIVITY),
-                    PlayerPointsRecord::TYPE_REFUND => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_REFUND),
-                ]);
+                $filter->eq()->select('type')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_points.fields.type'))
+                    ->options([
+                        PlayerPointsRecord::TYPE_BETTING_SUMMARY => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_BETTING_SUMMARY),
+                        PlayerPointsRecord::TYPE_EXCHANGE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_EXCHANGE),
+                        PlayerPointsRecord::TYPE_EXPIRE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_EXPIRE),
+                        PlayerPointsRecord::TYPE_ADMIN_ADJUST => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_ADMIN_ADJUST),
+                        PlayerPointsRecord::TYPE_ACTIVITY => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_ACTIVITY),
+                        PlayerPointsRecord::TYPE_REFUND => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_REFUND),
+                        PlayerPointsRecord::TYPE_POINTS_ADD => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_ADD),
+                        PlayerPointsRecord::TYPE_POINTS_DEDUCT => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_DEDUCT),
+                        PlayerPointsRecord::TYPE_POINTS_FREEZE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_FREEZE),
+PlayerPointsRecord::TYPE_POINTS_UNFREEZE => admin_trans('player_points.type.' . PlayerPointsRecord::TYPE_POINTS_UNFREEZE),
+                    ]);
             });
+
+            $grid->actions(function (Actions $actions, $data) {
+                $actions->hideDel();
+            })->align('center');
         });
     }
 
@@ -154,6 +169,8 @@ class ChannelPlayerPointsController
     public function addPoints(): Form
     {
         $data = Request::input();
+        // ExAdmin 提交時表單欄位包在 data 鍵內，需併入才能取得 player_id
+        $data += (array)($data['data'] ?? []);
 
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
@@ -178,21 +195,24 @@ class ChannelPlayerPointsController
                 ->required()
                 ->placeholder(admin_trans('player_points.form.remark_placeholder'));
 
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use ($data) {
                 try {
                     $admin = Admin::user();
                     $adminInfo = [
                         'admin_id' => $admin['id'] ?? 0,
                         'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
-                        'admin_ip' => Request::getRealIp(),
+                        'admin_ip' => request()->getRealIp(),
                     ];
 
                     PlayerPointsService::addPoints(
-                        (int)$form->input('player_id'),
-                        abs((int)$form->input('points')),
-                        $form->input('remark') ?? admin_trans('player_points.action.add_points'),
-                        $adminInfo
+                        (int)$data['player_id'],
+                        abs((int)($data['points'] ?? 0)),
+                        $data['remark'] ?? admin_trans('player_points.action.add_points'),
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_ADD,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
+                return message_success(admin_trans('player_points.message.add_success'));
                 } catch (Exception $e) {
                     return message_error(admin_trans('player_points.message.add_failed') . '：' . $e->getMessage());
                 }
@@ -207,6 +227,8 @@ class ChannelPlayerPointsController
     public function deductPoints(): Form
     {
         $data = Request::input();
+        // ExAdmin 提交時表單欄位包在 data 鍵內，需併入才能取得 player_id
+        $data += (array)($data['data'] ?? []);
 
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
@@ -239,21 +261,24 @@ class ChannelPlayerPointsController
                 ->required()
                 ->placeholder(admin_trans('player_points.form.remark_placeholder'));
 
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use ($data) {
                 try {
                     $admin = Admin::user();
                     $adminInfo = [
                         'admin_id' => $admin['id'] ?? 0,
                         'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
-                        'admin_ip' => Request::getRealIp(),
+                        'admin_ip' => request()->getRealIp(),
                     ];
 
                     PlayerPointsService::deductPoints(
-                        (int)$form->input('player_id'),
-                        abs((int)$form->input('points')),
-                        $form->input('remark') ?? admin_trans('player_points.action.deduct_points'),
-                        $adminInfo
+                        (int)$data['player_id'],
+                        abs((int)($data['points'] ?? 0)),
+                        $data['remark'] ?? admin_trans('player_points.action.deduct_points'),
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_DEDUCT,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
+                return message_success(admin_trans('player_points.message.deduct_success'));
                 } catch (Exception $e) {
                     return message_error(admin_trans('player_points.message.deduct_failed') . '：' . $e->getMessage());
                 }
@@ -268,6 +293,8 @@ class ChannelPlayerPointsController
     public function freezePoints(): Form
     {
         $data = Request::input();
+        // ExAdmin 提交時表單欄位包在 data 鍵內，需併入才能取得 player_id
+        $data += (array)($data['data'] ?? []);
 
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
@@ -300,13 +327,24 @@ class ChannelPlayerPointsController
                 ->required()
                 ->placeholder(admin_trans('player_points.form.remark_placeholder'));
 
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use ($data) {
                 try {
+                    $admin = Admin::user();
+                    $adminInfo = [
+                        'admin_id' => $admin['id'] ?? 0,
+                        'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
+                        'admin_ip' => request()->getRealIp(),
+                    ];
+
                     PlayerPointsService::freezePoints(
-                        (int)$form->input('player_id'),
-                        abs((int)$form->input('points')),
-                        $form->input('remark') ?? admin_trans('player_points.action.freeze_points')
+                        (int)$data['player_id'],
+                        abs((int)($data['points'] ?? 0)),
+                        $data['remark'] ?? admin_trans('player_points.action.freeze_points'),
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_FREEZE,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
+                return message_success(admin_trans('player_points.message.freeze_success'));
                 } catch (Exception $e) {
                     return message_error(admin_trans('player_points.message.freeze_failed') . '：' . $e->getMessage());
                 }
@@ -321,6 +359,8 @@ class ChannelPlayerPointsController
     public function unfreezePoints(): Form
     {
         $data = Request::input();
+        // ExAdmin 提交時表單欄位包在 data 鍵內，需併入才能取得 player_id
+        $data += (array)($data['data'] ?? []);
 
         // 验证权限
         if ($this->checkPlayerPermission($data['player_id']) === false) {
@@ -353,13 +393,24 @@ class ChannelPlayerPointsController
                 ->required()
                 ->placeholder(admin_trans('player_points.form.remark_placeholder'));
 
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use ($data) {
                 try {
+                    $admin = Admin::user();
+                    $adminInfo = [
+                        'admin_id' => $admin['id'] ?? 0,
+                        'admin_name' => $admin['nickname'] ?? admin_trans('admin.system'),
+                        'admin_ip' => request()->getRealIp(),
+                    ];
+
                     PlayerPointsService::unfreezePoints(
-                        (int)$form->input('player_id'),
-                        abs((int)$form->input('points')),
-                        $form->input('remark') ?? admin_trans('player_points.action.unfreeze_points')
+                        (int)$data['player_id'],
+                        abs((int)($data['points'] ?? 0)),
+                        $data['remark'] ?? admin_trans('player_points.action.unfreeze_points'),
+                        $adminInfo,
+                        PlayerPointsRecord::TYPE_POINTS_UNFREEZE,
+                        PlayerPointsRecord::SOURCE_POINTS
                     );
+                return message_success(admin_trans('player_points.message.unfreeze_success'));
                 } catch (Exception $e) {
                     return message_error(admin_trans('player_points.message.unfreeze_failed') . '：' . $e->getMessage());
                 }

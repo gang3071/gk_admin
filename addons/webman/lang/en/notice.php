@@ -17,6 +17,7 @@ return [
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP Level Upgraded',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP Level Downgraded',
         Notice::TYPE_SERVICE_CALL => 'Device Service Bell Call',
+        Notice::TYPE_DISH_ORDER => 'There are new dish orders',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => 'New open score order pending review, player: {player_name}, open score game points: {point} open score amount: {money}!',

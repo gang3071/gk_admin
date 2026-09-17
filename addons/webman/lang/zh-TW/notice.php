@@ -17,6 +17,7 @@ return [
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP等級升級',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP等級降級',
         Notice::TYPE_SERVICE_CALL => '設備服務鈴呼叫',
+        Notice::TYPE_DISH_ORDER => '有新的餐點訂單',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新的開分訂單待稽核,玩家:{player_name},開分遊戲點:{point}開分金額:{money}！',

@@ -35,6 +35,10 @@ class PlayerPointsRecord extends Model
     const TYPE_ADMIN_ADJUST = 4;     // 后台调整
     const TYPE_ACTIVITY = 5;         // 活动奖励
     const TYPE_REFUND = 6;           // 订单退款
+    const TYPE_POINTS_ADD = 7;       // 增加积分
+    const TYPE_POINTS_DEDUCT = 8;    // 扣除积分
+    const TYPE_POINTS_FREEZE = 9;    // 冻结积分
+    const TYPE_POINTS_UNFREEZE = 10; // 解冻积分
 
     // 来源常量
     const SOURCE_BETTING_SUMMARY = 'betting_summary';
@@ -43,6 +47,7 @@ class PlayerPointsRecord extends Model
     const SOURCE_ADMIN = 'admin';
     const SOURCE_ACTIVITY = 'activity';
     const SOURCE_REFUND = 'refund';
+    const SOURCE_POINTS = 'points';
 
     protected $fillable = [
         'player_id',
@@ -84,6 +89,10 @@ class PlayerPointsRecord extends Model
             self::TYPE_ADMIN_ADJUST => admin_trans('player_points.type.' . self::TYPE_ADMIN_ADJUST),
             self::TYPE_ACTIVITY => admin_trans('player_points.type.' . self::TYPE_ACTIVITY),
             self::TYPE_REFUND => admin_trans('player_points.type.' . self::TYPE_REFUND),
+            self::TYPE_POINTS_ADD => admin_trans('player_points.type.' . self::TYPE_POINTS_ADD),
+            self::TYPE_POINTS_DEDUCT => admin_trans('player_points.type.' . self::TYPE_POINTS_DEDUCT),
+            self::TYPE_POINTS_FREEZE => admin_trans('player_points.type.' . self::TYPE_POINTS_FREEZE),
+            self::TYPE_POINTS_UNFREEZE => admin_trans('player_points.type.' . self::TYPE_POINTS_UNFREEZE),
         ];
 
         return $types[$this->type] ?? admin_trans('admin.unknown', [], 'Unknown');

@@ -32,6 +32,10 @@ return [
         PlayerPointsRecord::TYPE_ADMIN_ADJUST => '后台调整',
         PlayerPointsRecord::TYPE_ACTIVITY => '活动奖励',
         PlayerPointsRecord::TYPE_REFUND => '订单退款',
+        PlayerPointsRecord::TYPE_POINTS_ADD => '增加积分',
+        PlayerPointsRecord::TYPE_POINTS_DEDUCT => '扣除积分',
+        PlayerPointsRecord::TYPE_POINTS_FREEZE => '冻结积分',
+        PlayerPointsRecord::TYPE_POINTS_UNFREEZE => '解冻积分',
     ],
 
     'action' => [

@@ -2420,6 +2420,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-VipLevelController/cashback',
         'title' => 'VIP反水比例',
     ],
+    [
+        'id' => 'addons\webman\controller\VipLevelController\point',
+        'pid' => 'addons\webman\controller\VipLevelController\index',
+        'action' => 'point',
+        'method' => '',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-VipLevelController/point',
+        'title' => 'VIP積分比例',
+    ],
     // 出票记录（总后台）
     [
         'id' => 'addons\webman\controller\AdminTicketRecordController\index',

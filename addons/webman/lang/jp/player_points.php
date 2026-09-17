@@ -32,6 +32,10 @@ return [
         PlayerPointsRecord::TYPE_ADMIN_ADJUST => '管理者調整',
         PlayerPointsRecord::TYPE_ACTIVITY => 'アクティビティ報酬',
         PlayerPointsRecord::TYPE_REFUND => '返金',
+        PlayerPointsRecord::TYPE_POINTS_ADD => 'ポイント追加',
+        PlayerPointsRecord::TYPE_POINTS_DEDUCT => 'ポイント減算',
+        PlayerPointsRecord::TYPE_POINTS_FREEZE => 'ポイント凍結',
+        PlayerPointsRecord::TYPE_POINTS_UNFREEZE => 'ポイント凍結解除',
     ],
 
     'action' => [

@@ -32,6 +32,10 @@ return [
         PlayerPointsRecord::TYPE_ADMIN_ADJUST => '後台調整',
         PlayerPointsRecord::TYPE_ACTIVITY => '活動獎勵',
         PlayerPointsRecord::TYPE_REFUND => '訂單退款',
+        PlayerPointsRecord::TYPE_POINTS_ADD => '增加積分',
+        PlayerPointsRecord::TYPE_POINTS_DEDUCT => '扣除積分',
+        PlayerPointsRecord::TYPE_POINTS_FREEZE => '凍結積分',
+        PlayerPointsRecord::TYPE_POINTS_UNFREEZE => '解凍積分',
     ],
 
     'action' => [
