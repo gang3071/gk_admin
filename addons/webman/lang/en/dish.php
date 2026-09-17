@@ -11,6 +11,7 @@ return [
         'content' => 'Content',
         'picture' => 'Image',
         'price' => 'Price',
+        'daily_limit' => 'Daily limit per person',
         'status' => 'Status',
         'top' => 'Top',
         'sort' => 'Sort',
@@ -21,6 +22,9 @@ return [
     'status' => [
         0 => 'Disabled',
         1 => 'Enabled'
+    ],
+    'help' => [
+        'daily_limit' => 'Enter 0 for unlimited'
     ]
 ];
 
