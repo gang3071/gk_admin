@@ -17,6 +17,7 @@ return [
         Notice::TYPE_VIP_LEVEL_CHANGE_UPGRADE => 'VIP等级升级',
         Notice::TYPE_VIP_LEVEL_CHANGE_DOWNGRADE => 'VIP等级降级',
         Notice::TYPE_SERVICE_CALL => '设备服务铃呼叫',
+        Notice::TYPE_DISH_ORDER => '有新的餐点订单',
     ],
     'content' => [
         Notice::TYPE_EXAMINE_RECHARGE => '新的开分订单待审核, 玩家: {player_name}, 开分游戏点: {point} 开分金额: {money}!',

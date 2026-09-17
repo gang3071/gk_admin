@@ -150,9 +150,9 @@ class DishController
                 $form->myEditor('content', admin_trans('dish.fields.content'))->maxlength(200);
             }
 
-            $form->number('price', admin_trans('dish.fields.price'))->default(0)->required();
-            $form->number('daily_limit', admin_trans('dish.fields.daily_limit'))->default(0)->help(admin_trans('dish.help.daily_limit'));
-            $form->number('sort', admin_trans('dish.fields.sort'))->default(0);
+            $form->number('price', admin_trans('dish.fields.price'))->default(0)->required()->style(['width' => '100%']);
+            $form->number('daily_limit', admin_trans('dish.fields.daily_limit'))->default(0)->style(['width' => '100%'])->help(admin_trans('dish.help.daily_limit'));
+            $form->number('sort', admin_trans('dish.fields.sort'))->default(0)->style(['width' => '100%']);
             $form->switch('top', admin_trans('dish.fields.top'))->default(0);
             $form->switch('status', admin_trans('dish.fields.status'))->default(1);
             $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200);
