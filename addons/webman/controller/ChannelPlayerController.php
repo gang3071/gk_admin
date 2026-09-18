@@ -186,6 +186,10 @@ class ChannelPlayerController
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
 
+        // 数据时间筛选（用于电子游戏打码量统计）
+        $dataTimeStart = $requestFilter['data_time_start'] ?? '';
+        $dataTimeEnd = $requestFilter['data_time_end'] ?? '';
+
         // 预加载渠道的 VIP 等级列表（用于筛选和显示）
         $channelVipLevels = VipLevel::query()
             ->where('department_id', Admin::user()->department_id)
@@ -288,11 +292,6 @@ class ChannelPlayerController
                 Db::raw('(SELECT player_id, wallet_locked FROM player_platform_cash WHERE platform_id = 1) as ppc_stats'),
                 'player.id', '=', 'ppc_stats.player_id'
             )
-            // LEFT JOIN 电子游戏打码量统计（预聚合子查询）
-            ->leftJoin(
-                Db::raw('(SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM play_game_record GROUP BY player_id) as game_bet_stats'),
-                'player.id', '=', 'game_bet_stats.player_id'
-            )
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -352,6 +351,31 @@ class ChannelPlayerController
 
                 // 合并爆机状态（从缓存）
                 $item['is_crashed'] = $crashStatuses[$item['id']] ?? 0;
+            }
+            unset($item);
+        }
+
+        // ✅ 独立查询：电子游戏打码量（避免大表GROUP BY拖慢主查询）
+        if (!empty($list)) {
+            $playerIds = array_column($list, 'id');
+            $gameBetQuery = \addons\webman\model\PlayGameRecord::query()
+                ->select('player_id', Db::raw('COALESCE(SUM(bet), 0) as electronic_game_bet_amount'))
+                ->whereIn('player_id', $playerIds)
+                ->groupBy('player_id');
+
+            // 数据时间筛选
+            if (!empty($dataTimeStart)) {
+                $gameBetQuery->where('created_at', '>=', $dataTimeStart);
+            }
+            if (!empty($dataTimeEnd)) {
+                $gameBetQuery->where('created_at', '<=', $dataTimeEnd);
+            }
+
+            $gameBetAmounts = $gameBetQuery->pluck('electronic_game_bet_amount', 'player_id')->toArray();
+
+            // 合并电子游戏打码量到列表
+            foreach ($list as &$item) {
+                $item['electronic_game_bet_amount'] = $gameBetAmounts[$item['id']] ?? 0;
             }
             unset($item);
         }
@@ -777,6 +801,14 @@ class ChannelPlayerController
                     admin_trans('public_msg.created_at_start'),
                     admin_trans('public_msg.created_at_end')
                 ]);
+
+                // 数据时间筛选（用于电子游戏打码量统计）
+                $filter->form()->hidden('data_time_start');
+                $filter->form()->hidden('data_time_end');
+                $filter->form()->dateTimeRange('data_time_start', 'data_time_end', admin_trans('player.data_time'))->placeholder([
+                    admin_trans('public_msg.created_at_start'),
+                    admin_trans('public_msg.created_at_end')
+                ]);
             });
             $grid->hideDelete();
             $grid->expandFilter();
@@ -1125,6 +1157,25 @@ class ChannelPlayerController
                 $query->where('player.status', $requestFilter['status']);
             }
         }
+    }
+
+    /**
+     * 构建电子游戏打码量统计子查询
+     * @param string $dataTimeStart 开始时间
+     * @param string $dataTimeEnd 结束时间
+     * @return string
+     */
+    private function buildGameBetStatsQuery(string $dataTimeStart = '', string $dataTimeEnd = ''): string
+    {
+        $whereClause = '';
+        if (!empty($dataTimeStart)) {
+            $whereClause .= " AND created_at >= '" . addslashes($dataTimeStart) . "'";
+        }
+        if (!empty($dataTimeEnd)) {
+            $whereClause .= " AND created_at <= '" . addslashes($dataTimeEnd) . "'";
+        }
+
+        return "(SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM play_game_record WHERE 1=1 {$whereClause} GROUP BY player_id) as game_bet_stats";
     }
 
     /**

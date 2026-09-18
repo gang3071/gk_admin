@@ -34,6 +34,7 @@ return [
     'machine_bet' => '実機',
     'game_bet' => '電子ゲーム',
     'electronic_game_bet_amount' => '電子ゲームベット額',
+    'data_time' => 'データ時間',
     'bet_trend_15days' => '15日間のベット推移',
     'month_bet_distribution' => '今月のベット分布',
     'bet_amount_unit' => 'NT$',
