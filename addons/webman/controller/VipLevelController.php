@@ -72,9 +72,10 @@ class VipLevelController
                         ->size('small')
                         ->drawer([$this, 'point'], ['vip_level_id' => $data['id']])
                         ->width(500)
-                        ->title($data['name'] . ' - ' . admin_trans('vip_level_point.title') . admin_trans('vip_level_point.summary'))
+                        ->title($data['name'] . ' - ' . admin_trans('vip_level_point.title') . '（100=100%，0.1=0.1%）')
                 );
             });
+
             $grid->setForm()->drawer($this->form());
             $grid->filter(function (Filter $filter) {
                 $filter->like('name', admin_trans('vip_level.fields.name'));
@@ -206,31 +207,13 @@ class VipLevelController
             ->toArray();
 
         return Form::create([], function (Form $form) use ($gamePlatform, $vipLevelPoint) {
-            $form->labelWidth(120);
-
             foreach ($gamePlatform as $value) {
-                $form->divider()->content($value->name);
-
-                $form->number('ratio_point_' . $value->id, admin_trans('vip_level_point.fields.ratio_point'))
+                $form->number('ratio_point_' . $value->id, $value->name)
                     ->min(0)
                     ->max(100)
                     ->step(0.01)
                     ->required()
                     ->value($vipLevelPoint[$value->id]['ratio_point'] ?? 0);
-
-                $form->number('ratio_bet_amount_' . $value->id, admin_trans('vip_level_point.fields.ratio_bet_amount'))
-                    ->min(0)
-                    ->max(9999999999)
-                    ->step(0.01)
-                    ->required()
-                    ->value($vipLevelPoint[$value->id]['ratio_bet_amount'] ?? 0);
-
-                $form->number('min_bet_amount_' . $value->id, admin_trans('vip_level_point.fields.min_bet_amount'))
-                    ->min(0)
-                    ->max(9999999999)
-                    ->step(0.01)
-                    ->required()
-                    ->value($vipLevelPoint[$value->id]['min_bet_amount'] ?? 0);
             }
 
             $form->saved(function (Form $form) use ($gamePlatform) {
@@ -239,21 +222,17 @@ class VipLevelController
                     $data = request()->post('data', []);
 
                     foreach ($gamePlatform as $value) {
-                        $key1 = 'ratio_point_' . $value->id;
-                        $key2 = 'ratio_bet_amount_' . $value->id;
-                        $key3 = 'min_bet_amount_' . $value->id;
+                        $key = 'ratio_point_' . $value->id;
 
-                        if (!isset($data[$key1]) || !isset($data[$key2]) || !isset($data[$key3])) {
+                        if (!isset($data[$key])) {
                             continue;
                         }
 
-                        $ratioPoint = floatval($data[$key1]);
-                        $ratioBetAmount = floatval($data[$key2]);
-                        $minBetAmount = floatval($data[$key3]);
+                        $ratioPoint = floatval($data[$key]);
 
                         VipLevelPoint::updateOrCreate(
                             ['vip_level_id' => $vipLevelId, 'platform_id' => $value->id],
-                            ['ratio_point' => $ratioPoint, 'ratio_bet_amount' => $ratioBetAmount, 'min_bet_amount' => $minBetAmount, 'status' => 1]
+                            ['ratio_point' => $ratioPoint, 'status' => 1]
                         );
 
                     }
