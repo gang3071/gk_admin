@@ -308,11 +308,17 @@ class AgentStoreProfitReportController
         $query = TicketRecord::query()->whereIn('store_admin_id', $storeIds);
         $this->applyTimeFilter($query, 'created_at', $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
+        $validStatuses = implode(',', [
+            TicketRecord::STATUS_NORMAL,
+            TicketRecord::STATUS_BACKEND_USED,
+            TicketRecord::STATUS_MACHINE_USED,
+        ]);
+
         $ticketData = $query->selectRaw("
             CAST(store_admin_id AS UNSIGNED) as store_admin_id,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND ((`player_id` > 0) OR ((`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "'))) THEN `score` ELSE 0 END) AS ticket_open_score_amount,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND (`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "') THEN `score` ELSE 0 END) AS counter_ticket_amount,
-            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " AND `status` != " . TicketRecord::STATUS_PRINT_FAILED . " AND `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "' THEN `score` ELSE 0 END) AS storage_ticket_purchase,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` IN ({$validStatuses}) AND ((`player_id` > 0) OR ((`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "'))) THEN `score` ELSE 0 END) AS ticket_open_score_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` IN ({$validStatuses}) AND (`player_id` = 0 OR `player_id` IS NULL) AND (`source_type` IS NULL OR `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "') THEN `score` ELSE 0 END) AS counter_ticket_amount,
+            SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_RECHARGE . " AND `status` IN ({$validStatuses}) AND `source_type` = '" . TicketRecord::SOURCE_TYPE_PURCHASE . "' THEN `score` ELSE 0 END) AS storage_ticket_purchase,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_EXPERIENCE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS experience_coupon_amount,
             SUM(CASE WHEN `ticket_type` = " . TicketRecord::TYPE_WELFARE . " AND `status` != " . TicketRecord::STATUS_DISABLED . " THEN `score` ELSE 0 END) AS welfare_coupon_amount
         ")->groupBy('store_admin_id')->get();

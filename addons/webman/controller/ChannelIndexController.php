@@ -18,6 +18,7 @@ use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
 use addons\webman\model\StoreShiftDeviceDetail;
+use addons\webman\model\TicketRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -2180,17 +2181,17 @@ class ChannelIndexController
 
         // ========== 出票统计（支持时间筛选） ==========
         // 出票记录统计（开分类型，排除禁用状态）
-        $ticketRecordQuery = \addons\webman\model\TicketRecord::query()
+        $ticketRecordQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'created_at'));
             })
             ->selectRaw(
                 'sum(score) as total_score, count(*) as total_count, '
-                . 'sum(IF(status IN (' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ',' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
-                . 'sum(IF(status IN (' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ',' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
+                . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
+                . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
             )
             ->first();
 
@@ -2203,18 +2204,18 @@ class ChannelIndexController
 
         // 核销记录统计（洗分类型，排除禁用状态）
         // 使用 scanned_at（核销时间）作为时间筛选，而非 created_at（出票时间）
-        $ticketRedeemQuery = \addons\webman\model\TicketRecord::query()
+        $ticketRedeemQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
             ->when($dateType !== null && $dateType > 0, function ($query) use ($dateType) {
                 $query->where(getDateWhere($dateType, 'scanned_at'));
             })
             ->selectRaw(
                 'sum(score) as total_score, count(*) as total_count, '
-                . 'sum(IF(status IN (' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ',' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
-                . 'sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
-                . 'sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
+                . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
+                . 'sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
+                . 'sum(IF(status = ' . TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
             )
             ->first();
 
@@ -2278,10 +2279,10 @@ class ChannelIndexController
             ->first();
 
         // ✅ 当前班次统计：出票记录（开分类型，排除禁用状态）
-        $currentShiftTicketRecordQuery = \addons\webman\model\TicketRecord::query()
+        $currentShiftTicketRecordQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
@@ -2289,14 +2290,14 @@ class ChannelIndexController
             ->first();
 
         // ✅ 当前班次统计：核销记录（洗分类型）- 后台使用金额（排除禁用状态）
-        $currentShiftTicketRedeemQuery = \addons\webman\model\TicketRecord::query()
+        $currentShiftTicketRedeemQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('scanned_at', '>', $lastShiftTime);
             })
-            ->selectRaw('sum(IF(status = ' . \addons\webman\model\TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
+            ->selectRaw('sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
             ->first();
 
         // ✅ 当前班次统计：储值机储值（投钞类型，source=storage_recharge）
@@ -2316,12 +2317,12 @@ class ChannelIndexController
             ->sum('player_delivery_record.amount');
 
         // ✅ 当前班次统计：储值机购票（开分类型，source_type=purchase，排除禁用和打印失败）
-        $currentShiftStorageTicketPurchaseQuery = \addons\webman\model\TicketRecord::query()
+        $currentShiftStorageTicketPurchaseQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
-            ->where('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->where('source_type', TicketRecord::SOURCE_TYPE_PURCHASE)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
@@ -2329,11 +2330,11 @@ class ChannelIndexController
 
         // ✅ 当前班次统计：开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
         // 包含：后台开分 + 储值机购票
-        $currentShiftTicketOpenScoreQuery = \addons\webman\model\TicketRecord::query()
+        $currentShiftTicketOpenScoreQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-            ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
@@ -3512,19 +3513,19 @@ class ChannelIndexController
                         ->sum('player_game_log.chip_amount');
 
                     // 5.3 统计出票记录（开分类型，排除禁用状态）
-                    $ticketRecordTotalScore = (float)\addons\webman\model\TicketRecord::query()
+                    $ticketRecordTotalScore = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                        ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.4 统计核销记录后台使用金额（洗分类型）
-                    $ticketRedeemBackendUsedScore = (float)\addons\webman\model\TicketRecord::query()
+                    $ticketRedeemBackendUsedScore = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', TicketRecord::STATUS_BACKEND_USED)
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
@@ -3548,57 +3549,63 @@ class ChannelIndexController
                         ->sum('player_delivery_record.amount');
 
                     // 5.7 统计洗票未核销（出票记录，type=洗分，status=1正常状态）
-                    $ticketUnredeemedAmount = (float)\addons\webman\model\TicketRecord::query()
+                    $ticketUnredeemedAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_NORMAL)
+                        ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', TicketRecord::STATUS_NORMAL)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.8 统计体验券（ticket_type=3）
-                    $experienceCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+                    $experienceCouponAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
+                        ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.9 统计福利券（ticket_type=4）
-                    $welfareCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+                    $welfareCouponAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                        ->where('ticket_type', TicketRecord::TYPE_WELFARE)
+                        ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，status!=0且!=5，player_id为0或null，source_type为null或购票）
-                    $counterTicketAmount = (float)\addons\webman\model\TicketRecord::query()
+                    // 5.9.1 统计柜台开票（ticket_type=1开分类型，只统计正常/后台使用/机台使用，player_id为0或null，source_type为null或购票）
+                    $counterTicketAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+                        ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                        ->whereIn('status', [
+                            TicketRecord::STATUS_NORMAL,
+                            TicketRecord::STATUS_BACKEND_USED,
+                            TicketRecord::STATUS_MACHINE_USED,
+                        ])
                         ->where(function ($q) {
                             $q->where('player_id', 0)
                                 ->orWhereNull('player_id');
                         })
                         ->where(function ($q) {
                             $q->whereNull('source_type')
-                                ->orWhere('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE);
+                                ->orWhere('source_type', TicketRecord::SOURCE_TYPE_PURCHASE);
                         })
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.9.2 统计储值机购票（ticket_type=1开分类型，status!=0且!=5，source_type=purchase）
-                    $storageTicketPurchase = (float)\addons\webman\model\TicketRecord::query()
+                    // 5.9.2 统计储值机购票（ticket_type=1开分类型，只统计正常/后台使用/机台使用，source_type=purchase）
+                    $storageTicketPurchase = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
-                        ->where('source_type', \addons\webman\model\TicketRecord::SOURCE_TYPE_PURCHASE)
+                        ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                        ->whereIn('status', [
+                            TicketRecord::STATUS_NORMAL,
+                            TicketRecord::STATUS_BACKEND_USED,
+                            TicketRecord::STATUS_MACHINE_USED,
+                        ])
+                        ->where('source_type', TicketRecord::SOURCE_TYPE_PURCHASE)
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
@@ -3606,13 +3613,13 @@ class ChannelIndexController
                     // 5.9.3 统计柜台核销
                     // 开分票：所有后台核销
                     // 洗分票：后台核销且无玩家关联
-                    $counterRedeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                    $counterRedeemAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('status', TicketRecord::STATUS_BACKEND_USED)
                         ->where(function ($q) {
-                            $q->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
+                            $q->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                                 ->orWhere(function ($q2) {
-                                    $q2->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
+                                    $q2->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                                         ->where(function ($q3) {
                                             $q3->where('player_id', 0)->orWhereNull('player_id');
                                         });
@@ -3622,42 +3629,45 @@ class ChannelIndexController
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
-                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
-                    $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+                    // 5.10 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，只统计正常/后台使用/机台使用）
+                    $ticketOpenScoreAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-                        ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+                        ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                        ->whereIn('status', [
+                            TicketRecord::STATUS_NORMAL,
+                            TicketRecord::STATUS_BACKEND_USED,
+                            TicketRecord::STATUS_MACHINE_USED,
+                        ])
                         ->where('created_at', '>', $startTime)
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.11 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
                     // 使用 scanned_at（核销时间）作为筛选条件，因为出票可能在交班前，但使用在交班期间
-                    $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
+                    $ticketOpenScoreUsedAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                        ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                        ->where('status', TicketRecord::STATUS_MACHINE_USED)
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.12 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
                     // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
-                    $redeemAmountExport = (float)\addons\webman\model\TicketRecord::query()
+                    $redeemAmountExport = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                        ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', TicketRecord::STATUS_BACKEND_USED)
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
 
                     // 5.13 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
                     // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
-                    $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
+                    $redeemAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                        ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                        ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                        ->where('status', TicketRecord::STATUS_MACHINE_USED)
                         ->where('scanned_at', '>', $startTime)
                         ->where('scanned_at', '<=', $endTime)
                         ->sum('score');
@@ -4177,9 +4187,9 @@ class ChannelIndexController
 
             // 查询今日已领取的福利券记录（包含规则类型）
             // 时间范围与打码量同步，以08:00作为分界点
-            $claimedWelfareRecords = \addons\webman\model\TicketRecord::query()
+            $claimedWelfareRecords = TicketRecord::query()
                 ->where('player_id', $playerId)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                ->where('ticket_type', TicketRecord::TYPE_WELFARE)
                 ->where('created_at', '>=', $todayStart)
                 ->where('created_at', '<', $todayEnd)
                 ->whereNull('deleted_at')
@@ -4189,28 +4199,28 @@ class ChannelIndexController
 
             // 查询今日已领取的体验券次数
             // 时间范围与打码量同步，以08:00作为分界点
-            $claimedExperienceCount = \addons\webman\model\TicketRecord::query()
+            $claimedExperienceCount = TicketRecord::query()
                 ->where('player_id', $playerId)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
                 ->where('created_at', '>=', $todayStart)
                 ->where('created_at', '<', $todayEnd)
                 ->whereNull('deleted_at')
                 ->count();
 
             // 查询体验券总领取次数（排除已删除的记录）
-            $claimedExperienceTotal = \addons\webman\model\TicketRecord::query()
+            $claimedExperienceTotal = TicketRecord::query()
                 ->where('player_id', $playerId)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
                 ->whereNull('deleted_at')
                 ->count();
 
             // 查询体验券已使用次数（状态为后台使用或机台使用）
-            $usedExperienceCount = \addons\webman\model\TicketRecord::query()
+            $usedExperienceCount = TicketRecord::query()
                 ->where('player_id', $playerId)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
                 ->whereIn('status', [
-                    \addons\webman\model\TicketRecord::STATUS_BACKEND_USED,
-                    \addons\webman\model\TicketRecord::STATUS_MACHINE_USED,
+                    TicketRecord::STATUS_BACKEND_USED,
+                    TicketRecord::STATUS_MACHINE_USED,
                 ])
                 ->whereNull('deleted_at')
                 ->count();
@@ -4266,7 +4276,7 @@ class ChannelIndexController
 
             // 验证必填参数
             // 福利券允许负数（负数表示今日规则），其他类型必须大于0
-            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE) {
+            if ($ticketType === TicketRecord::TYPE_WELFARE) {
                 if ($score == 0) {
                     return json(['code' => 400, 'message' => '分数/金额不能为0']);
                 }
@@ -4283,8 +4293,8 @@ class ChannelIndexController
             }
 
             // 福利券和体验券必须选择关联用户
-            if (($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE
-                || $ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+            if (($ticketType === TicketRecord::TYPE_WELFARE
+                || $ticketType === TicketRecord::TYPE_EXPERIENCE)
                 && $playerId <= 0) {
                 return json(['code' => 400, 'message' => '福利券和体验券必须选择关联玩家才能出票']);
             }
@@ -4302,7 +4312,7 @@ class ChannelIndexController
             }
 
             // 体验券验证
-            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_EXPERIENCE && $playerId > 0) {
+            if ($ticketType === TicketRecord::TYPE_EXPERIENCE && $playerId > 0) {
                 $expConfig = $voucherConfig['experience'] ?? [];
                 if (empty($expConfig['enabled'])) {
                     return json(['code' => 400, 'message' => '体验券功能未启用']);
@@ -4332,9 +4342,9 @@ class ChannelIndexController
                     $todayEnd = $today8am->toDateTimeString();
                 }
 
-                $todayQuery = \addons\webman\model\TicketRecord::query()
+                $todayQuery = TicketRecord::query()
                     ->where('player_id', $playerId)
-                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                    ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
                     ->where('created_at', '>=', $todayStart)
                     ->where('created_at', '<', $todayEnd);
                 $todayCount = $todayQuery->count();
@@ -4342,7 +4352,7 @@ class ChannelIndexController
                 // 调试日志
                 \support\Log::info('体验券每日领取检查', [
                     'player_id' => $playerId,
-                    'ticket_type' => \addons\webman\model\TicketRecord::TYPE_EXPERIENCE,
+                    'ticket_type' => TicketRecord::TYPE_EXPERIENCE,
                     'today_start' => $todayStart,
                     'today_end' => $todayEnd,
                     'daily_limit' => $dailyLimit,
@@ -4365,9 +4375,9 @@ class ChannelIndexController
 
                 // 检查总领取次数（排除已删除的记录）
                 $totalLimit = $expConfig['total_limit'] ?? 6;
-                $totalCount = \addons\webman\model\TicketRecord::query()
+                $totalCount = TicketRecord::query()
                     ->where('player_id', $playerId)
-                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
+                    ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
                     ->count();
                 if ($totalCount >= $totalLimit) {
                     return json(['code' => 400, 'message' => '体验券领取总次数已用完（共' . $totalLimit . '次）']);
@@ -4420,7 +4430,7 @@ class ChannelIndexController
             }
 
             // 福利券验证（按档位+规则类型分别限制）
-            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && $playerId > 0) {
+            if ($ticketType === TicketRecord::TYPE_WELFARE && $playerId > 0) {
                 $welfareConfig = $voucherConfig['welfare'] ?? [];
                 if (empty($welfareConfig['enabled'])) {
                     return json(['code' => 400, 'message' => '福利券功能未启用']);
@@ -4504,9 +4514,9 @@ class ChannelIndexController
 
                     // 检查今日是否已领取过昨日规则的任何档位
                     // 时间范围与打码量同步，以08:00作为分界点
-                    $yesterdayClaimedCount = \addons\webman\model\TicketRecord::query()
+                    $yesterdayClaimedCount = TicketRecord::query()
                         ->where('player_id', $playerId)
-                        ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                        ->where('ticket_type', TicketRecord::TYPE_WELFARE)
                         ->where('created_at', '>=', $todayStart)
                         ->where('created_at', '<', $todayEnd)
                         ->whereNull('deleted_at')
@@ -4524,9 +4534,9 @@ class ChannelIndexController
 
                 // 检查该档位+规则类型今日是否已领取（通过extra_data字段判断）
                 // 时间范围与打码量同步，以08:00作为分界点
-                $todayCount = \addons\webman\model\TicketRecord::query()
+                $todayCount = TicketRecord::query()
                     ->where('player_id', $playerId)
-                    ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
+                    ->where('ticket_type', TicketRecord::TYPE_WELFARE)
                     ->where('score', $actualScore)
                     ->where('created_at', '>=', $todayStart)
                     ->where('created_at', '<', $todayEnd)
@@ -4548,8 +4558,8 @@ class ChannelIndexController
                 $score = $actualScore;  // 转换为正数
             }
 
-            $orderId = \addons\webman\model\TicketRecord::generateOrderId($ticketType);
-            $qrCodeNo = \addons\webman\model\TicketRecord::generateQrCodeNo();
+            $orderId = TicketRecord::generateOrderId($ticketType);
+            $qrCodeNo = TicketRecord::generateQrCodeNo();
 
             // 获取玩家名称
             $playerName = '';
@@ -4564,11 +4574,11 @@ class ChannelIndexController
 
             // 构建extra_data
             $extraData = null;
-            if ($ticketType === \addons\webman\model\TicketRecord::TYPE_WELFARE && !empty($welfareRuleType)) {
+            if ($ticketType === TicketRecord::TYPE_WELFARE && !empty($welfareRuleType)) {
                 $extraData = json_encode(['rule_type' => $welfareRuleType, 'score' => abs($score)]);
             }
 
-            $record = \addons\webman\model\TicketRecord::create([
+            $record = TicketRecord::create([
                 'order_id'           => $orderId,
                 'department_id'      => $departmentId,
                 'store_admin_id'     => $storeAdminId,
@@ -4582,7 +4592,7 @@ class ChannelIndexController
                 'encrypted_content'  => $orderId,
                 'ticket_type'        => $ticketType,
                 'extra_data'         => $extraData,
-                'status'             => \addons\webman\model\TicketRecord::STATUS_NORMAL,
+                'status'             => TicketRecord::STATUS_NORMAL,
                 'remark'             => $remark,
             ]);
 
@@ -4617,7 +4627,7 @@ class ChannelIndexController
             }
 
             $admin = Admin::user();
-            $record = \addons\webman\model\TicketRecord::query()
+            $record = TicketRecord::query()
                 ->where('order_id', $orderId)
                 ->where('store_admin_id', $admin->id)
                 ->first();
@@ -4651,7 +4661,7 @@ class ChannelIndexController
             }
 
             $admin = Admin::user();
-            $record = \addons\webman\model\TicketRecord::query()
+            $record = TicketRecord::query()
                 ->where('order_id', $orderId)
                 ->where('store_admin_id', $admin->id)
                 ->first();
@@ -4662,8 +4672,8 @@ class ChannelIndexController
 
             // 检查是否可以重复打印：只有未使用(1)和打印失败(5)的订单可以重复打印
             $reprintableStatuses = [
-                \addons\webman\model\TicketRecord::STATUS_NORMAL,        // 1 = 未使用
-                \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED,  // 5 = 打印失败
+                TicketRecord::STATUS_NORMAL,        // 1 = 未使用
+                TicketRecord::STATUS_PRINT_FAILED,  // 5 = 打印失败
             ];
 
             if (!in_array($record->status, $reprintableStatuses)) {
@@ -4873,68 +4883,68 @@ class ChannelIndexController
             $machineBet = $machineBetMap[$player->id] ?? 0;
 
             // 统计洗票未核销（该设备的出票记录，type=洗分，status=1正常状态）
-            $ticketUnredeemedAmount = (float)\addons\webman\model\TicketRecord::query()
+            $ticketUnredeemedAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                ->where('status', \addons\webman\model\TicketRecord::STATUS_NORMAL)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', TicketRecord::STATUS_NORMAL)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计体验券（ticket_type=3）
-            $experienceCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+            $experienceCouponAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_EXPERIENCE)
-                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('ticket_type', TicketRecord::TYPE_EXPERIENCE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计福利券（ticket_type=4）
-            $welfareCouponAmount = (float)\addons\webman\model\TicketRecord::query()
+            $welfareCouponAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WELFARE)
-                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
+                ->where('ticket_type', TicketRecord::TYPE_WELFARE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
-            $ticketOpenScoreAmount = (float)\addons\webman\model\TicketRecord::query()
+            $ticketOpenScoreAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_DISABLED)
-                ->where('status', '!=', \addons\webman\model\TicketRecord::STATUS_PRINT_FAILED)
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+                ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
                 ->where('created_at', '>', $startTime)
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计开票已使用金额（用于入票计算，ticket_type=1开分类型，status=3机台使用）
             // 使用 scanned_at（核销时间）作为筛选条件
-            $ticketOpenScoreUsedAmount = (float)\addons\webman\model\TicketRecord::query()
+            $ticketOpenScoreUsedAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_RECHARGE)
-                ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                ->where('status', TicketRecord::STATUS_MACHINE_USED)
                 ->where('scanned_at', '>', $startTime)
                 ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-导出用（TicketRecord中ticket_type=2洗分类型，status=2后台核销）
             // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
-            $redeemAmountExport = (float)\addons\webman\model\TicketRecord::query()
+            $redeemAmountExport = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                ->where('status', \addons\webman\model\TicketRecord::STATUS_BACKEND_USED)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', TicketRecord::STATUS_BACKEND_USED)
                 ->where('scanned_at', '>', $startTime)
                 ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
 
             // 统计核销金额-入票用（TicketRecord中ticket_type=2洗分类型，status=3机台使用）
             // 使用 scanned_at（核销时间）作为筛选条件，而非 created_at（出票时间）
-            $redeemAmount = (float)\addons\webman\model\TicketRecord::query()
+            $redeemAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
-                ->where('ticket_type', \addons\webman\model\TicketRecord::TYPE_WITHDRAW)
-                ->where('status', \addons\webman\model\TicketRecord::STATUS_MACHINE_USED)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->where('status', TicketRecord::STATUS_MACHINE_USED)
                 ->where('scanned_at', '>', $startTime)
                 ->where('scanned_at', '<=', $endTime)
                 ->sum('score');
