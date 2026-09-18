@@ -521,11 +521,13 @@ class SystemSettingController
         $config = json_decode($record->content ?? '{}', true) ?: [];
         $recordId = $record->id;
 
-        return Form::create([
-            'vip8_text'  => $config[8]['text'] ?? '',
-            'vip9_text'  => $config[9]['text'] ?? '',
-            'vip10_text' => $config[10]['text'] ?? '',
-        ], function (Form $form) use ($config, $recordId) {
+        return Form::create([], function (Form $form) use ($config, $recordId) {
+            // 预填 $form->data，exec() 绑定到 Vue 响应式数据时才有值
+            $form->input([
+                'vip8_text'  => $config[8]['text'] ?? '',
+                'vip9_text'  => $config[9]['text'] ?? '',
+                'vip10_text' => $config[10]['text'] ?? '',
+            ]);
             $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
 
             foreach ([8, 9, 10] as $level) {
@@ -540,16 +542,17 @@ class SystemSettingController
                     $form->push(Html::markdown($audioHtml));
                 }
 
-                $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
+                $form->text("vip{$level}_text")
                     ->value($text)
                     ->maxlength(200)
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
             }
 
             $form->saving(function (Form $form) use ($config, $recordId) {
+                $text = $form->input("vip8_text", '');
+                Log::info('dddd', [$text]);
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
-                    $text = $form->input("vip{$level}_text", '');
                     $newConfig[$level] = [
                         'text' => $text,
                         'url'  => $newConfig[$level]['url'] ?? '',
@@ -563,6 +566,7 @@ class SystemSettingController
                         continue;
                     }
                     $result = GoogleTtsHttpService::generateVipWelcomeVoice($text, $level);
+                    Log::info('dddd', [$result]);
                     if ($result['success']) {
                         $newConfig[$level]['url'] = $result['url'];
                     } else {
