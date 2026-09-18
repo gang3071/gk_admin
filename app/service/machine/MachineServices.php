@@ -234,7 +234,6 @@ class MachineServices
                     SongOfflineJackpot::MACHINE_SCORE,
                     SongOfflineJackpot::MACHINE_TURN,
                     SongOfflineJackpot::WIN_NUMBER,
-                    SongOfflineJackpot::EXTERNAL_BUTTON_QUERY,  // 线下特有
                     SongOfflineJackpot::WASH_ZERO,
                     SongOfflineJackpot::OPEN_ANY_POINT,
                     SongOfflineJackpot::TURN_UP_ALL,
