@@ -232,8 +232,6 @@ class ChannelPlayerController
             'player_points.available_points',
             'player_points.frozen_points',
             'player_points.total_points',
-            // 电子游戏打码量（通过LEFT JOIN聚合）
-            Db::raw('COALESCE(game_bet_stats.electronic_game_bet_amount, 0) as electronic_game_bet_amount'),
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -1157,25 +1155,6 @@ class ChannelPlayerController
                 $query->where('player.status', $requestFilter['status']);
             }
         }
-    }
-
-    /**
-     * 构建电子游戏打码量统计子查询
-     * @param string $dataTimeStart 开始时间
-     * @param string $dataTimeEnd 结束时间
-     * @return string
-     */
-    private function buildGameBetStatsQuery(string $dataTimeStart = '', string $dataTimeEnd = ''): string
-    {
-        $whereClause = '';
-        if (!empty($dataTimeStart)) {
-            $whereClause .= " AND created_at >= '" . addslashes($dataTimeStart) . "'";
-        }
-        if (!empty($dataTimeEnd)) {
-            $whereClause .= " AND created_at <= '" . addslashes($dataTimeEnd) . "'";
-        }
-
-        return "(SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM play_game_record WHERE 1=1 {$whereClause} GROUP BY player_id) as game_bet_stats";
     }
 
     /**
