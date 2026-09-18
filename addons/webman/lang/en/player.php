@@ -34,6 +34,7 @@ return [
     'month_bet' => 'This Month\'s Bets',
     'machine_bet' => 'Physical Machines',
     'game_bet' => 'Electronic Games',
+    'electronic_game_bet_amount' => 'E-Game Bet Amount',
     'bet_trend_15days' => '15-Day Bet Trend',
     'month_bet_distribution' => 'Monthly Bet Distribution',
     'bet_amount_unit' => 'NT$',

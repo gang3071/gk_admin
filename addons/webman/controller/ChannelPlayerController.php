@@ -228,6 +228,8 @@ class ChannelPlayerController
             'player_points.available_points',
             'player_points.frozen_points',
             'player_points.total_points',
+            // 电子游戏打码量（通过LEFT JOIN聚合）
+            Db::raw('COALESCE(game_bet_stats.electronic_game_bet_amount, 0) as electronic_game_bet_amount'),
         ];
 
         // 线下渠道：添加代理和店家字段
@@ -276,6 +278,11 @@ class ChannelPlayerController
                     ->where('vip_retain_period.period_type', '=', 'retain')
                     ->where('vip_retain_period.status', '=', 1);
             })
+            // LEFT JOIN 电子游戏打码量统计（预聚合子查询）
+            ->leftJoin(
+                Db::raw('(SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM play_game_record GROUP BY player_id) as game_bet_stats'),
+                'player.id', '=', 'game_bet_stats.player_id'
+            )
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -597,6 +604,11 @@ class ChannelPlayerController
                 return number_format(floatval($value), 2);
             })->sortable()->width(120)->align('center');
 
+            // 电子游戏打码量
+            $grid->column('electronic_game_bet_amount', admin_trans('player.electronic_game_bet_amount'))->display(function ($value) {
+                return number_format(floatval($value), 2);
+            })->sortable()->width(120)->align('center');
+
             $grid->column('subtotal', admin_trans('player.subtotal'))->display(function ($value) {
                 $color = $value >= 0 ? '#3f8600' : '#cf1322';
                 return Html::create(number_format(floatval($value), 2))->style(['color' => $color, 'fontWeight' => 'bold']);
@@ -741,6 +753,13 @@ class ChannelPlayerController
                     0 => admin_trans('player.normal'),
                     1 => admin_trans('player.crashed')
                 ])->placeholder(admin_trans('player.is_crashed'));
+
+                // 账号状态筛选
+                $filter->eq()->select('status')->options([
+                    '' => admin_trans('public_msg.all'),
+                    1 => admin_trans('admin.open'),
+                    0 => admin_trans('admin.close')
+                ])->placeholder(admin_trans('player.fields.status'));
 
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');

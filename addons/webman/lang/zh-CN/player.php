@@ -34,6 +34,7 @@ return [
     'month_bet' => '本月打码量',
     'machine_bet' => '实体机台',
     'game_bet' => '电子游戏',
+    'electronic_game_bet_amount' => '电子游戏打码量',
     'bet_trend_15days' => '近15天打码量趋势',
     'month_bet_distribution' => '本月打码量分布',
     'bet_amount_unit' => 'NT$',
