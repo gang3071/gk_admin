@@ -37,6 +37,7 @@ return [
         'machine_rebate' => 'Physical Machine Rebate',
         'ticket_machine_version' => 'Ticket Machine Version',
         'ticket_machine_download_url' => 'Ticket Machine Download URL',
+        'vip_welcome_voice' => 'VIP Welcome Voice',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',
@@ -62,6 +63,15 @@ return [
     'points' => 'points',
     'balls' => 'balls',
     'disabled' => 'Disabled',
+    // VIP Welcome Voice
+    'vip_welcome_voice' => [
+        'title' => 'VIP Welcome Voice Configuration',
+        'level_voice' => 'Welcome Voice',
+        'welcome_text' => 'Welcome Voice Text',
+        'text_placeholder' => 'Enter welcome voice text, voice will be synthesized automatically after saving',
+        'save_success' => 'Saved successfully, voice synthesis completed',
+        'save_partial' => 'Saved successfully, some voice synthesis failed: ',
+    ],
     // Rebate Configuration
     'rebate' => [
         'electronic_game_rebate' => 'Electronic Game Rebate',

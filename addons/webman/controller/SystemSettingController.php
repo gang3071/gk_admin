@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\model\Channel;
 use addons\webman\model\SystemSetting;
+use addons\webman\service\GoogleTtsHttpService;
 use DateTime;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -337,6 +338,18 @@ class SystemSettingController
                         ->rule(['required' => admin_trans('system_setting.fields.ticket_machine_download_url')])
                 )->display(function ($val, SystemSetting $data) {
                     return $data->content;
+                })->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'vip_welcome_voice';
+                })->display(function ($value, SystemSetting $data) {
+                    $config = json_decode($data->content ?? '{}', true) ?: [];
+                    $parts = [];
+                    foreach ([8, 9, 10] as $level) {
+                        $hasUrl = !empty($config[$level]['url'] ?? '');
+                        $parts[] = 'VIP' . $level . ':' . ($hasUrl ? '✓' : '—');
+                    }
+                    $html = Html::create()->content(implode(' | ', $parts))->style(['cursor' => 'pointer']);
+                    return Tag::create($html)->color('blue')->modal([$this, 'editVipWelcomeVoice'], ['data' => $data]);
                 })->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');
@@ -491,6 +504,89 @@ class SystemSettingController
             $form->timeRange('date_start', 'date_end', admin_trans('system_setting.time_range'))
                 ->value([$data->date_start, $data->date_end])
                 ->required();
+        });
+    }
+
+    /**
+     * VIP欢迎语音配置
+     * @auth true
+     * @param SystemSetting $data
+     * @return Form
+     */
+    public function editVipWelcomeVoice(SystemSetting $data): Form
+    {
+        /** @var SystemSetting $data */
+        $data = $data->where('feature', 'vip_welcome_voice')->first();
+        $config = json_decode($data->content ?? '{}', true) ?: [];
+
+        return Form::create($data, function (Form $form) use ($data, $config) {
+            $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
+
+            foreach ([8, 9, 10] as $level) {
+                $levelConfig = $config[$level] ?? [];
+                $audioUrl = $levelConfig['url'] ?? '';
+                $text = $levelConfig['text'] ?? '';
+
+                $headerHtml = '<div style="margin:16px 0 8px;padding:8px 12px;background:#f0f5ff;border-left:4px solid #1890ff;font-weight:bold;font-size:14px;">VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.level_voice') . '</div>';
+                $form->push(Html::markdown($headerHtml));
+
+                if (!empty($audioUrl)) {
+                    $audioHtml = '<div style="margin-bottom:8px;"><audio controls style="width:100%;max-width:320px;height:32px;"><source src="' . $audioUrl . '" type="audio/wav">您的浏览器不支持音频播放</audio></div>';
+                    $form->push(Html::markdown($audioHtml));
+                }
+
+                $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
+                    ->value($text)
+                    ->maxlength(200)
+                    ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
+            }
+
+            $form->saving(function (Form $form) use ($config) {
+                $newConfig = $config;
+                foreach ([8, 9, 10] as $level) {
+                    $text = $form->input("vip{$level}_text", '');
+                    $newConfig[$level] = [
+                        'text' => $text,
+                        'url'  => $newConfig[$level]['url'] ?? '',
+                    ];
+                }
+                $form->input('content', json_encode($newConfig, JSON_UNESCAPED_UNICODE));
+            });
+
+            $form->saved(function (Form $form) {
+                $id = $form->input('id');
+                $record = SystemSetting::query()->find($id);
+                if (!$record) {
+                    return message_error('保存失败');
+                }
+
+                $content = json_decode($record->content ?? '{}', true) ?: [];
+                $errors = [];
+
+                foreach ([8, 9, 10] as $level) {
+                    $text = $content[$level]['text'] ?? '';
+                    if (empty($text)) {
+                        continue;
+                    }
+
+                    $result = GoogleTtsHttpService::generateVipWelcomeVoice($text, $level);
+                    if ($result['success']) {
+                        $content[$level]['url'] = $result['url'];
+                    } else {
+                        $errors[] = 'VIP ' . $level . ': ' . $result['error'];
+                    }
+                }
+
+                SystemSetting::query()->where('id', $id)->update([
+                    'content' => json_encode($content, JSON_UNESCAPED_UNICODE),
+                ]);
+
+                if (!empty($errors)) {
+                    return message_warning(admin_trans('system_setting.vip_welcome_voice.save_partial') . implode('，', $errors));
+                }
+
+                return message_success(admin_trans('system_setting.vip_welcome_voice.save_success'));
+            });
         });
     }
 }
