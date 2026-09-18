@@ -35,6 +35,7 @@ return [
     'machine_bet' => '實體機台',
     'game_bet' => '電子遊戲',
     'electronic_game_bet_amount' => '電子遊戲打碼量',
+    'data_time' => '數據時間',
     'bet_trend_15days' => '近15天打碼量趨勢',
     'month_bet_distribution' => '本月打碼量分佈',
     'bet_amount_unit' => 'NT$',
