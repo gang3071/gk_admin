@@ -803,9 +803,9 @@ class ChannelPlayerController
                 // 数据时间筛选（用于电子游戏打码量统计）
                 $filter->form()->hidden('data_time_start');
                 $filter->form()->hidden('data_time_end');
-                $filter->form()->dateTimeRange('data_time_start', 'data_time_end', admin_trans('player.data_time'))->placeholder([
-                    admin_trans('public_msg.created_at_start'),
-                    admin_trans('public_msg.created_at_end')
+                $filter->form()->dateTimeRange('data_time_start', 'data_time_end', '')->placeholder([
+                    admin_trans('player.data_time') . admin_trans('public_msg.created_at_start'),
+                    admin_trans('player.data_time') . admin_trans('public_msg.created_at_end')
                 ]);
             });
             $grid->hideDelete();
