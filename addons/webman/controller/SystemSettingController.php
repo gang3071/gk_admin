@@ -521,7 +521,11 @@ class SystemSettingController
         $config = json_decode($record->content ?? '{}', true) ?: [];
         $recordId = $record->id;
 
-        return Form::create([], function (Form $form) use ($config, $recordId) {
+        return Form::create([
+            'vip8_text'  => $config[8]['text'] ?? '',
+            'vip9_text'  => $config[9]['text'] ?? '',
+            'vip10_text' => $config[10]['text'] ?? '',
+        ], function (Form $form) use ($config, $recordId) {
             $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
 
             foreach ([8, 9, 10] as $level) {
