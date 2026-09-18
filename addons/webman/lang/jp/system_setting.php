@@ -37,6 +37,7 @@ return [
         'machine_rebate' => '物理マシンリベート',
         'ticket_machine_version' => 'チケットマシンバージョン',
         'ticket_machine_download_url' => 'チケットマシンダウンロードURL',
+        'vip_welcome_voice' => 'VIPウェルカム音声',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
@@ -62,6 +63,15 @@ return [
     'points' => 'ポイント',
     'balls' => '玉',
     'disabled' => '無効',
+    // VIPウェルカム音声
+    'vip_welcome_voice' => [
+        'title' => 'VIPウェルカム音声設定',
+        'level_voice' => 'ウェルカム音声',
+        'welcome_text' => 'ウェルカム音声テキスト',
+        'text_placeholder' => 'ウェルカム音声テキストを入力してください。保存後に自動合成されます',
+        'save_success' => '保存成功、音声合成完了',
+        'save_partial' => '保存成功、一部の音声合成が失敗：',
+    ],
     // リベート設定
     'rebate' => [
         'electronic_game_rebate' => '電子ゲームリベート',

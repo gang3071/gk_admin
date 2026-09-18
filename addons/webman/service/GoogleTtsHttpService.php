@@ -34,6 +34,11 @@ class GoogleTtsHttpService
     private const VOICE_DIR = 'voice/device';
 
     /**
+     * VIP欢迎语音存储目录
+     */
+    private const VOICE_DIR_VIP = 'voice/vip';
+
+    /**
      * 台湾中文语音参数
      */
     private const TW_LANGUAGE_CODE = 'cmn-TW';
@@ -478,6 +483,137 @@ class GoogleTtsHttpService
 
             return false;
         }
+    }
+
+    /**
+     * 生成VIP欢迎语音文件
+     *
+     * @param string $text 欢迎语音文本
+     * @param int $vipLevel VIP等级（8/9/10）
+     * @return array ['success' => bool, 'url' => string|null, 'path' => string|null, 'error' => string|null]
+     */
+    public static function generateVipWelcomeVoice(string $text, int $vipLevel): array
+    {
+        try {
+            if (empty($text)) {
+                throw new \Exception('欢迎语音文本不能为空');
+            }
+
+            $useGemini = config('google.tts.use_gemini', true);
+            $apiKey = self::getApiKey($useGemini);
+
+            if ($useGemini) {
+                $styleInstructions = config(
+                    'google.tts.gemini_style',
+                    'Read aloud in a clear, professional customer service voice, warm and attentive, as if a waitress is politely announcing a customer request.'
+                );
+                $voiceName = config('google.tts.gemini_voice', self::GEMINI_VOICE);
+
+                $requestBody = [
+                    'contents' => [
+                        ['parts' => [['text' => $styleInstructions . ' ' . $text]]]
+                    ],
+                    'generationConfig' => [
+                        'responseModalities' => ['AUDIO'],
+                        'speechConfig' => [
+                            'voiceConfig' => [
+                                'prebuiltVoiceConfig' => ['voiceName' => $voiceName]
+                            ]
+                        ]
+                    ]
+                ];
+
+                $response = Http::timeout(30)
+                    ->withHeaders(['Content-Type' => 'application/json', 'x-goog-api-key' => $apiKey])
+                    ->post(self::GEMINI_TTS_ENDPOINT, $requestBody);
+
+                if (!$response->successful()) {
+                    throw new \Exception('Gemini TTS API 错误: ' . $response->json('error.message', 'Unknown error'));
+                }
+
+                $result = $response->json();
+                $audioContentBase64 = $result['candidates'][0]['content']['parts'][0]['inlineData']['data'] ?? null;
+                if (empty($audioContentBase64)) {
+                    throw new \Exception('Gemini TTS API 返回空音频内容');
+                }
+
+                $wavData = self::convertPcmToWav(base64_decode($audioContentBase64), 24000, 1, 16);
+                return self::saveVipVoiceFile($wavData, $vipLevel, 'wav');
+            } else {
+                $requestBody = [
+                    'input' => ['text' => $text],
+                    'voice' => ['languageCode' => self::TW_LANGUAGE_CODE, 'name' => self::TW_VOICE_NAME, 'ssmlGender' => 'FEMALE'],
+                    'audioConfig' => [
+                        'audioEncoding' => 'MP3',
+                        'speakingRate' => (float)config('google.tts.speaking_rate', 1.0),
+                        'pitch' => (float)config('google.tts.pitch', 0.0),
+                        'volumeGainDb' => (float)config('google.tts.volume_gain_db', 0.0),
+                    ]
+                ];
+
+                $response = Http::timeout(30)->post(self::API_ENDPOINT . '?key=' . $apiKey, $requestBody);
+                if (!$response->successful()) {
+                    throw new \Exception('Google TTS API 错误: ' . $response->json('error.message', 'Unknown error'));
+                }
+
+                $audioContentBase64 = $response->json('audioContent');
+                if (empty($audioContentBase64)) {
+                    throw new \Exception('Google TTS API 返回空音频内容');
+                }
+
+                return self::saveVipVoiceFile(base64_decode($audioContentBase64), $vipLevel);
+            }
+        } catch (\Exception $e) {
+            Log::error('VIP欢迎语音生成失败', [
+                'vip_level' => $vipLevel,
+                'text' => $text,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'url' => null, 'path' => null, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * 保存VIP语音文件到 Google Cloud Storage
+     */
+    private static function saveVipVoiceFile(string $audioContent, int $vipLevel, string $format = 'mp3'): array
+    {
+        $timestamp = time();
+        $filename = "vip_{$vipLevel}_{$timestamp}.{$format}";
+        $ossPath = self::VOICE_DIR_VIP . '/' . $filename;
+
+        try {
+            $storageClient = self::getStorageClient();
+            $bucket = $storageClient->bucket(config('plugin.rockys.ex-admin-webman.filesystems.disks.google_oss.bucket'));
+            $mimeType = $format === 'wav' ? 'audio/wav' : 'audio/mpeg';
+
+            $bucket->upload($audioContent, [
+                'name' => $ossPath,
+                'metadata' => ['contentType' => $mimeType, 'cacheControl' => 'public, max-age=31536000'],
+                'predefinedAcl' => 'publicRead',
+            ]);
+
+            $url = "https://storage.googleapis.com/{$bucket->name()}/{$ossPath}";
+
+            // 删除该VIP等级的旧语音文件
+            try {
+                $prefix = self::VOICE_DIR_VIP . "/vip_{$vipLevel}_";
+                foreach ($bucket->objects(['prefix' => $prefix]) as $object) {
+                    if (basename($object->name()) !== $filename) {
+                        $object->delete();
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::warning('清理VIP旧语音文件失败', ['vip_level' => $vipLevel, 'error' => $e->getMessage()]);
+            }
+
+            Log::info('VIP欢迎语音生成成功', ['vip_level' => $vipLevel, 'url' => $url]);
+        } catch (\Exception $e) {
+            throw new \Exception('上传到 Google Cloud Storage 失败: ' . $e->getMessage());
+        }
+
+        return ['success' => true, 'url' => $url, 'path' => $ossPath, 'error' => null];
     }
 
     /**

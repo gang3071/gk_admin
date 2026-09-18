@@ -37,6 +37,7 @@ return [
         'machine_rebate' => '實體機台反水',
         'ticket_machine_version' => '儲值機版本號',
         'ticket_machine_download_url' => '儲值機客戶端下載鏈接',
+        'vip_welcome_voice' => 'VIP歡迎語音',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字元',
@@ -62,6 +63,15 @@ return [
     'points' => '分',
     'balls' => '珠',
     'disabled' => '已禁用',
+    // VIP欢迎语音
+    'vip_welcome_voice' => [
+        'title' => 'VIP歡迎語音配置',
+        'level_voice' => '歡迎語音',
+        'welcome_text' => '歡迎語音文字',
+        'text_placeholder' => '請輸入歡迎語音文字，儲存後自動合成語音',
+        'save_success' => '儲存成功，語音合成完成',
+        'save_partial' => '儲存成功，部分語音合成失敗：',
+    ],
     // 反水配置
     'rebate' => [
         'electronic_game_rebate' => '電子遊戲反水',

@@ -37,6 +37,7 @@ return [
         'machine_rebate' => '实体机台反水',
         'ticket_machine_version' => '储值机版本号',
         'ticket_machine_download_url' => '储值机客户端下载链接',
+        'vip_welcome_voice' => 'VIP欢迎语音',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字符',
@@ -62,6 +63,15 @@ return [
     'points' => '分',
     'balls' => '珠',
     'disabled' => '已禁用',
+    // VIP欢迎语音
+    'vip_welcome_voice' => [
+        'title' => 'VIP欢迎语音配置',
+        'level_voice' => '欢迎语音',
+        'welcome_text' => '欢迎语音文字',
+        'text_placeholder' => '请输入欢迎语音文字，保存后自动合成语音',
+        'save_success' => '保存成功，语音合成完成',
+        'save_partial' => '保存成功，部分语音合成失败：',
+    ],
     // 反水配置
     'rebate' => [
         'electronic_game_rebate' => '电子游戏反水',

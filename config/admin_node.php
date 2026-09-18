@@ -1921,6 +1921,15 @@ return [
         'title' => '机台保留停止时段',
     ],
     [
+        'id' => 'addons\webman\controller\SystemSettingController\editVipWelcomeVoice',
+        'pid' => 'addons\webman\controller\SystemSettingController\index',
+        'action' => 'editVipWelcomeVoice',
+        'method' => '',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-SystemSettingController/editVipWelcomeVoice',
+        'title' => 'VIP欢迎语音配置',
+    ],
+    [
         'id' => 'addons\webman\controller\AnnouncementController\index',
         'pid' => 'addons\webman\controller\AnnouncementController-',
         'action' => 'index',
