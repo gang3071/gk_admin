@@ -541,6 +541,8 @@ class SystemSettingController
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
             }
 
+            $form->except(['vip8_text', 'vip9_text', 'vip10_text']);
+
             $form->saving(function (Form $form) use ($config) {
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
