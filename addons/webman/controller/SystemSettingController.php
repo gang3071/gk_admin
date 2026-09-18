@@ -517,21 +517,16 @@ class SystemSettingController
     public function editVipWelcomeVoice(SystemSetting $data): Form
     {
         /** @var SystemSetting $data */
-        $data = $data->where('feature', 'vip_welcome_voice')->first();
-        $config = json_decode($data->content ?? '{}', true) ?: [];
+        $record = $data->where('feature', 'vip_welcome_voice')->first();
+        $config = json_decode($record->content ?? '{}', true) ?: [];
+        $recordId = $record->id;
 
-        // 将自定义字段注入模型属性，让 ExAdmin 能将其绑定到 Vue 响应式数据
-        $data->setRawAttributes(array_merge($data->getAttributes(), [
-            'vip8_text'  => $config[8]['text'] ?? '',
-            'vip9_text'  => $config[9]['text'] ?? '',
-            'vip10_text' => $config[10]['text'] ?? '',
-        ]));
-
-        return Form::create($data, function (Form $form) use ($data, $config) {
+        return Form::create([], function (Form $form) use ($config, $recordId) {
             $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
 
             foreach ([8, 9, 10] as $level) {
                 $audioUrl = $config[$level]['url'] ?? '';
+                $text = $config[$level]['text'] ?? '';
 
                 $headerHtml = '<div style="margin:16px 0 8px;padding:8px 12px;background:#f0f5ff;border-left:4px solid #1890ff;font-weight:bold;font-size:14px;">VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.level_voice') . '</div>';
                 $form->push(Html::markdown($headerHtml));
@@ -542,13 +537,12 @@ class SystemSettingController
                 }
 
                 $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
+                    ->value($text)
                     ->maxlength(200)
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
             }
 
-            $form->except(['vip8_text', 'vip9_text', 'vip10_text']);
-
-            $form->saving(function (Form $form) use ($config) {
+            $form->saving(function (Form $form) use ($config, $recordId) {
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
                     $text = $form->input("vip{$level}_text", '');
@@ -557,42 +551,28 @@ class SystemSettingController
                         'url'  => $newConfig[$level]['url'] ?? '',
                     ];
                 }
-                $form->input('content', json_encode($newConfig, JSON_UNESCAPED_UNICODE));
-                Log::info('报错1', [$newConfig]);
-            });
 
-            $form->saved(function (Form $form) {
-                $id = $form->input('id');
-                $record = SystemSetting::query()->find($id);
-                if (!$record) {
-                    return message_error('保存失败');
-                }
-
-                $content = json_decode($record->content ?? '{}', true) ?: [];
                 $errors = [];
-
                 foreach ([8, 9, 10] as $level) {
-                    $text = $content[$level]['text'] ?? '';
+                    $text = $newConfig[$level]['text'];
                     if (empty($text)) {
                         continue;
                     }
-
                     $result = GoogleTtsHttpService::generateVipWelcomeVoice($text, $level);
                     if ($result['success']) {
-                        $content[$level]['url'] = $result['url'];
+                        $newConfig[$level]['url'] = $result['url'];
                     } else {
                         $errors[] = 'VIP ' . $level . ': ' . $result['error'];
                     }
                 }
 
-                SystemSetting::query()->where('id', $id)->update([
-                    'content' => json_encode($content, JSON_UNESCAPED_UNICODE),
+                SystemSetting::query()->where('id', $recordId)->update([
+                    'content' => json_encode($newConfig, JSON_UNESCAPED_UNICODE),
                 ]);
-                Log::info('报错', [$errors]);
+
                 if (!empty($errors)) {
                     return message_warning(admin_trans('system_setting.vip_welcome_voice.save_partial') . implode('，', $errors));
                 }
-
                 return message_success(admin_trans('system_setting.vip_welcome_voice.save_success'));
             });
         });
