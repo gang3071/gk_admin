@@ -552,7 +552,7 @@ class SystemSettingController
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
                     $newConfig[$level] = [
-                        'text' => $form->input("vip{$level}_text", ''),
+                        'text' => $form->input("vip{$level}_text") ?? '',
                         'url'  => $newConfig[$level]['url'] ?? '',
                     ];
                 }
