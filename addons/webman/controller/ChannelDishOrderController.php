@@ -18,7 +18,7 @@ use support\Db;
 /**
  * 餐點訂單
  */
-class DishOrderController
+class ChannelDishOrderController
 {
     protected $model;
 
@@ -213,6 +213,7 @@ class DishOrderController
     {
         $stores = AdminUser::query()
             ->where('type', 4)
+            ->where('department_id', Admin::user()->department_id)
             ->pluck('nickname','id')
             ->toArray();
 

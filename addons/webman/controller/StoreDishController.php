@@ -4,7 +4,6 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\form\MyEditor;
-use addons\webman\model\AdminUser;
 use addons\webman\model\DishCategory;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -16,7 +15,7 @@ use ExAdmin\ui\component\grid\image\Image;
 /**
  * 餐點
  */
-class DishController
+class StoreDishController
 {
     protected $model;
 
@@ -31,19 +30,19 @@ class DishController
      */
     public function index(): Grid
     {
+        $adminUser = Admin::user();
         $categories = self::getCategories();
-        $stores = self::getStores();
 
-        return Grid::create(new $this->model, function (Grid $grid) use ($categories, $stores) {
+        return Grid::create(new $this->model, function (Grid $grid) use ($adminUser, $categories) {
             $grid->title(admin_trans('dish.title'));
             $grid->hideDelete();
             $grid->hideSelection();
 
-            $grid->model()->whereIn('admin_user_id', array_keys($stores));
-            $grid->model()->orderBy('admin_user_id', 'asc')->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'desc');
+            $grid->model()->where('admin_user_id', $adminUser->id);
+            $grid->model()->orderBy('category_id', 'asc')->orderBy('top', 'desc')->orderBy('sort', 'desc');
 
             $grid->expandFilter();
-            $grid->filter(function (Filter $filter) use ($categories, $stores) {
+            $grid->filter(function (Filter $filter) use ($categories) {
                 $filter->like()->text('title')->placeholder(admin_trans('dish.fields.title'));
                 $filter->eq()->select('status')
                     ->showSearch()
@@ -61,13 +60,6 @@ class DishController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('dish.fields.category_id'))
                     ->options($categories);
-
-                $filter->eq()->select('admin_user_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('dish.fields.admin_user_id'))
-                    ->options($stores);
             });
 
             $grid->column('id', admin_trans('dish.fields.id'))->align('center');
@@ -90,10 +82,6 @@ class DishController
             $grid->sortInput('sort', admin_trans('dish.fields.sort'))->align('center');
             $grid->column('top', admin_trans('dish.fields.top'))->align('center')->switch();
             $grid->column('status', admin_trans('dish.fields.status'))->align('center')->switch();
-            $grid->column('admin_user_id', admin_trans('dish.fields.admin_user_id'))->align('center')
-                ->display(function ($value) use ($stores) {
-                    return $stores[$value] ?? '門店遺失';
-                });
 
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
@@ -113,10 +101,12 @@ class DishController
         Form::extend('myEditor', MyEditor::class);
 
         return Form::create(new $this->model(), function (Form $form) {
+            $adminUser = Admin::user();
             $form->title(admin_trans('dish.title'));
             $form->layout('vertical');
 
-            $form->select('admin_user_id', admin_trans('dish.fields.admin_user_id'))->options(self::getStores())->required();
+            $form->hidden('admin_user_id')->value($adminUser->id);
+            $form->hidden('department_id')->value($adminUser->department_id);
             $form->select('category_id', admin_trans('dish.fields.category_id'))->options(self::getCategories())->required();
             $form->text('title', admin_trans('dish.fields.title'))->maxlength(200)->required();
             $form->image('picture', admin_trans('dish.fields.picture'))->required();
@@ -134,32 +124,7 @@ class DishController
             $form->switch('top', admin_trans('dish.fields.top'))->default(0);
             $form->switch('status', admin_trans('dish.fields.status'))->default(1);
             $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200);
-
-            $form->saving(function (Form $form) {
-                $department_id = Admin::user()->department_id;
-                $store = AdminUser::query()->where('id', $form->input('admin_user_id'))->first();
-
-                if ($store) {
-                    $department_id = $store->department_id;
-                }
-
-                $form->input('department_id', $department_id);
-            });
         });
-    }
-
-    /**
-     * 門店清單
-     * @return array
-     */
-    public function getStores(): array
-    {
-        $stores = AdminUser::query()
-            ->where('type', 4)
-            ->pluck('nickname','id')
-            ->toArray();
-
-        return $stores;
     }
 
     /**

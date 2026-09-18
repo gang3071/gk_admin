@@ -11,7 +11,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 /**
  * 餐點類別
  */
-class DishCategoryController
+class ChannelDishCategoryController
 {
     protected $model;
 

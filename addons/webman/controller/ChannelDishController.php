@@ -16,7 +16,7 @@ use ExAdmin\ui\component\grid\image\Image;
 /**
  * 餐點
  */
-class DishController
+class ChannelDishController
 {
     protected $model;
 
@@ -156,6 +156,7 @@ class DishController
     {
         $stores = AdminUser::query()
             ->where('type', 4)
+            ->where('department_id', Admin::user()->department_id)
             ->pluck('nickname','id')
             ->toArray();
 

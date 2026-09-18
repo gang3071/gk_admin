@@ -3,7 +3,6 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\model\AdminUser;
 use addons\webman\model\DishOrder;
 use addons\webman\model\PlayerPointsRecord;
 use addons\webman\service\PlayerPointsService;
@@ -18,7 +17,7 @@ use support\Db;
 /**
  * 餐點訂單
  */
-class DishOrderController
+class StoreDishOrderController
 {
     protected $model;
 
@@ -33,19 +32,19 @@ class DishOrderController
      */
     public function index(): Grid
     {
-        $stores = self::getStores();
+        $adminUser = Admin::user();
 
-        return Grid::create(new $this->model, function (Grid $grid) use ($stores)  {
+        return Grid::create(new $this->model, function (Grid $grid) use ($adminUser)  {
             $grid->title(admin_trans('dish_order.title'));
             $grid->hideAdd();
             $grid->hideDelete();
             $grid->hideSelection();
 
-            $grid->model()->whereIn('admin_user_id', array_keys($stores));
+            $grid->model()->where('admin_user_id', $adminUser->id);
             $grid->model()->with('items')->orderBy('id', 'desc');
 
             $grid->expandFilter();
-            $grid->filter(function (Filter $filter) use ($stores)  {
+            $grid->filter(function (Filter $filter) {
                 $filter->like()->text('order_no')->placeholder(admin_trans('dish_order.fields.order_no'));
                 $filter->like()->text('player.name')->placeholder(admin_trans('dish_order.fields.player_id'));
                 $filter->eq()->select('status')
@@ -54,13 +53,6 @@ class DishOrderController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('dish_order.fields.status'))
                     ->options(DishOrder::getStatusDescription());
-
-                $filter->eq()->select('admin_user_id')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('dish.fields.admin_user_id'))
-                    ->options($stores);
             });
 
             $grid->column('id', admin_trans('dish_order.fields.id'))->align('center');
@@ -100,10 +92,6 @@ class DishOrderController
                 });
             $grid->column('created_at', admin_trans('dish_order.fields.created_at'))->align('center');
             $grid->column('updated_at', admin_trans('dish_order.fields.updated_at'))->align('center');
-            $grid->column('admin_user_id', admin_trans('dish_order.fields.admin_user_id'))->align('center')
-                ->display(function ($value) use ($stores) {
-                    return $stores[$value] ?? '門店遺失';
-                });
 
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
@@ -203,20 +191,6 @@ class DishOrderController
                 }
             });
         });
-    }
-
-    /**
-     * 門店清單
-     * @return array
-     */
-    public function getStores(): array
-    {
-        $stores = AdminUser::query()
-            ->where('type', 4)
-            ->pluck('nickname','id')
-            ->toArray();
-
-        return $stores;
     }
 
     /**
