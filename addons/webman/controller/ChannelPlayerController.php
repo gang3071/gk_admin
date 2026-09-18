@@ -1110,6 +1110,10 @@ class ChannelPlayerController
             if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
                 $query->where('cash.is_crashed', $requestFilter['is_crashed']);
             }
+            // 账号状态筛选
+            if (isset($requestFilter['status']) && in_array($requestFilter['status'], [0, 1])) {
+                $query->where('player.status', $requestFilter['status']);
+            }
         }
     }
 
