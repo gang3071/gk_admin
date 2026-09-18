@@ -215,10 +215,10 @@ class ChannelPlayerController
             Db::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
             // VIP等级排序字段（用于排序）
             Db::raw('COALESCE(vip_level.sort, channel_min_vip_level.sort) as vip_level_sort'),
-            // 彩金累计（子查询，用于排序）
-            Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_lottery_record WHERE player_lottery_record.player_id = player.id AND player_lottery_record.status = 1) as lottery_amount'),
-            // 钱包锁定状态（子查询）
-            Db::raw('(SELECT wallet_locked FROM player_platform_cash WHERE player_platform_cash.player_id = player.id AND player_platform_cash.platform_id = 1 LIMIT 1) as wallet_locked'),
+            // 彩金累计（通过LEFT JOIN聚合）
+            Db::raw('COALESCE(lottery_stats.lottery_amount, 0) as lottery_amount'),
+            // 钱包锁定状态（通过LEFT JOIN获取）
+            Db::raw('COALESCE(ppc_stats.wallet_locked, 0) as wallet_locked'),
             // 打码量相关字段
             'player.total_bet_amount',
             'vip_retain_period.period_bet_amount as period_bet_amount',
@@ -278,6 +278,16 @@ class ChannelPlayerController
                     ->where('vip_retain_period.period_type', '=', 'retain')
                     ->where('vip_retain_period.status', '=', 1);
             })
+            // LEFT JOIN 彩金累计统计（预聚合子查询）
+            ->leftJoin(
+                Db::raw('(SELECT player_id, COALESCE(SUM(amount), 0) as lottery_amount FROM player_lottery_record WHERE status = 1 GROUP BY player_id) as lottery_stats'),
+                'player.id', '=', 'lottery_stats.player_id'
+            )
+            // LEFT JOIN 钱包锁定状态
+            ->leftJoin(
+                Db::raw('(SELECT player_id, wallet_locked FROM player_platform_cash WHERE platform_id = 1) as ppc_stats'),
+                'player.id', '=', 'ppc_stats.player_id'
+            )
             // LEFT JOIN 电子游戏打码量统计（预聚合子查询）
             ->leftJoin(
                 Db::raw('(SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM play_game_record GROUP BY player_id) as game_bet_stats'),
