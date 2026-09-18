@@ -16,6 +16,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use Illuminate\Support\Str;
+use support\Log;
 use Webman\RedisQueue\Client;
 
 /**
@@ -519,13 +520,18 @@ class SystemSettingController
         $data = $data->where('feature', 'vip_welcome_voice')->first();
         $config = json_decode($data->content ?? '{}', true) ?: [];
 
+        // 将自定义字段注入模型属性，让 ExAdmin 能将其绑定到 Vue 响应式数据
+        $data->setRawAttributes(array_merge($data->getAttributes(), [
+            'vip8_text'  => $config[8]['text'] ?? '',
+            'vip9_text'  => $config[9]['text'] ?? '',
+            'vip10_text' => $config[10]['text'] ?? '',
+        ]));
+
         return Form::create($data, function (Form $form) use ($data, $config) {
             $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
 
             foreach ([8, 9, 10] as $level) {
-                $levelConfig = $config[$level] ?? [];
-                $audioUrl = $levelConfig['url'] ?? '';
-                $text = $levelConfig['text'] ?? '';
+                $audioUrl = $config[$level]['url'] ?? '';
 
                 $headerHtml = '<div style="margin:16px 0 8px;padding:8px 12px;background:#f0f5ff;border-left:4px solid #1890ff;font-weight:bold;font-size:14px;">VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.level_voice') . '</div>';
                 $form->push(Html::markdown($headerHtml));
@@ -536,7 +542,6 @@ class SystemSettingController
                 }
 
                 $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
-                    ->value($text)
                     ->maxlength(200)
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
             }
@@ -553,6 +558,7 @@ class SystemSettingController
                     ];
                 }
                 $form->input('content', json_encode($newConfig, JSON_UNESCAPED_UNICODE));
+                Log::info('报错1', [$newConfig]);
             });
 
             $form->saved(function (Form $form) {
@@ -582,7 +588,7 @@ class SystemSettingController
                 SystemSetting::query()->where('id', $id)->update([
                     'content' => json_encode($content, JSON_UNESCAPED_UNICODE),
                 ]);
-
+                Log::info('报错', [$errors]);
                 if (!empty($errors)) {
                     return message_warning(admin_trans('system_setting.vip_welcome_voice.save_partial') . implode('，', $errors));
                 }
