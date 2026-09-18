@@ -786,9 +786,9 @@ class ChannelPlayerController
                 // 数据时间筛选（用于电子游戏打码量统计）
                 $filter->form()->hidden('data_time_start');
                 $filter->form()->hidden('data_time_end');
-                $filter->form()->dateTimeRange('data_time_start', 'data_time_end', admin_trans('player.data_time'))->placeholder([
-                    admin_trans('public_msg.created_at_start'),
-                    admin_trans('public_msg.created_at_end')
+                $filter->form()->dateTimeRange('data_time_start', 'data_time_end', '')->placeholder([
+                    admin_trans('player.data_time') . admin_trans('public_msg.created_at_start'),
+                    admin_trans('player.data_time') . admin_trans('public_msg.created_at_end')
                 ]);
             });
             $grid->hideDelete();
@@ -1115,25 +1115,6 @@ class ChannelPlayerController
                 $query->where('player.status', $requestFilter['status']);
             }
         }
-    }
-
-    /**
-     * 构建电子游戏打码量统计子查询
-     * @param string $dataTimeStart 开始时间
-     * @param string $dataTimeEnd 结束时间
-     * @return string
-     */
-    private function buildGameBetStatsQuery(string $dataTimeStart = '', string $dataTimeEnd = ''): string
-    {
-        $whereClause = '';
-        if (!empty($dataTimeStart)) {
-            $whereClause .= " AND created_at >= '" . addslashes($dataTimeStart) . "'";
-        }
-        if (!empty($dataTimeEnd)) {
-            $whereClause .= " AND created_at <= '" . addslashes($dataTimeEnd) . "'";
-        }
-
-        return "(SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM play_game_record WHERE 1=1 {$whereClause} GROUP BY player_id) as game_bet_stats";
     }
 
     /**
