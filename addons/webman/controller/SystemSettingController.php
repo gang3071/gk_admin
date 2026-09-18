@@ -542,19 +542,17 @@ class SystemSettingController
                     $form->push(Html::markdown($audioHtml));
                 }
 
-                $form->text("vip{$level}_text")
+                $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
                     ->value($text)
                     ->maxlength(200)
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
             }
 
             $form->saving(function (Form $form) use ($config, $recordId) {
-                $text = $form->input("vip8_text", '');
-                Log::info('dddd', [$text]);
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
                     $newConfig[$level] = [
-                        'text' => $text,
+                        'text' => $form->input("vip{$level}_text", ''),
                         'url'  => $newConfig[$level]['url'] ?? '',
                     ];
                 }
@@ -566,7 +564,6 @@ class SystemSettingController
                         continue;
                     }
                     $result = GoogleTtsHttpService::generateVipWelcomeVoice($text, $level);
-                    Log::info('dddd', [$result]);
                     if ($result['success']) {
                         $newConfig[$level]['url'] = $result['url'];
                     } else {
