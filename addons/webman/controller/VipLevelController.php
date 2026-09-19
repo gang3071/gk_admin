@@ -14,6 +14,7 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use support\Log;
+use support\Redis;
 
 /**
  * VIP等级管理
@@ -221,6 +222,8 @@ class VipLevelController
                     $vipLevelId = request()->post('vip_level_id', 0);
                     $data = request()->post('data', []);
 
+                    $redis = Redis::connection()->client();
+
                     foreach ($gamePlatform as $value) {
                         $key = 'ratio_point_' . $value->id;
 
@@ -235,6 +238,9 @@ class VipLevelController
                             ['ratio_point' => $ratioPoint, 'status' => 1]
                         );
 
+                        // 清除对应的 Redis 缓存（与 gk_api PlayerPointsService 保持一致）
+                        $cacheKey = sprintf('gk_api:vip_level_point:%d:%d', $vipLevelId, $value->id);
+                        $redis->del($cacheKey);
                     }
                 } catch (\Throwable $e) {
                     Log::error('VIP Point save failed: ' . $e->getMessage(), [
