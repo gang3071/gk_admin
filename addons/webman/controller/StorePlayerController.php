@@ -128,6 +128,9 @@ class StorePlayerController
             if (!empty($requestFilter['created_at_end'])) {
                 $query->where('player.created_at', '<=', $requestFilter['created_at_end']);
             }
+            if (isset($requestFilter['birthday_month']) && $requestFilter['birthday_month'] !== '') {
+                $query->whereRaw('MONTH(player_extend.birthday) = ?', [intval($requestFilter['birthday_month'])]);
+            }
         }
 
         $list = $query->select([
@@ -808,6 +811,16 @@ class StorePlayerController
 
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
+
+                // 生日月份筛选
+                $monthOptions = ['' => admin_trans('public_msg.all')];
+                for ($m = 1; $m <= 12; $m++) {
+                    $monthOptions[$m] = $m . '月';
+                }
+                $filter->eq()->select('birthday_month')
+                    ->placeholder(admin_trans('player.filter.birthday_month'))
+                    ->options($monthOptions)
+                    ->style(['width' => '150px']);
 
                 // 设备注册时间范围筛选
                 $filter->form()->hidden('created_at_start');

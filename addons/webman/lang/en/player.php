@@ -321,6 +321,7 @@ return [
     // Filters
     'filter' => [
         'select_device' => 'Select Player',
+        'birthday_month' => 'Birthday Month',
     ],
 
     // Machine Crash Related
@@ -368,5 +369,6 @@ return [
     // Help Text
     'help' => [
         'birthday_disabled' => 'Birthday bonus already issued this year, cannot modify birthday',
+        'birthday_month' => 'Birthday Month',
     ],
 ];

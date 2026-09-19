@@ -321,6 +321,7 @@ return [
     // フィルター
     'filter' => [
         'select_device' => 'プレイヤーを選択',
+        'birthday_month' => '誕生月',
     ],
 
     // マシンクラッシュ関連
@@ -368,5 +369,6 @@ return [
     // ヘルプテキスト
     'help' => [
         'birthday_disabled' => '今年の誕生日ボーナスは既に発行済み、誕生日を変更できません',
+        'birthday_month' => '誕生月',
     ],
 ];

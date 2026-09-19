@@ -322,6 +322,7 @@ return [
     // 筛选器
     'filter' => [
         'select_device' => '选择玩家',
+        'birthday_month' => '生日月份',
     ],
 
     // 爆机相关
@@ -369,5 +370,6 @@ return [
     // 帮助文本
     'help' => [
         'birthday_disabled' => '当年已发放生日礼金，无法修改生日',
+        'birthday_month' => '生日月份',
     ],
 ];
