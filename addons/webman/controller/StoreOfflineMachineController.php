@@ -232,7 +232,7 @@ class StoreOfflineMachineController
                     if ($data->gaming_user_id) {
                         $balance = WalletService::getBalance($data->gaming_user_id);
                         return Html::create()->content([
-                            Html::strong($balance)->style(['color' => '#1890ff'])
+                            Html::create($balance)->tag('strong')->style(['color' => '#1890ff'])
                         ]);
                     }
                     return '-';
@@ -339,7 +339,7 @@ class StoreOfflineMachineController
                     if ($data->gaming_user_id) {
                         $balance = WalletService::getBalance($data->gaming_user_id);
                         return Html::create()->content([
-                            Html::strong($balance)->style(['color' => '#1890ff'])
+                            Html::create($balance)->tag('strong')->style(['color' => '#1890ff'])
                         ]);
                     }
                     return '-';
