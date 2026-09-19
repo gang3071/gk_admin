@@ -8,6 +8,7 @@ use addons\webman\model\PlayerPointsRecord;
 use Exception;
 use support\Db;
 use support\Log;
+use support\Redis;
 
 /**
  * 玩家积分服务（gk_admin）
@@ -126,6 +127,9 @@ class PlayerPointsService
 
             Db::commit();
 
+            // 同步 Redis 缓存
+            self::syncPointsCache($playerId);
+
             return [
                 'points_added' => $points,
                 'total_points' => $playerPoints->total_points,
@@ -217,6 +221,9 @@ class PlayerPointsService
 
             Db::commit();
 
+            // 同步 Redis 缓存
+            self::syncPointsCache($playerId);
+
             return true;
 
         } catch (Exception $e) {
@@ -302,6 +309,9 @@ class PlayerPointsService
             ]);
 
             Db::commit();
+
+            // 同步 Redis 缓存
+            self::syncPointsCache($playerId);
 
             return true;
 
@@ -389,6 +399,9 @@ class PlayerPointsService
 
             Db::commit();
 
+            // 同步 Redis 缓存
+            self::syncPointsCache($playerId);
+
             return true;
 
         } catch (Exception $e) {
@@ -456,5 +469,35 @@ class PlayerPointsService
             'total' => $total,
             'list' => $records,
         ];
+    }
+
+    /**
+     * 同步积分到 Redis 缓存（与 gk_api PlayerPointsService 保持一致）
+     *
+     * @param int $playerId
+     */
+    private static function syncPointsCache(int $playerId): void
+    {
+        try {
+            $playerPoints = PlayerPoints::where('player_id', $playerId)->first();
+            if (!$playerPoints) {
+                return;
+            }
+
+            $redis = Redis::connection()->client();
+            $key = 'gk_api:player_points:' . $playerId;
+            $redis->hMSet($key, [
+                'available_points' => (int)$playerPoints->available_points,
+                'frozen_points' => (int)$playerPoints->frozen_points,
+                'total_points' => (int)$playerPoints->total_points,
+                'last_update' => time(),
+            ]);
+            $redis->expire($key, 86400 * 365);
+        } catch (\Throwable $e) {
+            Log::warning('[积分] Redis缓存同步失败', [
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }
