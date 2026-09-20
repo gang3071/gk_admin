@@ -790,6 +790,15 @@ class StorePlayerController
                 $filter->like()->text('phone')->placeholder(admin_trans('player.fields.phone'));
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
 
+                // 生日月份筛选
+                $monthOptions = [];
+                for ($m = 1; $m <= 12; $m++) {
+                    $monthOptions[$m] = $m;
+                }
+                $filter->eq()->select('birthday_month')
+                    ->options($monthOptions)
+                    ->placeholder(admin_trans('player_extend.fields.birthday_month'));
+
                 // 设备注册时间范围筛选
                 $filter->form()->hidden('created_at_start');
                 $filter->form()->hidden('created_at_end');

@@ -10,6 +10,7 @@ return [
         'qq' => 'QQ アカウント',
         'telegram' => '電報',
         'birthday' => '誕生日',
+        'birthday_month' => '誕生月',
         'id_number' => 'ID番号',
         'id_card_front' => 'IDカード表面',
         'id_card_back' => 'IDカード裏面',
