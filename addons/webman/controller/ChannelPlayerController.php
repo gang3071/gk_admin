@@ -221,6 +221,8 @@ class ChannelPlayerController
             Db::raw('COALESCE(vip_level.sort, channel_min_vip_level.sort) as vip_level_sort'),
             // 彩金累计（通过LEFT JOIN聚合）
             Db::raw('COALESCE(lottery_stats.lottery_amount, 0) as lottery_amount'),
+            // 电子游戏打码量（通过LEFT JOIN聚合，支持排序）
+            Db::raw('COALESCE(electronic_game_stats.electronic_game_bet_amount, 0) as electronic_game_bet_amount'),
             // 钱包锁定状态（通过LEFT JOIN获取）
             Db::raw('COALESCE(ppc_stats.wallet_locked, 0) as wallet_locked'),
             // 打码量相关字段
@@ -290,6 +292,11 @@ class ChannelPlayerController
                 Db::raw('(SELECT player_id, wallet_locked FROM player_platform_cash WHERE platform_id = 1) as ppc_stats'),
                 'player.id', '=', 'ppc_stats.player_id'
             )
+            // LEFT JOIN 电子游戏打码量统计（支持排序和数据时间筛选）
+            ->leftJoin(
+                Db::raw('(' . $this->buildElectronicGameBetSubquery($dataTimeStart, $dataTimeEnd) . ') as electronic_game_stats'),
+                'player.id', '=', 'electronic_game_stats.player_id'
+            )
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
@@ -353,30 +360,7 @@ class ChannelPlayerController
             unset($item);
         }
 
-        // ✅ 独立查询：电子游戏打码量（避免大表GROUP BY拖慢主查询）
-        if (!empty($list)) {
-            $playerIds = array_column($list, 'id');
-            $gameBetQuery = \addons\webman\model\PlayGameRecord::query()
-                ->select('player_id', Db::raw('COALESCE(SUM(bet), 0) as electronic_game_bet_amount'))
-                ->whereIn('player_id', $playerIds)
-                ->groupBy('player_id');
-
-            // 数据时间筛选
-            if (!empty($dataTimeStart)) {
-                $gameBetQuery->where('created_at', '>=', $dataTimeStart);
-            }
-            if (!empty($dataTimeEnd)) {
-                $gameBetQuery->where('created_at', '<=', $dataTimeEnd);
-            }
-
-            $gameBetAmounts = $gameBetQuery->pluck('electronic_game_bet_amount', 'player_id')->toArray();
-
-            // 合并电子游戏打码量到列表
-            foreach ($list as &$item) {
-                $item['electronic_game_bet_amount'] = $gameBetAmounts[$item['id']] ?? 0;
-            }
-            unset($item);
-        }
+        // 电子游戏打码量已通过 LEFT JOIN 子查询在主查询中获取，支持排序
 
         // 计算小计和纯开分金额（彩金已在 SQL 子查询中获取）
         if (!empty($list)) {
@@ -6520,6 +6504,23 @@ class ChannelPlayerController
         } catch (\Exception $e) {
             return jsonFailResponse($e->getMessage());
         }
+    }
+
+    /**
+     * 构建电子游戏打码量子查询SQL（用于LEFT JOIN，支持排序和数据时间筛选）
+     */
+    private function buildElectronicGameBetSubquery(string $dataTimeStart = '', string $dataTimeEnd = ''): string
+    {
+        $tableName = (new PlayGameRecord())->getTable();
+        $sql = "SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM {$tableName} WHERE 1=1";
+        if (!empty($dataTimeStart)) {
+            $sql .= " AND created_at >= '" . addslashes($dataTimeStart) . "'";
+        }
+        if (!empty($dataTimeEnd)) {
+            $sql .= " AND created_at <= '" . addslashes($dataTimeEnd) . "'";
+        }
+        $sql .= " GROUP BY player_id";
+        return $sql;
     }
 
 }
