@@ -127,10 +127,7 @@ class StorePlayerController
                 $query->where('player.created_at', '<=', $requestFilter['created_at_end']);
             }
             if (isset($requestFilter['birthday_month']) && $requestFilter['birthday_month'] !== '') {
-                $month = intval($requestFilter['birthday_month']);
-                $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01';
-                $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . date('t', mktime(0, 0, 0, $month, 1));
-                $query->whereBetween('player_extend.birthday', [$startDate, $endDate]);
+                $query->whereRaw('MONTH(player_extend.birthday) = ?', [intval($requestFilter['birthday_month'])]);
             }
         }
 
