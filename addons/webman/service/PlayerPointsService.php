@@ -67,7 +67,8 @@ class PlayerPointsService
         string $remark,
         array $adminInfo,
         ?int $type = null,
-        ?string $source = null
+        ?string $source = null,
+        bool $updateTotal = true
     ): array {
         $type = $type ?? PlayerPointsRecord::TYPE_POINTS_ADD;
         $source = $source ?? PlayerPointsRecord::SOURCE_POINTS;
@@ -93,14 +94,17 @@ class PlayerPointsService
 
             // 使用乐观锁更新
             $currentVersion = $playerPoints->version;
+            $updateData = [
+                'available_points' => Db::raw('available_points + ' . (int)$points),
+                'version' => $currentVersion + 1,
+                'updated_at' => date('Y-m-d H:i:s'),
+            ];
+            if ($updateTotal) {
+                $updateData['total_points'] = Db::raw('total_points + ' . (int)$points);
+            }
             $affected = PlayerPoints::where('id', $playerPoints->id)
                 ->where('version', $currentVersion)
-                ->update([
-                    'total_points' => Db::raw('total_points + ' . (int)$points),
-                    'available_points' => Db::raw('available_points + ' . (int)$points),
-                    'version' => $currentVersion + 1,
-                    'updated_at' => date('Y-m-d H:i:s'),
-                ]);
+                ->update($updateData);
 
             if ($affected === 0) {
                 throw new Exception(admin_trans('player_points.message.add_failed'));
