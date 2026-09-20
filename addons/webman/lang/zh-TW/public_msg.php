@@ -12,4 +12,5 @@ return [
     ],
     'action_at_start' => '結算開始時間',
     'action_at_end' => '結算結束時間',
+    'month_unit' => '月',
 ];

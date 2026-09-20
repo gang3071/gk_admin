@@ -10,6 +10,8 @@ use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
+use addons\webman\model\PlayerPoints;
+use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
@@ -126,6 +128,12 @@ class StorePlayerController
             if (!empty($requestFilter['created_at_end'])) {
                 $query->where('player.created_at', '<=', $requestFilter['created_at_end']);
             }
+            if (isset($requestFilter['birthday_month']) && $requestFilter['birthday_month'] !== '') {
+                $month = intval($requestFilter['birthday_month']);
+                $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01';
+                $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . date('t', mktime(0, 0, 0, $month, 1));
+                $query->whereBetween('player_extend.birthday', [$startDate, $endDate]);
+            }
         }
 
         $list = $query->select([
@@ -135,6 +143,7 @@ class StorePlayerController
             'player_extend.machine_put_point',
             'player_extend.pending_cashback_amount',
             'player_extend.total_cashback_amount',
+            'player_extend.birthday',
             // VIP等级字段
             'vip_level.name as vip_level_name',
             'vip_level.sort as vip_level_sort',
@@ -146,9 +155,15 @@ class StorePlayerController
             Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_delivery_record WHERE player_delivery_record.player_id = player.id AND player_delivery_record.type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ') as lottery_ticket_reward_amount'),
             // 小计 = 开分 - 洗分（用于排序）
             Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0)) as subtotal'),
+            // 积分字段
+            'player_points.available_points',
+            'player_points.frozen_points',
+            'player_points.total_points',
         ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
+            // 积分表关联
+            ->leftjoin('player_points', 'player.id', '=', 'player_points.player_id')
             // LEFT JOIN 保级周期（获取当前周期内打码量）
             ->leftJoin('player_vip_period as vip_retain_period', function ($join) {
                 $join->on('player.id', '=', 'vip_retain_period.player_id')
@@ -440,6 +455,10 @@ class StorePlayerController
                 ]);
             })->width(110)->align('center');
 
+            $grid->column('birthday', admin_trans('player_extend.fields.birthday'))->display(function ($value) {
+                return $value ? date('m-d', strtotime($value)) : '-';
+            })->width(80)->align('center');
+
             $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($value) {
                 return match ($value) {
                     Player::PLAYER_SOURCE_ONLINE => Tag::create(admin_trans('player.fields.player_source_online'))->color('blue'),
@@ -567,6 +586,17 @@ class StorePlayerController
                     'color' => 'green'
                 ]);
             })->sortable()->width(110)->align('center');
+
+            // 积分列
+            $grid->column('available_points', admin_trans('player_points.fields.available_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('green');
+            })->align('center')->width(100)->sortable();
+            $grid->column('frozen_points', admin_trans('player_points.fields.frozen_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('orange');
+            })->align('center')->width(100)->sortable();
+            $grid->column('total_points', admin_trans('player_points.fields.total_points'))->display(function ($val) {
+                return Tag::create($val ?? 0)->color('blue');
+            })->align('center')->width(100)->sortable();
 
             $grid->column('lottery_ticket_reward_amount', admin_trans('player.total_lottery_ticket_reward_amount'))->display(function ($value) {
                 return Html::create(number_format(floatval($value ?? 0), 2))->style([
@@ -791,13 +821,14 @@ class StorePlayerController
                 $filter->like()->text('name')->placeholder(admin_trans('player.fields.device_name'));
 
                 // 生日月份筛选
-                $monthOptions = [];
+                $monthOptions = ['' => admin_trans('public_msg.all')];
                 for ($m = 1; $m <= 12; $m++) {
-                    $monthOptions[$m] = $m;
+                    $monthOptions[$m] = $m . admin_trans('public_msg.month_unit');
                 }
                 $filter->eq()->select('birthday_month')
+                    ->placeholder(admin_trans('player.filter.birthday_month'))
                     ->options($monthOptions)
-                    ->placeholder(admin_trans('player_extend.fields.birthday_month'));
+                    ->style(['width' => '150px']);
 
                 // 设备注册时间范围筛选
                 $filter->form()->hidden('created_at_start');
@@ -820,6 +851,30 @@ class StorePlayerController
                 );
 
                 $actions->edit()->modal($this->form())->width('60%');
+
+                // 积分管理
+                $dropdown = $actions->dropdown();
+                $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
+                    ->modal([StorePlayerPointsController::class, 'index'], ['player_id' => $data['id']])
+                    ->width('90%')
+                    ->title($data['name'] . ' (ID:' . $data['id'] . ') - ' . admin_trans('player_points.records_title'));
+                $dropdown->append(admin_trans('player_points.action.add_points'), 'PlusCircleOutlined')
+                    ->modal([StorePlayerPointsController::class, 'addPoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.add_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.deduct_points'), 'MinusCircleOutlined')
+                    ->modal([StorePlayerPointsController::class, 'deductPoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.deduct_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.freeze_points'), 'LockOutlined')
+                    ->modal([StorePlayerPointsController::class, 'freezePoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.freeze_points_title') . ' - ' . $data['name']);
+                $dropdown->append(admin_trans('player_points.action.unfreeze_points'), 'UnlockOutlined')
+                    ->modal([StorePlayerPointsController::class, 'unfreezePoints'], ['player_id' => $data['id']])
+                    ->width('600px')
+                    ->title(admin_trans('player_points.form.unfreeze_points_title') . ' - ' . $data['name']);
+
                 $actions->hideDel();
                 $actions->detail()->modal($this->viewForm())->width('60%');
             });

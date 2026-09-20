@@ -12,4 +12,5 @@ return [
     ],
     'action_at_start' => '決済開始時間',
     'action_at_end' => '決済終了時間',
+    'month_unit' => '月',
 ];
