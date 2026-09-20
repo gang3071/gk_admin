@@ -384,20 +384,26 @@ class StoreOfflineMachineController
      * @param Machine $machine
      * @return object
      */
-    private function getMachineStatusViaApi(Machine $machine): object
+    private function getMachineStatusViaApi(Machine $machine): \stdClass
     {
         try {
-            $apiService = new \app\service\MachineApiService();
-            $result = $apiService->getMachineStatus($machine->id);
-            return is_array($result) ? (object) $result : $result;
+            $result = \app\service\MachineApiService::getMachineStatus($machine->id);
+
+            $status = new \stdClass();
+            if (isset($result['machine_info'])) {
+                foreach ($result['machine_info'] as $key => $value) {
+                    $status->$key = $value;
+                }
+            }
+            if (isset($result['cache_data'])) {
+                foreach ($result['cache_data'] as $key => $value) {
+                    $cleanKey = str_replace('machine_tcp_data_cache_' . $machine->id . '_', '', $key);
+                    $status->$cleanKey = $value;
+                }
+            }
+            return $status;
         } catch (\Exception $e) {
-            // 线下机台可能未联网，返回默认值
-            return (object)[
-                'keep_seconds' => 0,
-                'keeping' => 0,
-                'last_point_at' => 0,
-                'last_play_time' => 0,
-            ];
+            return new \stdClass();
         }
     }
 
