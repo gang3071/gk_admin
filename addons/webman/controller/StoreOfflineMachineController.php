@@ -388,7 +388,8 @@ class StoreOfflineMachineController
     {
         try {
             $apiService = new \app\service\MachineApiService();
-            return $apiService->getMachineStatus($machine->id);
+            $result = $apiService->getMachineStatus($machine->id);
+            return is_array($result) ? (object) $result : $result;
         } catch (\Exception $e) {
             // 线下机台可能未联网，返回默认值
             return (object)[
