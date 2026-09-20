@@ -20,6 +20,9 @@ class ShiftReportExporter extends Excel
     // 存储每个设备的累计数据 [player_name => [...]]
     protected $deviceTotals = [];
 
+    // 存储交班记录的ID和时间，用于导出汇总工作表
+    protected $shiftSummary = [];
+
     /**
      * 固定导出的16个列定义
      */
@@ -198,6 +201,13 @@ class ShiftReportExporter extends Excel
                 if (!$originalRecord) {
                     continue;
                 }
+
+                // 收集交班ID和时间用于汇总工作表
+                $this->shiftSummary[] = [
+                    'id' => $originalRecord->id,
+                    'start_time' => $originalRecord->start_time,
+                    'end_time' => $originalRecord->end_time,
+                ];
 
                 // 交班记录标题行（包含交班ID和时间）
                 $titleText = admin_trans('shift_handover.shift_id') . ': ' . $originalRecord->id . '    ' .
@@ -447,6 +457,9 @@ class ShiftReportExporter extends Excel
                 // 设置列宽
                 $this->setColumnWidths($activeColumns);
 
+                // 创建机台报表工作表
+                $this->createMachineReportSheet();
+
                 // 冻结首行
                 $this->sheet->freezePane('A1');
 
@@ -507,6 +520,54 @@ class ShiftReportExporter extends Excel
                 $devices = null;
                 unset($devices);
             });
+    }
+
+    /**
+     * 创建机台报表工作表（交班ID + 交班时间）
+     */
+    protected function createMachineReportSheet()
+    {
+        if (empty($this->shiftSummary)) {
+            return;
+        }
+
+        // 创建新工作表
+        $reportSheet = $this->spreadsheet->createSheet();
+        $reportSheet->setTitle(admin_trans('shift_handover.machine_report_sheet_title'));
+
+        // 表头（参考主工作表样式）
+        $reportSheet->setCellValue('A1', admin_trans('shift_handover.shift_id'));
+        $reportSheet->setCellValue('B1', admin_trans('shift_handover.shift_time'));
+
+        $reportSheet->getStyle('A1:B1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+        ]);
+
+        $reportSheet->getColumnDimension('A')->setWidth(15);
+        $reportSheet->getColumnDimension('B')->setWidth(35);
+
+        // 写入数据
+        $row = 2;
+        foreach ($this->shiftSummary as $index => $item) {
+            $timeRange = $item['start_time'] . ' ~ ' . $item['end_time'];
+            $reportSheet->setCellValue('A' . $row, $item['id']);
+            $reportSheet->setCellValue('B' . $row, $timeRange);
+
+            // ID 居中对齐
+            $reportSheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // 交替行背景色
+            $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
+            $reportSheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+            ]);
+
+            $row++;
+        }
     }
 
     /**
