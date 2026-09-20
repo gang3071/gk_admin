@@ -815,7 +815,7 @@ class StorePlayerController
                 // 生日月份筛选
                 $monthOptions = ['' => admin_trans('public_msg.all')];
                 for ($m = 1; $m <= 12; $m++) {
-                    $monthOptions[$m] = $m . '月';
+                    $monthOptions[$m] = $m . admin_trans('public_msg.month_unit');
                 }
                 $filter->eq()->select('birthday_month')
                     ->placeholder(admin_trans('player.filter.birthday_month'))

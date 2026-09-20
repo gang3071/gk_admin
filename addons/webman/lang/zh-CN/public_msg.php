@@ -12,4 +12,5 @@ return [
     ],
     'action_at_start' => '结算开始时间',
     'action_at_end' => '结算结束时间',
+    'month_unit' => '月',
 ];
