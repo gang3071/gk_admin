@@ -70,6 +70,18 @@ class MachineCategory extends Model
                     'new_value' => $category->keep_minutes,
                 ]);
             }
+
+            // 检查 turn_used_point 变化
+            if ($category->wasChanged('turn_used_point')) {
+                $turnUsedPointCacheKey = "machine_category:{$category->id}:turn_used_point";
+                Cache::delete($turnUsedPointCacheKey);
+                \support\Log::info('MachineCategory: 已清理 turn_used_point 缓存', [
+                    'category_id' => $category->id,
+                    'cache_key' => $turnUsedPointCacheKey,
+                    'old_value' => $category->getOriginal('turn_used_point'),
+                    'new_value' => $category->turn_used_point,
+                ]);
+            }
         });
     }
 
