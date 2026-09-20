@@ -10,6 +10,7 @@ return [
         'qq' => 'QQ account',
         'telegram' => 'Telegram',
         'birthday' => 'birthday',
+        'birthday_month' => 'Birthday Month',
         'id_number' => 'ID Number',
         'id_card_front' => 'ID Card Front',
         'id_card_back' => 'ID Card Back',

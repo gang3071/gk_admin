@@ -10,6 +10,7 @@ return [
         'qq' => 'QQ賬號',
         'telegram' => 'Telegram',
         'birthday' => '生日',
+        'birthday_month' => '生日月份',
         'id_number' => '身份證號',
         'id_card_front' => '身份證正面照',
         'id_card_back' => '身份證反面照',
