@@ -129,7 +129,10 @@ class StorePlayerController
                 $query->where('player.created_at', '<=', $requestFilter['created_at_end']);
             }
             if (isset($requestFilter['birthday_month']) && $requestFilter['birthday_month'] !== '') {
-                $query->whereRaw('MONTH(player_extend.birthday) = ?', [intval($requestFilter['birthday_month'])]);
+                $month = intval($requestFilter['birthday_month']);
+                $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01';
+                $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . date('t', mktime(0, 0, 0, $month, 1));
+                $query->whereBetween('player_extend.birthday', [$startDate, $endDate]);
             }
         }
 
@@ -140,6 +143,7 @@ class StorePlayerController
             'player_extend.machine_put_point',
             'player_extend.pending_cashback_amount',
             'player_extend.total_cashback_amount',
+            'player_extend.birthday',
             // VIP等级字段
             'vip_level.name as vip_level_name',
             'vip_level.sort as vip_level_sort',
@@ -450,6 +454,10 @@ class StorePlayerController
                     'fontSize' => '13px'
                 ]);
             })->width(110)->align('center');
+
+            $grid->column('birthday', admin_trans('player_extend.fields.birthday'))->display(function ($value) {
+                return $value ? date('m-d', strtotime($value)) : '-';
+            })->width(80)->align('center');
 
             $grid->column('player_source', admin_trans('player.fields.player_source'))->display(function ($value) {
                 return match ($value) {
