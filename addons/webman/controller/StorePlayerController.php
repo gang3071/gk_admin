@@ -826,7 +826,7 @@ class StorePlayerController
                     $monthOptions[$m] = $m . admin_trans('public_msg.month_unit');
                 }
                 $filter->eq()->select('birthday_month')
-                    ->placeholder(admin_trans('player.filter.birthday_month'))
+                    ->placeholder(admin_trans('player_extend.fields.birthday_month'))
                     ->options($monthOptions)
                     ->style(['width' => '150px']);
 
