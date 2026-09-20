@@ -180,7 +180,8 @@ class StoreDishOrderController
                             admin_trans('dish_order.cancel_refund') . ' ' . $order->order_no,
                             $adminInfo,
                             PlayerPointsRecord::TYPE_REFUND,
-                            PlayerPointsRecord::SOURCE_REFUND
+                            PlayerPointsRecord::SOURCE_REFUND,
+                            false // 退款只恢复可用积分，不增加总积分
                         );
                     }
 
