@@ -554,6 +554,7 @@ class ShiftReportExporter extends Excel
             'open_point' => admin_trans('shift_handover.machine_open_point'),
             'wash_point' => admin_trans('shift_handover.machine_wash_point'),
             'profit' => admin_trans('shift_handover.machine_profit'),
+            'pressure' => admin_trans('shift_handover.machine_pressure'),
         ];
 
         // 设置列宽（固定宽度，两种类型共用）
@@ -704,13 +705,13 @@ class ShiftReportExporter extends Excel
                 $reportSheet->getRowDimension($row)->setRowHeight(22);
                 $row++;
 
-                // 表头（钢珠只显示5列）
+                // 表头（钢珠显示6列）
                 $colIndex = 1;
                 foreach ($steelBallColumns as $header) {
                     $reportSheet->setCellValueByColumnAndRow($colIndex, $row, $header);
                     $colIndex++;
                 }
-                $reportSheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                $reportSheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
@@ -720,21 +721,22 @@ class ShiftReportExporter extends Excel
                 $row++;
 
                 // 数据行
-                $steelBallSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0];
+                $steelBallSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0, 'pressure' => 0];
                 foreach ($steelBallDetails as $detailIndex => $detail) {
                     $reportSheet->setCellValue('A' . $row, $detail->machine_code ?: '-');
                     $reportSheet->setCellValue('B' . $row, $detail->machine_name ?: '-');
                     $reportSheet->setCellValue('C' . $row, number_format($detail->open_point, 2));
                     $reportSheet->setCellValue('D' . $row, number_format($detail->wash_point, 2));
                     $reportSheet->setCellValue('E' . $row, number_format($detail->profit, 2));
+                    $reportSheet->setCellValue('F' . $row, number_format($detail->pressure, 2));
 
                     // 数字列右对齐
-                    $reportSheet->getStyle('C' . $row . ':E' . $row)
+                    $reportSheet->getStyle('C' . $row . ':F' . $row)
                         ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
 
                     // 交替行背景色
                     $rowColor = $detailIndex % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
-                    $reportSheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                    $reportSheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                         'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
                         'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
                     ]);
@@ -748,6 +750,7 @@ class ShiftReportExporter extends Excel
                     $steelBallSubtotal['open_point'] += $detail->open_point;
                     $steelBallSubtotal['wash_point'] += $detail->wash_point;
                     $steelBallSubtotal['profit'] += $detail->profit;
+                    $steelBallSubtotal['pressure'] += $detail->pressure;
 
                     $row++;
                 }
@@ -758,8 +761,9 @@ class ShiftReportExporter extends Excel
                 $reportSheet->setCellValue('C' . $row, number_format($steelBallSubtotal['open_point'], 2));
                 $reportSheet->setCellValue('D' . $row, number_format($steelBallSubtotal['wash_point'], 2));
                 $reportSheet->setCellValue('E' . $row, number_format($steelBallSubtotal['profit'], 2));
+                $reportSheet->setCellValue('F' . $row, number_format($steelBallSubtotal['pressure'], 2));
 
-                $reportSheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                $reportSheet->getStyle('A' . $row . ':F' . $row)->applyFromArray([
                     'font' => ['bold' => true, 'size' => 11],
                     'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
