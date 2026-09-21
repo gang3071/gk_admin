@@ -483,7 +483,7 @@ class System extends SystemAbstract
                         'type' => $item->type,
                         'created_at' => $createTime,
                         'status' => true,
-                        'url' => admin_url(['addons\webman\controller\DishOrderController', 'index'])
+                        'url' => admin_url(['addons\webman\controller\StoreDishOrderController', 'index'])
                     ];
                     break;
             }
