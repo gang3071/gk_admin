@@ -7,9 +7,11 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\model\PlayerGameLog;
 use addons\webman\model\SystemSetting;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
+use addons\webman\model\VipLevelMachineRatio;
 use support\Log;
 
 /**
@@ -222,6 +224,13 @@ class VipCashbackService
                     ]);
                 }
             }
+
+            // 处理实体机台打码量反水
+            $machineResult = $this->processMachineCashback();
+            $result['processed'] += $machineResult['processed'];
+            $result['updated'] += $machineResult['updated'];
+            $result['skipped'] += $machineResult['skipped'];
+            $result['errors'] += $machineResult['errors'];
 
             if ($result['updated'] > 0) {
                 $this->log('info', 'VIP反水补算完成', $result);
@@ -493,5 +502,200 @@ class VipCashbackService
         }
 
         return $this->electronicGamePlatformIds;
+    }
+
+    /**
+     * 处理实体机台打码量反水
+     * 查询 player_game_log 中未反水且操作为弃台或下分的记录
+     *
+     * @return array 处理结果统计
+     */
+    protected function processMachineCashback(): array
+    {
+        $result = [
+            'processed' => 0,
+            'updated' => 0,
+            'skipped' => 0,
+            'errors' => 0,
+        ];
+
+        try {
+            // 查询未反水的实体机台记录（弃台或下分，打码量>0）
+            $records = $this->queryUnsettledMachineRecords();
+
+            if ($records->isEmpty()) {
+                return $result;
+            }
+
+            $result['processed'] = $records->count();
+
+            // 批量获取玩家信息
+            $playerIds = $records->pluck('player_id')->unique();
+            $players = $this->queryPlayers($playerIds);
+
+            // 获取默认VIP等级
+            $defaultLevel = VipLevel::query()
+                ->where('status', VipLevel::STATUS_ENABLED)
+                ->orderBy('sort', 'asc')
+                ->first();
+
+            // 批量预加载机台反水比例
+            $allVipLevelIds = VipLevel::query()
+                ->where('status', VipLevel::STATUS_ENABLED)
+                ->pluck('id')
+                ->toArray();
+            $machineRatioMap = $this->preloadMachineRatios($allVipLevelIds);
+
+            // 批量获取机台类型映射
+            $machineIds = $records->pluck('machine_id')->unique()->toArray();
+            $machineTypeMap = $this->queryMachineTypes($machineIds);
+
+            // 逐条处理
+            foreach ($records as $record) {
+                try {
+                    $player = $players->get($record->player_id);
+                    if (!$player) {
+                        $record->vip_level_id = 0;
+                        $record->save();
+                        $result['skipped']++;
+                        continue;
+                    }
+
+                    // 获取玩家VIP等级
+                    $vipLevelId = $player->vip_level_id ?? null;
+                    if (empty($vipLevelId)) {
+                        if ($defaultLevel) {
+                            $vipLevelId = $defaultLevel->id;
+                            $this->assignDefaultVipLevel($player, $defaultLevel->id);
+                        } else {
+                            $record->vip_level_id = 0;
+                            $record->save();
+                            $result['skipped']++;
+                            continue;
+                        }
+                    }
+
+                    // 获取机台类型
+                    $machineType = $machineTypeMap[$record->machine_id] ?? 0;
+                    if (empty($machineType)) {
+                        $record->vip_level_id = $vipLevelId;
+                        $record->cashback_ratio = null;
+                        $record->cashback_amount = null;
+                        $record->save();
+                        $result['skipped']++;
+                        continue;
+                    }
+
+                    // 计算机台反水
+                    $cashbackRatio = $machineRatioMap[$vipLevelId][$machineType] ?? 0;
+                    $cashbackAmount = VipLevelMachineRatio::calculateMachineAmount($record->chip_amount, $cashbackRatio);
+                    $storageData = VipLevelMachineRatio::formatForStorage($cashbackRatio, $cashbackAmount);
+
+                    // 更新记录
+                    $record->vip_level_id = $vipLevelId;
+                    $record->cashback_ratio = $storageData['cashback_ratio'];
+                    $record->cashback_amount = $storageData['cashback_amount'];
+                    $record->save();
+
+                    // 更新玩家反水金额
+                    if ($cashbackAmount > 0) {
+                        $this->updatePlayerCashbackAmount($player, $cashbackAmount);
+                    }
+
+                    // 触发VIP升降级检查
+                    $this->triggerVipUpgradeCheck($player, $record->chip_amount);
+
+                    $result['updated']++;
+
+                } catch (\Throwable $e) {
+                    $result['errors']++;
+                    $this->log('error', '实体机台反水补算单条记录失败', [
+                        'record_id' => $record->id,
+                        'player_id' => $record->player_id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+        } catch (\Throwable $e) {
+            $this->log('error', '实体机台反水补算服务异常', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * 查询未反水的实体机台记录（弃台或下分，打码量>0）
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    protected function queryUnsettledMachineRecords()
+    {
+        $table = (new PlayerGameLog())->getTable();
+
+        return PlayerGameLog::query()
+            ->whereNull($table . '.vip_level_id')
+            ->where($table . '.chip_amount', '>', 0)
+            ->whereIn($table . '.action', [PlayerGameLog::ACTION_LEAVE, PlayerGameLog::ACTION_DOWN])
+            ->where($table . '.machine_id', '>', 0)
+            ->join('player', $table . '.player_id', '=', 'player.id')
+            ->select($table . '.*')
+            ->when($this->sinceDate, function ($query) use ($table) {
+                $query->where($table . '.created_at', '>=', $this->sinceDate);
+            })
+            ->orderBy($table . '.id', 'asc')
+            ->limit(self::BATCH_SIZE)
+            ->get();
+    }
+
+    /**
+     * 批量预加载机台反水比例
+     * @param array $vipLevelIds
+     * @return array [vipLevelId => [machineType => ratio]]
+     */
+    protected function preloadMachineRatios(array $vipLevelIds): array
+    {
+        if (empty($vipLevelIds)) {
+            return [];
+        }
+
+        $records = VipLevelMachineRatio::query()
+            ->whereIn('vip_level_id', $vipLevelIds)
+            ->where('status', 1)
+            ->get();
+
+        $map = [];
+        foreach ($records as $r) {
+            $map[$r->vip_level_id][$r->machine_type] = $r->ratio;
+        }
+        return $map;
+    }
+
+    /**
+     * 批量查询机台类型
+     * @param array $machineIds
+     * @return array [machineId => type]
+     */
+    protected function queryMachineTypes(array $machineIds): array
+    {
+        if (empty($machineIds)) {
+            return [];
+        }
+
+        try {
+            $machineTableName = (new \addons\webman\model\Machine())->getTable();
+            return \addons\webman\model\Machine::query()
+                ->whereIn($machineTableName . '.id', $machineIds)
+                ->pluck($machineTableName . '.type', $machineTableName . '.id')
+                ->toArray();
+        } catch (\Throwable $e) {
+            $this->log('warning', '获取机台类型失败', [
+                'error' => $e->getMessage(),
+            ]);
+            return [];
+        }
     }
 }

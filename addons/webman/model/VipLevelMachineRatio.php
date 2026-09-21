@@ -81,4 +81,18 @@ class VipLevelMachineRatio extends Model
     {
         return round($bet * $ratio / 100, 4);
     }
+
+    /**
+     * 格式化存储数据（0值转null）
+     * @param float $ratio
+     * @param float $amount
+     * @return array
+     */
+    public static function formatForStorage(float $ratio, float $amount): array
+    {
+        return [
+            'cashback_ratio' => $ratio > 0 ? $ratio : null,
+            'cashback_amount' => $amount > 0 ? $amount : null,
+        ];
+    }
 }
