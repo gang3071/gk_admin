@@ -12,6 +12,7 @@ use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreAutoShiftConfig;
 use addons\webman\model\StoreAutoShiftLog;
 use addons\webman\model\StoreShiftDeviceDetail;
+use addons\webman\model\StoreShiftMachineDetail;
 use Carbon\Carbon;
 use support\Db;
 use support\Log;
@@ -248,6 +249,11 @@ class AutoShiftService
             $shiftRecord->total_profit_amount = $statistics['total_profit'];
             $shiftRecord->electronic_game_bet_amount = $statistics['electronic_game_bet_amount'];
             $shiftRecord->machine_bet_amount = $statistics['machine_bet_amount'];
+            // 实体机台汇总
+            $shiftRecord->machine_open_point_total = $statistics['machine_open_point_total'];
+            $shiftRecord->machine_wash_point_total = $statistics['machine_wash_point_total'];
+            $shiftRecord->machine_profit_total = $statistics['machine_profit_total'];
+            $shiftRecord->machine_score_total = $statistics['machine_score_total'];
             $shiftRecord->ticket_record_total_score = $statistics['ticket_record_total_score'];
             $shiftRecord->ticket_redeem_backend_used_score = $statistics['ticket_redeem_backend_used_score'];
             // 新增字段
@@ -275,6 +281,20 @@ class AutoShiftService
                 foreach ($statistics['device_details'] as $detail) {
                     $detail['shift_record_id'] = $shiftRecord->id;
                     StoreShiftDeviceDetail::create($detail);
+                }
+            }
+
+            // 5.2 保存实体机台明细
+            $machineDetails = $this->calculateMachineDetails(
+                $config->department_id,
+                $config->bind_admin_user_id,
+                $startTime->toDateTimeString(),
+                $endTime->toDateTimeString()
+            );
+            if (!empty($machineDetails)) {
+                foreach ($machineDetails as $detail) {
+                    $detail['shift_record_id'] = $shiftRecord->id;
+                    StoreShiftMachineDetail::create($detail);
                 }
             }
 
@@ -475,6 +495,28 @@ class AutoShiftService
             ->where('player_game_log.created_at', '<=', $endTime)
             ->sum('player_game_log.chip_amount');
 
+        // 计算实体机台汇总数据（从 player_game_log 表按 machine_id 聚合）
+        $machineGameData = PlayerGameLog::query()
+            ->join('player', 'player_game_log.player_id', '=', 'player.id')
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
+            ->where('player_game_log.created_at', '>', $startTime)
+            ->where('player_game_log.created_at', '<=', $endTime)
+            ->selectRaw('
+                COALESCE(SUM(player_game_log.open_point), 0) as total_open_point,
+                COALESCE(SUM(player_game_log.wash_point), 0) as total_wash_point,
+                COALESCE(SUM(player_game_log.pressure), 0) as total_pressure,
+                COALESCE(SUM(player_game_log.score), 0) as total_score
+            ')
+            ->first();
+
+        $machineOpenPointTotal = (float)($machineGameData->total_open_point ?? 0);
+        $machineWashPointTotal = (float)($machineGameData->total_wash_point ?? 0);
+        $machineProfitTotal = bcsub($machineOpenPointTotal, $machineWashPointTotal, 2);
+        $machinePressureTotal = (float)($machineGameData->total_pressure ?? 0);
+        $machineScoreTotal = (float)($machineGameData->total_score ?? 0);
+
         // 计算出票记录总金额（开分类型，排除禁用状态）
         $ticketRecordTotalScore = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
@@ -659,6 +701,10 @@ class AutoShiftService
             'total_profit' => (float)$totalProfit,
             'electronic_game_bet_amount' => (float)$electronicGameBetAmount,
             'machine_bet_amount' => (float)$machineBetAmount,
+            'machine_open_point_total' => (float)$machineOpenPointTotal,
+            'machine_wash_point_total' => (float)$machineWashPointTotal,
+            'machine_profit_total' => (float)$machineProfitTotal,
+            'machine_score_total' => (float)$machineScoreTotal,
             'ticket_record_total_score' => $ticketRecordTotalScore,
             'ticket_redeem_backend_used_score' => $ticketRedeemBackendUsedScore,
             // 新增字段
@@ -969,6 +1015,81 @@ class AutoShiftService
         unset($players, $statistics, $electronicGameBetMap, $machineBetMap);
 
         return $deviceDetails;
+    }
+
+    /**
+     * 计算实体机台明细（按 machine_id 聚合 player_game_log 数据）
+     */
+    private function calculateMachineDetails(int $departmentId, int $bindAdminUserId, string $startTime, string $endTime): array
+    {
+        // 查询该店家下所有设备
+        $players = Player::query()
+            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('is_promoter', 0)
+            ->get(['id']);
+
+        if ($players->isEmpty()) {
+            return [];
+        }
+
+        $playerIds = $players->pluck('id')->toArray();
+
+        // 按 machine_id 聚合 player_game_log 数据
+        $machineLogs = PlayerGameLog::query()
+            ->selectRaw('
+                machine_id,
+                type,
+                COALESCE(SUM(open_point), 0) as open_point,
+                COALESCE(SUM(wash_point), 0) as wash_point,
+                COALESCE(SUM(pressure), 0) as pressure,
+                COALESCE(SUM(score), 0) as score
+            ')
+            ->whereIn('player_id', $playerIds)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->where('machine_id', '>', 0)
+            ->groupBy('machine_id', 'type')
+            ->get();
+
+        if ($machineLogs->isEmpty()) {
+            return [];
+        }
+
+        // 获取机台编号和名称映射（名称来自 machine_label 表）
+        $machineIds = $machineLogs->pluck('machine_id')->unique()->toArray();
+        $machineTableName = (new \addons\webman\model\Machine())->getTable();
+        $machineLabelTableName = (new \addons\webman\model\MachineLabel())->getTable();
+        $machineMap = \addons\webman\model\Machine::query()
+            ->leftJoin($machineLabelTableName, $machineTableName . '.label_id', '=', $machineLabelTableName . '.id')
+            ->whereIn($machineTableName . '.id', $machineIds)
+            ->pluck($machineLabelTableName . '.name', $machineTableName . '.id');
+        $machineCodeMap = \addons\webman\model\Machine::query()
+            ->whereIn('id', $machineIds)
+            ->pluck('code', 'id');
+
+        // 组装机台明细数据
+        $machineDetails = [];
+        foreach ($machineLogs as $log) {
+            $openPoint = (float)$log->open_point;
+            $washPoint = (float)$log->wash_point;
+
+            $machineDetails[] = [
+                'department_id' => $departmentId,
+                'bind_admin_user_id' => $bindAdminUserId,
+                'machine_id' => (int)$log->machine_id,
+                'machine_code' => $machineCodeMap[$log->machine_id] ?? '',
+                'machine_name' => $machineMap[$log->machine_id] ?? '',
+                'type' => (int)$log->type,
+                'open_point' => $openPoint,
+                'wash_point' => $washPoint,
+                'profit' => (float)bcsub($openPoint, $washPoint, 2),
+                'pressure' => (float)$log->pressure,
+                'score' => (float)$log->score,
+            ];
+        }
+
+        return $machineDetails;
     }
 
     /**

@@ -329,11 +329,23 @@ export default {
     handleDishOrderNew(content) {
       const lang = this.lang;
 
-      // 显示桌面通知
+      // 組合描述：玩家名稱 + 設備名稱（如有）+ 訂單號
+      let description = content.player_name || '';
+      if (content.device_name) {
+        description += `（${content.device_name}）`;
+      }
+      description += ` - ${content.order_no}`;
+
+      // 显示桌面通知（點擊跳轉到訂單列表）
       this.$notification.warning({
         message: messages[lang].message.dish_order_new,
-        description: `${messages[lang].message.dish_order_new}`,
+        description: description,
         duration: 5,
+        onClick: () => {
+          if (content.url) {
+            this.$router.push({ path: content.url });
+          }
+        },
       });
 
       // 添加到语音播报队列

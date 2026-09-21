@@ -7,6 +7,7 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\DishOrder;
 use addons\webman\model\PlayerPointsRecord;
 use addons\webman\service\PlayerPointsService;
+use ExAdmin\ui\component\common\Copy;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -65,6 +66,7 @@ class ChannelDishOrderController
 
             $grid->column('id', admin_trans('dish_order.fields.id'))->align('center');
             $grid->column('order_no', admin_trans('dish_order.fields.order_no'))->align('center');
+            $grid->column('device.device_name', admin_trans('dish_order.fields.device_id'))->align('center');
             $grid->column('player.name', admin_trans('dish_order.fields.player_id'))->align('center');
             $grid->column('items', admin_trans('dish_order_item.title'))->align('center')
                 ->display(function ($items) {
@@ -123,16 +125,20 @@ class ChannelDishOrderController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('dish_order.title'));
 
-            $form->text('order_no', admin_trans('dish_order.fields.order_no'))->disabled();
+            $form->text('order_no', admin_trans('dish_order.fields.order_no'))->attr('readonly', true)->addonAfter(Copy::create($form->input('order_no')));
+            $form->text('device.device_name', admin_trans('dish_order.fields.device_id'))->attr('readonly', true)->placeholder('');
+            $form->text('player.name', admin_trans('dish_order.fields.player_id'))->attr('readonly', true)->placeholder('');
 
             $form->hasMany('items', admin_trans('dish_order_item.title'), function ($items) {
-                $items->text('dish_title', admin_trans('dish_order_item.fields.dish_title'))->disabled();
-                $items->text('price', admin_trans('dish_order_item.fields.price'))->disabled();
-                $items->text('quantity', admin_trans('dish_order_item.fields.quantity'))->disabled();
-                $items->text('subtotal', admin_trans('dish_order_item.fields.subtotal'))->disabled();
-                $items->text('remark', admin_trans('dish_order_item.fields.remark'))->disabled()->placeholder('');
+                $items->text('dish_title', admin_trans('dish_order_item.fields.dish_title'))->attr('readonly', true)->style(['width' => '160px']);
+                $items->text('price', admin_trans('dish_order_item.fields.price'))->attr('readonly', true)->style(['width' => '90px']);
+                $items->text('quantity', admin_trans('dish_order_item.fields.quantity'))->attr('readonly', true)->style(['width' => '70px']);
+                $items->text('subtotal', admin_trans('dish_order_item.fields.subtotal'))->attr('readonly', true)->style(['width' => '90px']);
             })
+            ->table()
             ->disabled();
+
+            $form->divider();
 
             if (in_array($form->input('status'), [DishOrder::STATUS_COMPLETED, DishOrder::STATUS_CANCELLED])) {
                 $form->radio('status', admin_trans('dish_order.fields.status'))

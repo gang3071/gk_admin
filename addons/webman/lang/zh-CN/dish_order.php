@@ -8,6 +8,7 @@ return [
         'player_id' => '玩家',
         'department_id' => '渠道/部门',
         'admin_user_id' => '门店',
+        'device_id' => '设备',
         'total_amount' => '总额',
         'status' => '状态',
         'remark' => '备注',
