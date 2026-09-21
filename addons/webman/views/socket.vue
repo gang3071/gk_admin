@@ -61,6 +61,7 @@
   <audio controls="controls" hidden muted src="/audio/lottery_examine.mp3" ref="lottery_examine_audio"></audio>
   <audio controls="controls" hidden muted src="/audio/recharge_examine.mp3" ref="recharge_examine_audio"></audio>
   <audio controls="controls" hidden muted src="/audio/withdraw_examine.mp3" ref="withdraw_examine_audio"></audio>
+  <audio controls="controls" hidden muted src="/audio/dish_order.mp3" ref="dish_order_audio"></audio>
 </template>
 <style>
 .action_content {
@@ -348,10 +349,8 @@ export default {
         },
       });
 
-      // 添加到语音播报队列
-      if (content.voice_url) {
-        this.addToVoiceQueue(content.voice_url);
-      }
+      // 語音播報
+      this.startPlay('dish_order');
     },
 
     /**
