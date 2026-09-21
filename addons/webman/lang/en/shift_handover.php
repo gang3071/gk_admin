@@ -333,4 +333,17 @@ return [
             'device_profit' => 'Device Profit:',
         ],
     ],
+
+    // Machine Report
+    'machine_report_sheet_title' => 'Machine Report',
+    'machine_code' => 'Machine Code',
+    'machine_name' => 'Machine Name',
+    'machine_type' => 'Type',
+    'machine_type_slot' => 'Slot',
+    'machine_type_steel_ball' => 'Steel Ball',
+    'machine_open_point' => 'Open Point',
+    'machine_wash_point' => 'Wash Point',
+    'machine_profit' => 'Profit',
+    'machine_pressure' => 'Pressure',
+    'machine_score' => 'Score',
 ];
