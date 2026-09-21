@@ -39,6 +39,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $lottery_ticket_reward_amount 摸奖券中奖奖励金额（TYPE_LOTTERY_TICKET_REWARD=33）
  * @property float $electronic_game_bet_amount 电子游戏打码量
  * @property float $machine_bet_amount 机器打码量
+ * @property float $machine_open_point_total 实体机台上分总计
+ * @property float $machine_wash_point_total 实体机台下分总计
+ * @property float $machine_profit_total 实体机台利润总计（上分-下分）
+ * @property float $machine_score_total 实体机台得分总计
  * @property float $ticket_record_total_score 出票记录总金额
  * @property float $ticket_redeem_backend_used_score 核销记录后台使用金额
  * @property float $birthday_bonus_amount VIP生日礼金金额
@@ -106,5 +110,14 @@ class StoreAgentShiftHandoverRecord extends Model
     public function deviceDetails(): HasMany
     {
         return $this->hasMany(StoreShiftDeviceDetail::class, 'shift_record_id');
+    }
+
+    /**
+     * 实体机台明细
+     * @return HasMany
+     */
+    public function machineDetails(): HasMany
+    {
+        return $this->hasMany(StoreShiftMachineDetail::class, 'shift_record_id');
     }
 }

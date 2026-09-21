@@ -4,6 +4,7 @@ namespace addons\webman\grid;
 
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
+use addons\webman\model\StoreShiftMachineDetail;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -535,39 +536,250 @@ class ShiftReportExporter extends Excel
         $reportSheet = $this->spreadsheet->createSheet();
         $reportSheet->setTitle(admin_trans('shift_handover.machine_report_sheet_title'));
 
-        // 表头（参考主工作表样式）
-        $reportSheet->setCellValue('A1', admin_trans('shift_handover.shift_id'));
-        $reportSheet->setCellValue('B1', admin_trans('shift_handover.shift_time'));
+        // 斯洛类型列定义（全部列）
+        $slotColumns = [
+            'machine_code' => admin_trans('shift_handover.machine_code'),
+            'machine_name' => admin_trans('shift_handover.machine_name'),
+            'open_point' => admin_trans('shift_handover.machine_open_point'),
+            'wash_point' => admin_trans('shift_handover.machine_wash_point'),
+            'profit' => admin_trans('shift_handover.machine_profit'),
+            'pressure' => admin_trans('shift_handover.machine_pressure'),
+            'score' => admin_trans('shift_handover.machine_score'),
+        ];
 
-        $reportSheet->getStyle('A1:B1')->applyFromArray([
-            'font' => ['bold' => true, 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
-        ]);
+        // 钢珠类型列定义（简化列）
+        $steelBallColumns = [
+            'machine_code' => admin_trans('shift_handover.machine_code'),
+            'machine_name' => admin_trans('shift_handover.machine_name'),
+            'open_point' => admin_trans('shift_handover.machine_open_point'),
+            'wash_point' => admin_trans('shift_handover.machine_wash_point'),
+            'profit' => admin_trans('shift_handover.machine_profit'),
+        ];
 
+        // 设置列宽（固定宽度，两种类型共用）
         $reportSheet->getColumnDimension('A')->setWidth(15);
-        $reportSheet->getColumnDimension('B')->setWidth(35);
+        $reportSheet->getColumnDimension('B')->setWidth(18);
+        $reportSheet->getColumnDimension('C')->setWidth(12);
+        $reportSheet->getColumnDimension('D')->setWidth(12);
+        $reportSheet->getColumnDimension('E')->setWidth(12);
+        $reportSheet->getColumnDimension('F')->setWidth(12);
+        $reportSheet->getColumnDimension('G')->setWidth(12);
 
-        // 写入数据
-        $row = 2;
+        $maxColLetter = 'G';
+        $row = 1;
+
         foreach ($this->shiftSummary as $index => $item) {
             $timeRange = $item['start_time'] . ' ~ ' . $item['end_time'];
-            $reportSheet->setCellValue('A' . $row, $item['id']);
-            $reportSheet->setCellValue('B' . $row, $timeRange);
 
-            // ID 居中对齐
-            $reportSheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-
-            // 交替行背景色
-            $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
-            $reportSheet->getStyle('A' . $row . ':B' . $row)->applyFromArray([
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+            // ===== 标题行：交班ID + 交班时间 =====
+            $titleText = admin_trans('shift_handover.shift_id') . ': ' . $item['id'] . '    ' .
+                         admin_trans('shift_handover.shift_time') . ': ' . $timeRange;
+            $reportSheet->setCellValue('A' . $row, $titleText);
+            $reportSheet->mergeCells('A' . $row . ':' . $maxColLetter . $row);
+            $reportSheet->getStyle('A' . $row)->applyFromArray([
+                'font' => ['bold' => true, 'size' => 14],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
             ]);
-
+            $reportSheet->getRowDimension($row)->setRowHeight(25);
             $row++;
+
+            // 查询该交班记录的实体机台明细
+            $machineDetails = StoreShiftMachineDetail::where('shift_record_id', $item['id'])->get();
+
+            if ($machineDetails->isEmpty()) {
+                $row++;
+                continue;
+            }
+
+            // 按类型分组：1=斯洛, 2=钢珠
+            $grouped = $machineDetails->groupBy('type');
+
+            // ===== 斯洛 (TYPE_SLOT = 1) =====
+            if ($grouped->has(1)) {
+                $slotDetails = $grouped->get(1);
+
+                // 类型标题
+                $reportSheet->setCellValue('A' . $row, admin_trans('shift_handover.machine_type_slot'));
+                $reportSheet->mergeCells('A' . $row . ':' . $maxColLetter . $row);
+                $reportSheet->getStyle('A' . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 12],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+                ]);
+                $reportSheet->getRowDimension($row)->setRowHeight(22);
+                $row++;
+
+                // 表头
+                $colIndex = 1;
+                foreach ($slotColumns as $header) {
+                    $reportSheet->setCellValueByColumnAndRow($colIndex, $row, $header);
+                    $colIndex++;
+                }
+                $reportSheet->getStyle('A' . $row . ':' . $maxColLetter . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 11],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+                ]);
+                $reportSheet->getRowDimension($row)->setRowHeight(22);
+                $row++;
+
+                // 数据行
+                $slotSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0, 'pressure' => 0, 'score' => 0];
+                foreach ($slotDetails as $detailIndex => $detail) {
+                    $reportSheet->setCellValue('A' . $row, $detail->machine_code ?: '-');
+                    $reportSheet->setCellValue('B' . $row, $detail->machine_name ?: '-');
+                    $reportSheet->setCellValue('C' . $row, number_format($detail->open_point, 2));
+                    $reportSheet->setCellValue('D' . $row, number_format($detail->wash_point, 2));
+                    $reportSheet->setCellValue('E' . $row, number_format($detail->profit, 2));
+                    $reportSheet->setCellValue('F' . $row, number_format($detail->pressure, 2));
+                    $reportSheet->setCellValue('G' . $row, number_format($detail->score, 2));
+
+                    // 数字列右对齐
+                    $reportSheet->getStyle('C' . $row . ':' . $maxColLetter . $row)
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+                    // 交替行背景色
+                    $rowColor = $detailIndex % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
+                    $reportSheet->getStyle('A' . $row . ':' . $maxColLetter . $row)->applyFromArray([
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+                    ]);
+
+                    // 利润颜色
+                    $profitColor = $detail->profit >= 0 ? '3f8600' : 'cf1322';
+                    $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($profitColor);
+                    $reportSheet->getStyle('E' . $row)->getFont()->setBold(true);
+
+                    // 累加小计
+                    $slotSubtotal['open_point'] += $detail->open_point;
+                    $slotSubtotal['wash_point'] += $detail->wash_point;
+                    $slotSubtotal['profit'] += $detail->profit;
+                    $slotSubtotal['pressure'] += $detail->pressure;
+                    $slotSubtotal['score'] += $detail->score;
+
+                    $row++;
+                }
+
+                // 小计行
+                $reportSheet->setCellValue('A' . $row, admin_trans('shift_handover.subtotal'));
+                $reportSheet->setCellValue('B' . $row, '');
+                $reportSheet->setCellValue('C' . $row, number_format($slotSubtotal['open_point'], 2));
+                $reportSheet->setCellValue('D' . $row, number_format($slotSubtotal['wash_point'], 2));
+                $reportSheet->setCellValue('E' . $row, number_format($slotSubtotal['profit'], 2));
+                $reportSheet->setCellValue('F' . $row, number_format($slotSubtotal['pressure'], 2));
+                $reportSheet->setCellValue('G' . $row, number_format($slotSubtotal['score'], 2));
+
+                $reportSheet->getStyle('A' . $row . ':' . $maxColLetter . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 11],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '999999']]]
+                ]);
+                $reportSheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                // 小计利润颜色
+                $subtotalProfitColor = $slotSubtotal['profit'] >= 0 ? '3f8600' : 'cf1322';
+                $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
+
+                $row++;
+            }
+
+            // ===== 钢珠 (TYPE_STEEL_BALL = 2) =====
+            if ($grouped->has(2)) {
+                $steelBallDetails = $grouped->get(2);
+
+                // 类型标题
+                $reportSheet->setCellValue('A' . $row, admin_trans('shift_handover.machine_type_steel_ball'));
+                $reportSheet->mergeCells('A' . $row . ':' . $maxColLetter . $row);
+                $reportSheet->getStyle('A' . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 12],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+                ]);
+                $reportSheet->getRowDimension($row)->setRowHeight(22);
+                $row++;
+
+                // 表头（钢珠只显示5列）
+                $colIndex = 1;
+                foreach ($steelBallColumns as $header) {
+                    $reportSheet->setCellValueByColumnAndRow($colIndex, $row, $header);
+                    $colIndex++;
+                }
+                $reportSheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 11],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+                ]);
+                $reportSheet->getRowDimension($row)->setRowHeight(22);
+                $row++;
+
+                // 数据行
+                $steelBallSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0];
+                foreach ($steelBallDetails as $detailIndex => $detail) {
+                    $reportSheet->setCellValue('A' . $row, $detail->machine_code ?: '-');
+                    $reportSheet->setCellValue('B' . $row, $detail->machine_name ?: '-');
+                    $reportSheet->setCellValue('C' . $row, number_format($detail->open_point, 2));
+                    $reportSheet->setCellValue('D' . $row, number_format($detail->wash_point, 2));
+                    $reportSheet->setCellValue('E' . $row, number_format($detail->profit, 2));
+
+                    // 数字列右对齐
+                    $reportSheet->getStyle('C' . $row . ':E' . $row)
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+                    // 交替行背景色
+                    $rowColor = $detailIndex % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
+                    $reportSheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                        'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
+                        'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E0E0E0']]]
+                    ]);
+
+                    // 利润颜色
+                    $profitColor = $detail->profit >= 0 ? '3f8600' : 'cf1322';
+                    $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($profitColor);
+                    $reportSheet->getStyle('E' . $row)->getFont()->setBold(true);
+
+                    // 累加小计
+                    $steelBallSubtotal['open_point'] += $detail->open_point;
+                    $steelBallSubtotal['wash_point'] += $detail->wash_point;
+                    $steelBallSubtotal['profit'] += $detail->profit;
+
+                    $row++;
+                }
+
+                // 小计行
+                $reportSheet->setCellValue('A' . $row, admin_trans('shift_handover.subtotal'));
+                $reportSheet->setCellValue('B' . $row, '');
+                $reportSheet->setCellValue('C' . $row, number_format($steelBallSubtotal['open_point'], 2));
+                $reportSheet->setCellValue('D' . $row, number_format($steelBallSubtotal['wash_point'], 2));
+                $reportSheet->setCellValue('E' . $row, number_format($steelBallSubtotal['profit'], 2));
+
+                $reportSheet->getStyle('A' . $row . ':E' . $row)->applyFromArray([
+                    'font' => ['bold' => true, 'size' => 11],
+                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
+                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
+                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '999999']]]
+                ]);
+                $reportSheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+                // 小计利润颜色
+                $subtotalProfitColor = $steelBallSubtotal['profit'] >= 0 ? '3f8600' : 'cf1322';
+                $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
+
+                $row++;
+            }
+
+            // 交班记录之间的空行
+            $row += 2;
         }
+
+        // 冻结首行
+        $reportSheet->freezePane('A1');
     }
 
     /**

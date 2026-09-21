@@ -332,4 +332,17 @@ return [
             'device_profit' => 'デバイス利益：',
         ],
     ],
+
+    // 機台レポート
+    'machine_report_sheet_title' => '機台レポート',
+    'machine_code' => '機台番号',
+    'machine_name' => '機台名',
+    'machine_type' => 'タイプ',
+    'machine_type_slot' => 'スロット',
+    'machine_type_steel_ball' => 'パチンコ',
+    'machine_open_point' => '上分',
+    'machine_wash_point' => '下分',
+    'machine_profit' => '利益',
+    'machine_pressure' => 'プレッシャー',
+    'machine_score' => '得点',
 ];

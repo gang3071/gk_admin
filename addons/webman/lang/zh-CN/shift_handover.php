@@ -331,4 +331,17 @@ return [
         'type_add_point' => '后台加点',
         'type_deduct_point' => '后台扣点',
     ],
+
+    // 实体机台报表
+    'machine_report_sheet_title' => '机台报表',
+    'machine_code' => '机台编号',
+    'machine_name' => '机台名称',
+    'machine_type' => '类型',
+    'machine_type_slot' => '斯洛',
+    'machine_type_steel_ball' => '钢珠',
+    'machine_open_point' => '上分',
+    'machine_wash_point' => '下分',
+    'machine_profit' => '利润',
+    'machine_pressure' => '押分',
+    'machine_score' => '得分',
 ];

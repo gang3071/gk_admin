@@ -331,4 +331,16 @@ return [
             'device_profit' => '設備利潤：',
         ],
     ],
+    // 實體機台報表
+    'machine_report_sheet_title' => '機台報表',
+    'machine_code' => '機台編號',
+    'machine_name' => '機台名稱',
+    'machine_type' => '類型',
+    'machine_type_slot' => '斯洛',
+    'machine_type_steel_ball' => '鋼珠',
+    'machine_open_point' => '上分',
+    'machine_wash_point' => '下分',
+    'machine_profit' => '利潤',
+    'machine_pressure' => '押分',
+    'machine_score' => '得分',
 ];
