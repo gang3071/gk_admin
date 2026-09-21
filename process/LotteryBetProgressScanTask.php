@@ -129,6 +129,13 @@ class LotteryBetProgressScanTask
                     $scanEnd = min($currentTime, $activity->end_time);
 
                     if ($scanStart >= $scanEnd) {
+                        Log::info('[摸奖券] 活动时间窗口无效，跳过扫描', [
+                            'activity_id' => $activity->id,
+                            'scan_start' => $scanStart,
+                            'scan_end' => $scanEnd,
+                            'activity_end_time' => $activity->end_time,
+                            'last_scan_time' => $lastScanTime,
+                        ]);
                         continue;
                     }
 
@@ -140,6 +147,11 @@ class LotteryBetProgressScanTask
                     );
 
                     if (empty($playerBetAmounts)) {
+                        Log::debug('[摸奖券] 时间窗口内无打码数据', [
+                            'activity_id' => $activity->id,
+                            'department_id' => $activity->department_id,
+                            'scan_range' => [$scanStart, $scanEnd],
+                        ]);
                         continue;
                     }
 
@@ -370,6 +382,14 @@ class LotteryBetProgressScanTask
             // 5. 检查并发券（批量）
             if ($playersCount > 0) {
                 $ticketsIssued = $this->checkAndIssueTickets($activityId, array_keys($playerBetAmounts));
+            } else {
+                Log::warning('[摸奖券] 有打码数据但无有效进度记录，跳过发券检查', [
+                    'activity_id' => $activityId,
+                    'bet_players_count' => count($playerBetAmounts),
+                    'to_update_count' => count($playersToUpdate),
+                    'to_create_count' => count($playersToCreate),
+                    'hint' => '请检查活动VIP配置是否涵盖所有玩家VIP等级',
+                ]);
             }
 
             // 6. 推送打码进度更新（只推送有变化的玩家，进度变化≥5%才推送）
@@ -478,6 +498,16 @@ class LotteryBetProgressScanTask
                     $progress->current_bet_amount = $chipAmount;
                     $progress->save();
                     $createCount++;
+                } else {
+                    // 玩家没有匹配的VIP配置，或活动已结束
+                    $player = \addons\webman\model\Player::find($playerId);
+                    Log::warning('[摸奖券] 玩家无法创建打码进度，跳过发券', [
+                        'activity_id' => $activityId,
+                        'player_id' => $playerId,
+                        'player_vip_level_id' => $player ? $player->vip_level_id : null,
+                        'chip_amount' => $chipAmount,
+                        'reason' => '无匹配VIP配置或活动已结束',
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::warning('创建打码进度失败', [

@@ -51,6 +51,11 @@ class LotteryTicketBetProgressService
             ->first();
 
         if (!$config) {
+            \support\Log::warning('[摸奖券] 玩家VIP等级无对应活动配置，无法创建打码进度', [
+                'activity_id' => $activityId,
+                'player_id' => $playerId,
+                'player_vip_level_id' => $player->vip_level_id,
+            ]);
             return null;
         }
 
