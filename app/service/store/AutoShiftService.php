@@ -515,6 +515,38 @@ class AutoShiftService
         $machineWashPointTotal = (float)($machineGameData->total_wash_point ?? 0);
         $machineProfitTotal = bcsub($machineOpenPointTotal, $machineWashPointTotal, 2);
         $machinePressureTotal = (float)($machineGameData->total_pressure ?? 0);
+
+        // 钢珠(type=2)的押分需要重新计算：转数 * machine_category.lottery_point
+        $machineCategoryTableName = (new \addons\webman\model\MachineCategory())->getTable();
+        $machineTableName = (new \addons\webman\model\Machine())->getTable();
+        $steelBallPressureData = PlayerGameLog::query()
+            ->join('player', 'player_game_log.player_id', '=', 'player.id')
+            ->leftJoin($machineTableName, 'player_game_log.machine_id', '=', $machineTableName . '.id')
+            ->leftJoin($machineCategoryTableName, $machineTableName . '.cate_id', '=', $machineCategoryTableName . '.id')
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
+            ->where('player_game_log.created_at', '>', $startTime)
+            ->where('player_game_log.created_at', '<=', $endTime)
+            ->where('player_game_log.type', \addons\webman\model\GameType::TYPE_STEEL_BALL)
+            ->where('player_game_log.machine_id', '>', 0)
+            ->selectRaw('COALESCE(SUM(player_game_log.turn_point * ' . $machineCategoryTableName . '.lottery_point), 0) as steel_ball_pressure')
+            ->first();
+
+        $steelBallPressureTotal = (float)($steelBallPressureData->steel_ball_pressure ?? 0);
+
+        // 斯洛的押分 = 总押分 - 钢珠的原始押分 + 钢珠的重新计算押分
+        $steelBallOriginalPressure = PlayerGameLog::query()
+            ->join('player', 'player_game_log.player_id', '=', 'player.id')
+            ->where('player.department_id', $admin->department_id)
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player.is_promoter', 0)
+            ->where('player_game_log.created_at', '>', $startTime)
+            ->where('player_game_log.created_at', '<=', $endTime)
+            ->where('player_game_log.type', \addons\webman\model\GameType::TYPE_STEEL_BALL)
+            ->sum('player_game_log.pressure');
+
+        $machinePressureTotal = $machinePressureTotal - (float)$steelBallOriginalPressure + $steelBallPressureTotal;
         $machineScoreTotal = (float)($machineGameData->total_score ?? 0);
 
         // 计算出票记录总金额（开分类型，排除禁用状态）
@@ -1043,6 +1075,7 @@ class AutoShiftService
                 COALESCE(SUM(open_point), 0) as open_point,
                 COALESCE(SUM(wash_point), 0) as wash_point,
                 COALESCE(SUM(pressure), 0) as pressure,
+                COALESCE(SUM(turn_point), 0) as turn_point,
                 COALESCE(SUM(score), 0) as score
             ')
             ->whereIn('player_id', $playerIds)
@@ -1068,23 +1101,39 @@ class AutoShiftService
             ->whereIn('id', $machineIds)
             ->pluck('code', 'id');
 
+        // 获取钢珠机台的 lottery_point（来自 machine_category 表）
+        $machineCategoryTableName = (new \addons\webman\model\MachineCategory())->getTable();
+        $lotteryPointMap = \addons\webman\model\Machine::query()
+            ->leftJoin($machineCategoryTableName, $machineTableName . '.cate_id', '=', $machineCategoryTableName . '.id')
+            ->whereIn($machineTableName . '.id', $machineIds)
+            ->pluck($machineCategoryTableName . '.lottery_point', $machineTableName . '.id');
+
         // 组装机台明细数据
         $machineDetails = [];
         foreach ($machineLogs as $log) {
             $openPoint = (float)$log->open_point;
             $washPoint = (float)$log->wash_point;
+            $machineId = (int)$log->machine_id;
+            $machineType = (int)$log->type;
+
+            // 钢珠(type=2)的押分 = 转数 * machine_category.lottery_point
+            $pressure = (float)$log->pressure;
+            if ($machineType === \addons\webman\model\GameType::TYPE_STEEL_BALL) {
+                $lotteryPoint = (float)($lotteryPointMap[$machineId] ?? 0);
+                $pressure = (float)bcmul((string)(int)$log->turn_point, (string)$lotteryPoint, 2);
+            }
 
             $machineDetails[] = [
                 'department_id' => $departmentId,
                 'bind_admin_user_id' => $bindAdminUserId,
-                'machine_id' => (int)$log->machine_id,
-                'machine_code' => $machineCodeMap[$log->machine_id] ?? '',
-                'machine_name' => $machineMap[$log->machine_id] ?? '',
-                'type' => (int)$log->type,
+                'machine_id' => $machineId,
+                'machine_code' => $machineCodeMap[$machineId] ?? '',
+                'machine_name' => $machineMap[$machineId] ?? '',
+                'type' => $machineType,
                 'open_point' => $openPoint,
                 'wash_point' => $washPoint,
                 'profit' => (float)bcsub($openPoint, $washPoint, 2),
-                'pressure' => (float)$log->pressure,
+                'pressure' => $pressure,
                 'score' => (float)$log->score,
             ];
         }
