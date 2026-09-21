@@ -25,6 +25,8 @@ class VipLevelMachineRatio extends Model
 {
     use HasDateTimeFormatter;
 
+    protected $table = 'vip_level_machine_ratio';
+
     // 机台类型常量
     const TYPE_SLOT = 1;        // 斯洛
     const TYPE_STEEL_BALL = 2;  // 钢珠
