@@ -174,6 +174,7 @@ export default {
     examine_lottery: String,
     machine: String,
     title: String,
+    vip_welcome_voice_config: Object,
   },
   data() {
     return {
@@ -260,7 +261,11 @@ export default {
 
         // 处理服务铃消息
         if (content.type === 'service_call') {
-          that.handleServiceCall(content);
+          if (content.msg_type === 'player_high_vip_login') {
+            that.handleVipWelcomeVoice(content);
+          } else {
+            that.handleServiceCall(content);
+          }
           return;
         }
 
@@ -320,6 +325,17 @@ export default {
       // 添加到语音播报队列
       if (content.voice_url) {
         this.addToVoiceQueue(content.voice_url);
+      }
+    },
+
+    /**
+     * 处理高等级VIP玩家登入语音播报
+     */
+    handleVipWelcomeVoice(content) {
+      const vipLevel = String(content.vip_level_sort);
+      const levelConfig = this.vip_welcome_voice_config?.[vipLevel];
+      if (levelConfig?.url) {
+        this.addToVoiceQueue(levelConfig.url);
       }
     },
 

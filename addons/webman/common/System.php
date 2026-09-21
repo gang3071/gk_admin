@@ -102,6 +102,13 @@ class System extends SystemAbstract
         // 店家和代理后台需要实时接收服务铃消息，始终启用机台推送
         $isStoreOrAgent = $user->isStore() || $user->isAgent();
 
+        // 仅店家后台需要VIP欢迎语音，直接注入配置避免前端额外请求
+        $vipWelcomeVoiceConfig = null;
+        if ($user->isStore()) {
+            $vipSetting = \addons\webman\model\SystemSetting::where('feature', 'vip_welcome_voice')->first();
+            $vipWelcomeVoiceConfig = json_decode($vipSetting->content ?? '{}', true) ?: null;
+        }
+
         return [
             admin_view(plugin()->webman->getPath() . '/views/socket.vue')->attrs([
                 'id' => Admin::id(),
@@ -111,6 +118,7 @@ class System extends SystemAbstract
                 'lang' => Container::getInstance()->translator->getLocale(),
                 'ws' => $ws,
                 'title' => admin_trans('admin.system_messages'),
+                'vip_welcome_voice_config' => $vipWelcomeVoiceConfig,
                 'examine_withdraw' => Admin::check(ChannelWithdrawRecordController::class, 'reject', '')
                         || Admin::check(ChannelWithdrawRecordController::class, 'pass', ''),
                 'examine_recharge' => Admin::check(ChannelRechargeRecordController::class, 'reject', '')
