@@ -103,12 +103,11 @@ class System extends SystemAbstract
         $isStoreOrAgent = $user->isStore() || $user->isAgent();
 
         // 仅店家后台需要VIP欢迎语音，直接注入配置避免前端额外请求
-        $vipWelcomeVoiceConfig = null;
+        $vipWelcomeVoiceConfig = new \stdClass();
         if ($user->isStore()) {
-            $vipSetting = \addons\webman\model\SystemSetting::where('feature', 'vip_welcome_voice')->first();
-            $vipWelcomeVoiceConfig = json_decode($vipSetting->content ?? '{}', true) ?: null;
+            $vipSetting = \addons\webman\model\SystemSetting::query()->withoutGlobalScopes()->where('feature', 'vip_welcome_voice')->first();
+            $vipWelcomeVoiceConfig = json_decode($vipSetting->content ?? '{}') ?: new \stdClass();
         }
-
         return [
             admin_view(plugin()->webman->getPath() . '/views/socket.vue')->attrs([
                 'id' => Admin::id(),

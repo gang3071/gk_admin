@@ -336,7 +336,12 @@ export default {
       const vipLevel = String(content.vip_level_sort);
       const levelConfig = this.vip_welcome_voice_config?.[vipLevel];
       if (levelConfig?.url) {
+        // 使用管理员预先生成的语音文件undefined
         this.addToVoiceQueue(levelConfig.url);
+      } else if (levelConfig?.text) {
+        // 还未生成语音文件时，降级用浏览器TTS播报文字
+        const utterance = new SpeechSynthesisUtterance(levelConfig.text);
+        window.speechSynthesis.speak(utterance);
       }
     },
 
