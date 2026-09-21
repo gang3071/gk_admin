@@ -8,6 +8,7 @@ return [
         'player_id' => 'Player',
         'department_id' => 'Channel/Department',
         'admin_user_id' => 'Store',
+        'device_id' => 'Device',
         'total_amount' => 'Total Amount',
         'status' => 'Status',
         'remark' => 'Remarks',

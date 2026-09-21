@@ -8,6 +8,7 @@ return [
         'player_id' => '玩家',
         'department_id' => '渠道/部門',
         'admin_user_id' => '門店',
+        'device_id' => '設備',
         'total_amount' => '總額',
         'status' => '狀態',
         'remark' => '備註',

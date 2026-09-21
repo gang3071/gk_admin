@@ -65,6 +65,7 @@ class DishOrderController
 
             $grid->column('id', admin_trans('dish_order.fields.id'))->align('center');
             $grid->column('order_no', admin_trans('dish_order.fields.order_no'))->align('center');
+            $grid->column('device.device_name', admin_trans('dish_order.fields.device_id'))->align('center');
             $grid->column('player.name', admin_trans('dish_order.fields.player_id'))->align('center');
             $grid->column('items', admin_trans('dish_order_item.title'))->align('center')
                 ->display(function ($items) {
@@ -109,7 +110,7 @@ class DishOrderController
                 $actions->hideDel();
             })->align('center');
 
-            $grid->setForm()->drawer($this->form());
+            $grid->setForm()->drawer($this->form())->width('45%');
         });
     }
 
@@ -124,15 +125,20 @@ class DishOrderController
             $form->title(admin_trans('dish_order.title'));
 
             $form->text('order_no', admin_trans('dish_order.fields.order_no'))->disabled();
+            $form->text('device.device_name', admin_trans('dish_order.fields.device_id'))->disabled()->placeholder('');
+            $form->text('player.name', admin_trans('dish_order.fields.player_id'))->disabled()->placeholder('');
 
             $form->hasMany('items', admin_trans('dish_order_item.title'), function ($items) {
-                $items->text('dish_title', admin_trans('dish_order_item.fields.dish_title'))->disabled();
-                $items->text('price', admin_trans('dish_order_item.fields.price'))->disabled();
-                $items->text('quantity', admin_trans('dish_order_item.fields.quantity'))->disabled();
-                $items->text('subtotal', admin_trans('dish_order_item.fields.subtotal'))->disabled();
-                $items->text('remark', admin_trans('dish_order_item.fields.remark'))->disabled()->placeholder('');
+                $items->text('dish_title', admin_trans('dish_order_item.fields.dish_title'))->disabled()->style(['width' => '160px']);
+                $items->text('price', admin_trans('dish_order_item.fields.price'))->disabled()->style(['width' => '90px']);
+                $items->text('quantity', admin_trans('dish_order_item.fields.quantity'))->disabled()->style(['width' => '70px']);
+                $items->text('subtotal', admin_trans('dish_order_item.fields.subtotal'))->disabled()->style(['width' => '90px']);
+                $items->text('remark', admin_trans('dish_order_item.fields.remark'))->disabled()->placeholder('')->style(['width' => '150px']);
             })
+            ->table()
             ->disabled();
+
+            $form->divider();
 
             if (in_array($form->input('status'), [DishOrder::STATUS_COMPLETED, DishOrder::STATUS_CANCELLED])) {
                 $form->radio('status', admin_trans('dish_order.fields.status'))

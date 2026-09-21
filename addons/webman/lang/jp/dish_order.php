@@ -8,6 +8,7 @@ return [
         'player_id' => 'プレイヤー',
         'department_id' => 'チャネル/部門',
         'admin_user_id' => '店舗',
+        'device_id' => '設備',
         'total_amount' => '合計金額',
         'status' => 'ステータス',
         'remark' => '備考',
