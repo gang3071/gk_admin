@@ -6,6 +6,7 @@ use addons\webman\Admin;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
+use addons\webman\model\VipLevelMachineRatio;
 use addons\webman\service\VipLevelService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Icon;
@@ -120,6 +121,15 @@ class ChannelVipLevelController
                         ->width(500)
                         ->title($data['name'] . ' - ' . admin_trans('vip_level.cashback') . '（100=100%，0.1=0.1%）')
                 );
+                $actions->prepend(
+                    Button::create(admin_trans('vip_level.machine_ratio'))
+                        ->icon(Icon::create('SettingOutlined'))
+                        ->type('primary')
+                        ->size('small')
+                        ->drawer([$this, 'machineRatio'], ['vip_level_id' => $data['id']])
+                        ->width(500)
+                        ->title($data['name'] . ' - ' . admin_trans('vip_level.machine_ratio') . '（100=100%，0.1=0.1%）')
+                );
             });
 
             $grid->setForm()->drawer($this->form());
@@ -233,6 +243,64 @@ class ChannelVipLevelController
                     }
                 } catch (\Throwable $e) {
                     Log::error('VIP cashback save failed: ' . $e->getMessage(), [
+                        'vip_level_id' => $vipLevelId ?? 0,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            });
+        });
+    }
+
+    /**
+     * 机台比例设置
+     * @auth true
+     * @param int $vip_level_id
+     * @return Form
+     */
+    public function machineRatio(int $vip_level_id): Form
+    {
+        $vipLevel = VipLevel::query()->find($vip_level_id);
+        $existingRatios = VipLevelMachineRatio::query()
+            ->where('vip_level_id', $vip_level_id)
+            ->pluck('ratio', 'machine_type')
+            ->toArray();
+
+        $machineTypes = [
+            VipLevelMachineRatio::TYPE_SLOT => admin_trans('vip_level.machine_type_slot'),
+            VipLevelMachineRatio::TYPE_STEEL_BALL => admin_trans('vip_level.machine_type_steel_ball'),
+        ];
+
+        return Form::create([], function (Form $form) use ($vipLevel, $machineTypes, $existingRatios) {
+            $form->title(($vipLevel->name ?? '') . ' - ' . admin_trans('vip_level.machine_ratio') . '（100=100%，0.1=0.1%）');
+            $form->labelWidth(180);
+
+            foreach ($machineTypes as $type => $label) {
+                $form->number('machine_ratio_' . $type, $label)
+                    ->min(0)
+                    ->max(100)
+                    ->step(0.01)
+                    ->value($existingRatios[$type] ?? 0);
+            }
+
+            $form->saved(function (Form $form) {
+                try {
+                    $vipLevelId = request()->post('vip_level_id', 0);
+                    $data = request()->post('data', []);
+
+                    foreach ([VipLevelMachineRatio::TYPE_SLOT, VipLevelMachineRatio::TYPE_STEEL_BALL] as $type) {
+                        $key = 'machine_ratio_' . $type;
+                        if (!isset($data[$key])) {
+                            continue;
+                        }
+
+                        $ratio = floatval($data[$key]);
+                        VipLevelMachineRatio::updateOrCreate(
+                            ['vip_level_id' => $vipLevelId, 'machine_type' => $type],
+                            ['ratio' => $ratio, 'status' => 1]
+                        );
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('VIP machine ratio save failed: ' . $e->getMessage(), [
                         'vip_level_id' => $vipLevelId ?? 0,
                         'error' => $e->getMessage(),
                     ]);

@@ -3,6 +3,9 @@
 return [
     'title' => 'VIP等级管理',
     'cashback' => '反水比例',
+    'machine_ratio' => '机台比例',
+    'machine_type_slot' => '斯洛',
+    'machine_type_steel_ball' => '钢珠',
     'cashback_title' => ':name - 反水比例设置',
     'import_template' => '一键导入模板',
     'import_confirm' => '确定要导入VIP默认模板吗？将创建10个默认VIP等级（VIP1-VIP10）',

@@ -4167,6 +4167,14 @@ class ChannelIndexController
                     ->sum('bet');
             }
 
+            // 今日实体机台打码量（从 player_game_log 表的 chip_amount 字段汇总）
+            $todayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
+                ->where('player_id', $playerId)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
+                ->sum('chip_amount');
+            $todayBetAmount += $todayMachineBetAmount;
+
             // 昨日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
             $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
                 ->where('stat_type', 'game')
@@ -4184,6 +4192,14 @@ class ChannelIndexController
                     ->where('created_at', '<', $yesterdayEnd)
                     ->sum('bet');
             }
+
+            // 昨日实体机台打码量（从 player_game_log 表的 chip_amount 字段汇总）
+            $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
+                ->where('player_id', $playerId)
+                ->where('created_at', '>=', $yesterdayStart)
+                ->where('created_at', '<', $yesterdayEnd)
+                ->sum('chip_amount');
+            $yesterdayBetAmount += $yesterdayMachineBetAmount;
 
             // 查询今日已领取的福利券记录（包含规则类型）
             // 时间范围与打码量同步，以08:00作为分界点
@@ -4416,6 +4432,14 @@ class ChannelIndexController
                                 ->sum('bet');
                         }
 
+                        // 昨日实体机台打码量
+                        $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
+                            ->where('player_id', $playerId)
+                            ->where('created_at', '>=', $yesterdayStart)
+                            ->where('created_at', '<', $yesterdayEnd)
+                            ->sum('chip_amount');
+                        $yesterdayBetAmount += $yesterdayMachineBetAmount;
+
                         // 昨日打码量不足20000，拒绝领取
                         if ($yesterdayBetAmount < 20000) {
                             \support\Log::info('体验券打码判定失败', [
@@ -4473,6 +4497,14 @@ class ChannelIndexController
                         ->where('created_at', '<', $todayEnd)
                         ->sum('bet');
 
+                    // 今日实体机台打码量
+                    $todayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $todayStart)
+                        ->where('created_at', '<', $todayEnd)
+                        ->sum('chip_amount');
+                    $todayBetAmount += $todayMachineBetAmount;
+
                     $todayWelfareRules = $voucherConfig['today_welfare']['rules'] ?? [];
                     $valid = false;
                     foreach ($todayWelfareRules as $rule) {
@@ -4491,6 +4523,14 @@ class ChannelIndexController
                         ->where('created_at', '>=', $yesterdayStart)
                         ->where('created_at', '<', $yesterdayEnd)
                         ->sum('bet');
+
+                    // 昨日实体机台打码量
+                    $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
+                        ->where('player_id', $playerId)
+                        ->where('created_at', '>=', $yesterdayStart)
+                        ->where('created_at', '<', $yesterdayEnd)
+                        ->sum('chip_amount');
+                    $yesterdayBetAmount += $yesterdayMachineBetAmount;
 
                     $yesterdayWelfareRules = $welfareConfig['rules'] ?? [];
 

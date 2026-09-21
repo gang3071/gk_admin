@@ -3,6 +3,9 @@
 return [
     'title' => 'VIPレベル管理',
     'cashback' => 'キャッシュバック率',
+    'machine_ratio' => '機台比率',
+    'machine_type_slot' => 'スロット',
+    'machine_type_steel_ball' => 'パチンコ',
     'cashback_title' => ':name - キャッシュバック率設定',
     'import_template' => 'テンプレートをインポート',
     'import_confirm' => 'デフォルトのVIPテンプレートをインポートしてもよろしいですか？10個のデフォルトVIPレベル（VIP1-VIP10）が作成されます',

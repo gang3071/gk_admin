@@ -3,6 +3,9 @@
 return [
     'title' => 'VIP Level Management',
     'cashback' => 'Cashback Ratio',
+    'machine_ratio' => 'Machine Ratio',
+    'machine_type_slot' => 'Slot',
+    'machine_type_steel_ball' => 'Steel Ball',
     'cashback_title' => ':name - Cashback Ratio Settings',
     'import_template' => 'Import Template',
     'import_confirm' => 'Are you sure you want to import the default VIP template? This will create 10 default VIP levels (VIP1-VIP10)',
