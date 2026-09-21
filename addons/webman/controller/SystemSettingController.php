@@ -535,7 +535,7 @@ class SystemSettingController
                     $form->push(Html::markdown($audioHtml));
                 }
 
-                $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
+                $form->text("vip{$level}_text", '')
                     ->value($text)
                     ->maxlength(200)
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
