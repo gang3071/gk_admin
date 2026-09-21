@@ -204,20 +204,22 @@ class LotteryTicketIssueService
             return (int)$redisCount;
         }
 
-        // ✅ Redis失效，从数据库读取
-        $dbCount = LotteryTicket::where('activity_id', $activityId)->count();
+        // ✅ Redis失效，从数据库最大ticket_no恢复（不能用COUNT，因为有gaps时COUNT < MAX会导致重复编号）
+        $maxTicketNo = LotteryTicket::where('activity_id', $activityId)
+            ->max(\support\Db::raw('CAST(ticket_no AS UNSIGNED)'));
+        $dbMax = $maxTicketNo ? (int)$maxTicketNo : 0;
 
         // ✅ 回写Redis（避免缓存击穿）
-        if ($dbCount > 0) {
-            Redis::set($key, $dbCount);
+        if ($dbMax > 0) {
+            Redis::set($key, $dbMax);
 
-            Log::warning('[摸奖券] Redis序列号失效，已从数据库恢复', [
+            Log::warning('[摸奖券] Redis序列号失效，已从数据库最大编号恢复', [
                 'activity_id' => $activityId,
-                'db_count' => $dbCount
+                'db_max_sequence' => $dbMax,
             ]);
         }
 
-        return $dbCount;
+        return $dbMax;
     }
 
     /**
@@ -225,6 +227,12 @@ class LotteryTicketIssueService
      *
      * @param int $playerId
      */
+    private function isDuplicateKeyException(\Exception $e): bool
+    {
+        $msg = $e->getMessage();
+        return str_contains($msg, '1062') || str_contains($msg, 'Duplicate entry');
+    }
+
     private function clearPlayerTicketCache(int $playerId)
     {
         try {
@@ -285,6 +293,7 @@ class LotteryTicketIssueService
             throw new \Exception('活动奖券编号已用尽（超过100万张）');
         }
 
+        // ⭐ DB操作单独用try-catch，失败才回退Redis序列号
         try {
             Db::beginTransaction();
 
@@ -322,25 +331,28 @@ class LotteryTicketIssueService
                 'source' => $source
             ]);
 
-            // 清除玩家有效奖券缓存
-            $this->clearPlayerTicketCache($playerId);
-
-            // ⭐ 推送发券通知给客户端
-            // ⚠️ 不传 totalTickets 参数，让推送服务重新查询最新数据，确保数据一致性
-            $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $actualCount);
-            LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
-
-            // ⭐ 只返回必要信息，避免查询和返回大量数据
-            return [
-                'count' => $actualCount,
-                'first_ticket_no' => str_pad($startSequence, 6, '0', STR_PAD_LEFT),
-                'last_ticket_no' => str_pad($baseSequence, 6, '0', STR_PAD_LEFT),
-            ];
-
         } catch (\Exception $e) {
             Db::rollBack();
 
-            // 回退Redis序列号（避免序列号浪费）
+            // 重复键异常：Redis计数器落后于DB，自动从MAX(ticket_no)修复，不做decrby
+            if ($this->isDuplicateKeyException($e)) {
+                $maxTicketNo = LotteryTicket::where('activity_id', $activityId)
+                    ->max(\support\Db::raw('CAST(ticket_no AS UNSIGNED)'));
+                $maxSequenceInDb = $maxTicketNo ? (int)$maxTicketNo : 0;
+                Redis::set($key, $maxSequenceInDb);
+
+                Log::warning('[摸奖券] 检测到重复键错误，Redis序列号已自动修复，下次重试将使用正确编号', [
+                    'activity_id' => $activityId,
+                    'player_id' => $playerId,
+                    'stale_redis_value' => $baseSequence,
+                    'corrected_to' => $maxSequenceInDb,
+                    'sequence_range_attempted' => "{$startSequence}-{$baseSequence}",
+                ]);
+
+                throw $e;
+            }
+
+            // 普通DB失败才回退Redis序列号
             Redis::decrby($key, $actualCount);
 
             Log::error('[摸奖券] 批量发放失败，已回退Redis序列号', [
@@ -353,6 +365,27 @@ class LotteryTicketIssueService
 
             throw $e;
         }
+
+        // ⭐ commit成功后执行的后置操作，失败不影响发券结果也不回退Redis
+        $this->clearPlayerTicketCache($playerId);
+
+        // ⚠️ 推送失败只记日志，不抛出异常——推送失败不能回退已提交的tickets
+        try {
+            $message = sprintf('您在活動「%s」中獲得了 %d 張摸獎券！', $activity->name, $actualCount);
+            LotteryTicketPushService::pushPlayerTicketsUpdate($playerId, $message);
+        } catch (\Exception $e) {
+            Log::warning('[摸奖券] 发券推送通知失败，不影响发券结果', [
+                'activity_id' => $activityId,
+                'player_id' => $playerId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return [
+            'count' => $actualCount,
+            'first_ticket_no' => str_pad($startSequence, 6, '0', STR_PAD_LEFT),
+            'last_ticket_no' => str_pad($baseSequence, 6, '0', STR_PAD_LEFT),
+        ];
     }
 
     /**
