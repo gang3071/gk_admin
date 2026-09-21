@@ -10,8 +10,6 @@ use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
-use addons\webman\model\PlayerPoints;
-use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
@@ -129,10 +127,7 @@ class StorePlayerController
                 $query->where('player.created_at', '<=', $requestFilter['created_at_end']);
             }
             if (isset($requestFilter['birthday_month']) && $requestFilter['birthday_month'] !== '') {
-                $month = intval($requestFilter['birthday_month']);
-                $startDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-01';
-                $endDate = date('Y') . '-' . str_pad($month, 2, '0', STR_PAD_LEFT) . '-' . date('t', mktime(0, 0, 0, $month, 1));
-                $query->whereBetween('player_extend.birthday', [$startDate, $endDate]);
+                $query->whereRaw('MONTH(player_extend.birthday) = ?', [intval($requestFilter['birthday_month'])]);
             }
         }
 
@@ -155,15 +150,9 @@ class StorePlayerController
             Db::raw('(SELECT COALESCE(SUM(amount), 0) FROM player_delivery_record WHERE player_delivery_record.player_id = player.id AND player_delivery_record.type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ') as lottery_ticket_reward_amount'),
             // 小计 = 开分 - 洗分（用于排序）
             Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0)) as subtotal'),
-            // 积分字段
-            'player_points.available_points',
-            'player_points.frozen_points',
-            'player_points.total_points',
         ])
             // VIP等级关联
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
-            // 积分表关联
-            ->leftjoin('player_points', 'player.id', '=', 'player_points.player_id')
             // LEFT JOIN 保级周期（获取当前周期内打码量）
             ->leftJoin('player_vip_period as vip_retain_period', function ($join) {
                 $join->on('player.id', '=', 'vip_retain_period.player_id')
@@ -587,17 +576,6 @@ class StorePlayerController
                 ]);
             })->sortable()->width(110)->align('center');
 
-            // 积分列
-            $grid->column('available_points', admin_trans('player_points.fields.available_points'))->display(function ($val) {
-                return Tag::create($val ?? 0)->color('green');
-            })->align('center')->width(100)->sortable();
-            $grid->column('frozen_points', admin_trans('player_points.fields.frozen_points'))->display(function ($val) {
-                return Tag::create($val ?? 0)->color('orange');
-            })->align('center')->width(100)->sortable();
-            $grid->column('total_points', admin_trans('player_points.fields.total_points'))->display(function ($val) {
-                return Tag::create($val ?? 0)->color('blue');
-            })->align('center')->width(100)->sortable();
-
             $grid->column('lottery_ticket_reward_amount', admin_trans('player.total_lottery_ticket_reward_amount'))->display(function ($value) {
                 return Html::create(number_format(floatval($value ?? 0), 2))->style([
                     'fontSize' => '13px',
@@ -826,7 +804,7 @@ class StorePlayerController
                     $monthOptions[$m] = $m . admin_trans('public_msg.month_unit');
                 }
                 $filter->eq()->select('birthday_month')
-                    ->placeholder(admin_trans('player.filter.birthday_month'))
+                    ->placeholder(admin_trans('player_extend.fields.birthday_month'))
                     ->options($monthOptions)
                     ->style(['width' => '150px']);
 
