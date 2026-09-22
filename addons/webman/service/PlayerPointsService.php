@@ -422,24 +422,38 @@ class PlayerPointsService
     /**
      * 查询积分记录
      *
-     * @param int $playerId
+     * @param int $playerId 玩家ID；传 0 表示查询全部玩家
      * @param int $page
      * @param int $size
      * @param int|null $type
      * @param array $permissionFilter 权限过滤条件 ['department_id' => xxx, 'agent_admin_id' => xxx, 'store_admin_id' => xxx]
+     * @param bool $withPlayer 是否载入玩家信息（查询全部玩家时需要）
      * @return array
      */
     public static function getRecords(
-        int $playerId,
+        int $playerId = 0,
         int $page = 1,
         int $size = 20,
         ?int $type = null,
-        array $permissionFilter = []
+        array $permissionFilter = [],
+        bool $withPlayer = false
     ): array {
-        $query = PlayerPointsRecord::where('player_id', $playerId);
+        $query = PlayerPointsRecord::query();
+
+        // playerId > 0：查询单一玩家；playerId = 0：查询全部玩家
+        if ($playerId > 0) {
+            $query->where('player_id', $playerId);
+        }
 
         if ($type !== null) {
             $query->where('type', $type);
+        }
+
+        // 查询全部玩家时，预载玩家信息，避免逐笔查询
+        if ($withPlayer) {
+            $query->with(['player' => function ($q) {
+                $q->select('id', 'name', 'uuid', 'account');
+            }]);
         }
 
         // 应用数据权限过滤（如果提供）

@@ -31,18 +31,10 @@ class PlayerPointsController
     public function index(array $params = []): Grid
     {
         $playerId = (int)(Request::input('player_id') ?? ($params['player_id'] ?? 0));
+        $player = $playerId ? Player::find($playerId) : null;
 
-        // 验证玩家ID
-        if (!$playerId) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('player_points.records_title'));
-                $grid->quickSearch(admin_trans('player_points.message.player_not_found'));
-            });
-        }
-
-        // 获取玩家信息
-        $player = Player::find($playerId);
-        if (!$player) {
+        // 指定 player_id 但查無玩家
+        if ($playerId && !$player) {
             return Grid::create([], function (Grid $grid) {
                 $grid->title(admin_trans('player_points.records_title'));
                 $grid->quickSearch(admin_trans('player_points.message.player_not_found'));
@@ -54,15 +46,32 @@ class PlayerPointsController
         $size = Request::input('ex_admin_size', 20);
         $type = Request::input('ex_admin_filter.type');
 
-        // 获取积分信息
-        $pointsData = PlayerPointsService::getPlayerPoints($playerId);
+        // 获取积分信息（仅指定玩家时显示统计卡片）
+        $pointsData = $playerId ? PlayerPointsService::getPlayerPoints($playerId) : null;
 
-        // 查询数据（主站无权限限制）
-        $result = PlayerPointsService::getRecords($playerId, $page, $size, $type !== '' ? $type : null);
-        $list = ($result['list'] ?? collect())->toArray();
+        // 查询数据（主站无权限限制）：指定 player_id 查单一玩家，否则查全部玩家
+        $result = PlayerPointsService::getRecords(
+            $playerId,
+            $page,
+            $size,
+            $type !== '' ? $type : null,
+            [],
+            $playerId === 0
+        );
+        $records = $result['list'] ?? collect();
+        if ($playerId === 0) {
+            // 查询全部玩家时补充玩家名称，供列表显示
+            $list = $records->map(function ($item) {
+                $row = $item->toArray();
+                $row['player_name'] = $item->player->name ?? ($item->player->account ?? '');
+                return $row;
+            })->toArray();
+        } else {
+            $list = $records->toArray();
+        }
         $total = $result['total'] ?? 0;
 
-        return Grid::create($list, function (Grid $grid) use ($player, $pointsData, $total, $list) {
+        return Grid::create($list, function (Grid $grid) use ($player, $pointsData, $total, $list, $playerId) {
             $grid->title(admin_trans('player_points.records_title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -73,18 +82,26 @@ class PlayerPointsController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
 
-            // 添加顶部统计卡片
-            $grid->header(function () use ($player, $pointsData) {
-                return [
-                    ['label' => admin_trans('player_points.statistics.player_account'), 'value' => $player->username ?? $player->name],
-                    ['label' => admin_trans('player_points.statistics.available_points'), 'value' => $pointsData['available_points'], 'type' => 'success'],
-                    ['label' => admin_trans('player_points.statistics.frozen_points'), 'value' => $pointsData['frozen_points'], 'type' => 'warning'],
-                    ['label' => admin_trans('player_points.statistics.total_points'), 'value' => $pointsData['total_points'], 'type' => 'primary'],
-                ];
-            });
+            // 添加顶部统计卡片（仅指定单一玩家时显示）
+            if ($player && $pointsData) {
+                $grid->header(function () use ($player, $pointsData) {
+                    return [
+                        ['label' => admin_trans('player_points.statistics.player_account'), 'value' => $player->username ?? $player->name],
+                        ['label' => admin_trans('player_points.statistics.available_points'), 'value' => $pointsData['available_points'], 'type' => 'success'],
+                        ['label' => admin_trans('player_points.statistics.frozen_points'), 'value' => $pointsData['frozen_points'], 'type' => 'warning'],
+                        ['label' => admin_trans('player_points.statistics.total_points'), 'value' => $pointsData['total_points'], 'type' => 'primary'],
+                    ];
+                });
+            }
 
             // 列定义
             $grid->column('id', admin_trans('player_points.fields.id'))->width(80)->align('center');
+
+            // 查询全部玩家时，显示玩家信息
+            if ($playerId === 0) {
+                $grid->column('player_id', admin_trans('player_points.fields.player_id'))->width(90)->align('center');
+                $grid->column('player_name', admin_trans('player_points.fields.player_name'))->width(160)->align('center');
+            }
             $grid->column('type_desc', admin_trans('player_points.fields.type'))->width(120)->align('center');
             $grid->column('points', admin_trans('player_points.fields.points'))
                 ->width(120)
