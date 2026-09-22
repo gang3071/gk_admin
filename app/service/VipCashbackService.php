@@ -107,6 +107,14 @@ class VipCashbackService
         ];
 
         try {
+            // 处理实体机台打码量反水（经验值+反水）
+            // 必须先于三方游戏处理：无三方待补算记录时也不能跳过机台
+            $machineResult = $this->processMachineCashback();
+            $result['processed'] += $machineResult['processed'];
+            $result['updated'] += $machineResult['updated'];
+            $result['skipped'] += $machineResult['skipped'];
+            $result['errors'] += $machineResult['errors'];
+
             // 查询已结算但未计算反水的游戏记录
             $records = $this->queryUnsettledRecords();
 
@@ -114,7 +122,7 @@ class VipCashbackService
                 return $result;
             }
 
-            $result['processed'] = $records->count();
+            $result['processed'] += $records->count();
 
             // 批量获取玩家信息
             $playerIds = $records->pluck('player_id')->unique();
@@ -224,13 +232,6 @@ class VipCashbackService
                     ]);
                 }
             }
-
-            // 处理实体机台打码量反水
-            $machineResult = $this->processMachineCashback();
-            $result['processed'] += $machineResult['processed'];
-            $result['updated'] += $machineResult['updated'];
-            $result['skipped'] += $machineResult['skipped'];
-            $result['errors'] += $machineResult['errors'];
 
             if ($result['updated'] > 0) {
                 $this->log('info', 'VIP反水补算完成', $result);
