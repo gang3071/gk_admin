@@ -334,7 +334,7 @@ class SystemSettingController
                 ->if(function ($value, SystemSetting $data) {
                     return $data->feature === 'ticket_machine_download_url';
                 })->editable(
-                    Editable::text('content')
+                    Editable::input('content')
                         ->rule(['required' => admin_trans('system_setting.fields.ticket_machine_download_url')])
                 )->display(function ($val, SystemSetting $data) {
                     return $data->content;
@@ -521,7 +521,7 @@ class SystemSettingController
 
         return Form::create($data, function (Form $form) use ($data, $config) {
             $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
-            $form->hidden('id')->default($data['id']);
+
             foreach ([8, 9, 10] as $level) {
                 $levelConfig = $config[$level] ?? [];
                 $audioUrl = $levelConfig['url'] ?? '';
@@ -535,7 +535,7 @@ class SystemSettingController
                     $form->push(Html::markdown($audioHtml));
                 }
 
-                $form->text("vip{$level}_text", '')
+                $form->text("vip{$level}_text", 'VIP ' . $level . ' ' . admin_trans('system_setting.vip_welcome_voice.welcome_text'))
                     ->value($text)
                     ->maxlength(200)
                     ->placeholder(admin_trans('system_setting.vip_welcome_voice.text_placeholder'));
@@ -544,7 +544,7 @@ class SystemSettingController
             $form->saving(function (Form $form) use ($config) {
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
-                    $text = $form->input("vip{$level}_text");
+                    $text = $form->input("vip{$level}_text", '');
                     $newConfig[$level] = [
                         'text' => $text,
                         'url'  => $newConfig[$level]['url'] ?? '',
