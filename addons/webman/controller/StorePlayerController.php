@@ -16,6 +16,7 @@ use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\VipLevel;
 use addons\webman\model\PlayerBetStatistics;
 use addons\webman\service\WalletService;
+use addons\webman\grid\Driver\AlreadyPaginated;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -131,7 +132,7 @@ class StorePlayerController
             }
         }
 
-        $list = $query->select([
+        $query = $query->select([
             'player.*',
             'player_extend.recharge_amount',
             'player_extend.withdraw_amount',
@@ -169,17 +170,22 @@ class StorePlayerController
         ];
         $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
 
+        // SQL 层分页：count 去掉 select（相关子查询不参与 count），distinct 防止 vip_retain_period 一对多放大
+        $playerCount = (clone $query)->toBase()->distinct()->count('player.id');
+
+        $page = max(1, (int)Request::input('ex_admin_page', 1));
+        $size = max(1, (int)Request::input('ex_admin_size', 20));
+
+        // 只取当前页，后面的余额/班次批量查询也只作用于这一页
         $list = $query->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
                 function ($query) use ($actualSortField, $exAdminSortBy) {
                     $query->orderBy($actualSortField, $exAdminSortBy);
                 }, function ($query) {
                     $query->orderBy('player.id', 'desc');
                 })
+            ->forPage($page, $size)
             ->get()
             ->toArray();
-
-        // 计算筛选后的总数（在 select/join 之后）
-        $playerCount = count($list);
 
         // 🚀 批量从 Redis 获取余额和爆机状态（优化性能）
         if (!empty($list)) {
@@ -367,25 +373,28 @@ class StorePlayerController
             unset($item);
         }
 
-        // ✅ 优化：直接从已查询的 list 构建 playerOptions，避免重复查询
-        $playerOptions = [];
-        foreach ($list as $item) {
-            $label = $item['name']
-                ? "{$item['name']} (ID: {$item['id']})"
-                : "ID: {$item['id']}";
-            if (!empty($item['uuid'])) {
-                $label .= " - {$item['uuid']}";
-            }
-            $playerOptions[$item['id']] = $label;
-        }
+        // 筛选下拉需要全部玩家（与分页无关），只取轻量字段
+        $playerOptions = Player::query()
+            ->where('department_id', $departmentId)
+            ->where('store_admin_id', $storeAdminId)
+            ->where('is_promoter', 0)
+            ->get(['id', 'name', 'uuid'])
+            ->mapWithKeys(function ($item) {
+                $label = $item->name ? "{$item->name} (ID: {$item->id})" : "ID: {$item->id}";
+                if (!empty($item->uuid)) {
+                    $label .= " - {$item->uuid}";
+                }
+                return [$item->id => $label];
+            })
+            ->toArray();
 
-        return Grid::create($list, function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter, $channelVipLevels) {
+        return Grid::create(new AlreadyPaginated($list, $playerCount), function (Grid $grid) use ($storeAdminId, $departmentId, $admin, $playerCount, $list, $playerOptions, $requestFilter, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
 
             // 设置分页
-            $grid->pagination()->pageSize(50);
+            $grid->pagination()->pageSize(20);
             $grid->pagination()->showSizeChanger(true);
             $grid->pagination()->pageSizeOptions(['20', '50', '100', '200']);
 
