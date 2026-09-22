@@ -343,7 +343,7 @@ return [
     'machine_type_steel_ball' => 'Steel Ball',
     'machine_open_point' => 'Open Point',
     'machine_wash_point' => 'Wash Point',
-    'machine_profit' => 'Profit',
+    'machine_profit' => 'Subtotal',
     'machine_pressure' => 'Pressure',
     'machine_score' => 'Score',
 ];

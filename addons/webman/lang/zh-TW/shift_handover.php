@@ -341,7 +341,7 @@ return [
     'machine_type_steel_ball' => '鋼珠',
     'machine_open_point' => '上分',
     'machine_wash_point' => '下分',
-    'machine_profit' => '利潤',
+    'machine_profit' => '小計',
     'machine_pressure' => '押分',
     'machine_score' => '得分',
 ];
