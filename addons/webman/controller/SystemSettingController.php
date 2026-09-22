@@ -521,6 +521,7 @@ class SystemSettingController
 
         return Form::create($data, function (Form $form) use ($data, $config) {
             $form->title(admin_trans('system_setting.vip_welcome_voice.title'));
+            $form->hidden('id')->default($data['id']);
 
             foreach ([8, 9, 10] as $level) {
                 $levelConfig = $config[$level] ?? [];
@@ -544,7 +545,7 @@ class SystemSettingController
             $form->saving(function (Form $form) use ($config) {
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
-                    $text = $form->input("vip{$level}_text", '');
+                    $text = $form->input("vip{$level}_text");
                     $newConfig[$level] = [
                         'text' => $text,
                         'url'  => $newConfig[$level]['url'] ?? '',
