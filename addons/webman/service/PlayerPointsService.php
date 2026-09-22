@@ -459,7 +459,8 @@ class PlayerPointsService
         // 应用数据权限过滤（如果提供）
         if (!empty($permissionFilter)) {
             if (isset($permissionFilter['department_id'])) {
-                $query->where('department_id', $permissionFilter['department_id']);
+                // 限定表名，避免与 join 的 player 表字段冲突（department_id 两边都有）
+                $query->where('player_points_record.department_id', $permissionFilter['department_id']);
             }
             // 如果需要按代理或门店过滤，需要JOIN player表
             if (isset($permissionFilter['agent_admin_id']) || isset($permissionFilter['store_admin_id'])) {

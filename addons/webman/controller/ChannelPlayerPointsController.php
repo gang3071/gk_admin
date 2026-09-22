@@ -52,47 +52,56 @@ class ChannelPlayerPointsController
     public function index(array $params = []): Grid
     {
         $playerId = (int)(Request::input('player_id') ?? ($params['player_id'] ?? 0));
-
-        // 验证玩家ID
-        if (!$playerId) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('player_points.records_title'));
-                $grid->quickSearch(admin_trans('player_points.message.player_not_found'));
-            });
-        }
-
-        // 验证权限
-        $permissionFilter = $this->checkPlayerPermission($playerId);
-        if ($permissionFilter === false) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('player_points.records_title'));
-                $grid->quickSearch(admin_trans('player_points.message.permission_denied'));
-            });
-        }
-
-        // 获取玩家信息
-        $player = Player::find($playerId);
-        if (!$player) {
-            return Grid::create([], function (Grid $grid) {
-                $grid->title(admin_trans('player_points.records_title'));
-                $grid->quickSearch(admin_trans('player_points.message.player_not_found'));
-            });
-        }
+        $admin = Admin::user();
 
         // 获取参数
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $type = Request::input('ex_admin_filter.type');
 
-        // 获取积分信息
-        $pointsData = PlayerPointsService::getPlayerPoints($playerId);
+        if ($playerId) {
+            // 指定 player_id：查询单一玩家（需通过权限验证）
+            $permissionFilter = $this->checkPlayerPermission($playerId);
+            if ($permissionFilter === false) {
+                return Grid::create([], function (Grid $grid) {
+                    $grid->title(admin_trans('player_points.records_title'));
+                    $grid->quickSearch(admin_trans('player_points.message.permission_denied'));
+                });
+            }
 
-        // 查询数据（应用权限过滤）
-        $result = PlayerPointsService::getRecords($playerId, $page, $size, $type !== '' ? $type : null, $permissionFilter);
-        $list = ($result['list'] ?? collect())->toArray();
+            // 获取玩家信息与积分统计
+            $player = Player::find($playerId);
+            $pointsData = PlayerPointsService::getPlayerPoints($playerId);
+        } else {
+            // 未指定 player_id：查询本渠道全部玩家的记录
+            $permissionFilter = ['department_id' => $admin->department_id];
+            $player = null;
+            $pointsData = null;
+        }
+
+        // 查询数据（应用权限过滤）：指定 player_id 查单一玩家，否则查本渠道全部玩家
+        $result = PlayerPointsService::getRecords(
+            $playerId,
+            $page,
+            $size,
+            $type !== '' ? $type : null,
+            $permissionFilter,
+            $playerId === 0
+        );
+        $records = $result['list'] ?? collect();
+        if ($playerId === 0) {
+            // 查询本渠道全部玩家时补充玩家名称，供列表显示
+            $list = $records->map(function ($item) {
+                $row = $item->toArray();
+                $row['player_name'] = $item->player->name ?? ($item->player->account ?? '');
+                return $row;
+            })->toArray();
+        } else {
+            $list = $records->toArray();
+        }
         $total = $result['total'] ?? 0;
 
-        return Grid::create($list, function (Grid $grid) use ($player, $pointsData, $total, $list) {
+        return Grid::create($list, function (Grid $grid) use ($player, $pointsData, $total, $list, $playerId) {
             $grid->title(admin_trans('player_points.records_title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -103,18 +112,26 @@ class ChannelPlayerPointsController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
 
-            // 添加顶部统计卡片
-            $grid->header(function () use ($player, $pointsData) {
-                return [
-                    ['label' => admin_trans('player_points.statistics.player_account'), 'value' => $player->username ?? $player->name],
-                    ['label' => admin_trans('player_points.statistics.available_points'), 'value' => $pointsData['available_points'], 'type' => 'success'],
-                    ['label' => admin_trans('player_points.statistics.frozen_points'), 'value' => $pointsData['frozen_points'], 'type' => 'warning'],
-                    ['label' => admin_trans('player_points.statistics.total_points'), 'value' => $pointsData['total_points'], 'type' => 'primary'],
-                ];
-            });
+            // 添加顶部统计卡片（仅指定单一玩家时显示）
+            if ($player && $pointsData) {
+                $grid->header(function () use ($player, $pointsData) {
+                    return [
+                        ['label' => admin_trans('player_points.statistics.player_account'), 'value' => $player->username ?? $player->name],
+                        ['label' => admin_trans('player_points.statistics.available_points'), 'value' => $pointsData['available_points'], 'type' => 'success'],
+                        ['label' => admin_trans('player_points.statistics.frozen_points'), 'value' => $pointsData['frozen_points'], 'type' => 'warning'],
+                        ['label' => admin_trans('player_points.statistics.total_points'), 'value' => $pointsData['total_points'], 'type' => 'primary'],
+                    ];
+                });
+            }
 
             // 列定义
             $grid->column('id', admin_trans('player_points.fields.id'))->width(80)->align('center');
+
+            // 查询本渠道全部玩家时，显示玩家信息
+            if ($playerId === 0) {
+                $grid->column('player_id', admin_trans('player_points.fields.player_id'))->width(90)->align('center');
+                $grid->column('player_name', admin_trans('player_points.fields.player_name'))->width(160)->align('center');
+            }
             $grid->column('type_desc', admin_trans('player_points.fields.type'))->width(120)->align('center');
             $grid->column('points', admin_trans('player_points.fields.points'))
                 ->width(120)
