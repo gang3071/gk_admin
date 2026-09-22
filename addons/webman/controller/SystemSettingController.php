@@ -544,7 +544,7 @@ class SystemSettingController
             $form->saving(function (Form $form) use ($config) {
                 $newConfig = $config;
                 foreach ([8, 9, 10] as $level) {
-                    $text = $form->input("vip{$level}_text", '');
+                    $text = $form->input("vip{$level}_text");
                     $newConfig[$level] = [
                         'text' => $text,
                         'url'  => $newConfig[$level]['url'] ?? '',
