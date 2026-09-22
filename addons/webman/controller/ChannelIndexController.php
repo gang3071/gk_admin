@@ -5132,7 +5132,7 @@ class ChannelIndexController
                 COALESCE(SUM(open_point), 0) as open_point,
                 COALESCE(SUM(wash_point), 0) as wash_point,
                 COALESCE(SUM(pressure), 0) as pressure,
-                COALESCE(SUM(turn_point), 0) as turn_point,
+                COALESCE(SUM(chip_amount), 0) as chip_amount,
                 COALESCE(SUM(score), 0) as score
             ')
             ->whereIn('player_id', $playerIds)
@@ -5158,13 +5158,6 @@ class ChannelIndexController
             ->whereIn('id', $machineIds)
             ->pluck('code', 'id');
 
-        // 获取钢珠机台的 lottery_point（来自 machine_category 表）
-        $machineCategoryTableName = (new \addons\webman\model\MachineCategory())->getTable();
-        $lotteryPointMap = \addons\webman\model\Machine::query()
-            ->leftJoin($machineCategoryTableName, $machineTableName . '.cate_id', '=', $machineCategoryTableName . '.id')
-            ->whereIn($machineTableName . '.id', $machineIds)
-            ->pluck($machineCategoryTableName . '.lottery_point', $machineTableName . '.id');
-
         // 保存机台明细
         foreach ($machineLogs as $log) {
             $openPoint = (float)$log->open_point;
@@ -5172,12 +5165,10 @@ class ChannelIndexController
             $machineId = (int)$log->machine_id;
             $machineType = (int)$log->type;
 
-            // 钢珠(type=2)的押分 = 转数 * machine_category.lottery_point
-            $pressure = (float)$log->pressure;
-            if ($machineType === \addons\webman\model\GameType::TYPE_STEEL_BALL) {
-                $lotteryPoint = (float)($lotteryPointMap[$machineId] ?? 0);
-                $pressure = (float)bcmul((string)(int)$log->turn_point, (string)$lotteryPoint, 2);
-            }
+            // 斯洛使用 pressure 字段，钢珠使用 chip_amount 字段
+            $pressure = $machineType === \addons\webman\model\GameType::TYPE_STEEL_BALL
+                ? (float)$log->chip_amount
+                : (float)$log->pressure;
 
             \addons\webman\model\StoreShiftMachineDetail::create([
                 'shift_record_id' => $shiftRecordId,
