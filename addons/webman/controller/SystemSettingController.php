@@ -516,7 +516,7 @@ class SystemSettingController
     public function editVipWelcomeVoice(SystemSetting $data): Form
     {
         /** @var SystemSetting $data */
-        $data = $data->where('feature', 'vip_welcome_voice')->first();
+        $data = $data->where('department_id', 0)->where('feature', 'vip_welcome_voice')->first();
         $config = json_decode($data->content ?? '{}', true) ?: [];
 
         return Form::create($data, function (Form $form) use ($data, $config) {
