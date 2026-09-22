@@ -25,6 +25,8 @@ class VipLevelMachineRatio extends Model
 {
     use HasDateTimeFormatter;
 
+    protected $table = 'vip_level_machine_ratio';
+
     // 机台类型常量
     const TYPE_SLOT = 1;        // 斯洛
     const TYPE_STEEL_BALL = 2;  // 钢珠
@@ -78,5 +80,19 @@ class VipLevelMachineRatio extends Model
     public static function calculateMachineAmount(float $bet, float $ratio): float
     {
         return round($bet * $ratio / 100, 4);
+    }
+
+    /**
+     * 格式化存储数据（0值转null）
+     * @param float $ratio
+     * @param float $amount
+     * @return array
+     */
+    public static function formatForStorage(float $ratio, float $amount): array
+    {
+        return [
+            'cashback_ratio' => $ratio > 0 ? $ratio : null,
+            'cashback_amount' => $amount > 0 ? $amount : null,
+        ];
     }
 }
