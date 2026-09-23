@@ -1,29 +1,52 @@
 <template>
   <div class="batch-qrcode-container">
-    <!-- 操作按钮 -->
+    <!-- 操作區 -->
     <div class="batch-action-bar">
-      <a-button type="primary" @click="downloadImage" :loading="generating" class="batch-btn-download">
-        下載圖片
-      </a-button>
-      <a-button @click="printQRCodes" :loading="generating" class="batch-btn-print">
-        列印
-      </a-button>
-      <a-tag color="blue" class="batch-machine-count">共 {{ machines.length }} 個機台</a-tag>
+      <div class="batch-controls">
+        <span class="batch-control-item">
+          <label>二維碼尺寸</label>
+          <a-input-number v-model:value="qrSize" :min="80" :max="300" :step="10" size="small" />
+          <span class="batch-unit">px</span>
+        </span>
+        <span class="batch-control-item">
+          <label>每行數量</label>
+          <a-input-number v-model:value="cols" :min="1" :max="6" size="small" />
+        </span>
+      </div>
+
+      <div class="batch-buttons">
+        <a-button type="primary" @click="downloadAll" :loading="generating" class="batch-btn-download">
+          下載全部
+        </a-button>
+        <a-button @click="printAll" :loading="generating" class="batch-btn-print">
+          列印全部
+        </a-button>
+        <a-button @click="renderAll" :loading="generating" class="batch-btn-regenerate">
+          重新生成
+        </a-button>
+      </div>
+
+      <div class="batch-summary">
+        <a-tag color="blue">共 {{ machines.length }} 個機台</a-tag>
+        <a-tag color="cyan">目前尺寸 {{ qrSize }}px</a-tag>
+        <a-tag color="green">每頁 {{ perPage }} 個</a-tag>
+        <a-tag color="orange">共 {{ pages.length }} 頁</a-tag>
+        <a-tag v-if="clamped" color="red">尺寸過大，每行已自動調整為 {{ usedCols }}</a-tag>
+      </div>
     </div>
 
-    <!-- 加载提示 -->
+    <!-- 加載提示 -->
     <div v-if="generating" class="batch-loading">
       <a-spin size="large" />
       <div class="batch-loading-text">正在生成二維碼...</div>
     </div>
 
-    <!-- A4 画布预览 -->
-    <div v-show="!generating" class="batch-canvas-wrapper" ref="canvasWrapper">
-      <canvas
-        ref="batchCanvas"
-        class="batch-canvas"
-        :style="canvasStyle"
-      ></canvas>
+    <!-- 多頁 A4 預覽 -->
+    <div v-show="!generating" class="batch-pages">
+      <div v-for="(page, pageIndex) in pages" :key="pageIndex" class="batch-page">
+        <div class="batch-page-label">第 {{ pageIndex + 1 }} / {{ pages.length }} 頁</div>
+        <canvas :ref="(el) => setPageCanvas(pageIndex, el)" class="batch-canvas"></canvas>
+      </div>
     </div>
   </div>
 </template>
@@ -46,59 +69,112 @@ export default {
     return {
       generating: false,
       qrcodeLoaded: false,
-      canvasScale: 1,   // Canvas 缩放比例
 
-      // A4 纸张尺寸 (96 DPI)
+      // 可調整參數
+      qrSize: 180,   // 二維碼尺寸（正方形）
+      cols: 3,       // 每行數量（會依紙張寬度自動夾限）
+
+      // A4 紙張尺寸 (96 DPI)
       pageWidth: 794,   // 210mm
       pageHeight: 1123, // 297mm
 
-      // 布局配置
-      cols: 3,          // 每行3个二维码
-      qrSize: 200,      // 二维码尺寸
-      textHeight: 60,   // 文字区域高度
-      padding: 20,      // 页边距
-      gapX: 15,         // 水平间距
-      gapY: 15,         // 垂直间距
+      // 固定版面參數
+      textHeight: 60,   // 文字區域高度
+      padding: 20,      // 頁邊距
+      gapX: 15,         // 水平間距
+      gapY: 15          // 垂直間距
     };
   },
   computed: {
-    // 计算每个二维码单元的尺寸
+    usableWidth() {
+      return this.pageWidth - this.padding * 2;
+    },
+    usableHeight() {
+      return this.pageHeight - this.padding * 2;
+    },
     cellWidth() {
       return this.qrSize + this.gapX;
     },
     cellHeight() {
       return this.qrSize + this.textHeight + this.gapY;
     },
-    // Canvas 缩放样式
-    canvasStyle() {
-      return {
-        transform: `scale(${this.canvasScale})`,
-        transformOrigin: 'center center',
-        transition: 'transform 0.3s ease'
-      };
+    // 依紙張寬度算出最多能放幾欄
+    maxCols() {
+      return Math.max(1, Math.floor((this.usableWidth + this.gapX) / this.cellWidth));
+    },
+    // 依紙張高度算出最多能放幾列
+    maxRows() {
+      return Math.max(1, Math.floor((this.usableHeight + this.gapY) / this.cellHeight));
+    },
+    // 實際使用的欄數（不超過能放的數量，避免被切到）
+    usedCols() {
+      return Math.max(1, Math.min(this.cols, this.maxCols));
+    },
+    usedRows() {
+      return this.maxRows;
+    },
+    // 每頁可容納數量
+    perPage() {
+      return this.usedCols * this.usedRows;
+    },
+    // 使用者設定的欄數超過可放數量時提示
+    clamped() {
+      return this.cols > this.maxCols;
+    },
+    // 依每頁容量切頁
+    pages() {
+      const list = this.machines || [];
+      const result = [];
+      for (let i = 0; i < list.length; i += this.perPage) {
+        result.push(list.slice(i, i + this.perPage));
+      }
+      return result;
+    }
+  },
+  watch: {
+    qrSize() {
+      this.renderAll();
+    },
+    cols() {
+      this.renderAll();
+    },
+    machines() {
+      this.renderAll();
     }
   },
   created() {
-    // 调试：打印接收到的机台数据
-    console.log('Batch QR Code - Machines data:', this.machines);
+    // 各頁 canvas 元素（非響應式，避免 function ref 觸發重複渲染）
+    this.pageCanvasEls = [];
   },
   mounted() {
     this.loadQRCodeLibrary();
-    // 监听窗口大小变化
-    window.addEventListener('resize', this.calculateCanvasScale);
-  },
-  beforeDestroy() {
-    // 移除监听器
-    window.removeEventListener('resize', this.calculateCanvasScale);
   },
   methods: {
     /**
-     * 加载 QR Code 库
+     * 記錄每一頁的 canvas 元素（function ref）
+     */
+    setPageCanvas(index, el) {
+      if (!this.pageCanvasEls) {
+        this.pageCanvasEls = [];
+      }
+      this.pageCanvasEls[index] = el || null;
+    },
+
+    /**
+     * 取得所有頁面的 canvas 元素（依頁碼順序）
+     */
+    getPageCanvases() {
+      const els = this.pageCanvasEls || [];
+      return this.pages.map((page, index) => els[index]).filter(Boolean);
+    },
+
+    /**
+     * 載入 QR Code 庫
      */
     async loadQRCodeLibrary() {
       if (window.qrcode) {
         this.qrcodeLoaded = true;
-        this.generateAllQRCodes();
+        this.renderAll();
         return;
       }
 
@@ -109,7 +185,7 @@ export default {
         script.src = 'https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js';
         script.onload = () => {
           this.qrcodeLoaded = true;
-          this.generateAllQRCodes();
+          this.renderAll();
           resolve();
         };
         script.onerror = (error) => {
@@ -122,9 +198,9 @@ export default {
     },
 
     /**
-     * 生成所有二维码到 A4 画布
+     * 生成所有頁面的二維碼
      */
-    async generateAllQRCodes() {
+    async renderAll() {
       if (!this.qrcodeLoaded || !this.machines.length) {
         this.generating = false;
         return;
@@ -132,45 +208,43 @@ export default {
 
       this.generating = true;
 
-      // 延迟执行，确保 DOM 已更新
+      // 等 DOM 更新（頁數可能因尺寸改變而變動）
       await this.$nextTick();
 
       try {
-        const canvas = this.$refs.batchCanvas;
-        if (!canvas) {
-          throw new Error('Canvas not found');
-        }
+        const canvases = this.getPageCanvases();
+        const pages = this.pages;
 
-        // 设置 canvas 尺寸为 A4
-        canvas.width = this.pageWidth;
-        canvas.height = this.pageHeight;
+        for (let p = 0; p < pages.length; p++) {
+          const canvas = canvases[p];
+          if (!canvas) {
+            continue;
+          }
 
-        const ctx = canvas.getContext('2d');
+          // 設定 canvas 為 A4 尺寸
+          canvas.width = this.pageWidth;
+          canvas.height = this.pageHeight;
 
-        // 填充白色背景
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, this.pageWidth, this.pageHeight);
+          const ctx = canvas.getContext('2d');
 
-        // 遍历机台，逐个绘制二维码
-        for (let i = 0; i < this.machines.length; i++) {
-          const machine = this.machines[i];
+          // 白色背景
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, this.pageWidth, this.pageHeight);
 
-          // 计算位置（每行3个）
-          const row = Math.floor(i / this.cols);
-          const col = i % this.cols;
+          // 逐個繪製本頁的二維碼
+          const items = pages[p];
+          for (let i = 0; i < items.length; i++) {
+            const row = Math.floor(i / this.usedCols);
+            const col = i % this.usedCols;
 
-          const x = this.padding + col * this.cellWidth;
-          const y = this.padding + row * this.cellHeight;
+            const x = this.padding + col * this.cellWidth;
+            const y = this.padding + row * this.cellHeight;
 
-          // 绘制单个二维码
-          await this.drawSingleQRCode(ctx, machine, x, y);
+            this.drawSingleQRCode(ctx, items[i], x, y);
+          }
         }
 
         this.generating = false;
-
-        // 生成完成后计算缩放比例
-        await this.$nextTick();
-        this.calculateCanvasScale();
       } catch (error) {
         console.error('Generate QR codes failed:', error);
         this.$message.error('生成二維碼失敗');
@@ -179,57 +253,28 @@ export default {
     },
 
     /**
-     * 计算 Canvas 缩放比例，使其适应可视区域
+     * 繪製單個二維碼
      */
-    calculateCanvasScale() {
-      this.$nextTick(() => {
-        const wrapper = this.$refs.canvasWrapper;
-        const canvas = this.$refs.batchCanvas;
-
-        if (!wrapper || !canvas) {
-          return;
-        }
-
-        // 获取容器尺寸
-        const wrapperRect = wrapper.getBoundingClientRect();
-        const wrapperWidth = wrapperRect.width - 40; // 减去 padding
-        const wrapperHeight = wrapperRect.height - 40;
-
-        // 计算缩放比例（保持宽高比）
-        const scaleX = wrapperWidth / this.pageWidth;
-        const scaleY = wrapperHeight / this.pageHeight;
-        const scale = Math.min(scaleX, scaleY, 1); // 不放大，只缩小
-
-        this.canvasScale = scale;
-      });
-    },
-
-    /**
-     * 绘制单个二维码
-     */
-    async drawSingleQRCode(ctx, machine, x, y) {
+    drawSingleQRCode(ctx, machine, x, y) {
       try {
-        // 防御性检查：确保必要字段存在
         if (!machine || !machine.id) {
           throw new Error('Invalid machine data');
         }
 
-        // 确保 code 和 name 是字符串
         const machineCode = String(machine.code || machine.id);
         const machineName = String(machine.name || '-');
 
-        // 生成二维码数据：机台ID|机台编号|时间戳
+        // 生成二維碼資料：機台ID|機台編號|時間戳
         const qrData = `${machine.id}|${machineCode}|${Date.now()}`;
 
-        // 使用 qrcode-generator 库生成二维码
-        const qr = window.qrcode(0, 'M'); // type=0(auto), errorCorrectionLevel='M'(15%)
+        const qr = window.qrcode(0, 'M'); // type=0(auto), errorCorrectionLevel='M'
         qr.addData(qrData);
         qr.make();
 
         const moduleCount = qr.getModuleCount();
         const cellSize = this.qrSize / moduleCount;
 
-        // 绘制二维码模块
+        // 繪製二維碼模組
         for (let row = 0; row < moduleCount; row++) {
           for (let col = 0; col < moduleCount; col++) {
             const isDark = qr.isDark(row, col);
@@ -243,22 +288,22 @@ export default {
           }
         }
 
-        // 绘制边框
+        // 邊框
         ctx.strokeStyle = '#cccccc';
         ctx.lineWidth = 1;
         ctx.strokeRect(x, y, this.qrSize, this.qrSize);
 
-        // 绘制文字标签
+        // 文字標籤
         const textY = y + this.qrSize + 10;
         ctx.fillStyle = '#000000';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
 
-        // 机台编号（粗体、较大）
+        // 機台編號（粗體、較大）
         ctx.font = 'bold 16px Arial, sans-serif';
         ctx.fillText(machineCode, x + this.qrSize / 2, textY);
 
-        // 机台名称（普通、较小）
+        // 機台名稱（普通、較小）
         ctx.font = '14px Arial, sans-serif';
         const maxNameWidth = this.qrSize - 10;
         const truncatedName = this.truncateText(ctx, machineName, maxNameWidth);
@@ -266,7 +311,7 @@ export default {
 
       } catch (error) {
         console.error('Draw single QR code failed:', error);
-        // 绘制错误占位符
+        // 錯誤佔位符
         ctx.fillStyle = '#f5f5f5';
         ctx.fillRect(x, y, this.qrSize, this.qrSize);
         ctx.strokeStyle = '#ff4d4f';
@@ -280,12 +325,10 @@ export default {
     },
 
     /**
-     * 截断文字以适应宽度
+     * 截斷文字以適應寬度
      */
     truncateText(ctx, text, maxWidth) {
-      // 确保 text 是字符串
       const safeText = String(text || '');
-
       if (!safeText) {
         return '';
       }
@@ -303,36 +346,48 @@ export default {
     },
 
     /**
-     * 下载为图片
+     * 下載全部頁面（合併成一張 PNG）
      */
-    async downloadImage() {
-      if (this.generating) return;
+    async downloadAll() {
+      if (this.generating) {
+        return;
+      }
+
+      const canvases = this.getPageCanvases();
+      if (!canvases.length) {
+        this.$message.error('畫布未就緒');
+        return;
+      }
 
       try {
-        const canvas = this.$refs.batchCanvas;
-        if (!canvas) {
-          this.$message.error('畫布未就緒');
-          return;
-        }
+        const combined = document.createElement('canvas');
+        combined.width = this.pageWidth;
+        combined.height = this.pageHeight * canvases.length;
 
-        // 转换为 Blob
-        canvas.toBlob((blob) => {
+        const ctx = combined.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, combined.width, combined.height);
+
+        canvases.forEach((canvas, index) => {
+          ctx.drawImage(canvas, 0, index * this.pageHeight);
+        });
+
+        combined.toBlob((blob) => {
           if (!blob) {
             this.$message.error('生成圖片失敗');
             return;
           }
 
-          // 创建下载链接
           const url = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `機台二維碼_${new Date().getTime()}.png`;
+          link.download = `機台二維碼_${this.machines.length}台_${new Date().getTime()}.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           URL.revokeObjectURL(url);
 
-          this.$message.success('圖片已下載');
+          this.$message.success('已下載全部頁面');
         }, 'image/png', 1.0);
 
       } catch (error) {
@@ -342,44 +397,70 @@ export default {
     },
 
     /**
-     * 打印二维码
+     * 列印全部頁面（每頁一張 A4）
      */
-    async printQRCodes() {
-      if (this.generating) return;
+    async printAll() {
+      if (this.generating) {
+        return;
+      }
+
+      const canvases = this.getPageCanvases();
+      if (!canvases.length) {
+        this.$message.error('畫布未就緒');
+        return;
+      }
 
       try {
-        const canvas = this.$refs.batchCanvas;
-        if (!canvas) {
-          this.$message.error('畫布未就緒');
-          return;
-        }
-
-        // 创建打印窗口
         const printWindow = window.open('', '_blank');
         if (!printWindow) {
           this.$message.error('請允許彈出窗口以進行列印');
           return;
         }
 
-        // 转换为图片 URL
-        const imageUrl = canvas.toDataURL('image/png');
-
-        // 使用 DOM 操作创建打印页面
         const doc = printWindow.document;
 
-        // 创建样式标签
         const styleEl = doc.createElement('style');
-        styleEl.textContent = '@page { size: A4; margin: 0; } body { margin: 0; padding: 0; } img { max-width: 100%; height: auto; display: block; margin: 0 auto; }';
+        styleEl.textContent = '@page { size: A4; margin: 0; } html, body { margin: 0; padding: 0; } img { width: 100%; display: block; page-break-after: always; break-after: page; } img:last-child { page-break-after: auto; break-after: auto; }';
         doc.head.appendChild(styleEl);
 
-        // 创建图片元素
-        const imgEl = doc.createElement('img');
-        imgEl.src = imageUrl;
-        imgEl.onload = function() {
+        let printed = false;
+        const doPrint = () => {
+          if (printed) {
+            return;
+          }
+          printed = true;
+          printWindow.focus();
           printWindow.print();
           printWindow.close();
         };
-        doc.body.appendChild(imgEl);
+
+        const images = canvases.map((canvas) => {
+          const img = doc.createElement('img');
+          img.src = canvas.toDataURL('image/png');
+          doc.body.appendChild(img);
+          return img;
+        });
+
+        const total = images.length;
+        let loaded = 0;
+        const onOneLoaded = () => {
+          loaded++;
+          if (loaded >= total) {
+            doPrint();
+          }
+        };
+
+        images.forEach((img) => {
+          if (img.complete) {
+            onOneLoaded();
+          } else {
+            img.onload = onOneLoaded;
+            img.onerror = onOneLoaded;
+          }
+        });
+
+        // 保險：最多等 1.5 秒就列印
+        setTimeout(doPrint, 1500);
 
       } catch (error) {
         console.error('Print failed:', error);
@@ -403,12 +484,39 @@ export default {
   text-align: center;
 }
 
+.batch-controls {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.batch-control-item {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 12px 8px 12px;
+}
+
+.batch-control-item label {
+  margin-right: 8px;
+  color: #666;
+}
+
+.batch-unit {
+  margin-left: 6px;
+  color: #999;
+}
+
+.batch-buttons {
+  margin-bottom: 12px;
+}
+
 .batch-btn-download {
   margin-right: 10px;
 }
 
-.batch-machine-count {
-  margin-left: 10px;
+.batch-summary .ant-tag {
+  margin: 4px;
 }
 
 .batch-loading {
@@ -421,16 +529,33 @@ export default {
   color: #666;
 }
 
-.batch-canvas-wrapper {
+.batch-pages {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
   background: #f0f0f0;
   padding: 20px;
-  min-height: 500px;
+}
+
+.batch-page {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.batch-page:last-child {
+  margin-bottom: 0;
+}
+
+.batch-page-label {
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 13px;
 }
 
 .batch-canvas {
+  width: 100%;
+  max-width: 794px;
+  height: auto;
   background: #ffffff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   display: block;
