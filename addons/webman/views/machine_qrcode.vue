@@ -1,18 +1,18 @@
 <template>
   <div class="qr-modal-container" ref="modalContainer">
     <div class="qr-header">
-      <h3>{{ title }}</h3>
+      <h3>{{ modalTitle }}</h3>
     </div>
 
     <div class="qr-info">
       <a-descriptions :column="1" bordered size="small">
-        <a-descriptions-item label="机台编号">
+        <a-descriptions-item :label="t.machine_code">
           <a-tag color="blue">{{ machineCode }}</a-tag>
         </a-descriptions-item>
-        <a-descriptions-item label="机台名称">
+        <a-descriptions-item :label="t.machine_name">
           {{ machineName }}
         </a-descriptions-item>
-        <a-descriptions-item label="机台ID">
+        <a-descriptions-item :label="t.machine_id">
           <a-tag color="green">{{ machineId }}</a-tag>
         </a-descriptions-item>
       </a-descriptions>
@@ -29,19 +29,19 @@
 
     <div class="qr-footer">
       <a-alert
-        message="扫码说明"
-        description="玩家使用手机APP扫描此二维码，即可快速查看该机台信息"
+        :message="t.scan_title"
+        :description="t.scan_desc"
         type="info"
         show-icon
       />
 
       <div class="qr-buttons">
         <a-button type="primary" @click="downloadQrCode" size="large">
-          下载二维码
+          {{ t.download }}
         </a-button>
 
         <a-button @click="printQrCode" size="large">
-          打印二维码
+          {{ t.print }}
         </a-button>
       </div>
     </div>
@@ -49,6 +49,64 @@
 </template>
 
 <script>
+const messages = {
+  'zh-TW': {
+    default_title: '機台二維碼',
+    machine_code: '機台編號',
+    machine_name: '機台名稱',
+    machine_id: '機台 ID',
+    machine_qr_code: '機台二維碼',
+    scan_title: '掃碼說明',
+    scan_desc: '玩家使用手機APP掃描此二維碼，即可快速查看該機台資訊',
+    download: '下載二維碼',
+    print: '列印二維碼',
+    qr_error: '二維碼生成失敗',
+    download_failed: '下載失敗',
+    print_failed: '列印失敗'
+  },
+  'zh-CN': {
+    default_title: '机台二维码',
+    machine_code: '机台编号',
+    machine_name: '机台名称',
+    machine_id: '机台 ID',
+    machine_qr_code: '机台二维码',
+    scan_title: '扫码说明',
+    scan_desc: '玩家使用手机APP扫描此二维码，即可快速查看该机台信息',
+    download: '下载二维码',
+    print: '打印二维码',
+    qr_error: '二维码生成失败',
+    download_failed: '下载失败',
+    print_failed: '打印失败'
+  },
+  en: {
+    default_title: 'Machine QR Code',
+    machine_code: 'Machine Code',
+    machine_name: 'Machine Name',
+    machine_id: 'Machine ID',
+    machine_qr_code: 'Machine QR Code',
+    scan_title: 'Scan Instructions',
+    scan_desc: 'Players scan this QR code with the mobile app to view machine information quickly.',
+    download: 'Download QR Code',
+    print: 'Print QR Code',
+    qr_error: 'QR code generation failed',
+    download_failed: 'Download failed',
+    print_failed: 'Print failed'
+  },
+  jp: {
+    default_title: '筐体QRコード',
+    machine_code: '筐体番号',
+    machine_name: '筐体名',
+    machine_id: '筐体ID',
+    machine_qr_code: '筐体QRコード',
+    scan_title: 'スキャン説明',
+    scan_desc: 'プレイヤーがスマホアプリでこのQRコードをスキャンすると、該当筐体の情報を素早く確認できます',
+    download: 'QRコードダウンロード',
+    print: 'QRコード印刷',
+    qr_error: 'QRコード生成失敗',
+    download_failed: 'ダウンロード失敗',
+    print_failed: '印刷失敗'
+  }
+}
 // 引入第三方二维码库（通过 CDN）
 // 注意：这里使用内联实现，避免外部依赖
 
@@ -187,7 +245,19 @@ export default {
     },
     title: {
       type: String,
-      default: '机台二维码'
+      default: ''
+    },
+    langLocale: {
+      type: String,
+      default: 'zh-TW'
+    }
+  },
+  computed: {
+    t() {
+      return messages[this.langLocale] || messages['zh-TW'];
+    },
+    modalTitle() {
+      return this.title || this.t.default_title;
     }
   },
   data() {
@@ -284,13 +354,13 @@ export default {
         ctx.textBaseline = 'top';
 
         ctx.font = 'bold 16px Arial, sans-serif';
-        ctx.fillText(`编号: ${this.machineCode}`, this.canvasSize / 2, textStartY);
+        ctx.fillText(`${this.t.machine_code}: ${this.machineCode}`, this.canvasSize / 2, textStartY);
 
         ctx.font = '14px Arial, sans-serif';
         const nameText = this.machineName.length > 15
           ? this.machineName.substring(0, 15) + '...'
           : this.machineName;
-        ctx.fillText(`名称: ${nameText}`, this.canvasSize / 2, textStartY + 25);
+        ctx.fillText(`${this.t.machine_name}: ${nameText}`, this.canvasSize / 2, textStartY + 25);
 
         // 边框
         ctx.strokeStyle = '#d9d9d9';
@@ -307,7 +377,7 @@ export default {
         ctx.fillStyle = '#FF0000';
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('二维码生成失败', this.canvasSize / 2, this.canvasSize / 2);
+        ctx.fillText(this.t.qr_error, this.canvasSize / 2, this.canvasSize / 2);
       }
     },
 
@@ -354,13 +424,13 @@ export default {
         ctx.textBaseline = 'top';
 
         ctx.font = 'bold 16px Arial, sans-serif';
-        ctx.fillText(`编号: ${this.machineCode}`, this.canvasSize / 2, textStartY);
+        ctx.fillText(`${this.t.machine_code}: ${this.machineCode}`, this.canvasSize / 2, textStartY);
 
         ctx.font = '14px Arial, sans-serif';
         const nameText = this.machineName.length > 15
           ? this.machineName.substring(0, 15) + '...'
           : this.machineName;
-        ctx.fillText(`名称: ${nameText}`, this.canvasSize / 2, textStartY + 25);
+        ctx.fillText(`${this.t.machine_name}: ${nameText}`, this.canvasSize / 2, textStartY + 25);
 
         ctx.strokeStyle = '#d9d9d9';
         ctx.lineWidth = 1;
@@ -373,7 +443,7 @@ export default {
         ctx.fillStyle = '#FF0000';
         ctx.font = '16px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('二维码生成失败', this.canvasSize / 2, this.canvasSize / 2);
+        ctx.fillText(this.t.qr_error, this.canvasSize / 2, this.canvasSize / 2);
       }
     },
 
@@ -403,7 +473,7 @@ export default {
       } catch (error) {
         console.error('Download failed:', error);
         if (this.$message) {
-          this.$message.error('下载失败');
+          this.$message.error(this.t.download_failed);
         }
       }
     },
@@ -425,11 +495,11 @@ export default {
         infoDiv.className = 'print-info';
 
         const codeInfo = document.createElement('div');
-        codeInfo.innerHTML = `<strong>机台编号：</strong>${this.machineCode}`;
+        codeInfo.innerHTML = `<strong>${this.t.machine_code}:</strong> ${this.machineCode}`;
         infoDiv.appendChild(codeInfo);
 
         const nameInfo = document.createElement('div');
-        nameInfo.innerHTML = `<strong>机台名称：</strong>${this.machineName}`;
+        nameInfo.innerHTML = `<strong>${this.t.machine_name}:</strong> ${this.machineName}`;
         infoDiv.appendChild(nameInfo);
 
         printContainer.appendChild(infoDiv);
@@ -437,7 +507,7 @@ export default {
         // 4. 创建二维码图片
         const img = document.createElement('img');
         img.src = dataUrl;
-        img.alt = '机台二维码';
+        img.alt = this.t.machine_qr_code;
         img.className = 'print-qrcode-image';
         printContainer.appendChild(img);
 
@@ -457,7 +527,7 @@ export default {
       } catch (error) {
         console.error('Print failed:', error);
         if (this.$message) {
-          this.$message.error('打印失败');
+          this.$message.error(this.t.print_failed);
         }
       }
     }

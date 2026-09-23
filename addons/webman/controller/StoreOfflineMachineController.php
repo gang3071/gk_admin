@@ -15,6 +15,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Msg;
+use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -440,7 +441,8 @@ class StoreOfflineMachineController
             'machineId' => $machine->id,
             'machineCode' => $machine->code,
             'machineName' => $machine->machineLabel->name ?? '-',
-            'title' => admin_trans('store_offline_machine.qrcode_title'),
+            // 'title' => admin_trans('store_offline_machine.qrcode_title'),
+            'langLocale' => Container::getInstance()->translator->getLocale()
         ]);
     }
 
