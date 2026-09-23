@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\grid\Driver\AlreadyPaginated;
 use addons\webman\model\Activity;
 use addons\webman\model\ActivityContent;
 use addons\webman\model\AdminDepartment;
@@ -37,6 +38,7 @@ use addons\webman\model\PlayerPromoter;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerTag;
+use addons\webman\model\PlayerVipPeriod;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAutoShiftConfig;
@@ -178,7 +180,8 @@ class ChannelPlayerController
     public function index(int $id = 0): Grid
     {
         /** @var Channel $channel */
-        $channel = Channel::query()->where('department_id', Admin::user()->department_id)->first();
+        $departmentId = Admin::user()->department_id;
+        $channel = Channel::query()->where('department_id', $departmentId)->first();
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $requestFilter = Request::input('ex_admin_filter', []);
@@ -192,13 +195,16 @@ class ChannelPlayerController
 
         // 预加载渠道的 VIP 等级列表（用于筛选和显示）
         $channelVipLevels = VipLevel::query()
-            ->where('department_id', Admin::user()->department_id)
+            ->where('department_id', $departmentId)
             ->where('status', VipLevel::STATUS_ENABLED)
             ->orderBy('sort', 'asc')
             ->get(['id', 'name', 'sort', 'upgrade_bet_amount'])
             ->keyBy('sort');
+        // 渠道最低等级（原 channel_min_vip 两个 join 的 PHP 等价物）
+        $minVipLevel = $channelVipLevels->first();
+        $minVipSort = (int)($minVipLevel->sort ?? 0);
 
-        // 构建基础查询字段（不包含余额和爆机状态，从 Redis 获取）
+        // 构建基础查询字段（统计类字段改为取当前页后批量补齐，不进主查询）
         $selectFields = [
             'player.*',
             'player_extend.recharge_amount',
@@ -208,28 +214,14 @@ class ChannelPlayerController
             'player_extend.pending_cashback_amount',
             'player_extend.total_cashback_amount',
             'player_extend.id_number',  // 添加：身份证号
-            'channel.name as channel_name',
-            'recommend_promoter.uuid as recommend_promoter_uuid',
-            'recommend_promoter.phone as recommend_promoter_phone',
-            'recommend_promoter.name as recommend_promoter_name',
             'player_register_record.ip',
             'player_register_record.country_name',
-            'player_register_record.city_name',
-            // VIP等级：优先显示玩家自己的等级，没有则显示渠道最低等级
-            Db::raw('COALESCE(vip_level.name, channel_min_vip_level.name) as vip_level_name'),
-            // VIP等级排序字段（用于排序）
-            Db::raw('COALESCE(vip_level.sort, channel_min_vip_level.sort) as vip_level_sort'),
-            // 彩金累计（通过LEFT JOIN聚合）
-            Db::raw('COALESCE(lottery_stats.lottery_amount, 0) as lottery_amount'),
-            // 电子游戏打码量（通过LEFT JOIN聚合，支持排序）
-            Db::raw('COALESCE(electronic_game_stats.electronic_game_bet_amount, 0) as electronic_game_bet_amount'),
-            // 钱包锁定状态（通过LEFT JOIN获取）
-            Db::raw('COALESCE(ppc_stats.wallet_locked, 0) as wallet_locked'),
+            // VIP等级：仅 join 玩家自己的等级，缺失时由 PHP 回退到渠道最低等级
+            'vip_level.name as vip_level_name',
+            'vip_level.sort as vip_level_sort',
             // 打码量相关字段
             'player.total_bet_amount',
-            'vip_retain_period.period_bet_amount as period_bet_amount',
-            Db::raw('COALESCE(vip_level.upgrade_bet_amount, channel_min_vip_level.upgrade_bet_amount) as current_upgrade_bet_amount'),
-            'next_vip_level.upgrade_bet_amount as next_upgrade_bet_amount',
+            'vip_level.upgrade_bet_amount as current_upgrade_bet_amount',
             // 积分字段
             'player_points.available_points',
             'player_points.frozen_points',
@@ -248,85 +240,89 @@ class ChannelPlayerController
             ]);
         }
 
-        // 构建完整查询（不再 JOIN player_platform_cash 表）
+        // 处理特殊排序字段映射
+        $sortFieldMapping = [
+            'id' => 'player.id',
+            'vip_level_name' => Db::raw('COALESCE(vip_level.sort, ' . (int)$minVipSort . ')'),
+            'subtotal' => Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0))'),
+        ];
+        // 只有按彩金/电子打码排序时才挂聚合 join（限定本渠道玩家，避免全站 GROUP BY）
+        $sortNeedsLottery = ($exAdminSortField === 'lottery_amount' && $exAdminSortBy !== '');
+        $sortNeedsElectronicBet = ($exAdminSortField === 'electronic_game_bet_amount' && $exAdminSortBy !== '');
+
+        if ($sortNeedsLottery) {
+            $selectFields[] = 'lottery_stats.lottery_amount';
+            $sortFieldMapping['lottery_amount'] = 'lottery_stats.lottery_amount';
+        }
+        if ($sortNeedsElectronicBet) {
+            $selectFields[] = 'electronic_game_stats.electronic_game_bet_amount';
+            $sortFieldMapping['electronic_game_bet_amount'] = 'electronic_game_stats.electronic_game_bet_amount';
+        }
+        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+
+        // 构建基础查询：只保留 1:1 / 筛选用 join，统计与 VIP 展示字段不再全站聚合
         $query = Player::query()->with(['the_last_player_login_record'])
             ->select($selectFields)
             ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
             ->leftjoin('player_points', 'player.id', '=', 'player_points.player_id')
-            ->leftjoin('channel', 'player.department_id', '=', 'channel.department_id')
+            // recommend_promoter join 供「推荐人」筛选使用（筛选字段在 WHERE 中）
             ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
             ->leftjoin('player_register_record', 'player.id', '=', 'player_register_record.player_id')
-            // VIP等级关联
+            // VIP等级关联（仅玩家自己的等级，排序 vip_level_name 也走这里）
             ->leftjoin('vip_level', 'player.vip_level_id', '=', 'vip_level.id')
-            // LEFT JOIN 渠道最低VIP等级（通过子查询预计算，使用原始SQL避免绑定参数问题）
-            ->leftJoin(
-                Db::raw('(SELECT department_id, MIN(sort) as min_sort FROM vip_level WHERE status = ' . VipLevel::STATUS_ENABLED . ' GROUP BY department_id) as channel_min_vip'),
-                'player.department_id', '=', 'channel_min_vip.department_id'
-            )
-            ->leftJoin('vip_level as channel_min_vip_level', function ($join) {
-                $join->on('channel_min_vip.department_id', '=', 'channel_min_vip_level.department_id')
-                    ->on('channel_min_vip.min_sort', '=', 'channel_min_vip_level.sort');
-            })
-            // LEFT JOIN 下一等级（通过子查询获取当前等级的下一个等级）
-            ->leftJoin(
-                Db::raw('(SELECT vl.department_id, vl.sort, vl.upgrade_bet_amount FROM vip_level vl WHERE vl.status = ' . VipLevel::STATUS_ENABLED . ') as next_vip_level'),
-                function ($join) {
-                    $join->on('player.department_id', '=', 'next_vip_level.department_id')
-                        ->whereRaw('next_vip_level.sort = (SELECT MIN(vl2.sort) FROM vip_level vl2 WHERE vl2.department_id = player.department_id AND vl2.sort > COALESCE(vip_level.sort, channel_min_vip_level.sort) AND vl2.status = ' . VipLevel::STATUS_ENABLED . ')');
-                }
-            )
-            // LEFT JOIN 保级周期（获取当前周期内打码量）
-            ->leftJoin('player_vip_period as vip_retain_period', function ($join) {
-                $join->on('player.id', '=', 'vip_retain_period.player_id')
-                    ->on('player.vip_level_id', '=', 'vip_retain_period.vip_level_id')
-                    ->where('vip_retain_period.period_type', '=', 'retain')
-                    ->where('vip_retain_period.status', '=', 1);
-            })
-            // LEFT JOIN 彩金累计统计（预聚合子查询）
-            ->leftJoin(
-                Db::raw('(SELECT player_id, COALESCE(SUM(amount), 0) as lottery_amount FROM player_lottery_record WHERE status = 1 GROUP BY player_id) as lottery_stats'),
-                'player.id', '=', 'lottery_stats.player_id'
-            )
-            // LEFT JOIN 钱包锁定状态
-            ->leftJoin(
-                Db::raw('(SELECT player_id, wallet_locked FROM player_platform_cash WHERE platform_id = 1) as ppc_stats'),
-                'player.id', '=', 'ppc_stats.player_id'
-            )
-            // LEFT JOIN 电子游戏打码量统计（支持排序和数据时间筛选）
-            ->leftJoin(
-                Db::raw('(' . $this->buildElectronicGameBetSubquery($dataTimeStart, $dataTimeEnd) . ') as electronic_game_stats'),
-                'player.id', '=', 'electronic_game_stats.player_id'
-            )
             // 线下渠道：关联代理和店家
             ->when($channel && $channel->is_offline == 1, function ($query) {
                 $query->leftjoin('admin_users as agent_admin', 'player.agent_admin_id', '=', 'agent_admin.id')
                     ->leftjoin('admin_users as store_admin', 'player.store_admin_id', '=', 'store_admin.id');
             })
-            // 优化 IP 筛选查询
-            ->when(!empty($requestFilter['ip']), function ($query) use ($requestFilter) {
-                $query->leftJoin('player_login_record as r', function($join) {
-                    $join->on('player.id', '=', 'r.player_id')
-                        ->whereRaw('r.id = (SELECT MAX(id) FROM player_login_record WHERE player_id = player.id)');
-                });
-            })
             ->where('player.type', Player::TYPE_PLAYER);
+
+        // 排序专用聚合 join（带部门过滤，只聚合本渠道玩家）
+        if ($sortNeedsLottery) {
+            $query->leftJoinSub(
+                PlayerLotteryRecord::query()
+                    ->selectRaw('player_id, COALESCE(SUM(amount), 0) as lottery_amount')
+                    ->where('status', 1)
+                    ->whereIn('player_id', Player::query()
+                        ->select('id')
+                        ->where('department_id', $departmentId)
+                        ->where('type', Player::TYPE_PLAYER))
+                    ->groupBy('player_id'),
+                'lottery_stats',
+                function ($join) {
+                    $join->on('player.id', '=', 'lottery_stats.player_id');
+                }
+            );
+        }
+        if ($sortNeedsElectronicBet) {
+            $eleSub = PlayGameRecord::query()
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount')
+                ->whereIn('player_id', Player::query()
+                    ->select('id')
+                    ->where('department_id', $departmentId)
+                    ->where('type', Player::TYPE_PLAYER))
+                ->groupBy('player_id');
+            if (!empty($dataTimeStart)) {
+                $eleSub->where('created_at', '>=', $dataTimeStart);
+            }
+            if (!empty($dataTimeEnd)) {
+                $eleSub->where('created_at', '<=', $dataTimeEnd);
+            }
+            $query->leftJoinSub($eleSub, 'electronic_game_stats', function ($join) {
+                $join->on('player.id', '=', 'electronic_game_stats.player_id');
+            });
+        }
 
         // 应用筛选条件
         $this->applyFilters($query, $requestFilter, $quickSearch, $id, true, $channel);
 
-        // 克隆查询用于 count，但移除 select 和 with 以优化性能
-        $countQuery = clone $query;
-        $countQuery->getQuery()->columns = null; // 移除 select 字段
-        // 注意：我们无法移除 with()，但 count 不会加载关联数据
-
-        // 执行 count 查询
-        $total = $countQuery->count('player.id');
-        // 处理特殊排序字段映射
-        $sortFieldMapping = [
-            'vip_level_name' => 'vip_level_sort',
-            'subtotal' => Db::raw('(COALESCE(player_extend.recharge_amount, 0) - COALESCE(player_extend.withdraw_amount, 0))'),
-        ];
-        $actualSortField = $sortFieldMapping[$exAdminSortField] ?? $exAdminSortField;
+        // count：只保留筛选会用到的 join，不带聚合/展示 join
+        $countQuery = Player::query()
+            ->leftjoin('player_extend', 'player.id', '=', 'player_extend.player_id')
+            ->leftjoin('player as recommend_promoter', 'recommend_promoter.id', '=', 'player.recommend_id')
+            ->where('player.type', Player::TYPE_PLAYER);
+        $this->applyFilters($countQuery, $requestFilter, $quickSearch, $id, true, $channel);
+        $total = $countQuery->toBase()->distinct()->count('player.id');
 
         // 执行分页查询
         $list = $query->forPage($page, $size)
@@ -334,37 +330,89 @@ class ChannelPlayerController
                 function ($query) use ($actualSortField, $exAdminSortBy) {
                     $query->orderBy($actualSortField, $exAdminSortBy);
                 }, function ($query) {
-                    $query->orderBy('id', 'desc');
+                    $query->orderBy('player.id', 'desc');
                 })
             ->get()
             ->toArray();
 
-        // ✅ 优化：使用 WalletService 批量从 Redis 缓存获取余额和爆机状态
+        // ✅ 当前页批量补齐：余额/爆机(Redis) + 彩金/电子打码/钱包锁 + VIP 展示字段
         if (!empty($list)) {
             $playerIds = array_column($list, 'id');
 
-            // 批量获取余额（从 Redis 缓存）
+            // 批量获取余额和爆机状态（Redis）
             $balances = WalletService::getBatchBalance($playerIds, PlayerPlatformCash::PLATFORM_SELF);
-
-            // 批量获取爆机状态（从 Redis 缓存）
             $crashStatuses = WalletService::getBatchCrashStatus($playerIds, PlayerPlatformCash::PLATFORM_SELF);
 
-            // 将 Redis 缓存余额和爆机状态合并到列表数据中
+            // 彩金累计（仅当前页；口径与原 SQL 子查询一致：status = 1）
+            $lotteryByPlayer = PlayerLotteryRecord::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('status', 1)
+                ->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(amount), 0) as total_amount')
+                ->pluck('total_amount', 'player_id');
+
+            // 电子游戏打码量（仅当前页，支持数据时间筛选；未排序时不在主查询聚合）
+            $eleQuery = PlayGameRecord::query()->whereIn('player_id', $playerIds);
+            if (!empty($dataTimeStart)) {
+                $eleQuery->where('created_at', '>=', $dataTimeStart);
+            }
+            if (!empty($dataTimeEnd)) {
+                $eleQuery->where('created_at', '<=', $dataTimeEnd);
+            }
+            $electronicBetByPlayer = $eleQuery->groupBy('player_id')
+                ->selectRaw('player_id, COALESCE(SUM(bet), 0) as total_bet')
+                ->pluck('total_bet', 'player_id');
+
+            // 钱包锁定状态（仅当前页）
+            $walletLockedByPlayer = PlayerPlatformCash::query()
+                ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                ->whereIn('player_id', $playerIds)
+                ->pluck('wallet_locked', 'player_id');
+
+            // 保级周期打码量（仅当前页；口径同原 join：retain + 进行中 + 按 vip_level_id 对齐）
+            // 移出主查询既少一个 join，也消除一人多条活跃周期时的行放大
+            $periodBetMap = PlayerVipPeriod::query()
+                ->whereIn('player_id', $playerIds)
+                ->where('period_type', PlayerVipPeriod::PERIOD_TYPE_RETAIN)
+                ->where('status', PlayerVipPeriod::STATUS_ACTIVE)
+                ->get(['player_id', 'vip_level_id', 'period_bet_amount'])
+                ->keyBy(fn ($row) => $row->player_id . '_' . $row->vip_level_id);
+
             foreach ($list as &$item) {
                 // 🔧 修复精度问题：格式化为保留2位小数
                 $item['money'] = number_format($balances[$item['id']] ?? 0.0, 2, '.', '');
 
                 // 合并爆机状态（从缓存）
                 $item['is_crashed'] = $crashStatuses[$item['id']] ?? 0;
-            }
-            unset($item);
-        }
 
-        // 电子游戏打码量已通过 LEFT JOIN 子查询在主查询中获取，支持排序
+                // 统计列（排序走 SQL 时已有值，此处兜底并统一口径）
+                $item['lottery_amount'] = floatval($lotteryByPlayer[$item['id']] ?? ($item['lottery_amount'] ?? 0));
+                $item['electronic_game_bet_amount'] = floatval($electronicBetByPlayer[$item['id']] ?? ($item['electronic_game_bet_amount'] ?? 0));
+                $item['wallet_locked'] = intval($walletLockedByPlayer[$item['id']] ?? 0);
 
-        // 计算小计和纯开分金额（彩金已在 SQL 子查询中获取）
-        if (!empty($list)) {
-            foreach ($list as &$item) {
+                // 保级周期打码量：与原 join 一致，按 player_id + vip_level_id 对齐
+                $periodBetKey = $item['id'] . '_' . (int)($item['vip_level_id'] ?? 0);
+                $periodBetRow = $periodBetMap->get($periodBetKey);
+                $item['period_bet_amount'] = floatval($periodBetRow->period_bet_amount ?? 0);
+
+                // VIP 展示字段：等级名/升级要求缺失时回退渠道最低等级（对齐原 COALESCE 语义）
+                if ($minVipLevel) {
+                    if (empty($item['vip_level_name'])) {
+                        $item['vip_level_name'] = $minVipLevel->name;
+                    }
+                    if (!isset($item['current_upgrade_bet_amount']) || $item['current_upgrade_bet_amount'] === null) {
+                        $item['current_upgrade_bet_amount'] = $minVipLevel->upgrade_bet_amount;
+                    }
+                    if (!isset($item['vip_level_sort']) || $item['vip_level_sort'] === null) {
+                        $item['vip_level_sort'] = $minVipLevel->sort;
+                    }
+                }
+
+                // 下一等级（原 next_vip_level 相关子查询的 PHP 等价物）
+                $currentSort = floatval($item['vip_level_sort'] ?? $minVipSort);
+                $nextLevel = $channelVipLevels->first(fn ($lv) => $lv->sort > $currentSort);
+                $item['next_upgrade_bet_amount'] = $nextLevel->upgrade_bet_amount ?? 0;
+
                 // 计算小计 = 开分 - 洗分
                 $rechargeAmount = floatval($item['recharge_amount'] ?? 0);
                 $withdrawAmount = floatval($item['withdraw_amount'] ?? 0);
@@ -377,26 +425,31 @@ class ChannelPlayerController
             unset($item);
         }
 
-        // 获取设备选项列表用于筛选器下拉选择（限制数量避免内存溢出）
-        $playerOptions = Player::query()
-            ->where('department_id', Admin::user()->department_id)
-            ->where('type', Player::TYPE_PLAYER)
-            ->where('is_promoter', 0)
-            ->orderBy('id', 'desc')
-            ->limit(500)  // 限制最多500条，避免数据量过大
-            ->get(['id', 'name', 'uuid'])
-            ->mapWithKeys(function ($player) {
-                $label = $player->name
-                    ? "{$player->name} (ID: {$player->id})"
-                    : "ID: {$player->id}";
-                if ($player->uuid) {
-                    $label .= " - {$player->uuid}";
-                }
-                return [$player->id => $label];
-            })
-            ->toArray();
+        // 设备选项（筛选下拉）：按渠道缓存 60s，避免每次翻页都查
+        $playerOptionsCacheKey = 'channel_player_options_' . $departmentId;
+        $playerOptions = Cache::get($playerOptionsCacheKey);
+        if (!is_array($playerOptions)) {
+            $playerOptions = Player::query()
+                ->where('department_id', $departmentId)
+                ->where('type', Player::TYPE_PLAYER)
+                ->where('is_promoter', 0)
+                ->orderBy('id', 'desc')
+                ->limit(500)  // 限制最多500条，避免数据量过大
+                ->get(['id', 'name', 'uuid'])
+                ->mapWithKeys(function ($player) {
+                    $label = $player->name
+                        ? "{$player->name} (ID: {$player->id})"
+                        : "ID: {$player->id}";
+                    if ($player->uuid) {
+                        $label .= " - {$player->uuid}";
+                    }
+                    return [$player->id => $label];
+                })
+                ->toArray();
+            Cache::set($playerOptionsCacheKey, $playerOptions, 60);
+        }
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $channel, $playerOptions, $channelVipLevels) {
+        return Grid::create(new AlreadyPaginated($list, (int)$total), function (Grid $grid) use ($total, $list, $channel, $playerOptions, $channelVipLevels) {
             $grid->title(admin_trans('player.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -1014,12 +1067,13 @@ class ChannelPlayerController
             $query->where('player.recommend_id', $id);
         }
 
-        // 快速搜索
+        // 快速搜索：uuid/phone 走右模糊可部分命中索引，name 保留全模糊
         if (!empty($quickSearch)) {
+            $kw = addcslashes($quickSearch, '%_');
             $query->where([
-                ['player.name', 'like', '%' . $quickSearch . '%', 'or'],
-                ['player.phone', 'like', '%' . $quickSearch . '%', 'or'],
-                ['player.uuid', 'like', '%' . $quickSearch . '%', 'or'],
+                ['player.uuid', 'like', $kw . '%', 'or'],
+                ['player.phone', 'like', $kw . '%', 'or'],
+                ['player.name', 'like', '%' . $kw . '%', 'or'],
             ]);
         }
 
@@ -1127,17 +1181,30 @@ class ChannelPlayerController
             if (!empty($requestFilter['id_number'])) {
                 $query->where('player_extend.id_number', 'like', '%' . $requestFilter['id_number'] . '%');
             }
-            if (!empty($requestFilter['ip'])) {
-                $query->where('r.ip', 'like', '%' . $requestFilter['ip'] . '%');
-            }
-            // 爆机状态筛选
-            if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
-                $query->where('cash.is_crashed', $requestFilter['is_crashed']);
-            }
             // 账号状态筛选
             if (isset($requestFilter['status']) && in_array($requestFilter['status'], [0, 1])) {
                 $query->where('player.status', $requestFilter['status']);
             }
+        }
+
+        // IP 筛选：改为 whereIn 子查询，去掉原先带相关子查询的 join（别名 r 已不复存在）
+        if (!empty($requestFilter['ip'])) {
+            $ip = addcslashes($requestFilter['ip'], '%_');
+            $query->whereIn('player.id', function ($sub) use ($ip) {
+                $sub->select('player_id')
+                    ->from('player_login_record')
+                    ->where('ip', 'like', '%' . $ip . '%');
+            });
+        }
+
+        // 爆机状态筛选：where exists/whereIn，修正原 cash. 别名不存在的问题
+        if (isset($requestFilter['is_crashed']) && in_array($requestFilter['is_crashed'], [0, 1])) {
+            $query->whereIn('player.id', function ($sub) use ($requestFilter) {
+                $sub->select('player_id')
+                    ->from('player_platform_cash')
+                    ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
+                    ->where('is_crashed', (int)$requestFilter['is_crashed']);
+            });
         }
     }
 
@@ -1148,13 +1215,17 @@ class ChannelPlayerController
      */
     public function handleTagIds(array $value): Html
     {
-        $options = $this->getPlayerTagOptions($value);
+        // 用全量标签缓存按需过滤：原先 getPlayerTagOptions() 以「本行 tag id 组合」
+        // 做缓存键，每行组合不同就各打一次 DB（一页最多 20 次查询）。
+        $all = $this->getPlayerTagOptionsFilter();
         $html = Html::create();
-        foreach ($options as $option) {
-            $html->content(
-                Tag::create($option)
-                    ->color('success')
-            );
+        foreach ($value as $id) {
+            if (isset($all[$id])) {
+                $html->content(
+                    Tag::create($all[$id])
+                        ->color('success')
+                );
+            }
         }
         return $html;
     }
@@ -6504,23 +6575,6 @@ class ChannelPlayerController
         } catch (\Exception $e) {
             return jsonFailResponse($e->getMessage());
         }
-    }
-
-    /**
-     * 构建电子游戏打码量子查询SQL（用于LEFT JOIN，支持排序和数据时间筛选）
-     */
-    private function buildElectronicGameBetSubquery(string $dataTimeStart = '', string $dataTimeEnd = ''): string
-    {
-        $tableName = (new PlayGameRecord())->getTable();
-        $sql = "SELECT player_id, COALESCE(SUM(bet), 0) as electronic_game_bet_amount FROM {$tableName} WHERE 1=1";
-        if (!empty($dataTimeStart)) {
-            $sql .= " AND created_at >= '" . addslashes($dataTimeStart) . "'";
-        }
-        if (!empty($dataTimeEnd)) {
-            $sql .= " AND created_at <= '" . addslashes($dataTimeEnd) . "'";
-        }
-        $sql .= " GROUP BY player_id";
-        return $sql;
     }
 
 }

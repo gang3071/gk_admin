@@ -204,7 +204,10 @@ class Player extends Model
 
     public function the_last_player_login_record(): HasOne
     {
-        return $this->hasOne(PlayerLoginRecord::class, 'player_id')->latest();
+        // latestOfMany: 取每人最新一条。原先的 latest() 在 with() 预加载时会把
+        // 这批玩家的全部登录流水都拉回来再在 PHP 里取首条，内存/带宽都会爆；
+        // latestOfMany 在 SQL 端用 MAX 子查询，正好每人一行。
+        return $this->hasOne(PlayerLoginRecord::class, 'player_id')->latestOfMany('created_at');
     }
 
     public function player_register_record(): HasOne
