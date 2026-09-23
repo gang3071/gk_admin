@@ -51,7 +51,7 @@ Desktop.ini
 
 # Upload files (可选)
 # /public/uploads/
-# /public/storage/
+/public/storage/
 
 # Admin assets (可选，如果需要提交则注释掉)
 # /public/admin/
