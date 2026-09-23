@@ -2393,4 +2393,13 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelDishOrderController/form',
         'title' => '修改配置',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelDishOrderController\reportItem',
+        'pid' => 'addons\webman\controller\ChannelDishController-',
+        'action' => 'reportItem',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelDishOrderController/reportItem',
+        'title' => '訂單明細報表',
+    ],
 ];

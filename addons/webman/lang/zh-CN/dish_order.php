@@ -16,7 +16,7 @@ return [
         'updated_at' => '更新时间'
     ],
     'reportItem' => [
-        'title' => '餐点明细报表',
+        'title' => '餐点订单明细报表',
         'quantity' => '总数量',
         'subtotal' => '总积分'
     ],

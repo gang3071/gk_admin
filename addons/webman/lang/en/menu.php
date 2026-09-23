@@ -308,6 +308,7 @@ return [
         'dish_category' => 'Dish Categories',
         'dish' => 'Dish List',
         'dish_order' => 'Dish Orders',
+        'dish_order_report_item' => 'Order Detail Report',
         //Admin Offline Machine Management
         'offline_machine_manage' => 'Offline Machine Management',
         'offline_machine_list' => 'Offline Machines',

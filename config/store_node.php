@@ -936,5 +936,14 @@ return [
         'group' => 'store',
         'url' => 'ex-admin/addons-webman-controller-StoreDishOrderController/form',
         'title' => '修改配置',
-    ]
+    ],
+    [
+        'id' => 'addons\webman\controller\StoreDishOrderController\reportItem',
+        'pid' => 'addons\webman\controller\StoreDishController-',
+        'action' => 'reportItem',
+        'method' => 'get',
+        'group' => 'store',
+        'url' => 'ex-admin/addons-webman-controller-StoreDishOrderController/reportItem',
+        'title' => '訂單明細報表',
+    ],
 ];

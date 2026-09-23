@@ -2557,4 +2557,13 @@ return [
         'url' => 'ex-admin/addons-webman-controller-DishOrderController/form',
         'title' => '修改配置',
     ],
+    [
+        'id' => 'addons\webman\controller\DishOrderController\reportItem',
+        'pid' => 'addons\webman\controller\DishController-',
+        'action' => 'reportItem',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-DishOrderController/reportItem',
+        'title' => '訂單明細報表',
+    ],
 ];

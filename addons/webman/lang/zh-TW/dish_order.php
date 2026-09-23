@@ -16,7 +16,7 @@ return [
         'updated_at' => '更新時間'
     ],
     'reportItem' => [
-        'title' => '餐點明細報表',
+        'title' => '餐點訂單明細報表',
         'quantity' => '總數量',
         'subtotal' => '總積分'
     ],
