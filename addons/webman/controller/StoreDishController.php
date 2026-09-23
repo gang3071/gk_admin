@@ -85,7 +85,7 @@ class StoreDishController
 
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
-            })->align('center');
+            });
 
             $grid->setForm()->modal($this->form());
         });
@@ -123,7 +123,7 @@ class StoreDishController
             $form->number('sort', admin_trans('dish.fields.sort'))->default(0)->style(['width' => '100%']);
             $form->switch('top', admin_trans('dish.fields.top'))->default(0);
             $form->switch('status', admin_trans('dish.fields.status'))->default(1);
-            $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200);
+            $form->textarea('remark', admin_trans('dish.fields.remark'))->maxlength(200)->help(admin_trans('dish.help.remark'));
         });
     }
 

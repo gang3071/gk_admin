@@ -24,7 +24,8 @@ return [
         1 => 'Enabled'
     ],
     'help' => [
-        'daily_limit' => 'Enter 0 for unlimited'
+        'daily_limit' => 'Enter 0 for unlimited',
+        'remark' => 'Please use a slash (/) to separate categories and a semicolon (;) to separate options. Ex. less ice;light ice;no ice/full sugar;half sugar;no sugar'
     ]
 ];
 

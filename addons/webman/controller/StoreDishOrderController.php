@@ -98,7 +98,7 @@ class StoreDishOrderController
 
             $grid->actions(function (Actions $actions) {
                 $actions->hideDel();
-            })->align('center');
+            });
 
             $grid->setForm()->drawer($this->form());
         });
@@ -119,10 +119,18 @@ class StoreDishOrderController
             $form->text('player.name', admin_trans('dish_order.fields.player_id'))->attr('readonly', true)->placeholder('');
 
             $form->hasMany('items', admin_trans('dish_order_item.title'), function ($items) {
-                $items->text('dish_title', admin_trans('dish_order_item.fields.dish_title'))->attr('readonly', true)->style(['width' => '160px']);
-                $items->text('price', admin_trans('dish_order_item.fields.price'))->attr('readonly', true)->style(['width' => '90px']);
-                $items->text('quantity', admin_trans('dish_order_item.fields.quantity'))->attr('readonly', true)->style(['width' => '70px']);
-                $items->text('subtotal', admin_trans('dish_order_item.fields.subtotal'))->attr('readonly', true)->style(['width' => '90px']);
+                $string = $items->form()->input('dish_title');
+                $remark = $items->form()->input('remark');
+
+                if (! empty($remark)) {
+                    $string .= ' (' . $remark . ')';
+                }
+
+                $items->form()->input('string', $string);
+                $items->desc('string', admin_trans('dish_order_item.fields.dish_title'));
+                $items->desc('price', admin_trans('dish_order_item.fields.price'))->style(['width' => '80px']);
+                $items->desc('quantity', admin_trans('dish_order_item.fields.quantity'))->style(['width' => '60px']);
+                $items->desc('subtotal', admin_trans('dish_order_item.fields.subtotal'))->style(['width' => '80px']);
             })
             ->table()
             ->disabled();
@@ -306,7 +314,13 @@ class StoreDishOrderController
 
         foreach ($items as $value) {
             $html .= '<tr>';
-            $html .= '<td>' . $value->dish_title . '</td>';
+            $html .= '<td>' . $value->dish_title;
+
+            if (! empty($value->remark)) {
+                $html .= ' (' . $value->remark . ')';
+            }
+
+            $html .= '</td>';
             $html .= '<td>x ' . $value->quantity . '</td>';
             $html .= '</tr>';
         }
