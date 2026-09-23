@@ -15,6 +15,11 @@ return [
         'created_at' => '创建时间',
         'updated_at' => '更新时间'
     ],
+    'reportItem' => [
+        'title' => '餐点明细报表',
+        'quantity' => '总数量',
+        'subtotal' => '总积分'
+    ],
     'status' => [
         0 => '待确认',
         1 => '已确认',

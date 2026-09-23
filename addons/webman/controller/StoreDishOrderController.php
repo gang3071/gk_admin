@@ -3,7 +3,9 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\DishCategory;
 use addons\webman\model\DishOrder;
+use addons\webman\model\DishOrderItem;
 use addons\webman\model\PlayerPointsRecord;
 use addons\webman\service\PlayerPointsService;
 use ExAdmin\ui\component\common\Copy;
@@ -13,6 +15,7 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\support\Request;
 use support\Db;
 
 /**
@@ -33,15 +36,13 @@ class StoreDishOrderController
      */
     public function index(): Grid
     {
-        $adminUser = Admin::user();
-
-        return Grid::create(new $this->model, function (Grid $grid) use ($adminUser)  {
+        return Grid::create(new $this->model, function (Grid $grid) {
             $grid->title(admin_trans('dish_order.title'));
             $grid->hideAdd();
             $grid->hideDelete();
             $grid->hideSelection();
 
-            $grid->model()->where('admin_user_id', $adminUser->id);
+            $grid->model()->where('admin_user_id', Admin::user()->id);
             $grid->model()->with('items')->orderBy('id', 'desc');
 
             $grid->expandFilter();
@@ -198,6 +199,97 @@ class StoreDishOrderController
                 }
             });
         });
+    }
+
+    /**
+     * 餐點明細報表
+     * @auth true
+     */
+    public function reportItem(): Grid
+    {
+        $categories = self::getCategories();
+
+        return Grid::create(new DishOrderItem(), function (Grid $grid) use ($categories) {
+            $grid->title(admin_trans('dish_order.reportItem.title'));
+            $grid->hideAdd();
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->export('DishOrderItemReport' . date('ymdHis'));
+
+            $grid->model()
+                ->join('dish_order', 'dish_order.id', '=', 'dish_order_item.order_id')
+                ->selectRaw(implode(', ', [
+                    'MIN(dish_order_item.id) AS id',
+                    'dish_order_item.dish_id',
+                    'MIN(dish_order_item.dish_title) AS dish_title',
+                    'dish_order_item.price AS price',
+                    'SUM(dish_order_item.quantity) AS quantity',
+                    'SUM(dish_order_item.subtotal) AS subtotal',
+                    'dish_order.admin_user_id',
+                ]))
+                ->groupBy('dish_order_item.dish_id', 'dish_order_item.price', 'dish_order.admin_user_id')
+                ->orderBy('dish_order.admin_user_id', 'asc')
+                ->orderBy('dish_order_item.dish_id', 'asc');
+
+            $grid->model()
+                ->where('dish_order.admin_user_id', Admin::user()->id)
+                ->where('dish_order.status', DishOrder::STATUS_COMPLETED);
+
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            if (! empty($exAdminFilter['created_at_start'])) {
+                $grid->model()->where('dish_order.created_at', '>=', $exAdminFilter['created_at_start']);
+            }
+
+            if (! empty($exAdminFilter['created_at_end'])) {
+                $grid->model()->where('dish_order.created_at', '<=', $exAdminFilter['created_at_end']);
+            }
+
+            $grid->expandFilter();
+            $grid->filter(function (Filter $filter) use ($categories)  {
+                $filter->like()->text('dish_title')->placeholder(admin_trans('dish_order_item.fields.dish_title'));
+
+                $filter->eq()->select('dish.category_id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('dish.fields.category_id'))
+                    ->options($categories);
+
+                $filter->form()->hidden('created_at_start');
+                $filter->form()->hidden('created_at_end');
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')
+                    ->placeholder([admin_trans('public_msg.created_at_start'), admin_trans('public_msg.created_at_end')]);
+            });
+
+            $grid->column('dish_title', admin_trans('dish_order_item.fields.dish_title'))->align('center');
+            $grid->column('dish.category_id', admin_trans('dish.fields.category_id'))->align('center')
+                ->display(function ($value) use ($categories) {
+                        return $categories[$value] ?? '類別遺失';
+                    });
+            $grid->column('price', admin_trans('dish_order_item.fields.price'))->align('center');
+            $grid->column('quantity', admin_trans('dish_order.reportItem.quantity'))->align('center');
+            $grid->column('subtotal', admin_trans('dish_order.reportItem.subtotal'))->align('center');
+
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+            });
+        });
+    }
+
+    /**
+     * 類別清單
+     * @return array
+     */
+    public function getCategories(): array
+    {
+        $dishCategory = DishCategory::query()
+            ->orderBy('top', 'desc')
+            ->orderBy('sort', 'desc')
+            ->pluck('title','id')
+            ->toArray();
+
+        return $dishCategory;
     }
 
     /**

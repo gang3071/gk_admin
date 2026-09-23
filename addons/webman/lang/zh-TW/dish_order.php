@@ -15,6 +15,11 @@ return [
         'created_at' => '創建時間',
         'updated_at' => '更新時間'
     ],
+    'reportItem' => [
+        'title' => '餐點明細報表',
+        'quantity' => '總數量',
+        'subtotal' => '總積分'
+    ],
     'status' => [
         0 => '待確認',
         1 => '已確認',

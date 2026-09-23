@@ -15,6 +15,11 @@ return [
         'created_at' => '作成日時',
         'updated_at' => '更新日時'
     ],
+    'reportItem' => [
+        'title' => '食事明細レポート',
+        'quantity' => '総数',
+        'subtotal' => '合計ポイント'
+    ],
     'status' => [
         0 => '未確認',
         1 => '確認済み',

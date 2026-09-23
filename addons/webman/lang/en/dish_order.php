@@ -15,6 +15,11 @@ return [
         'created_at' => 'Created At',
         'updated_at' => 'Updated At'
     ],
+    'reportItem' => [
+        'title' => 'Meal Order Item Report',
+        'quantity' => 'Total quantity',
+        'subtotal' => 'Total Points'
+    ],
     'status' => [
         0 => 'Pending',
         1 => 'Confirmed',
