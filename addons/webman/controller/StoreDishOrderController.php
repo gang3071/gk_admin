@@ -222,9 +222,13 @@ class StoreDishOrderController
             $grid->hideAdd();
             $grid->hideDelete();
             $grid->hideSelection();
-            $grid->export('DishOrderItemReport' . date('ymdHis'));
 
-            $grid->model()
+            $grid->export('DishOrderItemReport' . date('ymdHis'));
+            $grid->hideExportSelection();
+
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            $query = DishOrderItem::query()
                 ->join('dish_order', 'dish_order.id', '=', 'dish_order_item.order_id')
                 ->selectRaw(implode(', ', [
                     'MIN(dish_order_item.id) AS id',
@@ -235,23 +239,23 @@ class StoreDishOrderController
                     'SUM(dish_order_item.subtotal) AS subtotal',
                     'dish_order.admin_user_id',
                 ]))
-                ->groupBy('dish_order_item.dish_id', 'dish_order_item.price', 'dish_order.admin_user_id')
-                ->orderBy('dish_order.admin_user_id', 'asc')
-                ->orderBy('dish_order_item.dish_id', 'asc');
-
-            $grid->model()
                 ->where('dish_order.admin_user_id', Admin::user()->id)
                 ->where('dish_order.status', DishOrder::STATUS_COMPLETED);
 
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-
             if (! empty($exAdminFilter['created_at_start'])) {
-                $grid->model()->where('dish_order.created_at', '>=', $exAdminFilter['created_at_start']);
+                $query->where('dish_order.created_at', '>=', $exAdminFilter['created_at_start']);
             }
 
             if (! empty($exAdminFilter['created_at_end'])) {
-                $grid->model()->where('dish_order.created_at', '<=', $exAdminFilter['created_at_end']);
+                $query->where('dish_order.created_at', '<=', $exAdminFilter['created_at_end']);
             }
+
+            $query->groupBy('dish_order_item.dish_id', 'dish_order_item.price', 'dish_order.admin_user_id');
+
+            $grid->model()
+                ->fromSub($query, 'dish_order_item')
+                ->orderBy('dish_order_item.admin_user_id', 'asc')
+                ->orderBy('dish_order_item.dish_id', 'asc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) use ($categories)  {
