@@ -36,6 +36,8 @@ return [
     'ticket_record_total_score' => '出票記録合計金額',
     'ticket_redeem_backend_used_score' => '精算バックエンド使用金額',
     'ticket_subtotal' => '小計',
+    'storage_recharge_short' => 'チャージ',
+    'unknown_device' => '不明なデバイス',
 
     // エラーメッセージ
     'error' => [

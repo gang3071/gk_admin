@@ -35,6 +35,8 @@ return [
     'ticket_record_total_score' => '出票記錄總金額',
     'ticket_redeem_backend_used_score' => '核銷記錄後台使用金額',
     'ticket_subtotal' => '小計',
+    'storage_recharge_short' => '儲值',
+    'unknown_device' => '未知設備',
 
     // 錯誤訊息
     'error' => [

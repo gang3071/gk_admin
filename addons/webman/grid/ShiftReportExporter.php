@@ -2,9 +2,12 @@
 
 namespace addons\webman\grid;
 
+use addons\webman\model\AdminDevice;
+use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\StoreShiftDeviceDetail;
 use addons\webman\model\StoreShiftMachineDetail;
+use addons\webman\model\TicketRecord;
 use ExAdmin\ui\component\grid\grid\excel\Excel;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -223,6 +226,9 @@ class ShiftReportExporter extends Excel
                 ]);
                 $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
                 $this->currentRow++;
+
+                // 储值机设备明细行（按出票/储值设备拆分，位于汇总行上方）
+                $this->writeStorageDeviceRows($originalRecord);
 
                 // 储值机购票、储值机储值、小计
                 $storageTicketLabel = admin_trans('shift_handover.storage_ticket_purchase') . '：';
@@ -521,6 +527,112 @@ class ShiftReportExporter extends Excel
                 $devices = null;
                 unset($devices);
             });
+    }
+
+    /**
+     * 储值机设备明细行：购票/储值按设备拆分
+     *
+     * 位于交班标题行与「储值机购票」汇总行之间，列位与汇总行一一对应：
+     * A=设备名称  B=购票  C=储值：  D=储值  E=小计：  F=小计
+     * 购票按 qr_ticket_record.issue_device_id 归属，储值按 player_delivery_record.device_id 归属，
+     * 金额口径与交班统计（AutoShiftService）一致。
+     */
+    protected function writeStorageDeviceRows(StoreAgentShiftHandoverRecord $record): void
+    {
+        $startTime = $record->start_time;
+        $endTime = $record->end_time;
+
+        // 购票：按出票设备（issue_device_id）汇总
+        $purchaseMap = [];
+        $purchaseRows = TicketRecord::query()
+            ->where('store_admin_id', $record->bind_admin_user_id)
+            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
+            ->where('source_type', TicketRecord::SOURCE_TYPE_PURCHASE)
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('issue_device_id')
+            ->selectRaw('issue_device_id, SUM(score) as total')
+            ->get();
+        foreach ($purchaseRows as $row) {
+            $purchaseMap[(int)$row->issue_device_id] = (float)$row->total;
+        }
+        unset($purchaseRows);
+
+        // 储值：按设备（device_id）汇总
+        $rechargeMap = [];
+        $rechargeRows = PlayerDeliveryRecord::query()
+            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+            ->where('player.store_admin_id', $record->bind_admin_user_id)
+            ->where('player.is_promoter', 0)
+            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_MACHINE)
+            ->where('player_delivery_record.source', 'storage_recharge')
+            ->where('player_delivery_record.created_at', '>', $startTime)
+            ->where('player_delivery_record.created_at', '<=', $endTime)
+            ->groupBy('player_delivery_record.device_id')
+            ->selectRaw('player_delivery_record.device_id as device_id, SUM(player_delivery_record.amount) as total')
+            ->get();
+        foreach ($rechargeRows as $row) {
+            $rechargeMap[(int)$row->device_id] = (float)$row->total;
+        }
+        unset($rechargeRows);
+
+        // 汇总两个来源涉及的设备（已知设备在前，未归属设备在后）
+        $deviceIds = array_unique(array_merge(array_keys($purchaseMap), array_keys($rechargeMap)));
+        usort($deviceIds, function ($a, $b) {
+            if ($a === 0) {
+                return 1;
+            }
+            if ($b === 0) {
+                return -1;
+            }
+            return $a <=> $b;
+        });
+        if (empty($deviceIds)) {
+            return;
+        }
+
+        $deviceNames = AdminDevice::query()->whereIn('id', $deviceIds)->pluck('device_name', 'id');
+
+        $index = 0;
+        foreach ($deviceIds as $deviceId) {
+            $purchase = $purchaseMap[$deviceId] ?? 0;
+            $recharge = $rechargeMap[$deviceId] ?? 0;
+            if ($purchase == 0 && $recharge == 0) {
+                continue;
+            }
+
+            $deviceName = $deviceNames[$deviceId] ?? admin_trans('shift_handover.unknown_device');
+            $subtotal = bcadd((string)$purchase, (string)$recharge, 2);
+
+            $this->sheet->setCellValue('A' . $this->currentRow, $deviceName);
+            $this->sheet->setCellValue('B' . $this->currentRow, number_format($purchase, 2));
+            $this->sheet->setCellValue('C' . $this->currentRow, admin_trans('shift_handover.storage_recharge_short') . '：');
+            $this->sheet->setCellValue('D' . $this->currentRow, number_format($recharge, 2));
+            $this->sheet->setCellValue('E' . $this->currentRow, admin_trans('shift_handover.subtotal') . '：');
+            $this->sheet->setCellValue('F' . $this->currentRow, number_format((float)$subtotal, 2));
+
+            // 与汇总行对齐：B/D/F 数字右对齐
+            $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+            $this->sheet->getStyle('F' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+
+            // 交替行背景色，与设备明细表风格一致
+            $rowColor = $index % 2 == 0 ? 'FFFFFF' : 'F9F9F9';
+            $this->sheet->getStyle('A' . $this->currentRow . ':F' . $this->currentRow)->applyFromArray([
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => $rowColor]],
+            ]);
+
+            $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
+            $this->currentRow++;
+            $index++;
+        }
+
+        unset($deviceNames, $purchaseMap, $rechargeMap);
     }
 
     /**

@@ -36,6 +36,8 @@ return [
     'ticket_record_total_score' => '出票记录总金额',
     'ticket_redeem_backend_used_score' => '核销记录后台使用金额',
     'ticket_subtotal' => '小计',
+    'storage_recharge_short' => '储值',
+    'unknown_device' => '未知设备',
 
     // 错误消息
     'error' => [

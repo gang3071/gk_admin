@@ -36,6 +36,8 @@ return [
     'ticket_record_total_score' => 'Ticket Record Total Amount',
     'ticket_redeem_backend_used_score' => 'Redeem Backend Used Amount',
     'ticket_subtotal' => 'Subtotal',
+    'storage_recharge_short' => 'Top-up',
+    'unknown_device' => 'Unknown Device',
 
     // Error messages
     'error' => [
