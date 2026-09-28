@@ -58,6 +58,7 @@ return [
         PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => 'VIP Birthday Bonus',
         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIP Upgrade Bonus',
         PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => 'Cashback Pool Claim',
+        PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP Daily Login Bonus',
     ],
     'detail' => 'details',
     'chart' => 'chart',

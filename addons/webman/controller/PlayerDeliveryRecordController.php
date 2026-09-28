@@ -232,6 +232,7 @@ class PlayerDeliveryRecordController
                         return Tag::create($translatedText)->color('blue');
                     case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
                     case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
+                    case PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS:
                         return Tag::create($translatedText)->color('#eb2f96');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
@@ -368,6 +369,9 @@ class PlayerDeliveryRecordController
                         case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS))->color('#722ed1');
                             break;
+                        case PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS:
+                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS))->color('#eb2f96');
+                            break;
                         default:
                             $tag = '';
                     }
@@ -489,6 +493,7 @@ class PlayerDeliveryRecordController
                         'machine_down' => admin_trans('message.target.machine_down'),
                         'birthday_bonus' => admin_trans('message.target.birthday_bonus'),
                         'vip_upgrade_bonus' => admin_trans('message.target.vip_upgrade_bonus'),
+                        'vip_daily_login_bonus' => admin_trans('message.target.vip_daily_login_bonus'),
                         'activity_bonus' => admin_trans('message.target.activity_bonus'),
                         'register_present' => admin_trans('message.target.register_present'),
                         'profit' => admin_trans('message.target.profit'),
@@ -577,6 +582,7 @@ class PlayerDeliveryRecordController
                         PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS),
                         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS),
                         PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL),
+                        PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS),
                     ])->when([
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
