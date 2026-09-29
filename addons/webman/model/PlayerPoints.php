@@ -11,10 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $player_id
  * @property int $department_id
- * @property int $total_points
- * @property int $available_points
- * @property int $frozen_points
- * @property int $used_points
+ * @property float $total_points
+ * @property float $available_points
+ * @property float $frozen_points
+ * @property float $used_points
  * @property int $version
  * @property string $created_at
  * @property string $updated_at
@@ -36,10 +36,11 @@ class PlayerPoints extends Model
     protected $casts = [
         'player_id' => 'integer',
         'department_id' => 'integer',
-        'total_points' => 'integer',
-        'available_points' => 'integer',
-        'frozen_points' => 'integer',
-        'used_points' => 'integer',
+        // 积分保留4位小数（decimal(14,4)），必须用 float，integer 会在读取时截断小数
+        'total_points' => 'float',
+        'available_points' => 'float',
+        'frozen_points' => 'float',
+        'used_points' => 'float',
         'version' => 'integer',
     ];
 

@@ -7,6 +7,7 @@ use addons\webman\model\Channel;
 use addons\webman\model\LevelList;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
@@ -27,6 +28,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\support\Request;
 use support\Db;
 
@@ -841,6 +843,12 @@ class StorePlayerController
 
                 // 积分管理
                 $dropdown = $actions->dropdown();
+                $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
+                    ->modal($this->playerWallet([
+                        'id' => $data['id'],
+                        'money' => $data['wallet_money'] ?? 0,
+                    ]))->width('600px')
+                    ->title(admin_trans('player.wallet.player_wallet') . ' - ' . $data['name']);
                 $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
                     ->modal([StorePlayerPointsController::class, 'index'], ['player_id' => $data['id']])
                     ->width('90%')
@@ -1139,6 +1147,99 @@ class StorePlayerController
                 })->span(12);
             });
         });
+    }
+
+    /**
+     * 玩家钱包（店机后台：只保留加点类型，操作下拉固定为活动外增）
+     * @auth true
+     * @group store
+     * @param $data
+     * @return Form
+     */
+    public function playerWallet($data): Form
+    {
+        return Form::create(new Player(), function (Form $form) use ($data) {
+            $form->hidden('id')->default($data['id']);
+            // 只保留加点类型
+            $form->radio('type', admin_trans('player.wallet.type'))
+                ->button()
+                ->disabled(true)
+                ->default(PlayerMoneyEditLog::TYPE_INCREASE)
+                ->options([
+                    PlayerMoneyEditLog::TYPE_INCREASE => admin_trans('player.wallet.increase'),
+                ]);
+            // 操作下拉固定为活动外增
+            $form->select('increase_action', admin_trans('player.wallet.action'))
+                ->disabled(true)
+                ->default(PlayerMoneyEditLog::ACTIVITY_GIVE)
+                ->options([
+                    PlayerMoneyEditLog::ACTIVITY_GIVE => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::ACTIVITY_GIVE),
+                ]);
+            $form->number('money',
+                admin_trans('player.wallet.money'))->min(0)->max(100000000)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player.wallet.machine_wallet') . ' ' . ($data['money'] ?? 0))->required();
+            $form->textarea('remark', admin_trans('player.wallet.textarea'))->maxlength(255)->bindAttr('rows',
+                4)->required();
+            $form->actions()->hideResetButton();
+            $form->saving(function (Form $form) use ($data) {
+                // 店机权限：只能操作本店玩家
+                if ($this->checkPlayerPermission((int)$form->input('id')) === false) {
+                    return message_error(admin_trans('player.wallet.player_error'));
+                }
+                // 类型固定为加点，操作固定为活动外增
+                return $this->store([
+                    'id' => $form->input('id'),
+                    'type' => PlayerMoneyEditLog::TYPE_INCREASE,
+                    'deduct_action' => null,
+                    'increase_action' => PlayerMoneyEditLog::ACTIVITY_GIVE,
+                    'money' => $form->input('money'),
+                    'remark' => $form->input('remark'),
+                    'activity' => null,
+                    'delivery_type' => PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
+                    'source' => 'wallet_modify'
+                ]);
+            });
+            $form->layout('vertical');
+        });
+    }
+
+    /**
+     * 钱包操作
+     * @param $data
+     * @return Msg
+     */
+    public function store($data): Msg
+    {
+        try {
+            Db::beginTransaction();
+            playerManualSystem($data);
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollBack();
+            return message_error(admin_trans('player.wallet.wallet_operation_failed'));
+        }
+        return message_success(admin_trans('player.wallet.wallet_operation_success'));
+    }
+
+    /**
+     * 验证玩家权限（门店：只能操作绑定到该门店的玩家）
+     */
+    private function checkPlayerPermission(int $playerId): array|false
+    {
+        $admin = Admin::user();
+        $player = Player::find($playerId);
+
+        if (!$player) {
+            return false;
+        }
+
+        if ($player->department_id != $admin->department_id || $player->store_admin_id != $admin->id) {
+            return false;
+        }
+
+        return [
+            'department_id' => $admin->department_id,
+            'store_admin_id' => $admin->id,
+        ];
     }
 
     /**

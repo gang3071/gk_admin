@@ -205,6 +205,7 @@ class AdminTicketRedeemController
                         TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.redeem.source_purchase'))->color('green'),
                         TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.redeem.source_split'))->color('cyan'),
                         TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.redeem.source_merge'))->color('geekblue'),
+                        TicketRecord::SOURCE_TYPE_CHUZHI => Tag::create(admin_trans('ticket_machine.redeem.source_chuzhi'))->color('orange'),
                         default => Tag::create(admin_trans('ticket_machine.redeem.source_machine_wash'))->color('blue'),
                     };
                 });
@@ -253,6 +254,7 @@ class AdminTicketRedeemController
                         TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.redeem.source_purchase'),
                         TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.redeem.source_split'),
                         TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.redeem.source_merge'),
+                        TicketRecord::SOURCE_TYPE_CHUZHI => admin_trans('ticket_machine.redeem.source_chuzhi'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')

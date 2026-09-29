@@ -203,6 +203,7 @@ class AdminTicketRecordController
                         TicketRecord::SOURCE_TYPE_PURCHASE => Tag::create(admin_trans('ticket_machine.record.source_purchase'))->color('green'),
                         TicketRecord::SOURCE_TYPE_SPLIT => Tag::create(admin_trans('ticket_machine.record.source_split'))->color('cyan'),
                         TicketRecord::SOURCE_TYPE_MERGE => Tag::create(admin_trans('ticket_machine.record.source_merge'))->color('geekblue'),
+                        TicketRecord::SOURCE_TYPE_CHUZHI => Tag::create(admin_trans('ticket_machine.record.source_chuzhi'))->color('orange'),
                         default => Tag::create(admin_trans('ticket_machine.record.source_backend'))->color('blue'),
                     };
                 });
@@ -266,6 +267,7 @@ class AdminTicketRecordController
                         TicketRecord::SOURCE_TYPE_PURCHASE => admin_trans('ticket_machine.record.source_purchase'),
                         TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.record.source_split'),
                         TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.record.source_merge'),
+                        TicketRecord::SOURCE_TYPE_CHUZHI => admin_trans('ticket_machine.record.source_chuzhi'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')

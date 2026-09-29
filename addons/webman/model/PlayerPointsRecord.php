@@ -13,9 +13,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $department_id
  * @property int $type
  * @property string $source
- * @property int $points
- * @property int $points_before
- * @property int $points_after
+ * @property float $points
+ * @property float $points_before
+ * @property float $points_after
  * @property string $remark
  * @property int|null $admin_id
  * @property string|null $admin_name
@@ -69,9 +69,9 @@ class PlayerPointsRecord extends Model
         'player_id' => 'integer',
         'department_id' => 'integer',
         'type' => 'integer',
-        'points' => 'integer',
-        'points_before' => 'integer',
-        'points_after' => 'integer',
+        'points' => 'float',
+        'points_before' => 'float',
+        'points_after' => 'float',
         'admin_id' => 'integer',
     ];
 
