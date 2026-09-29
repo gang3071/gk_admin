@@ -200,7 +200,7 @@
             <!-- 开分/洗分：数字输入 -->
             <a-input-number v-else v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
           </div>
-          <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected">{{ labels.send_qr || '發送QR碼' }}</a-button>
+          <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected || isSendingQr" :loading="isSendingQr">{{ labels.send_qr || '發送QR碼' }}</a-button>
         </a-card>
       </a-col>
     </a-row>
@@ -291,6 +291,7 @@ export default {
       playerKeyword: '',
       playerBetInfo: null,
       betInfoLoading: false,
+      isSendingQr: false,
       hexCommand: '',
       remark: '',
       logExpanded: false,
@@ -1041,8 +1042,21 @@ export default {
       this.addLog(r ? 'success' : 'error', r ? this.t('lottery_sent') : this.t('send_failed', {error: ''}));
     },
 
-    // 发送QR码
+    // 发送QR码（防抖入口，防止多次点击重复调用接口）
     async sendQrCode() {
+      if (this.isSendingQr) return;
+      this.isSendingQr = true;
+      let ok = false;
+      try {
+        ok = await this.doSendQrCode();
+      } finally {
+        // 成功后弹窗即将关闭并刷新，期间保持禁用；失败或异常则恢复按钮
+        if (!ok) this.isSendingQr = false;
+      }
+    },
+
+    // 执行QR码发送（接口调用 + 出票机通信）
+    async doSendQrCode() {
       // 检查出票机连接状态
       if (!this.isConnected || !this.port) {
         this.addLog('error', this.t('printer_not_connected'));
@@ -1295,7 +1309,9 @@ export default {
         setTimeout(() => {
           this.closeModalAndRefresh();
         }, 1000);
+        return true;
       }
+      return false;
     },
 
     // 关闭弹窗并刷新页面
