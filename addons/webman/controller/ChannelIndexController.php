@@ -2340,8 +2340,6 @@ class ChannelIndexController
             ->sum('score');
 
         // 当前班次数据汇总
-        // 开分金额（人工储值）
-        $openScoreAmount = floatval($currentShiftDeliveryQuery->open_score_amount ?? 0);
         // 开票金额（后台开分 + 储值机购票，从TicketRecord表计算）
         $ticketOpenScoreAmount = floatval($currentShiftTicketOpenScoreQuery ?? 0);
         // 储值机储值金额
@@ -2353,8 +2351,8 @@ class ChannelIndexController
 
         $currentShiftStats = [
             'machine_put_point' => $currentShiftDeliveryQuery->machine_put_point ?? 0,
-            // 总收入 = 开分 + 开票 + 储值机储值
-            'total_income' => bcadd(bcadd($openScoreAmount, $ticketOpenScoreAmount, 2), $storageRechargeAmount, 2),
+            // 总收入 = 开票 + 储值机储值（人工储值不计入收入）
+            'total_income' => bcadd($ticketOpenScoreAmount, $storageRechargeAmount, 2),
             // 总支出 = 洗分 + 核销
             'total_outcome' => bcadd($channelWithdrawalAmount, $redeemAmountExport, 2),
             'lottery_amount' => $currentShiftLotteryQuery->lottery_amount ?? 0,
@@ -2391,7 +2389,7 @@ class ChannelIndexController
             ->sum('player_game_log.chip_amount');
 
         // 总利润 = 总收入 - 总支出
-        // 总收入 = 开分 + 开票 + 储值机储值
+        // 总收入 = 开票 + 储值机储值
         // 总支出 = 洗分 + 核销
         // 注意：彩金、摸奖券奖励只用于展示，不参与利润计算（已经发放给客户，客户洗分会洗掉）
         $currentShiftStats['total_profit'] = bcsub(
