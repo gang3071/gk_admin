@@ -843,12 +843,12 @@ class StorePlayerController
 
                 // 积分管理
                 $dropdown = $actions->dropdown();
-                $dropdown->append(admin_trans('player.wallet.player_wallet'), 'MoneyCollectFilled')
+                $dropdown->append(admin_trans('player.wallet.activity_give'), 'MoneyCollectFilled')
                     ->modal($this->playerWallet([
                         'id' => $data['id'],
                         'money' => $data['wallet_money'] ?? 0,
                     ]))->width('600px')
-                    ->title(admin_trans('player.wallet.player_wallet') . ' - ' . $data['name']);
+                    ->title(admin_trans('player.wallet.activity_give') . ' - ' . $data['name']);
                 $dropdown->append(admin_trans('player_points.action.view_records'), 'TransactionOutlined')
                     ->modal([StorePlayerPointsController::class, 'index'], ['player_id' => $data['id']])
                     ->width('90%')
@@ -1150,7 +1150,7 @@ class StorePlayerController
     }
 
     /**
-     * 玩家钱包（店机后台：只保留加点类型，操作下拉固定为活动外增）
+     * 活动外增（店机后台：只填金额和备注，类型/操作固定为加点-活动外增）
      * @auth true
      * @group store
      * @param $data
@@ -1160,21 +1160,6 @@ class StorePlayerController
     {
         return Form::create(new Player(), function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
-            // 只保留加点类型
-            $form->radio('type', admin_trans('player.wallet.type'))
-                ->button()
-                ->disabled(true)
-                ->default(PlayerMoneyEditLog::TYPE_INCREASE)
-                ->options([
-                    PlayerMoneyEditLog::TYPE_INCREASE => admin_trans('player.wallet.increase'),
-                ]);
-            // 操作下拉固定为活动外增
-            $form->select('increase_action', admin_trans('player.wallet.action'))
-                ->disabled(true)
-                ->default(PlayerMoneyEditLog::ACTIVITY_GIVE)
-                ->options([
-                    PlayerMoneyEditLog::ACTIVITY_GIVE => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::ACTIVITY_GIVE),
-                ]);
             $form->number('money',
                 admin_trans('player.wallet.money'))->min(0)->max(100000000)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player.wallet.machine_wallet') . ' ' . ($data['money'] ?? 0))->required();
             $form->textarea('remark', admin_trans('player.wallet.textarea'))->maxlength(255)->bindAttr('rows',
@@ -1194,7 +1179,7 @@ class StorePlayerController
                     'money' => $form->input('money'),
                     'remark' => $form->input('remark'),
                     'activity' => null,
-                    'delivery_type' => PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
+                    'delivery_type' => PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
                     'source' => 'wallet_modify'
                 ]);
             });

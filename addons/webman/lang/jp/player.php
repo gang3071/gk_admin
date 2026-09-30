@@ -139,6 +139,7 @@ return [
     ],
     'wallet' => [
         'player_wallet' => 'プレイヤーウォレット',
+        'activity_give' => 'イベント外付与',
         'deduct' => '減点',
         'increase' => 'ドットを追加',
         'wallet_from' => 'ウォレット情報',

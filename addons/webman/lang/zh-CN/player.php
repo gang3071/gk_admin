@@ -140,6 +140,7 @@ return [
     ],
     'wallet' => [
         'player_wallet' => '玩家钱包',
+        'activity_give' => '活动外增',
         'player_game_wallet' => '电子游戏钱包',
         'deduct' => '扣点',
         'increase' => '加点',

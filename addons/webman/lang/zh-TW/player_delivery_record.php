@@ -59,6 +59,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIP升級禮金',
         PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => '反水池反水領取',
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP每日登錄獎勵',
+        PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => '活動外增',
     ],
     'detail' => '詳情',
     'chart' => '圖表',

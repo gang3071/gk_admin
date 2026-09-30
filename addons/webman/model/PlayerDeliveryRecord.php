@@ -86,6 +86,7 @@ class PlayerDeliveryRecord extends Model
     const TYPE_VIP_UPGRADE_BONUS = 35; // VIP升级礼金
     const TYPE_REVERSE_WATER_POOL = 36; // 反水池反水领取
     const TYPE_VIP_DAILY_LOGIN_BONUS = 37; // VIP每日登录奖励
+    const TYPE_ACTIVITY_GIVE = 38; // 活动外增
 
     protected $fillable = [
         'player_id',
@@ -171,6 +172,107 @@ class PlayerDeliveryRecord extends Model
     public function getAmountAfterAttribute($value): float
     {
         return floatval($value);
+    }
+
+    /**
+     * 账变类型 => 标签颜色
+     * 新增类型时只需在此维护一处
+     */
+    public static function typeColor(int $type): string
+    {
+        $map = [
+            self::TYPE_MODIFIED_AMOUNT_ADD => '#2db7f5',
+            self::TYPE_PRESENT_IN => '#8D3514',
+            self::TYPE_PRESENT_OUT => '#f50',
+            self::TYPE_MACHINE_UP => '#9FCC84',
+            self::TYPE_MACHINE_DOWN => '#668A50',
+            self::TYPE_RECHARGE => '#3C87C9',
+            self::TYPE_WITHDRAWAL => '#C98341',
+            self::TYPE_MODIFIED_AMOUNT_DEDUCT => '#108ee9',
+            self::TYPE_WITHDRAWAL_BACK => '#CC6600',
+            self::TYPE_ACTIVITY_BONUS => '#CC6600',
+            self::TYPE_REGISTER_PRESENT => '#CC6600',
+            self::TYPE_PROFIT => '#e8c521',
+            self::TYPE_LOTTERY => '#e8c521',
+            self::TYPE_GAME_PLATFORM_OUT => '#CC6600',
+            self::TYPE_GAME_PLATFORM_IN => '#108ee9',
+            self::TYPE_NATIONAL_INVITE => '#e8c521',
+            self::TYPE_RECHARGE_REWARD => '#e8c521',
+            self::TYPE_DAMAGE_REBATE => '#e8c521',
+            self::TYPE_REVERSE_WATER => '#e8c521',
+            self::TYPE_REVERSE_WATER_POOL => '#722ed1',
+            self::COIN_ADD => '#e8c521',
+            self::COIN_DEDUCT => '#e8c521',
+            self::TYPE_SPECIAL => '#e8c521',
+            self::TYPE_MACHINE => '#e8c521',
+            self::TYPE_AGENT_OUT => '#e8c521',
+            self::TYPE_AGENT_IN => '#e8c521',
+            self::TYPE_BET => '#1890ff',
+            self::TYPE_CANCEL_BET => '#52c41a',
+            self::TYPE_GIFT => '#eb2f96',
+            self::TYPE_SETTLEMENT => '#13c2c2',
+            self::TYPE_RE_SETTLEMENT => '#722ed1',
+            self::TYPE_PREPAY => '#fa8c16',
+            self::TYPE_REFUND => '#a0d911',
+            self::TYPE_LOTTERY_TICKET_REWARD => '#CC6600',
+            self::TYPE_BIRTHDAY_BONUS => '#eb2f96',
+            self::TYPE_VIP_UPGRADE_BONUS => '#722ed1',
+            self::TYPE_VIP_DAILY_LOGIN_BONUS => '#eb2f96',
+            self::TYPE_ACTIVITY_GIVE => '#CC6600',
+        ];
+        return $map[$type] ?? 'gray';
+    }
+
+    /**
+     * 账变类型 => 名称（筛选下拉等）
+     */
+    public static function typeOptions(): array
+    {
+        $types = [
+            self::TYPE_MODIFIED_AMOUNT_ADD,
+            self::TYPE_PRESENT_IN,
+            self::TYPE_PRESENT_OUT,
+            self::TYPE_MACHINE_UP,
+            self::TYPE_MACHINE_DOWN,
+            self::TYPE_RECHARGE,
+            self::TYPE_WITHDRAWAL,
+            self::TYPE_MODIFIED_AMOUNT_DEDUCT,
+            self::TYPE_WITHDRAWAL_BACK,
+            self::TYPE_ACTIVITY_BONUS,
+            self::TYPE_REGISTER_PRESENT,
+            self::TYPE_PROFIT,
+            self::TYPE_LOTTERY,
+            self::TYPE_GAME_PLATFORM_OUT,
+            self::TYPE_GAME_PLATFORM_IN,
+            self::TYPE_NATIONAL_INVITE,
+            self::TYPE_RECHARGE_REWARD,
+            self::TYPE_DAMAGE_REBATE,
+            self::TYPE_REVERSE_WATER,
+            self::TYPE_REVERSE_WATER_POOL,
+            self::COIN_ADD,
+            self::COIN_DEDUCT,
+            self::TYPE_SPECIAL,
+            self::TYPE_MACHINE,
+            self::TYPE_AGENT_OUT,
+            self::TYPE_AGENT_IN,
+            self::TYPE_BET,
+            self::TYPE_CANCEL_BET,
+            self::TYPE_GIFT,
+            self::TYPE_SETTLEMENT,
+            self::TYPE_RE_SETTLEMENT,
+            self::TYPE_PREPAY,
+            self::TYPE_REFUND,
+            self::TYPE_LOTTERY_TICKET_REWARD,
+            self::TYPE_BIRTHDAY_BONUS,
+            self::TYPE_VIP_UPGRADE_BONUS,
+            self::TYPE_VIP_DAILY_LOGIN_BONUS,
+            self::TYPE_ACTIVITY_GIVE,
+        ];
+        $options = [];
+        foreach ($types as $type) {
+            $options[$type] = admin_trans('player_delivery_record.type.' . $type);
+        }
+        return $options;
     }
 
     /**

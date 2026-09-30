@@ -213,6 +213,7 @@ class ChannelPlayerDeliveryRecordController
                 switch ($data->type) {
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
+                    case PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE:
                     case PlayerDeliveryRecord::TYPE_RECHARGE:
                     case PlayerDeliveryRecord::TYPE_WITHDRAWAL:
                     case PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK:
@@ -278,117 +279,12 @@ class ChannelPlayerDeliveryRecordController
             })->align('center');
             $grid->column('type', admin_trans('player_delivery_record.fields.type'))
                 ->display(function ($value) {
-                    switch ($value) {
-                        case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD))->color('#2db7f5');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_PRESENT_IN:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PRESENT_IN))->color('#8D3514');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PRESENT_OUT))->color('#f50');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_MACHINE_UP:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MACHINE_UP))->color('#9FCC84');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MACHINE_DOWN))->color('#668A50');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_RECHARGE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RECHARGE))->color('#3C87C9');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_WITHDRAWAL:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_WITHDRAWAL))->color('#C98341');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT))->color('#108ee9');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_PROFIT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PROFIT))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_LOTTERY:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN))->color('#108ee9');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_NATIONAL_INVITE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_NATIONAL_INVITE))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RECHARGE_REWARD))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_DAMAGE_REBATE))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REVERSE_WATER))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL))->color('#722ed1');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_SPECIAL:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_SPECIAL))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_MACHINE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MACHINE))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_AGENT_OUT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_AGENT_OUT))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_AGENT_IN:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_AGENT_IN))->color('#e8c521');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_BET:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BET))->color('#1890ff');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_CANCEL_BET:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_CANCEL_BET))->color('#52c41a');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_GIFT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GIFT))->color('#eb2f96');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_SETTLEMENT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_SETTLEMENT))->color('#13c2c2');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RE_SETTLEMENT))->color('#722ed1');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_PREPAY:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY))->color('#fa8c16');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_REFUND:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND))->color('#a0d911');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS))->color('#eb2f96');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS))->color('#722ed1');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS))->color('#eb2f96');
-                            break;
-                        default:
-                            $tag = '';
+                    if ($value === null || $value === '') {
+                        return Html::create()->content(['']);
                     }
+                    $label = admin_trans('player_delivery_record.type.' . $value);
                     return Html::create()->content([
-                        $tag
+                        Tag::create($label)->color(PlayerDeliveryRecord::typeColor((int)$value))
                     ]);
                 })->align('center')->sortable();
             $grid->column('remark', admin_trans('player_withdraw_record.fields.remark'))->display(function ($value) {
@@ -452,6 +348,7 @@ class ChannelPlayerDeliveryRecordController
                 if (in_array($data->type, [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
+                    PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
                     PlayerDeliveryRecord::TYPE_SPECIAL,
                 ])) {
                     $name = $data->user_name ?? admin_trans('common.default.admin');
@@ -550,44 +447,7 @@ class ChannelPlayerDeliveryRecordController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->multiple()
-                    ->options([
-                        PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD),
-                        PlayerDeliveryRecord::TYPE_PRESENT_IN => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PRESENT_IN),
-                        PlayerDeliveryRecord::TYPE_PRESENT_OUT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PRESENT_OUT),
-                        PlayerDeliveryRecord::TYPE_MACHINE_UP => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MACHINE_UP),
-                        PlayerDeliveryRecord::TYPE_MACHINE_DOWN => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MACHINE_DOWN),
-                        PlayerDeliveryRecord::TYPE_RECHARGE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RECHARGE),
-                        PlayerDeliveryRecord::TYPE_WITHDRAWAL => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_WITHDRAWAL),
-                        PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT),
-                        PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK),
-                        PlayerDeliveryRecord::TYPE_REGISTER_PRESENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT),
-                        PlayerDeliveryRecord::TYPE_PROFIT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PROFIT),
-                        PlayerDeliveryRecord::TYPE_LOTTERY => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY),
-                        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT),
-                        PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN),
-                        PlayerDeliveryRecord::TYPE_NATIONAL_INVITE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_NATIONAL_INVITE),
-                        PlayerDeliveryRecord::TYPE_RECHARGE_REWARD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RECHARGE_REWARD),
-                        PlayerDeliveryRecord::TYPE_DAMAGE_REBATE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_DAMAGE_REBATE),
-                        PlayerDeliveryRecord::TYPE_REVERSE_WATER => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REVERSE_WATER),
-                        PlayerDeliveryRecord::COIN_ADD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::COIN_ADD),
-                        PlayerDeliveryRecord::COIN_DEDUCT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::COIN_DEDUCT),
-                        PlayerDeliveryRecord::TYPE_SPECIAL => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_SPECIAL),
-                        PlayerDeliveryRecord::TYPE_MACHINE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MACHINE),
-                        PlayerDeliveryRecord::TYPE_AGENT_OUT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_AGENT_OUT),
-                        PlayerDeliveryRecord::TYPE_AGENT_IN => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_AGENT_IN),
-                        PlayerDeliveryRecord::TYPE_BET => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BET),
-                        PlayerDeliveryRecord::TYPE_CANCEL_BET => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_CANCEL_BET),
-                        PlayerDeliveryRecord::TYPE_GIFT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_GIFT),
-                        PlayerDeliveryRecord::TYPE_SETTLEMENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_SETTLEMENT),
-                        PlayerDeliveryRecord::TYPE_RE_SETTLEMENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_RE_SETTLEMENT),
-                        PlayerDeliveryRecord::TYPE_PREPAY => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY),
-                        PlayerDeliveryRecord::TYPE_REFUND => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND),
-                        PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD),
-                        PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS),
-                        PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS),
-                        PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL),
-                        PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS),
-                    ])->when([
+                    ->options(PlayerDeliveryRecord::typeOptions())->when([
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT
                     ], function ($filter) {

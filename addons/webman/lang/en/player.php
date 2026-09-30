@@ -140,6 +140,7 @@ return [
     ],
     'wallet' => [
         'player_wallet' => 'Player wallet',
+        'activity_give' => 'Activity Give',
         'deduct' => 'deduct points',
         'increase' => 'Add dot',
         'wallet_from' => 'wallet information',

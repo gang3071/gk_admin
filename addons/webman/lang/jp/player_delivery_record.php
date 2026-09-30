@@ -59,6 +59,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS => 'VIPアップグレードボーナス',
         PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => 'キャッシュバックプール受取',
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP毎日ログインボーナス',
+        PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => 'イベント外付与',
     ],
     'detail' => '詳細',
     'chart' => 'チャート',

@@ -2988,6 +2988,7 @@ class PlayerController
                 ->whereIn('type', [
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
                     PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
+                    PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
                     PlayerDeliveryRecord::TYPE_REGISTER_PRESENT,
                     PlayerDeliveryRecord::TYPE_NATIONAL_INVITE,
                 ])
@@ -3012,6 +3013,7 @@ class PlayerController
                 switch ($data->type) {
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
                     case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
+                    case PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE:
                     case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
                     case PlayerDeliveryRecord::TYPE_NATIONAL_INVITE:
                         return Tag::create(trans($val, [], 'message', $lang))->color('red');
@@ -3021,24 +3023,12 @@ class PlayerController
             })->align('center');
             $grid->column('type', admin_trans('player_delivery_record.fields.type'))
                 ->display(function ($value) {
-                    switch ($value) {
-                        case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD))->color('#2db7f5');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT))->color('#108ee9');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT))->color('#CC6600');
-                            break;
-                        case PlayerDeliveryRecord::TYPE_NATIONAL_INVITE:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_NATIONAL_INVITE))->color('#CC6600');
-                            break;
-                        default:
-                            $tag = '';
+                    if ($value === null || $value === '') {
+                        return Html::create()->content(['']);
                     }
+                    $label = admin_trans('player_delivery_record.type.' . $value);
                     return Html::create()->content([
-                        $tag
+                        Tag::create($label)->color(PlayerDeliveryRecord::typeColor((int)$value))
                     ]);
                 })->align('center')->sortable();
             $grid->column('remark', admin_trans('player_withdraw_record.fields.remark'))->display(function ($value) {
@@ -3090,6 +3080,7 @@ class PlayerController
                     ->options([
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD),
                         PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT),
+                        PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE),
                         PlayerDeliveryRecord::TYPE_REGISTER_PRESENT => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REGISTER_PRESENT),
                         PlayerDeliveryRecord::TYPE_NATIONAL_INVITE => admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_NATIONAL_INVITE),
                     ]);
