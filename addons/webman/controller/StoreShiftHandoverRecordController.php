@@ -270,6 +270,7 @@ class StoreShiftHandoverRecordController
                 'total_out',
                 'profit',
                 'ticket_unredeemed_amount',
+                'activity_give_amount',
             ];
             $selectedColumns = Cache::get($cacheKey, $defaultColumns);
 
@@ -331,6 +332,7 @@ class StoreShiftHandoverRecordController
                 'total_out',
                 'profit',
                 'ticket_unredeemed_amount',
+                'activity_give_amount',
             ];
             $selectedColumns = Cache::get($cacheKey, $defaultColumns);
 
