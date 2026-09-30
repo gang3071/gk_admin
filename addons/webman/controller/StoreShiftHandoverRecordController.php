@@ -227,18 +227,18 @@ class StoreShiftHandoverRecordController
                     ->placeholder([admin_trans('shift_handover.filter.start_time'), admin_trans('shift_handover.filter.end_time')]);
             });
 
-            // 工具栏 - 添加导出配置按钮
-            $grid->tools([
-                Button::create(admin_trans('shift_handover.export.select_columns'))
-                    ->type('default')
-                    ->modal(
-                        admin_url([
-                            'addons-webman-controller-StoreShiftHandoverRecordController',
-                            'exportConfig'
-                        ])
-                    )
-                    ->width('50%')
-            ]);
+            // 工具栏 - 选择导出栏位按钮（暂时隐藏）
+            // $grid->tools([
+            //     Button::create(admin_trans('shift_handover.export.select_columns'))
+            //         ->type('default')
+            //         ->modal(
+            //             admin_url([
+            //                 'addons-webman-controller-StoreShiftHandoverRecordController',
+            //                 'exportConfig'
+            //             ])
+            //         )
+            //         ->width('50%')
+            // ]);
 
             // 操作列
             $grid->actions(function (Actions $actions) {
@@ -253,15 +253,15 @@ class StoreShiftHandoverRecordController
             // 导出功能（权限通过 store_node.php 和 @auth true 控制）
             $exporter = new ShiftReportExporter();
 
-            // 从缓存获取用户选择的导出列（默认指定列）
-            $adminId = Admin::id();
-            $cacheKey = "export_columns_{$adminId}";
+            // 暂时隐藏缓存逻辑，固定使用默认导出栏位
+            // $adminId = Admin::id();
+            // $cacheKey = "export_columns_{$adminId}";
             $defaultColumns = [
                 'player_name',
                 'player_phone',
                 'open_score_amount',
-                'incoming_ticket_amount',
-                'ticket_redeem_amount',
+                'ticket_open_score_amount',
+                'redeem_amount',
                 'experience_coupon_amount',
                 'welfare_coupon_amount',
                 'electronic_game_bet_amount',
@@ -272,18 +272,16 @@ class StoreShiftHandoverRecordController
                 'ticket_unredeemed_amount',
                 'activity_give_amount',
             ];
-            $selectedColumns = Cache::get($cacheKey, $defaultColumns);
+            // $selectedColumns = Cache::get($cacheKey, $defaultColumns);
+            //
+            // Log::info("index 读取导出列缓存", [
+            //     'admin_id' => $adminId,
+            //     'cache_key' => $cacheKey,
+            //     'selected_columns' => $selectedColumns,
+            //     'has_cache' => Cache::has($cacheKey),
+            // ]);
 
-            Log::info("index 读取导出列缓存", [
-                'admin_id' => $adminId,
-                'cache_key' => $cacheKey,
-                'selected_columns' => $selectedColumns,
-                'has_cache' => Cache::has($cacheKey),
-            ]);
-
-            if (!empty($selectedColumns)) {
-                $exporter->setSelectedColumns($selectedColumns);
-            }
+            $exporter->setSelectedColumns($defaultColumns);
 
             $grid->export($exporter)
                 ->filename('shift_report_' . date('YmdHis'));
@@ -322,8 +320,8 @@ class StoreShiftHandoverRecordController
                 'player_name',
                 'player_phone',
                 'open_score_amount',
-                'incoming_ticket_amount',
-                'ticket_redeem_amount',
+                'ticket_open_score_amount',
+                'redeem_amount',
                 'experience_coupon_amount',
                 'welfare_coupon_amount',
                 'electronic_game_bet_amount',

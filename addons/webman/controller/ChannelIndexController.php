@@ -3429,6 +3429,7 @@ class ChannelIndexController
                             PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,      // VIP生日礼金
                             PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,   // VIP升级礼金
                             PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,       // 活动外增
+                            PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS, // VIP每日登录奖励
                         ])
                         ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
                         ->where('player_delivery_record.created_at', '<=', $endTime)
@@ -3445,7 +3446,7 @@ class ChannelIndexController
                                 THEN player_delivery_record.amount ELSE 0 END) AS birthday_bonus_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS upgrade_bonus_amount,
-                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE . "
+                            SUM(CASE WHEN player_delivery_record.type IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE . ", " . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS . ")
                                 THEN player_delivery_record.amount ELSE 0 END) AS activity_give_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
@@ -3571,11 +3572,14 @@ class ChannelIndexController
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->sum('player_delivery_record.amount');
 
-                    // 5.6.1 统计活动外增金额
+                    // 5.6.1 统计活动外增金额（含VIP每日登录奖励）
                     $activityGiveAmount = (float)\addons\webman\model\PlayerDeliveryRecord::query()
                         ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
                         ->where('player.store_admin_id', $admin->id)
-                        ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE)
+                        ->whereIn('player_delivery_record.type', [
+                            \addons\webman\model\PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
+                            \addons\webman\model\PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS,
+                        ])
                         ->where('player_delivery_record.created_at', '>', $startTime)
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->sum('player_delivery_record.amount');
@@ -4934,7 +4938,7 @@ class ChannelIndexController
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ' THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . ' THEN amount ELSE 0 END) as birthday_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . ' THEN amount ELSE 0 END) as upgrade_bonus_amount,
-                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE . ' THEN amount ELSE 0 END) as activity_give_amount,
+                    SUM(CASE WHEN type IN (' . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE . ', ' . PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS . ') THEN amount ELSE 0 END) as activity_give_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' THEN amount ELSE 0 END) as recharge_amount,
                     SUM(CASE WHEN (type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'artificial_recharge\') OR (type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ' AND source = \'storage_recharge\') THEN amount ELSE 0 END) as open_score_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,

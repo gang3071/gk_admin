@@ -577,11 +577,14 @@ class AutoShiftService
             ->where('player_delivery_record.created_at', '<=', $endTime)
             ->sum('player_delivery_record.amount');
 
-        // 计算活动外增金额
+        // 计算活动外增金额（含VIP每日登录奖励）
         $activityGiveAmount = (float)PlayerDeliveryRecord::query()
             ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
             ->where('player.store_admin_id', $bindAdminUserId)
-            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE)
+            ->whereIn('player_delivery_record.type', [
+                PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
+                PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS,
+            ])
             ->where('player_delivery_record.created_at', '>', $startTime)
             ->where('player_delivery_record.created_at', '<=', $endTime)
             ->sum('player_delivery_record.amount');
@@ -806,7 +809,7 @@ class AutoShiftService
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as birthday_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as upgrade_bonus_amount,
-                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as activity_give_amount,
+                SUM(CASE WHEN type IN (?, ?) THEN amount ELSE 0 END) as activity_give_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
                 SUM(CASE WHEN (type = ? AND source = \'artificial_recharge\') OR (type = 23 AND source = \'storage_recharge\') THEN amount ELSE 0 END) as open_score_amount,
                 SUM(CASE WHEN type = ? AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,
@@ -823,6 +826,7 @@ class AutoShiftService
                 PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
                 PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
                 PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
+                PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS,  // 活动外增含VIP每日登录奖励
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // recharge_amount
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // open_score_amount (source=artificial_recharge)
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // ticket_open_score_amount (source=ticket_open_score)
