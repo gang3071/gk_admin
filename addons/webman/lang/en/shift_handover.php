@@ -217,6 +217,7 @@ return [
     'storage_recharge' => 'Storage Recharge',
     'modified_add_amount' => 'Admin Add',
     'modified_deduct_amount' => 'Admin Deduct',
+    'activity_give_amount' => 'Activity Give',
     'subtotal' => 'Subtotal',
     'no_device_data' => 'No Device Details (Use Shift Summary)',
     'grand_total' => 'Grand Total',

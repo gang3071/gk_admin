@@ -216,6 +216,7 @@ return [
     'storage_recharge' => '儲值機儲值',
     'modified_add_amount' => '後台加點',
     'modified_deduct_amount' => '後台扣點',
+    'activity_give_amount' => '活動外增',
     'subtotal' => '小計',
     'no_device_data' => '暫無設備明細數據（使用交班匯總）',
     'grand_total' => '總計',

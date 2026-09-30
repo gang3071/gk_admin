@@ -246,6 +246,7 @@ class AutoShiftService
             $shiftRecord->lottery_ticket_reward_amount = $statistics['lottery_ticket_reward_amount'];
             $shiftRecord->birthday_bonus_amount = $statistics['birthday_bonus_amount'];
             $shiftRecord->upgrade_bonus_amount = $statistics['upgrade_bonus_amount'];
+            $shiftRecord->activity_give_amount = $statistics['activity_give_amount'];
             $shiftRecord->total_profit_amount = $statistics['total_profit'];
             $shiftRecord->electronic_game_bet_amount = $statistics['electronic_game_bet_amount'];
             $shiftRecord->machine_bet_amount = $statistics['machine_bet_amount'];
@@ -576,6 +577,15 @@ class AutoShiftService
             ->where('player_delivery_record.created_at', '<=', $endTime)
             ->sum('player_delivery_record.amount');
 
+        // 计算活动外增金额
+        $activityGiveAmount = (float)PlayerDeliveryRecord::query()
+            ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+            ->where('player.store_admin_id', $bindAdminUserId)
+            ->where('player_delivery_record.type', PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE)
+            ->where('player_delivery_record.created_at', '>', $startTime)
+            ->where('player_delivery_record.created_at', '<=', $endTime)
+            ->sum('player_delivery_record.amount');
+
         // 计算洗票未核销（出票记录，type=洗分，status=1正常状态）
         $ticketUnredeemedAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
@@ -721,6 +731,7 @@ class AutoShiftService
             'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
             'birthday_bonus_amount' => $birthdayBonusAmount,
             'upgrade_bonus_amount' => $upgradeBonusAmount,
+            'activity_give_amount' => $activityGiveAmount,
             'total_profit' => (float)$totalProfit,
             'electronic_game_bet_amount' => (float)$electronicGameBetAmount,
             'machine_bet_amount' => (float)$machineBetAmount,
@@ -795,6 +806,7 @@ class AutoShiftService
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as birthday_bonus_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as upgrade_bonus_amount,
+                SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as activity_give_amount,
                 SUM(CASE WHEN type = ? THEN amount ELSE 0 END) as recharge_amount,
                 SUM(CASE WHEN (type = ? AND source = \'artificial_recharge\') OR (type = 23 AND source = \'storage_recharge\') THEN amount ELSE 0 END) as open_score_amount,
                 SUM(CASE WHEN type = ? AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,
@@ -810,6 +822,7 @@ class AutoShiftService
                 PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD,
                 PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,
                 PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,
+                PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // recharge_amount
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // open_score_amount (source=artificial_recharge)
                 PlayerDeliveryRecord::TYPE_RECHARGE,            // ticket_open_score_amount (source=ticket_open_score)
@@ -916,6 +929,7 @@ class AutoShiftService
                 'lottery_ticket_reward_amount' => 0,
                 'birthday_bonus_amount' => 0,
                 'upgrade_bonus_amount' => 0,
+                'activity_give_amount' => 0,
                 'recharge_amount' => 0,
                 'open_score_amount' => 0,
                 'ticket_open_score_amount' => 0,
@@ -983,6 +997,7 @@ class AutoShiftService
                 || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
                 || $data['birthday_bonus_amount'] > 0                          // 生日礼金
                 || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
+                || ($data['activity_give_amount'] ?? 0) > 0                   // 活动外增
                 || $data['modified_add_amount'] > 0                            // 调账增加
                 || $data['modified_deduct_amount'] > 0                         // 调账扣除
                 || $electronicGameBet > 0                                      // 电子游戏打码量
@@ -1021,6 +1036,7 @@ class AutoShiftService
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
                     'birthday_bonus_amount' => (float)($data['birthday_bonus_amount'] ?? 0),
                     'upgrade_bonus_amount' => (float)($data['upgrade_bonus_amount'] ?? 0),
+                    'activity_give_amount' => (float)($data['activity_give_amount'] ?? 0),
                     'electronic_game_bet_amount' => $electronicGameBet,
                     'machine_bet_amount' => $machineBet,
                     'total_in' => (float)$totalIn,

@@ -217,6 +217,7 @@ return [
     'storage_recharge' => 'ストレージ儲值',
     'modified_add_amount' => '管理者追加',
     'modified_deduct_amount' => '管理者控除',
+    'activity_give_amount' => 'イベント外付与',
     'subtotal' => '小計',
     'no_device_data' => 'デバイス詳細なし（交代サマリーを使用）',
     'grand_total' => '合計',

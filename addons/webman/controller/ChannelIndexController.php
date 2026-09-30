@@ -3428,6 +3428,7 @@ class ChannelIndexController
                             PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD, // 摸奖券奖励
                             PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS,      // VIP生日礼金
                             PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS,   // VIP升级礼金
+                            PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,       // 活动外增
                         ])
                         ->where('player_delivery_record.created_at', '>', $startTime)  // 修复边界问题：用 > 而不是 >=
                         ->where('player_delivery_record.created_at', '<=', $endTime)
@@ -3444,6 +3445,8 @@ class ChannelIndexController
                                 THEN player_delivery_record.amount ELSE 0 END) AS birthday_bonus_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS upgrade_bonus_amount,
+                            SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE . "
+                                THEN player_delivery_record.amount ELSE 0 END) AS activity_give_amount,
                             SUM(CASE WHEN player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . "
                                 THEN player_delivery_record.amount ELSE 0 END) AS recharge_amount,
                             SUM(CASE WHEN (player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " AND player_delivery_record.source = 'artificial_recharge') OR (player_delivery_record.type = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND player_delivery_record.source = 'storage_recharge')
@@ -3564,6 +3567,15 @@ class ChannelIndexController
                         ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
                         ->where('player.store_admin_id', $admin->id)
                         ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS)
+                        ->where('player_delivery_record.created_at', '>', $startTime)
+                        ->where('player_delivery_record.created_at', '<=', $endTime)
+                        ->sum('player_delivery_record.amount');
+
+                    // 5.6.1 统计活动外增金额
+                    $activityGiveAmount = (float)\addons\webman\model\PlayerDeliveryRecord::query()
+                        ->join('player', 'player_delivery_record.player_id', '=', 'player.id')
+                        ->where('player.store_admin_id', $admin->id)
+                        ->where('player_delivery_record.type', \addons\webman\model\PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE)
                         ->where('player_delivery_record.created_at', '>', $startTime)
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->sum('player_delivery_record.amount');
@@ -3802,6 +3814,7 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->ticket_redeem_backend_used_score = $ticketRedeemBackendUsedScore;
                     $storeAgentShiftHandoverRecord->birthday_bonus_amount = $birthdayBonusAmount ?? 0;
                     $storeAgentShiftHandoverRecord->upgrade_bonus_amount = $upgradeBonusAmount ?? 0;
+                    $storeAgentShiftHandoverRecord->activity_give_amount = $activityGiveAmount ?? 0;
 
                     // 新增字段：按source细分的金额
                     $storeAgentShiftHandoverRecord->open_score_amount = $playerDeliveryRecord['open_score_amount'] ?? 0;
@@ -4921,6 +4934,7 @@ class ChannelIndexController
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ' THEN amount ELSE 0 END) as lottery_ticket_reward_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS . ' THEN amount ELSE 0 END) as birthday_bonus_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS . ' THEN amount ELSE 0 END) as upgrade_bonus_amount,
+                    SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE . ' THEN amount ELSE 0 END) as activity_give_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' THEN amount ELSE 0 END) as recharge_amount,
                     SUM(CASE WHEN (type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'artificial_recharge\') OR (type = ' . PlayerDeliveryRecord::TYPE_MACHINE . ' AND source = \'storage_recharge\') THEN amount ELSE 0 END) as open_score_amount,
                     SUM(CASE WHEN type = ' . PlayerDeliveryRecord::TYPE_RECHARGE . ' AND source = \'ticket_open_score\' THEN amount ELSE 0 END) as ticket_open_score_amount,
@@ -4942,6 +4956,7 @@ class ChannelIndexController
                 'lottery_ticket_reward_amount' => 0,
                 'birthday_bonus_amount' => 0,
                 'upgrade_bonus_amount' => 0,
+                'activity_give_amount' => 0,
                 'recharge_amount' => 0,
                 'open_score_amount' => 0,
                 'ticket_open_score_amount' => 0,
@@ -5051,6 +5066,7 @@ class ChannelIndexController
                 || $data['lottery_ticket_reward_amount'] > 0                   // 彩金券奖励
                 || $data['birthday_bonus_amount'] > 0                          // 生日礼金
                 || $data['upgrade_bonus_amount'] > 0                           // 升级礼金
+                || ($data['activity_give_amount'] ?? 0) > 0                   // 活动外增
                 || $data['modified_add_amount'] > 0                            // 调账增加
                 || $data['modified_deduct_amount'] > 0                         // 调账扣除
                 || $electronicGameBet > 0                                      // 电子游戏打码量
@@ -5090,6 +5106,7 @@ class ChannelIndexController
                     'lottery_ticket_reward_amount' => (float)$data['lottery_ticket_reward_amount'],
                     'birthday_bonus_amount' => (float)($data['birthday_bonus_amount'] ?? 0),
                     'upgrade_bonus_amount' => (float)($data['upgrade_bonus_amount'] ?? 0),
+                    'activity_give_amount' => (float)($data['activity_give_amount'] ?? 0),
                     'electronic_game_bet_amount' => $electronicGameBet,
                     'machine_bet_amount' => $machineBet,
                     'total_in' => (float)$totalIn,

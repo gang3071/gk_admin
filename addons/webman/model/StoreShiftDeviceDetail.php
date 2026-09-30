@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $lottery_ticket_reward_amount 摸奖券中奖奖励金额
  * @property float $birthday_bonus_amount VIP生日礼金金额
  * @property float $upgrade_bonus_amount VIP升级礼金金额
+ * @property float $activity_give_amount 活动外增金额（TYPE_ACTIVITY_GIVE=38）
  * @property float $electronic_game_bet_amount 电子游戏打码量
  * @property float $machine_bet_amount 机器打码量
  * @property float $total_in 总收入
@@ -87,6 +88,7 @@ class StoreShiftDeviceDetail extends Model
         'lottery_ticket_reward_amount',
         'birthday_bonus_amount',
         'upgrade_bonus_amount',
+        'activity_give_amount',
         'electronic_game_bet_amount',
         'machine_bet_amount',
         'total_in',
@@ -115,6 +117,7 @@ class StoreShiftDeviceDetail extends Model
         'lottery_ticket_reward_amount' => 'float',
         'birthday_bonus_amount' => 'float',
         'upgrade_bonus_amount' => 'float',
+        'activity_give_amount' => 'float',
         'electronic_game_bet_amount' => 'float',
         'machine_bet_amount' => 'float',
         'total_in' => 'float',

@@ -47,6 +47,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $ticket_redeem_backend_used_score 核销记录后台使用金额
  * @property float $birthday_bonus_amount VIP生日礼金金额
  * @property float $upgrade_bonus_amount VIP升级礼金金额
+ * @property float $activity_give_amount 活动外增金额（TYPE_ACTIVITY_GIVE=38）
  * @property float $total_profit_amount 总利润（总收入 - 总支出）
  * @property int $is_auto_shift 是否自动交班（0=手动交班，1=自动交班）
  * @property int $auto_shift_log_id 自动交班日志ID（关联 store_auto_shift_log.id，仅自动交班时有值）

@@ -48,6 +48,7 @@ class ShiftReportExporter extends Excel
         'total_out' => 'shift_handover.total_out',
         'profit' => 'shift_handover.profit',
         'ticket_unredeemed_amount' => 'shift_handover.ticket_unredeemed_amount',
+        'activity_give_amount' => 'shift_handover.activity_give_amount',
     ];
 
     // 用户选择的导出列
@@ -132,6 +133,7 @@ class ShiftReportExporter extends Excel
             'total_in' => $detail ? $detail->total_in : 0,
             'total_out' => $detail ? $detail->total_out : 0,
             'profit' => $detail ? $detail->profit : 0,
+            'activity_give_amount' => $detail ? ($detail->activity_give_amount ?? 0) : 0,
             default => 0,
         };
     }
