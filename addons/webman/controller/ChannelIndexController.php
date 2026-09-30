@@ -2277,11 +2277,16 @@ class ChannelIndexController
             ->selectRaw("SUM(`amount`) as lottery_amount")
             ->first();
 
-        // ✅ 当前班次统计：出票记录（开分类型，排除禁用状态）
+        // ✅ 当前班次统计：出票记录（开分类型，只统计正常/后台使用/机台使用）
+        // 排除：禁用、打印失败、已拆分、已合并（拆合后原票会被新票替代，保留会重复计数）
         $currentShiftTicketRecordQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
@@ -2315,25 +2320,33 @@ class ChannelIndexController
             })
             ->sum('player_delivery_record.amount');
 
-        // ✅ 当前班次统计：储值机购票（开分类型，source_type=purchase，排除禁用和打印失败）
+        // ✅ 当前班次统计：储值机购票（开分类型，source_type=purchase，只统计正常/后台使用/机台使用）
+        // 排除：禁用、打印失败、已拆分、已合并（拆合后原票会被新票替代，保留会重复计数）
         $currentShiftStorageTicketPurchaseQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
             ->where('source_type', TicketRecord::SOURCE_TYPE_PURCHASE)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
             ->sum('score');
 
-        // ✅ 当前班次统计：开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
+        // ✅ 当前班次统计：开票金额（从TicketRecord表获取，ticket_type=1开分类型，只统计正常/后台使用/机台使用）
         // 包含：后台开分 + 储值机购票
+        // 排除：禁用、打印失败、已拆分、已合并（拆合后原票会被新票替代，保留会重复计数）
         $currentShiftTicketOpenScoreQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
