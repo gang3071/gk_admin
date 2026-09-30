@@ -349,8 +349,9 @@ class StoreOfflineMachineController
 
             // 保留时间
             $grid->column('keep_seconds', admin_trans('machine.fields.keep_seconds'))
-                ->display(function ($val) {
-                    $seconds = $val;
+                ->display(function ($val, Machine $data) {
+                    $services = $this->getMachineStatusViaApi($data);
+                    $seconds = $services->keep_seconds ?? 0;
                     if ($seconds > 3600) {
                         $hours = intval($seconds / 3600);
                         $time = $hours . ":" . gmstrftime('%M:%S', $seconds);
@@ -360,6 +361,17 @@ class StoreOfflineMachineController
                     return Html::create()->content($time);
                 })
                 ->width(120)->align('center');
+
+            // 保留状态
+            $grid->column('keeping', admin_trans('machine.fields.keeping'))
+                ->display(function ($val, Machine $data) {
+                    $services = $this->getMachineStatusViaApi($data);
+                    $keeping = $services->keeping ?? 0;
+                    return $keeping == 1
+                        ? Tag::create(admin_trans('machine.keeping'))->color('red')
+                        : Tag::create(admin_trans('machine.un_keeping'))->color('default');
+                })
+                ->width(100)->align('center');
 
             $grid->column('last_game_at', admin_trans('machine.fields.last_game_at'))->width(160)->align('center');
 
