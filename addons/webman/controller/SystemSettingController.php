@@ -350,6 +350,21 @@ class SystemSettingController
                     }
                     $html = Html::create()->content(implode(' | ', $parts))->style(['cursor' => 'pointer']);
                     return Tag::create($html)->color('blue')->modal([$this, 'editVipWelcomeVoice'], ['data' => $data]);
+                })->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return Str::startsWith($data->feature, 'leaderboard_');
+                })->display(function ($value, SystemSetting $data) {
+                    $config = json_decode($data->content ?? '{}', true) ?: [];
+                    $prizes = [];
+                    foreach (($config['prizes'] ?? []) as $p) {
+                        $prizes[] = ($p['rank'] ?? '?') . '名:' . ($p['amount'] ?? 0);
+                    }
+                    $parts = admin_trans('system_setting.leaderboard.threshold') . ' ' . number_format((float)($config['threshold'] ?? 0), 0);
+                    if (!empty($prizes)) {
+                        $parts .= ' | ' . implode('，', $prizes);
+                    }
+                    $html = Html::create()->content($parts)->style(['cursor' => 'pointer']);
+                    return Tag::create($html)->color('purple')->modal([$this, 'editLeaderboard'], ['id' => $data->id, 'feature' => $data->feature]);
                 })->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');
@@ -587,6 +602,94 @@ class SystemSettingController
                 }
 
                 return message_success(admin_trans('system_setting.vip_welcome_voice.save_success'));
+            });
+        });
+    }
+
+    /**
+     * 排行榜設定
+     * @auth true
+     * @param int $id 設定ID
+     * @param string $feature 功能代碼（leaderboard_*）
+     * @return Form
+     */
+    public function editLeaderboard($id = 0, $feature = ''): Form
+    {
+        $id = (int)($id ?: request()->input('id', 0));
+        $feature = (string)($feature ?: request()->input('feature', ''));
+
+        // 兼容 modal 以 data 傳參
+        if (!$id && $feature === '') {
+            $dataInput = request()->input('data', []);
+            if (is_array($dataInput)) {
+                $id = (int)($dataInput['id'] ?? 0);
+                $feature = (string)($dataInput['feature'] ?? '');
+            }
+        }
+
+        $data = null;
+        if ($id > 0) {
+            $data = SystemSetting::query()->find($id);
+        }
+        if (!$data && $feature !== '') {
+            $data = SystemSetting::query()
+                ->where('department_id', 0)
+                ->where('feature', $feature)
+                ->first();
+        }
+        if (!$data) {
+            $data = new SystemSetting();
+        }
+
+        $config = json_decode($data->content ?? '{}', true) ?: [];
+
+        $prizes = [];
+        foreach (($config['prizes'] ?? []) as $p) {
+            $prizes[(int)($p['rank'] ?? 0)] = (float)($p['amount'] ?? 0);
+        }
+
+        return Form::create($data, function (Form $form) use ($data, $config, $prizes) {
+            $form->title(admin_trans('system_setting.leaderboard.title'));
+            $form->hidden('id')->default($data['id']);
+
+            $form->text('name', admin_trans('system_setting.leaderboard.name'))
+                ->value($config['name'] ?? '')
+                ->required();
+
+            $form->number('threshold', admin_trans('system_setting.leaderboard.threshold'))
+                ->value($config['threshold'] ?? 0)
+                ->min(0)
+                ->required();
+
+            $form->number('rank1_amount', admin_trans('system_setting.leaderboard.rank1'))
+                ->value($prizes[1] ?? 0)
+                ->min(0)
+                ->required();
+
+            $form->number('rank2_amount', admin_trans('system_setting.leaderboard.rank2'))
+                ->value($prizes[2] ?? 0)
+                ->min(0)
+                ->required();
+
+            $form->number('rank3_amount', admin_trans('system_setting.leaderboard.rank3'))
+                ->value($prizes[3] ?? 0)
+                ->min(0)
+                ->required();
+
+            $form->saving(function (Form $form) use ($config) {
+                $newConfig = $config;
+                $newConfig['name'] = $form->input('name');
+                $newConfig['threshold'] = (float)$form->input('threshold');
+                $newConfig['prizes'] = [
+                    ['rank' => 1, 'amount' => (float)$form->input('rank1_amount')],
+                    ['rank' => 2, 'amount' => (float)$form->input('rank2_amount')],
+                    ['rank' => 3, 'amount' => (float)$form->input('rank3_amount')],
+                ];
+                $form->input('content', json_encode($newConfig, JSON_UNESCAPED_UNICODE));
+            });
+
+            $form->saved(function (Form $form) {
+                return message_success(admin_trans('system_setting.leaderboard.save_success'));
             });
         });
     }

@@ -38,6 +38,9 @@ return [
         'ticket_machine_version' => '儲值機版本號',
         'ticket_machine_download_url' => '儲值機客戶端下載鏈接',
         'vip_welcome_voice' => 'VIP歡迎語音',
+        'leaderboard_golden_weekly' => '金樽遊戲量週排行',
+        'leaderboard_store_weekly' => '各店週排行',
+        'leaderboard_golden_monthly' => '金樽遊戲量月排行',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字元',
@@ -71,6 +74,16 @@ return [
         'text_placeholder' => '請輸入歡迎語音文字，儲存後自動合成語音',
         'save_success' => '儲存成功，語音合成完成',
         'save_partial' => '儲存成功，部分語音合成失敗：',
+    ],
+    // 排行榜設定
+    'leaderboard' => [
+        'title' => '排行榜設定',
+        'name' => '榜單名稱',
+        'threshold' => '門檻分數',
+        'rank1' => '第 1 名獎勵',
+        'rank2' => '第 2 名獎勵',
+        'rank3' => '第 3 名獎勵',
+        'save_success' => '儲存成功',
     ],
     // 反水配置
     'rebate' => [

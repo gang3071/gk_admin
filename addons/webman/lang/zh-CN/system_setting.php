@@ -38,6 +38,9 @@ return [
         'ticket_machine_version' => '储值机版本号',
         'ticket_machine_download_url' => '储值机客户端下载链接',
         'vip_welcome_voice' => 'VIP欢迎语音',
+        'leaderboard_golden_weekly' => '金樽游戏量周排行',
+        'leaderboard_store_weekly' => '各店周排行',
+        'leaderboard_golden_monthly' => '金樽游戏量月排行',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字符',
@@ -71,6 +74,16 @@ return [
         'text_placeholder' => '请输入欢迎语音文字，保存后自动合成语音',
         'save_success' => '保存成功，语音合成完成',
         'save_partial' => '保存成功，部分语音合成失败：',
+    ],
+    // 排行榜设定
+    'leaderboard' => [
+        'title' => '排行榜设定',
+        'name' => '榜单名称',
+        'threshold' => '门槛分数',
+        'rank1' => '第 1 名奖励',
+        'rank2' => '第 2 名奖励',
+        'rank3' => '第 3 名奖励',
+        'save_success' => '保存成功',
     ],
     // 反水配置
     'rebate' => [

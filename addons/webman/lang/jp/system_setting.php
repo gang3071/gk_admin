@@ -38,6 +38,9 @@ return [
         'ticket_machine_version' => 'チケットマシンバージョン',
         'ticket_machine_download_url' => 'チケットマシンダウンロードURL',
         'vip_welcome_voice' => 'VIPウェルカム音声',
+        'leaderboard_golden_weekly' => '金樽ゲーム量週間ランキング',
+        'leaderboard_store_weekly' => '店舗週間ランキング',
+        'leaderboard_golden_monthly' => '金樽ゲーム量月間ランキング',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
@@ -71,6 +74,16 @@ return [
         'text_placeholder' => 'ウェルカム音声テキストを入力してください。保存後に自動合成されます',
         'save_success' => '保存成功、音声合成完了',
         'save_partial' => '保存成功、一部の音声合成が失敗：',
+    ],
+    // ランキング設定
+    'leaderboard' => [
+        'title' => 'ランキング設定',
+        'name' => 'ランキング名',
+        'threshold' => 'しきい値スコア',
+        'rank1' => '1位報酬',
+        'rank2' => '2位報酬',
+        'rank3' => '3位報酬',
+        'save_success' => '保存成功',
     ],
     // リベート設定
     'rebate' => [

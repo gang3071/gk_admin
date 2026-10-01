@@ -38,6 +38,9 @@ return [
         'ticket_machine_version' => 'Ticket Machine Version',
         'ticket_machine_download_url' => 'Ticket Machine Download URL',
         'vip_welcome_voice' => 'VIP Welcome Voice',
+        'leaderboard_golden_weekly' => 'Golden Weekly Game Volume Ranking',
+        'leaderboard_store_weekly' => 'Store Weekly Ranking',
+        'leaderboard_golden_monthly' => 'Golden Monthly Game Volume Ranking',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',
@@ -71,6 +74,16 @@ return [
         'text_placeholder' => 'Enter welcome voice text, voice will be synthesized automatically after saving',
         'save_success' => 'Saved successfully, voice synthesis completed',
         'save_partial' => 'Saved successfully, some voice synthesis failed: ',
+    ],
+    // Leaderboard Configuration
+    'leaderboard' => [
+        'title' => 'Leaderboard Settings',
+        'name' => 'Board Name',
+        'threshold' => 'Threshold Score',
+        'rank1' => '1st Place Reward',
+        'rank2' => '2nd Place Reward',
+        'rank3' => '3rd Place Reward',
+        'save_success' => 'Saved successfully',
     ],
     // Rebate Configuration
     'rebate' => [
