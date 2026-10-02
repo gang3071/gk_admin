@@ -259,6 +259,11 @@ export default {
     });
   },
   methods: {
+    getToken() {
+      const appName = window['App-Name'] || '';
+      return localStorage.getItem(appName + '_ex-admin-token') || '';
+    },
+
     // 刷新机台数据
     async refreshData() {
       this.refreshing = true;
@@ -268,6 +273,7 @@ export default {
           headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
+            'Authorization': this.getToken(),
           },
           body: JSON.stringify({
             machine_id: this.machine_id
@@ -353,6 +359,7 @@ export default {
           headers: {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest',
+            'Authorization': this.getToken(),
           },
           body: JSON.stringify({
             machine_id: this.machine_id,
