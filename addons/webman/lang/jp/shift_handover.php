@@ -199,7 +199,7 @@ return [
     'device_name' => '会員名',
     'device_number' => '会員番号',
     'recharge_amount' => 'チャージ',
-    'open_score_amount' => '開分',
+    'open_score_amount' => 'チャージ',
     'ticket_open_score_amount' => '開票',
     'incoming_ticket_amount' => '入票',
     'redeem_amount' => '消込',
