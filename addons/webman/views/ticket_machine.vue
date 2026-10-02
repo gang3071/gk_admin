@@ -198,7 +198,7 @@
               </a-select-option>
             </a-select>
             <!-- 开分/洗分：数字输入 -->
-            <a-input-number v-else v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
+            <a-input-number v-else v-model:value="ticketScore" :min="0" :max="200000" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
           </div>
           <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected || isSendingQr" :loading="isSendingQr">{{ labels.send_qr || '發送QR碼' }}</a-button>
         </a-card>

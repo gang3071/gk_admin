@@ -1161,7 +1161,7 @@ class StorePlayerController
         return Form::create(new Player(), function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
             $form->number('money',
-                admin_trans('player.wallet.money'))->min(0)->max(100000000)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player.wallet.machine_wallet') . ' ' . ($data['money'] ?? 0))->required();
+                admin_trans('player.wallet.money'))->min(0)->max(60000)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player.wallet.machine_wallet') . ' ' . ($data['money'] ?? 0))->required();
             $form->textarea('remark', admin_trans('player.wallet.textarea'))->maxlength(255)->bindAttr('rows',
                 4)->required();
             $form->actions()->hideResetButton();

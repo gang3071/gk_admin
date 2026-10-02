@@ -4358,6 +4358,9 @@ class ChannelIndexController
                 if ($score <= 0) {
                     return json(['code' => 400, 'message' => '分数/金额必须大于0']);
                 }
+                if ($score > 200000) {
+                    return json(['code' => 400, 'message' => '单次开票金额不能超过200,000']);
+                }
             }
             if (empty($storeAdminId)) {
                 return json(['code' => 400, 'message' => '店家管理员ID不能为空']);
