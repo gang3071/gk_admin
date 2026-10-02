@@ -367,5 +367,11 @@ return [
         // 餐點訂單明細
         'dish_order_item_table' => 'dish_order_item',
         'dish_order_item_model' => \addons\webman\model\DishOrderItem::class,
+        // 排行榜 期別
+        'leaderboard_table' => 'leaderboard',
+        'leaderboard_model' => \addons\webman\model\Leaderboard::class,
+        // 排行榜 名次
+        'leaderboard_entry_table' => 'leaderboard_entry',
+        'leaderboard_entry_model' => \addons\webman\model\LeaderboardEntry::class,
     ],
 ];
