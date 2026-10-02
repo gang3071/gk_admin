@@ -21,7 +21,6 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\support\Container;
-use GatewayWorker\Lib\Gateway;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Log;
@@ -820,11 +819,21 @@ class AdminOfflineMachineController
             }
         }
 
-        // 检测机台 TCP 在线状态
+        // 检测机台 TCP 在线状态（与列表一致，通过 gk_work API 批量查询）
         $isOnline = false;
         try {
-            $uid = $machine->domain . ':' . $machine->port;
-            $isOnline = Gateway::isUidOnline($uid);
+            $result = MachineApiService::getAllOnlineStatus(
+                departmentId: Admin::user()->department_id,
+                adminId: Admin::id(),
+                machineIds: [$machine->id]
+            );
+            if (is_array($result)) {
+                foreach ($result as $item) {
+                    if (isset($item['id']) && $item['id'] == $machine->id) {
+                        $isOnline = (bool)($item['online'] ?? false);
+                    }
+                }
+            }
         } catch (\Exception $e) {
             Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
         }
@@ -1020,11 +1029,21 @@ class AdminOfflineMachineController
                 return json(['code' => 0, 'msg' => '机台不存在', 'data' => []]);
             }
 
-            // 检测在线状态
+            // 检测在线状态（与列表一致，通过 gk_work API 批量查询）
             $isOnline = false;
             try {
-                $uid = $machine->domain . ':' . $machine->port;
-                $isOnline = Gateway::isUidOnline($uid);
+                $result = MachineApiService::getAllOnlineStatus(
+                    departmentId: Admin::user()->department_id,
+                    adminId: Admin::id(),
+                    machineIds: [$machine->id]
+                );
+                if (is_array($result)) {
+                    foreach ($result as $item) {
+                        if (isset($item['id']) && $item['id'] == $machine->id) {
+                            $isOnline = (bool)($item['online'] ?? false);
+                        }
+                    }
+                }
             } catch (\Exception $e) {
                 Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
             }
