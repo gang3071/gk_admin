@@ -97,12 +97,14 @@ class WalletService
      */
     private static function getBalanceFromDB(int $playerId, int $platformId): float
     {
-        $wallet = PlayerPlatformCash::query()
+        // 使用原生查詢讀取 money，避免觸發 PlayerPlatformCash::getMoneyAttribute
+        // 造成 getBalance 與 accessor 互相呼叫的無限遞迴
+        $money = \support\Db::table((new PlayerPlatformCash())->getTable())
             ->where('player_id', $playerId)
             ->where('platform_id', $platformId)
-            ->first();
+            ->value('money');
 
-        return $wallet ? (float)$wallet->money : 0.0;
+        return $money !== null ? (float)$money : 0.0;
     }
 
     /**
