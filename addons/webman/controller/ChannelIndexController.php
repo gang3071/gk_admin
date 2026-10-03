@@ -2293,15 +2293,19 @@ class ChannelIndexController
             ->selectRaw('sum(score) as total_score')
             ->first();
 
-        // ✅ 当前班次统计：核销记录（洗分类型）- 后台使用金额（排除禁用状态）
+        // ✅ 当前班次统计：核销记录（开分票 + 洗分票）- 后台使用金额
+        // 后台核销的开分票、洗分票都计入总支出
         $currentShiftTicketRedeemQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->whereIn('ticket_type', [
+                TicketRecord::TYPE_RECHARGE,
+                TicketRecord::TYPE_WITHDRAW,
+            ])
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('scanned_at', '>', $lastShiftTime);
             })
-            ->selectRaw('sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
+            ->selectRaw('sum(score) as backend_used_score')
             ->first();
 
         // ✅ 当前班次统计：储值机储值（投钞类型，source=storage_recharge）
