@@ -2277,26 +2277,35 @@ class ChannelIndexController
             ->selectRaw("SUM(`amount`) as lottery_amount")
             ->first();
 
-        // ✅ 当前班次统计：出票记录（开分类型，排除禁用状态）
+        // ✅ 当前班次统计：出票记录（开分类型，只统计正常/后台使用/机台使用）
+        // 排除：禁用、打印失败、已拆分、已合并（拆合后原票会被新票替代，保留会重复计数）
         $currentShiftTicketRecordQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
             ->selectRaw('sum(score) as total_score')
             ->first();
 
-        // ✅ 当前班次统计：核销记录（洗分类型）- 后台使用金额（排除禁用状态）
+        // ✅ 当前班次统计：核销记录（开分票 + 洗分票）- 后台使用金额
+        // 后台核销的开分票、洗分票都计入总支出
         $currentShiftTicketRedeemQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->whereIn('ticket_type', [
+                TicketRecord::TYPE_RECHARGE,
+                TicketRecord::TYPE_WITHDRAW,
+            ])
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('scanned_at', '>', $lastShiftTime);
             })
-            ->selectRaw('sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
+            ->selectRaw('sum(score) as backend_used_score')
             ->first();
 
         // ✅ 当前班次统计：储值机储值（投钞类型，source=storage_recharge）
@@ -2327,13 +2336,17 @@ class ChannelIndexController
             })
             ->sum('score');
 
-        // ✅ 当前班次统计：开票金额（从TicketRecord表获取，ticket_type=1开分类型，排除禁用和打印失败）
+        // ✅ 当前班次统计：开票金额（从TicketRecord表获取，ticket_type=1开分类型，只统计正常/后台使用/机台使用）
         // 包含：后台开分 + 储值机购票
+        // 排除：禁用、打印失败、已拆分、已合并（拆合后原票会被新票替代，保留会重复计数）
         $currentShiftTicketOpenScoreQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
             ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-            ->where('status', '!=', TicketRecord::STATUS_PRINT_FAILED)
+            ->whereIn('status', [
+                TicketRecord::STATUS_NORMAL,
+                TicketRecord::STATUS_BACKEND_USED,
+                TicketRecord::STATUS_MACHINE_USED,
+            ])
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('created_at', '>', $lastShiftTime);
             })
@@ -3591,6 +3604,19 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
+                    // 已拆分/已合并的洗分票：原票已被新票替代，不再算作未核销
+                    // 与出卷同用 created_at 归属班次，避免跨班次出现负数
+                    $splitMergedAmount = (float)TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                        ->whereIn('status', [
+                            TicketRecord::STATUS_SPLIT,
+                            TicketRecord::STATUS_MERGED,
+                        ])
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
                     // 5.8 统计体验券（ticket_type=3）
                     $experienceCouponAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
@@ -3828,10 +3854,14 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->redeem_machine_amount = $redeemAmount ?? 0;
                     $storeAgentShiftHandoverRecord->channel_withdrawal_amount = $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->ticket_redeem_amount = $playerDeliveryRecord['ticket_redeem_amount'] ?? 0;
-                    // 未核销 = 出卷 - 后台核销 - 机台核销
+                    // 未核销 = 出卷 - 后台核销 - 机台核销 - 已拆分/已合并
                     $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = bcsub(
-                        bcsub($playerDeliveryRecord['ticket_redeem_amount'] ?? 0, $redeemAmountExport ?? 0, 2),
-                        $redeemAmount ?? 0,
+                        bcsub(
+                            bcsub($playerDeliveryRecord['ticket_redeem_amount'] ?? 0, $redeemAmountExport ?? 0, 2),
+                            $redeemAmount ?? 0,
+                            2
+                        ),
+                        $splitMergedAmount,
                         2
                     );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
@@ -4348,6 +4378,9 @@ class ChannelIndexController
             } else {
                 if ($score <= 0) {
                     return json(['code' => 400, 'message' => '分数/金额必须大于0']);
+                }
+                if ($score > 200000) {
+                    return json(['code' => 400, 'message' => '单次开票金额不能超过200,000']);
                 }
             }
             if (empty($storeAdminId)) {
@@ -4982,6 +5015,18 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
+            // 已拆分/已合并的洗分票：原票已被新票替代，不再算作未核销
+            $splitMergedAmount = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->whereIn('status', [
+                    TicketRecord::STATUS_SPLIT,
+                    TicketRecord::STATUS_MERGED,
+                ])
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
             // 统计体验券（ticket_type=3）
             $experienceCouponAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
@@ -5097,8 +5142,12 @@ class ChannelIndexController
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 后台核销 - 机台核销
-                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销 - 已拆分/已合并
+                    'ticket_unredeemed_amount' => bcsub(
+                        bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                        $splitMergedAmount,
+                        2
+                    ),
                     'experience_coupon_amount' => $experienceCouponAmount,
                     'welfare_coupon_amount' => $welfareCouponAmount,
                     'modified_add_amount' => (float)$data['modified_add_amount'],
