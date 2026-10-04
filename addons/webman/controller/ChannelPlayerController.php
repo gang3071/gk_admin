@@ -888,10 +888,9 @@ class ChannelPlayerController
             $tools[] = Button::create('加入黑名單')
                 ->icon(Icon::create('StopOutlined'))
                 ->type('danger')
-                ->style(['marginLeft' => '20px'])
                 ->modal([$this, 'addToBlacklist'])
-                ->width('500px')
-                ->centered();
+                ->width('50%')
+                ->title('加入黑名單');
 
             $grid->tools($tools);
             $grid->actions(function (Actions $actions, $data) use ($channel) {
