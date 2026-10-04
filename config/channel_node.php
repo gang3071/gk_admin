@@ -2403,16 +2403,8 @@ return [
         'title' => '訂單明細報表',
     ],
     [
-        'id' => 'addons\webman\controller\ChannelPlayerIdCardBlacklistController-',
-        'pid' => 0,
-        'url' => '',
-        'group' => 'channel',
-        'title' => '黑名單管理',
-        'children' => [],
-    ],
-    [
         'id' => 'addons\webman\controller\ChannelPlayerIdCardBlacklistController\index',
-        'pid' => 'addons\webman\controller\ChannelPlayerIdCardBlacklistController-',
+        'pid' => 'addons\webman\controller\ChannelPlayerController-',
         'action' => 'index',
         'method' => 'get',
         'group' => 'channel',
