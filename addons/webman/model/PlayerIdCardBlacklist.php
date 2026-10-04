@@ -9,6 +9,15 @@ class PlayerIdCardBlacklist extends Model
 {
     use HasDateTimeFormatter;
 
+    protected $fillable = [
+        'id_number',
+        'player_id',
+        'player_name',
+        'admin_id',
+        'admin_name',
+        'remark',
+    ];
+
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
