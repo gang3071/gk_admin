@@ -2413,7 +2413,7 @@ return [
     ],
     [
         'id' => 'addons\webman\controller\ChannelPlayerIdCardBlacklistController\addToBlacklist',
-        'pid' => 'addons\webman\controller\ChannelPlayerController\index',
+        'pid' => 'addons\webman\controller\ChannelPlayerIdCardBlacklistController\index',
         'action' => 'addToBlacklist',
         'method' => '',
         'group' => 'channel',
