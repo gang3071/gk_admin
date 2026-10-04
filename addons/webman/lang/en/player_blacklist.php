@@ -9,6 +9,7 @@ return [
         'admin_name' => 'Operator',
         'remark'     => 'Remark',
         'created_at' => 'Added At',
+        'status'     => 'Blacklist Status',
     ],
 
     'action' => [
@@ -21,11 +22,13 @@ return [
     ],
 
     'message' => [
-        'add_success' => 'Successfully added to blacklist',
+        'add_success'      => 'Successfully added to blacklist',
+        'not_blacklisted'  => '✓ Not in blacklist',
     ],
 
     'error' => [
-        'id_number_required' => 'ID number is required',
+        'id_number_required'     => 'ID number is required',
+        'id_number_in_blacklist' => 'This ID number is blacklisted and cannot be used to create a player',
     ],
 
     'filter' => [
