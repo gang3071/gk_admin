@@ -885,6 +885,13 @@ class ChannelPlayerController
                     ->style(['marginLeft' => '20px']);
             }
 
+            $tools[] = Button::create('加入黑名單')
+                ->icon(Icon::create('StopOutlined'))
+                ->type('danger')
+                ->modal([$this, 'addToBlacklist'])
+                ->width('500px')
+                ->style(['marginLeft' => '20px']);
+
             $grid->tools($tools);
             $grid->actions(function (Actions $actions, $data) use ($channel) {
                 $actions->edit()->modal($this->form())->width('60%');
@@ -984,12 +991,6 @@ class ChannelPlayerController
                     ->modal([ChannelPlayerPointsController::class, 'unfreezePoints'], ['player_id' => $data['id']])
                     ->width('600px')
                     ->title(admin_trans('player_points.form.unfreeze_points_title') . ' - ' . $data['name']);
-
-                $dropdown->divider();
-                $dropdown->append('加入黑名單', 'StopOutlined')
-                    ->modal([$this, 'addToBlacklist'], ['player_id' => $data['id']])
-                    ->width('500px')
-                    ->title('加入黑名單 - ' . $data['name']);
 
                 // 百家禁用
             });
@@ -6579,45 +6580,25 @@ class ChannelPlayerController
      * 加入身份证黑名单
      * @auth true
      * @group blacklist
-     * @param int $player_id
      * @return Form
      */
-    public function addToBlacklist(int $player_id): Form
+    public function addToBlacklist(): Form
     {
-        /** @var Player $player */
-        $player = Player::query()->with(['player_extend'])->find($player_id);
-
-        if (!$player) {
-            return Form::create(function (Form $form) {
-                $form->text('error', '玩家不存在')->disabled();
-            });
-        }
-
-        $idNumber = $player->player_extend->id_number ?? '';
-        $playerName = $player->name ?? '';
-
-        return Form::create(function (Form $form) use ($player_id, $playerName, $idNumber) {
-            $form->text('id_number_display', '身份證號碼')
-                ->value($idNumber ?: '（未設置）')
-                ->disabled();
-            $form->hidden('player_id')->value($player_id);
-            $form->hidden('player_name')->value($playerName);
-            $form->hidden('id_number')->value($idNumber);
+        return Form::create(function (Form $form) {
+            $form->text('id_number', '身份證號碼')->required();
             $form->textarea('remark', '備注')->rows(3);
 
             $form->saved(function (Form $form) {
-                $idNumber = $form->input('id_number');
+                $idNumber = trim($form->input('id_number') ?? '');
                 if (empty($idNumber)) {
-                    return message_error('該玩家未設置身份證號碼，無法加入黑名單');
+                    return message_error('身份證號碼不能為空');
                 }
 
                 PlayerIdCardBlacklist::create([
-                    'id_number'   => $idNumber,
-                    'player_id'   => (int)$form->input('player_id'),
-                    'player_name' => $form->input('player_name'),
-                    'admin_id'    => Admin::id(),
-                    'admin_name'  => Admin::user()->name ?? '',
-                    'remark'      => $form->input('remark') ?? '',
+                    'id_number' => $idNumber,
+                    'admin_id'  => Admin::id(),
+                    'admin_name' => Admin::user()->name ?? '',
+                    'remark'    => $form->input('remark') ?? '',
                 ]);
 
                 return message_success('已成功加入黑名單');
