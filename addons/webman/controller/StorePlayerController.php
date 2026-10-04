@@ -920,11 +920,7 @@ class StorePlayerController
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))
                     ->maxlength(50)->required()
                     ->default($playerExtend->id_number ?? '');
-                $form->text('blacklist_warning_msg', admin_trans('player_blacklist.fields.status'))
-                    ->disabled(true)
-                    ->placeholder(admin_trans('player_blacklist.message.not_blacklisted'))
-                    ->style(['cursor' => 'default'])
-                    ->default('');
+                $form->desc('blacklist_warning_msg', '')->default('');
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))
                     ->ext('jpg,png,jpeg')->fileSize('5m')
                     ->default($playerExtend->id_card_front ?? '');
@@ -1005,11 +1001,7 @@ class StorePlayerController
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
                 $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
-                $form->text('blacklist_warning_msg', admin_trans('player_blacklist.fields.status'))
-                    ->disabled(true)
-                    ->placeholder(admin_trans('player_blacklist.message.not_blacklisted'))
-                    ->style(['cursor' => 'default'])
-                    ->default('');
+                $form->desc('blacklist_warning_msg', '')->default('');
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
@@ -1113,11 +1105,15 @@ class StorePlayerController
                     }
                     $record = PlayerIdCardBlacklist::where('id_number', $value)->first();
                     if ($record) {
-                        $msg = admin_trans('player_blacklist.error.id_number_in_blacklist');
+                        $msg = htmlspecialchars(admin_trans('player_blacklist.error.id_number_in_blacklist'));
                         if (!empty($record->remark)) {
-                            $msg .= ' - ' . admin_trans('player_blacklist.fields.remark') . ': ' . $record->remark;
+                            $msg .= ' — ' . htmlspecialchars(admin_trans('player_blacklist.fields.remark')) . ': ' . htmlspecialchars($record->remark);
                         }
-                        $watch->set('blacklist_warning_msg', $msg);
+                        $html = '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#fff2f0;border:1px solid #ffccc7;border-radius:6px;color:#ff4d4f;font-size:14px;line-height:1.5;margin:4px 0 8px;">'
+                            . '<span style="font-size:16px;flex-shrink:0;">⚠</span>'
+                            . '<span>' . $msg . '</span>'
+                            . '</div>';
+                        $watch->set('blacklist_warning_msg', $html);
                     } else {
                         $watch->set('blacklist_warning_msg', '');
                     }
