@@ -39,7 +39,6 @@ use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerVipPeriod;
-use addons\webman\model\PlayerIdCardBlacklist;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
 use addons\webman\model\StoreAutoShiftConfig;
@@ -885,12 +884,12 @@ class ChannelPlayerController
                     ->style(['marginLeft' => '20px']);
             }
 
-            $tools[] = Button::create('加入黑名單')
+            $tools[] = Button::create(admin_trans('player_blacklist.action.add'))
                 ->icon(Icon::create('StopOutlined'))
                 ->type('danger')
-                ->modal([$this, 'addToBlacklist'])
+                ->modal([ChannelPlayerIdCardBlacklistController::class, 'addToBlacklist'])
                 ->width('50%')
-                ->title('加入黑名單');
+                ->title(admin_trans('player_blacklist.action.add'));
 
             $grid->tools($tools);
             $grid->actions(function (Actions $actions, $data) use ($channel) {
@@ -6574,38 +6573,6 @@ class ChannelPlayerController
         } catch (\Exception $e) {
             return jsonFailResponse($e->getMessage());
         }
-    }
-
-    /**
-     * 加入身份证黑名单
-     * @auth true
-     * @group blacklist
-     * @return Form
-     */
-    public function addToBlacklist(): Form
-    {
-        return Form::create(function (Form $form) {
-            $form->text('id_number', '身份證號碼')->required();
-            $form->textarea('remark', '備注')->rows(3);
-
-            $form->saved(function (Form $form) {
-                $idNumber = trim($form->input('id_number') ?? '');
-                if (empty($idNumber)) {
-                    return message_error('身份證號碼不能為空');
-                }
-
-                PlayerIdCardBlacklist::create([
-                    'id_number' => $idNumber,
-                    'admin_id'  => Admin::id(),
-                    'admin_name' => Admin::user()->name ?? '',
-                    'remark'    => $form->input('remark') ?? '',
-                ]);
-
-                return message_success('已成功加入黑名單');
-            });
-
-            $form->layout('vertical');
-        });
     }
 
 }
