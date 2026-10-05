@@ -264,6 +264,10 @@ class DishOrderController
                 $query->where('dish_order.created_at', '<=', $exAdminFilter['created_at_end']);
             }
 
+            if (! empty($exAdminFilter['admin_user_id'])) {
+                $query->where('dish_order.admin_user_id', '=', $exAdminFilter['admin_user_id']);
+            }
+
             $query->groupBy('dish_order_item.dish_id', 'dish_order_item.price', 'dish_order.admin_user_id');
 
             $grid->model()
@@ -282,7 +286,7 @@ class DishOrderController
                     ->placeholder(admin_trans('dish.fields.category_id'))
                     ->options($categories);
 
-                $filter->eq()->select('order.admin_user_id')
+                $filter->eq()->select('admin_user_id')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
