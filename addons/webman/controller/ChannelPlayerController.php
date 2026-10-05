@@ -884,13 +884,6 @@ class ChannelPlayerController
                     ->style(['marginLeft' => '20px']);
             }
 
-            $tools[] = Button::create(admin_trans('player_blacklist.action.add'))
-                ->icon(Icon::create('StopOutlined'))
-                ->type('danger')
-                ->modal([ChannelPlayerIdCardBlacklistController::class, 'addToBlacklist'])
-                ->width('50%')
-                ->title(admin_trans('player_blacklist.action.add'));
-
             $grid->tools($tools);
             $grid->actions(function (Actions $actions, $data) use ($channel) {
                 $actions->edit()->modal($this->form())->width('60%');

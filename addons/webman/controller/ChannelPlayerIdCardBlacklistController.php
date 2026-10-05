@@ -4,6 +4,8 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\PlayerIdCardBlacklist;
+use ExAdmin\ui\component\common\Button;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -41,6 +43,15 @@ class ChannelPlayerIdCardBlacklistController
             $grid->title(admin_trans('player_blacklist.title'));
             $grid->autoHeight();
             $grid->bordered(true);
+            $grid->tools([
+                Button::create(admin_trans('player_blacklist.action.add'))
+                    ->icon(Icon::create('StopOutlined'))
+                    ->type('danger')
+                    ->style(['marginLeft' => '20px'])
+                    ->modal([$this, 'addToBlacklist'])
+                    ->width('50%')
+                    ->title(admin_trans('player_blacklist.action.add')),
+            ]);
             $grid->column('id', 'ID')->align('center');
             $grid->column('id_number', admin_trans('player_blacklist.fields.id_number'))->align('center');
             $grid->column('player_name', admin_trans('player_blacklist.fields.player_name'))->align('center');
