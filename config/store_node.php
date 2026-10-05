@@ -181,6 +181,15 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/playerGameWallet',
                 'title' => '游戏钱包',
             ],
+            [
+                'id' => 'addons\webman\controller\StoreLeaderboardController\index',
+                'pid' => 'addons\webman\controller\ChannelPlayerController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
+                'title' => '设备列表',
+            ],
         ]
     ],
 

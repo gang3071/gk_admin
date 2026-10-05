@@ -1175,6 +1175,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerController/toggleGameDisable',
         'title' => '切换游戏禁用状态',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelLeaderboardController\index',
+        'pid' => 'addons\webman\controller\ChannelPlayerController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelLeaderboardController/index',
+        'title' => '排行榜',
+    ],
     //机台管理
     [
         'id' => 'addons\webman\controller\ChannelMachineController-',

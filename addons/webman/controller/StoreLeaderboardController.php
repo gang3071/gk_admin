@@ -3,7 +3,6 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\model\AdminUser;
 use addons\webman\model\Leaderboard;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;

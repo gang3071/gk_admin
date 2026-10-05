@@ -901,6 +901,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-PlayerController/index',
         'title' => '玩家列表',
     ],
+    [
+        'id' => 'addons\webman\controller\LeaderboardController\index',
+        'pid' => 'addons\webman\controller\PlayerController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-LeaderboardController/index',
+        'title' => '排行榜',
+    ],
     // 设备列表（顶级主菜单）
     [
         'id' => 'addons\webman\controller\AdminDeviceController\index',

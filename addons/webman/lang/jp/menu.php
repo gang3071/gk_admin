@@ -317,6 +317,8 @@ return [
         'dish' => 'メニュー一覧',
         'dish_order' => '注文管理',
         'dish_order_report_item' => '注文明細レポート',
+        // ランキング
+        'leaderboard' => 'ランキング',
     ],
     'help' => [
         'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',
