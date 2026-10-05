@@ -92,4 +92,29 @@ return [
     //     'reloadable' => true,
     //     'constructor' => []
     // ],
+
+    // ============================================================
+    // 排行榜任務
+    // ============================================================
+
+    // 週榜結算（只算，不發錢）：每週二 16:00
+    'leaderboard_settle_weekly' => [
+        'handler' => process\LeaderboardSettleWeeklyTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
+    // 月榜結算（只算，不發錢）：每月第一個週二 16:00
+    'leaderboard_settle_monthly' => [
+        'handler' => process\LeaderboardSettleMonthlyTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
+
+    // 發獎（只發，不算）：每 5 分鐘
+    'leaderboard_grant' => [
+        'handler' => process\LeaderboardGrantTask::class,
+        'reloadable' => true,
+        'constructor' => []
+    ],
 ];

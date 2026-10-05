@@ -33,6 +33,8 @@ class Leaderboard extends Model
     const SCOPE_TYPE_ALL = 1;  // 全站
     const SCOPE_TYPE_STORE = 3;  // 門店
 
+    protected $guarded = [];
+
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);

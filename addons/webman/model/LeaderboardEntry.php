@@ -28,6 +28,8 @@ class LeaderboardEntry extends Model
     const GRANT_STATUS_UNISSUED = 0;  // 未發放
     const GRANT_STATUS_ISSUED = 1;  // 已發放
 
+    protected $guarded = [];
+
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
@@ -40,5 +42,13 @@ class LeaderboardEntry extends Model
     public function player(): BelongsTo
     {
         return $this->belongsTo(Player::class, 'player_id')->withTrashed();
+    }
+
+    /**
+     * 所屬榜單期別
+     */
+    public function leaderboard(): BelongsTo
+    {
+        return $this->belongsTo(Leaderboard::class, 'leaderboard_id');
     }
 }

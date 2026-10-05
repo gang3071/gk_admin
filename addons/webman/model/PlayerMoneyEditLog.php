@@ -67,6 +67,7 @@ class PlayerMoneyEditLog extends Model
     const COIN_WITHDRAWAL = 16; // 币商提现
     const DEPOSIT_BONUS_GRANT = 17; // 充值满赠发放
     const DEPOSIT_BONUS_CANCEL = 18; // 充值满赠取消
+    const LEADERBOARD_GIVE = 19; // 排行榜外贈
 
     public function __construct(array $attributes = [])
     {
