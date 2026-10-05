@@ -4644,9 +4644,10 @@ class ChannelIndexController
                         ->whereNull('deleted_at')
                         ->get()
                         ->filter(function ($record) {
-                            if (empty($record->extra_data)) return false;
-                            $extraData = json_decode($record->extra_data, true);
-                            return isset($extraData['rule_type']) && $extraData['rule_type'] === 'yesterday';
+                            $extraData = $this->parseExtraData($record->extra_data ?? null);
+                            return is_array($extraData)
+                                && isset($extraData['rule_type'])
+                                && $extraData['rule_type'] === 'yesterday';
                         })
                         ->count();
                     if ($yesterdayClaimedCount > 0) {
@@ -4665,9 +4666,10 @@ class ChannelIndexController
                     ->whereNull('deleted_at')
                     ->get()
                     ->filter(function ($record) use ($ruleType) {
-                        if (empty($record->extra_data)) return false;
-                        $extraData = json_decode($record->extra_data, true);
-                        return isset($extraData['rule_type']) && $extraData['rule_type'] === $ruleType;
+                        $extraData = $this->parseExtraData($record->extra_data ?? null);
+                        return is_array($extraData)
+                            && isset($extraData['rule_type'])
+                            && $extraData['rule_type'] === $ruleType;
                     })
                     ->count();
                 if ($todayCount > 0) {
@@ -4730,6 +4732,39 @@ class ChannelIndexController
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * 解析票据 extra_data
+     *
+     * 库里存在两种落库形态，本项目 TicketRecord 模型没有 json cast，取到的是原始字符串：
+     * - 单编码：{"rule_type":"today","score":1000}（本后台 saveTicketRecord 写入）
+     * - 双重编码："{\"rule_type\":\"today\",\"score\":1000}"
+     *   （gk_api 侧模型带 json cast 且又手动 json_encode 造成）
+     *
+     * 只 json_decode 一层时，双重编码会解出字符串而非数组，
+     * 之后 isset($data['rule_type']) 恒为 false，导致去重失效。
+     * 这里按需多解一层，使判断对两种形态都生效。
+     *
+     * @param mixed $extraData
+     * @return array|null 无法解析时返回 null
+     */
+    protected function parseExtraData($extraData): ?array
+    {
+        if (is_array($extraData)) {
+            return $extraData;
+        }
+        if (!is_string($extraData) || $extraData === '') {
+            return null;
+        }
+
+        $decoded = json_decode($extraData, true);
+        // 双重编码时第一次解出来仍是字符串
+        if (is_string($decoded) && $decoded !== '') {
+            $decoded = json_decode($decoded, true);
+        }
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**

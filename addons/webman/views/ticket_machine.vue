@@ -1470,8 +1470,13 @@ export default {
         return this.playerBetInfo.claimed_welfare_records.some(r => {
           if (r.score !== score || !r.extra_data) return false;
           try {
-            const extraData = JSON.parse(r.extra_data);
-            return extraData.rule_type === ruleType;
+            // 兼容被双重编码的历史数据（JSON 字符串里再套一层 JSON），
+            // 否则解出来是字符串，rule_type 读不到，会误判为未领取
+            let extraData = r.extra_data;
+            for (let i = 0; i < 2 && typeof extraData === 'string'; i++) {
+              extraData = JSON.parse(extraData);
+            }
+            return !!extraData && extraData.rule_type === ruleType;
           } catch {
             return false;
           }
