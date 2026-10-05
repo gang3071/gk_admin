@@ -969,6 +969,13 @@ class ChannelController
             })
             ->pluck('machine_id')
             ->toArray();
+        // 与网格显示口径对齐：排除已软删机台。
+        // ChannelMachine::machine() 关联带 withTrashed()，直接用它做预选会把软删机台也勾上，
+        // 但网格用 Machine 模型（自动排除软删）不显示它们，造成「没点却已选中 / 全选数量对不上」。
+        $selectedId = Machine::query()
+            ->whereIn('id', $selectedId)
+            ->pluck('id')
+            ->toArray();
         return Grid::create(new $this->machineModel(), function (Grid $grid) use ($department_id) {
             $grid->title(admin_trans('channel.add_machine'));
             // 只显示线上机台
@@ -1180,6 +1187,14 @@ class ChannelController
             })
             ->pluck('machine_id')
             ->toArray();
+        // 与网格显示口径对齐：排除已软删机台。
+        // 上面 whereHas 走的 ChannelMachine::machine() 带 withTrashed()，会把软删机台也勾选上，
+        // 但网格和提交校验用的 Machine::query() 会排除软删，导致「没点却已选中、全选数量对不上、
+        // 提交时报所选机台中包含非线下机台」。
+        $selectedId = Machine::query()
+            ->whereIn('id', $selectedId)
+            ->pluck('id')
+            ->toArray();
 
         // 获取已被其他渠道绑定的线下机台ID
         $boundToOtherChannels = ChannelMachine::query()
@@ -1365,6 +1380,18 @@ class ChannelController
         }
 
         // 验证选中的都是线下机台
+        // 分两步判定，避免「机器不存在/已删除」被误报成「包含非线下机台」
+        $existingIds = Machine::query()
+            ->whereIn('id', $selected)
+            ->pluck('id')
+            ->toArray();
+        if (count($existingIds) != count($selected)) {
+            $missingIds = array_values(array_diff($selected, $existingIds));
+            return message_error(admin_trans('channel.selected_machine_missing', null, [
+                '{ids}' => implode(',', $missingIds),
+            ]));
+        }
+
         $selectedMachineList = Machine::query()
             ->whereIn('id', $selected)
             ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
@@ -1393,6 +1420,13 @@ class ChannelController
                     $query->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
                 })
                 ->pluck('machine_id')
+                ->toArray();
+            // 与预选/网格口径对齐：排除已软删机台。
+            // 上面 whereHas 走的 ChannelMachine::machine() 带 withTrashed()，会把软删机台也算进「当前已绑定」；
+            // 它们不在 $selected 里就会被误判成「已取消选择」而解除绑定。这里过滤掉，保留其原绑定关系。
+            $currentBoundIds = Machine::query()
+                ->whereIn('id', $currentBoundIds)
+                ->pluck('id')
                 ->toArray();
 
             $toUnbind = array_diff($currentBoundIds, $selected);

@@ -93,6 +93,7 @@ return [
     'add_offline_machine_success' => 'オフライン機台の割り当てに成功しました',
     'offline_machine_already_bound' => '選択したオフライン機台の中に他のチャネルに割り当てられているものがあります',
     'not_all_offline_machine' => '選択した機台の中にオフライン機台でないものが含まれています',
+    'selected_machine_missing' => '選択した機台の中に存在しないか削除済みのものがあります：{ids}',
     'unbind_offline_machine' => 'オフライン機台の紐付け解除',
     'unbind_offline_machine_confirm' => '選択したオフライン機台の紐付けを解除しますか？機台はこのチャネルと関連店舗から削除されます。',
     'unbind_offline_machine_success' => 'オフライン機台の紐付け解除に成功しました',

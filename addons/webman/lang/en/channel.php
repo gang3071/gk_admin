@@ -102,6 +102,7 @@ return [
     'add_offline_machine_success' => 'Assign offline machines successfully',
     'offline_machine_already_bound' => 'Some selected offline machines are already assigned to other channels',
     'not_all_offline_machine' => 'Selected machines contain non-offline machines',
+    'selected_machine_missing' => 'Selected machines include missing or deleted ones: {ids}',
     'unbind_offline_machine' => 'Unbind Offline Machines',
     'unbind_offline_machine_confirm' => 'Are you sure you want to unbind the selected offline machines? The machines will be removed from this channel and related stores.',
     'unbind_offline_machine_success' => 'Unbind offline machines successfully',
