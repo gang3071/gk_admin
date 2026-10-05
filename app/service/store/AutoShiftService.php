@@ -598,6 +598,19 @@ class AutoShiftService
             ->where('created_at', '<=', $endTime)
             ->sum('score');
 
+        // 已拆分/已合并的洗分票：原票已被新票替代，不再算作未核销
+        // 与出卷同用 created_at 归属班次，避免跨班次出现负数
+        $splitMergedAmount = (float)TicketRecord::query()
+            ->where('store_admin_id', $bindAdminUserId)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->whereIn('status', [
+                TicketRecord::STATUS_SPLIT,
+                TicketRecord::STATUS_MERGED,
+            ])
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->sum('score');
+
         // 计算体验券（ticket_type=3）
         $experienceCouponAmount = (float)TicketRecord::query()
             ->where('store_admin_id', $bindAdminUserId)
@@ -754,8 +767,12 @@ class AutoShiftService
             'redeem_machine_amount' => (float)$redeemAmount,
             'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
             'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-            // 未核销 = 出卷 - 后台核销 - 机台核销
-            'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+            // 未核销 = 出卷 - 后台核销 - 机台核销 - 已拆分/已合并
+            'ticket_unredeemed_amount' => bcsub(
+                bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                $splitMergedAmount,
+                2
+            ),
             'experience_coupon_amount' => $experienceCouponAmount,
             'welfare_coupon_amount' => $welfareCouponAmount,
             'counter_ticket_amount' => $counterTicketAmount,
@@ -877,6 +894,20 @@ class AutoShiftService
             ->groupBy('player_id')
             ->pluck('total_score', 'player_id');
 
+        // 查询已拆分/已合并的洗分票（按设备分组，从“未核销”中剔除）
+        $splitMergedMap = TicketRecord::query()
+            ->selectRaw('player_id, SUM(score) as total_score')
+            ->whereIn('player_id', $playerIds)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->whereIn('status', [
+                TicketRecord::STATUS_SPLIT,
+                TicketRecord::STATUS_MERGED,
+            ])
+            ->where('created_at', '>', $startTime)
+            ->where('created_at', '<=', $endTime)
+            ->groupBy('player_id')
+            ->pluck('total_score', 'player_id');
+
         // 查询体验券（按设备分组）
         $experienceCouponMap = TicketRecord::query()
             ->selectRaw('player_id, SUM(score) as total_score')
@@ -918,6 +949,7 @@ class AutoShiftService
 
             // 获取洗票未核销、体验券、福利券
             $ticketUnredeemed = (float)($ticketUnredeemedMap[$player->id] ?? 0);
+            $splitMerged = (float)($splitMergedMap[$player->id] ?? 0);
             $experienceCoupon = (float)($experienceCouponMap[$player->id] ?? 0);
             $welfareCoupon = (float)($welfareCouponMap[$player->id] ?? 0);
 
@@ -1029,8 +1061,12 @@ class AutoShiftService
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 后台核销 - 机台核销
-                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销 - 已拆分/已合并
+                    'ticket_unredeemed_amount' => bcsub(
+                        bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                        $splitMerged,
+                        2
+                    ),
                     'experience_coupon_amount' => $experienceCoupon,
                     'welfare_coupon_amount' => $welfareCoupon,
                     'modified_add_amount' => (float)$data['modified_add_amount'],

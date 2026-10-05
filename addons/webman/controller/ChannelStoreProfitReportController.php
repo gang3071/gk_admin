@@ -121,6 +121,9 @@ class ChannelStoreProfitReportController
         // ========== 第7步：批量查询核销数据（1条SQL） ==========
         $redeemDataByStore = $this->batchQueryRedeemData($storeIds, $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
+        // 已拆分/已合并的洗分票：原票已被新票替代，需从“未核销”中剔除
+        $splitMergedByStore = $this->batchQuerySplitMergedData($storeIds, $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
+
         // ========== 第8步：批量查询拉彩数据（1条SQL） ==========
         $lotteryDataByStore = $this->batchQueryLotteryData($playerIdsByStore, $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
@@ -165,9 +168,14 @@ class ChannelStoreProfitReportController
 
             // 入票 = 开票机台使用 + 核销机台使用
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
-            // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销
+            // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销 - 已拆分/已合并
             $totalRedeem = bcadd($redeemAmount, $redeemMachineAmount, 2);
-            $ticketUnredeemedAmount = bcadd(bcsub($ticketRedeemAmount, $totalRedeem, 2), $counterRedeemAmount, 2);
+            $splitMergedAmount = floatval($splitMergedByStore[$storeId] ?? 0);
+            $ticketUnredeemedAmount = bcsub(
+                bcadd(bcsub($ticketRedeemAmount, $totalRedeem, 2), $counterRedeemAmount, 2),
+                $splitMergedAmount,
+                2
+            );
 
             // 拉彩数据
             $lotteryData = $lotteryDataByStore[$storeId] ?? null;
@@ -446,6 +454,49 @@ class ChannelStoreProfitReportController
         $result = [];
         foreach ($redeemData as $item) {
             $result[(int)$item->store_admin_id] = $item;
+        }
+        return $result;
+    }
+
+    /**
+     * 批量查询已拆分/已合并的洗分票金额
+     *
+     * 原票被新票替代后不再算作未核销，需从残差中剔除。
+     * 这类票的 scanned_at 恒为空，只能按 created_at 归属时间，
+     * 因此不能并入 batchQueryRedeemData（那条整条按 scanned_at 过滤）。
+     *
+     * @param array $storeIds
+     * @param string|null $selectedShift
+     * @param string|null $dateType
+     * @param string|null $createdAtStart
+     * @param string|null $createdAtEnd
+     * @param array|null $shiftDateRange
+     * @return array [storeId => float]
+     */
+    private function batchQuerySplitMergedData(array $storeIds, ?string $selectedShift, ?string $dateType, ?string $createdAtStart, ?string $createdAtEnd, ?array $shiftDateRange): array
+    {
+        if (empty($storeIds)) {
+            return [];
+        }
+
+        $query = TicketRecord::query()
+            ->whereIn('store_admin_id', $storeIds)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->whereIn('status', [
+                TicketRecord::STATUS_SPLIT,
+                TicketRecord::STATUS_MERGED,
+            ]);
+
+        $this->applyTimeFilter($query, 'created_at', $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
+
+        $rows = $query->selectRaw('CAST(store_admin_id AS UNSIGNED) as store_admin_id, SUM(score) as total_score')
+            ->groupBy('store_admin_id')
+            ->get();
+
+        // 确保键是整数类型
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(int)$row->store_admin_id] = (float)$row->total_score;
         }
         return $result;
     }
