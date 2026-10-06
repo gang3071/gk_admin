@@ -17,6 +17,7 @@ use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\response\Msg;
 use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
+use support\Log;
 
 /**
  * 店家后台 - 线下机台管理
@@ -277,9 +278,24 @@ class StoreOfflineMachineController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function ($actions, Machine $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                if ($data->gaming_user_id > 0) {
+                    $actions->append(
+                        Button::create(admin_trans('store_offline_machine.actions.kick_player'))
+                            ->type('danger')
+                            ->size('small')
+                            ->icon(Icon::create('StopOutlined'))
+                            ->confirm(
+                                admin_trans('store_offline_machine.confirm.kick_player'),
+                                [$this, 'kickPlayer'],
+                                ['machine_id' => $data['id']]
+                            )
+                            ->gridRefresh()
+                    );
+                }
             });
         });
     }
@@ -383,9 +399,24 @@ class StoreOfflineMachineController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->hideTrashed();
-            $grid->actions(function ($actions) {
+            $grid->actions(function ($actions, Machine $data) {
                 $actions->hideEdit();
                 $actions->hideDel();
+
+                if ($data->gaming_user_id > 0) {
+                    $actions->append(
+                        Button::create(admin_trans('store_offline_machine.actions.kick_player'))
+                            ->type('danger')
+                            ->size('small')
+                            ->icon(Icon::create('StopOutlined'))
+                            ->confirm(
+                                admin_trans('store_offline_machine.confirm.kick_player'),
+                                [$this, 'kickPlayer'],
+                                ['machine_id' => $data['id']]
+                            )
+                            ->gridRefresh()
+                    );
+                }
             });
         });
     }
@@ -418,6 +449,56 @@ class StoreOfflineMachineController
         } catch (\Exception $e) {
             return new \stdClass();
         }
+    }
+
+    /**
+     * 踢出玩家并返还余额
+     * @auth true
+     * @group store
+     * @return Msg
+     */
+    public function kickPlayer(): Msg
+    {
+        $machineId = (int) Request::input('machine_id');
+
+        $storeAdminId = Admin::user()->id;
+        $departmentId = Admin::user()->department_id;
+
+        $machine = Machine::query()
+            ->whereHas('channelMachines', function ($query) use ($storeAdminId, $departmentId) {
+                $query->where('store_admin_id', $storeAdminId)
+                    ->where('department_id', $departmentId);
+            })
+            ->where('id', $machineId)
+            ->where('machine_source', Machine::MACHINE_SOURCE_OFFLINE)
+            ->first();
+
+        if (!$machine) {
+            return message_error(admin_trans('store_offline_machine.error.machine_not_found'));
+        }
+
+        if (empty($machine->gaming_user_id)) {
+            return message_error(admin_trans('store_offline_machine.error.no_player_in_machine'));
+        }
+
+        try {
+            \app\service\MachineApiService::kickPlayer(
+                $machine->id,
+                $machine->gaming_user_id,
+                'leave',
+                Admin::id(),
+                Container::getInstance()->translator->getLocale()
+            );
+        } catch (\Exception $e) {
+            Log::error('StoreOfflineMachineController::kickPlayer failed', [
+                'machine_id' => $machineId,
+                'gaming_user_id' => $machine->gaming_user_id,
+                'error' => $e->getMessage(),
+            ]);
+            return message_error($e->getMessage());
+        }
+
+        return message_success(admin_trans('store_offline_machine.message.kick_success'));
     }
 
     /**

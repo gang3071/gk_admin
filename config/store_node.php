@@ -881,6 +881,16 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/infoList',
                 'title' => '机台资讯',
             ],
+            // 踢出玩家
+            [
+                'id' => 'addons\webman\controller\StoreOfflineMachineController\kickPlayer',
+                'pid' => 'addons\webman\controller\StoreOfflineMachineController\infoList',
+                'action' => 'kickPlayer',
+                'method' => '',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreOfflineMachineController/kickPlayer',
+                'title' => '踢出玩家',
+            ],
         ]
     ],
     // 餐點管理
