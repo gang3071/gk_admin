@@ -89,6 +89,7 @@ return [
         //玩家管理
         'channel_player_manage' => '玩家管理',
         'channel_player_list' => '玩家列表',
+        'player_id_card_blacklist' => '黑名单列表',
         'channel_player_accounting_change_records' => '账变记录',
         'player_points_records' => '积分记录',
         //机台管理

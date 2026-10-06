@@ -367,5 +367,8 @@ return [
         // 餐點訂單明細
         'dish_order_item_table' => 'dish_order_item',
         'dish_order_item_model' => \addons\webman\model\DishOrderItem::class,
+        //玩家身份证黑名单
+        'player_id_card_blacklist_table' => 'player_id_card_blacklist',
+        'player_id_card_blacklist_model' => \addons\webman\model\PlayerIdCardBlacklist::class,
     ],
 ];

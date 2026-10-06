@@ -89,6 +89,7 @@ return [
         //プレイヤー管理
         'channel_player_manage' => 'プレイヤー管理',
         'channel_player_list' => 'プレイヤーリスト',
+        'player_id_card_blacklist' => 'IDカードブラックリスト',
         'channel_player_accounting_change_records' => '会計変更レコード',
         'player_points_records' => 'ポイント記録',
         //マシン管理

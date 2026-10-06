@@ -89,6 +89,7 @@ return [
         //Player management
         'channel_player_manage' => 'Player management',
         'channel_player_list' => 'Player list',
+        'player_id_card_blacklist' => 'ID Card Blacklist',
         'channel_player_accounting_change_records' => 'Accounting change records',
         'player_points_records' => 'Points records',
         //machine management

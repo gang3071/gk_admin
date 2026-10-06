@@ -9,6 +9,7 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerExtend;
+use addons\webman\model\PlayerIdCardBlacklist;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRegisterRecord;
@@ -21,6 +22,7 @@ use addons\webman\grid\Driver\AlreadyPaginated;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\form\Watch;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -918,6 +920,7 @@ class StorePlayerController
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))
                     ->maxlength(50)->required()
                     ->default($playerExtend->id_number ?? '');
+                $form->desc('blacklist_warning_msg', '')->default('');
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))
                     ->ext('jpg,png,jpeg')->fileSize('5m')
                     ->default($playerExtend->id_card_front ?? '');
@@ -949,6 +952,11 @@ class StorePlayerController
 
                     if (empty($player)) {
                         return message_error(admin_trans('player.not_fount'));
+                    }
+
+                    $idNumber = $form->input('id_number');
+                    if (!empty($idNumber) && PlayerIdCardBlacklist::where('id_number', $idNumber)->exists()) {
+                        return message_error(admin_trans('player_blacklist.error.id_number_in_blacklist'));
                     }
 
                     DB::beginTransaction();
@@ -993,6 +1001,7 @@ class StorePlayerController
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
                 $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
+                $form->desc('blacklist_warning_msg', '')->default('');
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
@@ -1027,6 +1036,11 @@ class StorePlayerController
                     $existingPlayer = Player::query()->where('phone', $phone)->first();
                     if (!empty($existingPlayer)) {
                         return message_error(admin_trans('player.phone_has_register'));
+                    }
+
+                    $idNumber = $form->input('id_number');
+                    if (!empty($idNumber) && PlayerIdCardBlacklist::where('id_number', $idNumber)->exists()) {
+                        return message_error(admin_trans('player_blacklist.error.id_number_in_blacklist'));
                     }
 
                     // 验证渠道是否存在（同步自总后台逻辑）
@@ -1081,6 +1095,30 @@ class StorePlayerController
                     return message_success(admin_trans('player.save_player_info_success'));
                 });
             }
+
+            $form->watch([
+                'id_number' => function ($value, Watch $watch) {
+                    $value = trim($value ?? '');
+                    if (empty($value)) {
+                        $watch->set('blacklist_warning_msg', '');
+                        return;
+                    }
+                    $record = PlayerIdCardBlacklist::where('id_number', $value)->first();
+                    if ($record) {
+                        $msg = htmlspecialchars(admin_trans('player_blacklist.error.id_number_in_blacklist'));
+                        if (!empty($record->remark)) {
+                            $msg .= ' — ' . htmlspecialchars(admin_trans('player_blacklist.fields.remark')) . ': ' . htmlspecialchars($record->remark);
+                        }
+                        $html = '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#fff2f0;border:1px solid #ffccc7;border-radius:6px;color:#ff4d4f;font-size:14px;line-height:1.5;margin:4px 0 8px;">'
+                            . '<span style="font-size:16px;flex-shrink:0;">⚠</span>'
+                            . '<span>' . $msg . '</span>'
+                            . '</div>';
+                        $watch->set('blacklist_warning_msg', $html);
+                    } else {
+                        $watch->set('blacklist_warning_msg', '');
+                    }
+                }
+            ]);
         });
     }
 

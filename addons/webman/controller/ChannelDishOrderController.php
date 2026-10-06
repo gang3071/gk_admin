@@ -264,6 +264,10 @@ class ChannelDishOrderController
                 $query->where('dish_order.created_at', '<=', $exAdminFilter['created_at_end']);
             }
 
+            if (! empty($exAdminFilter['admin_user_id'])) {
+                $query->where('dish_order.admin_user_id', '=', $exAdminFilter['admin_user_id']);
+            }
+
             $query->groupBy('dish_order_item.dish_id', 'dish_order_item.price', 'dish_order.admin_user_id');
 
             $grid->model()
@@ -282,7 +286,7 @@ class ChannelDishOrderController
                     ->placeholder(admin_trans('dish.fields.category_id'))
                     ->options($categories);
 
-                $filter->eq()->select('order.admin_user_id')
+                $filter->eq()->select('admin_user_id')
                     ->showSearch()
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
@@ -358,14 +362,14 @@ class ChannelDishOrderController
 
         foreach ($items as $value) {
             $html .= '<tr>';
-            $html .= '<td>' . $value->dish_title;
+            $html .= '<td style="overflow-wrap:anywhere;">' . $value->dish_title;
 
             if (! empty($value->remark)) {
                 $html .= ' (' . $value->remark . ')';
             }
 
             $html .= '</td>';
-            $html .= '<td>x ' . $value->quantity . '</td>';
+            $html .= '<td style="text-align:right">x ' . $value->quantity . '</td>';
             $html .= '</tr>';
         }
 
