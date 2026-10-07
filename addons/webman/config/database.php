@@ -96,6 +96,8 @@ return [
         //玩家踢出日志
         'machine_kick_log_table' => 'machine_kick_log',
         'machine_kick_log_model' => \addons\webman\model\MachineKickLog::class,
+        'machine_operation_log_table' => 'machine_operation_log',
+        'machine_operation_log_model' => \addons\webman\model\MachineOperationLog::class,
         //玩家充值记录
         'player_recharge_record_table' => 'player_recharge_record',
         'player_recharge_record_model' => \addons\webman\model\PlayerRechargeRecord::class,
