@@ -1009,8 +1009,10 @@ class PlayerLotteryRecordController
 
             // 视频流地址（与机台资讯列表的 iframe_src / src_list 保持同一套结构）
             $srcList = [];
+            $pushList = [];
             $iframeSrc = '';
             $mediaList = MachineMedia::query()
+                ->with('machineMediaPush')
                 ->where('machine_id', $machineId)
                 ->where('status', 1)
                 ->where('stream_name', '!=', '-1')
@@ -1025,6 +1027,23 @@ class PlayerLotteryRecordController
                     'title' => admin_trans('machine_media.media_title') . $mediaKey,
                     'desc' => admin_trans('machine_media.fields.pull_ip') . ':' . $media->pull_ip . ' ' . admin_trans('machine_media.fields.stream_name') . ':' . $media->stream_name,
                 ];
+
+                // 推流资料：源流地址 + 腾讯 RTMP 推流地址
+                foreach ($media->machineMediaPush as $push) {
+                    $pushList[] = [
+                        'media_id' => $media->id,
+                        'stream_name' => $media->stream_name,
+                        'media_ip' => $media->media_ip,
+                        'push_ip' => $media->push_ip,
+                        'media_app' => $media->media_app,
+                        'is_ams' => $media->is_ams,
+                        'rtmp_url' => $push->rtmp_url,
+                        'endpoint_service_id' => $push->endpoint_service_id,
+                        'expiration_date' => $push->expiration_date,
+                        'machine_code' => $push->machine_code,
+                        'status' => $push->status,
+                    ];
+                }
                 $mediaKey++;
             }
 
@@ -1040,6 +1059,7 @@ class PlayerLotteryRecordController
                 'record_id' => $record->id,
                 'iframe_src' => $iframeSrc,
                 'src_list' => $srcList,
+                'push_list' => $pushList,
             ]);
 
             \support\Log::info('精灵球彩金重新派发成功', [
@@ -1049,6 +1069,7 @@ class PlayerLotteryRecordController
                 'machine_id' => $machineId,
                 'amount' => $record->amount,
                 'iframe_src' => $iframeSrc,
+                'push_list' => $pushList,
             ]);
 
             return message_success(admin_trans('player_lottery_record.retry_success'));
