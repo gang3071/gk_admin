@@ -30,7 +30,7 @@ return [
     'delete_has_machine_error' => '改分类下已添加机台,请先删除机台',
     'lottery_setting' => '彩金配置',
     'lottery_point_help' => '游戏的过程中，斯洛的每一次压分，或者钢珠的每一转，累积一部分金额到对应的彩金池',
-    'lottery_rate_help' => '派彩时将乘以派彩系数为实际活动金额',
+    'lottery_rate_help' => '派彩时将乘以派彩系数为实际活动金额（直接倍率：1.0=不变，1.5=派彩×1.5倍；注意：切勿填写过大的数值，如100则表示100倍派彩）',
     'lottery_add_status_help' => '该类型是否参与彩金池的累计',
     'lottery_assign_status_help' => '该类型是否参与彩金',
     'form' => [

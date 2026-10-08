@@ -405,13 +405,13 @@ class MachineCategoryController
                         ->help(admin_trans('machine_category.lottery_point_help'))
                         ->style(['width' => '100%']);
                     $form->number('lottery_rate', admin_trans('machine_category.fields.lottery_rate'))
-                        ->max(1000)
+                        ->max(10)
                         ->min(0.01)
                         ->precision(2)
                         ->span(6)
                         ->help(admin_trans('machine_category.lottery_rate_help'))
                         ->rule([
-                            'max:1000' => admin_trans('validator.max', null, ['{max}' => 1000]),
+                            'max:10' => admin_trans('validator.max', null, ['{max}' => 10]),
                             'min:0.01' => admin_trans('validator.min', null, ['{min}' => 0.01]),
                         ])
                         ->style(['width' => '100%']);
