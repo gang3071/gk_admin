@@ -49,6 +49,15 @@ class MachineMedia extends Model
     {
         return $this->belongsTo(plugin()->webman->config('database.machine_model'), 'machine_id')->withTrashed();
     }
+
+    /**
+     * 视频流播放地址
+     * @return string
+     */
+    public function getPlayUrl(): string
+    {
+        return 'https://' . $this->pull_ip . '/' . $this->media_app . '/play.html?id=' . $this->stream_name;
+    }
     
     /**
      * 游戏类别
