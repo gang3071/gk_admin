@@ -1451,6 +1451,15 @@ return [
         'title' => '机台异动日志',
     ],
     [
+        'id' => 'addons\webman\controller\MachineOperationLogController\index',
+        'pid' => 'addons\webman\controller\MachineKeepingLogController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-MachineOperationLogController/index',
+        'title' => '机台操作日志',
+    ],
+    [
         'id' => 'addons\webman\controller\MachineEditLogController\detail',
         'pid' => 'addons\webman\controller\MachineEditLogController\index',
         'action' => 'detail',

@@ -89,6 +89,15 @@ return [
     ],
     'action_error' => 'Operation failed',
     'action_success' => 'Action successful',
+    // 后台 UI 动作名（指令码以外的业务动作）
+    'ui_action' => [
+        'kick_player' => 'Kick player',
+        'kick_force' => 'Force kick',
+        'start' => 'Start (slot)',
+        'auto' => 'Auto (slot)',
+        'plc_push_5hz' => 'PushAuto start',
+        'reset_wash_limit' => 'Reset wash limit',
+    ],
     'admin_actions' => 'Administrator operation',
     'date_type' => 'Cycle',
     'action_type' => [

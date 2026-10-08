@@ -1651,8 +1651,14 @@ class MachineController
                 default => Slot::class,
             };
 
+            // 落库用：一个 UI 动作记一条，避免底层多条指令变成多行噪音
+            $logAction = strtolower($action);
+            $logPoint = 0;
+
             switch ($action) {
                 case 'open_custom': // 开分自定(斯洛+钢珠)
+                    $logAction = Jackpot::OPEN_ANY_POINT;
+                    $logPoint = (int)($params['open'] ?? 0);
                     // ✅ 通过 API 调用 gk_work
                     \app\service\MachineApiService::customOpenScore(
                         $machine->id,
@@ -1663,6 +1669,8 @@ class MachineController
                     );
                     break;
                 case 'down': // 下分(斯洛+钢珠)
+                    $logAction = Jackpot::WASH_ZERO;
+                    $logPoint = (int)($services->point ?? 0); // 洗分前的机台分数
                     // ✅ 通过 API 调用 gk_work
                     \app\service\MachineApiService::kickPlayer(
                         $machine->id,
@@ -1685,6 +1693,8 @@ class MachineController
                     $machine->save();
                     break;
                 case 'kick_player': // 踢除遊戲中的玩家
+                    $logAction = 'kick_player';
+                    $logPoint = (int)($services->point ?? 0);
                     // ✅ 通过 API 调用 gk_work
                     \app\service\MachineApiService::kickPlayer(
                         $machine->id,
@@ -1695,6 +1705,7 @@ class MachineController
                     );
                     break;
                 case 'kick_force': // 強制踢出(分數將不會返回玩家)
+                    $logAction = 'kick_force';
                     // ✅ 通过 API 调用 gk_work
                     \app\service\MachineApiService::forceKickPlayer(
                         $machine->id,
@@ -1831,6 +1842,17 @@ class MachineController
                 'params' => $params
             ]);
 
+            // 落库到机台操作日志（后台「管理员操作」页）
+            saveMachineOperationLog(
+                $machine,
+                $player,
+                json_encode(['action' => $action, 'params' => $params], JSON_UNESCAPED_UNICODE),
+                $logAction,
+                1,
+                0,
+                $logPoint
+            );
+
         } catch (\Exception $e) {
             // 记录失败日志
             Log::error('【机台操作】执行失败', [
@@ -1843,6 +1865,17 @@ class MachineController
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
+
+            saveMachineOperationLog(
+                $machine,
+                $player ?? null,
+                json_encode(['action' => $action, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE),
+                $logAction ?? strtolower($action),
+                0,
+                0,
+                $logPoint ?? 0
+            );
+
             return message_error($e->getMessage());
         }
 

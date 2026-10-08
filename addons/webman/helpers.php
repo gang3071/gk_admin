@@ -10,6 +10,7 @@ use addons\webman\model\MachineKeepingLog;
 use addons\webman\model\MachineLabel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineMediaPush;
+use addons\webman\model\MachineOperationLog;
 use addons\webman\model\MachineTencentPlay;
 use addons\webman\model\NationalInvite;
 use addons\webman\model\NationalProfitRecord;
@@ -141,6 +142,150 @@ if (!function_exists('getGameTypeCateName')) {
     function getGameTypeCateName($val): string
     {
         return admin_trans('game_type.game_type_cate.' . $val);
+    }
+}
+
+if (!function_exists('saveMachineOperationLog')) {
+    /**
+     * 记录机台操作日志
+     *
+     * 写日志绝不能影响主业务：内部吞掉所有异常，失败只记 warning。
+     *
+     * @param Machine $machine
+     * @param Player|null $player
+     * @param string $content 内容
+     * @param string $action 功能
+     * @param int $status 状态
+     * @param int $isSystem
+     * @param int $point
+     * @return bool 是否写入成功
+     */
+    function saveMachineOperationLog(
+        Machine $machine,
+        Player  $player = null,
+        string  $content = '',
+        string  $action = '',
+        int     $status = 1,
+        int     $isSystem = 0,
+        int     $point = 0
+    ): bool
+    {
+        try {
+            // 开分固定档位的点数，跟历史行为保持一致
+            // 用严格字符串比较：历史上是松散 ==，'41 ' / int 41 会踩坑
+            $actionStr = (string)$action;
+            if ($actionStr === Jackpot::OPEN_ONE) {
+                $point = 100;
+            } elseif ($actionStr === Jackpot::OPEN_TEN) {
+                $point = 1000;
+            }
+
+            $requestData = request()?->input('data') ?? [];
+            $remark = is_array($requestData) ? (string)($requestData['remark'] ?? '') : '';
+
+            $adminName = Admin::user()?->toArray()['username'] ?? '';
+
+            $machineOperationLog = new MachineOperationLog;
+            $machineOperationLog->department_id = $player->department_id ?? 0;
+            $machineOperationLog->machine_id = $machine->id;
+            $machineOperationLog->producer_id = $machine->producer_id;
+            $machineOperationLog->machine_name = $machine->name;
+            $machineOperationLog->machine_type = $machine->type;
+            $machineOperationLog->machine_cate = $machine->cate_id;
+            $machineOperationLog->machine_code = $machine->code;
+            $machineOperationLog->uuid = $player->uuid ?? '';
+            $machineOperationLog->player_id = $player->id ?? 0;
+            $machineOperationLog->player_phone = $player->phone ?? '';
+            $machineOperationLog->player_name = $player->name ?? '';
+            $machineOperationLog->status = $status;
+            $machineOperationLog->is_system = $isSystem;
+            $machineOperationLog->content = $content;
+            $machineOperationLog->action = $action;
+            $machineOperationLog->remark = $remark;
+            $machineOperationLog->user_id = Admin::id() ?? 0;
+            $machineOperationLog->user_name = $adminName !== ''
+                ? $adminName
+                : admin_trans('message.system_automatic');
+            $machineOperationLog->point = $point;
+
+            return $machineOperationLog->save();
+        } catch (\Throwable $e) {
+            Log::warning('saveMachineOperationLog failed', [
+                'machine_id' => $machine->id ?? 0,
+                'action' => $action,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('getMachineOperationActionLabel')) {
+    /**
+     * 机台操作指令码 → 展示文案
+     *
+     * action 列存的是指令码（'41' / '4A' / 'start' …）。
+     * 优先用 machine_operation_log.machine_action（41/42/4A/43/44/21 → 上分/下分），
+     * 其次按 machine_type + 控制方式查 machine_action.function，最后兜底显示原码。
+     *
+     * @param string $action 指令码
+     * @param int $machineType 机台类型
+     * @return string
+     */
+    function getMachineOperationActionLabel(string $action, int $machineType = 0): string
+    {
+        $key = 'machine_operation_log.machine_action.' . $action;
+        $label = admin_trans($key);
+        if ($label !== adminTransMissValue($key)) {
+            return $label;
+        }
+
+        // machine_action.function 按「机台类型_控制方式」分组，日志里没有控制方式，两种都试
+        foreach ([Machine::CONTROL_TYPE_MEI, Machine::CONTROL_TYPE_SONG] as $controlType) {
+            $key = 'machine_action.function.' . $machineType . '_' . $controlType . '.' . $action;
+            $label = admin_trans($key);
+            if ($label !== adminTransMissValue($key)) {
+                return $label;
+            }
+        }
+
+        // 后台 UI 动作名（start / stop_1 / plc_up_turn_100 …）按机台类型查动作词表
+        foreach ([GameType::TYPE_SLOT => 'slot', GameType::TYPE_STEEL_BALL => 'jack_pot'] as $type => $group) {
+            if ($machineType > 0 && $machineType !== $type) {
+                continue;
+            }
+            $key = 'machine_operation_log.action.' . $group . '.' . $action;
+            $label = admin_trans($key);
+            if ($label !== adminTransMissValue($key)) {
+                return $label;
+            }
+        }
+
+        // 业务动作名（kick_player / open_custom …）
+        $key = 'machine_operation_log.ui_action.' . $action;
+        $label = admin_trans($key);
+        if ($label !== adminTransMissValue($key)) {
+            return $label;
+        }
+
+        return $action;
+    }
+}
+
+if (!function_exists('adminTransMissValue')) {
+    /**
+     * admin_trans 查不到词条时会返回什么
+     *
+     * admin_trans 会把 'group.item' 拼成 'ex_admin_ui-group.item' 再交给 Translator，
+     * Translator 按第一个点切出 domain 后，miss 时返回的是剩余的 id（不含 group 段）。
+     * 所以不能拿完整 key 跟返回值比，否则永远判成「已翻译」。
+     */
+    function adminTransMissValue(string $key): string
+    {
+        $parts = explode('.', $key, 2);
+
+        return $parts[1] ?? $key;
     }
 }
 

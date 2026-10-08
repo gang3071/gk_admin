@@ -292,6 +292,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelMachineKeepingLogController/index',
         'title' => '机台保留日志',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelMachineOperationLogController\index',
+        'pid' => 'addons\webman\controller\ChannelPlayerEditLogController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelMachineOperationLogController/index',
+        'title' => '机台操作日志',
+    ],
     //活动管理
     [
         'id' => 'addons\webman\controller\ChannelPlayerActivityRecordController-',

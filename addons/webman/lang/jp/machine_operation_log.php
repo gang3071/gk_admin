@@ -89,6 +89,15 @@ return [
     ],
     'action_error' => '操作は失敗しました',
     'action_success' => 'アクションは成功しました',
+    // 后台 UI 动作名（指令码以外的业务动作）
+    'ui_action' => [
+        'kick_player' => 'プレイヤーをキック',
+        'kick_force' => '強制キック',
+        'start' => '開始(スロット)',
+        'auto' => '自動(スロット)',
+        'plc_push_5hz' => 'PushAuto起動',
+        'reset_wash_limit' => '下回転制限をリセット',
+    ],
     'admin_actions' => '管理员操作',
     'date_type' => '操作周期',
     'action_type' => [

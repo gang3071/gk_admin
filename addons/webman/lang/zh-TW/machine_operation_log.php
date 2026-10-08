@@ -89,6 +89,15 @@ return [
     ],
     'action_error' => '操作失敗',
     'action_success' => '操作成功',
+    // 后台 UI 动作名（指令码以外的业务动作）
+    'ui_action' => [
+        'kick_player' => '踢出玩家',
+        'kick_force' => '強制踢出',
+        'start' => '開始(斯洛)',
+        'auto' => '自動(斯洛)',
+        'plc_push_5hz' => 'PushAuto啟動',
+        'reset_wash_limit' => '歸零下轉限制',
+    ],
     'admin_actions' => '管理員操作',
     'date_type' => '操作週期',
     'action_type' => [

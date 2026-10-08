@@ -502,6 +502,7 @@ class ChannelMachineController
         /** @var Player $player */
         $player = Player::find($machine->gaming_user_id);
         try {
+            $logAction = strtolower($action);
             switch ($action) {
                 case 'kick_player': // 踢除遊戲中的玩家
                     if ($player) {
@@ -533,7 +534,28 @@ class ChannelMachineController
                 default:
                     return message_error(admin_trans('machine.action.action_error'));
             }
+
+            // 落库到机台操作日志
+            saveMachineOperationLog(
+                $machine,
+                $player,
+                json_encode(['action' => $action], JSON_UNESCAPED_UNICODE),
+                $logAction,
+                1,
+                0,
+                0
+            );
         } catch (\Exception $e) {
+            saveMachineOperationLog(
+                $machine,
+                $player ?? null,
+                json_encode(['action' => $action, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE),
+                $logAction ?? strtolower($action),
+                0,
+                0,
+                0
+            );
+
             return message_error($e->getMessage());
         }
 

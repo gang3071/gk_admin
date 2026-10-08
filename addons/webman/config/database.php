@@ -183,6 +183,9 @@ return [
         //机台异动日志
         'machine_edit_log_table' => 'machine_edit_log',
         'machine_edit_log_model' => \addons\webman\model\MachineEditLog::class,
+        //管理员操作机台记录
+        'machine_operation_log_table' => 'machine_operation_log',
+        'machine_operation_log_model' => \addons\webman\model\MachineOperationLog::class,
         //机台开分卡更换
         'machine_open_card_table' => 'machine_open_card',
         'machine_open_card_model' => \addons\webman\model\MachineOpenCard::class,
