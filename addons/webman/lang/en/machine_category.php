@@ -30,7 +30,7 @@ return [
     'delete_has_machine_error' => 'A machine has been added under the changed category, please delete the machine first',
     'lottery_setting' => 'Lottery configuration',
     'lottery_point_help' => 'During the game, every time Sluo presses a point, or every turn of the steel ball, a part of the amount will be accumulated to the corresponding bonus pool',
-    'lottery_rate_help' => 'The actual activity amount will be multiplied by the payout coefficient',
+    'lottery_rate_help' => 'The payout amount is multiplied by this coefficient (direct multiplier: 1.0 = unchanged, 1.5 = 1.5× payout). The final amount is still capped by the lottery\'s "max payout amount". Do not set an excessively large value.',
     'lottery_add_status_help' => 'Whether this type participates in the accumulation of the lottery pool',
     'lottery_assign_status_help' => 'Whether this type participates in lottery',
     'form' => [

@@ -30,7 +30,7 @@ return [
     'delete_has_machine_error' => '改分類下已添加機台,請先删除機台',
     'lottery_setting' => '彩金配寘',
     'lottery_point_help' => '遊戲的過程中,斯洛的每一次壓分,或者鋼珠的每一轉,累積一部分金額到對應的彩金池',
-    'lottery_rate_help' => '派彩時將乘以派彩係數為實際活動金額',
+    'lottery_rate_help' => '派彩時將乘以派彩係數為實際活動金額（直接倍率：1.0=不變，1.5=派彩×1.5倍）。最終金額仍受彩金的「最大派彩金額」限制，超出部分將被截斷。切勿填寫過大的數值。',
     'lottery_add_status_help' => '該類型是否參與彩金池的累計',
     'lottery_assign_status_help' => '該類型是否參與彩金',
     'form' => [
