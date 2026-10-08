@@ -625,6 +625,16 @@ class GameLotteryController
                     ->pluck('pokemon_ball_machine_id')
                     ->toArray();
 
+                // 也检查 Lottery 表的绑定（跨表一对一）
+                $lotteryBoundIds = \addons\webman\model\Lottery::query()
+                    ->where('pokemon_ball_status', 1)
+                    ->whereNotNull('pokemon_ball_machine_id')
+                    ->where('pokemon_ball_machine_id', '>', 0)
+                    ->pluck('pokemon_ball_machine_id')
+                    ->toArray();
+
+                $boundMachineIds = array_unique(array_merge($boundMachineIds, $lotteryBoundIds));
+
                 // 过滤掉已绑定的机台
                 $availableMachines = [];
                 foreach ($pokemonMachines as $id => $name) {
@@ -656,13 +666,23 @@ class GameLotteryController
                 $pokemonBallMachineId = $form->input('pokemon_ball_machine_id');
                 if ($pokemonBallStatus == 1 && !empty($pokemonBallMachineId) && $pokemonBallMachineId > 0) {
                     $currentId = $form->isEdit() ? $form->driver()->get('id') : 0;
-                    $exists = GameLottery::query()
+
+                    // 检查 GameLottery 表
+                    $existsInGameLottery = GameLottery::query()
                         ->where('pokemon_ball_status', 1)
                         ->where('pokemon_ball_machine_id', $pokemonBallMachineId)
                         ->where('id', '!=', $currentId)
                         ->whereNull('deleted_at')
                         ->exists();
-                    if ($exists) {
+
+                    // 检查 Lottery 表
+                    $existsInLottery = \addons\webman\model\Lottery::query()
+                        ->where('pokemon_ball_status', 1)
+                        ->where('pokemon_ball_machine_id', $pokemonBallMachineId)
+                        ->whereNull('deleted_at')
+                        ->exists();
+
+                    if ($existsInGameLottery || $existsInLottery) {
                         return message_error(admin_trans('lottery.pokemon_ball_config.machine_already_bound'));
                     }
                 }

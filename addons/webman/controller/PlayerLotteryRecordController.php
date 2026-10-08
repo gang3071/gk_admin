@@ -993,7 +993,10 @@ class PlayerLotteryRecordController
             $machineId = $record->pokemon_ball_machine_id;
             if (empty($machineId)) {
                 // 如果记录中没有机台ID，从彩金配置中获取
-                $lottery = GameLottery::find($record->lottery_id);
+                // source 决定彩金落在哪张表：实体机台->Lottery，电子游戏->GameLottery
+                $lottery = $record->source == PlayerLotteryRecord::SOURCE_MACHINE
+                    ? Lottery::find($record->lottery_id)
+                    : GameLottery::find($record->lottery_id);
                 if ($lottery) {
                     $machineId = $lottery->pokemon_ball_machine_id;
                 }
