@@ -157,9 +157,9 @@ return [
 
     // 開分功能
     'credit_title' => '玩家錢包',
-    'credit_tip' => '提示: 開分分數必須以100為單位, 請確認開分信息, 一旦開分立即生效, 無法撤回. 4分=1遊戲點',
+    'credit_tip' => '提示: 開分分數必須以300為單位, 請確認開分信息, 一旦開分立即生效, 無法撤回. 4分=1遊戲點',
     'current_balance' => '當前餘額',
-    'error_amount_multiple_100' => '金額必須是100的倍數',
+    'error_amount_multiple_100' => '金額必須是300的倍數',
     'success_credit' => '開分成功',
 
     // 賬變記錄相關

@@ -111,7 +111,7 @@ class SongOfflineSlot extends AbstractMachineService implements BaseMachine
     // 业务限制常量
     // ========================================
     const MAX_SCORE = 99999999;             // 最大分数（4字节BCD = 99,999,999）
-    const OPEN_UNIT = 100;                  // 上分单位（固定100分）
+    const OPEN_UNIT = 300;                  // 上分单位（固定300分）
     const MAX_OPEN_TIMES = 255;             // 最大开分次数（1字节 = 0-255）
 
     public function __construct(Machine $machine, $lang = 'zh_CN')
