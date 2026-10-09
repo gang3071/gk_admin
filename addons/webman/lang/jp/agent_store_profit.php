@@ -27,6 +27,7 @@ return [
         'welfare_coupon_amount' => '福利券',
         'lottery_amount' => '宝くじ',
         'activity_total' => 'アクティビティ報酬',
+        'lottery_ticket_reward_amount' => '抽選券当選報酬',
         'electronic_game_bet_amount' => '電子ベット',
         'machine_bet_amount' => 'マシンベット',
         'total_income' => '総収入',
@@ -77,6 +78,7 @@ return [
         'total_expense' => '累計総支出',
         'total_profit' => '累計総利益',
         'total_activity' => '総活動ボーナス',
+        'total_lottery_ticket_reward' => '総抽選券当選報酬',
     ],
 
     // エクスポート

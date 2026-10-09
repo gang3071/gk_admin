@@ -27,6 +27,7 @@ return [
         'welfare_coupon_amount' => '福利券',
         'lottery_amount' => '彩金',
         'activity_total' => '活动奖励',
+        'lottery_ticket_reward_amount' => '摸奖券奖励',
         'electronic_game_bet_amount' => '电子打码量',
         'machine_bet_amount' => '机器打码量',
         'total_income' => '总收入',
@@ -77,6 +78,7 @@ return [
         'total_expense' => '累计总支出',
         'total_profit' => '累计总利润',
         'total_activity' => '总活动奖励',
+        'total_lottery_ticket_reward' => '总摸奖券奖励',
     ],
 
     // 导出
