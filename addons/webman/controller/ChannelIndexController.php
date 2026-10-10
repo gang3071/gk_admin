@@ -4091,6 +4091,8 @@ class ChannelIndexController
         // 补充连接状态标签
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
         $logLabels['printer_connected'] = admin_trans('ticket_machine.message.printer_connected');
+        $logLabels['voucher_disabled_msg'] = '活動已截止，請關注門店活動公告';
+        $logLabels['voucher_disabled_label'] = '已停用';
 
         // 获取福利券和体验券配置
         $voucherConfig = config('voucher');
@@ -4103,6 +4105,8 @@ class ChannelIndexController
             'player_bet_info_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/getPlayerBetInfo',
             'store_admin_id' => $store->id ?? 0,
             'department_id' => $store->department_id ?? 0,
+            'experience_voucher_enabled' => (bool)($store->experience_voucher_enabled ?? true),
+            'welfare_voucher_enabled' => (bool)($store->welfare_voucher_enabled ?? true),
             'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
             'paper_jam_msg' => admin_trans('ticket_machine.paper.jam_msg'),
             'paper_error_msg' => admin_trans('ticket_machine.paper.error_msg'),
