@@ -2,19 +2,22 @@
   <div>
     <!-- 工具栏 -->
     <div class="ex-tools">
+      <!-- 左侧标题（不压缩） -->
       <div class="ex-tools-left">
         <span class="ex-page-title">{{ titleMain }}</span>
         <a-divider type="vertical" class="title-divider" />
         <span class="ex-page-sub">{{ titleSub }}</span>
       </div>
+
+      <!-- 右侧面包屑 + 图标（不压缩，不换行） -->
       <div class="ex-tools-right">
-        <a-breadcrumb v-if="breadcrumbs && breadcrumbs.length">
+        <a-breadcrumb v-if="breadcrumbs && breadcrumbs.length" class="ex-breadcrumb">
           <a-breadcrumb-item v-for="(item, i) in breadcrumbs" :key="i">{{ item }}</a-breadcrumb-item>
         </a-breadcrumb>
         <a-divider type="vertical" style="margin: 0 12px;" />
         <a-space :size="6">
-          <a-tooltip :title="labels.search || '查詢'">
-            <a-button shape="circle" size="small" @click="fetchData" :loading="loading">
+          <a-tooltip :title="labels.search || '搜索'">
+            <a-button shape="circle" size="small" :loading="loading" @click="fetchData">
               <template #icon><search-outlined /></template>
             </a-button>
           </a-tooltip>
@@ -29,26 +32,28 @@
 
     <!-- 筛选区 -->
     <div class="ex-filter">
-      <!-- 四列网格：快捷日期 + 日期范围 + 平台 + 分类 -->
+      <!-- 三列网格：[快捷日期 + 日期范围（同组）] / [平台] / [分类] -->
       <div class="filter-grid">
-        <!-- 快捷日期 -->
-        <div class="filter-item">
-          <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate" class="filter-control">
+
+        <!-- 日期组：快捷日期按钮与日期范围并排，共享同一格 -->
+        <div class="filter-item filter-date-group">
+          <a-radio-group
+            v-model:value="quickDate"
+            button-style="solid"
+            @change="onQuickDate"
+            class="quick-date-btns"
+          >
             <a-radio-button value="today">今日</a-radio-button>
             <a-radio-button value="yesterday">昨日</a-radio-button>
             <a-radio-button value="week">本週</a-radio-button>
             <a-radio-button value="month">本月</a-radio-button>
             <a-radio-button value="last_month">上月</a-radio-button>
           </a-radio-group>
-        </div>
-
-        <!-- 日期范围 -->
-        <div class="filter-item">
           <a-range-picker
             v-model:value="dateRange"
             value-format="YYYY-MM-DD"
             :allow-clear="false"
-            class="filter-control"
+            class="date-picker"
             @change="onDateRangeChange"
           />
         </div>
@@ -61,8 +66,8 @@
             :placeholder="labels.platform || '全部平台'"
             class="filter-control"
             allow-clear
-            :max-tag-count="2"
             show-arrow
+            :max-tag-count="2"
           >
             <a-select-option v-for="p in platforms" :key="p.id" :value="p.id">
               {{ p.name }}
@@ -78,8 +83,8 @@
             placeholder="全部分類"
             class="filter-control"
             allow-clear
-            :max-tag-count="2"
             show-arrow
+            :max-tag-count="2"
           >
             <a-select-option v-for="opt in cateOptions" :key="opt.id" :value="opt.id">
               {{ opt.name }}
@@ -91,7 +96,8 @@
       <!-- 操作按钮 -->
       <div class="filter-actions">
         <a-button type="primary" :loading="loading" @click="fetchData">
-          {{ labels.search || '查詢' }}
+          <template #icon><search-outlined /></template>
+          {{ labels.search || '搜索' }}
         </a-button>
         <a-button @click="resetFilter">
           <template #icon><reload-outlined /></template>
@@ -130,32 +136,19 @@
 
 <script>
 const CATE_NAMES = {
-  1:  '實體機台',
-  2:  '電子',
-  3:  '真人視訊',
-  4:  '捕魚',
-  5:  '牌桌',
-  6:  '棋牌',
-  7:  '老虎機',
-  8:  '街機',
-  9:  '體育',
-  10: '彩票',
+  1: '實體機台', 2: '電子', 3: '真人視訊', 4: '捕魚',
+  5: '牌桌', 6: '棋牌', 7: '老虎機', 8: '街機', 9: '體育', 10: '彩票',
 };
-
 const CATE_ORDER = [2, 3, 4, 5, 6, 7, 8, 9, 10, 1];
 
 function getDateRange(type) {
   const today = new Date();
   const fmt = d => d.toISOString().slice(0, 10);
-  if (type === 'today')     { const s = fmt(today); return [s, s]; }
-  if (type === 'yesterday') { const d = new Date(today); d.setDate(d.getDate() - 1); const s = fmt(d); return [s, s]; }
-  if (type === 'week')      { const d = new Date(today); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return [fmt(d), fmt(today)]; }
-  if (type === 'month')     { return [fmt(today).slice(0, 8) + '01', fmt(today)]; }
-  if (type === 'last_month') {
-    const d    = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-    const last = new Date(today.getFullYear(), today.getMonth(), 0);
-    return [fmt(d), fmt(last)];
-  }
+  if (type === 'today')      { const s = fmt(today); return [s, s]; }
+  if (type === 'yesterday')  { const d = new Date(today); d.setDate(d.getDate() - 1); const s = fmt(d); return [s, s]; }
+  if (type === 'week')       { const d = new Date(today); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return [fmt(d), fmt(today)]; }
+  if (type === 'month')      { return [fmt(today).slice(0, 8) + '01', fmt(today)]; }
+  if (type === 'last_month') { const d = new Date(today.getFullYear(), today.getMonth() - 1, 1); const last = new Date(today.getFullYear(), today.getMonth(), 0); return [fmt(d), fmt(last)]; }
   return [fmt(today).slice(0, 8) + '01', fmt(today)];
 }
 
@@ -313,36 +306,52 @@ export default {
   background: #fff;
   padding: 10px 16px;
   display: flex;
+  justify-content: space-between; /* 左右两端对齐 */
   align-items: center;
+  flex-wrap: nowrap;              /* 绝不换行 */
   min-height: 46px;
 }
 
+/* 左侧：标题固定不压缩 */
 .ex-tools-left {
-  flex: 1;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
 }
 
+/* 右侧：面包屑 + 图标固定不压缩，单行显示 */
 .ex-tools-right {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
+  overflow: hidden;
+  max-width: 60%;
+}
+
+/* 面包屑强制不换行 */
+.ex-breadcrumb {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .ex-page-title {
   font-size: 14px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
+  white-space: nowrap;
 }
 
 .title-divider {
   height: 1em;
-  margin: 0 10px;
-  border-color: rgba(0, 0, 0, 0.25);
+  margin: 0 8px;           /* 充足的呼吸感 */
+  border-color: rgba(0, 0, 0, 0.2);
 }
 
 .ex-page-sub {
   font-size: 13px;
   color: rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
 }
 
 /* ===== 筛选区 ===== */
@@ -352,53 +361,56 @@ export default {
   padding: 16px 20px 4px;
 }
 
-/* 四列等宽网格 */
+/* 三列：日期组占 2fr，平台 1fr，分类 1fr */
 .filter-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 10px 16px;
+  align-items: center;
   margin-bottom: 12px;
 }
 
+/* 基础筛选项 */
 .filter-item {
   display: flex;
   align-items: center;
 }
 
-/* 统一控件高度 36px */
+/* 日期组：快捷按钮 + 日期范围并排 */
+.filter-date-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 快捷日期按钮组（高度 32px 对齐） */
+.quick-date-btns :deep(.ant-radio-button-wrapper) {
+  height: 32px;
+  line-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+/* 日期范围选择器撑满剩余空间 */
+.date-picker {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* 平台/分类下拉框撑满 */
 .filter-control {
   width: 100%;
-  height: 36px;
 }
 
-.filter-item :deep(.ant-picker),
+/* 统一 select 高度为 32px */
 .filter-item :deep(.ant-select-selector) {
-  height: 36px !important;
-  min-height: 36px !important;
-}
-
-.filter-item :deep(.ant-picker-input > input),
-.filter-item :deep(.ant-select-selection-search-input) {
-  height: 34px !important;
-  line-height: 34px !important;
+  height: 32px !important;
+  min-height: 32px !important;
 }
 
 .filter-item :deep(.ant-select-selection-placeholder),
 .filter-item :deep(.ant-select-selection-item) {
-  line-height: 34px !important;
-}
-
-/* 快捷日期按钮组与网格行对齐 */
-.filter-item :deep(.ant-radio-group) {
-  display: flex;
-  flex-wrap: nowrap;
-}
-
-.filter-item :deep(.ant-radio-button-wrapper) {
-  height: 36px;
-  line-height: 34px;
-  padding: 0 10px;
-  font-size: 12px;
+  line-height: 30px !important;
 }
 
 /* 按钮区 */
