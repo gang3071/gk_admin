@@ -413,7 +413,7 @@ class StoreMachineController
                         }
 
                         // 更新可编辑字段（wash_point_config已改为使用配置表）
-                        $updateableFields = ['agent_commission', 'channel_commission', 'experience_bet_check_enabled'];
+                        $updateableFields = ['agent_commission', 'channel_commission', 'experience_bet_check_enabled', 'experience_voucher_enabled', 'welfare_voucher_enabled'];
                         $updated = false;
                         foreach ($updateableFields as $field) {
                             if (array_key_exists($field, $data)) {
