@@ -14,5 +14,5 @@ return [
     'reset'          => '重置',
     'cate_name'               => '游戏分类',
     'platform'                => '厂商平台',
-    'player_win_loss_tip'     => '正数：庄家亏（玩家输）；负数：庄家赢（玩家赢）',
+    'player_win_loss_tip'     => '正数：庄家赢（玩家输）；负数：庄家亏（玩家赢）',
 ];
