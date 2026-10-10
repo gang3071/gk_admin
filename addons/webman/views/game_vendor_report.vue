@@ -69,8 +69,9 @@ export default {
 
   data() {
     const today = new Date().toISOString().slice(0, 10);
+    const firstDay = today.slice(0, 8) + '01';
     return {
-      dateRange: [today, today],
+      dateRange: [firstDay, today],
       loading: false,
       rawCategories: [],
     };
@@ -151,7 +152,8 @@ export default {
 
     resetFilter() {
       const today = new Date().toISOString().slice(0, 10);
-      this.dateRange = [today, today];
+      const firstDay = today.slice(0, 8) + '01';
+      this.dateRange = [firstDay, today];
       this.fetchData();
     },
 

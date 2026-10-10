@@ -74,7 +74,6 @@ class ChannelGameVendorReportController
             ->join($gp, "$gp.id", '=', "$pgr.platform_id")
             ->whereNull("$gp.deleted_at")
             ->whereIn("$pgr.type", [PlayGameRecord::TYPE_BET, PlayGameRecord::TYPE_GIFT])
-            ->where("$pgr.settlement_status", '!=', PlayGameRecord::SETTLEMENT_STATUS_CANCELLED)
             ->where("$pgr.department_id", $departmentId);
 
         if ($startDate) {
@@ -88,7 +87,7 @@ class ChannelGameVendorReportController
             ->groupBy("$pgr.platform_id", "$gp.cate_id", "$gp.name")
             ->selectRaw("$pgr.platform_id, $gp.cate_id, $gp.name as platform_name,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.bet ELSE 0 END) as valid_bet,
-                SUM(CASE WHEN $pgr.type=1 THEN $pgr.bet ELSE 0 END) as total_bet,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status!=2 THEN $pgr.bet ELSE 0 END) as total_bet,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.diff ELSE 0 END) as player_win_loss,
                 SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,
                 SUM(CASE WHEN $pgr.type=2 THEN 1 ELSE 0 END) as gift_count")
