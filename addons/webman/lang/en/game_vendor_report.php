@@ -14,5 +14,6 @@ return [
     'reset'          => 'Reset',
     'cate_name'               => 'Game Category',
     'platform'                => 'Vendor Platform',
+    'total_win'               => 'Total Win',
     'player_win_loss_tip'     => 'Positive: house wins (player loses); Negative: house loses (player wins)',
 ];

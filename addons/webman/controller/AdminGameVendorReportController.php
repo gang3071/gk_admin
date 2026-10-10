@@ -65,7 +65,8 @@ class AdminGameVendorReportController
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status!=2 THEN $pgr.bet  ELSE 0 END) as total_bet,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.diff ELSE 0 END) as player_win_loss,
                 SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,
-                SUM(CASE WHEN $pgr.type=2 THEN 1          ELSE 0 END) as gift_count")
+                SUM(CASE WHEN $pgr.type=2 THEN 1          ELSE 0 END) as gift_count,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.win ELSE 0 END) as total_win")
             ->orderBy("$gp.cate_id")
             ->orderBy("$gp.name")
             ->forPage($page, $size)
@@ -119,6 +120,10 @@ class AdminGameVendorReportController
                 ->align('right')->sortable();
 
             $grid->column('gift_count', admin_trans('game_vendor_report.gift_count'))
+                ->align('right')->sortable();
+
+            $grid->column('total_win', admin_trans('game_vendor_report.total_win'))
+                ->display(fn($val) => number_format(floatval($val), 0))
                 ->align('right')->sortable();
 
             $grid->filter(function (Filter $filter) use ($platformOptions) {
