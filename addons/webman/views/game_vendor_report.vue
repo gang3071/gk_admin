@@ -93,33 +93,48 @@ export default {
       const cateMap = {};
       this.rawCategories.forEach(c => { cateMap[c.cate_id] = c; });
 
-      const rows = [];
-      CATE_ORDER.forEach(cateId => {
-        const cate = cateMap[cateId];
-        if (!cate) return;
-        rows.push({
-          key:         `cate_${cateId}`,
-          is_category: true,
-          name:        CATE_NAMES[cateId] || cate.name,
-          valid_bet:       cate.valid_bet,
-          total_bet:       cate.total_bet,
-          player_win_loss: cate.player_win_loss,
-          gift_amount:     cate.gift_amount,
-          gift_count:      cate.gift_count,
-        });
-        (cate.platforms || []).forEach(p => {
-          rows.push({
-            key:         `platform_${p.platform_id}`,
-            is_category: false,
-            name:        p.name,
+      const toRows = (cate) => {
+        const cateId = cate.cate_id;
+        return [
+          {
+            key:             `cate_${cateId}`,
+            is_category:     true,
+            name:            CATE_NAMES[cateId] || cate.name,
+            valid_bet:       cate.valid_bet,
+            total_bet:       cate.total_bet,
+            player_win_loss: cate.player_win_loss,
+            gift_amount:     cate.gift_amount,
+            gift_count:      cate.gift_count,
+          },
+          ...(cate.platforms || []).map(p => ({
+            key:             `platform_${p.platform_id}`,
+            is_category:     false,
+            name:            p.name,
             valid_bet:       p.valid_bet,
             total_bet:       p.total_bet,
             player_win_loss: p.player_win_loss,
             gift_amount:     p.gift_amount,
             gift_count:      p.gift_count,
-          });
-        });
+          })),
+        ];
+      };
+
+      const rows = [];
+      const handled = new Set();
+
+      CATE_ORDER.forEach(cateId => {
+        const cate = cateMap[cateId];
+        if (!cate) return;
+        handled.add(cateId);
+        rows.push(...toRows(cate));
       });
+
+      // 不在预定义排序里的分类（如 cate_id=0）追加到末尾
+      this.rawCategories.forEach(c => {
+        if (handled.has(c.cate_id)) return;
+        rows.push(...toRows(c));
+      });
+
       return rows;
     },
   },
