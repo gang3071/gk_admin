@@ -36,6 +36,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use support\Db;
 use support\Log;
+use support\Redis;
 use support\Response;
 
 /**
@@ -4362,8 +4363,8 @@ class ChannelIndexController
             $qrCode = request()->input('qr_code', '');
             $ticketType = (int) request()->input('ticket_type', 1);
             $playerId = (int) request()->input('player_id', 0);
-            $storeAdminId = (int) request()->input('store_admin_id', 0);
-            $departmentId = (int) request()->input('department_id', 0);
+            $storeAdminId = Admin::id();
+            $departmentId = Admin::user()->department_id;
 
             if (empty($qrCode)) {
                 return json(['code' => 400, 'message' => 'QR码内容不能为空']);
@@ -4383,9 +4384,6 @@ class ChannelIndexController
                     return json(['code' => 400, 'message' => '单次开票金额不能超过200,000']);
                 }
             }
-            if (empty($storeAdminId)) {
-                return json(['code' => 400, 'message' => '店家管理员ID不能为空']);
-            }
             if (empty($departmentId)) {
                 return json(['code' => 400, 'message' => '部门ID不能为空']);
             }
@@ -4397,8 +4395,29 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => '福利券和体验券必须选择关联玩家才能出票']);
             }
 
+            // 对体验券/福利券加分布式锁，防止并发重复领取
+            $lockKey = null;
+            if (in_array($ticketType, [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE]) && $playerId > 0) {
+                $lockKey = "voucher:lock:player:{$playerId}";
+                if (!Redis::set($lockKey, 1, ['NX', 'EX' => 10])) {
+                    return json(['code' => 400, 'message' => '操作繁忙，请稍后重试']);
+                }
+            }
+
+            try {
             // 获取配置
             $voucherConfig = config('voucher');
+
+            // 检查门店劵类活动开关
+            if ($ticketType === TicketRecord::TYPE_EXPERIENCE || $ticketType === TicketRecord::TYPE_WELFARE) {
+                $storeAdminModel = \addons\webman\model\AdminUser::query()->find($storeAdminId);
+                if ($ticketType === TicketRecord::TYPE_EXPERIENCE && $storeAdminModel && !($storeAdminModel->experience_voucher_enabled ?? true)) {
+                    return json(['code' => 400, 'message' => '活動已截止，請關注門店活動公告']);
+                }
+                if ($ticketType === TicketRecord::TYPE_WELFARE && $storeAdminModel && !($storeAdminModel->welfare_voucher_enabled ?? true)) {
+                    return json(['code' => 400, 'message' => '活動已截止，請關注門店活動公告']);
+                }
+            }
 
             // 验证活动是否在有效期内
             if (isset($voucherConfig['activity']['end_time'])) {
@@ -4446,18 +4465,6 @@ class ChannelIndexController
                     ->where('created_at', '>=', $todayStart)
                     ->where('created_at', '<', $todayEnd);
                 $todayCount = $todayQuery->count();
-
-                // 调试日志
-                \support\Log::info('体验券每日领取检查', [
-                    'player_id' => $playerId,
-                    'ticket_type' => TicketRecord::TYPE_EXPERIENCE,
-                    'today_start' => $todayStart,
-                    'today_end' => $todayEnd,
-                    'daily_limit' => $dailyLimit,
-                    'today_count' => $todayCount,
-                    'sql' => $todayQuery->toSql(),
-                    'bindings' => $todayQuery->getBindings(),
-                ]);
 
                 if ($todayCount >= $dailyLimit) {
                     return json([
@@ -4729,6 +4736,11 @@ class ChannelIndexController
                     'qr_code_no' => $qrCodeNo,
                 ],
             ]);
+            } finally {
+                if ($lockKey) {
+                    Redis::del($lockKey);
+                }
+            }
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
         }

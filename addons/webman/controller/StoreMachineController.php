@@ -196,6 +196,14 @@ class StoreMachineController
                 ->switch()
                 ->width(120)->align('center');
 
+            $grid->column('experience_voucher_enabled', admin_trans('store_machine.fields.experience_voucher_enabled'))
+                ->switch()
+                ->width(120)->align('center');
+
+            $grid->column('welfare_voucher_enabled', admin_trans('store_machine.fields.welfare_voucher_enabled'))
+                ->switch()
+                ->width(120)->align('center');
+
             $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
                 return match ($value) {
                     0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),

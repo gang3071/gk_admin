@@ -18,6 +18,8 @@ return [
         'channel_commission' => '渠道抽成',
         'wash_point_config' => '洗分配置',
         'experience_bet_check_enabled' => '体验券打码判定',
+        'experience_voucher_enabled' => '体验券开关',
+        'welfare_voucher_enabled' => '福利券开关',
         'status' => '状态',
         'created_at' => '创建时间',
         'parent_agent' => '上级代理',
