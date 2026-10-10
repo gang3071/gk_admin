@@ -1,47 +1,48 @@
 <template>
-  <div style="padding: 16px;">
-    <!-- 查询条件 -->
-    <a-card size="small" style="margin-bottom: 16px;">
-      <a-space>
+  <div>
+    <!-- 筛选栏 -->
+    <div class="ex-filter-bar">
+      <a-space wrap>
         <a-range-picker
           v-model:value="dateRange"
           value-format="YYYY-MM-DD"
           :allow-clear="false"
-          style="width: 230px;"
+          style="width: 240px;"
         />
         <a-button type="primary" :loading="loading" @click="fetchData">
           {{ labels.search || '查詢' }}
         </a-button>
         <a-button @click="resetFilter">{{ labels.reset || '重置' }}</a-button>
       </a-space>
-    </a-card>
+    </div>
 
     <!-- 数据表格 -->
-    <a-table
-      :columns="columns"
-      :data-source="flatRows"
-      :loading="loading"
-      :pagination="false"
-      row-key="key"
-      :custom-row="rowAttrs"
-      size="middle"
-      bordered
-    >
-      <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'name'">
-          <strong v-if="record.is_category">{{ record.name }}</strong>
-          <span v-else style="padding-left: 20px; color: #555;">{{ record.name }}</span>
+    <div class="ex-table-wrap">
+      <a-table
+        :columns="columns"
+        :data-source="flatRows"
+        :loading="loading"
+        :pagination="false"
+        row-key="key"
+        :custom-row="rowAttrs"
+        size="middle"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.dataIndex === 'name'">
+            <strong v-if="record.is_category">{{ record.name }}</strong>
+            <span v-else style="padding-left: 20px; color: #555;">{{ record.name }}</span>
+          </template>
+          <template v-else-if="column.dataIndex === 'player_win_loss'">
+            <span :style="winLossStyle(record.player_win_loss)">
+              {{ formatNum(record.player_win_loss) }}
+            </span>
+          </template>
+          <template v-else>
+            {{ formatNum(record[column.dataIndex]) }}
+          </template>
         </template>
-        <template v-else-if="column.dataIndex === 'player_win_loss'">
-          <span :style="winLossStyle(record.player_win_loss)">
-            {{ formatNum(record.player_win_loss) }}
-          </span>
-        </template>
-        <template v-else>
-          {{ formatNum(record[column.dataIndex]) }}
-        </template>
-      </template>
-    </a-table>
+      </a-table>
+    </div>
   </div>
 </template>
 
@@ -80,12 +81,12 @@ export default {
   computed: {
     columns() {
       return [
-        { title: this.labels.vendor_name || '廠商名稱',    dataIndex: 'name',            key: 'name',            width: 200 },
-        { title: this.labels.valid_bet    || '有效投注',    dataIndex: 'valid_bet',       key: 'valid_bet',       align: 'right', width: 140 },
-        { title: this.labels.total_bet    || '投注金額',    dataIndex: 'total_bet',       key: 'total_bet',       align: 'right', width: 140 },
-        { title: this.labels.player_win_loss || '玩家輸贏', dataIndex: 'player_win_loss', key: 'player_win_loss', align: 'right', width: 140 },
-        { title: this.labels.gift_amount  || '打賞總額',    dataIndex: 'gift_amount',     key: 'gift_amount',     align: 'right', width: 130 },
-        { title: this.labels.gift_count   || '打賞筆數',    dataIndex: 'gift_count',      key: 'gift_count',      align: 'right', width: 100 },
+        { title: this.labels.vendor_name    || '廠商名稱', dataIndex: 'name',            key: 'name',            width: 200 },
+        { title: this.labels.valid_bet      || '有效投注', dataIndex: 'valid_bet',       key: 'valid_bet',       align: 'right', width: 140 },
+        { title: this.labels.total_bet      || '投注金額', dataIndex: 'total_bet',       key: 'total_bet',       align: 'right', width: 140 },
+        { title: this.labels.player_win_loss|| '玩家輸贏', dataIndex: 'player_win_loss', key: 'player_win_loss', align: 'right', width: 140 },
+        { title: this.labels.gift_amount    || '打賞總額', dataIndex: 'gift_amount',     key: 'gift_amount',     align: 'right', width: 130 },
+        { title: this.labels.gift_count     || '打賞筆數', dataIndex: 'gift_count',      key: 'gift_count',      align: 'right', width: 100 },
       ];
     },
 
@@ -182,7 +183,7 @@ export default {
 
     rowAttrs(record) {
       if (record.is_category) {
-        return { style: { background: '#f0f5ff', fontWeight: 'bold' } };
+        return { style: { background: '#fafafa', fontWeight: 'bold' } };
       }
       return {};
     },
@@ -201,3 +202,17 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.ex-filter-bar {
+  background: #fff;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 0;
+}
+
+.ex-table-wrap {
+  background: #fff;
+  padding: 16px 24px;
+}
+</style>
