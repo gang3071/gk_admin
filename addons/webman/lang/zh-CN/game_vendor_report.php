@@ -15,5 +15,5 @@ return [
     'cate_name'               => '游戏分类',
     'platform'                => '厂商平台',
     'total_win'               => '总赢分',
-    'player_win_loss_tip'     => '正数：庄家亏（玩家赢）；负数：庄家赢（玩家输）',
+    'player_win_loss_tip'     => '正数：庄家赢（玩家输）；负数：庄家亏（玩家赢）',
 ];

@@ -109,8 +109,8 @@ class AdminGameVendorReportController
             $grid->column('player_win_loss', admin_trans('game_vendor_report.player_win_loss'))
                 ->header($winLossLabel)
                 ->display(function ($val) {
-                    $num = floatval($val);
-                    $style = $num > 0 ? ['color' => 'red'] : ($num < 0 ? ['color' => 'green'] : []);
+                    $num = floatval($val) * -1;
+                    $style = $num > 0 ? ['color' => 'green'] : ($num < 0 ? ['color' => 'red'] : []);
                     return Html::create(number_format($num, 0))->style($style);
                 })
                 ->align('right')->sortable();

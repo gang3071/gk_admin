@@ -15,5 +15,5 @@ return [
     'cate_name'               => '遊戲分類',
     'platform'                => '廠商平台',
     'total_win'               => '總贏分',
-    'player_win_loss_tip'     => '正數：莊家虧（玩家贏）；負數：莊家贏（玩家輸）',
+    'player_win_loss_tip'     => '正數：莊家贏（玩家輸）；負數：莊家虧（玩家贏）',
 ];
