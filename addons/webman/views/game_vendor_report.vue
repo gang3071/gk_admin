@@ -1,13 +1,30 @@
 <template>
   <div>
-    <!-- 工具栏（对齐 ExAdmin .tools） -->
+    <!-- 工具栏 -->
     <div class="ex-tools">
       <div class="ex-tools-left">
-        <!-- 页面标题 -->
         <span class="ex-page-title">{{ page_title }}</span>
+      </div>
+      <div class="ex-tools-right">
+        <a-breadcrumb v-if="breadcrumbs && breadcrumbs.length">
+          <a-breadcrumb-item v-for="(item, i) in breadcrumbs" :key="i">{{ item }}</a-breadcrumb-item>
+        </a-breadcrumb>
+        <a-divider type="vertical" style="margin: 0 12px;" />
+        <a-tooltip :title="labels.search || '查詢'">
+          <search-outlined class="toolbar-icon" @click="fetchData" />
+        </a-tooltip>
+        <a-tooltip :title="labels.reset || '重置'" style="margin-left: 16px;">
+          <reload-outlined class="toolbar-icon" @click="resetFilter" />
+        </a-tooltip>
+      </div>
+    </div>
 
-        <!-- 快捷日期 -->
-        <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate" style="margin-left: 12px;">
+    <!-- 筛选区 -->
+    <div class="ex-filter">
+      <!-- 快捷日期（移入搜索区） -->
+      <div class="filter-quick-row">
+        <span class="filter-quick-label">快捷日期</span>
+        <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate">
           <a-radio-button value="today">今日</a-radio-button>
           <a-radio-button value="yesterday">昨日</a-radio-button>
           <a-radio-button value="week">本週</a-radio-button>
@@ -16,33 +33,26 @@
         </a-radio-group>
       </div>
 
-      <!-- 面包屑 -->
-      <div class="ex-tools-right" v-if="breadcrumbs && breadcrumbs.length">
-        <a-breadcrumb>
-          <a-breadcrumb-item v-for="(item, i) in breadcrumbs" :key="i">{{ item }}</a-breadcrumb-item>
-        </a-breadcrumb>
-      </div>
-    </div>
-
-    <!-- 筛选区（对齐 ExAdmin .filter） -->
-    <div class="ex-filter">
-      <a-form layout="inline">
-        <a-form-item>
+      <!-- 多列网格表单 -->
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label class="filter-label">{{ labels.start_date || '開始日期' }} ～ {{ labels.end_date || '結束日期' }}</label>
           <a-range-picker
             v-model:value="dateRange"
             value-format="YYYY-MM-DD"
             :allow-clear="false"
-            style="width: 240px;"
+            class="filter-control"
             @change="onDateRangeChange"
           />
-        </a-form-item>
+        </div>
 
-        <a-form-item>
+        <div class="filter-item">
+          <label class="filter-label">廠商平台</label>
           <a-select
             v-model:value="selectedPlatformIds"
             mode="multiple"
             :placeholder="labels.platform || '全部平台'"
-            style="min-width: 200px; max-width: 360px;"
+            class="filter-control"
             allow-clear
             :max-tag-count="2"
           >
@@ -50,18 +60,36 @@
               {{ p.name }}
             </a-select-option>
           </a-select>
-        </a-form-item>
+        </div>
 
-        <a-form-item>
-          <a-button type="primary" :loading="loading" @click="fetchData">
-            {{ labels.search || '查詢' }}
-          </a-button>
-        </a-form-item>
+        <div class="filter-item">
+          <label class="filter-label">遊戲分類</label>
+          <a-select
+            v-model:value="selectedCateIds"
+            mode="multiple"
+            placeholder="全部分類"
+            class="filter-control"
+            allow-clear
+            :max-tag-count="2"
+          >
+            <a-select-option v-for="opt in cateOptions" :key="opt.id" :value="opt.id">
+              {{ opt.name }}
+            </a-select-option>
+          </a-select>
+        </div>
+      </div>
 
-        <a-form-item>
-          <a-button @click="resetFilter">{{ labels.reset || '重置' }}</a-button>
-        </a-form-item>
-      </a-form>
+      <!-- 操作按钮（移至表单下方，带图标） -->
+      <div class="filter-actions">
+        <a-button type="primary" :loading="loading" @click="fetchData">
+          <template #icon><search-outlined /></template>
+          {{ labels.search || '查詢' }}
+        </a-button>
+        <a-button @click="resetFilter">
+          <template #icon><reload-outlined /></template>
+          {{ labels.reset || '重置' }}
+        </a-button>
+      </div>
     </div>
 
     <!-- 数据表格 -->
@@ -113,24 +141,17 @@ function getDateRange(type) {
   const fmt = d => d.toISOString().slice(0, 10);
 
   if (type === 'today') {
-    const s = fmt(today);
-    return [s, s];
+    const s = fmt(today); return [s, s];
   }
   if (type === 'yesterday') {
-    const d = new Date(today);
-    d.setDate(d.getDate() - 1);
-    const s = fmt(d);
-    return [s, s];
+    const d = new Date(today); d.setDate(d.getDate() - 1); const s = fmt(d); return [s, s];
   }
   if (type === 'week') {
-    const d = new Date(today);
-    const day = d.getDay() || 7;
-    d.setDate(d.getDate() - day + 1);
+    const d = new Date(today); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1);
     return [fmt(d), fmt(today)];
   }
   if (type === 'month') {
-    const s = fmt(today).slice(0, 8) + '01';
-    return [s, fmt(today)];
+    return [fmt(today).slice(0, 8) + '01', fmt(today)];
   }
   if (type === 'last_month') {
     const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -154,12 +175,17 @@ export default {
       dateRange:           getDateRange('month'),
       quickDate:           'month',
       selectedPlatformIds: [],
+      selectedCateIds:     [],
       loading:             false,
       rawPlatforms:        [],
     };
   },
 
   computed: {
+    cateOptions() {
+      return CATE_ORDER.map(id => ({ id, name: CATE_NAMES[id] }));
+    },
+
     columns() {
       return [
         { title: this.labels.vendor_name     || '廠商名稱', dataIndex: 'name',            key: 'name',            width: 200 },
@@ -172,11 +198,19 @@ export default {
     },
 
     filteredPlatforms() {
-      if (!this.selectedPlatformIds || !this.selectedPlatformIds.length) {
-        return this.rawPlatforms;
+      let result = this.rawPlatforms;
+
+      if (this.selectedPlatformIds.length) {
+        const ids = new Set(this.selectedPlatformIds);
+        result = result.filter(p => ids.has(p.platform_id));
       }
-      const ids = new Set(this.selectedPlatformIds);
-      return this.rawPlatforms.filter(p => ids.has(p.platform_id));
+
+      if (this.selectedCateIds.length) {
+        const cateIds = new Set(this.selectedCateIds);
+        result = result.filter(p => cateIds.has(p.cate_id));
+      }
+
+      return result;
     },
 
     flatRows() {
@@ -276,6 +310,7 @@ export default {
       this.quickDate           = 'month';
       this.dateRange           = getDateRange('month');
       this.selectedPlatformIds = [];
+      this.selectedCateIds     = [];
       this.fetchData();
     },
 
@@ -302,47 +337,96 @@ export default {
 </script>
 
 <style scoped>
-/* 工具栏 - 对齐 ExAdmin .tools */
+/* ===== 工具栏 ===== */
 .ex-tools {
   background: #fff;
-  padding-left: 10px;
-  padding-bottom: 10px;
-  padding-top: 10px;
+  padding: 10px 16px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  min-height: 46px;
 }
 
 .ex-tools-left {
   flex: 1;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
 }
 
-/* 对齐 ExAdmin .tools .right */
 .ex-tools-right {
   display: flex;
-  justify-content: flex-end;
-  margin: 0 15px;
+  align-items: center;
+  margin: 0 4px;
 }
 
-/* 对齐 ExAdmin Grid 页面的页面标题样式 */
 .ex-page-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: rgba(0, 0, 0, 0.85);
-  margin-right: 4px;
 }
 
-/* 筛选区 - 对齐 ExAdmin .filter */
+.toolbar-icon {
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.toolbar-icon:hover {
+  color: var(--ant-primary-color, #1890ff);
+}
+
+/* ===== 筛选区 ===== */
 .ex-filter {
   border-top: 1px solid #ededed;
   background: #fff;
-  padding: 20px 20px 0;
+  padding: 24px 24px 8px;
 }
 
-.ex-filter :deep(.ant-form-inline .ant-form-item) {
+/* 快捷日期行 */
+.filter-quick-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.filter-quick-label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  white-space: nowrap;
+  min-width: 56px;
+}
+
+/* 多列网格 */
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px 24px;
+  margin-bottom: 20px;
+}
+
+/* 单个筛选项 */
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: rgba(0, 0, 0, 0.65);
+  font-weight: 500;
+}
+
+.filter-control {
+  width: 100%;
+}
+
+/* 按钮区 */
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 24px;
 }
 </style>
