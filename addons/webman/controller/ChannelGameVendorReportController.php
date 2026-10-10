@@ -3,9 +3,9 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
-use addons\webman\model\GameType;
 use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\support\Request;
@@ -52,9 +52,6 @@ class ChannelGameVendorReportController
             if (!empty($exAdminFilter['platform_id'])) {
                 $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
             }
-            if (!empty($exAdminFilter['cate_id'])) {
-                $query->where("$gp.cate_id", $exAdminFilter['cate_id']);
-            }
         }
 
         $total = (clone $query)
@@ -76,10 +73,9 @@ class ChannelGameVendorReportController
             ->get()
             ->toArray();
 
-        $cateNames = $this->cateNames();
         $platformOptions = $this->platformOptions($platformModel);
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $cateNames, $platformOptions) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions) {
             $grid->title(admin_trans('game_vendor_report.title'));
             $grid->bordered(true);
             $grid->autoHeight();
@@ -88,9 +84,10 @@ class ChannelGameVendorReportController
             $grid->hideSelection();
             $grid->expandFilter();
 
-            $grid->column('cate_id', admin_trans('game_vendor_report.cate_name'))
-                ->display(fn($val) => $cateNames[$val] ?? $val)
-                ->align('center');
+            $grid->actions(function (Actions $action) {
+                $action->hideDel();
+                $action->hideEdit();
+            });
 
             $grid->column('platform_name', admin_trans('game_vendor_report.vendor_name'))
                 ->align('center');
@@ -118,7 +115,7 @@ class ChannelGameVendorReportController
             $grid->column('gift_count', admin_trans('game_vendor_report.gift_count'))
                 ->align('right')->sortable();
 
-            $grid->filter(function (Filter $filter) use ($cateNames, $platformOptions) {
+            $grid->filter(function (Filter $filter) use ($platformOptions) {
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
                     ->showSearch()
@@ -144,34 +141,12 @@ class ChannelGameVendorReportController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options($platformOptions);
-                $filter->eq()->select('cate_id')
-                    ->placeholder(admin_trans('game_vendor_report.cate_name'))
-                    ->showSearch()
-                    ->style(['width' => '160px'])
-                    ->dropdownMatchSelectWidth()
-                    ->options($cateNames);
             });
 
             $grid->attr('is_mongo', true);
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
         });
-    }
-
-    protected function cateNames(): array
-    {
-        return [
-            GameType::CATE_PHYSICAL_MACHINE => '實體機台',
-            GameType::CATE_COMPUTER_GAME    => '電子',
-            GameType::CATE_LIVE_VIDEO       => '真人視訊',
-            GameType::CATE_FISH             => '捕魚',
-            GameType::CATE_TABLE            => '牌桌',
-            GameType::CATE_P2P              => '棋牌',
-            GameType::CATE_SLO              => '老虎機',
-            GameType::CATE_ARCADE           => '街機',
-            GameType::CATE_SPORT            => '體育',
-            GameType::CATE_LOTTERY          => '彩票',
-        ];
     }
 
     protected function platformOptions(string $platformModel): array
