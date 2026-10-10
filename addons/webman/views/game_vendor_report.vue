@@ -3,13 +3,24 @@
     <!-- 工具栏（对齐 ExAdmin .tools） -->
     <div class="ex-tools">
       <div class="ex-tools-left">
-        <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate">
+        <!-- 页面标题 -->
+        <span class="ex-page-title">{{ page_title }}</span>
+
+        <!-- 快捷日期 -->
+        <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate" style="margin-left: 12px;">
           <a-radio-button value="today">今日</a-radio-button>
           <a-radio-button value="yesterday">昨日</a-radio-button>
           <a-radio-button value="week">本週</a-radio-button>
           <a-radio-button value="month">本月</a-radio-button>
           <a-radio-button value="last_month">上月</a-radio-button>
         </a-radio-group>
+      </div>
+
+      <!-- 面包屑 -->
+      <div class="ex-tools-right" v-if="breadcrumbs && breadcrumbs.length">
+        <a-breadcrumb>
+          <a-breadcrumb-item v-for="(item, i) in breadcrumbs" :key="i">{{ item }}</a-breadcrumb-item>
+        </a-breadcrumb>
       </div>
     </div>
 
@@ -131,9 +142,11 @@ function getDateRange(type) {
 
 export default {
   props: {
-    api_url:   { type: String, required: true },
-    labels:    { type: Object, default: () => ({}) },
-    platforms: { type: Array,  default: () => [] },
+    api_url:     { type: String, required: true },
+    labels:      { type: Object, default: () => ({}) },
+    platforms:   { type: Array,  default: () => [] },
+    page_title:  { type: String, default: '' },
+    breadcrumbs: { type: Array,  default: () => [] },
   },
 
   data() {
@@ -304,6 +317,22 @@ export default {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+/* 对齐 ExAdmin .tools .right */
+.ex-tools-right {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 15px;
+}
+
+/* 对齐 ExAdmin Grid 页面的页面标题样式 */
+.ex-page-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(0, 0, 0, 0.85);
+  margin-right: 4px;
 }
 
 /* 筛选区 - 对齐 ExAdmin .filter */

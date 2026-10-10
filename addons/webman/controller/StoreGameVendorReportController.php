@@ -43,9 +43,15 @@ class StoreGameVendorReportController
             ->values()->all();
 
         return admin_view(plugin()->webman->getPath() . '/views/game_vendor_report.vue')->attrs([
-            'api_url'   => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/vendorData',
-            'labels'    => $labels,
-            'platforms' => $platforms,
+            'api_url'     => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/vendorData',
+            'labels'      => $labels,
+            'platforms'   => $platforms,
+            'page_title'  => admin_trans('game_vendor_report.title') . ' 列表',
+            'breadcrumbs' => [
+                admin_trans('menu.titles.store_manage'),
+                admin_trans('menu.titles.store_game_manage'),
+                admin_trans('menu.titles.game_vendor_report'),
+            ],
         ]);
     }
 
