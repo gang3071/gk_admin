@@ -12,6 +12,7 @@ return [
     'end_date'       => 'End Date',
     'search'         => 'Search',
     'reset'          => 'Reset',
-    'cate_name'      => 'Game Category',
-    'platform'       => 'Vendor Platform',
+    'cate_name'               => 'Game Category',
+    'platform'                => 'Vendor Platform',
+    'player_win_loss_tip'     => 'Positive: player wins (house loses); Negative: player loses (house wins)',
 ];

@@ -12,6 +12,7 @@ return [
     'end_date'       => '结束日期',
     'search'         => '查询',
     'reset'          => '重置',
-    'cate_name'      => '游戏分类',
-    'platform'       => '厂商平台',
+    'cate_name'               => '游戏分类',
+    'platform'                => '厂商平台',
+    'player_win_loss_tip'     => '正数：玩家赢（庄家亏）；负数：玩家输（庄家赢）',
 ];

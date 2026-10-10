@@ -12,6 +12,7 @@ return [
     'end_date'       => '終了日',
     'search'         => '検索',
     'reset'          => 'リセット',
-    'cate_name'      => 'ゲームカテゴリ',
-    'platform'       => 'ベンダープラットフォーム',
+    'cate_name'               => 'ゲームカテゴリ',
+    'platform'                => 'ベンダープラットフォーム',
+    'player_win_loss_tip'     => 'プラス：プレイヤー勝ち；マイナス：プレイヤー負け',
 ];

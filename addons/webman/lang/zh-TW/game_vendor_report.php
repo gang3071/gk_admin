@@ -12,6 +12,7 @@ return [
     'end_date'       => '結束日期',
     'search'         => '查詢',
     'reset'          => '重置',
-    'cate_name'      => '遊戲分類',
-    'platform'       => '廠商平台',
+    'cate_name'               => '遊戲分類',
+    'platform'                => '廠商平台',
+    'player_win_loss_tip'     => '正數：玩家贏（莊家虧）；負數：玩家輸（莊家贏）',
 ];

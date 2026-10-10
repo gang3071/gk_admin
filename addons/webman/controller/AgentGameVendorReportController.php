@@ -7,9 +7,11 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\Player;
 use addons\webman\model\PlayGameRecord;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\ToolTip;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -106,7 +108,14 @@ class AgentGameVendorReportController
                 ->display(fn($val) => number_format(floatval($val), 0))
                 ->align('right')->sortable();
 
+            $winLossLabel = Html::create()->content([
+                admin_trans('game_vendor_report.player_win_loss') . ' ',
+                ToolTip::create(Icon::create('QuestionCircleOutlined'))
+                    ->title(admin_trans('game_vendor_report.player_win_loss_tip'))
+                    ->placement('top'),
+            ]);
             $grid->column('player_win_loss', admin_trans('game_vendor_report.player_win_loss'))
+                ->header($winLossLabel)
                 ->display(function ($val) {
                     $num = floatval($val);
                     $style = $num > 0 ? ['color' => 'green'] : ($num < 0 ? ['color' => 'red'] : []);
