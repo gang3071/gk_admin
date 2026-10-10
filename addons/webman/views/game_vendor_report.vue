@@ -73,7 +73,7 @@ export default {
     return {
       dateRange: [firstDay, today],
       loading: false,
-      rawCategories: [],
+      rawPlatforms: [],
     };
   },
 
@@ -90,51 +90,59 @@ export default {
     },
 
     flatRows() {
-      const cateMap = {};
-      this.rawCategories.forEach(c => { cateMap[c.cate_id] = c; });
+      const groups = {};
+      (this.rawPlatforms || []).forEach(p => {
+        const id = p.cate_id;
+        if (!groups[id]) {
+          groups[id] = {
+            cate_id: id,
+            valid_bet: 0, total_bet: 0, player_win_loss: 0,
+            gift_amount: 0, gift_count: 0,
+            platforms: [],
+          };
+        }
+        const g = groups[id];
+        g.valid_bet       += p.valid_bet       || 0;
+        g.total_bet       += p.total_bet       || 0;
+        g.player_win_loss += p.player_win_loss || 0;
+        g.gift_amount     += p.gift_amount     || 0;
+        g.gift_count      += p.gift_count      || 0;
+        g.platforms.push(p);
+      });
 
-      const toRows = (cate) => {
-        const cateId = cate.cate_id;
-        return [
-          {
-            key:             `cate_${cateId}`,
-            is_category:     true,
-            name:            CATE_NAMES[cateId] || cate.name,
-            valid_bet:       cate.valid_bet,
-            total_bet:       cate.total_bet,
-            player_win_loss: cate.player_win_loss,
-            gift_amount:     cate.gift_amount,
-            gift_count:      cate.gift_count,
-          },
-          ...(cate.platforms || []).map(p => ({
-            key:             `platform_${p.platform_id}`,
-            is_category:     false,
-            name:            p.name,
-            valid_bet:       p.valid_bet,
-            total_bet:       p.total_bet,
-            player_win_loss: p.player_win_loss,
-            gift_amount:     p.gift_amount,
-            gift_count:      p.gift_count,
-          })),
-        ];
-      };
+      const toRows = (g) => [
+        {
+          key:             `cate_${g.cate_id}`,
+          is_category:     true,
+          name:            CATE_NAMES[g.cate_id] || '其他',
+          valid_bet:       g.valid_bet,
+          total_bet:       g.total_bet,
+          player_win_loss: g.player_win_loss,
+          gift_amount:     g.gift_amount,
+          gift_count:      g.gift_count,
+        },
+        ...g.platforms.map(p => ({
+          key:             `platform_${p.platform_id}`,
+          is_category:     false,
+          name:            p.name,
+          valid_bet:       p.valid_bet,
+          total_bet:       p.total_bet,
+          player_win_loss: p.player_win_loss,
+          gift_amount:     p.gift_amount,
+          gift_count:      p.gift_count,
+        })),
+      ];
 
       const rows = [];
       const handled = new Set();
-
-      CATE_ORDER.forEach(cateId => {
-        const cate = cateMap[cateId];
-        if (!cate) return;
-        handled.add(cateId);
-        rows.push(...toRows(cate));
+      CATE_ORDER.forEach(id => {
+        if (!groups[id]) return;
+        handled.add(id);
+        rows.push(...toRows(groups[id]));
       });
-
-      // 不在预定义排序里的分类（如 cate_id=0）追加到末尾
-      this.rawCategories.forEach(c => {
-        if (handled.has(c.cate_id)) return;
-        rows.push(...toRows(c));
+      Object.values(groups).forEach(g => {
+        if (!handled.has(g.cate_id)) rows.push(...toRows(g));
       });
-
       return rows;
     },
   },
@@ -154,7 +162,7 @@ export default {
           params: { start_date: startDate || '', end_date: endDate || '' },
         });
         if (res.code === 200) {
-          this.rawCategories = res.data || [];
+          this.rawPlatforms = res.data || [];
         } else {
           this.$message.error(res.message || '查詢失敗');
         }
