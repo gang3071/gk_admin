@@ -2,27 +2,25 @@
   <div>
     <!-- 工具栏 -->
     <div class="ex-tools">
-      <!-- 左侧标题（不压缩） -->
       <div class="ex-tools-left">
         <span class="ex-page-title">{{ titleMain }}</span>
         <a-divider type="vertical" class="title-divider" />
         <span class="ex-page-sub">{{ titleSub }}</span>
       </div>
 
-      <!-- 右侧面包屑 + 图标（不压缩，不换行） -->
       <div class="ex-tools-right">
         <a-breadcrumb v-if="breadcrumbs && breadcrumbs.length" class="ex-breadcrumb">
           <a-breadcrumb-item v-for="(item, i) in breadcrumbs" :key="i">{{ item }}</a-breadcrumb-item>
         </a-breadcrumb>
-        <a-divider type="vertical" style="margin: 0 12px;" />
-        <a-space :size="6">
-          <a-tooltip :title="labels.search || '搜索'">
-            <a-button shape="circle" size="small" :loading="loading" @click="fetchData">
+        <a-divider type="vertical" style="margin: 0 14px;" />
+        <a-space :size="8">
+          <a-tooltip title="搜索">
+            <a-button class="icon-btn" shape="circle" size="small" :loading="loading" @click="fetchData">
               <template #icon><search-outlined /></template>
             </a-button>
           </a-tooltip>
-          <a-tooltip :title="labels.reset || '重置'">
-            <a-button shape="circle" size="small" @click="resetFilter">
+          <a-tooltip title="重置">
+            <a-button class="icon-btn" shape="circle" size="small" @click="resetFilter">
               <template #icon><reload-outlined /></template>
             </a-button>
           </a-tooltip>
@@ -32,10 +30,10 @@
 
     <!-- 筛选区 -->
     <div class="ex-filter">
-      <!-- 三列网格：[快捷日期 + 日期范围（同组）] / [平台] / [分类] -->
+      <!-- 三列网格：[快捷日期（上）+ 日期范围（下）] / [平台] / [分类] -->
       <div class="filter-grid">
 
-        <!-- 日期组：快捷日期按钮与日期范围并排，共享同一格 -->
+        <!-- 日期组：快捷按钮在上，日期范围在下，严格左对齐 -->
         <div class="filter-item filter-date-group">
           <a-radio-group
             v-model:value="quickDate"
@@ -97,7 +95,7 @@
       <div class="filter-actions">
         <a-button type="primary" :loading="loading" @click="fetchData">
           <template #icon><search-outlined /></template>
-          {{ labels.search || '搜索' }}
+          搜索
         </a-button>
         <a-button @click="resetFilter">
           <template #icon><reload-outlined /></template>
@@ -148,7 +146,11 @@ function getDateRange(type) {
   if (type === 'yesterday')  { const d = new Date(today); d.setDate(d.getDate() - 1); const s = fmt(d); return [s, s]; }
   if (type === 'week')       { const d = new Date(today); const day = d.getDay() || 7; d.setDate(d.getDate() - day + 1); return [fmt(d), fmt(today)]; }
   if (type === 'month')      { return [fmt(today).slice(0, 8) + '01', fmt(today)]; }
-  if (type === 'last_month') { const d = new Date(today.getFullYear(), today.getMonth() - 1, 1); const last = new Date(today.getFullYear(), today.getMonth(), 0); return [fmt(d), fmt(last)]; }
+  if (type === 'last_month') {
+    const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const last = new Date(today.getFullYear(), today.getMonth(), 0);
+    return [fmt(d), fmt(last)];
+  }
   return [fmt(today).slice(0, 8) + '01', fmt(today)];
 }
 
@@ -306,20 +308,18 @@ export default {
   background: #fff;
   padding: 10px 16px;
   display: flex;
-  justify-content: space-between; /* 左右两端对齐 */
+  justify-content: space-between;
   align-items: center;
-  flex-wrap: nowrap;              /* 绝不换行 */
+  flex-wrap: nowrap;
   min-height: 46px;
 }
 
-/* 左侧：标题固定不压缩 */
 .ex-tools-left {
   flex-shrink: 0;
   display: flex;
   align-items: center;
 }
 
-/* 右侧：面包屑 + 图标固定不压缩，单行显示 */
 .ex-tools-right {
   flex-shrink: 0;
   display: flex;
@@ -328,7 +328,7 @@ export default {
   max-width: 60%;
 }
 
-/* 面包屑强制不换行 */
+/* 面包屑强制单行，超出省略 */
 .ex-breadcrumb {
   white-space: nowrap;
   overflow: hidden;
@@ -344,7 +344,7 @@ export default {
 
 .title-divider {
   height: 1em;
-  margin: 0 8px;           /* 充足的呼吸感 */
+  margin: 0 8px;
   border-color: rgba(0, 0, 0, 0.2);
 }
 
@@ -354,6 +354,20 @@ export default {
   white-space: nowrap;
 }
 
+/* 圆形图标按钮：浅灰底色，无明显边框 */
+.icon-btn {
+  background-color: #f5f5f5 !important;
+  border-color: #f5f5f5 !important;
+  color: rgba(0, 0, 0, 0.55) !important;
+  box-shadow: none !important;
+}
+
+.icon-btn:hover {
+  background-color: #e8e8e8 !important;
+  border-color: #e8e8e8 !important;
+  color: rgba(0, 0, 0, 0.85) !important;
+}
+
 /* ===== 筛选区 ===== */
 .ex-filter {
   border-top: 1px solid #ededed;
@@ -361,48 +375,47 @@ export default {
   padding: 16px 20px 4px;
 }
 
-/* 三列：日期组占 2fr，平台 1fr，分类 1fr */
+/* 三列网格：日期组 2fr，平台 1fr，分类 1fr */
 .filter-grid {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr;
-  gap: 10px 16px;
-  align-items: center;
+  gap: 10px 16px;    /* 列间距 16px，行间距 10px */
+  align-items: start; /* 顶部对齐，使日期组不拉伸相邻列 */
   margin-bottom: 12px;
 }
 
-/* 基础筛选项 */
+/* 通用筛选项 */
 .filter-item {
   display: flex;
   align-items: center;
 }
 
-/* 日期组：快捷按钮 + 日期范围并排 */
+/* 日期组：快捷按钮（上）+ 日期范围（下），垂直堆叠，严格左对齐 */
 .filter-date-group {
-  display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: 8px;
 }
 
-/* 快捷日期按钮组（高度 32px 对齐） */
+/* 快捷日期按钮组 */
 .quick-date-btns :deep(.ant-radio-button-wrapper) {
   height: 32px;
   line-height: 30px;
-  padding: 0 10px;
+  padding: 0 11px;
   font-size: 12px;
 }
 
-/* 日期范围选择器撑满剩余空间 */
+/* 日期范围：撑满列宽，与上方按钮组左边对齐 */
 .date-picker {
-  flex: 1;
-  min-width: 200px;
+  width: 100%;
 }
 
-/* 平台/分类下拉框撑满 */
+/* 平台/分类：撑满列宽 */
 .filter-control {
   width: 100%;
 }
 
-/* 统一 select 高度为 32px */
+/* 统一 select 高度 32px */
 .filter-item :deep(.ant-select-selector) {
   height: 32px !important;
   min-height: 32px !important;
