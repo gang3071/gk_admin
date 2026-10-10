@@ -63,7 +63,10 @@ class AgentGameVendorReportController
             }
         }
 
-        $total = (clone $query)->groupBy("$pgr.platform_id", "$gp.cate_id")->get()->count();
+        $total = (clone $query)
+            ->selectRaw("$pgr.platform_id, $gp.cate_id")
+            ->groupBy("$pgr.platform_id", "$gp.cate_id")
+            ->get()->count();
 
         $list = $query
             ->groupBy("$pgr.platform_id", "$gp.cate_id", "$gp.name")
