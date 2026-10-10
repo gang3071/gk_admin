@@ -318,6 +318,8 @@ return [
         'dish' => '餐点列表',
         'dish_order' => '餐点订单',
         'dish_order_report_item' => '订单明细报表',
+        // 厂商数据报表
+        'game_vendor_report' => '厂商数据',
     ],
     'help' => [
         'controlled_menu' => '此菜单受功能开关控制，名称不可修改',
