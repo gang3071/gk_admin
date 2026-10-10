@@ -3,12 +3,38 @@
     <!-- 筛选栏 -->
     <div class="ex-filter-bar">
       <a-space wrap>
+        <!-- 快捷日期 -->
+        <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate">
+          <a-radio-button value="today">今日</a-radio-button>
+          <a-radio-button value="yesterday">昨日</a-radio-button>
+          <a-radio-button value="week">本週</a-radio-button>
+          <a-radio-button value="month">本月</a-radio-button>
+          <a-radio-button value="last_month">上月</a-radio-button>
+        </a-radio-group>
+
+        <!-- 自定义日期范围 -->
         <a-range-picker
           v-model:value="dateRange"
           value-format="YYYY-MM-DD"
           :allow-clear="false"
           style="width: 240px;"
+          @change="onDateRangeChange"
         />
+
+        <!-- 平台筛选 -->
+        <a-select
+          v-model:value="selectedPlatformIds"
+          mode="multiple"
+          :placeholder="labels.platform || '全部平台'"
+          style="min-width: 200px; max-width: 360px;"
+          allow-clear
+          :max-tag-count="2"
+        >
+          <a-select-option v-for="p in platforms" :key="p.id" :value="p.id">
+            {{ p.name }}
+          </a-select-option>
+        </a-select>
+
         <a-button type="primary" :loading="loading" @click="fetchData">
           {{ labels.search || '查詢' }}
         </a-button>
@@ -62,37 +88,78 @@ const CATE_NAMES = {
 
 const CATE_ORDER = [2, 3, 4, 5, 6, 7, 8, 9, 10, 1];
 
+function getDateRange(type) {
+  const today = new Date();
+  const fmt = d => d.toISOString().slice(0, 10);
+
+  if (type === 'today') {
+    const s = fmt(today);
+    return [s, s];
+  }
+  if (type === 'yesterday') {
+    const d = new Date(today);
+    d.setDate(d.getDate() - 1);
+    const s = fmt(d);
+    return [s, s];
+  }
+  if (type === 'week') {
+    const d = new Date(today);
+    const day = d.getDay() || 7;
+    d.setDate(d.getDate() - day + 1);
+    return [fmt(d), fmt(today)];
+  }
+  if (type === 'month') {
+    const s = fmt(today).slice(0, 8) + '01';
+    return [s, fmt(today)];
+  }
+  if (type === 'last_month') {
+    const d = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const last = new Date(today.getFullYear(), today.getMonth(), 0);
+    return [fmt(d), fmt(last)];
+  }
+  return [fmt(today).slice(0, 8) + '01', fmt(today)];
+}
+
 export default {
   props: {
-    api_url: { type: String, required: true },
-    labels: { type: Object, default: () => ({}) },
+    api_url:   { type: String,  required: true },
+    labels:    { type: Object,  default: () => ({}) },
+    platforms: { type: Array,   default: () => [] },
   },
 
   data() {
-    const today = new Date().toISOString().slice(0, 10);
-    const firstDay = today.slice(0, 8) + '01';
     return {
-      dateRange: [firstDay, today],
-      loading: false,
-      rawPlatforms: [],
+      dateRange:           getDateRange('month'),
+      quickDate:           'month',
+      selectedPlatformIds: [],
+      loading:             false,
+      rawPlatforms:        [],
     };
   },
 
   computed: {
     columns() {
       return [
-        { title: this.labels.vendor_name    || '廠商名稱', dataIndex: 'name',            key: 'name',            width: 200 },
-        { title: this.labels.valid_bet      || '有效投注', dataIndex: 'valid_bet',       key: 'valid_bet',       align: 'right', width: 140 },
-        { title: this.labels.total_bet      || '投注金額', dataIndex: 'total_bet',       key: 'total_bet',       align: 'right', width: 140 },
-        { title: this.labels.player_win_loss|| '玩家輸贏', dataIndex: 'player_win_loss', key: 'player_win_loss', align: 'right', width: 140 },
-        { title: this.labels.gift_amount    || '打賞總額', dataIndex: 'gift_amount',     key: 'gift_amount',     align: 'right', width: 130 },
-        { title: this.labels.gift_count     || '打賞筆數', dataIndex: 'gift_count',      key: 'gift_count',      align: 'right', width: 100 },
+        { title: this.labels.vendor_name     || '廠商名稱', dataIndex: 'name',            key: 'name',            width: 200 },
+        { title: this.labels.valid_bet       || '有效投注', dataIndex: 'valid_bet',       key: 'valid_bet',       align: 'right', width: 140 },
+        { title: this.labels.total_bet       || '投注金額', dataIndex: 'total_bet',       key: 'total_bet',       align: 'right', width: 140 },
+        { title: this.labels.player_win_loss || '玩家輸贏', dataIndex: 'player_win_loss', key: 'player_win_loss', align: 'right', width: 140 },
+        { title: this.labels.gift_amount     || '打賞總額', dataIndex: 'gift_amount',     key: 'gift_amount',     align: 'right', width: 130 },
+        { title: this.labels.gift_count      || '打賞筆數', dataIndex: 'gift_count',      key: 'gift_count',      align: 'right', width: 100 },
       ];
+    },
+
+    filteredPlatforms() {
+      if (!this.selectedPlatformIds || !this.selectedPlatformIds.length) {
+        return this.rawPlatforms;
+      }
+      const ids = new Set(this.selectedPlatformIds);
+      return this.rawPlatforms.filter(p => ids.has(p.platform_id));
     },
 
     flatRows() {
       const groups = {};
-      (this.rawPlatforms || []).forEach(p => {
+      this.filteredPlatforms.forEach(p => {
         const id = p.cate_id;
         if (!groups[id]) {
           groups[id] = {
@@ -153,6 +220,15 @@ export default {
   },
 
   methods: {
+    onQuickDate(e) {
+      this.dateRange = getDateRange(e.target.value);
+      this.fetchData();
+    },
+
+    onDateRangeChange() {
+      this.quickDate = null;
+    },
+
     async fetchData() {
       this.loading = true;
       try {
@@ -175,9 +251,9 @@ export default {
     },
 
     resetFilter() {
-      const today = new Date().toISOString().slice(0, 10);
-      const firstDay = today.slice(0, 8) + '01';
-      this.dateRange = [firstDay, today];
+      this.quickDate           = 'month';
+      this.dateRange           = getDateRange('month');
+      this.selectedPlatformIds = [];
       this.fetchData();
     },
 
@@ -208,7 +284,6 @@ export default {
   background: #fff;
   padding: 16px 24px;
   border-bottom: 1px solid #f0f0f0;
-  margin-bottom: 0;
 }
 
 .ex-table-wrap {

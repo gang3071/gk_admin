@@ -32,9 +32,18 @@ class AdminGameVendorReportController
             'reset'           => admin_trans('game_vendor_report.reset'),
         ];
 
+        $platformModel = plugin()->webman->config('database.game_platform_model');
+        $platforms = (new $platformModel)->newQuery()
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn($p) => ['id' => $p->id, 'name' => $p->name])
+            ->values()->all();
+
         return admin_view(plugin()->webman->getPath() . '/views/game_vendor_report.vue')->attrs([
-            'api_url' => 'ex-admin/addons-webman-controller-AdminGameVendorReportController/vendorData',
-            'labels'  => $labels,
+            'api_url'   => 'ex-admin/addons-webman-controller-AdminGameVendorReportController/vendorData',
+            'labels'    => $labels,
+            'platforms' => $platforms,
         ]);
     }
 
