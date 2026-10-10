@@ -142,11 +142,11 @@ export default {
             end_date: this.endDate || '',
           },
         });
-        if (res.data?.code === 200) {
-          this.categories = res.data.data || [];
+        if (res.code === 200) {
+          this.categories = res.data || [];
           this.expandedKeys = this.categories.map(c => c.cate_id);
         } else {
-          this.$message.error(res.data?.message || '查詢失敗');
+          this.$message.error(res.message || '查詢失敗');
         }
       } catch (e) {
         this.$message.error('請求失敗');
