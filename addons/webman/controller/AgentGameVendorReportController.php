@@ -118,7 +118,7 @@ class AgentGameVendorReportController
                 ->header($winLossLabel)
                 ->display(function ($val) {
                     $num = floatval($val);
-                    $style = $num > 0 ? ['color' => 'green'] : ($num < 0 ? ['color' => 'red'] : []);
+                    $style = $num > 0 ? ['color' => 'red'] : ($num < 0 ? ['color' => 'green'] : []);
                     return Html::create(number_format($num, 0))->style($style);
                 })
                 ->align('right')->sortable();
