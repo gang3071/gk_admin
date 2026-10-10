@@ -230,6 +230,24 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StorePlayGameRecordController/replay',
                 'title' => '游戏回放',
             ],
+            [
+                'id' => 'addons\webman\controller\StoreGameVendorReportController\index',
+                'pid' => 'addons\webman\controller\StorePlayGameRecordController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/index',
+                'title' => '厂商数据',
+            ],
+            [
+                'id' => 'addons\webman\controller\StoreGameVendorReportController\vendorData',
+                'pid' => 'addons\webman\controller\StoreGameVendorReportController\index',
+                'action' => 'vendorData',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/vendorData',
+                'title' => '查询厂商数据',
+            ],
         ]
     ],
 
