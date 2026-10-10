@@ -35,16 +35,16 @@ class ChannelGameVendorReportController
     public function index()
     {
         $labels = [
-            'vendor_name'     => '廠商名稱',
-            'valid_bet'       => '有效投注',
-            'total_bet'       => '投注金額',
-            'player_win_loss' => '玩家輸贏',
-            'gift_amount'     => '打賞總額',
-            'gift_count'      => '打賞筆數',
-            'start_date'      => '開始日期',
-            'end_date'        => '結束日期',
-            'search'          => '查詢',
-            'reset'           => '重置',
+            'vendor_name'     => admin_trans('game_vendor_report.vendor_name'),
+            'valid_bet'       => admin_trans('game_vendor_report.valid_bet'),
+            'total_bet'       => admin_trans('game_vendor_report.total_bet'),
+            'player_win_loss' => admin_trans('game_vendor_report.player_win_loss'),
+            'gift_amount'     => admin_trans('game_vendor_report.gift_amount'),
+            'gift_count'      => admin_trans('game_vendor_report.gift_count'),
+            'start_date'      => admin_trans('game_vendor_report.start_date'),
+            'end_date'        => admin_trans('game_vendor_report.end_date'),
+            'search'          => admin_trans('game_vendor_report.search'),
+            'reset'           => admin_trans('game_vendor_report.reset'),
         ];
 
         return admin_view(plugin()->webman->getPath() . '/views/game_vendor_report.vue')->attrs([
