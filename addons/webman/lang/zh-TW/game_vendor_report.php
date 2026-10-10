@@ -12,4 +12,6 @@ return [
     'end_date'       => '結束日期',
     'search'         => '查詢',
     'reset'          => '重置',
+    'cate_name'      => '遊戲分類',
+    'platform'       => '廠商平台',
 ];

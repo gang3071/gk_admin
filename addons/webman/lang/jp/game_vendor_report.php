@@ -12,4 +12,6 @@ return [
     'end_date'       => '終了日',
     'search'         => '検索',
     'reset'          => 'リセット',
+    'cate_name'      => 'ゲームカテゴリ',
+    'platform'       => 'ベンダープラットフォーム',
 ];

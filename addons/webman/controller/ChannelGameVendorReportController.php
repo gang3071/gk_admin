@@ -3,9 +3,12 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\GameType;
 use addons\webman\model\PlayGameRecord;
+use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\grid\grid\Filter;
+use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\support\Request;
-use support\Response;
 
 /**
  * 子站 - 厂商数据报表
@@ -18,58 +21,17 @@ class ChannelGameVendorReportController
      * @group channel
      * @auth true
      */
-    public function index()
+    public function index(): Grid
     {
-        $labels = [
-            'vendor_name'     => admin_trans('game_vendor_report.vendor_name'),
-            'valid_bet'       => admin_trans('game_vendor_report.valid_bet'),
-            'total_bet'       => admin_trans('game_vendor_report.total_bet'),
-            'player_win_loss' => admin_trans('game_vendor_report.player_win_loss'),
-            'gift_amount'     => admin_trans('game_vendor_report.gift_amount'),
-            'gift_count'      => admin_trans('game_vendor_report.gift_count'),
-            'start_date'      => admin_trans('game_vendor_report.start_date'),
-            'end_date'        => admin_trans('game_vendor_report.end_date'),
-            'search'          => admin_trans('game_vendor_report.search'),
-            'reset'           => admin_trans('game_vendor_report.reset'),
-        ];
-
-        $platformModel = plugin()->webman->config('database.game_platform_model');
-        $platforms = (new $platformModel)->newQuery()
-            ->whereNull('deleted_at')
-            ->orderBy('name')
-            ->get(['id', 'name'])
-            ->map(fn($p) => ['id' => $p->id, 'name' => $p->name])
-            ->values()->all();
-
-        return admin_view(plugin()->webman->getPath() . '/views/game_vendor_report.vue')->attrs([
-            'api_url'     => 'ex-admin/addons-webman-controller-ChannelGameVendorReportController/vendorData',
-            'labels'      => $labels,
-            'platforms'   => $platforms,
-            'page_title'  => admin_trans('game_vendor_report.title') . ' 列表',
-            'breadcrumbs' => [
-                admin_trans('menu.titles.channel_manage'),
-                admin_trans('menu.titles.computer_game'),
-                admin_trans('menu.titles.game_vendor_report'),
-            ],
-        ]);
-    }
-
-    /**
-     * 厂商数据 API
-     * @group channel
-     * @auth true
-     */
-    public function vendorData(): Response
-    {
-        $startDate    = Request::input('start_date', '');
-        $endDate      = Request::input('end_date', '');
-        $departmentId = Admin::user()->department_id;
+        $page          = Request::input('ex_admin_page', 1);
+        $size          = Request::input('ex_admin_size', 50);
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+        $departmentId  = Admin::user()->department_id;
 
         $modelClass    = plugin()->webman->config('database.play_game_record_model');
         $platformModel = plugin()->webman->config('database.game_platform_model');
-
-        $pgr = (new $modelClass)->getTable();
-        $gp  = (new $platformModel)->getTable();
+        $pgr           = (new $modelClass)->getTable();
+        $gp            = (new $platformModel)->getTable();
 
         $query = (new $modelClass)->newQuery()
             ->join($gp, "$gp.id", '=', "$pgr.platform_id")
@@ -77,14 +39,27 @@ class ChannelGameVendorReportController
             ->whereIn("$pgr.type", [PlayGameRecord::TYPE_BET, PlayGameRecord::TYPE_GIFT])
             ->where("$pgr.department_id", $departmentId);
 
-        if ($startDate) {
-            $query->where("$pgr.created_at", '>=', $startDate . ' 00:00:00');
-        }
-        if ($endDate) {
-            $query->where("$pgr.created_at", '<=', $endDate . ' 23:59:59');
+        if (!empty($exAdminFilter)) {
+            if (!empty($exAdminFilter['start_date'])) {
+                $query->where("$pgr.created_at", '>=', $exAdminFilter['start_date']);
+            }
+            if (!empty($exAdminFilter['end_date'])) {
+                $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
+            }
+            if (!empty($exAdminFilter['date_type'])) {
+                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
+            }
+            if (!empty($exAdminFilter['platform_id'])) {
+                $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
+            }
+            if (!empty($exAdminFilter['cate_id'])) {
+                $query->where("$gp.cate_id", $exAdminFilter['cate_id']);
+            }
         }
 
-        $rows = $query
+        $total = (clone $query)->groupBy("$pgr.platform_id", "$gp.cate_id")->get()->count();
+
+        $list = $query
             ->groupBy("$pgr.platform_id", "$gp.cate_id", "$gp.name")
             ->selectRaw("$pgr.platform_id, $gp.cate_id, $gp.name as platform_name,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.bet  ELSE 0 END) as valid_bet,
@@ -92,19 +67,116 @@ class ChannelGameVendorReportController
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.diff ELSE 0 END) as player_win_loss,
                 SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,
                 SUM(CASE WHEN $pgr.type=2 THEN 1          ELSE 0 END) as gift_count")
-            ->get();
+            ->orderBy("$gp.cate_id")
+            ->orderBy("$gp.name")
+            ->forPage($page, $size)
+            ->get()
+            ->toArray();
 
-        $data = $rows->map(fn($r) => [
-            'platform_id'     => (int)$r->platform_id,
-            'cate_id'         => (int)$r->cate_id,
-            'name'            => $r->platform_name,
-            'valid_bet'       => (float)$r->valid_bet,
-            'total_bet'       => (float)$r->total_bet,
-            'player_win_loss' => (float)$r->player_win_loss,
-            'gift_amount'     => (float)$r->gift_amount,
-            'gift_count'      => (int)$r->gift_count,
-        ])->values()->all();
+        $cateNames = $this->cateNames();
+        $platformOptions = $this->platformOptions($platformModel);
 
-        return json(['code' => 200, 'data' => $data]);
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $cateNames, $platformOptions) {
+            $grid->title(admin_trans('game_vendor_report.title'));
+            $grid->bordered(true);
+            $grid->autoHeight();
+            $grid->driver()->setPk('platform_id');
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->expandFilter();
+
+            $grid->column('cate_id', admin_trans('game_vendor_report.cate_name'))
+                ->display(fn($val) => $cateNames[$val] ?? $val)
+                ->align('center');
+
+            $grid->column('platform_name', admin_trans('game_vendor_report.vendor_name'))
+                ->align('center');
+
+            $grid->column('valid_bet', admin_trans('game_vendor_report.valid_bet'))
+                ->display(fn($val) => number_format(floatval($val), 0))
+                ->align('right')->sortable();
+
+            $grid->column('total_bet', admin_trans('game_vendor_report.total_bet'))
+                ->display(fn($val) => number_format(floatval($val), 0))
+                ->align('right')->sortable();
+
+            $grid->column('player_win_loss', admin_trans('game_vendor_report.player_win_loss'))
+                ->display(function ($val) {
+                    $num = floatval($val);
+                    $style = $num > 0 ? ['color' => 'green'] : ($num < 0 ? ['color' => 'red'] : []);
+                    return Html::create(number_format($num, 0))->style($style);
+                })
+                ->align('right')->sortable();
+
+            $grid->column('gift_amount', admin_trans('game_vendor_report.gift_amount'))
+                ->display(fn($val) => number_format(floatval($val), 0))
+                ->align('right')->sortable();
+
+            $grid->column('gift_count', admin_trans('game_vendor_report.gift_count'))
+                ->align('right')->sortable();
+
+            $grid->filter(function (Filter $filter) use ($cateNames, $platformOptions) {
+                $filter->select('date_type')
+                    ->placeholder(admin_trans('machine_report.fields.date_type'))
+                    ->showSearch()
+                    ->dropdownMatchSelectWidth()
+                    ->style(['width' => '160px'])
+                    ->options([
+                        1 => admin_trans('machine_report.date_type.1'),
+                        2 => admin_trans('machine_report.date_type.2'),
+                        3 => admin_trans('machine_report.date_type.3'),
+                        4 => admin_trans('machine_report.date_type.4'),
+                        5 => admin_trans('machine_report.date_type.5'),
+                        6 => admin_trans('machine_report.date_type.6'),
+                    ]);
+                $filter->hidden('start_date');
+                $filter->hidden('end_date');
+                $filter->form()->dateRange('start_date', 'end_date', '')->placeholder([
+                    admin_trans('public_msg.date_start'),
+                    admin_trans('public_msg.date_end'),
+                ]);
+                $filter->eq()->select('platform_id')
+                    ->placeholder(admin_trans('game_vendor_report.platform'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($platformOptions);
+                $filter->eq()->select('cate_id')
+                    ->placeholder(admin_trans('game_vendor_report.cate_name'))
+                    ->showSearch()
+                    ->style(['width' => '160px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($cateNames);
+            });
+
+            $grid->attr('is_mongo', true);
+            $grid->attr('is_mongo_total', $total);
+            $grid->attr('mongo_model', $list);
+        });
+    }
+
+    protected function cateNames(): array
+    {
+        return [
+            GameType::CATE_PHYSICAL_MACHINE => '實體機台',
+            GameType::CATE_COMPUTER_GAME    => '電子',
+            GameType::CATE_LIVE_VIDEO       => '真人視訊',
+            GameType::CATE_FISH             => '捕魚',
+            GameType::CATE_TABLE            => '牌桌',
+            GameType::CATE_P2P              => '棋牌',
+            GameType::CATE_SLO              => '老虎機',
+            GameType::CATE_ARCADE           => '街機',
+            GameType::CATE_SPORT            => '體育',
+            GameType::CATE_LOTTERY          => '彩票',
+        ];
+    }
+
+    protected function platformOptions(string $platformModel): array
+    {
+        return (new $platformModel)->newQuery()
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
     }
 }

@@ -12,4 +12,6 @@ return [
     'end_date'       => '结束日期',
     'search'         => '查询',
     'reset'          => '重置',
+    'cate_name'      => '游戏分类',
+    'platform'       => '厂商平台',
 ];
