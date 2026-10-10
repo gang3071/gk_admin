@@ -1,9 +1,8 @@
 <template>
   <div>
-    <!-- 筛选栏 -->
-    <div class="ex-filter-bar">
-      <a-space wrap>
-        <!-- 快捷日期 -->
+    <!-- 工具栏（对齐 ExAdmin .tools） -->
+    <div class="ex-tools">
+      <div class="ex-tools-left">
         <a-radio-group v-model:value="quickDate" button-style="solid" size="small" @change="onQuickDate">
           <a-radio-button value="today">今日</a-radio-button>
           <a-radio-button value="yesterday">昨日</a-radio-button>
@@ -11,64 +10,74 @@
           <a-radio-button value="month">本月</a-radio-button>
           <a-radio-button value="last_month">上月</a-radio-button>
         </a-radio-group>
+      </div>
+    </div>
 
-        <!-- 自定义日期范围 -->
-        <a-range-picker
-          v-model:value="dateRange"
-          value-format="YYYY-MM-DD"
-          :allow-clear="false"
-          style="width: 240px;"
-          @change="onDateRangeChange"
-        />
+    <!-- 筛选区（对齐 ExAdmin .filter） -->
+    <div class="ex-filter">
+      <a-form layout="inline">
+        <a-form-item>
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            :allow-clear="false"
+            style="width: 240px;"
+            @change="onDateRangeChange"
+          />
+        </a-form-item>
 
-        <!-- 平台筛选 -->
-        <a-select
-          v-model:value="selectedPlatformIds"
-          mode="multiple"
-          :placeholder="labels.platform || '全部平台'"
-          style="min-width: 200px; max-width: 360px;"
-          allow-clear
-          :max-tag-count="2"
-        >
-          <a-select-option v-for="p in platforms" :key="p.id" :value="p.id">
-            {{ p.name }}
-          </a-select-option>
-        </a-select>
+        <a-form-item>
+          <a-select
+            v-model:value="selectedPlatformIds"
+            mode="multiple"
+            :placeholder="labels.platform || '全部平台'"
+            style="min-width: 200px; max-width: 360px;"
+            allow-clear
+            :max-tag-count="2"
+          >
+            <a-select-option v-for="p in platforms" :key="p.id" :value="p.id">
+              {{ p.name }}
+            </a-select-option>
+          </a-select>
+        </a-form-item>
 
-        <a-button type="primary" :loading="loading" @click="fetchData">
-          {{ labels.search || '查詢' }}
-        </a-button>
-        <a-button @click="resetFilter">{{ labels.reset || '重置' }}</a-button>
-      </a-space>
+        <a-form-item>
+          <a-button type="primary" :loading="loading" @click="fetchData">
+            {{ labels.search || '查詢' }}
+          </a-button>
+        </a-form-item>
+
+        <a-form-item>
+          <a-button @click="resetFilter">{{ labels.reset || '重置' }}</a-button>
+        </a-form-item>
+      </a-form>
     </div>
 
     <!-- 数据表格 -->
-    <div class="ex-table-wrap">
-      <a-table
-        :columns="columns"
-        :data-source="flatRows"
-        :loading="loading"
-        :pagination="false"
-        row-key="key"
-        :custom-row="rowAttrs"
-        size="middle"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.dataIndex === 'name'">
-            <strong v-if="record.is_category">{{ record.name }}</strong>
-            <span v-else style="padding-left: 20px; color: #555;">{{ record.name }}</span>
-          </template>
-          <template v-else-if="column.dataIndex === 'player_win_loss'">
-            <span :style="winLossStyle(record.player_win_loss)">
-              {{ formatNum(record.player_win_loss) }}
-            </span>
-          </template>
-          <template v-else>
-            {{ formatNum(record[column.dataIndex]) }}
-          </template>
+    <a-table
+      :columns="columns"
+      :data-source="flatRows"
+      :loading="loading"
+      :pagination="false"
+      row-key="key"
+      :custom-row="rowAttrs"
+      size="middle"
+    >
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.dataIndex === 'name'">
+          <strong v-if="record.is_category">{{ record.name }}</strong>
+          <span v-else style="padding-left: 20px; color: #555;">{{ record.name }}</span>
         </template>
-      </a-table>
-    </div>
+        <template v-else-if="column.dataIndex === 'player_win_loss'">
+          <span :style="winLossStyle(record.player_win_loss)">
+            {{ formatNum(record.player_win_loss) }}
+          </span>
+        </template>
+        <template v-else>
+          {{ formatNum(record[column.dataIndex]) }}
+        </template>
+      </template>
+    </a-table>
   </div>
 </template>
 
@@ -122,9 +131,9 @@ function getDateRange(type) {
 
 export default {
   props: {
-    api_url:   { type: String,  required: true },
-    labels:    { type: Object,  default: () => ({}) },
-    platforms: { type: Array,   default: () => [] },
+    api_url:   { type: String, required: true },
+    labels:    { type: Object, default: () => ({}) },
+    platforms: { type: Array,  default: () => [] },
   },
 
   data() {
@@ -280,14 +289,31 @@ export default {
 </script>
 
 <style scoped>
-.ex-filter-bar {
+/* 工具栏 - 对齐 ExAdmin .tools */
+.ex-tools {
   background: #fff;
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
+  padding-left: 10px;
+  padding-bottom: 10px;
+  padding-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.ex-table-wrap {
+.ex-tools-left {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* 筛选区 - 对齐 ExAdmin .filter */
+.ex-filter {
+  border-top: 1px solid #ededed;
   background: #fff;
-  padding: 16px 24px;
+  padding: 20px 20px 0;
+}
+
+.ex-filter :deep(.ant-form-inline .ant-form-item) {
+  margin-bottom: 20px;
 }
 </style>
