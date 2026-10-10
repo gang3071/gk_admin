@@ -2,97 +2,65 @@
   <div style="padding: 16px;">
     <!-- 查询条件 -->
     <a-card size="small" style="margin-bottom: 16px;">
-      <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="white-space: nowrap;">{{ labels.start_date || '開始日期' }}</span>
-          <a-date-picker
-            v-model:value="startDate"
-            value-format="YYYY-MM-DD"
-            :placeholder="labels.start_date || '開始日期'"
-            style="width: 140px;"
-          />
-        </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="white-space: nowrap;">{{ labels.end_date || '結束日期' }}</span>
-          <a-date-picker
-            v-model:value="endDate"
-            value-format="YYYY-MM-DD"
-            :placeholder="labels.end_date || '結束日期'"
-            style="width: 140px;"
-          />
-        </div>
+      <a-space>
+        <a-range-picker
+          v-model:value="dateRange"
+          value-format="YYYY-MM-DD"
+          :allow-clear="false"
+          style="width: 230px;"
+        />
         <a-button type="primary" :loading="loading" @click="fetchData">
           {{ labels.search || '查詢' }}
         </a-button>
         <a-button @click="resetFilter">{{ labels.reset || '重置' }}</a-button>
-      </div>
+      </a-space>
     </a-card>
 
     <!-- 数据表格 -->
     <a-table
       :columns="columns"
-      :data-source="categories"
+      :data-source="flatRows"
       :loading="loading"
       :pagination="false"
-      row-key="cate_id"
-      :expandedRowKeys="expandedKeys"
-      @expand="handleExpand"
+      row-key="key"
+      :custom-row="rowAttrs"
       size="middle"
       bordered
     >
       <template #bodyCell="{ column, record }">
-        <template v-if="column.dataIndex === 'player_win_loss'">
+        <template v-if="column.dataIndex === 'name'">
+          <strong v-if="record.is_category">{{ record.name }}</strong>
+          <span v-else style="padding-left: 20px; color: #555;">{{ record.name }}</span>
+        </template>
+        <template v-else-if="column.dataIndex === 'player_win_loss'">
           <span :style="winLossStyle(record.player_win_loss)">
-            {{ formatNumber(record.player_win_loss) }}
+            {{ formatNum(record.player_win_loss) }}
           </span>
         </template>
-        <template v-else-if="column.dataIndex === 'name'">
-          <strong v-if="record.is_category">{{ record.name }}</strong>
-          <span v-else style="padding-left: 16px;">{{ record.name }}</span>
+        <template v-else>
+          {{ formatNum(record[column.dataIndex]) }}
         </template>
-        <template v-else-if="column.dataIndex === 'valid_bet'">
-          {{ formatNumber(record.valid_bet) }}
-        </template>
-        <template v-else-if="column.dataIndex === 'total_bet'">
-          {{ formatNumber(record.total_bet) }}
-        </template>
-        <template v-else-if="column.dataIndex === 'gift_amount'">
-          {{ formatNumber(record.gift_amount) }}
-        </template>
-      </template>
-
-      <template #expandedRowRender="{ record }">
-        <a-table
-          :columns="childColumns"
-          :data-source="record.platforms"
-          :pagination="false"
-          size="small"
-          :show-header="false"
-          row-key="platform_id"
-        >
-          <template #bodyCell="{ column, record: childRecord }">
-            <template v-if="column.dataIndex === 'player_win_loss'">
-              <span :style="winLossStyle(childRecord.player_win_loss)">
-                {{ formatNumber(childRecord.player_win_loss) }}
-              </span>
-            </template>
-            <template v-else-if="column.dataIndex === 'valid_bet'">
-              {{ formatNumber(childRecord.valid_bet) }}
-            </template>
-            <template v-else-if="column.dataIndex === 'total_bet'">
-              {{ formatNumber(childRecord.total_bet) }}
-            </template>
-            <template v-else-if="column.dataIndex === 'gift_amount'">
-              {{ formatNumber(childRecord.gift_amount) }}
-            </template>
-          </template>
-        </a-table>
       </template>
     </a-table>
   </div>
 </template>
 
 <script>
+const CATE_NAMES = {
+  1:  '實體機台',
+  2:  '電子',
+  3:  '真人視訊',
+  4:  '捕魚',
+  5:  '牌桌',
+  6:  '棋牌',
+  7:  '老虎機',
+  8:  '街機',
+  9:  '體育',
+  10: '彩票',
+};
+
+const CATE_ORDER = [2, 3, 4, 5, 6, 7, 8, 9, 10, 1];
+
 export default {
   props: {
     api_url: { type: String, required: true },
@@ -102,27 +70,56 @@ export default {
   data() {
     const today = new Date().toISOString().slice(0, 10);
     return {
-      startDate: today,
-      endDate: today,
+      dateRange: [today, today],
       loading: false,
-      categories: [],
-      expandedKeys: [],
+      rawCategories: [],
     };
   },
 
   computed: {
     columns() {
       return [
-        { title: this.labels.vendor_name || '廠商名稱', dataIndex: 'name', key: 'name', width: 180 },
-        { title: this.labels.valid_bet || '有效投注', dataIndex: 'valid_bet', key: 'valid_bet', align: 'right', width: 140 },
-        { title: this.labels.total_bet || '投注金額', dataIndex: 'total_bet', key: 'total_bet', align: 'right', width: 140 },
+        { title: this.labels.vendor_name || '廠商名稱',    dataIndex: 'name',            key: 'name',            width: 200 },
+        { title: this.labels.valid_bet    || '有效投注',    dataIndex: 'valid_bet',       key: 'valid_bet',       align: 'right', width: 140 },
+        { title: this.labels.total_bet    || '投注金額',    dataIndex: 'total_bet',       key: 'total_bet',       align: 'right', width: 140 },
         { title: this.labels.player_win_loss || '玩家輸贏', dataIndex: 'player_win_loss', key: 'player_win_loss', align: 'right', width: 140 },
-        { title: this.labels.gift_amount || '打賞總額', dataIndex: 'gift_amount', key: 'gift_amount', align: 'right', width: 130 },
-        { title: this.labels.gift_count || '打賞筆數', dataIndex: 'gift_count', key: 'gift_count', align: 'right', width: 100 },
+        { title: this.labels.gift_amount  || '打賞總額',    dataIndex: 'gift_amount',     key: 'gift_amount',     align: 'right', width: 130 },
+        { title: this.labels.gift_count   || '打賞筆數',    dataIndex: 'gift_count',      key: 'gift_count',      align: 'right', width: 100 },
       ];
     },
-    childColumns() {
-      return this.columns.map(c => ({ ...c, title: '' }));
+
+    flatRows() {
+      const cateMap = {};
+      this.rawCategories.forEach(c => { cateMap[c.cate_id] = c; });
+
+      const rows = [];
+      CATE_ORDER.forEach(cateId => {
+        const cate = cateMap[cateId];
+        if (!cate) return;
+        rows.push({
+          key:         `cate_${cateId}`,
+          is_category: true,
+          name:        CATE_NAMES[cateId] || cate.name,
+          valid_bet:       cate.valid_bet,
+          total_bet:       cate.total_bet,
+          player_win_loss: cate.player_win_loss,
+          gift_amount:     cate.gift_amount,
+          gift_count:      cate.gift_count,
+        });
+        (cate.platforms || []).forEach(p => {
+          rows.push({
+            key:         `platform_${p.platform_id}`,
+            is_category: false,
+            name:        p.name,
+            valid_bet:       p.valid_bet,
+            total_bet:       p.total_bet,
+            player_win_loss: p.player_win_loss,
+            gift_amount:     p.gift_amount,
+            gift_count:      p.gift_count,
+          });
+        });
+      });
+      return rows;
     },
   },
 
@@ -134,21 +131,18 @@ export default {
     async fetchData() {
       this.loading = true;
       try {
+        const [startDate, endDate] = this.dateRange || [];
         const res = await this.$request({
-          url: this.api_url,
+          url:    this.api_url,
           method: 'get',
-          params: {
-            start_date: this.startDate || '',
-            end_date: this.endDate || '',
-          },
+          params: { start_date: startDate || '', end_date: endDate || '' },
         });
         if (res.code === 200) {
-          this.categories = res.data || [];
-          this.expandedKeys = this.categories.map(c => c.cate_id);
+          this.rawCategories = res.data || [];
         } else {
           this.$message.error(res.message || '查詢失敗');
         }
-      } catch (e) {
+      } catch {
         this.$message.error('請求失敗');
       } finally {
         this.loading = false;
@@ -157,22 +151,19 @@ export default {
 
     resetFilter() {
       const today = new Date().toISOString().slice(0, 10);
-      this.startDate = today;
-      this.endDate = today;
+      this.dateRange = [today, today];
       this.fetchData();
     },
 
-    handleExpand(expanded, record) {
-      if (expanded) {
-        this.expandedKeys = [...this.expandedKeys, record.cate_id];
-      } else {
-        this.expandedKeys = this.expandedKeys.filter(k => k !== record.cate_id);
+    rowAttrs(record) {
+      if (record.is_category) {
+        return { style: { background: '#f0f5ff', fontWeight: 'bold' } };
       }
+      return {};
     },
 
-    formatNumber(val) {
-      if (val === null || val === undefined) return '0';
-      const num = parseFloat(val);
+    formatNum(val) {
+      const num = parseFloat(val) || 0;
       return num.toLocaleString('zh-TW', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
     },
 
