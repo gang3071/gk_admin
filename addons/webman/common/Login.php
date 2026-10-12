@@ -8,6 +8,8 @@ use addons\webman\model\AdminDepartment;
 use addons\webman\model\GameType;
 use addons\webman\model\LotteryTicketRecord;
 use addons\webman\model\MachineReport;
+use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\TicketRecord;
 use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerGameLog;
@@ -2203,6 +2205,130 @@ class Login extends LoginAbstract
                         'number' => floatval($claimedData->amount ?? 0),
                         'prefix' => 'NT$',
                         'suffix' => ''
+                    ],
+                ];
+                break;
+
+            case 'StoreTicketRecord':
+                $query = TicketRecord::query()
+                    ->where('store_admin_id', $adminUserId)
+                    ->whereIn('ticket_type', [
+                        TicketRecord::TYPE_RECHARGE,
+                        TicketRecord::TYPE_WITHDRAW,
+                        TicketRecord::TYPE_EXPERIENCE,
+                        TicketRecord::TYPE_WELFARE,
+                    ])
+                    ->where('status', '!=', TicketRecord::STATUS_DISABLED);
+
+                if (!empty($exAdminFilter['created_at_start'])) {
+                    $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                }
+                if (!empty($exAdminFilter['created_at_end'])) {
+                    $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                }
+                if (!empty($exAdminFilter['scanned_at_start'])) {
+                    $query->where('scanned_at', '>=', $exAdminFilter['scanned_at_start']);
+                }
+                if (!empty($exAdminFilter['scanned_at_end'])) {
+                    $query->where('scanned_at', '<=', $exAdminFilter['scanned_at_end']);
+                }
+                if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
+                    $query->where('status', $exAdminFilter['status']);
+                }
+                if (isset($exAdminFilter['source_type_custom'])) {
+                    $sourceType = $exAdminFilter['source_type_custom'];
+                    if ($sourceType === 'null' || $sourceType === 'NULL') {
+                        $query->where(function ($q) {
+                            $q->whereNull('source_type')->orWhere('source_type', '');
+                        });
+                    } elseif ($sourceType !== '') {
+                        $query->where('source_type', $sourceType);
+                    }
+                }
+                if (isset($exAdminFilter['ticket_type']) && $exAdminFilter['ticket_type'] !== '') {
+                    $query->where('ticket_type', $exAdminFilter['ticket_type']);
+                }
+
+                $usedIn = TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED;
+                $totalData = (clone $query)->selectRaw(
+                    "sum(score) as total_score,
+                     count(*) as total_count,
+                     sum(IF(status IN ({$usedIn}), 1, 0)) as used_count,
+                     sum(IF(status IN ({$usedIn}), score, 0)) as used_score"
+                )->first();
+
+                // 當前班次統計（不受篩選條件影響，僅限開分票）
+                $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
+                    ->where('bind_admin_user_id', $adminUserId)
+                    ->orderBy('id', 'desc')
+                    ->first();
+                $lastShiftTime = $lastShiftRecord?->end_time;
+
+                $shiftQuery = TicketRecord::query()
+                    ->where('store_admin_id', $adminUserId)
+                    ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                    ->where('status', '!=', TicketRecord::STATUS_DISABLED);
+                if ($lastShiftTime) {
+                    $shiftQuery->where('created_at', '>', $lastShiftTime);
+                }
+                $shiftData = $shiftQuery->selectRaw(
+                    "sum(score) as total_score,
+                     count(*) as total_count,
+                     sum(IF(status IN ({$usedIn}), 1, 0)) as used_count,
+                     sum(IF(status IN ({$usedIn}), score, 0)) as used_score"
+                )->first();
+
+                $shiftLabel = admin_trans('ticket_machine.record.current_shift')
+                    . ($lastShiftTime ? ' (' . $lastShiftTime . ')' : '');
+
+                $data = [
+                    [
+                        'title'  => admin_trans('ticket_machine.record.total_score'),
+                        'number' => floatval($totalData['total_score'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => admin_trans('ticket_machine.record.total_count'),
+                        'number' => intval($totalData['total_count'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => admin_trans('ticket_machine.record.used_count'),
+                        'number' => intval($totalData['used_count'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => admin_trans('ticket_machine.record.used_score'),
+                        'number' => floatval($totalData['used_score'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => $shiftLabel . ' ' . admin_trans('ticket_machine.record.total_score'),
+                        'number' => floatval($shiftData['total_score'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => $shiftLabel . ' ' . admin_trans('ticket_machine.record.total_count'),
+                        'number' => intval($shiftData['total_count'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => $shiftLabel . ' ' . admin_trans('ticket_machine.record.used_count'),
+                        'number' => intval($shiftData['used_count'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
+                    ],
+                    [
+                        'title'  => $shiftLabel . ' ' . admin_trans('ticket_machine.record.used_score'),
+                        'number' => floatval($shiftData['used_score'] ?? 0),
+                        'prefix' => '',
+                        'suffix' => '',
                     ],
                 ];
                 break;
