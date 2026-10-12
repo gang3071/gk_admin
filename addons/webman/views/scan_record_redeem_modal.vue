@@ -290,7 +290,6 @@ export default {
       const modalWrap = el.closest ? el.closest('.ant-modal-wrap') : null;
       const closeBtn  = modalWrap ? modalWrap.querySelector('.ant-modal-close') : null;
       if (closeBtn) closeBtn.click();
-      setTimeout(() => { window.location.reload(); }, 300);
     },
 
     // ===== 普通票查詢 =====
