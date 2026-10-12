@@ -1749,7 +1749,15 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_GIFT:
                         return Tag::create($translatedText)->color('pink');
                     case PlayerDeliveryRecord::TYPE_PREPAY:
+                        return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_REFUND:
+                        // 机台上分失败退款时显示机台代码和弹窗
+                        if ($data->machine) {
+                            return Tag::create('退款-' . $data->machine->code)->color('#a0d911')->style(['cursor' => 'pointer'])->modal([
+                                $this,
+                                'machineInfo'
+                            ], ['data' => $data->machine->toArray()])->width('60%')->title($data->machine->code . ' ' . $data->machine->name);
+                        }
                         return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_MACHINE_UP:
                     case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
