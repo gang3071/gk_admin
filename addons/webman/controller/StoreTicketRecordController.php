@@ -897,7 +897,7 @@ class StoreTicketRecordController
         }
 
         // 建立寄存票記錄
-        $orderId = TicketRecord::generateOrderId(TicketRecord::TYPE_DEPOSIT);
+        $orderId = TicketRecord::generateOrderId(TicketRecord::TYPE_WITHDRAW);
         TicketRecord::create([
             'order_id'       => $orderId,
             'store_admin_id' => $admin->id,
