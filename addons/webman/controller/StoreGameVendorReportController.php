@@ -100,11 +100,11 @@ class StoreGameVendorReportController
                 ->align('center');
 
             $grid->column('valid_bet', admin_trans('game_vendor_report.valid_bet'))
-                ->display(fn($val) => number_format(floatval($val), 0))
+                ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
             $grid->column('total_bet', admin_trans('game_vendor_report.total_bet'))
-                ->display(fn($val) => number_format(floatval($val), 0))
+                ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
             $winLossLabel = Html::create()->content([
@@ -118,19 +118,19 @@ class StoreGameVendorReportController
                 ->display(function ($val) {
                     $num = floatval($val) * -1;
                     $style = $num > 0 ? ['color' => 'green'] : ($num < 0 ? ['color' => 'red'] : []);
-                    return Html::create(number_format($num, 0))->style($style);
+                    return Html::create(number_format($num, 2))->style($style);
                 })
                 ->align('right')->sortable();
 
             $grid->column('gift_amount', admin_trans('game_vendor_report.gift_amount'))
-                ->display(fn($val) => number_format(floatval($val), 0))
+                ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
             $grid->column('gift_count', admin_trans('game_vendor_report.gift_count'))
                 ->align('right')->sortable();
 
             $grid->column('total_win', admin_trans('game_vendor_report.total_win'))
-                ->display(fn($val) => number_format(floatval($val), 0))
+                ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
             $grid->filter(function (Filter $filter) use ($platformOptions) {
