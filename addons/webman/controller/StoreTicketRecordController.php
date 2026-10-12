@@ -821,20 +821,20 @@ class StoreTicketRecordController
         }
         $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
         if (empty($player)) {
-            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+            return json_encode(['code' => 40003, 'msg' => '玩家不存在或不屬於本店']);
         }
 
         // ===== 4. 取玩家當前 JWT AccessToken（Redis key: JWT:TOKEN:WEB:{player_id}）=====
         try {
             $tokenKey    = 'JWT:TOKEN:WEB:' . $player->id;
-            $accessToken = Redis::get($tokenKey);
+            $accessToken = trim((string) Redis::get($tokenKey));
         } catch (\Throwable $e) {
             Log::error('redeemDepositCode: Redis error', ['error' => $e->getMessage()]);
             return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
         }
 
         if (empty($accessToken)) {
-            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+            return json_encode(['code' => 40007, 'msg' => '玩家未登入（Redis無Token）key=' . $tokenKey]);
         }
 
         // ===== 5. 驗簽 =====
@@ -843,7 +843,17 @@ class StoreTicketRecordController
         $sigExpect = strtoupper(bin2hex(substr($hmac, 0, 10)));         // 前10 bytes → 20字符 hex
 
         if (!hash_equals($sigExpect, $sig)) {
-            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+            return json_encode([
+                'code' => 40008,
+                'msg'  => '簽名不符',
+                'debug' => [
+                    'message'      => $message,
+                    'sig_received' => $sig,
+                    'sig_expected' => $sigExpect,
+                    'token_len'    => strlen($accessToken),
+                    'token_prefix' => substr($accessToken, 0, 20),
+                ],
+            ]);
         }
 
         // ===== 6. 防重放（nonce check）=====
