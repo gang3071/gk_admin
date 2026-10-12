@@ -73,16 +73,12 @@ class StoreTicketRedeemController
             })->style(['background' => '#fff']);
             $grid->header($layout);
 
-            // 工具按鈕：普通核銷 + GV1 寄存碼核銷
+            // 工具按鈕：核銷（支援普通票券 + GV1 寄存碼）
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.redeem.redeem_btn'))
                     ->type('primary')
-                    ->modal([$this, 'scanRedeem'])
-                    ->width('700px'),
-                Button::create(admin_trans('ticket_machine.record.redeem'))
                     ->modal([$this, 'scanRedeemModal'])
                     ->width('700px')
-                    ->type('primary')
                     ->icon('QrcodeOutlined')
                     ->gridRefresh(),
             ]);
