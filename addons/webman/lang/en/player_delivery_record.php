@@ -61,6 +61,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP Daily Login Bonus',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => 'Activity Give',
     ],
+    'machine_refund' => 'Machine Refund',
     'detail' => 'details',
     'chart' => 'chart',
     'total_in_amount' => 'Open Score',
