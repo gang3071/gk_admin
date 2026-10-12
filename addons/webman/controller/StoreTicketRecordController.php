@@ -811,7 +811,7 @@ class StoreTicketRecordController
         sendSocketMessage('player-' . $player->id, [
             'type'       => 'deposit_qr_scanned',
             'amount'     => (int) $amountStr,
-            'store_name' => $admin->username ?? '',
+            'store_name' => $admin->nickname ?? $admin->username ?? '',
             'timestamp'  => time(),
         ]);
 
@@ -955,7 +955,7 @@ class StoreTicketRecordController
             $ticket = new TicketRecord();
             $ticket->order_id          = $orderId;
             $ticket->store_admin_id    = $admin->id;
-            $ticket->store_name        = $admin->username ?? '';
+            $ticket->store_name        = $admin->nickname ?? $admin->username ?? '';
             $ticket->player_id         = $player->id;
             $ticket->player_name       = $player->name ?? '';
             $ticket->department_id     = $player->department_id;
@@ -1044,7 +1044,7 @@ class StoreTicketRecordController
             'order_id'    => $orderId,
             'amount'      => $amount,
             'balance'     => $balanceAfter,
-            'store_name'  => $admin->username ?? '',
+            'store_name'  => $admin->nickname ?? $admin->username ?? '',
             'timestamp'   => time(),
         ]);
 
