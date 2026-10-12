@@ -808,7 +808,7 @@ class StoreTicketRecordController
             return json_encode(['code' => 0]);
         }
 
-        sendSocketMessage("player-{$player->id}", [
+        sendSocketMessage('player-' . $player->id, [
             'type'       => 'deposit_qr_scanned',
             'amount'     => (int) $amountStr,
             'store_name' => $admin->username ?? '',
@@ -1039,7 +1039,7 @@ class StoreTicketRecordController
         }
 
         // 通知客戶端：寄存核銷完成
-        sendSocketMessage("player-{$player->id}", [
+        sendSocketMessage('player-' . $player->id, [
             'type'        => 'deposit_qr_redeemed',
             'order_id'    => $orderId,
             'amount'      => $amount,
