@@ -2563,6 +2563,14 @@ class ChannelIndexController
                             'display' => 'flex',
                             'alignItems' => 'center',
                             'marginLeft' => '20px'
+                        ]),
+                        Html::create()->content([
+                            Icon::create('calendar')->style(['marginRight' => '6px', 'fontSize' => '14px', 'color' => '#606266']),
+                            $timeDropdown
+                        ])->style([
+                            'display' => 'flex',
+                            'alignItems' => 'center',
+                            'marginLeft' => '20px'
                         ])
                     ])->style([
                         'display' => 'flex',
@@ -2649,31 +2657,7 @@ class ChannelIndexController
                 ])
                 , 12);
 
-            // ========== 第三行：运营统计标题 ==========
-            $row->column(
-                Card::create([
-                    Row::create()->column([
-                        Icon::create('bar-chart')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#409EFF']),
-                        Html::create(admin_trans('data_center.operation_statistics'))->style([
-                            'fontSize' => '14px',
-                            'fontWeight' => 'bold',
-                            'color' => '#303133',
-                            'marginRight' => 'auto'
-                        ]),
-                        $timeDropdown
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center'
-                    ])
-                ])->bodyStyle([
-                    'padding' => '10px 16px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'borderLeft' => '3px solid #409EFF'
-                ])
-            , 24);
-
-            // ========== 第三行：运营统计数据卡片（6个指标）==========
+            // ========== 运营统计数据卡片（6个指标）==========
             // 上分总和
             $row->column(
                 Card::create([
@@ -2806,29 +2790,6 @@ class ChannelIndexController
                     'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
                 ])
             , 4);
-
-            // ========== 出票核销统计标题 ==========
-            $row->column(
-                Card::create([
-                    Row::create()->column([
-                        Icon::create('PrinterOutlined')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#67C23A']),
-                        Html::create(admin_trans('ticket_machine.record.title') . ' / ' . admin_trans('ticket_machine.redeem.title'))->style([
-                            'fontSize' => '14px',
-                            'fontWeight' => 'bold',
-                            'color' => '#303133',
-                            'marginRight' => 'auto'
-                        ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center'
-                    ])
-                ])->bodyStyle([
-                    'padding' => '10px 16px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'borderLeft' => '3px solid #67C23A'
-                ])
-            , 24);
 
             // 出票统计（4个卡片，每个colspan=6，填满一行）
             // 出票总金额
