@@ -287,6 +287,23 @@ export default {
     closeModalAndRefresh() {
       this.$emit('success');
       this.$emit('gridRefresh');
+      this.$emit('formModalClose');
+
+      // 方案A：ExAdmin 可能直接在 instance 上注入 grid
+      if (this.grid && this.grid.exposed && this.grid.exposed.refresh) {
+        this.grid.exposed.refresh();
+      } else {
+        // 方案B：向上遍歷 $parent 找 grid 的 exposed.refresh
+        let p = this.$parent;
+        while (p) {
+          if (p.$ && p.$.exposed && p.$.exposed.refresh) {
+            p.$.exposed.refresh();
+            break;
+          }
+          p = p.$parent;
+        }
+      }
+
       const el = this.$el;
       const modalWrap = el.closest ? el.closest('.ant-modal-wrap') : null;
       const closeBtn  = modalWrap ? modalWrap.querySelector('.ant-modal-close') : null;
