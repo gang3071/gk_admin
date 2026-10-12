@@ -382,6 +382,7 @@ return [
         'source_split' => 'Split',
         'source_merge' => 'Merge',
         'source_chuzhi' => 'Recharge Machine',
+        'source_deposit_qr' => 'Deposit QR',
         'remark' => 'Remark',
         'created_at' => 'Created At',
         'disable' => 'Disable',

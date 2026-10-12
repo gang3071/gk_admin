@@ -380,6 +380,7 @@ return [
         'source_split' => '拆分',
         'source_merge' => '合并',
         'source_chuzhi' => '储值机',
+        'source_deposit_qr' => '寄存码',
         'remark' => '备注',
         'created_at' => '创建时间',
         'disable' => '禁用',

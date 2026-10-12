@@ -7,17 +7,14 @@ namespace addons\webman\controller;
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
 use addons\webman\model\Player;
-use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\avatar\Avatar;
-use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
@@ -63,271 +60,31 @@ class StoreTicketRedeemController
                 }
             }
 
-            // 统计数据（使用独立查询，避免 join 和 group by 问题，排除禁用状态）
-            $totalData = TicketRecord::query()
-                ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-                ->selectRaw(
-                    'sum(score) as total_score, count(*) as total_count, '
-                    . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
-                    . 'sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
-                    . 'sum(IF(status = ' . TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
-                )
-                ->first();
-
-            // 获取当前班次统计（从上次交班时间到现在）
-            $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
-                ->where('bind_admin_user_id', $admin->id)
-                ->orderBy('id', 'desc')
-                ->first();
-            $lastShiftTime = $lastShiftRecord ? $lastShiftRecord->end_time : null;
-
-            $currentShiftQuery = TicketRecord::query()
-                ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-                ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
-                    $query->where('scanned_at', '>', $lastShiftTime);
-                });
-            $currentShiftData = $currentShiftQuery->selectRaw(
-                'sum(score) as total_score, count(*) as total_count, '
-                . 'sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, '
-                . 'sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score, '
-                . 'sum(IF(status = ' . TicketRecord::STATUS_MACHINE_USED . ', score, 0)) as machine_used_score'
-            )->first();
-
+            // 統計面板（下拉式，隨篩選條件更新）
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($totalData) {
+            $layout->row(function (Row $row) use ($exAdminFilter, $admin) {
                 $row->gutter([10, 0]);
-                // 总金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['total_score']) ? floatval($totalData['total_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.total_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-                // 总核销次数
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['total_count']) ? intval($totalData['total_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.total_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-                // 已使用数量
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['used_count']) ? intval($totalData['used_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.used_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 后台使用金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['backend_used_score']) ? floatval($totalData['backend_used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.backend_used_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#f5222d'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-                // 机台使用金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['machine_used_score']) ? floatval($totalData['machine_used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.machine_used_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#722ed1'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type'            => 'StoreTicketRedeem',
+                    'admin_user_id'   => $admin->id,
+                    'default_open'    => true,
+                ]));
             })->style(['background' => '#fff']);
+            $grid->header($layout);
 
-            // 当前班次统计
-            $layout->row(function (Row $row) use ($currentShiftData, $lastShiftTime) {
-                $row->gutter([10, 0]);
-                // 当前班次标题
-                $row->column(
-                    Card::create([
-                        Html::create(admin_trans('ticket_machine.redeem.current_shift') . ($lastShiftTime ? ' (' . $lastShiftTime . ')' : ''))
-                            ->style([
-                                'font-size' => '12px',
-                                'font-weight' => 'bold',
-                                'color' => '#67C23A',
-                                'text-align' => 'center'
-                            ]),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'justify-content' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 当前班次总核销金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['total_score']) ? floatval($currentShiftData['total_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.total_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 当前班次总核销次数
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['total_count']) ? intval($currentShiftData['total_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.total_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 当前班次已使用数量
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['used_count']) ? intval($currentShiftData['used_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.used_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 当前班次后台使用金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['backend_used_score']) ? floatval($currentShiftData['backend_used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.backend_used_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#f5222d'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 当前班次机台使用金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['machine_used_score']) ? floatval($currentShiftData['machine_used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.redeem.machine_used_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#722ed1'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-            })->style(['background' => '#f6ffed']);
-
-            // 添加核销按钮和统计布局
+            // 工具按鈕：普通核銷 + GV1 寄存碼核銷
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.redeem.redeem_btn'))
                     ->type('primary')
                     ->modal([$this, 'scanRedeem'])
                     ->width('700px'),
-                $layout
+                Button::create(admin_trans('ticket_machine.record.redeem'))
+                    ->modal([$this, 'scanRedeemModal'])
+                    ->width('700px')
+                    ->type('primary')
+                    ->icon('QrcodeOutlined')
+                    ->gridRefresh(),
             ]);
 
             // 列定义
@@ -466,6 +223,7 @@ class StoreTicketRedeemController
                         TicketRecord::SOURCE_TYPE_SPLIT => admin_trans('ticket_machine.redeem.source_split'),
                         TicketRecord::SOURCE_TYPE_MERGE => admin_trans('ticket_machine.redeem.source_merge'),
                         TicketRecord::SOURCE_TYPE_CHUZHI => admin_trans('ticket_machine.redeem.source_chuzhi'),
+                        'deposit_qr' => admin_trans('ticket_machine.redeem.source_deposit_qr'),
                     ])
                     ->style(['width' => '150px']);
                 $filter->between()->dateTimeRange('created_at')
@@ -572,6 +330,43 @@ class StoreTicketRedeemController
                 'redeem_confirm' => admin_trans('ticket_machine.redeem.redeem_confirm'),
                 'player_name' => admin_trans('ticket_machine.redeem.player_name'),
                 'player_id' => admin_trans('ticket_machine.redeem.player_id'),
+            ],
+        ]);
+    }
+
+    /**
+     * 掃碼核銷（含 GV1 點數寄存碼）
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function scanRedeemModal()
+    {
+        return admin_view(plugin()->webman->getPath() . '/views/scan_record_redeem_modal.vue')->attrs([
+            'query_url'          => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/getRecordByQrCode',
+            'redeem_url'         => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
+            'deposit_redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
+            'deposit_notify_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/notifyDepositScanned',
+            'labels' => [
+                'input_qr_code'              => admin_trans('ticket_machine.redeem.input_qr_code'),
+                'scan_qr_code_placeholder'   => admin_trans('ticket_machine.redeem.scan_qr_code_placeholder'),
+                'order_id'                   => admin_trans('ticket_machine.redeem.order_id'),
+                'store_name'                 => admin_trans('ticket_machine.redeem.store_name'),
+                'machine_no'                 => admin_trans('ticket_machine.redeem.machine_no'),
+                'score'                      => admin_trans('ticket_machine.redeem.score'),
+                'status'                     => admin_trans('ticket_machine.redeem.status'),
+                'ticket_type'                => admin_trans('ticket_machine.redeem.ticket_type'),
+                'qr_code_no'                 => admin_trans('ticket_machine.redeem.qr_code_no'),
+                'created_at'                 => admin_trans('ticket_machine.redeem.created_at'),
+                'redeem_confirm'             => admin_trans('ticket_machine.redeem.redeem_confirm'),
+                'deposit_uid'                => admin_trans('ticket_machine.record.deposit_uid'),
+                'deposit_amount'             => admin_trans('ticket_machine.record.deposit_amount'),
+                'deposit_expires_in_seconds' => admin_trans('ticket_machine.record.deposit_expires_in_seconds'),
+                'deposit_expired'            => admin_trans('ticket_machine.record.deposit_expired'),
+                'deposit_confirm'            => admin_trans('ticket_machine.record.deposit_confirm'),
+                'deposit_success'            => admin_trans('ticket_machine.record.deposit_success'),
+                'deposit_balance_after'      => admin_trans('ticket_machine.record.deposit_balance_after'),
+                'deposit_failed'             => admin_trans('ticket_machine.record.deposit_failed'),
             ],
         ]);
     }

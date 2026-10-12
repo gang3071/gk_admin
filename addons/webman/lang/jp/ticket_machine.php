@@ -382,6 +382,7 @@ return [
         'source_split' => '分割',
         'source_merge' => '結合',
         'source_chuzhi' => 'チャージ機',
+        'source_deposit_qr' => '預かりQR',
         'remark' => '備考',
         'created_at' => '作成日時',
         'disable' => '無効にする',

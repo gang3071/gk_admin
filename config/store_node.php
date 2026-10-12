@@ -888,6 +888,15 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/redeemById',
                 'title' => '核销记录',
             ],
+            [
+                'id' => 'addons\webman\controller\StoreTicketRedeemController\scanRedeemModal',
+                'pid' => 'addons\webman\controller\StoreTicketRedeemController\index',
+                'action' => 'scanRedeemModal',
+                'method' => 'get',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRedeemController/scanRedeemModal',
+                'title' => '寄存碼核銷',
+            ],
         ]
     ],
 

@@ -384,6 +384,7 @@ return [
         'source_split' => '拆分',
         'source_merge' => '合併',
         'source_chuzhi' => '儲值機',
+        'source_deposit_qr' => '寄存碼',
         'remark' => '備註',
         'created_at' => '創建時間',
         'disable' => '禁用',

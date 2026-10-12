@@ -2209,6 +2209,107 @@ class Login extends LoginAbstract
                 ];
                 break;
 
+            case 'StoreTicketRedeem':
+                $query = TicketRecord::query()
+                    ->where('store_admin_id', $adminUserId)
+                    ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                    ->where('status', '!=', TicketRecord::STATUS_DISABLED);
+
+                if (!empty($exAdminFilter['created_at'][0])) {
+                    $query->where('created_at', '>=', $exAdminFilter['created_at'][0]);
+                }
+                if (!empty($exAdminFilter['created_at'][1])) {
+                    $query->where('created_at', '<=', $exAdminFilter['created_at'][1]);
+                }
+                if (!empty($exAdminFilter['scanned_at'][0])) {
+                    $query->where('scanned_at', '>=', $exAdminFilter['scanned_at'][0]);
+                }
+                if (!empty($exAdminFilter['scanned_at'][1])) {
+                    $query->where('scanned_at', '<=', $exAdminFilter['scanned_at'][1]);
+                }
+                if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
+                    $query->where('status', $exAdminFilter['status']);
+                }
+                if (isset($exAdminFilter['source_type_custom'])) {
+                    $sourceType = $exAdminFilter['source_type_custom'];
+                    if ($sourceType === 'null' || $sourceType === 'NULL') {
+                        $query->where(function ($q) {
+                            $q->whereNull('source_type')->orWhere('source_type', '');
+                        });
+                    } elseif ($sourceType !== '') {
+                        $query->where('source_type', $sourceType);
+                    }
+                }
+                if (!empty($exAdminFilter['order_id'])) {
+                    $query->where('order_id', 'like', '%' . $exAdminFilter['order_id'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_no'])) {
+                    $query->where('machine_no', 'like', '%' . $exAdminFilter['machine_no'] . '%');
+                }
+                if (!empty($exAdminFilter['store_name'])) {
+                    $query->where('store_name', $exAdminFilter['store_name']);
+                }
+                if (!empty($exAdminFilter['player']['name'])) {
+                    $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                    });
+                }
+                if (!empty($exAdminFilter['player']['uuid'])) {
+                    $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('uuid', 'like', '%' . $exAdminFilter['player']['uuid'] . '%');
+                    });
+                }
+
+                $bkUsed = TicketRecord::STATUS_BACKEND_USED;
+                $mcUsed = TicketRecord::STATUS_MACHINE_USED;
+                $usedIn = "{$bkUsed},{$mcUsed}";
+                $totalData = (clone $query)->selectRaw(
+                    "sum(score) as total_score,
+                     count(*) as total_count,
+                     sum(IF(status IN ({$usedIn}), 1, 0)) as used_count,
+                     sum(IF(status = {$bkUsed}, score, 0)) as backend_used_score,
+                     sum(IF(status = {$mcUsed}, score, 0)) as machine_used_score"
+                )->first();
+
+                // 當前班次（從上次交班時間起，不受篩選條件影響）
+                $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
+                    ->where('bind_admin_user_id', $adminUserId)
+                    ->orderBy('id', 'desc')
+                    ->first();
+                $lastShiftTime = $lastShiftRecord?->end_time;
+
+                $shiftQuery = TicketRecord::query()
+                    ->where('store_admin_id', $adminUserId)
+                    ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                    ->where('status', '!=', TicketRecord::STATUS_DISABLED);
+                if ($lastShiftTime) {
+                    $shiftQuery->where('scanned_at', '>', $lastShiftTime);
+                }
+                $shiftData = $shiftQuery->selectRaw(
+                    "sum(score) as total_score,
+                     count(*) as total_count,
+                     sum(IF(status IN ({$usedIn}), 1, 0)) as used_count,
+                     sum(IF(status = {$bkUsed}, score, 0)) as backend_used_score,
+                     sum(IF(status = {$mcUsed}, score, 0)) as machine_used_score"
+                )->first();
+
+                $shiftLabel = admin_trans('ticket_machine.redeem.current_shift')
+                    . ($lastShiftTime ? ' (' . $lastShiftTime . ')' : '');
+
+                $data = [
+                    ['title' => admin_trans('ticket_machine.redeem.total_score'),        'number' => floatval($totalData['total_score'] ?? 0),        'prefix' => '', 'suffix' => ''],
+                    ['title' => admin_trans('ticket_machine.redeem.total_count'),         'number' => intval($totalData['total_count'] ?? 0),           'prefix' => '', 'suffix' => ''],
+                    ['title' => admin_trans('ticket_machine.redeem.used_count'),          'number' => intval($totalData['used_count'] ?? 0),            'prefix' => '', 'suffix' => ''],
+                    ['title' => admin_trans('ticket_machine.redeem.backend_used_score'),  'number' => floatval($totalData['backend_used_score'] ?? 0),  'prefix' => '', 'suffix' => ''],
+                    ['title' => admin_trans('ticket_machine.redeem.machine_used_score'),  'number' => floatval($totalData['machine_used_score'] ?? 0),  'prefix' => '', 'suffix' => ''],
+                    ['title' => $shiftLabel . ' ' . admin_trans('ticket_machine.redeem.total_score'),       'number' => floatval($shiftData['total_score'] ?? 0),       'prefix' => '', 'suffix' => ''],
+                    ['title' => $shiftLabel . ' ' . admin_trans('ticket_machine.redeem.total_count'),        'number' => intval($shiftData['total_count'] ?? 0),          'prefix' => '', 'suffix' => ''],
+                    ['title' => $shiftLabel . ' ' . admin_trans('ticket_machine.redeem.used_count'),         'number' => intval($shiftData['used_count'] ?? 0),           'prefix' => '', 'suffix' => ''],
+                    ['title' => $shiftLabel . ' ' . admin_trans('ticket_machine.redeem.backend_used_score'), 'number' => floatval($shiftData['backend_used_score'] ?? 0), 'prefix' => '', 'suffix' => ''],
+                    ['title' => $shiftLabel . ' ' . admin_trans('ticket_machine.redeem.machine_used_score'), 'number' => floatval($shiftData['machine_used_score'] ?? 0), 'prefix' => '', 'suffix' => ''],
+                ];
+                break;
+
             case 'StoreTicketRecord':
                 $query = TicketRecord::query()
                     ->where('store_admin_id', $adminUserId)
