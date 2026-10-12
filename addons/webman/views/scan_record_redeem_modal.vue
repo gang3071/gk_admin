@@ -287,21 +287,25 @@ export default {
     closeModalAndRefresh() {
       this.$emit('success');
       this.$emit('gridRefresh');
-      this.$emit('formModalClose');
 
-      // 方案A：ExAdmin 可能直接在 instance 上注入 grid
-      if (this.grid && this.grid.exposed && this.grid.exposed.refresh) {
-        this.grid.exposed.refresh();
-      } else {
-        // 方案B：向上遍歷 $parent 找 grid 的 exposed.refresh
-        let p = this.$parent;
-        while (p) {
-          if (p.$ && p.$.exposed && p.$.exposed.refresh) {
-            p.$.exposed.refresh();
-            break;
+      try {
+        // 方案A：ExAdmin 可能直接在 instance 上注入 grid
+        if (this.grid && this.grid.exposed && typeof this.grid.exposed.refresh === 'function') {
+          this.grid.exposed.refresh();
+        } else {
+          // 方案B：向上遍歷 $parent，僅找有 selectCheckboxColumn（grid 特徵）的組件
+          let p = this.$parent;
+          while (p) {
+            const exp = p.$ && p.$.exposed;
+            if (exp && typeof exp.refresh === 'function' && typeof exp.selectIds !== 'undefined') {
+              exp.refresh();
+              break;
+            }
+            p = p.$parent;
           }
-          p = p.$parent;
         }
+      } catch (e) {
+        // grid 刷新失敗不影響彈窗關閉
       }
 
       const el = this.$el;
