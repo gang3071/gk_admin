@@ -2220,17 +2220,18 @@ class Login extends LoginAbstract
                     ])
                     ->where('status', '!=', TicketRecord::STATUS_DISABLED);
 
-                if (!empty($exAdminFilter['created_at_start'])) {
-                    $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+                // between()->dateTimeRange('created_at') 送出格式為 created_at[0]/created_at[1]
+                if (!empty($exAdminFilter['created_at'][0])) {
+                    $query->where('created_at', '>=', $exAdminFilter['created_at'][0]);
                 }
-                if (!empty($exAdminFilter['created_at_end'])) {
-                    $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+                if (!empty($exAdminFilter['created_at'][1])) {
+                    $query->where('created_at', '<=', $exAdminFilter['created_at'][1]);
                 }
-                if (!empty($exAdminFilter['scanned_at_start'])) {
-                    $query->where('scanned_at', '>=', $exAdminFilter['scanned_at_start']);
+                if (!empty($exAdminFilter['scanned_at'][0])) {
+                    $query->where('scanned_at', '>=', $exAdminFilter['scanned_at'][0]);
                 }
-                if (!empty($exAdminFilter['scanned_at_end'])) {
-                    $query->where('scanned_at', '<=', $exAdminFilter['scanned_at_end']);
+                if (!empty($exAdminFilter['scanned_at'][1])) {
+                    $query->where('scanned_at', '<=', $exAdminFilter['scanned_at'][1]);
                 }
                 if (isset($exAdminFilter['status']) && $exAdminFilter['status'] !== '') {
                     $query->where('status', $exAdminFilter['status']);
@@ -2247,6 +2248,17 @@ class Login extends LoginAbstract
                 }
                 if (isset($exAdminFilter['ticket_type']) && $exAdminFilter['ticket_type'] !== '') {
                     $query->where('ticket_type', $exAdminFilter['ticket_type']);
+                }
+                if (!empty($exAdminFilter['order_id'])) {
+                    $query->where('order_id', 'like', '%' . $exAdminFilter['order_id'] . '%');
+                }
+                if (!empty($exAdminFilter['machine_no'])) {
+                    $query->where('machine_no', 'like', '%' . $exAdminFilter['machine_no'] . '%');
+                }
+                if (!empty($exAdminFilter['player']['name'])) {
+                    $query->whereHas('player', function ($q) use ($exAdminFilter) {
+                        $q->where('name', 'like', '%' . $exAdminFilter['player']['name'] . '%');
+                    });
                 }
 
                 $usedIn = TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED;
