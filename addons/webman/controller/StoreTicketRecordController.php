@@ -821,7 +821,18 @@ class StoreTicketRecordController
         }
         $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
         if (empty($player)) {
-            return json_encode(['code' => 40003, 'msg' => '玩家不存在或不屬於本店']);
+            // 診斷：查玩家是否存在（不加 store 過濾）
+            $playerAny = Player::query()->where('id', (int) $uid)->first();
+            return json_encode([
+                'code'  => 40003,
+                'msg'   => '玩家不存在或不屬於本店',
+                'debug' => [
+                    'uid_queried'       => (int) $uid,
+                    'admin_id'          => $admin->id,
+                    'player_exists'     => !empty($playerAny),
+                    'player_store_id'   => $playerAny?->store_admin_id,
+                ],
+            ]);
         }
 
         // ===== 4. 取玩家當前 JWT AccessToken（Redis key: JWT:TOKEN:WEB:{player_id}）=====
