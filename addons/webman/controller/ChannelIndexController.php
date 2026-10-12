@@ -4403,7 +4403,7 @@ class ChannelIndexController
             $lockKey = null;
             if (in_array($ticketType, [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE]) && $playerId > 0) {
                 $lockKey = "voucher:lock:player:{$playerId}";
-                if (!Redis::set($lockKey, 1, ['NX', 'EX' => 10])) {
+                if (!Redis::set($lockKey, 1, 'EX', 10, 'NX')) {
                     return json(['code' => 400, 'message' => '操作繁忙，请稍后重试']);
                 }
             }
