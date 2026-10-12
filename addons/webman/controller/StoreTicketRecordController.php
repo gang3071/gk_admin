@@ -294,12 +294,6 @@ class StoreTicketRecordController
                     ->type('primary')
                     ->icon('QrcodeOutlined')
                     ->gridRefresh(),
-                Button::create(admin_trans('ticket_machine.record.deposit_redeem'))
-                    ->modal([$this, 'scanDepositCodeModal'])
-                    ->width('600px')
-                    ->type('default')
-                    ->icon('SaveOutlined')
-                    ->gridRefresh(),
                 $layout
             ]);
 
@@ -618,20 +612,30 @@ class StoreTicketRecordController
     public function scanRedeemModal()
     {
         return admin_view(plugin()->webman->getPath() . '/views/scan_record_redeem_modal.vue')->attrs([
-            'query_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/getRecordByQrCode',
-            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemRecord',
+            'query_url'          => 'ex-admin/addons-webman-controller-StoreTicketRecordController/getRecordByQrCode',
+            'redeem_url'         => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemRecord',
+            'deposit_redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
             'labels' => [
-                'input_qr_code' => admin_trans('ticket_machine.record.input_qr_code'),
+                'input_qr_code'            => admin_trans('ticket_machine.record.input_qr_code'),
                 'scan_qr_code_placeholder' => admin_trans('ticket_machine.record.scan_qr_code_placeholder'),
-                'order_id' => admin_trans('ticket_machine.record.order_id'),
-                'store_name' => admin_trans('ticket_machine.record.store_name'),
-                'machine_no' => admin_trans('ticket_machine.record.machine_no'),
-                'score' => admin_trans('ticket_machine.record.score'),
-                'status' => admin_trans('ticket_machine.record.status'),
-                'ticket_type' => admin_trans('ticket_machine.record.ticket_type'),
-                'qr_code_no' => admin_trans('ticket_machine.record.qr_code_no'),
-                'created_at' => admin_trans('ticket_machine.record.created_at'),
-                'redeem_confirm' => admin_trans('ticket_machine.record.redeem_confirm'),
+                'order_id'                 => admin_trans('ticket_machine.record.order_id'),
+                'store_name'               => admin_trans('ticket_machine.record.store_name'),
+                'machine_no'               => admin_trans('ticket_machine.record.machine_no'),
+                'score'                    => admin_trans('ticket_machine.record.score'),
+                'status'                   => admin_trans('ticket_machine.record.status'),
+                'ticket_type'              => admin_trans('ticket_machine.record.ticket_type'),
+                'qr_code_no'               => admin_trans('ticket_machine.record.qr_code_no'),
+                'created_at'               => admin_trans('ticket_machine.record.created_at'),
+                'redeem_confirm'           => admin_trans('ticket_machine.record.redeem_confirm'),
+                // GV1 寄存碼相關
+                'deposit_uid'              => admin_trans('ticket_machine.record.deposit_uid'),
+                'deposit_amount'           => admin_trans('ticket_machine.record.deposit_amount'),
+                'deposit_expires_in_seconds' => admin_trans('ticket_machine.record.deposit_expires_in_seconds'),
+                'deposit_expired'          => admin_trans('ticket_machine.record.deposit_expired'),
+                'deposit_confirm'          => admin_trans('ticket_machine.record.deposit_confirm'),
+                'deposit_success'          => admin_trans('ticket_machine.record.deposit_success'),
+                'deposit_balance_after'    => admin_trans('ticket_machine.record.deposit_balance_after'),
+                'deposit_failed'           => admin_trans('ticket_machine.record.deposit_failed'),
             ],
         ]);
     }
@@ -771,34 +775,6 @@ class StoreTicketRecordController
         ]);
 
         return json_encode(['code' => 0, 'msg' => admin_trans('ticket_machine.record.redeem_success')]);
-    }
-
-    /**
-     * 寄存碼掃碼彈窗
-     * @group store
-     * @auth true
-     * @return mixed
-     */
-    public function scanDepositCodeModal()
-    {
-        return admin_view(plugin()->webman->getPath() . '/views/deposit_code_redeem_modal.vue')->attrs([
-            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
-            'labels' => [
-                'title'            => admin_trans('ticket_machine.record.deposit_scan_title'),
-                'placeholder'      => admin_trans('ticket_machine.record.deposit_placeholder'),
-                'confirm'          => admin_trans('ticket_machine.record.deposit_confirm'),
-                'scan_again'       => admin_trans('ticket_machine.record.scan_again'),
-                'uid'              => admin_trans('ticket_machine.record.deposit_uid'),
-                'amount'           => admin_trans('ticket_machine.record.deposit_amount'),
-                'expires_in'       => admin_trans('ticket_machine.record.deposit_expires_in'),
-                'expires_in_seconds' => admin_trans('ticket_machine.record.deposit_expires_in_seconds'),
-                'expired'          => admin_trans('ticket_machine.record.deposit_expired'),
-                'success_title'    => admin_trans('ticket_machine.record.deposit_success'),
-                'order_id'         => admin_trans('ticket_machine.record.order_id'),
-                'balance_after'    => admin_trans('ticket_machine.record.deposit_balance_after'),
-                'failed'           => admin_trans('ticket_machine.record.deposit_failed'),
-            ],
-        ]);
     }
 
     /**
