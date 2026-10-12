@@ -9,6 +9,10 @@ use addons\webman\model\AdminUser;
 use addons\webman\model\Player;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\TicketRecord;
+use addons\webman\service\WalletService;
+use support\Db;
+use support\Log;
+use support\Redis;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -42,11 +46,12 @@ class StoreTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示当前店家的出票类型数据（开分、体验卷、福利卷）
+            // 只显示当前店家的出票类型数据（开分、洗分、体验卷、福利卷）
             $grid->model()
                 ->where('store_admin_id', $admin->id)
                 ->whereIn('ticket_type', [
                     TicketRecord::TYPE_RECHARGE,
+                    TicketRecord::TYPE_WITHDRAW,
                     TicketRecord::TYPE_EXPERIENCE,
                     TicketRecord::TYPE_WELFARE,
                 ])
@@ -288,6 +293,12 @@ class StoreTicketRecordController
                     ->width('700px')
                     ->type('primary')
                     ->icon('QrcodeOutlined')
+                    ->gridRefresh(),
+                Button::create(admin_trans('ticket_machine.record.deposit_redeem'))
+                    ->modal([$this, 'scanDepositCodeModal'])
+                    ->width('600px')
+                    ->type('default')
+                    ->icon('SaveOutlined')
                     ->gridRefresh(),
                 $layout
             ]);
@@ -760,6 +771,182 @@ class StoreTicketRecordController
         ]);
 
         return json_encode(['code' => 0, 'msg' => admin_trans('ticket_machine.record.redeem_success')]);
+    }
+
+    /**
+     * 寄存碼掃碼彈窗
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function scanDepositCodeModal()
+    {
+        return admin_view(plugin()->webman->getPath() . '/views/deposit_code_redeem_modal.vue')->attrs([
+            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
+            'labels' => [
+                'title'            => admin_trans('ticket_machine.record.deposit_scan_title'),
+                'placeholder'      => admin_trans('ticket_machine.record.deposit_placeholder'),
+                'confirm'          => admin_trans('ticket_machine.record.deposit_confirm'),
+                'scan_again'       => admin_trans('ticket_machine.record.scan_again'),
+                'uid'              => admin_trans('ticket_machine.record.deposit_uid'),
+                'amount'           => admin_trans('ticket_machine.record.deposit_amount'),
+                'expires_in'       => admin_trans('ticket_machine.record.deposit_expires_in'),
+                'expires_in_seconds' => admin_trans('ticket_machine.record.deposit_expires_in_seconds'),
+                'expired'          => admin_trans('ticket_machine.record.deposit_expired'),
+                'success_title'    => admin_trans('ticket_machine.record.deposit_success'),
+                'order_id'         => admin_trans('ticket_machine.record.order_id'),
+                'balance_after'    => admin_trans('ticket_machine.record.deposit_balance_after'),
+                'failed'           => admin_trans('ticket_machine.record.deposit_failed'),
+            ],
+        ]);
+    }
+
+    /**
+     * 核銷寄存碼（GV1格式）
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function redeemDepositCode()
+    {
+        $code  = request()->post('code', '');
+        $admin = Admin::user();
+
+        // ===== 1. 格式解析 =====
+        $parts = explode('.', trim($code));
+        if (count($parts) !== 6 || $parts[0] !== 'GV1') {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+
+        [, $uid, $amountStr, $expStr, $nonce, $sig] = $parts;
+
+        if (!ctype_digit($amountStr) || !ctype_digit($expStr)
+            || !preg_match('/^[0-9A-F]{8}$/', $nonce)
+            || !preg_match('/^[0-9A-F]{20}$/', $sig)) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+
+        $amount = (int) $amountStr;
+        $exp    = (int) $expStr;
+
+        if ($amount < 1000) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+
+        // ===== 2. 時間驗證 =====
+        $now = time();
+        if ($now > $exp + 10 || $exp - $now > 70) {
+            return json_encode(['code' => 40002, 'msg' => admin_trans('ticket_machine.record.deposit_err_expired')]);
+        }
+
+        // ===== 3. 查玩家 =====
+        if (!ctype_digit($uid)) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+        $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
+        if (empty($player)) {
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+        }
+
+        // ===== 4. 取玩家當前 JWT AccessToken（Redis key: JWT:TOKEN:WEB:{player_id}）=====
+        try {
+            $tokenKey    = 'JWT:TOKEN:WEB:' . $player->id;
+            $accessToken = Redis::get($tokenKey);
+        } catch (\Throwable $e) {
+            Log::error('redeemDepositCode: Redis error', ['error' => $e->getMessage()]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        if (empty($accessToken)) {
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+        }
+
+        // ===== 5. 驗簽 =====
+        $message   = "GV1.{$uid}.{$amountStr}.{$expStr}.{$nonce}";
+        $hmac      = hash_hmac('sha256', $message, $accessToken, true); // binary
+        $sigExpect = strtoupper(bin2hex(substr($hmac, 0, 10)));         // 前10 bytes → 20字符 hex
+
+        if (!hash_equals($sigExpect, $sig)) {
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+        }
+
+        // ===== 6. 防重放（nonce check）=====
+        $nonceKey = "deposit:nonce:{$player->id}:{$nonce}";
+        try {
+            $alreadyUsed = Redis::exists($nonceKey);
+        } catch (\Throwable $e) {
+            Log::error('redeemDepositCode: Redis nonce check error', ['error' => $e->getMessage()]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        if ($alreadyUsed) {
+            return json_encode(['code' => 40004, 'msg' => admin_trans('ticket_machine.record.deposit_err_used')]);
+        }
+
+        // ===== 7. 玩家狀態檢查 =====
+        $wallet = $player->machine_wallet;
+        if (!$wallet || $wallet->wallet_locked == 1) {
+            return json_encode(['code' => 40006, 'msg' => admin_trans('ticket_machine.record.deposit_err_locked')]);
+        }
+
+        // ===== 8. 餘額檢查 =====
+        $balanceBefore = WalletService::getBalance($player->id);
+        if ($balanceBefore < $amount) {
+            return json_encode(['code' => 40005, 'msg' => admin_trans('ticket_machine.record.deposit_err_balance')]);
+        }
+
+        // ===== 9. 扣點 + 建立記錄（事務） =====
+        try {
+            $deductResult = WalletService::atomicDecrement($player->id, (float) $amount);
+        } catch (\Throwable $e) {
+            Log::error('redeemDepositCode: atomicDecrement failed', [
+                'player_id' => $player->id,
+                'amount'    => $amount,
+                'error'     => $e->getMessage(),
+            ]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        if (empty($deductResult['ok'])) {
+            return json_encode(['code' => 40005, 'msg' => admin_trans('ticket_machine.record.deposit_err_balance')]);
+        }
+
+        $balanceAfter = (float) ($deductResult['new'] ?? $deductResult['balance'] ?? ($balanceBefore - $amount));
+
+        // 寫入 nonce（TTL 120s），防止重放
+        try {
+            Redis::setex($nonceKey, 120, 1);
+        } catch (\Throwable $e) {
+            Log::warning('redeemDepositCode: failed to set nonce key', ['error' => $e->getMessage()]);
+        }
+
+        // 建立寄存票記錄
+        $orderId = TicketRecord::generateOrderId(TicketRecord::TYPE_DEPOSIT);
+        TicketRecord::create([
+            'order_id'       => $orderId,
+            'store_admin_id' => $admin->id,
+            'store_name'     => $admin->username ?? '',
+            'player_id'      => $player->id,
+            'player_name'    => $player->name ?? '',
+            'department_id'  => $player->department_id,
+            'score'          => $amount,
+            'ticket_type'    => TicketRecord::TYPE_WITHDRAW,
+            'status'         => TicketRecord::STATUS_BACKEND_USED,
+            'scanned_at'     => date('Y-m-d H:i:s'),
+            'scanned_by'     => $admin->id,
+            'encrypted_content' => $code,
+            'source_type'    => 'deposit_qr',
+        ]);
+
+        return json_encode([
+            'code' => 0,
+            'data' => [
+                'depositId' => $orderId,
+                'uid'       => $uid,
+                'amount'    => $amount,
+                'balance'   => $balanceAfter,
+            ],
+        ]);
     }
 
     /**
