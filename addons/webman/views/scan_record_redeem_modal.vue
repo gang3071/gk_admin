@@ -10,6 +10,7 @@
           <a-input
             v-model:value="qrCodeNo"
             :placeholder="isGv1Locked ? labels.scan_qr_code_placeholder : (labels.scan_qr_code_placeholder || '请输入或扫描二维码编号')"
+            :type="inputType"
             size="large"
             ref="qrInput"
             :disabled="inputLocked"
@@ -165,6 +166,9 @@ export default {
     };
   },
   computed: {
+    inputType() {
+      return this.qrCodeNo.startsWith('GV') ? 'password' : 'text';
+    },
     canRedeem() {
       if (!this.record) return false;
       return this.record.ticket_type === 1 && this.record.status === 1;
