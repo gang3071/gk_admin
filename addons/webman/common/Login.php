@@ -2272,13 +2272,16 @@ class Login extends LoginAbstract
                 )->first();
 
                 // 當前班次（從上次交班時間起，不受篩選條件影響）
+                // 略過 DataPermissions(department_id) 避免誤篩，store_admin_id 已足夠限定範圍
                 $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
+                    ->withoutGlobalScope('dataAuth')
                     ->where('bind_admin_user_id', $adminUserId)
                     ->orderBy('id', 'desc')
                     ->first();
                 $lastShiftTime = $lastShiftRecord?->end_time;
 
                 $shiftQuery = TicketRecord::query()
+                    ->withoutGlobalScope('dataAuth')
                     ->where('store_admin_id', $adminUserId)
                     ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                     ->where('status', '!=', TicketRecord::STATUS_DISABLED);
@@ -2371,13 +2374,16 @@ class Login extends LoginAbstract
                 )->first();
 
                 // 當前班次統計（不受篩選條件影響，僅限開分票）
+                // 略過 DataPermissions(department_id) 避免誤篩，store_admin_id 已足夠限定範圍
                 $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
+                    ->withoutGlobalScope('dataAuth')
                     ->where('bind_admin_user_id', $adminUserId)
                     ->orderBy('id', 'desc')
                     ->first();
                 $lastShiftTime = $lastShiftRecord?->end_time;
 
                 $shiftQuery = TicketRecord::query()
+                    ->withoutGlobalScope('dataAuth')
                     ->where('store_admin_id', $adminUserId)
                     ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                     ->where('status', '!=', TicketRecord::STATUS_DISABLED);
