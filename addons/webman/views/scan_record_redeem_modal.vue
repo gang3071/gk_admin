@@ -141,6 +141,7 @@ export default {
     query_url: String,
     redeem_url: String,
     deposit_redeem_url: String,
+    deposit_notify_url: String,
     labels: Object,
   },
   data() {
@@ -233,6 +234,10 @@ export default {
           this.isGv1Locked = true;
           this.message    = '';
           this.startExpiryCountdown(gv1.exp);
+          // 通知伺服器（fire-and-forget），伺服器再推送給玩家
+          if (this.deposit_notify_url) {
+            this.$request({ url: this.deposit_notify_url, method: 'post', data: { code: value } }).catch(() => {});
+          }
           return;
         }
 

@@ -797,6 +797,26 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/detail',
                 'title' => '记录详情',
             ],
+            // 通知客戶端 GV1 已掃描
+            [
+                'id' => 'addons\webman\controller\StoreTicketRecordController\notifyDepositScanned',
+                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+                'action' => 'notifyDepositScanned',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/notifyDepositScanned',
+                'title' => '寄存碼掃描通知',
+            ],
+            // 點數寄存碼核銷
+            [
+                'id' => 'addons\webman\controller\StoreTicketRecordController\redeemDepositCode',
+                'pid' => 'addons\webman\controller\StoreTicketRecordController\index',
+                'action' => 'redeemDepositCode',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
+                'title' => '點數寄存碼核銷',
+            ],
         ]
     ],
 
