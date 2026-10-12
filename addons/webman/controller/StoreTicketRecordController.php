@@ -604,7 +604,7 @@ class StoreTicketRecordController
 
         $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
         if (empty($player)) {
-            return json_encode(['code' => 0]);
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.player_not_found')]);
         }
 
         sendSocketMessage('player-' . $player->id, [
@@ -614,7 +614,22 @@ class StoreTicketRecordController
             'timestamp'  => time(),
         ]);
 
-        return json_encode(['code' => 0]);
+        $balance      = WalletService::getBalance($player->id);
+        $wallet       = $player->machine_wallet;
+        $walletLocked = $wallet ? (int) $wallet->wallet_locked : 0;
+        $isCrashed    = $wallet ? (int) $wallet->is_crashed : 0;
+
+        return json_encode([
+            'code' => 0,
+            'data' => [
+                'name'          => $player->name ?? '',
+                'uuid'          => $player->uuid ?? '',
+                'balance'       => $balance,
+                'wallet_locked' => $walletLocked,
+                'is_crashed'    => $isCrashed,
+                'amount'        => (int) $amountStr,
+            ],
+        ]);
     }
 
     /**

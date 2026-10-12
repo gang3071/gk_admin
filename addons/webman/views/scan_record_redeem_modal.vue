@@ -56,20 +56,63 @@
       <template #title>
         <save-outlined style="margin-right:6px;color:#13c2c2;" />
         點數寄存碼
+        <a-spin v-if="notifying" size="small" style="margin-left:8px;" />
       </template>
-      <a-descriptions :column="2" size="small" bordered>
-        <a-descriptions-item :label="labels.deposit_uid || '玩家ID'">
-          <a-tag color="blue">{{ gv1Info.uid }}</a-tag>
+
+      <!-- 玩家資訊（通知接口返回後顯示） -->
+      <a-descriptions v-if="playerInfo" :column="2" size="small" bordered style="margin-bottom:12px;">
+        <!-- 帳號名稱 -->
+        <a-descriptions-item label="玩家帳號">
+          <span
+            style="cursor:pointer;color:#1890ff;"
+            :title="'點擊複製：' + playerInfo.name"
+            @click="copyText(playerInfo.name)"
+          >{{ playerInfo.name || '-' }}</span>
+          <copy-outlined style="margin-left:4px;color:#bfbfbf;cursor:pointer;" @click="copyText(playerInfo.name)" />
         </a-descriptions-item>
-        <a-descriptions-item :label="labels.deposit_amount || '寄存點數'">
-          <span style="color:#f5222d;font-weight:bold;font-size:16px;">{{ gv1Info.amount }}</span>
+        <!-- UUID -->
+        <a-descriptions-item label="UUID">
+          <span
+            style="cursor:pointer;color:#1890ff;font-family:monospace;"
+            :title="'點擊複製：' + playerInfo.uuid"
+            @click="copyText(playerInfo.uuid)"
+          >{{ playerInfo.uuid || '-' }}</span>
+          <copy-outlined style="margin-left:4px;color:#bfbfbf;cursor:pointer;" @click="copyText(playerInfo.uuid)" />
         </a-descriptions-item>
-        <a-descriptions-item :label="'有效期'" :span="2">
+        <!-- 餘額 -->
+        <a-descriptions-item label="當前餘額">
+          <span style="color:#f5222d;font-weight:bold;">{{ playerInfo.balance }}</span>
+        </a-descriptions-item>
+        <!-- 寄存金額 -->
+        <a-descriptions-item :label="labels.deposit_amount || '寄存金額'">
+          <span style="color:#fa8c16;font-weight:bold;font-size:15px;">{{ gv1Info.amount }}</span>
+        </a-descriptions-item>
+        <!-- 錢包狀態 -->
+        <a-descriptions-item label="錢包狀態" :span="2">
+          <a-tag :color="playerInfo.wallet_locked ? 'red' : 'green'">
+            {{ playerInfo.wallet_locked ? '🔒 已鎖定' : '✅ 正常' }}
+          </a-tag>
+          <a-tag v-if="playerInfo.is_crashed" color="volcano" style="margin-left:4px;">
+            💥 已暴機
+          </a-tag>
+        </a-descriptions-item>
+        <!-- 有效期 -->
+        <a-descriptions-item label="有效期" :span="2">
           <a-tag :color="expiryColor">{{ expiryText }}</a-tag>
         </a-descriptions-item>
       </a-descriptions>
 
-      <div style="margin-top:16px;">
+      <!-- 尚未取回玩家資訊時僅顯示基本資訊 -->
+      <a-descriptions v-else :column="2" size="small" bordered style="margin-bottom:12px;">
+        <a-descriptions-item :label="labels.deposit_amount || '寄存金額'">
+          <span style="color:#fa8c16;font-weight:bold;font-size:15px;">{{ gv1Info.amount }}</span>
+        </a-descriptions-item>
+        <a-descriptions-item label="有效期">
+          <a-tag :color="expiryColor">{{ expiryText }}</a-tag>
+        </a-descriptions-item>
+      </a-descriptions>
+
+      <div>
         <a-button
           type="primary"
           size="large"
@@ -153,6 +196,8 @@ export default {
       gv1ExpirySeconds: 0,
       expiryTimer: null,
       isGv1Locked: false,
+      playerInfo: null,     // 從後端取回的玩家資訊
+      notifying: false,     // 正在請求玩家資訊
 
       record: null,
       loading: false,
@@ -238,9 +283,17 @@ export default {
           this.isGv1Locked = true;
           this.message    = '';
           this.startExpiryCountdown(gv1.exp);
-          // 通知伺服器（fire-and-forget），伺服器再推送給玩家
+          // 通知伺服器並取回玩家資訊
           if (this.deposit_notify_url) {
-            this.$request({ url: this.deposit_notify_url, method: 'post', data: { code: value } }).catch(() => {});
+            this.notifying = true;
+            this.$request({ url: this.deposit_notify_url, method: 'post', data: { code: value } })
+              .then(res => {
+                if (res && res.code === 0 && res.data) {
+                  this.playerInfo = res.data;
+                }
+              })
+              .catch(() => {})
+              .finally(() => { this.notifying = false; });
           }
           return;
         }
@@ -272,6 +325,8 @@ export default {
       this.qrCodeNo        = '';
       this.rawGv1Code      = '';
       this.gv1Info         = null;
+      this.playerInfo      = null;
+      this.notifying       = false;
       this.record          = null;
       this.inputLocked     = false;
       this.isGv1Locked     = false;
@@ -282,6 +337,35 @@ export default {
       this.$nextTick(() => {
         if (this.$refs.qrInput) this.$refs.qrInput.focus();
       });
+    },
+
+    copyText(text) {
+      if (!text) return;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          this.$message.success('已複製：' + text);
+        }).catch(() => {
+          this.fallbackCopy(text);
+        });
+      } else {
+        this.fallbackCopy(text);
+      }
+    },
+
+    fallbackCopy(text) {
+      const el = document.createElement('textarea');
+      el.value = text;
+      el.style.position = 'fixed';
+      el.style.opacity = '0';
+      document.body.appendChild(el);
+      el.select();
+      try {
+        document.execCommand('copy');
+        this.$message.success('已複製：' + text);
+      } catch (e) {
+        this.$message.error('複製失敗，請手動複製');
+      }
+      document.body.removeChild(el);
     },
 
     closeModalAndRefresh() {
