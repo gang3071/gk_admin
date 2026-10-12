@@ -819,20 +819,10 @@ class StoreTicketRecordController
         if (!ctype_digit($uid)) {
             return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
         }
-        $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
+        // GV1 uid 是客戶端的 talk_user_id（非資料庫 id）
+        $player = Player::query()->where('talk_user_id', (int) $uid)->where('store_admin_id', $admin->id)->first();
         if (empty($player)) {
-            // 診斷：查玩家是否存在（不加 store 過濾）
-            $playerAny = Player::query()->where('id', (int) $uid)->first();
-            return json_encode([
-                'code'  => 40003,
-                'msg'   => '玩家不存在或不屬於本店',
-                'debug' => [
-                    'uid_queried'       => (int) $uid,
-                    'admin_id'          => $admin->id,
-                    'player_exists'     => !empty($playerAny),
-                    'player_store_id'   => $playerAny?->store_admin_id,
-                ],
-            ]);
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
         }
 
         // ===== 4. 取玩家當前 JWT AccessToken（Redis key: JWT:TOKEN:WEB:{player_id}）=====
@@ -845,7 +835,7 @@ class StoreTicketRecordController
         }
 
         if (empty($accessToken)) {
-            return json_encode(['code' => 40007, 'msg' => '玩家未登入（Redis無Token）key=' . $tokenKey]);
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
         }
 
         // ===== 5. 驗簽 =====
@@ -854,17 +844,7 @@ class StoreTicketRecordController
         $sigExpect = strtoupper(bin2hex(substr($hmac, 0, 10)));         // 前10 bytes → 20字符 hex
 
         if (!hash_equals($sigExpect, $sig)) {
-            return json_encode([
-                'code' => 40008,
-                'msg'  => '簽名不符',
-                'debug' => [
-                    'message'      => $message,
-                    'sig_received' => $sig,
-                    'sig_expected' => $sigExpect,
-                    'token_len'    => strlen($accessToken),
-                    'token_prefix' => substr($accessToken, 0, 20),
-                ],
-            ]);
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
         }
 
         // ===== 6. 防重放（nonce check）=====
