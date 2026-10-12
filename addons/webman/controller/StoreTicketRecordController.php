@@ -819,8 +819,7 @@ class StoreTicketRecordController
         if (!ctype_digit($uid)) {
             return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
         }
-        // GV1 uid 是客戶端的 talk_user_id（非資料庫 id）
-        $player = Player::query()->where('talk_user_id', (int) $uid)->where('store_admin_id', $admin->id)->first();
+        $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
         if (empty($player)) {
             return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
         }
