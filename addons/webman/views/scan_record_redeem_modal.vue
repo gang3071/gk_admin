@@ -286,6 +286,7 @@ export default {
 
     closeModalAndRefresh() {
       this.$emit('success');
+      this.$emit('gridRefresh');
       const el = this.$el;
       const modalWrap = el.closest ? el.closest('.ant-modal-wrap') : null;
       const closeBtn  = modalWrap ? modalWrap.querySelector('.ant-modal-close') : null;
