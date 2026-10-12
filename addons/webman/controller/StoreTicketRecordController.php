@@ -80,6 +80,7 @@ class StoreTicketRecordController
                     'ex_admin_filter' => $exAdminFilter,
                     'type'            => 'StoreTicketRecord',
                     'admin_user_id'   => $admin->id,
+                    'default_open'    => true,
                 ]));
             })->style(['background' => '#fff']);
             $grid->header($layout);
