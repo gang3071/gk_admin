@@ -2388,7 +2388,7 @@ class Login extends LoginAbstract
                     ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
                     ->where('status', '!=', TicketRecord::STATUS_DISABLED);
                 if ($lastShiftTime) {
-                    $shiftQuery->where('created_at', '>', $lastShiftTime);
+                    $shiftQuery->where('scanned_at', '>', $lastShiftTime);
                 }
                 $shiftData = $shiftQuery->selectRaw(
                     "sum(score) as total_score,
