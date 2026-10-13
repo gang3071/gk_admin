@@ -72,7 +72,7 @@ class StoreTicketRecordController
                 }
             }
 
-            // 統計面板（下拉式，隨篩選條件更新）
+            // 統計面板（下拉式，預設收起，點擊展開才載入，隨篩選條件更新）
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($exAdminFilter, $admin) {
                 $row->gutter([10, 0]);
@@ -80,7 +80,7 @@ class StoreTicketRecordController
                     'ex_admin_filter' => $exAdminFilter,
                     'type'            => 'StoreTicketRecord',
                     'admin_user_id'   => $admin->id,
-                    'default_open'    => true,
+                    'default_open'    => false,
                 ]));
             })->style(['background' => '#fff']);
             $grid->header($layout);
