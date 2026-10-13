@@ -385,7 +385,6 @@ class StoreTicketRedeemController
         $record = TicketRecord::query()
             ->where('id', $id)
             ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
             ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
@@ -576,7 +575,6 @@ class StoreTicketRedeemController
         $record = TicketRecord::query()
             ->where('order_id', $qrCodeNo)
             ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
             ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
@@ -585,7 +583,6 @@ class StoreTicketRedeemController
             $record = TicketRecord::query()
                 ->where('qr_code_no', $qrCodeNo)
                 ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
                 ->where('status', TicketRecord::STATUS_NORMAL)
                 ->first();
         }
@@ -764,7 +761,6 @@ class StoreTicketRedeemController
         $record = TicketRecord::query()
             ->where('id', $id)
             ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
             ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 

@@ -216,7 +216,8 @@ export default {
     },
     canRedeem() {
       if (!this.record) return false;
-      return this.record.ticket_type === 1 && this.record.status === 1;
+      // 全票種可核銷，僅保留狀態校驗（需為「正常」）
+      return this.record.status === 1;
     },
     expiryColor() {
       if (this.gv1ExpirySeconds <= 0) return 'red';
@@ -518,7 +519,6 @@ export default {
     },
     getRedeemDisabledReason() {
       if (!this.record) return '无法核销';
-      if (this.record.ticket_type !== 1) return '只有开分票可以核销';
       if (this.record.status === 0) return '该记录已禁用';
       if (this.record.status === 2 || this.record.status === 3) return '该记录已核销';
       return '无法核销';

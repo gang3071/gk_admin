@@ -150,9 +150,8 @@ export default {
   computed: {
     canRedeem() {
       if (!this.record) return false;
-      // 只有洗分票且状态为正常或已打印时可以核销
-      return this.record.ticket_type === 2 &&
-             [1, 2].includes(this.record.status);
+      // 全票種可核銷，僅保留狀態校驗（需為「正常」，與後端 STATUS_NORMAL 對齊）
+      return this.record.status === 1;
     }
   },
   mounted() {
@@ -272,9 +271,8 @@ export default {
 
     getRedeemDisabledReason() {
       if (!this.record) return '無法核銷';
-      if (this.record.ticket_type !== 2) return '只有洗分票可以核銷';
       if (this.record.status === 0) return '該記錄已禁用';
-      if (this.record.status === 3) return '該記錄已核銷';
+      if (this.record.status === 2 || this.record.status === 3) return '該記錄已核銷';
       return '無法核銷';
     },
 

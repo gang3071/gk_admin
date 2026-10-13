@@ -545,7 +545,7 @@ class StoreTicketRecordController
     }
 
     /**
-     * 核销记录（开分票）
+     * 核销记录（全票种）
      * @group store
      * @auth true
      * @return mixed
@@ -562,7 +562,6 @@ class StoreTicketRecordController
         $record = TicketRecord::query()
             ->where('id', $id)
             ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
             ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
