@@ -177,22 +177,14 @@ class PlayGameRecordController
             })->align('center');
             $grid->column('created_at', admin_trans('play_game_record.fields.create_at'))->align('center');
             $grid->column('action_at', admin_trans('play_game_record.fields.action_at'))->align('center');
-            $grid->actions(function (Actions $action,$data) {
+            $grid->actions(function (Actions $action, $data) {
                 $action->hideDel();
-                // 回放功能
+                // 回放功能：僅在渲染時判斷平台是否存在，實際 URL 在點擊時才取得
                 if (!empty($data->gamePlatform)) {
-                    try {
-                        $service = new \addons\webman\service\GamePlatformService();
-                        $url = $service->replay($data->id);
-                        if (!empty($url)) {
-                            $action->prepend(
-                                Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'],
-                                    ['url' => $url])
-                            );
-                        }
-                    } catch (\Exception $e) {
-                        // 如果平台不支持回放，忽略错误
-                    }
+                    $action->prepend(
+                        Button::create(admin_trans('play_game_record.replay'))
+                            ->ajax([$this, 'replayById'], ['id' => $data->id])
+                    );
                 }
             });
             $grid->filter(function (Filter $filter) {
@@ -263,14 +255,23 @@ class PlayGameRecordController
     }
 
     /**
-     * 回放
+     * 回放（點擊時才呼叫外部 API 取 URL，避免渲染時 N+1 HTTP 請求）
      * @auth true
-     * @param $url
+     * @param $id
      * @return Notification
      */
-    public function replay($url) : Notification
+    public function replayById($id): Notification
     {
-        return notification_success(admin_trans('admin.success'),
-            admin_trans('game_platform.action_success'))->redirect($url);
+        try {
+            $service = new \addons\webman\service\GamePlatformService();
+            $url = $service->replay($id);
+            if (empty($url)) {
+                return notification_error(admin_trans('admin.error'), admin_trans('play_game_record.replay_not_supported'));
+            }
+            return notification_success(admin_trans('admin.success'),
+                admin_trans('game_platform.action_success'))->redirect($url);
+        } catch (\Exception $e) {
+            return notification_error(admin_trans('admin.error'), $e->getMessage());
+        }
     }
 }
