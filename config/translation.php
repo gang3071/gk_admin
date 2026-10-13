@@ -21,5 +21,6 @@ return [
     // Fallback language
     'fallback_locale' => ['zh_CN', 'en'],
     // Folder where language files are stored
-    'path' => base_path() . '/resource/translations',
+    // 後台使用 ExAdmin 的 admin_trans()，此路徑指向 addons/webman/lang 避免啟動報錯
+    'path' => base_path() . '/addons/webman/lang',
 ];
