@@ -288,19 +288,11 @@ class StorePlayGameRecordController
             $grid->actions(function (Actions $action, $data) {
                 $action->hideDel();
                 $action->hideEdit();
-                // 回放功能
                 if (!empty($data->gamePlatform) && !empty($data->gamePlatform->code)) {
-                    try {
-                        $service = new \addons\webman\service\GamePlatformService();
-                        $url = $service->replay($data->id);
-                        if (!empty($url)) {
-                            $action->prepend(
-                                Button::create(admin_trans('play_game_record.replay'))->ajax([$this, 'replay'], ['url' => $url])
-                            );
-                        }
-                    } catch (\Exception $e) {
-                        // 如果平台不支持回放，忽略错误
-                    }
+                    $action->prepend(
+                        Button::create(admin_trans('play_game_record.replay'))
+                            ->ajax([$this, 'replayById'], ['id' => $data->id])
+                    );
                 }
             })->align('center');
 
@@ -311,14 +303,23 @@ class StorePlayGameRecordController
     }
 
     /**
-     * 回放
+     * 回放（點擊時才呼叫外部 API）
      * @group store
      * @auth true
-     * @param $url
+     * @param $id
      * @return Notification
      */
-    public function replay($url): Notification
+    public function replayById($id): Notification
     {
-        return notification_success(admin_trans('admin.success'), admin_trans('game_platform.action_success'))->redirect($url);
+        try {
+            $service = new \addons\webman\service\GamePlatformService();
+            $url = $service->replay($id);
+            if (empty($url)) {
+                return notification_error(admin_trans('admin.error'), admin_trans('play_game_record.replay_not_supported'));
+            }
+            return notification_success(admin_trans('admin.success'), admin_trans('game_platform.action_success'))->redirect($url);
+        } catch (\Exception $e) {
+            return notification_error(admin_trans('admin.error'), $e->getMessage());
+        }
     }
 }

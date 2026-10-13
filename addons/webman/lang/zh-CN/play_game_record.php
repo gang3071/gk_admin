@@ -5,6 +5,7 @@ use addons\webman\model\PlayGameRecord;
 return [
     'title' => '玩家游戏记录',
     'replay' => '回放',
+    'replay_not_supported' => '此平台不支持回放功能',
     'fields' => [
         'id' => 'ID',
         'game_code' => '游戏编号',
