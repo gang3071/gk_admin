@@ -417,6 +417,24 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelPlayerWalletTransferController/index',
         'title' => '转账记录',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelGameVendorReportController\index',
+        'pid' => 'addons\webman\controller\ChannelPlayGameRecordController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelGameVendorReportController/index',
+        'title' => '厂商数据',
+    ],
+    [
+        'id' => 'addons\webman\controller\ChannelGameVendorReportController\vendorData',
+        'pid' => 'addons\webman\controller\ChannelGameVendorReportController\index',
+        'action' => 'vendorData',
+        'method' => 'get',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelGameVendorReportController/vendorData',
+        'title' => '查询厂商数据',
+    ],
     //分润管理
     [
         'id' => 'addons\webman\controller\ChannelChannelProfitRecordController-',

@@ -30,7 +30,10 @@ use addons\webman\traits\HasDateTimeFormatter;
  * @property string|null $last_print_time 最后打印时间
  * @property array|null $extra_data 扩展数据
  * @property int|null $source_ticket_id 来源原票ID
- * @property string|null $source_type 来源类型: split/merge/purchase/chuzhi
+ * @property string|null $source_type 来源类型: split/merge/purchase/chuzhi/deposit_qr
+ * @property string|null $encrypted_content 二维码原始内容
+ * @property string|null $scanned_at 核销时间
+ * @property int|null $scanned_by 核销人管理员ID
  * @property array|null $related_ticket_ids 关联的新票ID数组
  * @property int $operation_type 操作类型: 0=无操作, 1=拆分, 2=合并
  * @property string|null $operated_at 操作时间

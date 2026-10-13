@@ -27,6 +27,7 @@ return [
         'welfare_coupon_amount' => 'Welfare Coupon',
         'lottery_amount' => 'Lottery',
         'activity_total' => 'Activity Rewards',
+        'lottery_ticket_reward_amount' => 'Lottery Ticket Reward',
         'electronic_game_bet_amount' => 'E-Game Bet',
         'machine_bet_amount' => 'Machine Bet',
         'total_income' => 'Total Income',
@@ -77,6 +78,7 @@ return [
         'total_expense' => 'Total Expense',
         'total_profit' => 'Total Profit',
         'total_activity' => 'Total Activity Bonus',
+        'total_lottery_ticket_reward' => 'Total Lottery Ticket Reward',
     ],
 
     // Export

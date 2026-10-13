@@ -411,6 +411,25 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-AgentPlayGameRecordController/replay',
                 'title' => '回放',
             ],
+            // 厂商数据
+            [
+                'id' => 'addons\webman\controller\AgentGameVendorReportController\index',
+                'pid' => 'addons\webman\controller\AgentPlayGameRecordController-',
+                'action' => 'index',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentGameVendorReportController/index',
+                'title' => '厂商数据',
+            ],
+            [
+                'id' => 'addons\webman\controller\AgentGameVendorReportController\vendorData',
+                'pid' => 'addons\webman\controller\AgentGameVendorReportController\index',
+                'action' => 'vendorData',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentGameVendorReportController/vendorData',
+                'title' => '查询厂商数据',
+            ],
         ]
     ],
 

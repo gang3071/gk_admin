@@ -18,6 +18,8 @@ return [
         'channel_commission' => 'Channel Commission',
         'wash_point_config' => 'Wash Point Config',
         'experience_bet_check_enabled' => 'Experience Bet Check',
+        'experience_voucher_enabled' => 'Experience Voucher',
+        'welfare_voucher_enabled' => 'Welfare Voucher',
         'status' => 'Status',
         'created_at' => 'Created At',
         'parent_agent' => 'Parent Agent',

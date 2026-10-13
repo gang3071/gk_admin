@@ -315,6 +315,8 @@ return [
         'dish' => '餐點列表',
         'dish_order' => '餐點訂單',
         'dish_order_report_item' => '訂單明細報表',
+        // 廠商數據報表
+        'game_vendor_report' => '廠商數據',
     ],
     'help' => [
         'controlled_menu' => '此菜單受功能開關控制，名稱不可修改',

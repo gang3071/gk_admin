@@ -1749,7 +1749,15 @@ class ChannelAgentController
                     case PlayerDeliveryRecord::TYPE_GIFT:
                         return Tag::create($translatedText)->color('pink');
                     case PlayerDeliveryRecord::TYPE_PREPAY:
+                        return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_REFUND:
+                        // 机台上分失败退款时，显示机台代码（与上分/下分保持 orange 风格）
+                        if ($data->machine) {
+                            return Tag::create('退款-' . $data->machine->code)->color('orange')->style(['cursor' => 'pointer'])->modal([
+                                $this,
+                                'machineInfo'
+                            ], ['data' => $data->machine->toArray()])->width('60%')->title($data->machine->code . ' ' . $data->machine->name);
+                        }
                         return Tag::create($translatedText)->color('cyan');
                     case PlayerDeliveryRecord::TYPE_MACHINE_UP:
                     case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
@@ -1795,7 +1803,7 @@ class ChannelAgentController
                 }
             })->align('center');
             $grid->column('type', admin_trans('player_delivery_record.fields.type'))
-                ->display(function ($value) {
+                ->display(function ($value, PlayerDeliveryRecord $data) {
                     switch ($value) {
                         case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD))->color('#2db7f5');
@@ -1891,7 +1899,12 @@ class ChannelAgentController
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_PREPAY))->color('#fa8c16');
                             break;
                         case PlayerDeliveryRecord::TYPE_REFUND:
-                            $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND))->color('#a0d911');
+                            // 机台上分失败退款：标签加"机台"前缀以便区分
+                            $label = admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_REFUND);
+                            if (!empty($data->machine_id)) {
+                                $label = admin_trans('player_delivery_record.machine_refund');
+                            }
+                            $tag = Tag::create($label)->color('#a0d911');
                             break;
                         case PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD:
                             $tag = Tag::create(admin_trans('player_delivery_record.type.' . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD))->color('#CC6600');

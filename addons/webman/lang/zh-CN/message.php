@@ -333,6 +333,7 @@ return [
         'vip_upgrade_bonus' => 'VIP升级礼金',
         'vip_daily_login_bonus' => 'VIP每日登录奖励',
         'storage_recharge' => '储值机储值',
+        'machine_open_failed_refund' => '机台上分失败退款',
     ],
     'source' => [
         'system' => '系统',

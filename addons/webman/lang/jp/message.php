@@ -332,6 +332,7 @@ return [
         'vip_upgrade_bonus' => 'VIPアップグレードボーナス',
         'vip_daily_login_bonus' => 'VIP毎日ログインボーナス',
         'storage_recharge' => 'チャージ機チャージ',
+        'machine_open_failed_refund' => '台上載入失敗返金',
     ],
     'source' => [
         'system' => 'システム',
