@@ -47,12 +47,12 @@ class StoreTicketRecordController
             $grid->title(admin_trans('ticket_machine.record.title'));
             $grid->autoHeight();
 
-            // 只显示当前店家的出票类型数据（开分、洗分、体验卷、福利卷）
+            // 只显示当前店家的出票类型数据（开分、体验卷、福利卷）
+            // 洗分票（TYPE_WITHDRAW）不出现在出票记录列表，含 GV1 寄存码核销产生的记录
             $grid->model()
                 ->where('store_admin_id', $admin->id)
                 ->whereIn('ticket_type', [
                     TicketRecord::TYPE_RECHARGE,
-                    TicketRecord::TYPE_WITHDRAW,
                     TicketRecord::TYPE_EXPERIENCE,
                     TicketRecord::TYPE_WELFARE,
                 ])
@@ -213,7 +213,6 @@ class StoreTicketRecordController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
                         TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
-                        TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
                         TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
                     ])
                     ->style(['width' => '150px']);
