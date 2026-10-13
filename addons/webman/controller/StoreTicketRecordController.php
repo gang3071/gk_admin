@@ -52,7 +52,6 @@ class StoreTicketRecordController
                 ->where('store_admin_id', $admin->id)
                 ->whereIn('ticket_type', [
                     TicketRecord::TYPE_RECHARGE,
-                    TicketRecord::TYPE_WITHDRAW,
                     TicketRecord::TYPE_EXPERIENCE,
                     TicketRecord::TYPE_WELFARE,
                 ])
