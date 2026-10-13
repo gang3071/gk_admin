@@ -2385,10 +2385,15 @@ class Login extends LoginAbstract
                 $shiftQuery = TicketRecord::query()
                     ->withoutGlobalScope('dataAuth')
                     ->where('store_admin_id', $adminUserId)
-                    ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
+                    ->whereIn('ticket_type', [
+                        TicketRecord::TYPE_RECHARGE,
+                        TicketRecord::TYPE_WITHDRAW,
+                        TicketRecord::TYPE_EXPERIENCE,
+                        TicketRecord::TYPE_WELFARE,
+                    ])
                     ->where('status', '!=', TicketRecord::STATUS_DISABLED);
                 if ($lastShiftTime) {
-                    $shiftQuery->where('scanned_at', '>', $lastShiftTime);
+                    $shiftQuery->where('created_at', '>', $lastShiftTime);
                 }
                 $shiftData = $shiftQuery->selectRaw(
                     "sum(score) as total_score,
