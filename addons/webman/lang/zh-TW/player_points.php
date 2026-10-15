@@ -10,6 +10,7 @@ return [
         'id' => '編號',
         'player_id' => '玩家ID',
         'player_name' => '玩家帳號',
+        'player_uuid' => 'UUID',
         'total_points' => '總積分',
         'available_points' => '可用積分',
         'frozen_points' => '凍結積分',

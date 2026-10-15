@@ -96,14 +96,20 @@ class StorePlayerPointsController
         );
         $records = $result['list'] ?? collect();
         if ($playerId === 0) {
-            // 查询本门店全部玩家时补充玩家名称，供列表显示
+            // 查询本门店全部玩家时补充玩家名称和 UUID，供列表显示
             $list = $records->map(function ($item) {
                 $row = $item->toArray();
                 $row['player_name'] = $item->player->name ?? ($item->player->account ?? '');
+                $row['player_uuid'] = $item->player->uuid ?? '';
                 return $row;
             })->toArray();
         } else {
-            $list = $records->toArray();
+            $playerUuid = $player->uuid ?? '';
+            $list = $records->map(function ($item) use ($playerUuid) {
+                $row = $item->toArray();
+                $row['player_uuid'] = $playerUuid;
+                return $row;
+            })->toArray();
         }
         $total = $result['total'] ?? 0;
 
@@ -137,6 +143,9 @@ class StorePlayerPointsController
             if ($playerId === 0) {
                 $grid->column('player_id', admin_trans('player_points.fields.player_id'))->width(90)->align('center');
                 $grid->column('player_name', admin_trans('player_points.fields.player_name'))->width(160)->align('center');
+                $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center');
+            } else {
+                $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center');
             }
             $grid->column('type_desc', admin_trans('player_points.fields.type'))->width(120)->align('center');
             $grid->column('points', admin_trans('player_points.fields.points'))
