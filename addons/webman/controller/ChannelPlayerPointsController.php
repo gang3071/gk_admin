@@ -58,6 +58,7 @@ class ChannelPlayerPointsController
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $type = Request::input('ex_admin_filter.type');
+        $uuid = Request::input('ex_admin_filter.uuid');
 
         if ($playerId) {
             // 指定 player_id：查询单一玩家（需通过权限验证）
@@ -86,7 +87,8 @@ class ChannelPlayerPointsController
             $size,
             $type !== '' ? $type : null,
             $permissionFilter,
-            $playerId === 0
+            $playerId === 0,
+            $uuid !== '' ? $uuid : null
         );
         $records = $result['list'] ?? collect();
         if ($playerId === 0) {
@@ -135,12 +137,9 @@ class ChannelPlayerPointsController
 
             // 查询本渠道全部玩家时，显示玩家信息
             if ($playerId === 0) {
-                $grid->column('player_id', admin_trans('player_points.fields.player_id'))->width(90)->align('center');
                 $grid->column('player_name', admin_trans('player_points.fields.player_name'))->width(160)->align('center');
-                $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center');
-            } else {
-                $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center');
             }
+            $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center')->copyable();
             $grid->column('type_desc', admin_trans('player_points.fields.type'))->width(120)->align('center');
             $grid->column('points', admin_trans('player_points.fields.points'))
                 ->width(120)
@@ -163,6 +162,9 @@ class ChannelPlayerPointsController
 
             // 筛选器
             $grid->filter(function (Filter $filter) {
+                $filter->eq()->text('uuid')
+                    ->style(['width' => '220px'])
+                    ->placeholder(admin_trans('player_points.fields.player_uuid'));
                 $filter->eq()->select('type')
                     ->showSearch()
                     ->style(['width' => '200px'])

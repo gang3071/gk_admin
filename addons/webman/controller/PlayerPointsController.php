@@ -45,6 +45,7 @@ class PlayerPointsController
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $type = Request::input('ex_admin_filter.type');
+        $uuid = Request::input('ex_admin_filter.uuid');
 
         // 获取积分信息（仅指定玩家时显示统计卡片）
         $pointsData = $playerId ? PlayerPointsService::getPlayerPoints($playerId) : null;
@@ -56,7 +57,8 @@ class PlayerPointsController
             $size,
             $type !== '' ? $type : null,
             [],
-            $playerId === 0
+            $playerId === 0,
+            $uuid !== '' ? $uuid : null
         );
         $records = $result['list'] ?? collect();
         if ($playerId === 0) {
@@ -105,12 +107,9 @@ class PlayerPointsController
 
             // 查询全部玩家时，显示玩家信息
             if ($playerId === 0) {
-                $grid->column('player_id', admin_trans('player_points.fields.player_id'))->width(90)->align('center');
                 $grid->column('player_name', admin_trans('player_points.fields.player_name'))->width(160)->align('center');
-                $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center');
-            } else {
-                $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center');
             }
+            $grid->column('player_uuid', admin_trans('player_points.fields.player_uuid'))->width(220)->align('center')->copyable();
             $grid->column('type_desc', admin_trans('player_points.fields.type'))->width(120)->align('center');
             $grid->column('points', admin_trans('player_points.fields.points'))
                 ->width(120)
@@ -133,6 +132,9 @@ class PlayerPointsController
 
             // 筛选器
             $grid->filter(function (Filter $filter) {
+                $filter->eq()->text('uuid')
+                    ->style(['width' => '220px'])
+                    ->placeholder(admin_trans('player_points.fields.player_uuid'));
                 $filter->eq()->select('type')
                     ->showSearch()
                     ->style(['width' => '200px'])
