@@ -943,8 +943,8 @@ class AdminOfflineMachineController
                 && $machine->control_type == Machine::CONTROL_TYPE_SONG
                 && $machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
                 && $cmd === 'a5') {
-                // 输入的是次数，需要转换为分数（100分/次）
-                $data = $data * 100;
+                // 输入的是次数，需要转换为分数（300分/次，OPEN_UNIT=300）
+                $data = $data * 300;
 
                 \support\Log::info('小淞线下Slot上分次数转换', [
                     'machine_id' => $machineId,
