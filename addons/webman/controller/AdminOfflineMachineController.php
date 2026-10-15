@@ -717,7 +717,7 @@ class AdminOfflineMachineController
                         ['name' => '查询大赏灯', 'cmd' => $serviceClass::QUERY_REWARD_LIGHT, 'desc' => '46 CE B8 - 查询大赏灯状态', 'danger' => false],
                     ],
                     '开分洗分' => [
-                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => '46 CA - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => '46 CA - 开任意分数（300的倍数）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 300],
                         ['name' => '洗分清零', 'cmd' => $serviceClass::WASH_ZERO, 'desc' => '46 CC - ⚠️ 洗分并清零', 'danger' => true],
                     ],
                     '转数操作' => [
