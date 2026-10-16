@@ -191,7 +191,6 @@ export default {
   data() {
     return {
       qrCodeNo: '',
-      scanBuf: '',          // 扫码枪原始缓冲（绕过输入法，唯一真相）
       rawGv1Code: '',       // GV1 原文（不顯示在輸入框）
       gv1Info: null,        // { uid, amount, exp }
       gv1ExpirySeconds: 0,
@@ -234,138 +233,15 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      this.bindScanKeyHandler();
       if (this.$refs.qrInput) this.$refs.qrInput.focus();
     });
   },
   beforeUnmount() {
     if (this.expiryTimer) clearInterval(this.expiryTimer);
     if (this.inputTimer)  clearTimeout(this.inputTimer);
-    this.unbindScanKeyHandler();
   },
   methods: {
     // ===== GV1 工具 =====
-    // 归一化扫码输入：中文/全角输入法会把半角 . 打成 。．・･ 等，全角模式还会把字母数字打成全角
-    normalizeScanCode(raw) {
-      if (!raw) return '';
-      return raw
-        .replace(/[。．・･｡]/g, '.') // 中文/日文句点、中点 → .
-        .replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角英数 → 半角
-        .replace(/　/g, ' ') // 全角空格 → 半角
-        .trim();
-    },
-
-    // ===== 绕过输入法的按键捕获 =====
-    // 键盘扫码枪是按键模拟输入，会经过当前输入法。中文输入法的实测污染（同一张寄存码）：
-    //   英文: GV1.73.1000.1792139006.8AF3C32B.11F2D0E31F53FBBD515B
-    //   中文: GV.73.1000.1792139006.8AFCB。11FDEFFBBDB
-    // 机制：字母进组合缓冲当拼音，组合态下按数字＝选候选词被吞掉，. 提交组合时变 。
-    // 归一化救不回被吞的字符，必须让 IME 根本看不到这些按键。
-    // 为此用独立的 scanBuf 作为唯一真相，v-model 只负责显示。
-    getScanInputEl() {
-      const comp = this.$refs.qrInput;
-      if (!comp) return null;
-      if (comp instanceof HTMLElement) return comp;
-      const el = comp.$el || null;
-      if (!el) return null;
-      if (el.tagName === 'INPUT') return el;
-      return (el.querySelector && el.querySelector('input')) || null;
-    },
-
-    bindScanKeyHandler() {
-      const el = this.getScanInputEl();
-      if (!el) return;
-      if (el._scanKeyBound) return;
-      // capture 阶段抢在输入法之前
-      el.addEventListener('keydown', this.onScanKeyDown, true);
-      el.addEventListener('beforeinput', this.onScanBeforeInput, true);
-      el.addEventListener('compositionstart', this.onScanCompositionStart, true);
-      el.addEventListener('paste', this.onScanPaste);
-      el.addEventListener('focus', this.bindScanKeyHandler);
-      el._scanKeyBound = true;
-    },
-
-    unbindScanKeyHandler() {
-      const el = this.getScanInputEl();
-      if (!el || !el._scanKeyBound) return;
-      el.removeEventListener('keydown', this.onScanKeyDown, true);
-      el.removeEventListener('beforeinput', this.onScanBeforeInput, true);
-      el.removeEventListener('compositionstart', this.onScanCompositionStart, true);
-      el.removeEventListener('paste', this.onScanPaste);
-      el.removeEventListener('focus', this.bindScanKeyHandler);
-      el._scanKeyBound = false;
-    },
-
-    // 物理键码 → 字符（e.code 不受输入法/键盘布局影响）
-    scanCodeToChar(code) {
-      if (!code) return null;
-      let m;
-      if ((m = /^Digit(\d)$/.exec(code)))  return m[1];
-      if ((m = /^Numpad(\d)$/.exec(code))) return m[1];
-      if ((m = /^Key([A-Z])$/.exec(code))) return m[1];
-      if (code === 'Period' || code === 'NumpadDecimal') return '.';
-      return null;
-    },
-
-    // 输入法一开始就掐掉：不允许在扫码框里组中文
-    onScanCompositionStart(e) {
-      e.preventDefault();
-      e.stopImmediatePropagation();
-    },
-
-    // 组合文本（输入法候选上屏）一律拒绝写入
-    onScanBeforeInput(e) {
-      if (e.inputType && e.inputType.indexOf('insertComposition') === 0) {
-        e.preventDefault();
-      }
-    },
-
-    // 粘贴是唯一不走 keydown 的入口，走归一化兜底
-    onScanPaste(e) {
-      const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
-      if (!text) return;
-      e.preventDefault();
-      this.scanBuf = this.normalizeScanCode(this.scanBuf + this.normalizeScanCode(text));
-      this.qrCodeNo = this.scanBuf;
-      this.onScanInput();
-    },
-
-    onScanKeyDown(e) {
-      // Ctrl/Cmd+V 粘贴等组合键放行
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-
-      // Enter 是扫码枪结束符，立刻处理，不等防抖
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        this.flushScanInput();
-        return;
-      }
-      if (e.key === 'Backspace') {
-        e.preventDefault();
-        this.scanBuf = this.scanBuf.slice(0, -1);
-        this.qrCodeNo = this.scanBuf;
-        return;
-      }
-
-      // 被输入法劫持的按键（key='Process' / isComposing / 非 ASCII）一律用物理键码还原
-      let ch = null;
-      if (e.isComposing || e.keyCode === 229 || e.key === 'Process' || e.key === 'Unidentified') {
-        ch = this.scanCodeToChar(e.code);
-      } else if (e.key && e.key.length === 1 && /^[\x20-\x7E]$/.test(e.key)) {
-        ch = e.key;
-      } else {
-        ch = this.scanCodeToChar(e.code);
-      }
-      if (ch === null) return;
-
-      // 关键：preventDefault 让输入法看不到这颗按键，也就不会转换 / 吞数字
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      this.scanBuf += ch;
-      this.qrCodeNo = this.scanBuf;
-      this.onScanInput();
-    },
-
     tryParseGv1(raw) {
       const parts = raw.split('.');
       if (parts.length !== 6 || parts[0] !== 'GV1') return null;
@@ -393,66 +269,50 @@ export default {
       if (this.inputTimer) clearTimeout(this.inputTimer);
       this.inputTimer = setTimeout(() => {
         this.inputTimer = null;
-        this.processScanValue();
-      }, 500);
-    },
+        const raw = this.qrCodeNo.trim();
+        if (!raw) return;
 
-    // Enter 提前触发，不等防抖
-    flushScanInput() {
-      if (this.inputTimer) {
-        clearTimeout(this.inputTimer);
-        this.inputTimer = null;
-      }
-      this.processScanValue();
-    },
+        // 嘗試去除掃碼器重複輸入
+        const value = this.extractFirstOccurrence(raw);
 
-    processScanValue() {
-      // scanBuf 是按键捕获的原始内容；为空时回退到输入框（兼容自动填充等）
-      const source = this.scanBuf || this.qrCodeNo || '';
-      const raw = this.normalizeScanCode(source);
-      if (!raw) return;
-      this.scanBuf = raw;
-
-      // 嘗試去除掃碼器重複輸入
-      const value = this.extractFirstOccurrence(raw);
-
-      // 偵測 GV1 格式
-      const gv1 = this.tryParseGv1(value);
-      if (gv1) {
-        this.rawGv1Code = value;
-        this.qrCodeNo   = '';       // 清空輸入框，不顯示原文
-        this.gv1Info    = gv1;
-        this.record     = null;
-        this.inputLocked = true;
-        this.isGv1Locked = true;
-        this.message    = '';
-        this.startExpiryCountdown(gv1.exp);
-        // 通知伺服器並取回玩家資訊
-        if (this.deposit_notify_url) {
-          this.notifying = true;
-          this.$request({ url: this.deposit_notify_url, method: 'post', data: { code: value } })
-            .then(res => {
-              if (res && res.code === 0 && res.data) {
-                this.playerInfo = res.data;
-                // 用服务端时间校正本地时钟偏差，修正倒计时
-                if (res.data.server_time) {
-                  this.serverTimeOffset = res.data.server_time - Math.floor(Date.now() / 1000);
+        // 偵測 GV1 格式
+        const gv1 = this.tryParseGv1(value);
+        if (gv1) {
+          this.rawGv1Code = value;
+          this.qrCodeNo   = '';       // 清空輸入框，不顯示原文
+          this.gv1Info    = gv1;
+          this.record     = null;
+          this.inputLocked = true;
+          this.isGv1Locked = true;
+          this.message    = '';
+          this.startExpiryCountdown(gv1.exp);
+          // 通知伺服器並取回玩家資訊
+          if (this.deposit_notify_url) {
+            this.notifying = true;
+            this.$request({ url: this.deposit_notify_url, method: 'post', data: { code: value } })
+              .then(res => {
+                if (res && res.code === 0 && res.data) {
+                  this.playerInfo = res.data;
+                  // 用服务端时间校正本地时钟偏差，修正倒计时
+                  if (res.data.server_time) {
+                    this.serverTimeOffset = res.data.server_time - Math.floor(Date.now() / 1000);
+                  }
                 }
-              }
-            })
-            .catch(() => {})
-            .finally(() => { this.notifying = false; });
+              })
+              .catch(() => {})
+              .finally(() => { this.notifying = false; });
+          }
+          return;
         }
-        return;
-      }
 
-      // 普通票碼
-      if (value === this.lastScannedValue) {
-        this.qrCodeNo = '';
-        return;
-      }
-      this.qrCodeNo = value;
-      this.queryRecord();
+        // 普通票碼
+        if (value === this.lastScannedValue) {
+          this.qrCodeNo = '';
+          return;
+        }
+        this.qrCodeNo = value;
+        this.queryRecord();
+      }, 500);
     },
 
     extractFirstOccurrence(str) {
@@ -470,7 +330,6 @@ export default {
 
     resetScan() {
       this.qrCodeNo        = '';
-      this.scanBuf         = '';
       this.rawGv1Code      = '';
       this.gv1Info         = null;
       this.playerInfo      = null;
@@ -549,13 +408,14 @@ export default {
 
     // ===== 普通票查詢 =====
     async queryRecord() {
-      this.qrCodeNo = this.normalizeScanCode(this.qrCodeNo);
       if (!this.qrCodeNo) {
         this.message = '请输入二维码编号';
         this.messageType = 'warning';
         this.messageDesc = '';
         return;
       }
+
+      this.qrCodeNo = this.qrCodeNo.trim();
       this.loading  = true;
       this.record   = null;
       this.gv1Info  = null;
