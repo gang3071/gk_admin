@@ -194,6 +194,7 @@ export default {
       rawGv1Code: '',       // GV1 原文（不顯示在輸入框）
       gv1Info: null,        // { uid, amount, exp }
       gv1ExpirySeconds: 0,
+      serverTimeOffset: 0,   // server_time - local_time（秒），用于修正客户端时钟偏差
       expiryTimer: null,
       isGv1Locked: false,
       playerInfo: null,     // 從後端取回的玩家資訊
@@ -255,7 +256,8 @@ export default {
     startExpiryCountdown(exp) {
       if (this.expiryTimer) clearInterval(this.expiryTimer);
       const tick = () => {
-        this.gv1ExpirySeconds = exp - Math.floor(Date.now() / 1000);
+        const serverNow = Math.floor(Date.now() / 1000) + this.serverTimeOffset;
+        this.gv1ExpirySeconds = exp - serverNow;
         if (this.gv1ExpirySeconds <= 0) clearInterval(this.expiryTimer);
       };
       tick();
@@ -291,6 +293,10 @@ export default {
               .then(res => {
                 if (res && res.code === 0 && res.data) {
                   this.playerInfo = res.data;
+                  // 用服务端时间校正本地时钟偏差，修正倒计时
+                  if (res.data.server_time) {
+                    this.serverTimeOffset = res.data.server_time - Math.floor(Date.now() / 1000);
+                  }
                 }
               })
               .catch(() => {})
@@ -334,6 +340,7 @@ export default {
       this.lastScannedValue = '';
       this.message         = '';
       this.messageDesc     = '';
+      this.serverTimeOffset = 0;
       if (this.expiryTimer) { clearInterval(this.expiryTimer); this.expiryTimer = null; }
       this.$nextTick(() => {
         if (this.$refs.qrInput) this.$refs.qrInput.focus();
