@@ -1047,6 +1047,28 @@ class PlayerLotteryRecordController
                 $mediaKey++;
             }
 
+            // 重建 Redis pending：否则机台结果回调查不到待确认彩金，游玩后无法派发
+            // Key 结构与 TTL 必须与 GameLotteryServices::savePokemonBallPending 保持一致
+            $pendingTtl = 300;
+            $pendingKey = 'game_lottery_pending:' . $record->player_id . ':' . $record->lottery_id;
+            $pendingData = json_encode([
+                'player_id' => $record->player_id,
+                'lottery_id' => $record->lottery_id,
+                'lottery_name' => $record->lottery_name,
+                'machine_id' => $machineId,
+                'amount' => (float)$record->amount,
+                'play_game_record_id' => $record->play_game_record_id ?: 0,
+                'bet' => (float)($record->bet ?? 0),
+                'burst_info' => ['is_bursting' => false, 'multiplier' => 1.0],
+                'is_doubled' => false,
+                'created_at' => date('Y-m-d H:i:s'),
+                'expires_at' => time() + $pendingTtl,
+            ]);
+
+            $redis = \support\Redis::connection()->client();
+            $redis->set($pendingKey, $pendingData, $pendingTtl);
+            $redis->set('game_lottery_machine_pending:' . $machineId, $pendingKey, $pendingTtl);
+
             // 重新发送WS消息
             sendSocketMessage('player-' . $record->player_id, [
                 'msg_type' => 'game_lottery_pokemon_ball',
@@ -1060,6 +1082,7 @@ class PlayerLotteryRecordController
                 'iframe_src' => $iframeSrc,
                 'src_list' => $srcList,
                 'push_list' => $pushList,
+                'ttl' => $pendingTtl,
             ]);
 
             \support\Log::info('精灵球彩金重新派发成功', [
@@ -1068,6 +1091,8 @@ class PlayerLotteryRecordController
                 'lottery_id' => $record->lottery_id,
                 'machine_id' => $machineId,
                 'amount' => $record->amount,
+                'pending_key' => $pendingKey,
+                'pending_ttl' => $pendingTtl,
                 'iframe_src' => $iframeSrc,
                 'push_list' => $pushList,
             ]);
