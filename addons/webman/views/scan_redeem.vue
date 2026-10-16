@@ -167,6 +167,16 @@ export default {
     }
   },
   methods: {
+    // 归一化扫码输入：中文/全角输入法会把半角 . 打成 。．・･ 等，全角模式还会把字母数字打成全角
+    normalizeScanCode(raw) {
+      if (!raw) return '';
+      return raw
+        .replace(/[。．・･｡]/g, '.') // 中文/日文句点、中点 → .
+        .replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角英数 → 半角
+        .replace(/　/g, ' ') // 全角空格 → 半角
+        .trim();
+    },
+
     getStatusColor(status) {
       const colors = {
         0: 'default',  // 禁用
@@ -186,7 +196,7 @@ export default {
       }
       this.inputTimer = setTimeout(() => {
         this.inputTimer = null;
-        const raw = this.qrCodeNo.trim();
+        const raw = this.normalizeScanCode(this.qrCodeNo);
         console.log('[扫码] 输入完成, 原始值长度:', raw.length, '原始值:', raw.substring(0, 30) + '...');
         if (!raw) return;
         // 提取第一次扫码的内容（去除重复拼接的部分）
@@ -309,15 +319,14 @@ export default {
     },
 
     async queryRecord() {
+      // 归一化：中文/全角输入法会把 . 打成 。等
+      this.qrCodeNo = this.normalizeScanCode(this.qrCodeNo);
       if (!this.qrCodeNo) {
         this.message = '請輸入二維碼編號';
         this.messageType = 'warning';
         this.messageDesc = '';
         return;
       }
-
-      // 去除首尾空格
-      this.qrCodeNo = this.qrCodeNo.trim();
 
       this.loading = true;
       this.record = null;

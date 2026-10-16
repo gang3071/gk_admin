@@ -451,7 +451,8 @@ class StoreTicketRecordController
      */
     public function getRecordByQrCode()
     {
-        $qrCodeNo = request()->input('qr_code_no', '');
+        // 归一化：中文/全角输入法会把 . 打成 。等，导致精确匹配失败
+        $qrCodeNo = normalizeScanCode((string) request()->input('qr_code_no', ''));
 
         if (empty($qrCodeNo)) {
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.record.qr_code_required')]);
@@ -587,7 +588,8 @@ class StoreTicketRecordController
      */
     public function notifyDepositScanned()
     {
-        $code  = request()->post('code', '');
+        // 归一化：中文/全角输入法会把 . 打成 。等，导致 GV1 分段失败
+        $code  = normalizeScanCode((string) request()->post('code', ''));
         $admin = Admin::user();
 
         $parts = explode('.', trim($code));
@@ -639,7 +641,8 @@ class StoreTicketRecordController
      */
     public function redeemDepositCode()
     {
-        $code  = request()->post('code', '');
+        // 归一化：中文/全角输入法会把 . 打成 。等，导致 GV1 分段/验签失败
+        $code  = normalizeScanCode((string) request()->post('code', ''));
         $admin = Admin::user();
 
         // ===== 1. 格式解析 =====

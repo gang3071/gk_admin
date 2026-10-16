@@ -2584,6 +2584,33 @@ if (!function_exists('createOrderNo')) {
         return $yCode[intval(date('Y')) - 2011] . strtoupper(dechex(date('m'))) . date('d') . substr(time(), -5) . substr(microtime(), 2, 5) . sprintf('%02d', rand(0, 99));
     }
 }
+
+if (!function_exists('normalizeScanCode')) {
+    /**
+     * 归一化扫码/手输的票码
+     *
+     * 键盘扫码枪以按键模拟输入，会经过当前输入法：中文/日文输入法会把半角 `.`
+     * 打成 。．・･ 等，全角模式还会把字母数字打成全角（ＧＶ１ / １２３）。
+     * 寄存码（GV1.uid.amount.exp.nonce.sig）按 `.` 分段，不归一会直接匹配失败。
+     *
+     * @param string $code 原始输入
+     * @return string 归一化后的票码
+     */
+    function normalizeScanCode(string $code): string
+    {
+        // 中文/日文标点 → 半角句点
+        $code = strtr($code, [
+            '。' => '.', // U+3002 句号（中文输入法默认）
+            '．' => '.', // U+FF0E 全角句点
+            '・' => '.', // U+30FB 片假名中点
+            '･'  => '.', // U+FF65 半角片假名中点
+            '｡'  => '.', // U+FF61 半角句号
+        ]);
+        // 全角英数/空格 → 半角（如 ＧＶ１ / １２３ / 全角空格）
+        $code = mb_convert_kana($code, 'as');
+        return trim($code);
+    }
+}
 if (!function_exists('clearMachineCrashCache')) {
     /**
      * 清除玩家的爆机状态缓存

@@ -135,6 +135,16 @@ export default {
     this.clearTimers();
   },
   methods: {
+    // 归一化扫码输入：中文/全角输入法会把半角 . 打成 。．・･ 等，全角模式还会把字母数字打成全角
+    normalizeScanCode(raw) {
+      if (!raw) return '';
+      return raw
+        .replace(/[。．・･｡]/g, '.') // 中文/日文句点、中点 → .
+        .replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角英数 → 半角
+        .replace(/　/g, ' ') // 全角空格 → 半角
+        .trim();
+    },
+
     clearTimers() {
       if (this.inputTimer) clearTimeout(this.inputTimer);
       if (this.expiryTimer) clearInterval(this.expiryTimer);
@@ -152,8 +162,9 @@ export default {
       this.error = '';
       if (this.expiryTimer) clearInterval(this.expiryTimer);
 
-      const raw = (this.qrCode || '').trim();
+      const raw = this.normalizeScanCode(this.qrCode || '');
       if (!raw) return;
+      this.qrCode = raw;
 
       const parts = raw.split('.');
       if (parts.length !== 6 || parts[0] !== 'GV1') {
@@ -187,7 +198,7 @@ export default {
     },
 
     async submit() {
-      const raw = (this.qrCode || '').trim();
+      const raw = this.normalizeScanCode(this.qrCode || '');
       if (!raw) return;
 
       this.error = '';

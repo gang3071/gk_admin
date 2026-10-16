@@ -242,6 +242,16 @@ export default {
   },
   methods: {
     // ===== GV1 工具 =====
+    // 归一化扫码输入：中文/全角输入法会把半角 . 打成 。．・･ 等，全角模式还会把字母数字打成全角
+    normalizeScanCode(raw) {
+      if (!raw) return '';
+      return raw
+        .replace(/[。．・･｡]/g, '.') // 中文/日文句点、中点 → .
+        .replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角英数 → 半角
+        .replace(/　/g, ' ') // 全角空格 → 半角
+        .trim();
+    },
+
     tryParseGv1(raw) {
       const parts = raw.split('.');
       if (parts.length !== 6 || parts[0] !== 'GV1') return null;
@@ -269,7 +279,7 @@ export default {
       if (this.inputTimer) clearTimeout(this.inputTimer);
       this.inputTimer = setTimeout(() => {
         this.inputTimer = null;
-        const raw = this.qrCodeNo.trim();
+        const raw = this.normalizeScanCode(this.qrCodeNo);
         if (!raw) return;
 
         // 嘗試去除掃碼器重複輸入
@@ -408,14 +418,13 @@ export default {
 
     // ===== 普通票查詢 =====
     async queryRecord() {
+      this.qrCodeNo = this.normalizeScanCode(this.qrCodeNo);
       if (!this.qrCodeNo) {
         this.message = '请输入二维码编号';
         this.messageType = 'warning';
         this.messageDesc = '';
         return;
       }
-
-      this.qrCodeNo = this.qrCodeNo.trim();
       this.loading  = true;
       this.record   = null;
       this.gv1Info  = null;

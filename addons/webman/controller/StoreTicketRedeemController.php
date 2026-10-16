@@ -410,7 +410,8 @@ class StoreTicketRedeemController
      */
     public function getRecordByQrCode()
     {
-        $qrCodeNo = request()->input('qr_code_no', '');
+        // 归一化：中文/全角输入法会把 . 打成 。等，导致精确匹配失败
+        $qrCodeNo = normalizeScanCode((string) request()->input('qr_code_no', ''));
 
         if (empty($qrCodeNo)) {
             return json_encode(['code' => -1, 'msg' => admin_trans('ticket_machine.redeem.qr_code_required')]);
@@ -563,7 +564,8 @@ class StoreTicketRedeemController
      */
     public function redeemByQrCode()
     {
-        $qrCodeNo = request()->input('qr_code_no', '');
+        // 归一化：中文/全角输入法会把 . 打成 。等，导致精确匹配失败
+        $qrCodeNo = normalizeScanCode((string) request()->input('qr_code_no', ''));
 
         if (empty($qrCodeNo)) {
             return message_error(admin_trans('ticket_machine.redeem.qr_code_required'));
