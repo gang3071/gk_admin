@@ -2034,6 +2034,7 @@ class ChannelAgentController
                         'withdrawal_back' => admin_trans('message.target.withdrawal_back'),
                         'ticket_open_score' => admin_trans('message.target.ticket_open_score'),
                         'ticket_redeem' => admin_trans('message.target.ticket_redeem'),
+                        'deposit_qr' => admin_trans('message.target.deposit_qr'),
                         'lottery_game' => admin_trans('message.target.lottery_game'),
                         'lottery_random' => admin_trans('message.target.lottery_random'),
                         'lottery_fixed' => admin_trans('message.target.lottery_fixed'),
