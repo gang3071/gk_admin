@@ -163,6 +163,7 @@ return [
         'action_success' => '操作成功',
         'action_not_fount' => '操作未定义',
         'open_num' => '开分值',
+        'open_times' => '上分次数（1次=300分）',
         'no_fount_player' => '沒有正在遊戲中的玩家',
         'open_custom' => '开分自定',
         'down' => '下分',

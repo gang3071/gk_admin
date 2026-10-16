@@ -1523,16 +1523,32 @@ class MachineController
      */
     public function openCustom($id): Form
     {
-        return Form::create(new $this->model(), function (Form $form) use ($id) {
-            $form->number('open', admin_trans('machine.action.open_num'))
+        /** @var \addons\webman\model\Machine $machine */
+        $machine = $this->model::find($id);
+        $isSongOfflineSlot = $machine
+            && $machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
+            && $machine->control_type == Machine::CONTROL_TYPE_SONG
+            && $machine->type == GameType::TYPE_SLOT;
+
+        // SongOfflineSlot：输入次数（1次=300分），其他机台：输入开分值（货币单位）
+        $inputLabel  = $isSongOfflineSlot ? admin_trans('machine.action.open_times') : admin_trans('machine.action.open_num');
+        $inputDefault = $isSongOfflineSlot ? 1 : 100;
+
+        return Form::create(new $this->model(), function (Form $form) use ($id, $isSongOfflineSlot, $inputLabel, $inputDefault) {
+            $form->number('open', $inputLabel)
                 ->min(1)
-                ->default(100)
+                ->default($inputDefault)
                 ->style(['width' => '80% !important'])
                 ->required()
                 ->precision(0);
             $form->text('remark', admin_trans('machine.fields.remark'))->value('')->required()->style(['width' => '80% !important']);
-            $form->saving(function (Form $form) use ($id) {
-                return $this->action($id, 'open_custom', ['open' => $form->input('open')]);
+            $form->saving(function (Form $form) use ($id, $isSongOfflineSlot) {
+                $open = (int) $form->input('open');
+                // SongOfflineSlot：次数 × 300 = 游戏分，对齐客户端 open_point 格式
+                if ($isSongOfflineSlot) {
+                    $open = $open * \app\service\machine\SongOfflineSlot::OPEN_UNIT;
+                }
+                return $this->action($id, 'open_custom', ['open' => $open]);
             });
         });
     }

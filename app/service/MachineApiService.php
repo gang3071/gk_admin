@@ -78,7 +78,7 @@ class MachineApiService
 
         return new Client([
             'base_uri' => self::$baseUrl,
-            'timeout' => 30,
+            'timeout' => 60, // SongOfflineSlot 上分/洗分最长 48s，需留有余量
             'headers' => [
                 'X-Admin-Id' => $adminId,
                 'Content-Type' => 'application/json',

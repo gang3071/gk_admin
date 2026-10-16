@@ -166,6 +166,7 @@ return [
         'action_success' => 'アクションは成功しました',
         'action_not_fount' => 'アクションが定義されていません',
         'open_num' => 'オープンスコア',
+        'open_times' => '上分回数（1回=300点）',
         'no_fount_player' => 'ゲームにプレイヤーがいません',
         'open_custom' => 'カスタマイズされたオープンポイント',
         'down' => '低いポイント',

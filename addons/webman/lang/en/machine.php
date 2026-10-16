@@ -163,6 +163,7 @@ return [
         'action_success' => 'Action successful',
         'action_not_fount' => 'Action is not defined',
         'open_num' => 'open score',
+        'open_times' => 'Times (1 = 300pts)',
         'no_fount_player' => 'There is no player in the game',
         'open_custom' => 'Open points customized',
         'down' => 'lower points',
