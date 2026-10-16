@@ -626,6 +626,7 @@ class StoreTicketRecordController
                 'wallet_locked' => $walletLocked,
                 'is_crashed'    => $isCrashed,
                 'amount'        => (int) $amountStr,
+                'server_time'   => time(),
             ],
         ]);
     }

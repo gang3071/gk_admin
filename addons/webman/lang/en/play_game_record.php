@@ -5,6 +5,7 @@ use addons\webman\model\PlayGameRecord;
 return [
     'title' => 'Player Game Records',
     'replay' => 'replay',
+    'replay_not_supported' => 'This platform does not support replay',
     'fields' => [
         'id' => 'ID',
         'game_code' => 'Game ID',
