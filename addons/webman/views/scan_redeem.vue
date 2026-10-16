@@ -136,6 +136,7 @@ export default {
   data() {
     return {
       qrCodeNo: '',
+      scanBuf: '',          // 扫码枪原始缓冲（绕过输入法，唯一真相）
       record: null,
       loading: false,
       redeeming: false,
@@ -160,11 +161,16 @@ export default {
       this.loadRecordById(this.record_id);
     } else {
       this.$nextTick(() => {
+        this.bindScanKeyHandler();
         if (this.$refs.qrInput) {
           this.$refs.qrInput.focus();
         }
       });
     }
+  },
+  beforeUnmount() {
+    this.unbindScanKeyHandler();
+    if (this.inputTimer) clearTimeout(this.inputTimer);
   },
   methods: {
     // 归一化扫码输入：中文/全角输入法会把半角 . 打成 。．・･ 等，全角模式还会把字母数字打成全角
@@ -175,6 +181,110 @@ export default {
         .replace(/[！-～]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)) // 全角英数 → 半角
         .replace(/　/g, ' ') // 全角空格 → 半角
         .trim();
+    },
+
+    // ===== 绕过输入法的按键捕获 =====
+    // 键盘扫码枪是按键模拟输入，会经过当前输入法。中文输入法会把 . 转成 、
+    // 组合态下数字当候选词被吞掉（GV1 → GV、签名丢位）。归一化救不回被吞的字符，
+    // 必须让 IME 根本看不到这些按键，并用独立的 scanBuf 作为唯一真相。
+    getScanInputEl() {
+      const comp = this.$refs.qrInput;
+      if (!comp) return null;
+      if (comp instanceof HTMLElement) return comp;
+      const el = comp.$el || null;
+      if (!el) return null;
+      if (el.tagName === 'INPUT') return el;
+      return (el.querySelector && el.querySelector('input')) || null;
+    },
+
+    bindScanKeyHandler() {
+      const el = this.getScanInputEl();
+      if (!el) return;
+      if (el._scanKeyBound) return;
+      el.addEventListener('keydown', this.onScanKeyDown, true);
+      el.addEventListener('beforeinput', this.onScanBeforeInput, true);
+      el.addEventListener('compositionstart', this.onScanCompositionStart, true);
+      el.addEventListener('paste', this.onScanPaste);
+      el.addEventListener('focus', this.bindScanKeyHandler);
+      el._scanKeyBound = true;
+    },
+
+    unbindScanKeyHandler() {
+      const el = this.getScanInputEl();
+      if (!el || !el._scanKeyBound) return;
+      el.removeEventListener('keydown', this.onScanKeyDown, true);
+      el.removeEventListener('beforeinput', this.onScanBeforeInput, true);
+      el.removeEventListener('compositionstart', this.onScanCompositionStart, true);
+      el.removeEventListener('paste', this.onScanPaste);
+      el.removeEventListener('focus', this.bindScanKeyHandler);
+      el._scanKeyBound = false;
+    },
+
+    scanCodeToChar(code) {
+      if (!code) return null;
+      let m;
+      if ((m = /^Digit(\d)$/.exec(code)))  return m[1];
+      if ((m = /^Numpad(\d)$/.exec(code))) return m[1];
+      if ((m = /^Key([A-Z])$/.exec(code))) return m[1];
+      if (code === 'Period' || code === 'NumpadDecimal') return '.';
+      return null;
+    },
+
+    // 输入法一开始就掐掉：不允许在扫码框里组中文
+    onScanCompositionStart(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    },
+
+    // 组合文本（输入法候选上屏）一律拒绝写入
+    onScanBeforeInput(e) {
+      if (e.inputType && e.inputType.indexOf('insertComposition') === 0) {
+        e.preventDefault();
+      }
+    },
+
+    // 粘贴是唯一不走 keydown 的入口，走归一化兜底
+    onScanPaste(e) {
+      const text = (e.clipboardData && e.clipboardData.getData('text')) || '';
+      if (!text) return;
+      e.preventDefault();
+      this.scanBuf = this.normalizeScanCode(this.scanBuf + this.normalizeScanCode(text));
+      this.qrCodeNo = this.scanBuf;
+      this.onScanInput();
+    },
+
+    onScanKeyDown(e) {
+      // Ctrl/Cmd+V 粘贴等组合键放行
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.flushScanInput();
+        return;
+      }
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        this.scanBuf = this.scanBuf.slice(0, -1);
+        this.qrCodeNo = this.scanBuf;
+        return;
+      }
+
+      // 被输入法劫持的按键一律用物理键码还原
+      let ch = null;
+      if (e.isComposing || e.keyCode === 229 || e.key === 'Process' || e.key === 'Unidentified') {
+        ch = this.scanCodeToChar(e.code);
+      } else if (e.key && e.key.length === 1 && /^[\x20-\x7E]$/.test(e.key)) {
+        ch = e.key;
+      } else {
+        ch = this.scanCodeToChar(e.code);
+      }
+      if (ch === null) return;
+
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      this.scanBuf += ch;
+      this.qrCodeNo = this.scanBuf;
+      this.onScanInput();
     },
 
     getStatusColor(status) {
@@ -196,22 +306,39 @@ export default {
       }
       this.inputTimer = setTimeout(() => {
         this.inputTimer = null;
-        const raw = this.normalizeScanCode(this.qrCodeNo);
-        console.log('[扫码] 输入完成, 原始值长度:', raw.length, '原始值:', raw.substring(0, 30) + '...');
-        if (!raw) return;
-        // 提取第一次扫码的内容（去除重复拼接的部分）
-        const value = this.extractFirstOccurrence(raw);
-        console.log('[扫码] 提取结果长度:', value.length, '是否重复:', value.length < raw.length);
-        this.qrCodeNo = value;
-        // 内容去重：和上次扫描的值相同则忽略
-        if (value === this.lastScannedValue) {
-          console.log('[扫码] 内容重复, 忽略. lastScannedValue:', this.lastScannedValue.substring(0, 30) + '...');
-          this.qrCodeNo = '';
-          return;
-        }
-        console.log('[扫码] 新内容, 触发查询. value:', value.substring(0, 30) + '...');
-        this.queryRecord();
+        this.processScanValue();
       }, 500);
+    },
+
+    // Enter 提前触发，不等防抖
+    flushScanInput() {
+      if (this.inputTimer) {
+        clearTimeout(this.inputTimer);
+        this.inputTimer = null;
+      }
+      this.processScanValue();
+    },
+
+    processScanValue() {
+      // scanBuf 是按键捕获的原始内容；为空时回退到输入框（兼容自动填充等）
+      const source = this.scanBuf || this.qrCodeNo || '';
+      const raw = this.normalizeScanCode(source);
+      console.log('[扫码] 输入完成, 原始值长度:', raw.length, '原始值:', raw.substring(0, 30) + '...');
+      if (!raw) return;
+      this.scanBuf = raw;
+      // 提取第一次扫码的内容（去除重复拼接的部分）
+      const value = this.extractFirstOccurrence(raw);
+      console.log('[扫码] 提取结果长度:', value.length, '是否重复:', value.length < raw.length);
+      this.scanBuf  = value;
+      this.qrCodeNo = value;
+      // 内容去重：和上次扫描的值相同则忽略
+      if (value === this.lastScannedValue) {
+        console.log('[扫码] 内容重复, 忽略. lastScannedValue:', this.lastScannedValue.substring(0, 30) + '...');
+        this.qrCodeNo = '';
+        return;
+      }
+      console.log('[扫码] 新内容, 触发查询. value:', value.substring(0, 30) + '...');
+      this.queryRecord();
     },
 
     // 从重复拼接的字符串中提取第一次的内容
