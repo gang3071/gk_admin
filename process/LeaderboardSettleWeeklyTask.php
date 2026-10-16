@@ -7,10 +7,10 @@ use support\Log;
 use Workerman\Crontab\Crontab;
 
 /**
- * 排行榜：週榜結算（只算，不發錢）
+ * 排行榜：週榜（即時刷新當期 + 定案已結束的期；只算，不發錢）
  *
- * 每週二 16:00 結算上一週
- * 期區間：上週一 08:00 ~ 本週一 08:00
+ * 每 30 分鐘刷新「本週進行中」的名次，並定案已結束的週
+ * 期區間：本週一 08:00 ~ 下週一 08:00
  */
 class LeaderboardSettleWeeklyTask
 {
@@ -24,18 +24,18 @@ class LeaderboardSettleWeeklyTask
         $this->log = Log::channel('leaderboard');
 
         $this->log->info('LeaderboardSettleWeeklyTask 進程已啟動', [
-            'schedule' => '每週二 16:00',
+            'schedule' => '每 30 分鐘',
             'pid' => getmypid(),
         ]);
 
-        // Cron：秒 分 時 日 月 週（週：0=日 1=一 2=二）
-        new Crontab('0 0 16 * * 2', function () {
+        // Cron：秒 分 時 日 月 週（每 30 分鐘）
+        new Crontab('0 */30 * * * *', function () {
             $this->doWork();
         });
     }
 
     /**
-     * 執行週榜結算
+     * 執行週榜刷新（當期）+ 定案（已結束）
      */
     private function doWork(): void
     {
@@ -46,10 +46,11 @@ class LeaderboardSettleWeeklyTask
             $result = LeaderboardService::settleWeekly();
 
             $this->log->info('LeaderboardSettleWeeklyTask 結算完成', [
-                'settled' => $result['settled'],
-                'skipped' => $result['skipped'],
-                'entries' => $result['entries'],
-                'elapsed' => round(microtime(true) - $startTime, 3),
+                'refreshed' => $result['refreshed'],
+                'finalized' => $result['finalized'],
+                'skipped'   => $result['skipped'],
+                'entries'   => $result['entries'],
+                'elapsed'   => round(microtime(true) - $startTime, 3),
             ]);
 
         } catch (\Throwable $e) {

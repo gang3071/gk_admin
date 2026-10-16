@@ -17,13 +17,17 @@ use support\Log;
  * 排行榜服務
  *
  * 職責：
- * - 結算週榜 / 月榜（只算，不發錢）
+ * - 結算週榜 / 月榜（即時刷新當期 + 定案已結束的期；只算，不發錢）
  * - 發放獎勵（發到錢包 + 寫錢包異動紀錄 + 寫玩家通知）
  *
  * 資料表：leaderboard、leaderboard_entry
  * 設定來源：system_setting（feature 以 leaderboard_ 開頭，content 為 JSON）
  *
  * 計分口徑：play_game_record 即時加總（只算電子平台、已結算的下注單）
+ *
+ * 期間口徑：當期進行中（本週一08:00~下週一08:00 / 本月1號08:00~下月1號08:00）
+ * - 每 30 分鐘刷新當期名次（settle_at 保持 NULL = 未定案）
+ * - 期結束後定案（寫入 settle_at），發獎只處理已定案的期
  */
 class LeaderboardService
 {
@@ -43,72 +47,185 @@ class LeaderboardService
     }
 
     /**
-     * 結算指定週期的榜單（只算，不發錢）
+     * 結算指定週期的榜單（即時刷新當期 + 定案已結束的期；只算，不發錢）
+     *
+     * 每 30 分鐘執行：
+     * - 刷新「進行中當期」的名次（settle_at 保持 NULL，未定案）
+     * - 將「已結束且未定案」的期定案（寫入 settle_at），供發獎使用
      *
      * @param int $periodType 1=週榜 2=月榜
-     * @return array ['settled'=>int, 'skipped'=>int, 'entries'=>int]
+     * @return array ['refreshed'=>int, 'finalized'=>int, 'skipped'=>int, 'entries'=>int]
      */
     public static function settle(int $periodType): array
     {
         $now = Carbon::now('Asia/Taipei');
+        [$start, $end, $periodKey] = self::currentPeriod($periodType, $now);
 
-        if ($periodType === 1) {
-            // 週榜：上週一 08:00 ~ 本週一 08:00
-            $end = $now->copy()->startOfWeek(Carbon::MONDAY)->setTime(8, 0, 0);
-            $start = $end->copy()->subWeek();
-            $periodKey = $start->format('Y-m-d');
-        } else {
-            // 月榜：上月 1 號 08:00 ~ 本月 1 號 08:00
-            $end = $now->copy()->startOfMonth()->setTime(8, 0, 0);
-            $start = $end->copy()->subMonthNoOverflow();
-            $periodKey = $start->format('Y-m');
-        }
-
-        $result = ['settled' => 0, 'skipped' => 0, 'entries' => 0];
+        $result = ['refreshed' => 0, 'finalized' => 0, 'skipped' => 0, 'entries' => 0];
 
         foreach (self::getSettings($periodType) as $setting) {
             $code = $setting['code'];
 
-            // 冪等：同榜同期已結算則跳過
-            $exists = Leaderboard::query()
+            // 1) 即時刷新「當期進行中」榜單（不改 settle_at）
+            $exist = Leaderboard::query()
                 ->where('code', $code)
                 ->where('period_key', $periodKey)
-                ->exists();
-            if ($exists) {
+                ->first();
+
+            if ($exist && $exist->settle_at !== null) {
+                // 已定案，不再覆蓋
                 $result['skipped']++;
-                continue;
+            } else {
+                $result['entries'] += self::refreshBoard($exist, $setting, $periodType, $periodKey, $start, $end, $now);
+                $result['refreshed']++;
             }
 
-            $leaderboardId = Leaderboard::query()->insertGetId([
-                'code'        => $code,
-                'name'        => $setting['name'],
-                'period_type' => $periodType,
-                'scope_type'  => $setting['scope_type'],
-                'period_key'  => $periodKey,
-                'start_at'    => $start->format('Y-m-d H:i:s'),
-                'end_at'      => $end->format('Y-m-d H:i:s'),
-                'settle_at'   => $now->format('Y-m-d H:i:s'),
-                'threshold'   => sprintf('%.2f', $setting['threshold']),
-                'prize_config' => json_encode($setting['prizes'], JSON_UNESCAPED_UNICODE),
-                'entry_count' => 0,
-                'created_at'  => $now->format('Y-m-d H:i:s'),
-                'updated_at'  => $now->format('Y-m-d H:i:s'),
-            ]);
-
-            $rows = self::buildEntries($leaderboardId, $setting, $start, $end);
-            if (!empty($rows)) {
-                LeaderboardEntry::query()->insert($rows);
-            }
-            Leaderboard::query()->where('id', $leaderboardId)->update([
-                'entry_count' => count($rows),
-                'updated_at'  => $now->format('Y-m-d H:i:s'),
-            ]);
-
-            $result['settled']++;
-            $result['entries'] += count($rows);
+            // 2) 定案所有「已結束但未定案」的期
+            $result['finalized'] += self::finalizeEnded($code, $now);
         }
 
         return $result;
+    }
+
+    /**
+     * 取得「當期進行中」的期間
+     *
+     * 週榜：本週一 08:00 ~ 下週一 08:00（未到本週一 08:00 則仍屬上一期）
+     * 月榜：本月 1 號 08:00 ~ 下月 1 號 08:00（未到本月 1 號 08:00 則仍屬上一期）
+     *
+     * @param int $periodType
+     * @param Carbon $now
+     * @return array [Carbon $start, Carbon $end, string $periodKey]
+     */
+    private static function currentPeriod(int $periodType, Carbon $now): array
+    {
+        if ($periodType === 1) {
+            $start = $now->copy()->startOfWeek(Carbon::MONDAY)->setTime(8, 0, 0);
+            if ($now->lt($start)) {
+                $start = $start->subWeek();
+            }
+            $end = $start->copy()->addWeek();
+            $periodKey = $start->format('Y-m-d');
+        } else {
+            $start = $now->copy()->startOfMonth()->setTime(8, 0, 0);
+            if ($now->lt($start)) {
+                $start = $start->subMonthNoOverflow();
+            }
+            $end = $start->copy()->addMonthNoOverflow();
+            $periodKey = $start->format('Y-m');
+        }
+
+        return [$start, $end, $periodKey];
+    }
+
+    /**
+     * 刷新（upsert）單一「進行中」榜單，覆蓋其名次，回傳名次筆數
+     *
+     * @param Leaderboard|null $exist 已存在的當期榜單（null=尚未建立）
+     * @param array $setting
+     * @param int $periodType
+     * @param string $periodKey
+     * @param Carbon $start
+     * @param Carbon $end
+     * @param Carbon $now
+     * @return int
+     */
+    private static function refreshBoard($exist, array $setting, int $periodType, string $periodKey, Carbon $start, Carbon $end, Carbon $now): int
+    {
+        $ts = $now->format('Y-m-d H:i:s');
+
+        if ($exist) {
+            $leaderboardId = (int) $exist->id;
+            Leaderboard::query()->where('id', $leaderboardId)->update([
+                'name'         => $setting['name'],
+                'period_type'  => $periodType,
+                'scope_type'   => $setting['scope_type'],
+                'start_at'     => $start->format('Y-m-d H:i:s'),
+                'end_at'       => $end->format('Y-m-d H:i:s'),
+                'threshold'    => sprintf('%.2f', $setting['threshold']),
+                'prize_config' => json_encode($setting['prizes'], JSON_UNESCAPED_UNICODE),
+                'updated_at'   => $ts,
+            ]);
+        } else {
+            // settle_at 保持 NULL（未定案）
+            $leaderboardId = Leaderboard::query()->insertGetId([
+                'code'         => $setting['code'],
+                'name'         => $setting['name'],
+                'period_type'  => $periodType,
+                'scope_type'   => $setting['scope_type'],
+                'period_key'   => $periodKey,
+                'start_at'     => $start->format('Y-m-d H:i:s'),
+                'end_at'       => $end->format('Y-m-d H:i:s'),
+                'threshold'    => sprintf('%.2f', $setting['threshold']),
+                'prize_config' => json_encode($setting['prizes'], JSON_UNESCAPED_UNICODE),
+                'entry_count'  => 0,
+                'created_at'   => $ts,
+                'updated_at'   => $ts,
+            ]);
+        }
+
+        // 覆蓋名次：先刪同榜舊名次再重塞（同一 leaderboard_id，unique 不衝突）
+        LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId)->delete();
+        $rows = self::buildEntries($leaderboardId, $setting, $start, $end);
+        if (!empty($rows)) {
+            LeaderboardEntry::query()->insert($rows);
+        }
+
+        Leaderboard::query()->where('id', $leaderboardId)->update([
+            'entry_count' => count($rows),
+            'updated_at'  => $ts,
+        ]);
+
+        return count($rows);
+    }
+
+    /**
+     * 定案「已結束但未定案」的期：以該期期間重算最終名次並寫入 settle_at
+     *
+     * @param string $code
+     * @param Carbon $now
+     * @return int 定案筆數
+     */
+    private static function finalizeEnded(string $code, Carbon $now): int
+    {
+        $ts = $now->format('Y-m-d H:i:s');
+
+        $boards = Leaderboard::query()
+            ->where('code', $code)
+            ->whereNull('settle_at')
+            ->where('end_at', '<=', $ts)
+            ->get();
+
+        $count = 0;
+        foreach ($boards as $lb) {
+            $setting = [
+                'code'       => (string) $lb->code,
+                'name'       => (string) $lb->name,
+                'scope_type' => (int) $lb->scope_type,
+                'threshold'  => (float) $lb->threshold,
+                'prizes'     => json_decode((string) $lb->prize_config, true) ?: [],
+            ];
+
+            $start = Carbon::parse($lb->start_at);
+            $end = Carbon::parse($lb->end_at);
+
+            // 以定案的期間重算最終名次
+            LeaderboardEntry::query()->where('leaderboard_id', $lb->id)->delete();
+            $rows = self::buildEntries((int) $lb->id, $setting, $start, $end);
+            if (!empty($rows)) {
+                LeaderboardEntry::query()->insert($rows);
+            }
+
+            Leaderboard::query()->where('id', $lb->id)->update([
+                'entry_count' => count($rows),
+                'settle_at'   => $ts,
+                'updated_at'  => $ts,
+            ]);
+
+            $count++;
+        }
+
+        return $count;
     }
 
     /**

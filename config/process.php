@@ -97,14 +97,14 @@ return [
     // 排行榜任務
     // ============================================================
 
-    // 週榜結算（只算，不發錢）：每週二 16:00
+    // 週榜：即時刷新當期 + 定案已結束的週（只算，不發錢）：每 30 分鐘
     'leaderboard_settle_weekly' => [
         'handler' => process\LeaderboardSettleWeeklyTask::class,
         'reloadable' => true,
         'constructor' => []
     ],
 
-    // 月榜結算（只算，不發錢）：每月第一個週二 16:00
+    // 月榜：即時刷新當期 + 定案已結束的月（只算，不發錢）：每 30 分鐘
     'leaderboard_settle_monthly' => [
         'handler' => process\LeaderboardSettleMonthlyTask::class,
         'reloadable' => true,
