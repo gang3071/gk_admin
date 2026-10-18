@@ -546,14 +546,14 @@ class LotteryController
                                     ->placeholder(admin_trans('lottery.auto_refill.amount_placeholder'))
                                     ->span(12);
                             });
-
-                            $form->number('max_pool_amount', admin_trans('lottery.max_pool_amount'))
-                                ->style(['width' => '100%'])
-                                ->min(0)->max(10000000000)->precision(2)
-                                ->help(admin_trans('lottery.form_help_extended.max_pool_cap'))
-                                ->placeholder(admin_trans('lottery.form_placeholder_extended.max_pool_cap'))
-                                ->required();
                         });
+                    $form->number('max_pool_amount', admin_trans('lottery.max_pool_amount'))
+                        ->style(['width' => '100%'])
+                        ->default(0)
+                        ->min(0)->max(10000000000)->precision(2)
+                        ->help(admin_trans('lottery.form_help_extended.max_pool_cap'))
+                        ->placeholder(admin_trans('lottery.form_placeholder_extended.max_pool_cap'))
+                        ->required();
                 })->when(Lottery::LOTTERY_TYPE_RANDOM, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
                     $form->hidden('game_type')->bindAttr('value', $gameType)
                         ->when(GameType::TYPE_SLOT, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
@@ -625,13 +625,6 @@ class LotteryController
                                     ->placeholder(admin_trans('lottery.burst_config.duration_placeholder'))
                                     ->span(12);
                             });
-
-                            $form->number('max_pool_amount', admin_trans('lottery.max_pool_amount'))
-                                ->style(['width' => '100%'])
-                                ->min(0)->max(10000000000)->precision(2)
-                                ->help(admin_trans('lottery.form_help_extended.max_pool_cap'))
-                                ->placeholder(admin_trans('lottery.form_placeholder_extended.max_pool_cap'))
-                                ->required();
 
                             // ===== 新增：保底金额配置 =====
                             $form->divider()->content(admin_trans('lottery.auto_refill.divider_title'));
@@ -757,13 +750,6 @@ class LotteryController
                                     ->min(0)->max(100)->default(0.01)->value($burstTriggerConfig['20'])->precision(2)->suffix('%')->help(admin_trans('lottery.burst_trigger.20_help'))->ignore()->span(24);
                             });
 
-                            $form->number('max_pool_amount', admin_trans('lottery.max_pool_amount'))
-                                ->style(['width' => '100%'])
-                                ->default(0)
-                                ->min(0)->max(10000000000)->precision(2)
-                                ->help(admin_trans('lottery.form_help_extended.max_pool_cap'))
-                                ->placeholder(admin_trans('lottery.form_placeholder_extended.max_pool_cap'))
-                                ->required();
                         })->when(GameType::TYPE_STEEL_BALL, function (Form $form) use ($gameType, $burstMultiplierConfig, $burstTriggerConfig) {
                             $form->divider()->content(admin_trans('lottery.machine_lottery.divider_probability_config'));
                             $maxRatio = 100;
@@ -860,14 +846,6 @@ class LotteryController
                                     ->placeholder(admin_trans('lottery.burst_config.duration_placeholder'))
                                     ->span(12);
                             });
-
-                            $form->number('max_pool_amount', admin_trans('lottery.max_pool_amount'))
-                                ->style(['width' => '100%'])
-                                ->default(0)
-                                ->min(0)->max(10000000000)->precision(2)
-                                ->help(admin_trans('lottery.form_help_extended.max_pool_cap'))
-                                ->placeholder(admin_trans('lottery.form_placeholder_extended.max_pool_cap'))
-                                ->required();
 
                             // 隐藏域用于保存JSON配置
                             $form->hidden('burst_multiplier_config');
@@ -967,6 +945,13 @@ class LotteryController
                             });
 
                         });
+                    $form->number('max_pool_amount', admin_trans('lottery.max_pool_amount'))
+                        ->style(['width' => '100%'])
+                        ->default(0)
+                        ->min(0)->max(10000000000)->precision(2)
+                        ->help(admin_trans('lottery.form_help_extended.max_pool_cap'))
+                        ->placeholder(admin_trans('lottery.form_placeholder_extended.max_pool_cap'))
+                        ->required();
                 });
             $form->switch('status', admin_trans('lottery.fields.status'))->default(1);
             $form->layout('vertical');
