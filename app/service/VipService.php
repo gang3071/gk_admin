@@ -14,25 +14,26 @@ use support\Log;
  * VIP服务
  * 处理VIP等级升级、保级逻辑
  *
- * 规则（当前仅走升级，保级/降级已关闭）：
- * 1. 升级：周期内累计打码量达到升级要求 → 立即升级
+ * 规则：
+ * 1. 升级：周期内累计打码量达到升级要求 → 立即升级（可连升多级）
  * 2. 升级后：超额打码量结转进新等级周期
- * 3. 保级/降级：已关闭（RETAIN_CHECK_ENABLED = false）
- *    —— 不评估保级打码量、不判断周期到期，因此也不会降级
+ * 3. 保级（周期 retain_level_days 到期时判定）：
+ *    - 经验 ≥ 保级量 → 保级成功，经验【不扣】，结转进新周期（重置保级计时）
+ *    - 经验 < 保级量 且 非最低级 → 降一级并【清空经验】，从低一级从 0 累计
+ *    - 经验 < 保级量 且 已是最低级 → 不降级、不清经验，经验继续累计
  *
- * 注：PlayerVipPeriod（PERIOD_TYPE_RETAIN）仍然作为升级经验的累计容器，
- *     只是不再用它做保级判定。周期缺失时会自动补建，否则升级经验无处累计。
+ * 注：PlayerVipPeriod（PERIOD_TYPE_RETAIN）是经验与保级计时的共同容器，
+ *     周期缺失时会自动补建。
  */
 class VipService
 {
     /**
      * 是否启用保级/降级检查
      *
-     * false = 只走升级条件：不计算是否达到保级打码量（retain_level_bet_amount），
-     *         不按 retain_level_days 判定周期到期，因此不会触发降级。
-     * 改回 true 即恢复原有保级 + 降级逻辑。
+     * true  = 按上述规则 3 判定保级与降级
+     * false = 只走升级：不评估保级打码量、不判周期到期，也不会降级
      */
-    const RETAIN_CHECK_ENABLED = false;
+    const RETAIN_CHECK_ENABLED = true;
 
     /** @var array 渠道VIP状态缓存 [departmentId => [val, ts]] */
     private static array $channelVipCache = [];
@@ -432,13 +433,14 @@ class VipService
     }
 
     /**
-     * 检查保级条件
+     * 检查保级条件（周期 retain_level_days 到期时判定）
      *
-     * ⚠️ 当前未启用：handleBet 仅在 RETAIN_CHECK_ENABLED = true 时才会调用本方法。
-     * 关闭期间不评估 retain_level_bet_amount / retain_level_days，也不会降级。
+     * - 经验 ≥ 保级量 → 保级成功，经验【不扣】，结转进新周期（重置保级计时）
+     * - 经验 < 保级量 且 非最低级 → 降一级并【清空经验】，从低一级从 0 累计
+     * - 经验 < 保级量 且 已是最低级 → 不降级、不清经验，经验继续累计
      *
      * @param Player $player
-     * @param PlayerVipPeriod|null $period 保级周期
+     * @param PlayerVipPeriod|null $period 经验/保级周期
      * @param float $betAmount 本次打码量（周期缺失补建时计入经验）
      * @return void
      */
@@ -468,29 +470,57 @@ class VipService
             return;
         }
 
+        // ---------- 保级成功：经验不扣，结转进新周期 ----------
         if ($period->period_bet_amount >= $currentLevel->retain_level_bet_amount) {
             $period->status = PlayerVipPeriod::STATUS_COMPLETED;
             $period->save();
 
-            static::createRetainPeriod($player, $currentLevel);
+            // 经验原样结转，只重置保级计时
+            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount);
 
             static::log('info', 'VIP retain success', [
                 'player_id' => $player->id,
                 'level_id' => $currentLevel->id,
                 'period_bet_amount' => $period->period_bet_amount,
+                'carried_over' => true,
             ]);
-        } else {
-            static::doDowngrade($player, $currentLevel, $period);
+            return;
         }
+
+        // ---------- 保级失败 ----------
+        $prevLevel = $currentLevel->getPrevLevel();
+
+        // 已是最低级：不降级、不清经验，经验继续累计，仅重置保级计时
+        if (!$prevLevel) {
+            $period->status = PlayerVipPeriod::STATUS_EXPIRED;
+            $period->save();
+
+            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount);
+
+            static::log('info', 'VIP retain failed at min level, no downgrade', [
+                'player_id' => $player->id,
+                'level_id' => $currentLevel->id,
+                'period_bet_amount' => $period->period_bet_amount,
+                'cleared' => false,
+            ]);
+            return;
+        }
+
+        // 非最低级：降一级并清空经验（doDowngrade 里 createRetainPeriod 不传经验 = 从 0 开始）
+        static::doDowngrade($player, $currentLevel, $period);
     }
 
     /**
-     * 执行降级
+     * 执行降级：降一级，并清空经验从 0 开始累计
+     *
+     * ⚠️ 调用方需保证当前不是最低级（checkRetain 已先行判断）。
+     * 此处的 no-prevLevel 分支只是防御性兜底。
      */
     private static function doDowngrade(Player $player, VipLevel $currentLevel, PlayerVipPeriod $period): void
     {
         $prevLevel = $currentLevel->getPrevLevel();
         if (!$prevLevel) {
+            // 兜底：无更低等级时不应走到这里，仅关闭周期
             $period->status = PlayerVipPeriod::STATUS_EXPIRED;
             $period->save();
             return;
@@ -499,7 +529,6 @@ class VipService
         $playerId = $player->id;
         $oldLevelId = $currentLevel->id;
         $newLevelId = $prevLevel->id;
-        $totalBetBefore = $player->total_bet_amount;
 
         Db::transaction(function () use ($period, $player, $prevLevel, $oldLevelId, $newLevelId) {
             $period->status = PlayerVipPeriod::STATUS_EXPIRED;
@@ -508,7 +537,8 @@ class VipService
             $player->vip_level_id = $prevLevel->id;
             $player->save();
 
-            static::createRetainPeriod($player, $prevLevel);
+            // 不传经验 = 从 0 开始：降级后清空经验，从低一级重新累计
+            static::createRetainPeriod($player, $prevLevel, 0);
 
             // ⭐ 同步更新摸奖券打码进度的 VIP 等级和配置
             static::updateLotteryBetProgressOnDowngrade($player, $oldLevelId, $newLevelId);
@@ -518,7 +548,7 @@ class VipService
             'player_id' => $playerId,
             'old_level' => $oldLevelId,
             'new_level' => $newLevelId,
-            'new_start_bet_amount' => $totalBetBefore,
+            'period_cleared' => true,
         ]);
 
         // 降级不推送通知
