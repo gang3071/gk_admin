@@ -54,11 +54,17 @@ class VipLevel extends Model
 
     /**
      * 获取下一等级
+     *
+     * 只在「同一渠道链路」内查找：department_id = 0（全局）或与当前等级相同，
+     * 避免升级串到其他渠道的等级。同时排除已禁用等级。
+     *
      * @return VipLevel|null
      */
     public function getNextLevel(): ?VipLevel
     {
         return static::query()
+            ->where('status', self::STATUS_ENABLED)
+            ->whereIn('department_id', [0, $this->department_id])
             ->where('sort', '>', $this->sort)
             ->orderBy('sort', 'asc')
             ->first();
@@ -66,12 +72,16 @@ class VipLevel extends Model
 
     /**
      * 获取上一等级
+     *
+     * 与 getNextLevel 同口径：限定渠道链路 + 只取启用中的等级。
+     *
      * @return VipLevel|null
      */
     public function getPrevLevel(): ?VipLevel
     {
         return static::query()
             ->where('status', self::STATUS_ENABLED)
+            ->whereIn('department_id', [0, $this->department_id])
             ->where('sort', '<', $this->sort)
             ->orderBy('sort', 'desc')
             ->first();
