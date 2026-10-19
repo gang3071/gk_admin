@@ -32,7 +32,7 @@ use support\Log;
 class LeaderboardService
 {
     /** 榜單取前 N 名 */
-    const SETTLE_TOP = 8;
+    const SETTLE_TOP = 10;
 
     /** 結算週榜（period_type=1） */
     public static function settleWeekly(): array
