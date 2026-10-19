@@ -486,7 +486,7 @@ class AutoShiftService
             ->where('play_game_record.created_at', '<=', $endTime)
             ->sum('play_game_record.bet');
 
-        // 计算机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
+        // 计算机器打码量（与机台报表押分同口径：钢珠取 chip_amount，斯洛等取 pressure）
         $machineBetAmount = PlayerGameLog::query()
             ->join('player', 'player_game_log.player_id', '=', 'player.id')
             ->where('player.department_id', $admin->department_id)
@@ -494,7 +494,8 @@ class AutoShiftService
             ->where('player.is_promoter', 0)
             ->where('player_game_log.created_at', '>', $startTime)
             ->where('player_game_log.created_at', '<=', $endTime)
-            ->sum('player_game_log.chip_amount');
+            ->selectRaw('COALESCE(SUM(CASE WHEN player_game_log.type = ' . \addons\webman\model\GameType::TYPE_STEEL_BALL . ' THEN player_game_log.chip_amount ELSE player_game_log.pressure END), 0) as total_machine_bet')
+            ->value('total_machine_bet');
 
         // 计算实体机台汇总数据（从 player_game_log 表按 machine_id 聚合）
         $machineGameData = PlayerGameLog::query()
@@ -870,9 +871,9 @@ class AutoShiftService
             ->get()
             ->pluck('total_bet', 'player_id');
 
-        // 4. 查询机器打码量（从 player_game_log 表）
+        // 4. 查询机器打码量（与机台报表押分同口径：钢珠取 chip_amount，斯洛等取 pressure）
         $machineBetMap = PlayerGameLog::query()
-            ->selectRaw('player_id, SUM(chip_amount) as total_chip')
+            ->selectRaw('player_id, SUM(CASE WHEN type = ' . \addons\webman\model\GameType::TYPE_STEEL_BALL . ' THEN chip_amount ELSE pressure END) as total_chip')
             ->whereIn('player_id', $playerIds)
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)

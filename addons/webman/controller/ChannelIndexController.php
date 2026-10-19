@@ -3478,7 +3478,7 @@ class ChannelIndexController
                         ->where('player_delivery_record.created_at', '<=', $endTime)
                         ->sum('player_delivery_record.amount');
 
-                    // 5.2 统计机器打码量（从 player_game_log 表的 chip_amount 字段汇总）
+                    // 5.2 统计机器打码量（与机台报表押分同口径：钢珠取 chip_amount，斯洛等取 pressure）
                     $machineBetAmount = \addons\webman\model\PlayerGameLog::query()
                         ->join('player', 'player_game_log.player_id', '=', 'player.id')
                         ->where('player.department_id', $admin->department_id)
@@ -3486,7 +3486,8 @@ class ChannelIndexController
                         ->where('player.is_promoter', 0)
                         ->where('player_game_log.created_at', '>', $startTime)
                         ->where('player_game_log.created_at', '<=', $endTime)
-                        ->sum('player_game_log.chip_amount');
+                        ->selectRaw('COALESCE(SUM(CASE WHEN player_game_log.type = ' . GameType::TYPE_STEEL_BALL . ' THEN player_game_log.chip_amount ELSE player_game_log.pressure END), 0) as total_machine_bet')
+                        ->value('total_machine_bet');
 
                     // 5.2.1 统计实体机台汇总数据（从 player_game_log 表聚合）
                     $machineGameData = \addons\webman\model\PlayerGameLog::query()
@@ -4191,26 +4192,12 @@ class ChannelIndexController
                 $yesterdayEnd = $yesterday8am->toDateTimeString();
             }
 
-            $todayBetAmount = 0;
-            $yesterdayBetAmount = 0;
-
-            // 今日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
-            $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                ->where('stat_type', 'game')
-                ->where('dimension', 'daily')
-                ->where('stat_date', $now->gte($today8am) ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day')))
-                ->first();
-
-            if ($todayData) {
-                $todayBetAmount = floatval($todayData->bet_amount);
-            } else {
-                // 统计表无数据，降级从游戏记录表实时查询
-                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('created_at', '>=', $todayStart)
-                    ->where('created_at', '<', $todayEnd)
-                    ->sum('bet');
-            }
+            // 统计表无数据，降级从游戏记录表实时查询
+            $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                ->where('player_id', $playerId)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
+                ->sum('bet');
 
             // 今日实体机台打码量（从 player_game_log 表的 chip_amount 字段汇总）
             $todayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
@@ -4220,23 +4207,12 @@ class ChannelIndexController
                 ->sum('chip_amount');
             $todayBetAmount += $todayMachineBetAmount;
 
-            // 昨日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
-            $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                ->where('stat_type', 'game')
-                ->where('dimension', 'daily')
-                ->where('stat_date', $now->gte($today8am) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d', strtotime('-2 days')))
-                ->first();
-
-            if ($yesterdayData) {
-                $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
-            } else {
-                // 统计表无数据，降级从游戏记录表实时查询
-                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('created_at', '>=', $yesterdayStart)
-                    ->where('created_at', '<', $yesterdayEnd)
-                    ->sum('bet');
-            }
+            // 统计表无数据，降级从游戏记录表实时查询
+            $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                ->where('player_id', $playerId)
+                ->where('created_at', '>=', $yesterdayStart)
+                ->where('created_at', '<', $yesterdayEnd)
+                ->sum('bet');
 
             // 昨日实体机台打码量（从 player_game_log 表的 chip_amount 字段汇总）
             $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
@@ -4468,23 +4444,11 @@ class ChannelIndexController
                             ? $today8am->toDateTimeString()
                             : $yesterday8am->toDateTimeString();
 
-                        // 优先从统计表查询，降级从游戏记录表实时查询
-                        $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                            ->where('stat_type', 'game')
-                            ->where('dimension', 'daily')
-                            ->where('stat_date', $now->gte($today8am) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d', strtotime('-2 days')))
-                            ->first();
-
-                        $yesterdayBetAmount = 0;
-                        if ($yesterdayData) {
-                            $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
-                        } else {
-                            $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                                ->where('player_id', $playerId)
-                                ->where('created_at', '>=', $yesterdayStart)
-                                ->where('created_at', '<', $yesterdayEnd)
-                                ->sum('bet');
-                        }
+                        $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                            ->where('player_id', $playerId)
+                            ->where('created_at', '>=', $yesterdayStart)
+                            ->where('created_at', '<', $yesterdayEnd)
+                            ->sum('bet');
 
                         // 昨日实体机台打码量
                         $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
@@ -4961,12 +4925,12 @@ class ChannelIndexController
             ->pluck('total_bet', 'player_id')
             ->map(fn($v) => (float)$v);
 
-        // 批量查询每台设备的机器打码量
+        // 批量查询每台设备的机器打码量（与机台报表押分同口径：钢珠取 chip_amount，斯洛等取 pressure）
         $machineBetMap = \addons\webman\model\PlayerGameLog::query()
             ->whereIn('player_id', $playerIds)
             ->where('created_at', '>', $startTime)
             ->where('created_at', '<=', $endTime)
-            ->selectRaw('player_id, SUM(chip_amount) as total_chip')
+            ->selectRaw('player_id, SUM(CASE WHEN type = ' . GameType::TYPE_STEEL_BALL . ' THEN chip_amount ELSE pressure END) as total_chip')
             ->groupBy('player_id')
             ->pluck('total_chip', 'player_id')
             ->map(fn($v) => (float)$v);
