@@ -266,6 +266,7 @@ class StoreMachineController
                                 : '確定將此店家設為撤店隱藏？分潤報表將不再顯示此店家。',
                             [$this, 'toggleHide?store_id=' . $data['id']]
                         )
+                        ->gridRefresh()
                         ->type($isHidden ? 'default' : 'danger')
                         ->size('small')
                 );
