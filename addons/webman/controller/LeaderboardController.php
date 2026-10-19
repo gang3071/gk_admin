@@ -149,6 +149,13 @@ class LeaderboardController
             $grid->filter(function (Filter $filter) {
                 $filter->like()->text('period_key')->placeholder(admin_trans('leaderboard.fields.period_key'));
 
+                $filter->eq()->select('scope_type')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('leaderboard.fields.scope_type'))
+                    ->options(Leaderboard::getScopeTypeDescription());
+
                 $filter->form()->hidden('settle_at_start');
                 $filter->form()->hidden('settle_at_end');
                 $filter->form()->dateTimeRange('settle_at_start', 'settle_at_end', '')
@@ -157,6 +164,20 @@ class LeaderboardController
 
             $grid->column('id', admin_trans('leaderboard.fields.id'))->align('center');
             $grid->column('period_key', admin_trans('leaderboard.fields.period_key'))->align('center');
+            $grid->column('scope_type', admin_trans('leaderboard.fields.scope_type'))->align('center')
+                ->display(function ($value) {
+                    switch ($value) {
+                        case Leaderboard::SCOPE_TYPE_ALL:
+                            $tag = Tag::create(admin_trans('leaderboard.scope_type.' . Leaderboard::SCOPE_TYPE_ALL))->color('#108ee9');
+                            break;
+
+                        case Leaderboard::SCOPE_TYPE_STORE:
+                            $tag = Tag::create(admin_trans('leaderboard.scope_type.' . Leaderboard::SCOPE_TYPE_STORE))->color('#52c41a');
+                            break;
+                    }
+
+                    return Html::create()->content([$tag]);
+                });
             $grid->column('start_at', admin_trans('leaderboard.fields.start_at'))->align('center');
             $grid->column('end_at', admin_trans('leaderboard.fields.end_at'))->align('center');
             $grid->column('threshold', admin_trans('leaderboard.fields.threshold'))->align('center');
