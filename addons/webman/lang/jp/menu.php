@@ -65,6 +65,7 @@ return [
         'machine_report' => 'マシンレポート',
         'up_and_down_report' => 'アップアンドダウンレポート',
         'store_profit_report' => 'ストア利益レポート',
+        'store_finance_report' => '店舗会計報告書',
         //クライアント管理
         'client_manager' => 'クライアント管理',
         'rotation_chart_manager' => 'ローテーションチャート管理',
@@ -124,7 +125,7 @@ return [
         'promoter_list' => 'プロモーターリスト',
         'profit_record' => '利益レポート',
         'profit_settlement_record' => '利益決済レコード',
-        
+
         //ボーナス管理
         'lottery_management' => '宝くじ管理',
         'lottery_list' => '宝くじリスト',

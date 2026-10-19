@@ -621,4 +621,133 @@ class AgentStoreProfitReportController
         // 此方法仅用于权限控制，实际导出由 Grid 的 export 功能处理
         // ExAdmin 会自动调用 AgentStoreProfitMonthlyExporter
     }
+
+    /**
+     * 門店帳務報表
+     * @auth true
+     */
+    public function finance(): Grid
+    {
+        $list = [];
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+        // ---------------------------------------- 代理底下的門店 ----------------------------------------
+        $stores = AdminUser::query()
+            ->where('type', 4)
+            ->where('is_hide', 0)
+            ->where('parent_admin_id', Admin::user()->id);
+
+        if (! empty($exAdminFilter['id'])) {
+            $stores->where('id', $exAdminFilter['id']);
+        }
+
+        $stores = $stores->pluck('nickname', 'id')->toArray();
+        $storeIds = array_keys($stores);
+        // ---------------------------------------- 門店底下的玩家 ----------------------------------------
+        $players = Player::query()
+            ->where('is_promoter', 0)
+            ->whereIn('store_admin_id', $storeIds)
+            ->pluck('store_admin_id', 'id')
+            ->toArray();
+
+        $playerIds = array_keys($players);
+        // ---------------------------------------- 玩家上下分紀錄 ----------------------------------------
+        $deliveryRecord = PlayerDeliveryRecord::query()
+            ->selectRaw("
+                player_id,
+                SUM(CASE WHEN type = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN amount ELSE 0 END) AS machine_put_point,
+                SUM(CASE WHEN type = " . PlayerDeliveryRecord::TYPE_RECHARGE . " THEN amount ELSE 0 END) AS recharge_amount,
+                SUM(CASE WHEN type = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND withdraw_status = " . PlayerWithdrawRecord::STATUS_SUCCESS . " THEN amount ELSE 0 END) AS withdraw_amount
+            ")
+            ->whereIn('player_id', $playerIds);
+
+        if (! empty($exAdminFilter['created_at_start'])) {
+            $deliveryRecord->where('created_at', '>=', $exAdminFilter['created_at_start']);
+        }
+
+        if (! empty($exAdminFilter['created_at_end'])) {
+            $deliveryRecord->where('created_at', '<=', $exAdminFilter['created_at_end']);
+        }
+
+        $deliveryRecord = $deliveryRecord->groupBy('player_id')->get()->keyBy('player_id')->toArray();
+
+        // ---------------------------------------- 組裝資料 ----------------------------------------
+        foreach ($stores as $key => $value) {
+            $list[$key] = [
+                'id' => $key,
+                'store_name' => $value,
+                'machine_put_point' => 0,
+                'recharge_amount' => 0,
+                'withdraw_amount' => 0
+            ];
+
+            foreach ($deliveryRecord as $key1 => $value1) {
+                if ($players[$key1] != $key) {
+                    continue;
+                }
+
+                $list[$key]['machine_put_point'] += floatval($value1['machine_put_point']);
+                $list[$key]['recharge_amount'] += floatval($value1['recharge_amount']);
+                $list[$key]['withdraw_amount'] += floatval($value1['withdraw_amount']);
+            }
+        }
+
+        return Grid::create($list, function (Grid $grid) {
+            $grid->title(admin_trans('agent_store_profit.titleFinance'));
+            $grid->bordered(true);
+            $grid->hideAdd();
+            $grid->hideDelete();
+            $grid->hideSelection();
+
+            $grid->export('StoreProfitReport' . date('ymdHis'));
+            $grid->hideExportSelection();
+
+            $grid->expandFilter();
+            $grid->filter(function (Filter $filter)  {
+                $filter->eq()->select('id')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('agent_store_profit.filter.select_store'))
+                    ->options(self::getStores());
+
+                $filter->form()->hidden('created_at_start');
+                $filter->form()->hidden('created_at_end');
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')
+                    ->placeholder([admin_trans('public_msg.created_at_start'), admin_trans('public_msg.created_at_end')]);
+            });
+
+            $grid->column('id', 'ID')->align('center');
+            $grid->column('store_name', admin_trans('agent_store_profit.fields.store_name'))->align('center');
+            $grid->column('machine_put_point', admin_trans('agent_store_profit.fields.machine_put_point'))->align('center')
+                ->display(function ($value) {
+                    return number_format(floatval($value), 2);
+                });
+            $grid->column('recharge_amount', admin_trans('agent_store_profit.fields.recharge_amount'))->align('center')
+                ->display(function ($value) {
+                    return number_format(floatval($value), 2);
+                });
+            $grid->column('withdraw_amount', admin_trans('agent_store_profit.fields.withdraw_amount'))->align('center')
+                ->display(function ($value) {
+                    return number_format(floatval($value), 2);
+                });
+
+            $grid->hideAction();
+        });
+    }
+
+    /**
+     * 門店清單
+     * @return array
+     */
+    protected function getStores(): array
+    {
+        $stores = AdminUser::query()
+            ->where('type', 4)
+            ->where('is_hide', 0)
+            ->where('parent_admin_id', Admin::user()->id)
+            ->pluck('nickname','id')
+            ->toArray();
+
+        return $stores;
+    }
 }

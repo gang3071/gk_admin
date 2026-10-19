@@ -2,6 +2,7 @@
 
 return [
     'title' => '店家分润报表',
+    'titleFinance' => '店家帐务报表',
 
     // 字段
     'fields' => [
@@ -11,7 +12,7 @@ return [
         'store_username' => '登录账号',
         'recharge_amount' => '累计开分',
         'withdraw_amount' => '累计洗分',
-        'machine_put_point' => '投钞',
+        'machine_put_point' => '累计投钞',
         'lottery_amount' => '彩金',
         'subtotal' => '小计',
         'agent_commission' => '代理抽成比例',

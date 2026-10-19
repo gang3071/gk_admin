@@ -152,6 +152,15 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-AgentStoreProfitReportController/export',
                 'title' => '导出月度营业状况',
             ],
+            [
+                'id' => 'addons\webman\controller\AgentStoreProfitReportController\finance',
+                'pid' => 'addons\webman\controller\AgentPlayerGameLogController-',
+                'action' => 'finance',
+                'method' => 'get',
+                'group' => 'agent',
+                'url' => 'ex-admin/addons-webman-controller-AgentStoreProfitReportController/finance',
+                'title' => '店家帳務報表',
+            ],
         ]
     ],
 
