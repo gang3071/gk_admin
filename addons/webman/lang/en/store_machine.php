@@ -29,7 +29,14 @@ return [
     'status' => [
         'normal' => 'Normal',
         'disabled' => 'Disabled',
+        'hidden' => 'Closed',
         'not_set' => 'Not Set',
+    ],
+
+    // Store hide
+    'hide' => [
+        'enabled' => 'Store hidden from profit report',
+        'disabled' => 'Store restored to profit report',
     ],
 
     // Form

@@ -42,6 +42,7 @@ class AgentStoreProfitReportController
             ->where("{$storeTable}.parent_admin_id", $admin->id)
             ->where("{$storeTable}.type", AdminUser::TYPE_STORE)
             ->where("{$storeTable}.status", 1)
+            ->where("{$storeTable}.is_hide", 0)
             ->when(!empty($selectedStoreId), function ($query) use ($selectedStoreId, $storeTable) {
                 $query->where("{$storeTable}.id", $selectedStoreId);
             })
@@ -193,6 +194,7 @@ class AgentStoreProfitReportController
         $storeOptions = $admin->childStores()
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
+            ->where('is_hide', 0)
             ->orderBy('id', 'desc')
             ->get(['id', 'nickname', 'username'])
             ->mapWithKeys(function ($store) {
@@ -388,6 +390,7 @@ class AgentStoreProfitReportController
             ->where('parent_admin_id', $admin->id)
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
+            ->where('is_hide', 0)
             ->when(!empty($selectedStoreId), function ($query) use ($selectedStoreId) {
                 $query->where('id', $selectedStoreId);
             })

@@ -29,7 +29,14 @@ return [
     'status' => [
         'normal' => '正常',
         'disabled' => '已停用',
+        'hidden' => '已撤店',
         'not_set' => '未設定',
+    ],
+
+    // 撤店隱藏
+    'hide' => [
+        'enabled' => '已設為撤店隱藏',
+        'disabled' => '已取消撤店隱藏',
     ],
 
     // 表單

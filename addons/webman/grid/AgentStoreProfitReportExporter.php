@@ -467,7 +467,8 @@ class AgentStoreProfitReportExporter extends Excel
         // 获取代理下的所有店家
         $allStoresQuery = $admin->childStores()
             ->where('type', AdminUser::TYPE_STORE)
-            ->where('status', 1);
+            ->where('status', 1)
+            ->where('is_hide', 0);
 
         // 如果选择了特定店家，只查询该店家
         if (!empty($selectedStoreId)) {

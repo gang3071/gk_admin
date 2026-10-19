@@ -171,13 +171,18 @@ class StoreMachineController
                 )
                 ->width(120)->align('center');
 
-            $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value) {
-                return match ($value) {
+            $grid->column('status', admin_trans('store_machine.fields.status'))->display(function ($value, $data) {
+                $tags = [];
+                $tags[] = match ((int) $value) {
                     0 => Tag::create(admin_trans('store_machine.status.disabled'))->color('red'),
                     1 => Tag::create(admin_trans('store_machine.status.normal'))->color('green'),
                     default => '',
                 };
-            })->width(80)->align('center');
+                if (!empty($data['is_hide'])) {
+                    $tags[] = Tag::create(admin_trans('store_machine.status.hidden'))->color('volcano');
+                }
+                return Html::create()->content($tags);
+            })->width(120)->align('center');
 
             $grid->column('created_at', admin_trans('store_machine.fields.created_at'))->width(160)->align('center');
 
@@ -248,6 +253,20 @@ class StoreMachineController
                     Button::create('开分配置')
                         ->drawer([$this, 'openScoreSettingList'], ['store_id' => $data['id']])
                         ->type('default')
+                        ->size('small')
+                );
+
+                // 撤店隱藏 / 取消撤店
+                $isHidden = !empty($data['is_hide']);
+                $actions->append(
+                    Button::create($isHidden ? '取消撤店' : '撤店隱藏')
+                        ->confirm(
+                            $isHidden
+                                ? '確定取消此店家的撤店隱藏？'
+                                : '確定將此店家設為撤店隱藏？分潤報表將不再顯示此店家。',
+                            [$this, 'toggleHide?store_id=' . $data['id']]
+                        )
+                        ->type($isHidden ? 'default' : 'danger')
                         ->size('small')
                 );
             });
@@ -627,6 +646,38 @@ class StoreMachineController
             });
 
         return Response::success($agents);
+    }
+
+    /**
+     * 切換撤店隱藏（撤店後分潤報表不再顯示該店家）
+     * @auth true
+     * @group channel
+     */
+    public function toggleHide()
+    {
+        $storeId = (int)request()->input('store_id');
+        $currentDepartmentId = Admin::user()->department_id;
+
+        $store = AdminUser::query()
+            ->join('admin_users as parent_admin', 'admin_users.parent_admin_id', '=', 'parent_admin.id')
+            ->where('admin_users.id', $storeId)
+            ->where('admin_users.type', AdminUser::TYPE_STORE)
+            ->where('parent_admin.department_id', $currentDepartmentId)
+            ->select('admin_users.*')
+            ->first();
+
+        if (!$store) {
+            return message_error(admin_trans('admin.not_found'));
+        }
+
+        $store->is_hide = $store->is_hide ? 0 : 1;
+        $store->save();
+
+        return message_success(
+            $store->is_hide
+                ? admin_trans('store_machine.hide.enabled')
+                : admin_trans('store_machine.hide.disabled')
+        );
     }
 
     /**

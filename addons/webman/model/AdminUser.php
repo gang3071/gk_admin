@@ -21,6 +21,7 @@ use support\Cache;
  * @property string $email 邮箱地址
  * @property string $phone 手机号码
  * @property int $status 账号状态：0=禁用，1=启用
+ * @property int $is_hide 是否撤店隐藏：0=否，1=是
  * @property int $type 用户类型：1=主站，2=渠道，3=代理，4=店家
  * @property string $remember_token 记住登录Token
  * @property int $department_id 所属部门ID，关联 admin_departments 表
@@ -82,6 +83,7 @@ class AdminUser extends Model
         'email',
         'phone',
         'status',
+        'is_hide',
         'type',
         'department_id',
         'parent_admin_id',
@@ -116,6 +118,7 @@ class AdminUser extends Model
     protected $casts = [
         'id' => 'integer',
         'status' => 'integer',
+        'is_hide' => 'integer',
         'type' => 'integer',
         'department_id' => 'integer',
         'parent_admin_id' => 'integer',

@@ -45,6 +45,7 @@ class ChannelStoreProfitReportController
             ->where("{$storeTable}.department_id", $admin->department_id)
             ->where("{$storeTable}.type", AdminUser::TYPE_STORE)
             ->where("{$storeTable}.status", 1)
+            ->where("{$storeTable}.is_hide", 0)
             ->when(!empty($selectedAgentId), function ($query) use ($selectedAgentId, $storeTable) {
                 $query->where("{$storeTable}.parent_admin_id", $selectedAgentId);
             })
@@ -216,6 +217,7 @@ class ChannelStoreProfitReportController
             ->where('department_id', $admin->department_id)
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
+            ->where('is_hide', 0)
             ->orderBy('id', 'desc')
             ->get(['id', 'nickname', 'username'])
             ->mapWithKeys(function ($store) {
@@ -456,6 +458,7 @@ class ChannelStoreProfitReportController
             ->where('department_id', $admin->department_id)
             ->where('type', AdminUser::TYPE_STORE)
             ->where('status', 1)
+            ->where('is_hide', 0)
             ->orderBy('id', 'desc');
 
         // 如果选择了特定代理，只查询该代理下的店家
