@@ -1307,16 +1307,22 @@ class StorePlayerController
     {
         try {
             $redis = \support\Redis::connection('default')->client();
-            $today = date('Y-m-d');
+
+            // 以每天 08:00 為業務日分界點（與 API 券領取邏輯一致）
+            $now = time();
+            $today8am = strtotime(date('Y-m-d') . ' 08:00:00');
+            $isAfter8am = $now >= $today8am;
+            $todayStatDate = $isAfter8am ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day'));
+
             $thisWeek = date('o-\WW');
             $thisMonth = date('Y-m');
 
             // 从 Redis 读取实时数据
             // Redis key 格式: gk_work:player_bet_stats:{player_id}:{stat_type}:{dimension}:{stat_date}
 
-            // 今日数据
-            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
-            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
+            // 今日数据（以08:00为分界的业务日）
+            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$todayStatDate}";
+            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$todayStatDate}";
             $todayMachineData = $redis->hGetAll($todayMachineKey);
             $todayGameData = $redis->hGetAll($todayGameKey);
 
@@ -1347,14 +1353,14 @@ class StorePlayerController
                 'game' => [],
             ];
 
-            // 准备日期列表
+            // 准备日期列表（以业务日为基准）
             $last15Days = [];
             for ($i = 14; $i >= 0; $i--) {
-                $last15Days[] = date('Y-m-d', strtotime("-{$i} days"));
+                $last15Days[] = date('Y-m-d', strtotime("-{$i} days", strtotime($todayStatDate)));
             }
 
-            // 从数据库批量查询历史数据（排除今天）
-            $historyDates = array_filter($last15Days, fn($date) => $date !== $today);
+            // 从数据库批量查询历史数据（排除今日业务日）
+            $historyDates = array_filter($last15Days, fn($date) => $date !== $todayStatDate);
             $historyData = PlayerBetStatistics::where('player_id', $playerId)
                 ->where('dimension', 'daily')
                 ->whereIn('stat_date', $historyDates)
@@ -1367,7 +1373,7 @@ class StorePlayerController
             foreach ($last15Days as $date) {
                 $dailyTrend['dates'][] = date('m-d', strtotime($date));
 
-                if ($date === $today) {
+                if ($date === $todayStatDate) {
                     // 今日从Redis
                     $dailyTrend['machine'][] = round($todayMachineAmount, 2);
                     $dailyTrend['game'][] = round($todayGameAmount, 2);
