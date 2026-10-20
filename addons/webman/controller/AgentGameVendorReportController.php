@@ -74,7 +74,7 @@ class AgentGameVendorReportController
         }
 
         if (!$hasDateFilter) {
-            $today = \now()->toDateString();
+            $today = date('Y-m-d');
             $query->whereBetween("$pgr.created_at", [$today . ' 00:00:00', $today . ' 23:59:59']);
         }
 
