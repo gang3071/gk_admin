@@ -2059,6 +2059,7 @@ class ChannelAgentController
                         'agent_in' => admin_trans('message.target.agent_in'),
                         'agent_out' => admin_trans('message.target.agent_out'),
                         'storage_recharge' => admin_trans('message.target.storage_recharge'),
+                        'retry_refund' => admin_trans('message.target.retry_refund'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()
