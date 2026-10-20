@@ -15,15 +15,19 @@ use support\Log;
  * 处理VIP等级升级、保级逻辑
  *
  * 规则：
- * 1. 升级：周期内累计打码量达到升级要求 → 立即升级（可连升多级）
- * 2. 升级后：超额打码量结转进新等级周期
+ * 1. 升级：升级经验（period_bet_amount）达到升级要求 → 立即升级（可连升多级）
+ * 2. 升级后：超额结转进新等级的升级经验
  * 3. 保级（周期 retain_level_days 到期时判定）：
- *    - 经验 ≥ 保级量 → 保级成功，经验【不扣】，结转进新周期（重置保级计时）
- *    - 经验 < 保级量 且 非最低级 → 降一级并【清空经验】，从低一级从 0 累计
- *    - 经验 < 保级量 且 已是最低级 → 不降级、不清经验，经验继续累计
+ *    比对的是【本保级窗口内新增打码量】= total_bet_amount - start_bet_amount，
+ *    不是可结转的升级经验 —— 否则经验一旦超过保级量就会永远保级成功。
  *
- * 注：PlayerVipPeriod（PERIOD_TYPE_RETAIN）是经验与保级计时的共同容器，
- *     周期缺失时会自动补建。
+ *    - 窗口打码 ≥ 保级量 → 保级成功，升级经验【不扣】结转，窗口重新开始
+ *    - 窗口打码 < 保级量 且 非最低级 → 降一级并【清空经验】，从低一级从 0 累计
+ *    - 窗口打码 < 保级量 且 已是最低级 → 不降级、不清经验，窗口重新开始
+ *
+ * 注：PlayerVipPeriod（PERIOD_TYPE_RETAIN）同时承载两个独立计数：
+ *     - period_bet_amount：升级经验（跨窗口结转）
+ *     - start_bet_amount：保级窗口起点（每窗口重置）
  */
 class VipService
 {
@@ -157,9 +161,10 @@ class VipService
                 return;
             }
 
-            // 更新总打码量 + 周期打码量
-            // ⚠️ 两个字段必须同进同退：升级判定用 period_bet_amount，
-            //    超额结转用 total_bet_amount - start_bet_amount，二者一旦漂移就会算错
+            // 更新总打码量 + 升级经验
+            // ⚠️ 两个字段必须同进同退：
+            //    period_bet_amount = 升级经验（升级判定）
+            //    total_bet_amount - start_bet_amount = 保级窗口打码量（保级判定）
             Db::transaction(function () use ($player, $betAmount) {
                 $player->increment('total_bet_amount', $betAmount);
                 $player->refresh();
@@ -218,10 +223,10 @@ class VipService
                 static::checkRetain($player, $period, $betAmount);
             } elseif (!$period) {
                 // 保级关闭时不再由 checkRetain 补建周期，
-                // 这里兜底建一次，并把这一笔计入经验
+                // 这里兜底建一次，并把这一笔计入经验与本窗口
                 $currentLevel = static::getLevelCached($player->vip_level_id);
                 if ($currentLevel) {
-                    static::createRetainPeriod($player, $currentLevel, $betAmount);
+                    static::createRetainPeriod($player, $currentLevel, $betAmount, $betAmount);
                 }
             }
         } catch (\Throwable $e) {
@@ -251,7 +256,8 @@ class VipService
         $player->vip_level_id = $minLevel->id;
         $player->save();
 
-        static::createRetainPeriod($player, $minLevel, $betAmount);
+        // 首笔既计入升级经验，也计入本保级窗口
+        static::createRetainPeriod($player, $minLevel, $betAmount, $betAmount);
 
         static::log('info', 'VIP init level', [
             'player_id' => $player->id,
@@ -361,9 +367,8 @@ class VipService
             $player->save();
 
             // 升级后新等级经验 = 超出升级量的部分（excessBetAmount）
-            // createRetainPeriod 会按 period_bet_amount 反推 start_bet_amount，
-            // 保证 period_bet_amount == total_bet_amount - start_bet_amount 恒成立
-            static::createRetainPeriod($player, $nextLevel, $excessBetAmount);
+            // 升级经验 = 超额；$currentBetAmount = 0 → 新保级窗口从 0 起
+            static::createRetainPeriod($player, $nextLevel, $excessBetAmount, 0);
 
             // ⭐ 同步更新摸奖券打码进度的 VIP 等级和配置
             static::updateLotteryBetProgressOnUpgrade($player, $oldLevelId, $newLevelId);
@@ -461,8 +466,8 @@ class VipService
         }
 
         if (!$period) {
-            // 周期缺失补建时把这一笔计入经验，避免打码量丢失
-            static::createRetainPeriod($player, $currentLevel, $betAmount);
+            // 周期缺失补建时把这一笔计入经验与本窗口，避免打码量丢失
+            static::createRetainPeriod($player, $currentLevel, $betAmount, $betAmount);
             return;
         }
 
@@ -470,19 +475,25 @@ class VipService
             return;
         }
 
-        // ---------- 保级成功：经验不扣，结转进新周期 ----------
-        if ($period->period_bet_amount >= $currentLevel->retain_level_bet_amount) {
+        // 本保级窗口内新增打码量
+        // ⚠️ 必须用 total - start，不能用 period_bet_amount（那是可结转的升级经验，
+        //    用它判定会导致「经验曾经超保级量就永远保级成功」）
+        $windowBetAmount = $period->getRetainWindowBetAmount($player->total_bet_amount);
+
+        // ---------- 保级成功：经验不扣，结转进新周期；窗口重新开始 ----------
+        if ($windowBetAmount >= $currentLevel->retain_level_bet_amount) {
             $period->status = PlayerVipPeriod::STATUS_COMPLETED;
             $period->save();
 
-            // 经验原样结转，只重置保级计时
-            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount);
+            // 升级经验原样结转；$currentBetAmount = 0 → 新窗口从 0 起
+            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount, 0);
 
             static::log('info', 'VIP retain success', [
                 'player_id' => $player->id,
                 'level_id' => $currentLevel->id,
-                'period_bet_amount' => $period->period_bet_amount,
-                'carried_over' => true,
+                'window_bet_amount' => $windowBetAmount,
+                'retain_level_bet_amount' => $currentLevel->retain_level_bet_amount,
+                'carried_experience' => $period->period_bet_amount,
             ]);
             return;
         }
@@ -490,23 +501,24 @@ class VipService
         // ---------- 保级失败 ----------
         $prevLevel = $currentLevel->getPrevLevel();
 
-        // 已是最低级：不降级、不清经验，经验继续累计，仅重置保级计时
+        // 已是最低级：不降级、不清经验，经验继续累计，窗口重新开始
         if (!$prevLevel) {
             $period->status = PlayerVipPeriod::STATUS_EXPIRED;
             $period->save();
 
-            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount);
+            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount, 0);
 
             static::log('info', 'VIP retain failed at min level, no downgrade', [
                 'player_id' => $player->id,
                 'level_id' => $currentLevel->id,
-                'period_bet_amount' => $period->period_bet_amount,
+                'window_bet_amount' => $windowBetAmount,
+                'carried_experience' => $period->period_bet_amount,
                 'cleared' => false,
             ]);
             return;
         }
 
-        // 非最低级：降一级并清空经验（doDowngrade 里 createRetainPeriod 不传经验 = 从 0 开始）
+        // 非最低级：降一级并清空经验（doDowngrade 里 createRetainPeriod 经验传 0）
         static::doDowngrade($player, $currentLevel, $period);
     }
 
@@ -537,8 +549,8 @@ class VipService
             $player->vip_level_id = $prevLevel->id;
             $player->save();
 
-            // 不传经验 = 从 0 开始：降级后清空经验，从低一级重新累计
-            static::createRetainPeriod($player, $prevLevel, 0);
+            // 经验清 0，新保级窗口也从 0 起
+            static::createRetainPeriod($player, $prevLevel, 0, 0);
 
             // ⭐ 同步更新摸奖券打码进度的 VIP 等级和配置
             static::updateLotteryBetProgressOnDowngrade($player, $oldLevelId, $newLevelId);
@@ -555,20 +567,27 @@ class VipService
     }
 
     /**
-     * 创建经验累计周期记录
+     * 创建经验 / 保级窗口周期记录
      *
-     * 以 period_bet_amount（新周期经验）为权威值，反推 start_bet_amount，
-     * 保证恒等式 period_bet_amount == total_bet_amount - start_bet_amount 永远成立。
-     * 这样升级判定（读 period_bet_amount）与超额结转不会各说各话。
+     * 两个字段语义相互独立，不可混用：
+     *
+     * - period_bet_amount：**升级经验**。跨保级窗口结转，只在升级（结转超额）或
+     *   降级（清零）时改变。升级判定读它。
+     *
+     * - start_bet_amount：**保级窗口起点**。本窗口内新增打码量
+     *   = total_bet_amount - start_bet_amount。每次重建周期都会重置，
+     *   因此保级判定只看本窗口新增打码，不会被结转过来的经验「白送」保级成功。
      *
      * @param Player $player 玩家
      * @param VipLevel $level VIP等级
-     * @param float|null $periodBetAmount 新周期经验（null / 0 = 从 0 开始累计）
+     * @param float|null $carryOverExperience 结转的升级经验（null / 0 = 从 0 累计）
+     * @param float|null $currentBetAmount 触发建周期的那一笔（计入本保级窗口）
      */
     private static function createRetainPeriod(
         Player $player,
         VipLevel $level,
-        ?float $periodBetAmount = null
+        ?float $carryOverExperience = null,
+        ?float $currentBetAmount = null
     ){
         // 检查是否已存在相同 vip_level_id 的活跃记录，避免重复创建
         $existingPeriod = PlayerVipPeriod::query()
@@ -587,15 +606,17 @@ class VipService
             return $existingPeriod;
         }
 
-        $periodBetAmount = max(0, (float)($periodBetAmount ?? 0));
-        $startBetAmount = $player->total_bet_amount - $periodBetAmount;
+        $carryOverExperience = max(0, (float)($carryOverExperience ?? 0));
+        $currentBetAmount = max(0, (float)($currentBetAmount ?? 0));
 
         return PlayerVipPeriod::query()->create([
             'player_id' => $player->id,
             'vip_level_id' => $level->id,
             'period_type' => PlayerVipPeriod::PERIOD_TYPE_RETAIN,
-            'start_bet_amount' => $startBetAmount,
-            'period_bet_amount' => $periodBetAmount,
+            // 窗口起点 = 当前总量 - 触发的那一笔 → 窗口打码量从 0（或该笔）起
+            'start_bet_amount' => $player->total_bet_amount - $currentBetAmount,
+            // 升级经验：可结转
+            'period_bet_amount' => $carryOverExperience,
             'started_at' => date('Y-m-d H:i:s'),
             'status' => PlayerVipPeriod::STATUS_ACTIVE,
         ]);
@@ -918,7 +939,7 @@ class VipService
             ? min(100, round($player->total_bet_amount / $currentLevel->upgrade_bet_amount * 100, 2))
             : 0;
 
-        $retainBetAmount = $retainPeriod ? $retainPeriod->getPeriodBetAmount($player->total_bet_amount) : 0;
+        $retainBetAmount = $retainPeriod ? $retainPeriod->getRetainWindowBetAmount($player->total_bet_amount) : 0;
         $retainProgress = $currentLevel->retain_level_bet_amount > 0
             ? min(100, round($retainBetAmount / $currentLevel->retain_level_bet_amount * 100, 2))
             : 0;
