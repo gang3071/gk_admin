@@ -338,6 +338,7 @@ return [
         'vip_daily_login_bonus' => 'VIP每日登录奖励',
         'storage_recharge' => '储值机储值',
         'machine_open_failed_refund' => '机台上分失败退款',
+        'retry_refund' => '开分部分失败回补',
     ],
     'source' => [
         'system' => '系统',
