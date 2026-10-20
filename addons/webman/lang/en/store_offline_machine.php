@@ -13,13 +13,20 @@ return [
 
     // Actions
     'actions' => [
-        'view_qrcode' => 'View QR Code',
+        'view_qrcode'  => 'View QR Code',
         'batch_qrcode' => 'Batch Generate QR Codes',
+        'kick_player'  => 'Kick Player',
     ],
 
     // Confirm messages
     'confirm' => [
         'batch_qrcode' => 'Are you sure you want to generate QR codes for selected machines?',
+        'kick_player'  => 'Are you sure you want to kick the player and return their balance?',
+    ],
+
+    // Success messages
+    'message' => [
+        'kick_success' => 'Player kicked and balance returned successfully',
     ],
 
     // QR Code
@@ -28,9 +35,10 @@ return [
 
     // Error messages
     'error' => [
-        'machine_not_found' => 'Machine not found or access denied',
+        'machine_not_found'    => 'Machine not found or access denied',
         'no_machines_selected' => 'Please select at least one machine',
-        'too_many_machines' => 'Maximum 30 QR codes can be generated at once',
+        'too_many_machines'    => 'Maximum 30 QR codes can be generated at once',
+        'no_player_in_machine' => 'No player is currently gaming on this machine',
     ],
 
     'menu' => [

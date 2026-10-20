@@ -10,6 +10,7 @@ return [
         'id' => 'ID',
         'player_id' => 'プレイヤーID',
         'player_name' => 'プレイヤーアカウント',
+        'player_uuid' => 'UUID',
         'total_points' => '総ポイント',
         'available_points' => '利用可能ポイント',
         'frozen_points' => '凍結ポイント',

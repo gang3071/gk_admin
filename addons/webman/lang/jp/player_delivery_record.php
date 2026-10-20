@@ -61,6 +61,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP毎日ログインボーナス',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => 'イベント外付与',
     ],
+    'machine_refund' => '台返金',
     'detail' => '詳細',
     'chart' => 'チャート',
     'total_in_amount' => 'チャージ',

@@ -104,6 +104,7 @@ return [
     'add_offline_machine_success' => '分配線下機台成功',
     'offline_machine_already_bound' => '所選線下機台中有已被其他渠道分配的機台',
     'not_all_offline_machine' => '所選機台中包含非線下機台',
+    'selected_machine_missing' => '所選機台中包含不存在或已刪除的機台：{ids}',
     'unbind_offline_machine' => '解綁線下機台',
     'unbind_offline_machine_confirm' => '確定要解綁已選中的線下機台嗎？解綁後機台將從該通路和相關店家中移除。',
     'unbind_offline_machine_success' => '解綁線下機台成功',

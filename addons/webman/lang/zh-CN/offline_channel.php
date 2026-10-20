@@ -157,9 +157,9 @@ return [
 
     // 开分功能
     'credit_title' => '玩家钱包',
-    'credit_tip' => '提示: 开分分数必须以100为单位, 请确认开分信息, 一旦开分立即生效, 无法撤回. 4分=1游戏点',
+    'credit_tip' => '提示: 开分分数必须以300为单位, 请确认开分信息, 一旦开分立即生效, 无法撤回. 4分=1游戏点',
     'current_balance' => '当前余额',
-    'error_amount_multiple_100' => '金额必须是100的倍数',
+    'error_amount_multiple_100' => '金额必须是300的倍数',
     'success_credit' => '开分成功',
 
     // 账变记录相关

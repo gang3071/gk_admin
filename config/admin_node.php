@@ -323,6 +323,24 @@ return [
         'url' => 'ex-admin/addons-webman-controller-NationalPromoterReportController/index',
         'title' => '全民代理报表',
     ],
+    [
+        'id' => 'addons\webman\controller\AdminGameVendorReportController\index',
+        'pid' => 'addons\webman\controller\MachineReportController-',
+        'action' => 'index',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminGameVendorReportController/index',
+        'title' => '厂商数据',
+    ],
+    [
+        'id' => 'addons\webman\controller\AdminGameVendorReportController\vendorData',
+        'pid' => 'addons\webman\controller\AdminGameVendorReportController\index',
+        'action' => 'vendorData',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-AdminGameVendorReportController/vendorData',
+        'title' => '查询厂商数据',
+    ],
     //财务数据
     [
         'id' => 'addons\webman\controller\PresentRecordController-',
@@ -1458,6 +1476,15 @@ return [
         'group' => 'department',
         'url' => 'ex-admin/addons-webman-controller-MachineEditLogController/index',
         'title' => '机台异动日志',
+    ],
+    [
+        'id' => 'addons\webman\controller\MachineOperationLogController\actionsList',
+        'pid' => 'addons\webman\controller\MachineKeepingLogController-',
+        'action' => 'actionsList',
+        'method' => 'get',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-MachineOperationLogController/actionsList',
+        'title' => '机台操作日志',
     ],
     [
         'id' => 'addons\webman\controller\MachineEditLogController\detail',

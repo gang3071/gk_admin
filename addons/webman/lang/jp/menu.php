@@ -89,6 +89,7 @@ return [
         //プレイヤー管理
         'channel_player_manage' => 'プレイヤー管理',
         'channel_player_list' => 'プレイヤーリスト',
+        'player_id_card_blacklist' => 'IDカードブラックリスト',
         'channel_player_accounting_change_records' => '会計変更レコード',
         'player_points_records' => 'ポイント記録',
         //マシン管理
@@ -319,6 +320,8 @@ return [
         'dish_order_report_item' => '注文明細レポート',
         // ランキング
         'leaderboard' => 'ランキング',
+        // ベンダーデータレポート
+        'game_vendor_report' => 'ベンダーデータ',
     ],
     'help' => [
         'controlled_menu' => 'このメニューは機能スイッチで制御されており、名前は変更できません',

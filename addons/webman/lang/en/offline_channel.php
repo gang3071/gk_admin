@@ -157,9 +157,9 @@ return [
 
     // Credit Function
     'credit_title' => 'Player Wallet',
-    'credit_tip' => 'Tip: Credit amount must be multiples of 100. Please confirm credit information. Once credited, it takes effect immediately and cannot be revoked. 4 credits = 1 game point',
+    'credit_tip' => 'Tip: Credit amount must be multiples of 300. Please confirm credit information. Once credited, it takes effect immediately and cannot be revoked. 4 credits = 1 game point',
     'current_balance' => 'Current Balance',
-    'error_amount_multiple_100' => 'Amount must be a multiple of 100',
+    'error_amount_multiple_100' => 'Amount must be a multiple of 300',
     'success_credit' => 'Credit successful',
 
     // Delivery Record Related

@@ -89,6 +89,7 @@ return [
         //玩家管理
         'channel_player_manage' => '玩家管理',
         'channel_player_list' => '玩家列表',
+        'player_id_card_blacklist' => '黑名单列表',
         'channel_player_accounting_change_records' => '账变记录',
         'player_points_records' => '积分记录',
         //机台管理
@@ -319,6 +320,8 @@ return [
         'dish_order_report_item' => '订单明细报表',
         // 排行榜
         'leaderboard' => '排行榜',
+        // 厂商数据报表
+        'game_vendor_report' => '厂商数据',
     ],
     'help' => [
         'controlled_menu' => '此菜单受功能开关控制，名称不可修改',

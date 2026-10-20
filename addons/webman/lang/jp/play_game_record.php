@@ -5,6 +5,7 @@ use addons\webman\model\PlayGameRecord;
 return [
     'title' => 'プレイヤープレイ履歴',
     'replay' => '再生',
+    'replay_not_supported' => 'このプラットフォームはリプレイ機能をサポートしていません',
     'fields' => [
         'id' => 'ID',
         'game_code' => 'ゲーム番号',

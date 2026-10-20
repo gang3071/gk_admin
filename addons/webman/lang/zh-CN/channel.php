@@ -103,6 +103,7 @@ return [
     'add_offline_machine_success' => '分配线下机台成功',
     'offline_machine_already_bound' => '所选线下机台中有已被其他渠道分配的机台',
     'not_all_offline_machine' => '所选机台中包含非线下机台',
+    'selected_machine_missing' => '所选机台中包含不存在或已删除的机台：{ids}',
     'unbind_offline_machine' => '解绑线下机台',
     'unbind_offline_machine_confirm' => '确定要解绑已选中的线下机台吗？解绑后机台将从该通路和相关店家中移除。',
     'unbind_offline_machine_success' => '解绑线下机台成功',

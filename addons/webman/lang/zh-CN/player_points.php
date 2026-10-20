@@ -10,6 +10,7 @@ return [
         'id' => '编号',
         'player_id' => '玩家ID',
         'player_name' => '玩家账号',
+        'player_uuid' => 'UUID',
         'total_points' => '总积分',
         'available_points' => '可用积分',
         'frozen_points' => '冻结积分',

@@ -36,6 +36,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use support\Db;
 use support\Log;
+use support\Redis;
 use support\Response;
 
 /**
@@ -2293,15 +2294,19 @@ class ChannelIndexController
             ->selectRaw('sum(score) as total_score')
             ->first();
 
-        // ✅ 当前班次统计：核销记录（洗分类型）- 后台使用金额（排除禁用状态）
+        // ✅ 当前班次统计：核销记录（开分票 + 洗分票）- 后台使用金额
+        // 后台核销的开分票、洗分票都计入总支出
         $currentShiftTicketRedeemQuery = TicketRecord::query()
             ->where('store_admin_id', $store->id)
-            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
-            ->where('status', '!=', TicketRecord::STATUS_DISABLED)
+            ->whereIn('ticket_type', [
+                TicketRecord::TYPE_RECHARGE,
+                TicketRecord::TYPE_WITHDRAW,
+            ])
+            ->where('status', TicketRecord::STATUS_BACKEND_USED)
             ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
                 $query->where('scanned_at', '>', $lastShiftTime);
             })
-            ->selectRaw('sum(IF(status = ' . TicketRecord::STATUS_BACKEND_USED . ', score, 0)) as backend_used_score')
+            ->selectRaw('sum(score) as backend_used_score')
             ->first();
 
         // ✅ 当前班次统计：储值机储值（投钞类型，source=storage_recharge）
@@ -2559,6 +2564,14 @@ class ChannelIndexController
                             'display' => 'flex',
                             'alignItems' => 'center',
                             'marginLeft' => '20px'
+                        ]),
+                        Html::create()->content([
+                            Icon::create('calendar')->style(['marginRight' => '6px', 'fontSize' => '14px', 'color' => '#606266']),
+                            $timeDropdown
+                        ])->style([
+                            'display' => 'flex',
+                            'alignItems' => 'center',
+                            'marginLeft' => '20px'
                         ])
                     ])->style([
                         'display' => 'flex',
@@ -2645,31 +2658,7 @@ class ChannelIndexController
                 ])
                 , 12);
 
-            // ========== 第三行：运营统计标题 ==========
-            $row->column(
-                Card::create([
-                    Row::create()->column([
-                        Icon::create('bar-chart')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#409EFF']),
-                        Html::create(admin_trans('data_center.operation_statistics'))->style([
-                            'fontSize' => '14px',
-                            'fontWeight' => 'bold',
-                            'color' => '#303133',
-                            'marginRight' => 'auto'
-                        ]),
-                        $timeDropdown
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center'
-                    ])
-                ])->bodyStyle([
-                    'padding' => '10px 16px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'borderLeft' => '3px solid #409EFF'
-                ])
-            , 24);
-
-            // ========== 第三行：运营统计数据卡片（6个指标）==========
+            // ========== 运营统计数据卡片（6个指标）==========
             // 上分总和
             $row->column(
                 Card::create([
@@ -2802,29 +2791,6 @@ class ChannelIndexController
                     'backgroundColor' => floatval($subtotal) >= 0 ? '#f0f9ff' : '#fef0f0'
                 ])
             , 4);
-
-            // ========== 出票核销统计标题 ==========
-            $row->column(
-                Card::create([
-                    Row::create()->column([
-                        Icon::create('PrinterOutlined')->style(['marginRight' => '8px', 'fontSize' => '16px', 'color' => '#67C23A']),
-                        Html::create(admin_trans('ticket_machine.record.title') . ' / ' . admin_trans('ticket_machine.redeem.title'))->style([
-                            'fontSize' => '14px',
-                            'fontWeight' => 'bold',
-                            'color' => '#303133',
-                            'marginRight' => 'auto'
-                        ])
-                    ])->style([
-                        'display' => 'flex',
-                        'alignItems' => 'center'
-                    ])
-                ])->bodyStyle([
-                    'padding' => '10px 16px',
-                    'display' => 'flex',
-                    'alignItems' => 'center',
-                    'borderLeft' => '3px solid #67C23A'
-                ])
-            , 24);
 
             // 出票统计（4个卡片，每个colspan=6，填满一行）
             // 出票总金额
@@ -3600,6 +3566,19 @@ class ChannelIndexController
                         ->where('created_at', '<=', $endTime)
                         ->sum('score');
 
+                    // 已拆分/已合并的洗分票：原票已被新票替代，不再算作未核销
+                    // 与出卷同用 created_at 归属班次，避免跨班次出现负数
+                    $splitMergedAmount = (float)TicketRecord::query()
+                        ->where('store_admin_id', $admin->id)
+                        ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                        ->whereIn('status', [
+                            TicketRecord::STATUS_SPLIT,
+                            TicketRecord::STATUS_MERGED,
+                        ])
+                        ->where('created_at', '>', $startTime)
+                        ->where('created_at', '<=', $endTime)
+                        ->sum('score');
+
                     // 5.8 统计体验券（ticket_type=3）
                     $experienceCouponAmount = (float)TicketRecord::query()
                         ->where('store_admin_id', $admin->id)
@@ -3837,10 +3816,14 @@ class ChannelIndexController
                     $storeAgentShiftHandoverRecord->redeem_machine_amount = $redeemAmount ?? 0;
                     $storeAgentShiftHandoverRecord->channel_withdrawal_amount = $playerDeliveryRecord['channel_withdrawal_amount'] ?? 0;
                     $storeAgentShiftHandoverRecord->ticket_redeem_amount = $playerDeliveryRecord['ticket_redeem_amount'] ?? 0;
-                    // 未核销 = 出卷 - 后台核销 - 机台核销
+                    // 未核销 = 出卷 - 后台核销 - 机台核销 - 已拆分/已合并
                     $storeAgentShiftHandoverRecord->ticket_unredeemed_amount = bcsub(
-                        bcsub($playerDeliveryRecord['ticket_redeem_amount'] ?? 0, $redeemAmountExport ?? 0, 2),
-                        $redeemAmount ?? 0,
+                        bcsub(
+                            bcsub($playerDeliveryRecord['ticket_redeem_amount'] ?? 0, $redeemAmountExport ?? 0, 2),
+                            $redeemAmount ?? 0,
+                            2
+                        ),
+                        $splitMergedAmount,
                         2
                     );
                     $storeAgentShiftHandoverRecord->experience_coupon_amount = $experienceCouponAmount ?? 0;
@@ -4069,6 +4052,8 @@ class ChannelIndexController
         // 补充连接状态标签
         $logLabels['printer_connection_lost'] = admin_trans('ticket_machine.message.printer_connection_lost');
         $logLabels['printer_connected'] = admin_trans('ticket_machine.message.printer_connected');
+        $logLabels['voucher_disabled_msg'] = '活動已截止，請關注門店活動公告';
+        $logLabels['voucher_disabled_label'] = '已停用';
 
         // 获取福利券和体验券配置
         $voucherConfig = config('voucher');
@@ -4081,6 +4066,8 @@ class ChannelIndexController
             'player_bet_info_url' => 'ex-admin/addons-webman-controller-ChannelIndexController/getPlayerBetInfo',
             'store_admin_id' => $store->id ?? 0,
             'department_id' => $store->department_id ?? 0,
+            'experience_voucher_enabled' => (bool)($store->experience_voucher_enabled ?? true),
+            'welfare_voucher_enabled' => (bool)($store->welfare_voucher_enabled ?? true),
             'paper_empty_msg' => admin_trans('ticket_machine.paper.empty_msg'),
             'paper_jam_msg' => admin_trans('ticket_machine.paper.jam_msg'),
             'paper_error_msg' => admin_trans('ticket_machine.paper.error_msg'),
@@ -4204,26 +4191,12 @@ class ChannelIndexController
                 $yesterdayEnd = $yesterday8am->toDateTimeString();
             }
 
-            $todayBetAmount = 0;
-            $yesterdayBetAmount = 0;
-
-            // 今日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
-            $todayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                ->where('stat_type', 'game')
-                ->where('dimension', 'daily')
-                ->where('stat_date', $now->gte($today8am) ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day')))
-                ->first();
-
-            if ($todayData) {
-                $todayBetAmount = floatval($todayData->bet_amount);
-            } else {
-                // 统计表无数据，降级从游戏记录表实时查询
-                $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('created_at', '>=', $todayStart)
-                    ->where('created_at', '<', $todayEnd)
-                    ->sum('bet');
-            }
+            // 统计表无数据，降级从游戏记录表实时查询
+            $todayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                ->where('player_id', $playerId)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<', $todayEnd)
+                ->sum('bet');
 
             // 今日实体机台打码量（从 player_game_log 表的 chip_amount 字段汇总）
             $todayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
@@ -4233,23 +4206,12 @@ class ChannelIndexController
                 ->sum('chip_amount');
             $todayBetAmount += $todayMachineBetAmount;
 
-            // 昨日电子游戏打码量（优先从统计表查询，降级从游戏记录表实时查询）
-            $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                ->where('stat_type', 'game')
-                ->where('dimension', 'daily')
-                ->where('stat_date', $now->gte($today8am) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d', strtotime('-2 days')))
-                ->first();
-
-            if ($yesterdayData) {
-                $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
-            } else {
-                // 统计表无数据，降级从游戏记录表实时查询
-                $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                    ->where('player_id', $playerId)
-                    ->where('created_at', '>=', $yesterdayStart)
-                    ->where('created_at', '<', $yesterdayEnd)
-                    ->sum('bet');
-            }
+            // 统计表无数据，降级从游戏记录表实时查询
+            $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                ->where('player_id', $playerId)
+                ->where('created_at', '>=', $yesterdayStart)
+                ->where('created_at', '<', $yesterdayEnd)
+                ->sum('bet');
 
             // 昨日实体机台打码量（从 player_game_log 表的 chip_amount 字段汇总）
             $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
@@ -4341,8 +4303,8 @@ class ChannelIndexController
             $qrCode = request()->input('qr_code', '');
             $ticketType = (int) request()->input('ticket_type', 1);
             $playerId = (int) request()->input('player_id', 0);
-            $storeAdminId = (int) request()->input('store_admin_id', 0);
-            $departmentId = (int) request()->input('department_id', 0);
+            $storeAdminId = Admin::id();
+            $departmentId = Admin::user()->department_id;
 
             if (empty($qrCode)) {
                 return json(['code' => 400, 'message' => 'QR码内容不能为空']);
@@ -4358,9 +4320,9 @@ class ChannelIndexController
                 if ($score <= 0) {
                     return json(['code' => 400, 'message' => '分数/金额必须大于0']);
                 }
-            }
-            if (empty($storeAdminId)) {
-                return json(['code' => 400, 'message' => '店家管理员ID不能为空']);
+                if ($score > 200000) {
+                    return json(['code' => 400, 'message' => '单次开票金额不能超过200,000']);
+                }
             }
             if (empty($departmentId)) {
                 return json(['code' => 400, 'message' => '部门ID不能为空']);
@@ -4373,8 +4335,29 @@ class ChannelIndexController
                 return json(['code' => 400, 'message' => '福利券和体验券必须选择关联玩家才能出票']);
             }
 
+            // 对体验券/福利券加分布式锁，防止并发重复领取
+            $lockKey = null;
+            if (in_array($ticketType, [TicketRecord::TYPE_EXPERIENCE, TicketRecord::TYPE_WELFARE]) && $playerId > 0) {
+                $lockKey = "voucher:lock:player:{$playerId}";
+                if (!Redis::set($lockKey, 1, 'EX', 10, 'NX')) {
+                    return json(['code' => 400, 'message' => '操作繁忙，请稍后重试']);
+                }
+            }
+
+            try {
             // 获取配置
             $voucherConfig = config('voucher');
+
+            // 检查门店劵类活动开关
+            if ($ticketType === TicketRecord::TYPE_EXPERIENCE || $ticketType === TicketRecord::TYPE_WELFARE) {
+                $storeAdminModel = \addons\webman\model\AdminUser::query()->find($storeAdminId);
+                if ($ticketType === TicketRecord::TYPE_EXPERIENCE && $storeAdminModel && !($storeAdminModel->experience_voucher_enabled ?? true)) {
+                    return json(['code' => 400, 'message' => '活動已截止，請關注門店活動公告']);
+                }
+                if ($ticketType === TicketRecord::TYPE_WELFARE && $storeAdminModel && !($storeAdminModel->welfare_voucher_enabled ?? true)) {
+                    return json(['code' => 400, 'message' => '活動已截止，請關注門店活動公告']);
+                }
+            }
 
             // 验证活动是否在有效期内
             if (isset($voucherConfig['activity']['end_time'])) {
@@ -4423,18 +4406,6 @@ class ChannelIndexController
                     ->where('created_at', '<', $todayEnd);
                 $todayCount = $todayQuery->count();
 
-                // 调试日志
-                \support\Log::info('体验券每日领取检查', [
-                    'player_id' => $playerId,
-                    'ticket_type' => TicketRecord::TYPE_EXPERIENCE,
-                    'today_start' => $todayStart,
-                    'today_end' => $todayEnd,
-                    'daily_limit' => $dailyLimit,
-                    'today_count' => $todayCount,
-                    'sql' => $todayQuery->toSql(),
-                    'bindings' => $todayQuery->getBindings(),
-                ]);
-
                 if ($todayCount >= $dailyLimit) {
                     return json([
                         'code' => 400,
@@ -4472,23 +4443,11 @@ class ChannelIndexController
                             ? $today8am->toDateTimeString()
                             : $yesterday8am->toDateTimeString();
 
-                        // 优先从统计表查询，降级从游戏记录表实时查询
-                        $yesterdayData = \addons\webman\model\PlayerBetStatistics::where('player_id', $playerId)
-                            ->where('stat_type', 'game')
-                            ->where('dimension', 'daily')
-                            ->where('stat_date', $now->gte($today8am) ? date('Y-m-d', strtotime('-1 day')) : date('Y-m-d', strtotime('-2 days')))
-                            ->first();
-
-                        $yesterdayBetAmount = 0;
-                        if ($yesterdayData) {
-                            $yesterdayBetAmount = floatval($yesterdayData->bet_amount);
-                        } else {
-                            $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
-                                ->where('player_id', $playerId)
-                                ->where('created_at', '>=', $yesterdayStart)
-                                ->where('created_at', '<', $yesterdayEnd)
-                                ->sum('bet');
-                        }
+                        $yesterdayBetAmount = (float) \addons\webman\model\PlayGameRecord::query()
+                            ->where('player_id', $playerId)
+                            ->where('created_at', '>=', $yesterdayStart)
+                            ->where('created_at', '<', $yesterdayEnd)
+                            ->sum('bet');
 
                         // 昨日实体机台打码量
                         $yesterdayMachineBetAmount = (float) \addons\webman\model\PlayerGameLog::query()
@@ -4620,9 +4579,10 @@ class ChannelIndexController
                         ->whereNull('deleted_at')
                         ->get()
                         ->filter(function ($record) {
-                            if (empty($record->extra_data)) return false;
-                            $extraData = json_decode($record->extra_data, true);
-                            return isset($extraData['rule_type']) && $extraData['rule_type'] === 'yesterday';
+                            $extraData = $this->parseExtraData($record->extra_data ?? null);
+                            return is_array($extraData)
+                                && isset($extraData['rule_type'])
+                                && $extraData['rule_type'] === 'yesterday';
                         })
                         ->count();
                     if ($yesterdayClaimedCount > 0) {
@@ -4641,9 +4601,10 @@ class ChannelIndexController
                     ->whereNull('deleted_at')
                     ->get()
                     ->filter(function ($record) use ($ruleType) {
-                        if (empty($record->extra_data)) return false;
-                        $extraData = json_decode($record->extra_data, true);
-                        return isset($extraData['rule_type']) && $extraData['rule_type'] === $ruleType;
+                        $extraData = $this->parseExtraData($record->extra_data ?? null);
+                        return is_array($extraData)
+                            && isset($extraData['rule_type'])
+                            && $extraData['rule_type'] === $ruleType;
                     })
                     ->count();
                 if ($todayCount > 0) {
@@ -4703,9 +4664,47 @@ class ChannelIndexController
                     'qr_code_no' => $qrCodeNo,
                 ],
             ]);
+            } finally {
+                if ($lockKey) {
+                    Redis::del($lockKey);
+                }
+            }
         } catch (\Exception $e) {
             return json(['code' => 500, 'message' => '保存失败: ' . $e->getMessage()]);
         }
+    }
+
+    /**
+     * 解析票据 extra_data
+     *
+     * 库里存在两种落库形态，本项目 TicketRecord 模型没有 json cast，取到的是原始字符串：
+     * - 单编码：{"rule_type":"today","score":1000}（本后台 saveTicketRecord 写入）
+     * - 双重编码："{\"rule_type\":\"today\",\"score\":1000}"
+     *   （gk_api 侧模型带 json cast 且又手动 json_encode 造成）
+     *
+     * 只 json_decode 一层时，双重编码会解出字符串而非数组，
+     * 之后 isset($data['rule_type']) 恒为 false，导致去重失效。
+     * 这里按需多解一层，使判断对两种形态都生效。
+     *
+     * @param mixed $extraData
+     * @return array|null 无法解析时返回 null
+     */
+    protected function parseExtraData($extraData): ?array
+    {
+        if (is_array($extraData)) {
+            return $extraData;
+        }
+        if (!is_string($extraData) || $extraData === '') {
+            return null;
+        }
+
+        $decoded = json_decode($extraData, true);
+        // 双重编码时第一次解出来仍是字符串
+        if (is_string($decoded) && $decoded !== '') {
+            $decoded = json_decode($decoded, true);
+        }
+
+        return is_array($decoded) ? $decoded : null;
     }
 
     /**
@@ -4991,6 +4990,18 @@ class ChannelIndexController
                 ->where('created_at', '<=', $endTime)
                 ->sum('score');
 
+            // 已拆分/已合并的洗分票：原票已被新票替代，不再算作未核销
+            $splitMergedAmount = (float)TicketRecord::query()
+                ->where('player_id', $player->id)
+                ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+                ->whereIn('status', [
+                    TicketRecord::STATUS_SPLIT,
+                    TicketRecord::STATUS_MERGED,
+                ])
+                ->where('created_at', '>', $startTime)
+                ->where('created_at', '<=', $endTime)
+                ->sum('score');
+
             // 统计体验券（ticket_type=3）
             $experienceCouponAmount = (float)TicketRecord::query()
                 ->where('player_id', $player->id)
@@ -5106,8 +5117,12 @@ class ChannelIndexController
                     'withdrawal_amount' => (float)$data['withdrawal_amount'],
                     'channel_withdrawal_amount' => (float)($data['channel_withdrawal_amount'] ?? 0),
                     'ticket_redeem_amount' => (float)($data['ticket_redeem_amount'] ?? 0),
-                    // 未核销 = 出卷 - 后台核销 - 机台核销
-                    'ticket_unredeemed_amount' => bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                    // 未核销 = 出卷 - 后台核销 - 机台核销 - 已拆分/已合并
+                    'ticket_unredeemed_amount' => bcsub(
+                        bcsub(bcsub($data['ticket_redeem_amount'] ?? 0, $redeemAmountExport, 2), $redeemAmount, 2),
+                        $splitMergedAmount,
+                        2
+                    ),
                     'experience_coupon_amount' => $experienceCouponAmount,
                     'welfare_coupon_amount' => $welfareCouponAmount,
                     'modified_add_amount' => (float)$data['modified_add_amount'],

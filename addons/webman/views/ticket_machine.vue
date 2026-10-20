@@ -87,9 +87,13 @@
               <a-select-option :value="1">{{ labels.type_recharge || '開分' }}</a-select-option>
               <a-select-option :value="3">
                 {{ labels.type_experience || '體驗券' }}
-                <span v-if="isExperienceBetCheckEnabled" style="color: #faad14; margin-left: 4px;">({{ labels.bet_check_on || '當前打開打碼量判定' }})</span>
+                <span v-if="!isExperienceVoucherEnabled" style="color: #ff4d4f; margin-left: 4px;">({{ labels.voucher_disabled_label || '已停用' }})</span>
+                <span v-else-if="isExperienceBetCheckEnabled" style="color: #faad14; margin-left: 4px;">({{ labels.bet_check_on || '當前打開打碼量判定' }})</span>
               </a-select-option>
-              <a-select-option :value="4">{{ labels.type_welfare || '福利券' }}</a-select-option>
+              <a-select-option :value="4">
+                {{ labels.type_welfare || '福利券' }}
+                <span v-if="!isWelfareVoucherEnabled" style="color: #ff4d4f; margin-left: 4px;">({{ labels.voucher_disabled_label || '已停用' }})</span>
+              </a-select-option>
               <a-select-option :value="6">{{ labels.type_reprint || '重複列印' }}</a-select-option>
             </a-select>
           </div>
@@ -198,7 +202,7 @@
               </a-select-option>
             </a-select>
             <!-- 开分/洗分：数字输入 -->
-            <a-input-number v-else v-model:value="ticketScore" :min="0" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
+            <a-input-number v-else v-model:value="ticketScore" :min="0" :max="200000" :placeholder="labels.field_score || '分數/金額'" style="width: 100%;" />
           </div>
           <a-button type="primary" block @click="sendQrCode" :disabled="!isConnected || isSendingQr" :loading="isSendingQr">{{ labels.send_qr || '發送QR碼' }}</a-button>
         </a-card>
@@ -245,6 +249,8 @@ export default {
       type: Object,
       default: () => ({})
     },
+    experience_voucher_enabled: { type: Boolean, default: true },
+    welfare_voucher_enabled: { type: Boolean, default: true },
     labels: {
       type: Object,
       default: () => ({})
@@ -319,6 +325,14 @@ export default {
     // 检查是否开启体验券打码判定
     isExperienceBetCheckEnabled() {
       return this.playerBetInfo?.experience_bet_check_enabled || false;
+    },
+
+    isExperienceVoucherEnabled() {
+      return this.experience_voucher_enabled !== false;
+    },
+
+    isWelfareVoucherEnabled() {
+      return this.welfare_voucher_enabled !== false;
     },
 
     // 计算福利卷/体验卷的可选分数选项
@@ -1351,6 +1365,11 @@ export default {
 
     // 票据类型变化
     handleTicketTypeChange(value) {
+      if (value === 3 && !this.isExperienceVoucherEnabled) {
+        this.$message.warning(this.labels.voucher_disabled_msg || '活動已截止，請關注門店活動公告');
+      } else if (value === 4 && !this.isWelfareVoucherEnabled) {
+        this.$message.warning(this.labels.voucher_disabled_msg || '活動已截止，請關注門店活動公告');
+      }
       if (value === 6) {
         // 切换到重复打印时，清空相关数据
         this.reprintOrderId = '';
@@ -1470,8 +1489,13 @@ export default {
         return this.playerBetInfo.claimed_welfare_records.some(r => {
           if (r.score !== score || !r.extra_data) return false;
           try {
-            const extraData = JSON.parse(r.extra_data);
-            return extraData.rule_type === ruleType;
+            // 兼容被双重编码的历史数据（JSON 字符串里再套一层 JSON），
+            // 否则解出来是字符串，rule_type 读不到，会误判为未领取
+            let extraData = r.extra_data;
+            for (let i = 0; i < 2 && typeof extraData === 'string'; i++) {
+              extraData = JSON.parse(extraData);
+            }
+            return !!extraData && extraData.rule_type === ruleType;
           } catch {
             return false;
           }

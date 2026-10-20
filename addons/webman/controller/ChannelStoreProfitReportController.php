@@ -121,6 +121,9 @@ class ChannelStoreProfitReportController
         // ========== 第7步：批量查询核销数据（1条SQL） ==========
         $redeemDataByStore = $this->batchQueryRedeemData($storeIds, $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
+        // 已拆分/已合并的洗分票：原票已被新票替代，需从“未核销”中剔除
+        $splitMergedByStore = $this->batchQuerySplitMergedData($storeIds, $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
+
         // ========== 第8步：批量查询拉彩数据（1条SQL） ==========
         $lotteryDataByStore = $this->batchQueryLotteryData($playerIdsByStore, $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
 
@@ -147,6 +150,7 @@ class ChannelStoreProfitReportController
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $storageRecharge = floatval($deliveryData->storage_recharge ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
+            $lotteryTicketRewardAmount = floatval($deliveryData->lottery_ticket_reward_amount ?? 0);
 
             // 票务数据
             $ticketData = $ticketDataByStore[$storeId] ?? null;
@@ -165,9 +169,14 @@ class ChannelStoreProfitReportController
 
             // 入票 = 开票机台使用 + 核销机台使用
             $incomingTicketAmount = bcadd($ticketOpenScoreUsedAmount, $redeemMachineAmount, 2);
-            // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销
+            // 未核销 = 出卷 - 后台核销 - 机台核销 + 柜台核销 - 已拆分/已合并
             $totalRedeem = bcadd($redeemAmount, $redeemMachineAmount, 2);
-            $ticketUnredeemedAmount = bcadd(bcsub($ticketRedeemAmount, $totalRedeem, 2), $counterRedeemAmount, 2);
+            $splitMergedAmount = floatval($splitMergedByStore[$storeId] ?? 0);
+            $ticketUnredeemedAmount = bcsub(
+                bcadd(bcsub($ticketRedeemAmount, $totalRedeem, 2), $counterRedeemAmount, 2),
+                $splitMergedAmount,
+                2
+            );
 
             // 拉彩数据
             $lotteryData = $lotteryDataByStore[$storeId] ?? null;
@@ -214,6 +223,7 @@ class ChannelStoreProfitReportController
                 'machine_put_point' => $machinePutPoint,
                 'lottery_amount' => $lotteryAmount,
                 'activity_total' => $activityTotal,
+                'lottery_ticket_reward_amount' => $lotteryTicketRewardAmount,
                 'electronic_game_bet_amount' => $electronicGameBetAmount,
                 'machine_bet_amount' => $machineBetAmount,
                 'incoming_ticket_amount' => $incomingTicketAmount,
@@ -242,6 +252,7 @@ class ChannelStoreProfitReportController
             'total_machine_put' => 0,
             'total_lottery' => 0,
             'total_activity' => 0,
+            'total_lottery_ticket_reward' => 0,
             'total_agent_profit' => 0,
             'total_channel_profit' => 0,
             'total_income' => 0,
@@ -253,6 +264,7 @@ class ChannelStoreProfitReportController
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $item['machine_put_point'], 2);
             $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $item['lottery_amount'], 2);
             $totalStats['total_activity'] = bcadd($totalStats['total_activity'] ?? 0, $item['activity_total'], 2);
+            $totalStats['total_lottery_ticket_reward'] = bcadd($totalStats['total_lottery_ticket_reward'], $item['lottery_ticket_reward_amount'], 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $item['agent_profit'], 2);
             $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $item['channel_profit'], 2);
             $totalStats['total_income'] = bcadd($totalStats['total_income'], $item['total_income'], 2);
@@ -337,7 +349,8 @@ class ChannelStoreProfitReportController
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_WITHDRAWAL . " AND `source` = 'ticket_redeem' THEN `amount` ELSE 0 END) AS ticket_redeem_amount,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " THEN `amount` ELSE 0 END) AS machine_put_point,
             SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_MACHINE . " AND `source` = 'storage_recharge' THEN `amount` ELSE 0 END) AS storage_recharge,
-            SUM(CASE WHEN `type` IN (" . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . "," . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . ") THEN `amount` ELSE 0 END) AS activity_total
+            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS . " THEN `amount` ELSE 0 END) AS activity_total,
+            SUM(CASE WHEN `type` = " . PlayerDeliveryRecord::TYPE_LOTTERY_TICKET_REWARD . " THEN `amount` ELSE 0 END) AS lottery_ticket_reward_amount
         ")->groupBy('player_id')->get();
 
         // 构建 playerId -> data 映射
@@ -354,6 +367,7 @@ class ChannelStoreProfitReportController
                 'machine_put_point' => 0,
                 'storage_recharge' => 0,
                 'activity_total' => 0,
+                'lottery_ticket_reward_amount' => 0,
             ];
 
             foreach ($playerIds as $playerId) {
@@ -366,6 +380,7 @@ class ChannelStoreProfitReportController
                     $storeData->machine_put_point += floatval($playerData->machine_put_point);
                     $storeData->storage_recharge += floatval($playerData->storage_recharge);
                     $storeData->activity_total += floatval($playerData->activity_total);
+                    $storeData->lottery_ticket_reward_amount += floatval($playerData->lottery_ticket_reward_amount);
                 }
             }
 
@@ -446,6 +461,49 @@ class ChannelStoreProfitReportController
         $result = [];
         foreach ($redeemData as $item) {
             $result[(int)$item->store_admin_id] = $item;
+        }
+        return $result;
+    }
+
+    /**
+     * 批量查询已拆分/已合并的洗分票金额
+     *
+     * 原票被新票替代后不再算作未核销，需从残差中剔除。
+     * 这类票的 scanned_at 恒为空，只能按 created_at 归属时间，
+     * 因此不能并入 batchQueryRedeemData（那条整条按 scanned_at 过滤）。
+     *
+     * @param array $storeIds
+     * @param string|null $selectedShift
+     * @param string|null $dateType
+     * @param string|null $createdAtStart
+     * @param string|null $createdAtEnd
+     * @param array|null $shiftDateRange
+     * @return array [storeId => float]
+     */
+    private function batchQuerySplitMergedData(array $storeIds, ?string $selectedShift, ?string $dateType, ?string $createdAtStart, ?string $createdAtEnd, ?array $shiftDateRange): array
+    {
+        if (empty($storeIds)) {
+            return [];
+        }
+
+        $query = TicketRecord::query()
+            ->whereIn('store_admin_id', $storeIds)
+            ->where('ticket_type', TicketRecord::TYPE_WITHDRAW)
+            ->whereIn('status', [
+                TicketRecord::STATUS_SPLIT,
+                TicketRecord::STATUS_MERGED,
+            ]);
+
+        $this->applyTimeFilter($query, 'created_at', $selectedShift, $dateType, $createdAtStart, $createdAtEnd, $shiftDateRange);
+
+        $rows = $query->selectRaw('CAST(store_admin_id AS UNSIGNED) as store_admin_id, SUM(score) as total_score')
+            ->groupBy('store_admin_id')
+            ->get();
+
+        // 确保键是整数类型
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(int)$row->store_admin_id] = (float)$row->total_score;
         }
         return $result;
     }
@@ -690,7 +748,7 @@ class ChannelStoreProfitReportController
             'counter_ticket_amount', 'counter_redeem_amount',
             'storage_ticket_purchase', 'storage_recharge',
             'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
-            'welfare_coupon_amount', 'lottery_amount', 'activity_total',
+            'welfare_coupon_amount', 'lottery_amount', 'activity_total', 'lottery_ticket_reward_amount',
             'electronic_game_bet_amount', 'machine_bet_amount',
             'total_income', 'total_expense',
         ];
@@ -911,6 +969,7 @@ class ChannelStoreProfitReportController
             'total_machine_put' => 0,
             'total_lottery' => 0,
             'total_activity' => 0,
+            'total_lottery_ticket_reward' => 0,
             'total_agent_profit' => 0,
             'total_channel_profit' => 0,
         ];
@@ -927,6 +986,7 @@ class ChannelStoreProfitReportController
             $withdrawAmount = floatval($deliveryData->withdraw_amount ?? 0);
             $machinePutPoint = floatval($deliveryData->machine_put_point ?? 0);
             $activityTotal = floatval($deliveryData->activity_total ?? 0);
+            $lotteryTicketRewardAmount = floatval($deliveryData->lottery_ticket_reward_amount ?? 0);
 
             $ticketOpenScoreAmount = floatval($ticketData->ticket_open_score_amount ?? 0);
             $storageTicketPurchase = floatval($ticketData->storage_ticket_purchase ?? 0);
@@ -959,6 +1019,7 @@ class ChannelStoreProfitReportController
             $totalStats['total_machine_put'] = bcadd($totalStats['total_machine_put'], $machinePutPoint, 2);
             $totalStats['total_lottery'] = bcadd($totalStats['total_lottery'], $lotteryAmount, 2);
             $totalStats['total_activity'] = bcadd($totalStats['total_activity'], $activityTotal, 2);
+            $totalStats['total_lottery_ticket_reward'] = bcadd($totalStats['total_lottery_ticket_reward'], $lotteryTicketRewardAmount, 2);
             $totalStats['total_agent_profit'] = bcadd($totalStats['total_agent_profit'], $agentProfit, 2);
             $totalStats['total_channel_profit'] = bcadd($totalStats['total_channel_profit'], $channelProfit, 2);
         }
@@ -970,6 +1031,7 @@ class ChannelStoreProfitReportController
             ['title' => admin_trans('channel_store_profit.stats.total_machine_put'), 'number' => floatval($totalStats['total_machine_put']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_lottery'), 'number' => floatval($totalStats['total_lottery']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_activity'), 'number' => floatval($totalStats['total_activity']), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_lottery_ticket_reward'), 'number' => floatval($totalStats['total_lottery_ticket_reward']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_agent_profit'), 'number' => floatval($totalStats['total_agent_profit']), 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_channel_profit'), 'number' => floatval($totalStats['total_channel_profit']), 'prefix' => '', 'suffix' => ''],
         ];
@@ -990,6 +1052,7 @@ class ChannelStoreProfitReportController
             ['title' => admin_trans('channel_store_profit.stats.total_machine_put'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_lottery'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_activity'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('channel_store_profit.stats.total_lottery_ticket_reward'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_agent_profit'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
             ['title' => admin_trans('channel_store_profit.stats.total_channel_profit'), 'number' => 0, 'prefix' => '', 'suffix' => ''],
         ];

@@ -21,7 +21,6 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\support\Container;
-use GatewayWorker\Lib\Gateway;
 use Illuminate\Support\Str;
 use support\Cache;
 use support\Log;
@@ -697,7 +696,7 @@ class AdminOfflineMachineController
                         ['name' => '登出', 'cmd' => $serviceClass::LOGOUT, 'desc' => 'EA C5 - 玩家登出机台', 'danger' => false],
                     ],
                     '资金操作' => [
-                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => 'A5 XX C0 - 上分指令（100分/次，输入开分次数）', 'danger' => false, 'has_input' => true, 'input_label' => '次数', 'default_value' => 1],
+                        ['name' => '上分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => 'A5 XX C0 - 上分指令（300分/次，输入开分次数）', 'danger' => false, 'has_input' => true, 'input_label' => '次数', 'default_value' => 1],
                         ['name' => '下分', 'cmd' => $serviceClass::WASH_POINT, 'desc' => 'A5 00 C1 - 下分指令（全部洗分）', 'danger' => true],
                     ],
                     '管理指令' => [
@@ -718,7 +717,7 @@ class AdminOfflineMachineController
                         ['name' => '查询大赏灯', 'cmd' => $serviceClass::QUERY_REWARD_LIGHT, 'desc' => '46 CE B8 - 查询大赏灯状态', 'danger' => false],
                     ],
                     '开分洗分' => [
-                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => '46 CA - 开任意分数（可输入）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 100],
+                        ['name' => '开任意分', 'cmd' => $serviceClass::OPEN_ANY_POINT, 'desc' => '46 CA - 开任意分数（300的倍数）', 'danger' => false, 'has_input' => true, 'input_label' => '分数', 'default_value' => 300],
                         ['name' => '洗分清零', 'cmd' => $serviceClass::WASH_ZERO, 'desc' => '46 CC - ⚠️ 洗分并清零', 'danger' => true],
                     ],
                     '转数操作' => [
@@ -820,11 +819,21 @@ class AdminOfflineMachineController
             }
         }
 
-        // 检测机台 TCP 在线状态
+        // 检测机台 TCP 在线状态（与列表一致，通过 gk_work API 批量查询）
         $isOnline = false;
         try {
-            $uid = $machine->domain . ':' . $machine->port;
-            $isOnline = Gateway::isUidOnline($uid);
+            $result = MachineApiService::getAllOnlineStatus(
+                departmentId: Admin::user()->department_id,
+                adminId: Admin::id(),
+                machineIds: [$machine->id]
+            );
+            if (is_array($result)) {
+                foreach ($result as $item) {
+                    if (isset($item['id']) && $item['id'] == $machine->id) {
+                        $isOnline = (bool)($item['online'] ?? false);
+                    }
+                }
+            }
         } catch (\Exception $e) {
             Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
         }
@@ -934,8 +943,8 @@ class AdminOfflineMachineController
                 && $machine->control_type == Machine::CONTROL_TYPE_SONG
                 && $machine->machine_source == Machine::MACHINE_SOURCE_OFFLINE
                 && $cmd === 'a5') {
-                // 输入的是次数，需要转换为分数（100分/次）
-                $data = $data * 100;
+                // 输入的是次数，需要转换为分数（300分/次，OPEN_UNIT=300）
+                $data = $data * 300;
 
                 \support\Log::info('小淞线下Slot上分次数转换', [
                     'machine_id' => $machineId,
@@ -1020,11 +1029,21 @@ class AdminOfflineMachineController
                 return json(['code' => 0, 'msg' => '机台不存在', 'data' => []]);
             }
 
-            // 检测在线状态
+            // 检测在线状态（与列表一致，通过 gk_work API 批量查询）
             $isOnline = false;
             try {
-                $uid = $machine->domain . ':' . $machine->port;
-                $isOnline = Gateway::isUidOnline($uid);
+                $result = MachineApiService::getAllOnlineStatus(
+                    departmentId: Admin::user()->department_id,
+                    adminId: Admin::id(),
+                    machineIds: [$machine->id]
+                );
+                if (is_array($result)) {
+                    foreach ($result as $item) {
+                        if (isset($item['id']) && $item['id'] == $machine->id) {
+                            $isOnline = (bool)($item['online'] ?? false);
+                        }
+                    }
+                }
             } catch (\Exception $e) {
                 Log::warning('检测机台在线状态失败', ['machine_id' => $machine->id, 'error' => $e->getMessage()]);
             }

@@ -96,6 +96,8 @@ return [
         //玩家踢出日志
         'machine_kick_log_table' => 'machine_kick_log',
         'machine_kick_log_model' => \addons\webman\model\MachineKickLog::class,
+        'machine_operation_log_table' => 'machine_operation_log',
+        'machine_operation_log_model' => \addons\webman\model\MachineOperationLog::class,
         //玩家充值记录
         'player_recharge_record_table' => 'player_recharge_record',
         'player_recharge_record_model' => \addons\webman\model\PlayerRechargeRecord::class,
@@ -373,5 +375,8 @@ return [
         // 排行榜 名次
         'leaderboard_entry_table' => 'leaderboard_entry',
         'leaderboard_entry_model' => \addons\webman\model\LeaderboardEntry::class,
+        //玩家身份证黑名单
+        'player_id_card_blacklist_table' => 'player_id_card_blacklist',
+        'player_id_card_blacklist_model' => \addons\webman\model\PlayerIdCardBlacklist::class,
     ],
 ];

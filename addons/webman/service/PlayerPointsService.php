@@ -436,7 +436,8 @@ class PlayerPointsService
         int $size = 20,
         ?int $type = null,
         array $permissionFilter = [],
-        bool $withPlayer = false
+        bool $withPlayer = false,
+        ?string $uuid = null
     ): array {
         $query = PlayerPointsRecord::query();
 
@@ -447,6 +448,12 @@ class PlayerPointsService
 
         if ($type !== null) {
             $query->where('type', $type);
+        }
+
+        if (!empty($uuid)) {
+            $query->whereHas('player', function ($q) use ($uuid) {
+                $q->where('uuid', $uuid);
+            });
         }
 
         // 查询全部玩家时，预载玩家信息，避免逐笔查询

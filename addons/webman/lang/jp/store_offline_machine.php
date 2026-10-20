@@ -13,13 +13,20 @@ return [
 
     // 操作
     'actions' => [
-        'view_qrcode' => 'QRコードを表示',
+        'view_qrcode'  => 'QRコードを表示',
         'batch_qrcode' => '一括QRコード生成',
+        'kick_player'  => 'プレイヤーをキック',
     ],
 
     // 確認メッセージ
     'confirm' => [
         'batch_qrcode' => '選択した機台のQRコードを生成してもよろしいですか？',
+        'kick_player'  => 'プレイヤーをキックして残高を返還してもよろしいですか？',
+    ],
+
+    // 成功メッセージ
+    'message' => [
+        'kick_success' => 'プレイヤーをキックし、残高を返還しました',
     ],
 
     // QRコード
@@ -28,9 +35,10 @@ return [
 
     // エラーメッセージ
     'error' => [
-        'machine_not_found' => '機台が存在しないか、アクセス権限がありません',
+        'machine_not_found'    => '機台が存在しないか、アクセス権限がありません',
         'no_machines_selected' => '少なくとも1つの機台を選択してください',
-        'too_many_machines' => '一度に最大30個のQRコードを生成できます',
+        'too_many_machines'    => '一度に最大30個のQRコードを生成できます',
+        'no_player_in_machine' => 'この機台でゲーム中のプレイヤーはいません',
     ],
 
     'menu' => [

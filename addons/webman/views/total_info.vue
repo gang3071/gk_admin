@@ -75,6 +75,10 @@ export default {
     agent_player_id: Number,
     parent_player_id: Number,
     player_id: Number,
+    default_open: {
+      type: Boolean,
+      default: false
+    },
     minSpan: {
       type: Number,
       default: 4
@@ -135,11 +139,12 @@ export default {
   },
   data() {
     return {
-      activeKey: [],
+      activeKey: this.default_open ? ['1'] : [],
       loading: false,
       statsData: null,
       error: false,
       hasLoaded: false,
+      filterChangedWhileClosed: false,
       breakpoints: {
         xs: {max: 576, columns: 1},
         sm: {min: 576, max: 768, columns: 2},
@@ -156,9 +161,12 @@ export default {
     ex_admin_filter: {
       handler(newVal) {
         this.currentFilter = newVal;
-        // 如果面板已展开且已加载过数据，自动刷新
-        if (this.activeKey.includes('1') && this.hasLoaded) {
+        if (this.activeKey.includes('1')) {
+          // 面板開啟時立即刷新（含初始載入）
           this.fetchData();
+        } else {
+          // 面板收起時記錄有待更新的數據
+          if (this.hasLoaded) this.filterChangedWhileClosed = true;
         }
       },
       deep: true,
@@ -198,9 +206,12 @@ export default {
     // 处理面板展开/收起
     handlePanelChange(keys) {
       this.activeKey = keys;
-      // 当面板展开且尚未加载过数据时，自动获取数据
-      if (keys.includes('1') && !this.hasLoaded) {
-        this.fetchData();
+      if (keys.includes('1')) {
+        // 首次開啟，或面板關閉期間 filter 有變化，則重新拉數據
+        if (!this.hasLoaded || this.filterChangedWhileClosed) {
+          this.filterChangedWhileClosed = false;
+          this.fetchData();
+        }
       }
     },
     getPrecision(number) {

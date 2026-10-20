@@ -10,6 +10,7 @@ return [
         'id' => 'ID',
         'player_id' => 'Player ID',
         'player_name' => 'Player Account',
+        'player_uuid' => 'UUID',
         'total_points' => 'Total Points',
         'available_points' => 'Available Points',
         'frozen_points' => 'Frozen Points',

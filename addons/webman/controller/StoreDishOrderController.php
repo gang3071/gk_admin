@@ -318,14 +318,14 @@ class StoreDishOrderController
 
         foreach ($items as $value) {
             $html .= '<tr>';
-            $html .= '<td>' . $value->dish_title;
+            $html .= '<td style="overflow-wrap:anywhere;">' . $value->dish_title;
 
             if (! empty($value->remark)) {
                 $html .= ' (' . $value->remark . ')';
             }
 
             $html .= '</td>';
-            $html .= '<td>x ' . $value->quantity . '</td>';
+            $html .= '<td style="text-align:right">x ' . $value->quantity . '</td>';
             $html .= '</tr>';
         }
 

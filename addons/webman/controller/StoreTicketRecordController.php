@@ -6,9 +6,16 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\AdminUser;
+use addons\webman\model\Channel;
+use addons\webman\model\Currency;
 use addons\webman\model\Player;
-use addons\webman\model\StoreAgentShiftHandoverRecord;
+use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\TicketRecord;
+use addons\webman\service\WalletService;
+use support\Db;
+use support\Log;
+use support\Redis;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
@@ -16,8 +23,6 @@ use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
-use ExAdmin\ui\component\grid\card\Card;
-use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tag\Tag;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
@@ -43,6 +48,7 @@ class StoreTicketRecordController
             $grid->autoHeight();
 
             // 只显示当前店家的出票类型数据（开分、体验卷、福利卷）
+            // 洗分票（TYPE_WITHDRAW）不出现在出票记录列表，含 GV1 寄存码核销产生的记录
             $grid->model()
                 ->where('store_admin_id', $admin->id)
                 ->whereIn('ticket_type', [
@@ -66,217 +72,20 @@ class StoreTicketRecordController
                 }
             }
 
-            // 统计数据（基于当前筛选条件，排除禁用状态）
-            $query = clone $grid->model();
-            $query->where('status', '!=', TicketRecord::STATUS_DISABLED);
-            $totalData = $query->selectRaw(
-                'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
-            )->first();
-
-            // 获取当前班次统计（从上次交班时间到现在）
-            $lastShiftRecord = StoreAgentShiftHandoverRecord::query()
-                ->where('bind_admin_user_id', $admin->id)
-                ->orderBy('id', 'desc')
-                ->first();
-            $lastShiftTime = $lastShiftRecord?->end_time;
-
-            $currentShiftQuery = TicketRecord::query()
-                ->where('store_admin_id', $admin->id)
-                ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
-                ->where('status', '!=', TicketRecord::STATUS_DISABLED)
-                ->when($lastShiftTime, function ($query) use ($lastShiftTime) {
-                    $query->where('created_at', '>', $lastShiftTime);
-                });
-            $currentShiftData = $currentShiftQuery->selectRaw(
-                'sum(score) as total_score, count(*) as total_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), 1, 0)) as used_count, sum(IF(status IN (' . TicketRecord::STATUS_BACKEND_USED . ',' . TicketRecord::STATUS_MACHINE_USED . '), score, 0)) as used_score'
-            )->first();
-
+            // 統計面板（下拉式，預設收起，點擊展開才載入，隨篩選條件更新）
             $layout = Layout::create();
-            $layout->row(function (Row $row) use ($totalData) {
+            $layout->row(function (Row $row) use ($exAdminFilter, $admin) {
                 $row->gutter([10, 0]);
-                // 总金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['total_score']) ? floatval($totalData['total_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.total_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                // 总出票次数
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['total_count']) ? intval($totalData['total_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.total_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                // 已使用数量
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['used_count']) ? intval($totalData['used_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.used_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
-                // 已使用金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($totalData['used_score']) ? floatval($totalData['used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.used_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#f5222d'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 6);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'type'            => 'StoreTicketRecord',
+                    'admin_user_id'   => $admin->id,
+                    'default_open'    => false,
+                ]));
             })->style(['background' => '#fff']);
+            $grid->header($layout);
 
-            // 当前班次统计
-            $layout->row(function (Row $row) use ($currentShiftData, $lastShiftTime) {
-                $row->gutter([10, 0]);
-                // 当前班次标题
-                $row->column(
-                    Card::create([
-                        Html::create(admin_trans('ticket_machine.record.current_shift') . ($lastShiftTime ? ' (' . $lastShiftTime . ')' : ''))
-                            ->style([
-                                'font-size' => '12px',
-                                'font-weight' => 'bold',
-                                'color' => '#67C23A',
-                                'text-align' => 'center'
-                            ]),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'justify-content' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 4);
-                // 当前班次总金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['total_score']) ? floatval($currentShiftData['total_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.total_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#1890ff'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-                // 当前班次出票次数
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['total_count']) ? intval($currentShiftData['total_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.total_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#52c41a'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-                // 当前班次已使用数量
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['used_count']) ? intval($currentShiftData['used_count']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.used_count'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#faad14'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-                // 当前班次已使用金额
-                $row->column(
-                    Card::create([
-                        Row::create()->column(Statistic::create()
-                            ->value(!empty($currentShiftData['used_score']) ? floatval($currentShiftData['used_score']) : 0)
-                            ->prefix(admin_trans('ticket_machine.record.used_score'))
-                            ->valueStyle([
-                                'font-size' => '14px',
-                                'font-weight' => '500',
-                                'text-align' => 'center',
-                                'color' => '#f5222d'
-                            ])),
-                    ])->bodyStyle([
-                        'display' => 'flex',
-                        'align-items' => 'center',
-                        'height' => '30px',
-                        'padding' => '0px',
-                        'background' => '#f6ffed'
-                    ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
-                    , 5);
-            })->style(['background' => '#f6ffed']);
-
-            // 添加出票机控制按钮、核销按钮和统计布局（合并到一次调用）
+            // 出票機控制按鈕、核銷按鈕
             $grid->tools([
                 Button::create(admin_trans('ticket_machine.title'))
                     ->modal([ChannelIndexController::class, 'ticketMachineControl'])
@@ -289,7 +98,6 @@ class StoreTicketRecordController
                     ->type('primary')
                     ->icon('QrcodeOutlined')
                     ->gridRefresh(),
-                $layout
             ]);
 
             // 列定义
@@ -405,7 +213,6 @@ class StoreTicketRecordController
                         '' => admin_trans('public_msg.all'),
                         TicketRecord::TYPE_RECHARGE => admin_trans('ticket_machine.record.type_recharge'),
                         TicketRecord::TYPE_EXPERIENCE => admin_trans('ticket_machine.record.type_experience'),
-                        TicketRecord::TYPE_WITHDRAW => admin_trans('ticket_machine.record.type_withdraw'),
                         TicketRecord::TYPE_WELFARE => admin_trans('ticket_machine.record.type_welfare'),
                     ])
                     ->style(['width' => '150px']);
@@ -607,20 +414,31 @@ class StoreTicketRecordController
     public function scanRedeemModal()
     {
         return admin_view(plugin()->webman->getPath() . '/views/scan_record_redeem_modal.vue')->attrs([
-            'query_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/getRecordByQrCode',
-            'redeem_url' => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemRecord',
+            'query_url'          => 'ex-admin/addons-webman-controller-StoreTicketRecordController/getRecordByQrCode',
+            'redeem_url'         => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemRecord',
+            'deposit_redeem_url'  => 'ex-admin/addons-webman-controller-StoreTicketRecordController/redeemDepositCode',
+            'deposit_notify_url'  => 'ex-admin/addons-webman-controller-StoreTicketRecordController/notifyDepositScanned',
             'labels' => [
-                'input_qr_code' => admin_trans('ticket_machine.record.input_qr_code'),
+                'input_qr_code'            => admin_trans('ticket_machine.record.input_qr_code'),
                 'scan_qr_code_placeholder' => admin_trans('ticket_machine.record.scan_qr_code_placeholder'),
-                'order_id' => admin_trans('ticket_machine.record.order_id'),
-                'store_name' => admin_trans('ticket_machine.record.store_name'),
-                'machine_no' => admin_trans('ticket_machine.record.machine_no'),
-                'score' => admin_trans('ticket_machine.record.score'),
-                'status' => admin_trans('ticket_machine.record.status'),
-                'ticket_type' => admin_trans('ticket_machine.record.ticket_type'),
-                'qr_code_no' => admin_trans('ticket_machine.record.qr_code_no'),
-                'created_at' => admin_trans('ticket_machine.record.created_at'),
-                'redeem_confirm' => admin_trans('ticket_machine.record.redeem_confirm'),
+                'order_id'                 => admin_trans('ticket_machine.record.order_id'),
+                'store_name'               => admin_trans('ticket_machine.record.store_name'),
+                'machine_no'               => admin_trans('ticket_machine.record.machine_no'),
+                'score'                    => admin_trans('ticket_machine.record.score'),
+                'status'                   => admin_trans('ticket_machine.record.status'),
+                'ticket_type'              => admin_trans('ticket_machine.record.ticket_type'),
+                'qr_code_no'               => admin_trans('ticket_machine.record.qr_code_no'),
+                'created_at'               => admin_trans('ticket_machine.record.created_at'),
+                'redeem_confirm'           => admin_trans('ticket_machine.record.redeem_confirm'),
+                // GV1 寄存碼相關
+                'deposit_uid'              => admin_trans('ticket_machine.record.deposit_uid'),
+                'deposit_amount'           => admin_trans('ticket_machine.record.deposit_amount'),
+                'deposit_expires_in_seconds' => admin_trans('ticket_machine.record.deposit_expires_in_seconds'),
+                'deposit_expired'          => admin_trans('ticket_machine.record.deposit_expired'),
+                'deposit_confirm'          => admin_trans('ticket_machine.record.deposit_confirm'),
+                'deposit_success'          => admin_trans('ticket_machine.record.deposit_success'),
+                'deposit_balance_after'    => admin_trans('ticket_machine.record.deposit_balance_after'),
+                'deposit_failed'           => admin_trans('ticket_machine.record.deposit_failed'),
             ],
         ]);
     }
@@ -727,7 +545,7 @@ class StoreTicketRecordController
     }
 
     /**
-     * 核销记录（开分票）
+     * 核销记录（全票种）
      * @group store
      * @auth true
      * @return mixed
@@ -744,7 +562,6 @@ class StoreTicketRecordController
         $record = TicketRecord::query()
             ->where('id', $id)
             ->where('store_admin_id', $admin->id)
-            ->where('ticket_type', TicketRecord::TYPE_RECHARGE)
             ->where('status', TicketRecord::STATUS_NORMAL)
             ->first();
 
@@ -760,6 +577,299 @@ class StoreTicketRecordController
         ]);
 
         return json_encode(['code' => 0, 'msg' => admin_trans('ticket_machine.record.redeem_success')]);
+    }
+
+    /**
+     * 通知客戶端 GV1 已被掃描
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function notifyDepositScanned()
+    {
+        $code  = request()->post('code', '');
+        $admin = Admin::user();
+
+        $parts = explode('.', trim($code));
+        if (count($parts) !== 6 || $parts[0] !== 'GV1' || !ctype_digit($parts[2])) {
+            return json_encode(['code' => 0]);
+        }
+
+        [, $uid, $amountStr] = $parts;
+        if (!ctype_digit($uid)) {
+            return json_encode(['code' => 0]);
+        }
+
+        $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
+        if (empty($player)) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.player_not_found')]);
+        }
+
+        sendSocketMessage('player-' . $player->id, [
+            'type'       => 'deposit_qr_scanned',
+            'amount'     => (int) $amountStr,
+            'store_name' => $admin->nickname ?? $admin->username ?? '',
+            'timestamp'  => time(),
+        ]);
+
+        $balance      = WalletService::getBalance($player->id);
+        $wallet       = $player->machine_wallet;
+        $walletLocked = $wallet ? (int) $wallet->wallet_locked : 0;
+        $isCrashed    = $wallet ? (int) $wallet->is_crashed : 0;
+
+        return json_encode([
+            'code' => 0,
+            'data' => [
+                'name'          => $player->name ?? '',
+                'uuid'          => $player->uuid ?? '',
+                'balance'       => $balance,
+                'wallet_locked' => $walletLocked,
+                'is_crashed'    => $isCrashed,
+                'amount'        => (int) $amountStr,
+                'server_time'   => time(),
+            ],
+        ]);
+    }
+
+    /**
+     * 核銷寄存碼（GV1格式）
+     * @group store
+     * @auth true
+     * @return mixed
+     */
+    public function redeemDepositCode()
+    {
+        $code  = request()->post('code', '');
+        $admin = Admin::user();
+
+        // ===== 1. 格式解析 =====
+        $parts = explode('.', trim($code));
+        if (count($parts) !== 6 || $parts[0] !== 'GV1') {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+
+        [, $uid, $amountStr, $expStr, $nonce, $sig] = $parts;
+
+        if (!ctype_digit($amountStr) || !ctype_digit($expStr)
+            || !preg_match('/^[0-9A-F]{8}$/', $nonce)
+            || !preg_match('/^[0-9A-F]{20}$/', $sig)) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+
+        $amount = (int) $amountStr;
+        $exp    = (int) $expStr;
+
+        if ($amount < 1000) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+
+        // ===== 2. 時間驗證 =====
+        $now = time();
+        if ($now > $exp + 10 || $exp - $now > 70) {
+            return json_encode(['code' => 40002, 'msg' => admin_trans('ticket_machine.record.deposit_err_expired')]);
+        }
+
+        // ===== 3. 查玩家 =====
+        if (!ctype_digit($uid)) {
+            return json_encode(['code' => 40001, 'msg' => admin_trans('ticket_machine.record.deposit_err_format')]);
+        }
+        $player = Player::query()->where('id', (int) $uid)->where('store_admin_id', $admin->id)->first();
+        if (empty($player)) {
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+        }
+
+        // ===== 4. 取玩家當前 JWT AccessToken（Redis key: JWT:TOKEN:WEB:{player_id}）=====
+        try {
+            $tokenKey    = 'JWT:TOKEN:WEB:' . $player->id;
+            $accessToken = trim((string) Redis::get($tokenKey));
+        } catch (\Throwable $e) {
+            Log::error('redeemDepositCode: Redis error', ['error' => $e->getMessage()]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        if (empty($accessToken)) {
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+        }
+
+        // ===== 5. 驗簽 =====
+        $message   = "GV1.{$uid}.{$amountStr}.{$expStr}.{$nonce}";
+        $hmac      = hash_hmac('sha256', $message, $accessToken, true); // binary
+        $sigExpect = strtoupper(bin2hex(substr($hmac, 0, 10)));         // 前10 bytes → 20字符 hex
+
+        if (!hash_equals($sigExpect, $sig)) {
+            return json_encode(['code' => 40003, 'msg' => admin_trans('ticket_machine.record.deposit_err_sig')]);
+        }
+
+        // ===== 6. 防重放（nonce check）=====
+        $nonceKey = "deposit:nonce:{$player->id}:{$nonce}";
+        try {
+            $alreadyUsed = Redis::exists($nonceKey);
+        } catch (\Throwable $e) {
+            Log::error('redeemDepositCode: Redis nonce check error', ['error' => $e->getMessage()]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        if ($alreadyUsed) {
+            return json_encode(['code' => 40004, 'msg' => admin_trans('ticket_machine.record.deposit_err_used')]);
+        }
+
+        // ===== 7. 玩家狀態檢查 =====
+        $wallet = $player->machine_wallet;
+        if (!$wallet || $wallet->wallet_locked == 1) {
+            return json_encode(['code' => 40006, 'msg' => admin_trans('ticket_machine.record.deposit_err_locked')]);
+        }
+
+        // ===== 8. 餘額檢查 =====
+        $balanceBefore = WalletService::getBalance($player->id);
+        if ($balanceBefore < $amount) {
+            return json_encode(['code' => 40005, 'msg' => admin_trans('ticket_machine.record.deposit_err_balance')]);
+        }
+
+        // ===== 9. 查渠道/幣種（用於提現記錄金額換算） =====
+        $channel  = Channel::query()->where('department_id', $player->department_id)->first();
+        $rate     = 1.0;
+        $money    = 0.0;
+        $currency = '';
+        if ($channel && $channel->currency) {
+            $cur = Currency::query()
+                ->where('identifying', $channel->currency)
+                ->where('status', 1)
+                ->whereNull('deleted_at')
+                ->first();
+            if ($cur && $cur->ratio > 0) {
+                $rate     = (float) $cur->ratio;
+                $money    = (float) bcdiv((string) $amount, (string) $rate, 2);
+                $currency = $channel->currency;
+            }
+        }
+
+        // ===== 10. 原子扣點 =====
+        try {
+            $deductResult = WalletService::atomicDecrement($player->id, (float) $amount);
+        } catch (\Throwable $e) {
+            Log::error('redeemDepositCode: atomicDecrement failed', [
+                'player_id' => $player->id,
+                'amount'    => $amount,
+                'error'     => $e->getMessage(),
+            ]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        if (empty($deductResult['ok'])) {
+            return json_encode(['code' => 40005, 'msg' => admin_trans('ticket_machine.record.deposit_err_balance')]);
+        }
+
+        $balanceAfter = (float) ($deductResult['new'] ?? $deductResult['balance'] ?? ($balanceBefore - $amount));
+
+        // ===== 11. 建立記錄（DB 事務；失敗時退款） =====
+        $orderId = TicketRecord::generateOrderId(TicketRecord::TYPE_WITHDRAW);
+        Db::beginTransaction();
+        try {
+            $ticket = new TicketRecord();
+            $ticket->order_id          = $orderId;
+            $ticket->store_admin_id    = $admin->id;
+            $ticket->store_name        = $admin->nickname ?? $admin->username ?? '';
+            $ticket->player_id         = $player->id;
+            $ticket->player_name       = $player->name ?? '';
+            $ticket->department_id     = $player->department_id;
+            $ticket->score             = $amount;
+            $ticket->ticket_type       = TicketRecord::TYPE_WITHDRAW;
+            $ticket->status            = TicketRecord::STATUS_BACKEND_USED;
+            $ticket->scanned_at        = date('Y-m-d H:i:s');
+            $ticket->scanned_by        = $admin->id;
+            $ticket->encrypted_content = $code;
+            $ticket->source_type       = 'deposit_qr';
+            $ticket->save();
+
+            // 提現記錄
+            $pwr = new PlayerWithdrawRecord();
+            $pwr->player_id    = $player->id;
+            $pwr->talk_user_id = $player->talk_user_id ?? 0;
+            $pwr->department_id = $player->department_id;
+            $pwr->tradeno      = $orderId;
+            $pwr->player_name  = $player->name ?? '';
+            $pwr->player_phone = $player->phone ?? '';
+            $pwr->rate         = $rate;
+            $pwr->actual_rate  = $rate;
+            $pwr->money        = $money;
+            $pwr->point        = $amount;
+            $pwr->fee          = 0;
+            $pwr->inmoney      = $money;
+            $pwr->currency     = $currency;
+            $pwr->bank_name    = '';
+            $pwr->account      = '';
+            $pwr->account_name = '';
+            $pwr->wallet_address = '';
+            $pwr->qr_code      = '';
+            $pwr->type         = PlayerWithdrawRecord::TYPE_SELF;
+            $pwr->status       = PlayerWithdrawRecord::STATUS_SUCCESS;
+            $pwr->bank_type    = 4;
+            $pwr->remark       = '點數寄存核銷';
+            $pwr->save();
+
+            // 金流明細
+            $pdr = new PlayerDeliveryRecord();
+            $pdr->player_id     = $player->id;
+            $pdr->department_id = $player->department_id;
+            $pdr->target        = $ticket->getTable();
+            $pdr->target_id     = $ticket->id;
+            $pdr->type          = PlayerDeliveryRecord::TYPE_WITHDRAWAL;
+            $pdr->withdraw_status = PlayerWithdrawRecord::STATUS_SUCCESS;
+            $pdr->source        = 'deposit_qr';
+            $pdr->amount        = $amount;
+            $pdr->amount_before = $balanceBefore;
+            $pdr->amount_after  = $balanceAfter;
+            $pdr->tradeno       = $orderId;
+            $pdr->remark        = '點數寄存核銷';
+            $pdr->save();
+
+            // 更新玩家提現統計
+            $extend = $player->player_extend;
+            if ($extend) {
+                $extend->withdraw_amount = bcadd((string) $extend->withdraw_amount, (string) $amount, 2);
+                $extend->save();
+            }
+
+            Db::commit();
+        } catch (\Throwable $e) {
+            if (Db::transactionLevel() > 0) {
+                Db::rollBack();
+            }
+            WalletService::atomicIncrement($player->id, (float) $amount);
+            Log::error('redeemDepositCode: DB transaction failed, balance refunded', [
+                'player_id' => $player->id,
+                'amount'    => $amount,
+                'error'     => $e->getMessage(),
+            ]);
+            return json_encode(['code' => -1, 'msg' => admin_trans('common.system_error')]);
+        }
+
+        // nonce 寫入事務提交後（避免扣款成功但記錄失敗時 nonce 仍被消耗）
+        try {
+            Redis::setex($nonceKey, 120, 1);
+        } catch (\Throwable $e) {
+            Log::warning('redeemDepositCode: failed to set nonce key', ['error' => $e->getMessage()]);
+        }
+
+        // 通知客戶端：寄存核銷完成
+        sendSocketMessage('player-' . $player->id, [
+            'type'        => 'deposit_qr_redeemed',
+            'order_id'    => $orderId,
+            'amount'      => $amount,
+            'balance'     => $balanceAfter,
+            'store_name'  => $admin->nickname ?? $admin->username ?? '',
+            'timestamp'   => time(),
+        ]);
+
+        return json_encode([
+            'code' => 0,
+            'data' => [
+                'depositId' => $orderId,
+                'uid'       => $uid,
+                'amount'    => $amount,
+                'balance'   => $balanceAfter,
+            ],
+        ]);
     }
 
     /**

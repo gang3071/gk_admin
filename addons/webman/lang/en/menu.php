@@ -89,6 +89,7 @@ return [
         //Player management
         'channel_player_manage' => 'Player management',
         'channel_player_list' => 'Player list',
+        'player_id_card_blacklist' => 'ID Card Blacklist',
         'channel_player_accounting_change_records' => 'Accounting change records',
         'player_points_records' => 'Points records',
         //machine management
@@ -311,6 +312,8 @@ return [
         'dish_order_report_item' => 'Order Detail Report',
         // Leaderboard
         'leaderboard' => 'Leaderboard',
+        // Vendor Report
+        'game_vendor_report' => 'Vendor Data',
         //Admin Offline Machine Management
         'offline_machine_manage' => 'Offline Machine Management',
         'offline_machine_list' => 'Offline Machines',

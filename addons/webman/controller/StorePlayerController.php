@@ -9,6 +9,7 @@ use addons\webman\model\Player;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerExtend;
+use addons\webman\model\PlayerIdCardBlacklist;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRegisterRecord;
@@ -21,6 +22,7 @@ use addons\webman\grid\Driver\AlreadyPaginated;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
+use ExAdmin\ui\component\form\Watch;
 use ExAdmin\ui\component\grid\avatar\Avatar;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -918,6 +920,7 @@ class StorePlayerController
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))
                     ->maxlength(50)->required()
                     ->default($playerExtend->id_number ?? '');
+                $form->desc('blacklist_warning_msg', '')->default('');
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))
                     ->ext('jpg,png,jpeg')->fileSize('5m')
                     ->default($playerExtend->id_card_front ?? '');
@@ -949,6 +952,11 @@ class StorePlayerController
 
                     if (empty($player)) {
                         return message_error(admin_trans('player.not_fount'));
+                    }
+
+                    $idNumber = $form->input('id_number');
+                    if (!empty($idNumber) && PlayerIdCardBlacklist::where('id_number', $idNumber)->exists()) {
+                        return message_error(admin_trans('player_blacklist.error.id_number_in_blacklist'));
                     }
 
                     DB::beginTransaction();
@@ -993,6 +1001,7 @@ class StorePlayerController
                 $form->text('name', admin_trans('player.fields.name'))->maxlength(50)->required();
                 $form->text('real_name', admin_trans('player.fields.real_name'))->maxlength(50)->required();
                 $form->text('id_number', admin_trans('player_extend.fields.id_number'))->maxlength(50)->required();
+                $form->desc('blacklist_warning_msg', '')->default('');
                 $form->image('id_card_front', admin_trans('player_extend.fields.id_card_front'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('id_card_back', admin_trans('player_extend.fields.id_card_back'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
                 $form->image('personal_photo', admin_trans('player_extend.fields.personal_photo'))->ext('jpg,png,jpeg')->fileSize('5m')->required();
@@ -1027,6 +1036,11 @@ class StorePlayerController
                     $existingPlayer = Player::query()->where('phone', $phone)->first();
                     if (!empty($existingPlayer)) {
                         return message_error(admin_trans('player.phone_has_register'));
+                    }
+
+                    $idNumber = $form->input('id_number');
+                    if (!empty($idNumber) && PlayerIdCardBlacklist::where('id_number', $idNumber)->exists()) {
+                        return message_error(admin_trans('player_blacklist.error.id_number_in_blacklist'));
                     }
 
                     // 验证渠道是否存在（同步自总后台逻辑）
@@ -1081,6 +1095,30 @@ class StorePlayerController
                     return message_success(admin_trans('player.save_player_info_success'));
                 });
             }
+
+            $form->watch([
+                'id_number' => function ($value, Watch $watch) {
+                    $value = trim($value ?? '');
+                    if (empty($value)) {
+                        $watch->set('blacklist_warning_msg', '');
+                        return;
+                    }
+                    $record = PlayerIdCardBlacklist::where('id_number', $value)->first();
+                    if ($record) {
+                        $msg = htmlspecialchars(admin_trans('player_blacklist.error.id_number_in_blacklist'));
+                        if (!empty($record->remark)) {
+                            $msg .= ' — ' . htmlspecialchars(admin_trans('player_blacklist.fields.remark')) . ': ' . htmlspecialchars($record->remark);
+                        }
+                        $html = '<div style="display:flex;align-items:flex-start;gap:8px;padding:10px 14px;background:#fff2f0;border:1px solid #ffccc7;border-radius:6px;color:#ff4d4f;font-size:14px;line-height:1.5;margin:4px 0 8px;">'
+                            . '<span style="font-size:16px;flex-shrink:0;">⚠</span>'
+                            . '<span>' . $msg . '</span>'
+                            . '</div>';
+                        $watch->set('blacklist_warning_msg', $html);
+                    } else {
+                        $watch->set('blacklist_warning_msg', '');
+                    }
+                }
+            ]);
         });
     }
 
@@ -1161,7 +1199,7 @@ class StorePlayerController
         return Form::create(new Player(), function (Form $form) use ($data) {
             $form->hidden('id')->default($data['id']);
             $form->number('money',
-                admin_trans('player.wallet.money'))->min(0)->max(100000000)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player.wallet.machine_wallet') . ' ' . ($data['money'] ?? 0))->required();
+                admin_trans('player.wallet.money'))->min(0)->max(60000)->precision(2)->style(['width' => '100%'])->addonBefore(admin_trans('player.wallet.machine_wallet') . ' ' . ($data['money'] ?? 0))->required();
             $form->textarea('remark', admin_trans('player.wallet.textarea'))->maxlength(255)->bindAttr('rows',
                 4)->required();
             $form->actions()->hideResetButton();
@@ -1268,101 +1306,111 @@ class StorePlayerController
     public function getBetStatisticsData(int $playerId): \support\Response
     {
         try {
-            $redis = \support\Redis::connection('default')->client();
-            $today = date('Y-m-d');
-            $thisWeek = date('o-\WW');
-            $thisMonth = date('Y-m');
+            // 以每天 08:00 為業務日分界點（與 API 券領取邏輯一致）
+            $now = time();
+            $today8am = strtotime(date('Y-m-d') . ' 08:00:00');
+            $isAfter8am = $now >= $today8am;
+            $todayStatDate = $isAfter8am ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day'));
+            $statDateTs    = strtotime($todayStatDate);
 
-            // 从 Redis 读取实时数据
-            // Redis key 格式: gk_work:player_bet_stats:{player_id}:{stat_type}:{dimension}:{stat_date}
-
-            // 今日数据
-            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$today}";
-            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$today}";
-            $todayMachineData = $redis->hGetAll($todayMachineKey);
-            $todayGameData = $redis->hGetAll($todayGameKey);
-
-            // 本周数据
-            $weekMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:weekly:{$thisWeek}";
-            $weekGameKey = "gk_work:player_bet_stats:{$playerId}:game:weekly:{$thisWeek}";
-            $weekMachineData = $redis->hGetAll($weekMachineKey);
-            $weekGameData = $redis->hGetAll($weekGameKey);
-
-            // 本月数据
-            $monthMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:monthly:{$thisMonth}";
-            $monthGameKey = "gk_work:player_bet_stats:{$playerId}:game:monthly:{$thisMonth}";
-            $monthMachineData = $redis->hGetAll($monthMachineKey);
-            $monthGameData = $redis->hGetAll($monthGameKey);
-
-            // Redis 存储的是"分"，需要除以100转为"元"
-            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
-            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
-            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
-            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
-            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
-            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
-
-            // 获取最近15天每日打码量（用于曲线图）
-            $dailyTrend = [
-                'dates' => [],
-                'machine' => [],
-                'game' => [],
-            ];
-
-            // 准备日期列表
-            $last15Days = [];
-            for ($i = 14; $i >= 0; $i--) {
-                $last15Days[] = date('Y-m-d', strtotime("-{$i} days"));
+            // 30s 快取，避免前端輪詢頻繁打 DB
+            $cacheKey = "bet_stats_store_player_{$playerId}_{$todayStatDate}";
+            $cached   = \support\Cache::get($cacheKey);
+            if ($cached !== null) {
+                return json(['code' => 0, 'data' => $cached]);
             }
 
-            // 从数据库批量查询历史数据（排除今天）
-            $historyDates = array_filter($last15Days, fn($date) => $date !== $today);
-            $historyData = PlayerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'daily')
-                ->whereIn('stat_date', $historyDates)
-                ->get()
-                ->keyBy(function($item) {
-                    return $item->stat_date . '_' . $item->stat_type;
-                });
+            // 今日業務日時間範圍
+            $todayStart = $todayStatDate . ' 08:00:00';
+            $todayEnd   = date('Y-m-d', strtotime('+1 day', $statDateTs)) . ' 08:00:00';
 
-            // 构建曲线图数据
+            // 今日 machine：PlayerGameLog.chip_amount 時間範圍（與 API 一致）
+            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::where('player_id', $playerId)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<',  $todayEnd)
+                ->sum('chip_amount');
+
+            // 今日 game：先查 PlayerBetStatistics daily，fallback PlayGameRecord（與 API 一致）
+            $todayGameStat   = PlayerBetStatistics::where('player_id', $playerId)
+                ->where('stat_type', 'game')->where('dimension', 'daily')
+                ->where('stat_date', $todayStatDate)->first();
+            $todayGameAmount = $todayGameStat
+                ? floatval($todayGameStat->bet_amount)
+                : (float) \addons\webman\model\PlayGameRecord::where('player_id', $playerId)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<',  $todayEnd)
+                    ->sum('bet');
+
+            // 本週：ISO 週內各業務日 daily 記錄加總 + 今日即時數據
+            $dayOfWeek        = (int) date('N', $statDateTs);
+            $weekMonday       = date('Y-m-d', strtotime('-' . ($dayOfWeek - 1) . ' days', $statDateTs));
+            $weekDates        = [];
+            for ($i = 0; $i < 7; $i++) {
+                $weekDates[] = date('Y-m-d', strtotime("+{$i} days", strtotime($weekMonday)));
+            }
+            $weekHistoryDates = array_values(array_diff($weekDates, [$todayStatDate]));
+            $weekHistory      = PlayerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')->whereIn('stat_date', $weekHistoryDates)
+                ->selectRaw('stat_type, SUM(bet_amount) as total')->groupBy('stat_type')
+                ->pluck('total', 'stat_type');
+            $weekMachineAmount = (float)($weekHistory['machine'] ?? 0) + $todayMachineAmount;
+            $weekGameAmount    = (float)($weekHistory['game']    ?? 0) + $todayGameAmount;
+
+            // 本月：當前業務月第一天至今日前的 daily 記錄加總 + 今日即時數據
+            $monthStart   = date('Y-m-01', $statDateTs);
+            $monthHistory = PlayerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->where('stat_date', '>=', $monthStart)
+                ->where('stat_date', '<',  $todayStatDate)
+                ->selectRaw('stat_type, SUM(bet_amount) as total')->groupBy('stat_type')
+                ->pluck('total', 'stat_type');
+            $monthMachineAmount = (float)($monthHistory['machine'] ?? 0) + $todayMachineAmount;
+            $monthGameAmount    = (float)($monthHistory['game']    ?? 0) + $todayGameAmount;
+
+            // 15天折線圖：今日用 DB 即時查詢，歷史從 player_bet_statistics 表讀取
+            $dailyTrend = ['dates' => [], 'machine' => [], 'game' => []];
+
+            $last15Days = [];
+            for ($i = 14; $i >= 0; $i--) {
+                $last15Days[] = date('Y-m-d', strtotime("-{$i} days", $statDateTs));
+            }
+
+            $historyDates = array_values(array_filter($last15Days, fn($date) => $date !== $todayStatDate));
+            $historyData  = PlayerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')->whereIn('stat_date', $historyDates)
+                ->get()->keyBy(fn($item) => $item->stat_date . '_' . $item->stat_type);
+
             foreach ($last15Days as $date) {
                 $dailyTrend['dates'][] = date('m-d', strtotime($date));
-
-                if ($date === $today) {
-                    // 今日从Redis
+                if ($date === $todayStatDate) {
                     $dailyTrend['machine'][] = round($todayMachineAmount, 2);
-                    $dailyTrend['game'][] = round($todayGameAmount, 2);
+                    $dailyTrend['game'][]    = round($todayGameAmount, 2);
                 } else {
-                    // 历史从数据库
-                    $machineKey = $date . '_machine';
-                    $gameKey = $date . '_game';
-                    $dailyTrend['machine'][] = isset($historyData[$machineKey]) ? round($historyData[$machineKey]->bet_amount, 2) : 0;
-                    $dailyTrend['game'][] = isset($historyData[$gameKey]) ? round($historyData[$gameKey]->bet_amount, 2) : 0;
+                    $dailyTrend['machine'][] = isset($historyData[$date . '_machine']) ? round($historyData[$date . '_machine']->bet_amount, 2) : 0;
+                    $dailyTrend['game'][]    = isset($historyData[$date . '_game'])    ? round($historyData[$date . '_game']->bet_amount, 2)    : 0;
                 }
             }
 
-            return json([
-                'code' => 0,
-                'data' => [
-                    'today' => [
-                        'machine' => round($todayMachineAmount, 2),
-                        'game' => round($todayGameAmount, 2),
-                        'total' => round($todayMachineAmount + $todayGameAmount, 2),
-                    ],
-                    'week' => [
-                        'machine' => round($weekMachineAmount, 2),
-                        'game' => round($weekGameAmount, 2),
-                        'total' => round($weekMachineAmount + $weekGameAmount, 2),
-                    ],
-                    'month' => [
-                        'machine' => round($monthMachineAmount, 2),
-                        'game' => round($monthGameAmount, 2),
-                        'total' => round($monthMachineAmount + $monthGameAmount, 2),
-                    ],
-                    'daily_trend' => $dailyTrend,
+            $result = [
+                'today' => [
+                    'machine' => round($todayMachineAmount, 2),
+                    'game'    => round($todayGameAmount, 2),
+                    'total'   => round($todayMachineAmount + $todayGameAmount, 2),
                 ],
-            ]);
+                'week' => [
+                    'machine' => round($weekMachineAmount, 2),
+                    'game'    => round($weekGameAmount, 2),
+                    'total'   => round($weekMachineAmount + $weekGameAmount, 2),
+                ],
+                'month' => [
+                    'machine' => round($monthMachineAmount, 2),
+                    'game'    => round($monthGameAmount, 2),
+                    'total'   => round($monthMachineAmount + $monthGameAmount, 2),
+                ],
+                'daily_trend' => $dailyTrend,
+            ];
+            \support\Cache::set($cacheKey, $result, 30);
+            return json(['code' => 0, 'data' => $result]);
         } catch (\Exception $e) {
             \support\Log::error('获取打码统计数据失败', [
                 'player_id' => $playerId,

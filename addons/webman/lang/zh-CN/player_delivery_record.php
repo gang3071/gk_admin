@@ -61,6 +61,7 @@ return [
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP每日登录奖励',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => '活动外增',
     ],
+    'machine_refund' => '机台退款',
     'detail' => '详情',
     'chart' => '图表',
     'total_in_amount' => '开分',
