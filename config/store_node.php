@@ -188,7 +188,7 @@ return [
                 'method' => 'get',
                 'group' => 'store',
                 'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
-                'title' => '设备列表',
+                'title' => '排行榜',
             ],
         ]
     ],
