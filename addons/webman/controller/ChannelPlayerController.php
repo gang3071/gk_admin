@@ -31,8 +31,6 @@ use addons\webman\model\PlayerGamePlatform;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
-use addons\webman\model\PlayerPoints;
-use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerPromoter;
 use addons\webman\model\PlayerRechargeRecord;
@@ -75,7 +73,6 @@ use ExAdmin\ui\support\Container;
 use ExAdmin\ui\support\Request;
 use Exception;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use support\Cache;
 use support\Db;
 use support\Log;
@@ -6489,7 +6486,9 @@ class ChannelPlayerController
             $todayEnd   = date('Y-m-d', strtotime('+1 day', $statDateTs)) . ' 08:00:00';
 
             // 今日 machine：PlayerGameLog.chip_amount 時間範圍（與 API 一致）
-            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::where('player_id', $playerId)
+            // withoutGlobalScope('dataAuth')：查特定 player_id 時不需要 department 過濾
+            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::withoutGlobalScope('dataAuth')
+                ->where('player_id', $playerId)
                 ->where('created_at', '>=', $todayStart)
                 ->where('created_at', '<',  $todayEnd)
                 ->sum('chip_amount');
@@ -6500,7 +6499,8 @@ class ChannelPlayerController
                 ->where('stat_date', $todayStatDate)->first();
             $todayGameAmount = $todayGameStat
                 ? floatval($todayGameStat->bet_amount)
-                : (float) \addons\webman\model\PlayGameRecord::where('player_id', $playerId)
+                : (float) \addons\webman\model\PlayGameRecord::withoutGlobalScope('dataAuth')
+                    ->where('player_id', $playerId)
                     ->where('created_at', '>=', $todayStart)
                     ->where('created_at', '<',  $todayEnd)
                     ->sum('bet');

@@ -3,28 +3,27 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\grid\Driver\AlreadyPaginated;
 use addons\webman\model\Channel;
 use addons\webman\model\LevelList;
 use addons\webman\model\Player;
+use addons\webman\model\PlayerBetStatistics;
 use addons\webman\model\PlayerDeliveryRecord;
-use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerExtend;
 use addons\webman\model\PlayerIdCardBlacklist;
 use addons\webman\model\PlayerLotteryRecord;
+use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
 use addons\webman\model\PlayerRegisterRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\StoreAgentShiftHandoverRecord;
 use addons\webman\model\VipLevel;
-use addons\webman\model\PlayerBetStatistics;
 use addons\webman\service\WalletService;
-use addons\webman\grid\Driver\AlreadyPaginated;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\form\Watch;
 use ExAdmin\ui\component\grid\avatar\Avatar;
-use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\tag\Tag;
@@ -1325,7 +1324,9 @@ class StorePlayerController
             $todayEnd   = date('Y-m-d', strtotime('+1 day', $statDateTs)) . ' 08:00:00';
 
             // 今日 machine：PlayerGameLog.chip_amount 時間範圍（與 API 一致）
-            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::where('player_id', $playerId)
+            // withoutGlobalScope('dataAuth')：查特定 player_id 時不需要 department 過濾
+            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::withoutGlobalScope('dataAuth')
+                ->where('player_id', $playerId)
                 ->where('created_at', '>=', $todayStart)
                 ->where('created_at', '<',  $todayEnd)
                 ->sum('chip_amount');
@@ -1336,7 +1337,8 @@ class StorePlayerController
                 ->where('stat_date', $todayStatDate)->first();
             $todayGameAmount = $todayGameStat
                 ? floatval($todayGameStat->bet_amount)
-                : (float) \addons\webman\model\PlayGameRecord::where('player_id', $playerId)
+                : (float) \addons\webman\model\PlayGameRecord::withoutGlobalScope('dataAuth')
+                    ->where('player_id', $playerId)
                     ->where('created_at', '>=', $todayStart)
                     ->where('created_at', '<',  $todayEnd)
                     ->sum('bet');
