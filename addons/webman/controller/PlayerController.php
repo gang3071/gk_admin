@@ -4179,105 +4179,111 @@ class PlayerController
     public function getBetStatisticsData(int $playerId): \support\Response
     {
         try {
-            $redis = \support\Redis::connection('default')->client();
-
             // 以每天 08:00 為業務日分界點（與 API 券領取邏輯一致）
             $now = time();
             $today8am = strtotime(date('Y-m-d') . ' 08:00:00');
             $isAfter8am = $now >= $today8am;
             $todayStatDate = $isAfter8am ? date('Y-m-d') : date('Y-m-d', strtotime('-1 day'));
+            $statDateTs    = strtotime($todayStatDate);
 
-            $thisWeek = date('o-\WW');
-            $thisMonth = date('Y-m');
-
-            // ✅ 从 Redis 读取实时数据
-            // Redis key 格式: gk_work:player_bet_stats:{player_id}:{stat_type}:{dimension}:{stat_date}
-
-            // 今日数据（以08:00为分界的业务日）
-            $todayMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:daily:{$todayStatDate}";
-            $todayGameKey = "gk_work:player_bet_stats:{$playerId}:game:daily:{$todayStatDate}";
-            $todayMachineData = $redis->hGetAll($todayMachineKey);
-            $todayGameData = $redis->hGetAll($todayGameKey);
-
-            // 本周数据
-            $weekMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:weekly:{$thisWeek}";
-            $weekGameKey = "gk_work:player_bet_stats:{$playerId}:game:weekly:{$thisWeek}";
-            $weekMachineData = $redis->hGetAll($weekMachineKey);
-            $weekGameData = $redis->hGetAll($weekGameKey);
-
-            // 本月数据
-            $monthMachineKey = "gk_work:player_bet_stats:{$playerId}:machine:monthly:{$thisMonth}";
-            $monthGameKey = "gk_work:player_bet_stats:{$playerId}:game:monthly:{$thisMonth}";
-            $monthMachineData = $redis->hGetAll($monthMachineKey);
-            $monthGameData = $redis->hGetAll($monthGameKey);
-
-            // ✅ Redis 存储的是"分"（精度设计），需要除以100转为"元"显示
-            $todayMachineAmount = isset($todayMachineData['bet_amount']) ? floatval($todayMachineData['bet_amount']) / 100 : 0;
-            $todayGameAmount = isset($todayGameData['bet_amount']) ? floatval($todayGameData['bet_amount']) / 100 : 0;
-            $weekMachineAmount = isset($weekMachineData['bet_amount']) ? floatval($weekMachineData['bet_amount']) / 100 : 0;
-            $weekGameAmount = isset($weekGameData['bet_amount']) ? floatval($weekGameData['bet_amount']) / 100 : 0;
-            $monthMachineAmount = isset($monthMachineData['bet_amount']) ? floatval($monthMachineData['bet_amount']) / 100 : 0;
-            $monthGameAmount = isset($monthGameData['bet_amount']) ? floatval($monthGameData['bet_amount']) / 100 : 0;
-
-            // ✅ 获取最近15天每日打码量（用于曲线图）
-            // 策略：今日从Redis，历史从数据库
-            $dailyTrend = [
-                'dates' => [],
-                'machine' => [],
-                'game' => [],
-            ];
-
-            // 准备日期列表（以业务日为基准）
-            $last15Days = [];
-            for ($i = 14; $i >= 0; $i--) {
-                $last15Days[] = date('Y-m-d', strtotime("-{$i} days", strtotime($todayStatDate)));
+            // 30s 快取，避免前端輪詢頻繁打 DB
+            $cacheKey = "bet_stats_admin_player_{$playerId}_{$todayStatDate}";
+            $cached   = \support\Cache::get($cacheKey);
+            if ($cached !== null) {
+                return jsonSuccessResponse('', $cached);
             }
 
-            // 从数据库批量查询历史数据（排除今日业务日）
-            $historyDates = array_filter($last15Days, fn($date) => $date !== $todayStatDate);
-            $historyData = $this->playerBetStatistics::where('player_id', $playerId)
-                ->where('dimension', 'daily')
-                ->whereIn('stat_date', $historyDates)
-                ->get()
-                ->keyBy(function($item) {
-                    return $item->stat_date . '_' . $item->stat_type;
-                });
+            // 今日業務日時間範圍
+            $todayStart = $todayStatDate . ' 08:00:00';
+            $todayEnd   = date('Y-m-d', strtotime('+1 day', $statDateTs)) . ' 08:00:00';
 
-            // 构建曲线图数据
+            // 今日 machine：PlayerGameLog.chip_amount 時間範圍（與 API 一致）
+            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::where('player_id', $playerId)
+                ->where('created_at', '>=', $todayStart)
+                ->where('created_at', '<',  $todayEnd)
+                ->sum('chip_amount');
+
+            // 今日 game：先查 PlayerBetStatistics daily，fallback PlayGameRecord（與 API 一致）
+            $todayGameStat   = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('stat_type', 'game')->where('dimension', 'daily')
+                ->where('stat_date', $todayStatDate)->first();
+            $todayGameAmount = $todayGameStat
+                ? floatval($todayGameStat->bet_amount)
+                : (float) \addons\webman\model\PlayGameRecord::where('player_id', $playerId)
+                    ->where('created_at', '>=', $todayStart)
+                    ->where('created_at', '<',  $todayEnd)
+                    ->sum('bet');
+
+            // 本週：ISO 週內各業務日 daily 記錄加總 + 今日即時數據
+            $dayOfWeek        = (int) date('N', $statDateTs); // 1=Mon ... 7=Sun
+            $weekMonday       = date('Y-m-d', strtotime('-' . ($dayOfWeek - 1) . ' days', $statDateTs));
+            $weekDates        = [];
+            for ($i = 0; $i < 7; $i++) {
+                $weekDates[] = date('Y-m-d', strtotime("+{$i} days", strtotime($weekMonday)));
+            }
+            $weekHistoryDates = array_values(array_diff($weekDates, [$todayStatDate]));
+            $weekHistory      = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')->whereIn('stat_date', $weekHistoryDates)
+                ->selectRaw('stat_type, SUM(bet_amount) as total')->groupBy('stat_type')
+                ->pluck('total', 'stat_type');
+            $weekMachineAmount = (float)($weekHistory['machine'] ?? 0) + $todayMachineAmount;
+            $weekGameAmount    = (float)($weekHistory['game']    ?? 0) + $todayGameAmount;
+
+            // 本月：當前業務月第一天至今日前的 daily 記錄加總 + 今日即時數據
+            $monthStart   = date('Y-m-01', $statDateTs);
+            $monthHistory = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')
+                ->where('stat_date', '>=', $monthStart)
+                ->where('stat_date', '<',  $todayStatDate)
+                ->selectRaw('stat_type, SUM(bet_amount) as total')->groupBy('stat_type')
+                ->pluck('total', 'stat_type');
+            $monthMachineAmount = (float)($monthHistory['machine'] ?? 0) + $todayMachineAmount;
+            $monthGameAmount    = (float)($monthHistory['game']    ?? 0) + $todayGameAmount;
+
+            // 15天折線圖：今日用 DB 即時查詢，歷史從 player_bet_statistics 表讀取
+            $dailyTrend = ['dates' => [], 'machine' => [], 'game' => []];
+
+            $last15Days = [];
+            for ($i = 14; $i >= 0; $i--) {
+                $last15Days[] = date('Y-m-d', strtotime("-{$i} days", $statDateTs));
+            }
+
+            $historyDates = array_values(array_filter($last15Days, fn($date) => $date !== $todayStatDate));
+            $historyData  = $this->playerBetStatistics::where('player_id', $playerId)
+                ->where('dimension', 'daily')->whereIn('stat_date', $historyDates)
+                ->get()->keyBy(fn($item) => $item->stat_date . '_' . $item->stat_type);
+
             foreach ($last15Days as $date) {
                 $dailyTrend['dates'][] = date('m-d', strtotime($date));
-
                 if ($date === $todayStatDate) {
-                    // ✅ 今日数据从 Redis 读取（实时）
                     $dailyTrend['machine'][] = $todayMachineAmount;
-                    $dailyTrend['game'][] = $todayGameAmount;
+                    $dailyTrend['game'][]    = $todayGameAmount;
                 } else {
-                    // ✅ 历史数据从数据库读取
-                    $machineKey = $date . '_machine';
-                    $gameKey = $date . '_game';
-                    $dailyTrend['machine'][] = isset($historyData[$machineKey]) ? floatval($historyData[$machineKey]->bet_amount) : 0;
-                    $dailyTrend['game'][] = isset($historyData[$gameKey]) ? floatval($historyData[$gameKey]->bet_amount) : 0;
+                    $dailyTrend['machine'][] = isset($historyData[$date . '_machine']) ? floatval($historyData[$date . '_machine']->bet_amount) : 0;
+                    $dailyTrend['game'][]    = isset($historyData[$date . '_game'])    ? floatval($historyData[$date . '_game']->bet_amount)    : 0;
                 }
             }
 
-            return jsonSuccessResponse('', [
+            $result = [
                 'today' => [
                     'machine' => $todayMachineAmount,
-                    'game' => $todayGameAmount,
-                    'total' => $todayMachineAmount + $todayGameAmount,
+                    'game'    => $todayGameAmount,
+                    'total'   => $todayMachineAmount + $todayGameAmount,
                 ],
                 'week' => [
                     'machine' => $weekMachineAmount,
-                    'game' => $weekGameAmount,
-                    'total' => $weekMachineAmount + $weekGameAmount,
+                    'game'    => $weekGameAmount,
+                    'total'   => $weekMachineAmount + $weekGameAmount,
                 ],
                 'month' => [
                     'machine' => $monthMachineAmount,
-                    'game' => $monthGameAmount,
-                    'total' => $monthMachineAmount + $monthGameAmount,
+                    'game'    => $monthGameAmount,
+                    'total'   => $monthMachineAmount + $monthGameAmount,
                 ],
                 'dailyTrend' => $dailyTrend,
-            ]);
+            ];
+            \support\Cache::set($cacheKey, $result, 30);
+            return jsonSuccessResponse('', $result);
         } catch (\Exception $e) {
             return jsonFailResponse($e->getMessage());
         }
