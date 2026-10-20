@@ -482,18 +482,25 @@ class VipService
 
         // ---------- 保级成功：经验不扣，结转进新周期；窗口重新开始 ----------
         if ($windowBetAmount >= $currentLevel->retain_level_bet_amount) {
-            $period->status = PlayerVipPeriod::STATUS_COMPLETED;
-            $period->save();
+            $carriedExperience = (float)$period->period_bet_amount;
 
-            // 升级经验原样结转；$currentBetAmount = 0 → 新窗口从 0 起
-            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount, 0);
+            // ⚠️ 关旧周期 + 开新周期必须同事务：
+            //    否则 create 失败会留下「旧周期已 COMPLETED、新周期没建」的断裂状态，
+            //    下一次 handleBet 走兜底补建就只会把当笔算进经验，全额结转就丢了
+            Db::transaction(function () use ($period, $player, $currentLevel, $carriedExperience) {
+                $period->status = PlayerVipPeriod::STATUS_COMPLETED;
+                $period->save();
+
+                // 升级经验原样结转；$currentBetAmount = 0 → 新窗口从 0 起
+                static::createRetainPeriod($player, $currentLevel, $carriedExperience, 0);
+            });
 
             static::log('info', 'VIP retain success', [
                 'player_id' => $player->id,
                 'level_id' => $currentLevel->id,
                 'window_bet_amount' => $windowBetAmount,
                 'retain_level_bet_amount' => $currentLevel->retain_level_bet_amount,
-                'carried_experience' => $period->period_bet_amount,
+                'carried_experience' => $carriedExperience,
             ]);
             return;
         }
@@ -503,10 +510,14 @@ class VipService
 
         // 已是最低级：不降级、不清经验，经验继续累计，窗口重新开始
         if (!$prevLevel) {
-            $period->status = PlayerVipPeriod::STATUS_EXPIRED;
-            $period->save();
+            $carriedExperience = (float)$period->period_bet_amount;
 
-            static::createRetainPeriod($player, $currentLevel, $period->period_bet_amount, 0);
+            Db::transaction(function () use ($period, $player, $currentLevel, $carriedExperience) {
+                $period->status = PlayerVipPeriod::STATUS_EXPIRED;
+                $period->save();
+
+                static::createRetainPeriod($player, $currentLevel, $carriedExperience, 0);
+            });
 
             static::log('info', 'VIP retain failed at min level, no downgrade', [
                 'player_id' => $player->id,
@@ -589,6 +600,9 @@ class VipService
         ?float $carryOverExperience = null,
         ?float $currentBetAmount = null
     ){
+        $carryOverExperience = max(0, (float)($carryOverExperience ?? 0));
+        $currentBetAmount = max(0, (float)($currentBetAmount ?? 0));
+
         // 检查是否已存在相同 vip_level_id 的活跃记录，避免重复创建
         $existingPeriod = PlayerVipPeriod::query()
             ->where('player_id', $player->id)
@@ -598,16 +612,30 @@ class VipService
             ->first();
 
         if ($existingPeriod) {
-            static::log('info', 'VIP retain period already exists, skip creation', [
-                'player_id' => $player->id,
-                'vip_level_id' => $level->id,
-                'existing_period_id' => $existingPeriod->id,
-            ]);
+            // ⚠️ 不可直接返回：那样会把传入的结转经验静默丢掉，
+            //    表现就是「保级/升级后新周期经验只有一部分」。
+            //    这里把结转经验并进已有周期（取较大值，避免重复累加）。
+            $merged = max(
+                (float)$existingPeriod->period_bet_amount,
+                $carryOverExperience + $currentBetAmount
+            );
+
+            if ($merged > (float)$existingPeriod->period_bet_amount) {
+                $existingPeriod->period_bet_amount = $merged;
+                $existingPeriod->save();
+
+                static::log('warning', 'VIP 周期已存在，结转经验已并入', [
+                    'player_id' => $player->id,
+                    'vip_level_id' => $level->id,
+                    'existing_period_id' => $existingPeriod->id,
+                    'carry_over' => $carryOverExperience,
+                    'current_bet' => $currentBetAmount,
+                    'merged_experience' => $merged,
+                ]);
+            }
+
             return $existingPeriod;
         }
-
-        $carryOverExperience = max(0, (float)($carryOverExperience ?? 0));
-        $currentBetAmount = max(0, (float)($currentBetAmount ?? 0));
 
         return PlayerVipPeriod::query()->create([
             'player_id' => $player->id,
