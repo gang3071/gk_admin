@@ -108,7 +108,7 @@ class StorePlayerController
             // 爆机状态筛选
             if (isset($requestFilter['is_crashed']) && $requestFilter['is_crashed'] !== '') {
                 $crashedPlayerIds = PlayerPlatformCash::query()
-                    ->where('platform', PlayerPlatformCash::PLATFORM_SELF)
+                    ->where('platform_id', PlayerPlatformCash::PLATFORM_SELF)
                     ->where('is_crashed', intval($requestFilter['is_crashed']))
                     ->pluck('player_id')
                     ->toArray();
