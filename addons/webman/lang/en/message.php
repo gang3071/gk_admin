@@ -338,6 +338,7 @@ return [
         'vip_daily_login_bonus' => 'VIP Daily Login Bonus',
         'storage_recharge' => 'Recharge Machine Top-up',
         'machine_open_failed_refund' => 'Machine Open Score Failed - Refund',
+        'retry_refund' => 'Partial Open Failure Refund',
     ],
     'source' => [
         'system' => 'system',

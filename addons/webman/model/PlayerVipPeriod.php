@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int player_id 玩家ID
  * @property int vip_level_id VIP等级ID
  * @property string period_type 周期类型
- * @property float start_bet_amount 周期开始时的总打码量
- * @property float period_bet_amount 周期内打码量总和
+ * @property float start_bet_amount 保级窗口开始时的总打码量
+ * @property float period_bet_amount 升级经验（跨保级窗口结转，升级/降级才清）
  * @property string started_at 周期开始时间
  * @property int status 状态
  * @property string created_at 创建时间
@@ -65,11 +65,16 @@ class PlayerVipPeriod extends Model
     }
 
     /**
-     * 获取周期内打码量
+     * 本保级窗口内新增打码量
+     *
+     * ⚠️ 与 $period_bet_amount（升级经验）是两个独立概念：
+     * - 本方法：窗口内新增打码量，每次重建周期都会重置，用于保级判定
+     * - $period_bet_amount：升级经验，跨保级窗口结转，用于升级判定
+     *
      * @param float $currentTotalBetAmount 当前总打码量
      * @return float
      */
-    public function getPeriodBetAmount(float $currentTotalBetAmount): float
+    public function getRetainWindowBetAmount(float $currentTotalBetAmount): float
     {
         return max(0, $currentTotalBetAmount - $this->start_bet_amount);
     }
