@@ -3,7 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\model\GameType;
-use addons\webman\model\MachineReport;
+use addons\webman\model\PlayerGameLog;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -26,7 +26,7 @@ class MachineReportController
 
     public function __construct()
     {
-        $this->model = plugin()->webman->config('database.machine_report_model');
+        $this->model = plugin()->webman->config('database.player_game_log_model');
     }
 
     /**
@@ -38,20 +38,20 @@ class MachineReportController
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $exAdminFilter = Request::input('ex_admin_filter', []);
-        $machineReport = MachineReport::with(['machine', 'machine.producer', 'machine.machineLabel']);
+        $machineReport = PlayerGameLog::with(['machine', 'machine.producer', 'machine.machineLabel']);
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
         if (!empty($exAdminFilter)) {
             if (!empty($exAdminFilter['date_start'])) {
-                $machineReport->where('date', '>=', $exAdminFilter['date_start']);
+                $machineReport->whereDate('created_at', '>=', $exAdminFilter['date_start']);
             }
             if (!empty($exAdminFilter['date_end'])) {
-                $machineReport->where('date', '<=', $exAdminFilter['date_end']);
+                $machineReport->whereDate('created_at', '<=', $exAdminFilter['date_end']);
             }
             if (!empty($exAdminFilter['department_id'])) {
                 $machineReport->where('department_id', $exAdminFilter['department_id']);
             }
-            if (!empty($exAdminFilter['is_test'])) {    //筛选测试数据
+            if (!empty($exAdminFilter['is_test'])) {
                 $machineReport->where('is_test', '=', $exAdminFilter['is_test']);
             }
             if (!empty($exAdminFilter['machine'])) {
@@ -75,23 +75,23 @@ class MachineReportController
         }
         $machineReport = $machineReport->selectRaw('
                         machine_id,
-                        sum(open_amount) as open_amount,
-                        sum(wash_amount) as wash_amount,
-                        sum(total_amount) as total_amount,
-                        sum(open_point) as open_point,
-                        sum(wash_point) as wash_point,
-                        sum(total_point) as total_point,
-                        sum(pressure) as total_pressure,
-                        sum(score) as total_score,
-                        sum(pressure - score) as total_diff,
-                        sum(turn_point) as total_turn_point,
-                        sum(lottery_amount) as lottery_amount,
-                        sum(activity_amount) as activity_amount,
-                        sum(open_amount-wash_amount-lottery_amount-activity_amount) as machine_total_point,
+                        SUM(CASE WHEN action = 1 THEN ABS(game_amount) ELSE 0 END) as open_amount,
+                        SUM(CASE WHEN action = 3 THEN ABS(game_amount) ELSE 0 END) as wash_amount,
+                        SUM(CASE WHEN action = 3 THEN ABS(game_amount) WHEN action = 1 THEN -ABS(game_amount) ELSE 0 END) as total_amount,
+                        SUM(open_point) as open_point,
+                        SUM(wash_point) as wash_point,
+                        SUM(open_point - wash_point) as total_point,
+                        SUM(pressure) as total_pressure,
+                        SUM(score) as total_score,
+                        SUM(pressure - score) as total_diff,
+                        SUM(turn_point) as total_turn_point,
+                        0 as lottery_amount,
+                        0 as activity_amount,
+                        SUM(CASE WHEN action = 1 THEN ABS(game_amount) ELSE 0 END) - SUM(CASE WHEN action = 3 THEN ABS(game_amount) ELSE 0 END) as machine_total_point,
                         odds');
         $where = [];
         if (isset($exAdminFilter['date_type'])) {
-            $where = getWhereDate($exAdminFilter['date_type'], 'date');
+            $where = getWhereDate($exAdminFilter['date_type'], 'created_at');
         }
         $machineReport->where($where);
         $totalNum = clone $machineReport;
