@@ -9,7 +9,7 @@ use Workerman\Crontab\Crontab;
 /**
  * 排行榜：週榜（即時刷新當期 + 定案已結束的期；只算，不發錢）
  *
- * 每 30 分鐘刷新「本週進行中」的名次，並定案已結束的週
+ * 每 1 分鐘刷新「本週進行中」的名次，並定案已結束的週（測試用，上線前改回 30 分鐘）
  * 期區間：本週一 08:00 ~ 下週一 08:00
  */
 class LeaderboardSettleWeeklyTask
@@ -24,12 +24,12 @@ class LeaderboardSettleWeeklyTask
         $this->log = Log::channel('leaderboard');
 
         $this->log->info('LeaderboardSettleWeeklyTask 進程已啟動', [
-            'schedule' => '每 30 分鐘',
+            'schedule' => '每 1 分鐘',
             'pid' => getmypid(),
         ]);
 
-        // Cron：秒 分 時 日 月 週（每 30 分鐘）
-        new Crontab('0 */30 * * * *', function () {
+        // Cron：秒 分 時 日 月 週（每 1 分鐘，測試用）
+        new Crontab('0 * * * * *', function () {
             $this->doWork();
         });
     }
