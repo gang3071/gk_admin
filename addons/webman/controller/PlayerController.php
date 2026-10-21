@@ -4,8 +4,8 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Activity;
-use addons\webman\model\AdminUser;
 use addons\webman\model\ActivityContent;
+use addons\webman\model\AdminUser;
 use addons\webman\model\Channel;
 use addons\webman\model\ChannelFinancialRecord;
 use addons\webman\model\ChannelRechargeMethod;
@@ -31,8 +31,6 @@ use addons\webman\model\PlayerGameRecord;
 use addons\webman\model\PlayerLotteryRecord;
 use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\PlayerPlatformCash;
-use addons\webman\model\PlayerPoints;
-use addons\webman\model\PlayerPointsRecord;
 use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerPromoter;
 use addons\webman\model\PlayerRechargeRecord;
@@ -41,10 +39,10 @@ use addons\webman\model\PlayerTag;
 use addons\webman\model\PlayerWashRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
-use addons\webman\model\VipLevel;
 use addons\webman\model\PromoterProfitGameRecord;
 use addons\webman\model\PromoterProfitRecord;
 use addons\webman\model\SystemSetting;
+use addons\webman\model\VipLevel;
 use addons\webman\service\WalletService;
 use app\exception\GameException;
 use ExAdmin\ui\component\common\Button;
@@ -4198,7 +4196,10 @@ class PlayerController
             $todayEnd   = date('Y-m-d', strtotime('+1 day', $statDateTs)) . ' 08:00:00';
 
             // 今日 machine：PlayerGameLog.chip_amount 時間範圍（與 API 一致）
-            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::where('player_id', $playerId)
+            // withoutGlobalScope('dataAuth')：查特定 player_id 時不需要 department 過濾，
+            // 否則管理員的資料權限 scope 會導致跨渠道玩家的打碼量顯示為 0
+            $todayMachineAmount = (float) \addons\webman\model\PlayerGameLog::withoutGlobalScope('dataAuth')
+                ->where('player_id', $playerId)
                 ->where('created_at', '>=', $todayStart)
                 ->where('created_at', '<',  $todayEnd)
                 ->sum('chip_amount');
@@ -4209,7 +4210,8 @@ class PlayerController
                 ->where('stat_date', $todayStatDate)->first();
             $todayGameAmount = $todayGameStat
                 ? floatval($todayGameStat->bet_amount)
-                : (float) \addons\webman\model\PlayGameRecord::where('player_id', $playerId)
+                : (float) \addons\webman\model\PlayGameRecord::withoutGlobalScope('dataAuth')
+                    ->where('player_id', $playerId)
                     ->where('created_at', '>=', $todayStart)
                     ->where('created_at', '<',  $todayEnd)
                     ->sum('bet');

@@ -941,6 +941,18 @@ class ShiftReportExporter extends Excel
     }
 
     /**
+     * 锁定所有工作表（不设密码，仅防误改）
+     * 导出后在 Excel/WPS 中默认只读，需手动「撤销工作表保护」才能编辑
+     */
+    protected function lockSheets(): void
+    {
+        foreach ($this->spreadsheet->getAllSheets() as $sheet) {
+            // 单元格默认 locked=true，启用保护后整表不可编辑
+            $sheet->getProtection()->setSheet(true);
+        }
+    }
+
+    /**
      * 保存文件
      * @param string $path 保存目录
      * @return string|bool
@@ -951,6 +963,9 @@ class ShiftReportExporter extends Excel
         if (!is_dir($path)) {
             mkdir($path, 0755, true);
         }
+
+        // 锁定所有工作表（含明细主表和机台报表）
+        $this->lockSheets();
 
         return parent::save($path);
     }
