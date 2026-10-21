@@ -228,7 +228,7 @@ class StoreLeaderboardController
             $grid->model()->orderBy('rank', 'asc');
 
             $grid->expandFilter();
-            $grid->filter(function (Filter $filter) use ($stores) {
+            $grid->filter(function (Filter $filter) {
                 $filter->like()->text('player.name')->placeholder(admin_trans('leaderboard_entry.fields.player_id'));
                 $filter->eq()->select('grant_status')
                     ->showSearch()
