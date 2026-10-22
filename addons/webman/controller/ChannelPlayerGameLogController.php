@@ -221,11 +221,14 @@ class ChannelPlayerGameLogController
                 })->align('center');
             }, admin_trans('player_game_log.machine_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function ($val
+                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function (
+                    $val,
+                    PlayerGameLog $data
                 ) {
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -$val : $val;
                     return Html::create()->content([
-                        $val > 0 ? '+' . $val : $val,
-                    ])->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
+                        $displayVal > 0 ? '+' . $displayVal : $displayVal,
+                    ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
                 })->align('center');
                 $grid->column('before_game_amount',
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');
@@ -496,11 +499,14 @@ class ChannelPlayerGameLogController
                 $grid->column('odds', admin_trans('player_game_log.fields.odds'))->align('center');
             }, admin_trans('player_game_log.machine_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function ($val
+                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function (
+                    $val,
+                    PlayerGameLog $data
                 ) {
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -$val : $val;
                     return Html::create()->content([
-                        $val > 0 ? '+' . $val : $val,
-                    ])->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
+                        $displayVal > 0 ? '+' . $displayVal : $displayVal,
+                    ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
                 })->align('center');
                 $grid->column('before_game_amount',
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');
