@@ -61,8 +61,9 @@ class AgentGameVendorReportController
             ->toArray();
 
         $platformOptions = $this->platformOptions($platformModel);
+        $storeOptions    = $this->storeOptions();
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions, $exAdminFilter) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions, $storeOptions, $exAdminFilter) {
             $grid->title(admin_trans('game_vendor_report.title'));
 
             // 厂商数据统计面板（点击展开，随搜索条件实时刷新）
@@ -135,7 +136,7 @@ class AgentGameVendorReportController
                 ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
-            $grid->filter(function (Filter $filter) use ($platformOptions) {
+            $grid->filter(function (Filter $filter) use ($platformOptions, $storeOptions) {
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
                     ->showSearch()
@@ -161,6 +162,12 @@ class AgentGameVendorReportController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options($platformOptions);
+                $filter->eq()->select('store_id')
+                    ->placeholder(admin_trans('game_vendor_report.store'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($storeOptions);
             });
 
             $grid->attr('is_mongo', true);
@@ -205,6 +212,11 @@ class AgentGameVendorReportController
             }
             if (!empty($exAdminFilter['platform_id'])) {
                 $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
+            }
+            if (!empty($exAdminFilter['store_id'])) {
+                $query->whereIn("$pgr.player_id", Player::query()
+                    ->where('store_admin_id', $exAdminFilter['store_id'])
+                    ->select('id'));
             }
         }
 
@@ -281,6 +293,28 @@ class AgentGameVendorReportController
         ];
 
         return json(['code' => 200, 'data' => $data]);
+    }
+
+    /**
+     * 店家选项（代理后台：下级店家）
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        /** @var AdminUser $admin */
+        $admin = Admin::user();
+
+        return AdminUser::query()
+            ->whereIn('id', $admin->childStores()->where('type', AdminUser::TYPE_STORE)->pluck('id'))
+            ->where('status', 1)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 
     protected function platformOptions(string $platformModel): array

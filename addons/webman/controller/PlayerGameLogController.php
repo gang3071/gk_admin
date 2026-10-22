@@ -674,7 +674,7 @@ class PlayerGameLogController
     {
         $exAdminFilter = Request::input('ex_admin_filter', []);
 
-        $query = $this->model->newQuery();
+        $query = (new $this->model)->newQuery();
         $this->applySearchFilter($query, $exAdminFilter);
 
         $totalData = $query->selectRaw("

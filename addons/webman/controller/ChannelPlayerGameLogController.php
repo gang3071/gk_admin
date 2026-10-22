@@ -443,7 +443,7 @@ class ChannelPlayerGameLogController
     {
         $exAdminFilter = Request::input('ex_admin_filter', []);
 
-        $query = $this->model->newQuery();
+        $query = (new $this->model)->newQuery();
         $this->applyQueryConditions($query, $exAdminFilter);
 
         $totalData = $query->selectRaw("

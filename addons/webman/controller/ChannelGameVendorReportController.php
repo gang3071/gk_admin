@@ -3,7 +3,9 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\model\AdminUser;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\model\Player;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
 use ExAdmin\ui\component\grid\grid\Actions;
@@ -59,8 +61,9 @@ class ChannelGameVendorReportController
             ->toArray();
 
         $platformOptions = $this->platformOptions($platformModel);
+        $storeOptions    = $this->storeOptions();
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions, $exAdminFilter) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions, $storeOptions, $exAdminFilter) {
             $grid->title(admin_trans('game_vendor_report.title'));
 
             // 厂商数据统计面板（点击展开，随搜索条件实时刷新）
@@ -134,7 +137,7 @@ class ChannelGameVendorReportController
                 ->display(fn($val) => number_format(floatval($val), 2))
                 ->align('right')->sortable();
 
-            $grid->filter(function (Filter $filter) use ($platformOptions) {
+            $grid->filter(function (Filter $filter) use ($platformOptions, $storeOptions) {
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
                     ->showSearch()
@@ -160,6 +163,12 @@ class ChannelGameVendorReportController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->options($platformOptions);
+                $filter->eq()->select('store_id')
+                    ->placeholder(admin_trans('game_vendor_report.store'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($storeOptions);
             });
 
             $grid->attr('is_mongo', true);
@@ -200,6 +209,11 @@ class ChannelGameVendorReportController
             }
             if (!empty($exAdminFilter['platform_id'])) {
                 $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
+            }
+            if (!empty($exAdminFilter['store_id'])) {
+                $query->whereIn("$pgr.player_id", Player::query()
+                    ->where('store_admin_id', $exAdminFilter['store_id'])
+                    ->select('id'));
             }
         }
 
@@ -276,6 +290,26 @@ class ChannelGameVendorReportController
         ];
 
         return json(['code' => 200, 'data' => $data]);
+    }
+
+    /**
+     * 店家选项（渠道后台：本渠道的店家）
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        return AdminUser::query()
+            ->where('department_id', Admin::user()->department_id)
+            ->where('type', AdminUser::TYPE_STORE)
+            ->where('status', 1)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 
     protected function platformOptions(string $platformModel): array

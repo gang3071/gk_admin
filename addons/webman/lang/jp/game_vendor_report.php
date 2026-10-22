@@ -14,6 +14,7 @@ return [
     'reset'          => 'リセット',
     'cate_name'               => 'ゲームカテゴリ',
     'platform'                => 'ベンダープラットフォーム',
+    'store'                   => '所属店舗',
     'total_win'               => '総獲得スコア',
     'player_win_loss_tip'     => 'プラス：胴元利益（プレイヤー負け）；マイナス：胴元損失（プレイヤー勝ち）',
     'stats' => [
