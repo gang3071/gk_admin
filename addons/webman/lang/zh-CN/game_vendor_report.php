@@ -16,4 +16,13 @@ return [
     'platform'                => '厂商平台',
     'total_win'               => '总赢分',
     'player_win_loss_tip'     => '正数：庄家赢（玩家输）；负数：庄家亏（玩家赢）',
+    'stats' => [
+        'panel_header'    => '查看统计数据',
+        'loading'         => '数据加载中...',
+        'refresh'         => '刷新数据',
+        'load_error'      => '数据加载失败',
+        'retry'           => '重试',
+        'click_to_view'   => '点击展开查看统计数据',
+        'load_failed_msg' => '数据加载失败，请重试',
+    ],
 ];

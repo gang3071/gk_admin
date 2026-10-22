@@ -9,6 +9,8 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\ToolTip;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -33,25 +35,7 @@ class AdminGameVendorReportController
         $pgr           = (new $modelClass)->getTable();
         $gp            = (new $platformModel)->getTable();
 
-        $query = (new $modelClass)->newQuery()
-            ->join($gp, "$gp.id", '=', "$pgr.platform_id")
-            ->whereNull("$gp.deleted_at")
-            ->whereIn("$pgr.type", [PlayGameRecord::TYPE_BET, PlayGameRecord::TYPE_GIFT]);
-
-        if (!empty($exAdminFilter)) {
-            if (!empty($exAdminFilter['start_date'])) {
-                $query->where("$pgr.created_at", '>=', $exAdminFilter['start_date']);
-            }
-            if (!empty($exAdminFilter['end_date'])) {
-                $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
-            }
-            if (!empty($exAdminFilter['date_type'])) {
-                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
-            }
-            if (!empty($exAdminFilter['platform_id'])) {
-                $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
-            }
-        }
+        $query = $this->buildBaseQuery($exAdminFilter);
 
         $total = (clone $query)
             ->selectRaw("$pgr.platform_id, $gp.cate_id")
@@ -75,8 +59,29 @@ class AdminGameVendorReportController
 
         $platformOptions = $this->platformOptions($platformModel);
 
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions, $exAdminFilter) {
             $grid->title(admin_trans('game_vendor_report.title'));
+
+            // 厂商数据统计面板（点击展开，随搜索条件实时刷新）
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($exAdminFilter) {
+                $row->gutter([10, 0]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/game_vendor_total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'api_url' => 'ex-admin/addons-webman-controller-AdminGameVendorReportController/totalInfo',
+                    'trans' => [
+                        'panelHeader' => admin_trans('game_vendor_report.stats.panel_header'),
+                        'loading' => admin_trans('game_vendor_report.stats.loading'),
+                        'refresh' => admin_trans('game_vendor_report.stats.refresh'),
+                        'loadError' => admin_trans('game_vendor_report.stats.load_error'),
+                        'retry' => admin_trans('game_vendor_report.stats.retry'),
+                        'clickToView' => admin_trans('game_vendor_report.stats.click_to_view'),
+                        'loadFailedMsg' => admin_trans('game_vendor_report.stats.load_failed_msg'),
+                    ],
+                ]));
+            })->style(['background' => '#fff']);
+            $grid->header($layout);
+
             $grid->bordered(true);
             $grid->autoHeight();
             $grid->driver()->setPk('platform_id');
@@ -158,6 +163,113 @@ class AdminGameVendorReportController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
         });
+    }
+
+    /**
+     * 按搜索条件构建厂商数据基础查询（列表与统计共用）
+     * @param array $exAdminFilter
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function buildBaseQuery(array $exAdminFilter)
+    {
+        $modelClass    = plugin()->webman->config('database.play_game_record_model');
+        $platformModel = plugin()->webman->config('database.game_platform_model');
+        $pgr           = (new $modelClass)->getTable();
+        $gp            = (new $platformModel)->getTable();
+
+        $query = (new $modelClass)->newQuery()
+            ->join($gp, "$gp.id", '=', "$pgr.platform_id")
+            ->whereNull("$gp.deleted_at")
+            ->whereIn("$pgr.type", [PlayGameRecord::TYPE_BET, PlayGameRecord::TYPE_GIFT]);
+
+        if (!empty($exAdminFilter)) {
+            if (!empty($exAdminFilter['start_date'])) {
+                $query->where("$pgr.created_at", '>=', $exAdminFilter['start_date']);
+            }
+            if (!empty($exAdminFilter['end_date'])) {
+                $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
+            }
+            if (!empty($exAdminFilter['date_type'])) {
+                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
+            }
+            if (!empty($exAdminFilter['platform_id'])) {
+                $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * 厂商数据统计（独立接口，不走通用 totalInfo）
+     * 汇总口径与列表列一致，随搜索条件实时变化
+     * @group department
+     * @auth true
+     * @return \support\Response
+     */
+    public function totalInfo(): \support\Response
+    {
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+
+        $modelClass = plugin()->webman->config('database.play_game_record_model');
+        $pgr        = (new $modelClass)->getTable();
+
+        $query = $this->buildBaseQuery($exAdminFilter);
+
+        $totalData = $query->selectRaw("
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.bet  ELSE 0 END) as valid_bet,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status!=2 THEN $pgr.bet  ELSE 0 END) as total_bet,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.diff ELSE 0 END) as player_win_loss,
+                SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,
+                SUM(CASE WHEN $pgr.type=2 THEN 1          ELSE 0 END) as gift_count,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.win ELSE 0 END) as total_win")
+            ->first();
+
+        // 玩家输赢：与列表展示口径一致，取反后正数=庄家赢
+        $playerWinLoss = $totalData && $totalData->player_win_loss !== null
+            ? floatval($totalData->player_win_loss) * -1
+            : 0.0;
+
+        $data = [
+            [
+                'title'  => admin_trans('game_vendor_report.valid_bet'),
+                'number' => $totalData && $totalData->valid_bet !== null ? floatval($totalData->valid_bet) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.total_bet'),
+                'number' => $totalData && $totalData->total_bet !== null ? floatval($totalData->total_bet) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.player_win_loss'),
+                'number' => $playerWinLoss,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.gift_amount'),
+                'number' => $totalData && $totalData->gift_amount !== null ? floatval($totalData->gift_amount) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.gift_count'),
+                'number' => $totalData && $totalData->gift_count !== null ? floatval($totalData->gift_count) : 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.total_win'),
+                'number' => $totalData && $totalData->total_win !== null ? floatval($totalData->total_win) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+        ];
+
+        return json(['code' => 200, 'data' => $data]);
     }
 
     protected function platformOptions(string $platformModel): array
