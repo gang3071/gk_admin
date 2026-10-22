@@ -742,21 +742,21 @@ class Login extends LoginAbstract
                 ];
                 break;
             case 'MachineReport':
-                $query = MachineReport::query();
+                $query = PlayerGameLog::query();
                 if (!empty($departmentId)) {
                     $query->where('department_id', $departmentId);
                 }
                 if (!empty($exAdminFilter)) {
                     if (!empty($exAdminFilter['date_start'])) {
-                        $query->whereDate('date', '>=', $exAdminFilter['date_start']);
+                        $query->whereDate('created_at', '>=', $exAdminFilter['date_start']);
+                    }
+                    if (!empty($exAdminFilter['date_end'])) {
+                        $query->whereDate('created_at', '<=', $exAdminFilter['date_end']);
                     }
                     if (!empty($exAdminFilter['department_id'])) {
                         $query->where('department_id', $exAdminFilter['department_id']);
                     }
-                    if (!empty($exAdminFilter['date_end'])) {
-                        $query->whereDate('date', '<=', $exAdminFilter['date_end']);
-                    }
-                    if (!empty($exAdminFilter['is_test'])) {    //筛选测试数据
+                    if (isset($exAdminFilter['is_test']) && $exAdminFilter['is_test'] !== '') {
                         $query->where('is_test', '=', $exAdminFilter['is_test']);
                     }
                     if (!empty($exAdminFilter['machine'])) {
@@ -778,45 +778,26 @@ class Login extends LoginAbstract
                         });
                     }
                 }
-                $machineReport = $query->selectRaw('
-                        machine_id,
-                        sum(open_amount) as open_amount,
-                        sum(wash_amount) as wash_amount,
-                        sum(total_amount) as total_amount,
-                        sum(open_point) as open_point,
-                        sum(wash_point) as wash_point,
-                        sum(total_point) as total_point,
-                        sum(pressure) as total_pressure,
-                        sum(score) as total_score,
-                        sum(pressure - score) as total_diff,
-                        sum(turn_point) as total_turn_point,
-                        sum(lottery_amount) as lottery_amount,
-                        sum(activity_amount) as activity_amount,
-                        sum(open_amount-wash_amount-lottery_amount-activity_amount) as machine_total_point,
-                        odds');
-                $where = [];
-                if (isset($exAdminFilter['date_type'])) {
-                    $where = getDateWhere($exAdminFilter['date_type'], 'date');
+                if (!empty($exAdminFilter['date_type'])) {
+                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
                 }
-                $machineReport->where($where);
-                $openAmount = clone $machineReport;
-                $washAmount = clone $machineReport;
-                $totalAmount = clone $machineReport;
-                $openPoint = clone $machineReport;
-                $washPoint = clone $machineReport;
-                $totalPoint = clone $machineReport;
-                $totalActivity = clone $machineReport;
-                $totalLottery = clone $machineReport;
-                $openAmountTotal = $openAmount->sum('open_amount');
-                $washAmountTotal = $washAmount->sum('wash_amount');
-                $totalAmount = $totalAmount->sum('total_amount');
-
-                $openPointTotal = $openPoint->sum('open_point');
-                $washPointTotal = $washPoint->sum('wash_point');
-                $totalPointTotal = $totalPoint->sum('total_point');
-                $totalActivityAmount = $totalActivity->sum('activity_amount');
-                $totalLotteryAmount = $totalLottery->sum('lottery_amount');
-                $totalActualWinLoss = ($totalAmount + $totalActivityAmount + $totalLotteryAmount) * -1;
+                $totals = (clone $query)->selectRaw('
+                    SUM(CASE WHEN action = 1 THEN ABS(game_amount) ELSE 0 END) as open_amount,
+                    SUM(CASE WHEN action = 3 THEN ABS(game_amount) ELSE 0 END) as wash_amount,
+                    SUM(CASE WHEN action = 3 THEN ABS(game_amount) WHEN action = 1 THEN -ABS(game_amount) ELSE 0 END) as total_amount,
+                    SUM(open_point) as open_point,
+                    SUM(wash_point) as wash_point,
+                    SUM(open_point - wash_point) as total_point
+                ')->first();
+                $openAmountTotal  = floatval($totals['open_amount'] ?? 0);
+                $washAmountTotal  = floatval($totals['wash_amount'] ?? 0);
+                $totalAmount      = floatval($totals['total_amount'] ?? 0);
+                $openPointTotal   = floatval($totals['open_point'] ?? 0);
+                $washPointTotal   = floatval($totals['wash_point'] ?? 0);
+                $totalPointTotal  = floatval($totals['total_point'] ?? 0);
+                $totalActivityAmount = 0;
+                $totalLotteryAmount  = 0;
+                $totalActualWinLoss  = $totalAmount * -1;
                 $data = [
                     [
                         'title' => admin_trans('machine_report.open_amount_total'),
