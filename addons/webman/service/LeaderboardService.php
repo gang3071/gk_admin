@@ -605,20 +605,22 @@ class LeaderboardService
     /**
      * VIP 總榜排行（依 VIP 等級、同等級比分數，取前 N）
      *
+     * 沒有打碼量的 VIP 也會列入，分數為 0
+     *
      * @param Carbon $start
      * @param Carbon $end
      * @return array
      */
     private static function queryVip(Carbon $start, Carbon $end): array
     {
-        $sql = "SELECT p.id AS player_id, p.store_admin_id, SUM(t.score) AS score
+        $sql = "SELECT p.id AS player_id, p.store_admin_id, COALESCE(SUM(t.score), 0) AS score
                 FROM player p
                 JOIN vip_level vl ON vl.id = p.vip_level_id
-                JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                LEFT JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
                 WHERE vl.sort >= ?
                   AND p.status = 1 AND p.deleted_at IS NULL AND p.store_admin_id > 0
                 GROUP BY p.id
-                ORDER BY MAX(vl.sort) DESC, score DESC, p.id ASC
+                ORDER BY MAX(vl.sort) DESC, COALESCE(SUM(t.score), 0) DESC, p.id ASC
                 LIMIT " . self::VIP_TOP;
 
         $bindings = array_merge(self::scoreBindings($start, $end), [self::VIP_MIN_LEVEL]);
