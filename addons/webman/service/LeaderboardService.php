@@ -25,7 +25,7 @@ use support\Log;
  *
  * 計分口徑（與後台一致）：
  * - 遊戲記錄：play_game_record，已結算投注（settlement_status=1）加總 bet
- * - 上下分報表：player_game_log，加總 pressure（斯洛／鋼珠／漁機）
+ * - 上下分報表：player_game_log，加總 chip_amount（打碼量，斯洛／鋼珠／漁機）
  *
  * 期間口徑：當期進行中（本週一08:00~下週一08:00 / 本月1號08:00~下月1號08:00）
  * - 每 30 分鐘刷新當期名次（settle_at 保持 NULL = 未定案）
@@ -536,7 +536,7 @@ class LeaderboardService
     }
 
     /**
-     * 排行榜計分子查詢（遊戲記錄已結算投注 + 上下分報表押分）
+     * 排行榜計分子查詢（遊戲記錄已結算投注 + 上下分報表打碼量）
      *
      * @return string
      */
@@ -548,7 +548,7 @@ class LeaderboardService
                   AND r.settlement_status = 1
                 GROUP BY r.player_id
                 UNION ALL
-                SELECT g.player_id, SUM(g.pressure) AS score
+                SELECT g.player_id, SUM(g.chip_amount) AS score
                 FROM player_game_log g
                 WHERE g.created_at >= ? AND g.created_at < ?
                 GROUP BY g.player_id";
