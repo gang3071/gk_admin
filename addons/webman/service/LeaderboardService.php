@@ -2,7 +2,6 @@
 
 namespace addons\webman\service;
 
-use addons\webman\model\GamePlatform;
 use addons\webman\model\Leaderboard;
 use addons\webman\model\LeaderboardEntry;
 use addons\webman\model\Notice;
@@ -18,12 +17,15 @@ use support\Log;
  *
  * 職責：
  * - 結算週榜 / 月榜（即時刷新當期 + 定案已結束的期；只算，不發錢）
+ * - 結算 VIP 總榜（依 VIP 等級、同等級比分數；不發獎）
  * - 發放獎勵（發到錢包 + 寫錢包異動紀錄 + 寫玩家通知）
  *
  * 資料表：leaderboard、leaderboard_entry
  * 設定來源：system_setting（feature 以 leaderboard_ 開頭，content 為 JSON）
  *
- * 計分口徑：play_game_record 即時加總（只算電子平台、已結算的下注單）
+ * 計分口徑（與後台一致）：
+ * - 遊戲記錄：play_game_record，已結算投注（settlement_status=1）加總 bet
+ * - 上下分報表：player_game_log，加總 pressure（斯洛／鋼珠／漁機）
  *
  * 期間口徑：當期進行中（本週一08:00~下週一08:00 / 本月1號08:00~下月1號08:00）
  * - 每 30 分鐘刷新當期名次（settle_at 保持 NULL = 未定案）
@@ -33,6 +35,16 @@ class LeaderboardService
 {
     /** 榜單取前 N 名 */
     const SETTLE_TOP = 10;
+
+    /** VIP 總榜：最低 VIP 等級（vip_level.sort） */
+    const VIP_MIN_LEVEL = 5;
+
+    /** VIP 總榜：取前 N 名 */
+    const VIP_TOP = 10;
+
+    /** VIP 總榜代碼 */
+    const VIP_CODE_WEEKLY = 'vip_weekly';
+    const VIP_CODE_MONTHLY = 'vip_monthly';
 
     /** 結算週榜（period_type=1） */
     public static function settleWeekly(): array
@@ -83,6 +95,9 @@ class LeaderboardService
             // 2) 定案所有「已結束但未定案」的期
             $result['finalized'] += self::finalizeEnded($code, $now);
         }
+
+        // 3) VIP 總榜（不依 system_setting，固定結算）
+        self::settleVip($periodType, $start, $end, $periodKey, $now);
 
         return $result;
     }
@@ -201,6 +216,7 @@ class LeaderboardService
             $setting = [
                 'code'       => (string) $lb->code,
                 'name'       => (string) $lb->name,
+                'period_type' => (int) $lb->period_type,
                 'scope_type' => (int) $lb->scope_type,
                 'threshold'  => (float) $lb->threshold,
                 'prizes'     => json_decode((string) $lb->prize_config, true) ?: [],
@@ -212,6 +228,163 @@ class LeaderboardService
             // 以定案的期間重算最終名次
             LeaderboardEntry::query()->where('leaderboard_id', $lb->id)->delete();
             $rows = self::buildEntries((int) $lb->id, $setting, $start, $end);
+            if (!empty($rows)) {
+                LeaderboardEntry::query()->insert($rows);
+            }
+
+            Leaderboard::query()->where('id', $lb->id)->update([
+                'entry_count' => count($rows),
+                'settle_at'   => $ts,
+                'updated_at'  => $ts,
+            ]);
+
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
+     * 結算 VIP 總榜（週/月）
+     *
+     * @param int $periodType
+     * @param Carbon $start
+     * @param Carbon $end
+     * @param string $periodKey
+     * @param Carbon $now
+     * @return void
+     */
+    private static function settleVip(int $periodType, Carbon $start, Carbon $end, string $periodKey, Carbon $now): void
+    {
+        $code = $periodType === Leaderboard::PERIOD_TYPE_WEEK ? self::VIP_CODE_WEEKLY : self::VIP_CODE_MONTHLY;
+
+        $exist = Leaderboard::query()
+            ->where('code', $code)
+            ->where('period_key', $periodKey)
+            ->first();
+
+        if (!$exist || $exist->settle_at === null) {
+            self::refreshVipBoard($exist, $code, $periodType, $periodKey, $start, $end, $now);
+        }
+
+        self::finalizeVipEnded($code, $now);
+    }
+
+    /**
+     * 刷新 VIP 總榜當期名次
+     *
+     * @param Leaderboard|null $exist
+     * @param string $code
+     * @param int $periodType
+     * @param string $periodKey
+     * @param Carbon $start
+     * @param Carbon $end
+     * @param Carbon $now
+     * @return int
+     */
+    private static function refreshVipBoard($exist, string $code, int $periodType, string $periodKey, Carbon $start, Carbon $end, Carbon $now): int
+    {
+        $ts = $now->format('Y-m-d H:i:s');
+
+        if ($exist) {
+            $leaderboardId = (int) $exist->id;
+            Leaderboard::query()->where('id', $leaderboardId)->update([
+                'name'         => 'VIP總榜',
+                'period_type'  => $periodType,
+                'scope_type'   => Leaderboard::SCOPE_TYPE_ALL,
+                'start_at'     => $start->format('Y-m-d H:i:s'),
+                'end_at'       => $end->format('Y-m-d H:i:s'),
+                'threshold'    => '0.00',
+                'prize_config' => '[]',
+                'updated_at'   => $ts,
+            ]);
+        } else {
+            $leaderboardId = Leaderboard::query()->insertGetId([
+                'code'         => $code,
+                'name'         => 'VIP總榜',
+                'period_type'  => $periodType,
+                'scope_type'   => Leaderboard::SCOPE_TYPE_ALL,
+                'period_key'   => $periodKey,
+                'start_at'     => $start->format('Y-m-d H:i:s'),
+                'end_at'       => $end->format('Y-m-d H:i:s'),
+                'threshold'    => '0.00',
+                'prize_config' => '[]',
+                'entry_count'  => 0,
+                'created_at'   => $ts,
+                'updated_at'   => $ts,
+            ]);
+        }
+
+        LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId)->delete();
+        $rows = self::buildVipEntries($leaderboardId, $start, $end);
+        if (!empty($rows)) {
+            LeaderboardEntry::query()->insert($rows);
+        }
+
+        Leaderboard::query()->where('id', $leaderboardId)->update([
+            'entry_count' => count($rows),
+            'updated_at'  => $ts,
+        ]);
+
+        return count($rows);
+    }
+
+    /**
+     * 組出 VIP 總榜名次（不發獎）
+     *
+     * @param int $leaderboardId
+     * @param Carbon $start
+     * @param Carbon $end
+     * @return array
+     */
+    private static function buildVipEntries(int $leaderboardId, Carbon $start, Carbon $end): array
+    {
+        $now = date('Y-m-d H:i:s');
+        $rows = [];
+        $rank = 0;
+
+        foreach (self::queryVip($start, $end) as $r) {
+            $rank++;
+            $rows[] = [
+                'leaderboard_id' => $leaderboardId,
+                'player_id'      => (int) $r->player_id,
+                'store_admin_id' => (int) $r->store_admin_id,
+                'rank'           => $rank,
+                'score'          => sprintf('%.2f', (float) $r->score),
+                'prize_amount'   => '0.00',
+                'grant_status'   => LeaderboardEntry::GRANT_STATUS_UNISSUED,
+                'created_at'     => $now,
+                'updated_at'     => $now,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * 定案已結束的 VIP 總榜
+     *
+     * @param string $code
+     * @param Carbon $now
+     * @return int
+     */
+    private static function finalizeVipEnded(string $code, Carbon $now): int
+    {
+        $ts = $now->format('Y-m-d H:i:s');
+
+        $boards = Leaderboard::query()
+            ->where('code', $code)
+            ->whereNull('settle_at')
+            ->where('end_at', '<=', $ts)
+            ->get();
+
+        $count = 0;
+        foreach ($boards as $lb) {
+            $start = Carbon::parse($lb->start_at);
+            $end = Carbon::parse($lb->end_at);
+
+            LeaderboardEntry::query()->where('leaderboard_id', $lb->id)->delete();
+            $rows = self::buildVipEntries((int) $lb->id, $start, $end);
             if (!empty($rows)) {
                 LeaderboardEntry::query()->insert($rows);
             }
@@ -299,6 +472,7 @@ class LeaderboardService
             $result[] = [
                 'code'       => (string)($content['code'] ?? $row->feature),
                 'name'       => (string)($content['name'] ?? ($content['code'] ?? $row->feature)),
+                'period_type' => $periodType,
                 'scope_type' => (int)($content['scope_type'] ?? 1),
                 'threshold'  => (float)($content['threshold'] ?? 0),
                 'prizes'     => $content['prizes'] ?? [],
@@ -312,22 +486,17 @@ class LeaderboardService
      */
     private static function buildEntries(int $leaderboardId, array $setting, Carbon $start, Carbon $end): array
     {
-        $platformIds = self::electronicPlatformIds();
-        if (empty($platformIds)) {
-            return [];
-        }
-
         $rows = [];
 
         if ((int)$setting['scope_type'] === Leaderboard::SCOPE_TYPE_STORE) {
             // 店內：每間店各自取前 N
-            foreach (self::queryByStore($platformIds, $start, $end) as $r) {
+            foreach (self::queryByStore($start, $end) as $r) {
                 $rows[] = self::entryRow($leaderboardId, (int)$r->player_id, (int)$r->rn, (float)$r->score, $setting, (int)$r->store_admin_id);
             }
         } else {
             // 全站：全體取前 N
             $rank = 0;
-            foreach (self::queryOverall($platformIds, $start, $end) as $r) {
+            foreach (self::queryOverall($start, $end) as $r) {
                 $rank++;
                 $rows[] = self::entryRow($leaderboardId, (int)$r->player_id, $rank, (float)$r->score, $setting, (int)$r->store_admin_id);
             }
@@ -367,75 +536,94 @@ class LeaderboardService
     }
 
     /**
+     * 排行榜計分子查詢（遊戲記錄已結算投注 + 上下分報表押分）
+     *
+     * @return string
+     */
+    private static function scoreSubquery(): string
+    {
+        return "SELECT r.player_id, SUM(r.bet) AS score
+                FROM play_game_record r
+                WHERE r.created_at >= ? AND r.created_at < ?
+                  AND r.settlement_status = 1
+                GROUP BY r.player_id
+                UNION ALL
+                SELECT g.player_id, SUM(g.pressure) AS score
+                FROM player_game_log g
+                WHERE g.created_at >= ? AND g.created_at < ?
+                GROUP BY g.player_id";
+    }
+
+    /**
      * 全站排行（取前 N）
      */
-    private static function queryOverall(array $platformIds, Carbon $start, Carbon $end): array
+    private static function queryOverall(Carbon $start, Carbon $end): array
     {
-        $in = implode(',', array_fill(0, count($platformIds), '?'));
-
-        $sql = "SELECT r.player_id, pl.store_admin_id, SUM(r.bet) AS score
-                FROM play_game_record r
-                JOIN player pl ON pl.id = r.player_id
-                WHERE r.created_at >= ? AND r.created_at < ?
-                  AND r.settlement_status = 1 AND r.type = 1 AND r.bet > 0
-                  AND r.platform_id IN ($in)
-                  GROUP BY r.player_id, pl.store_admin_id
-                ORDER BY score DESC, r.player_id ASC
+        $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
+                FROM player p
+                JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                GROUP BY t.player_id, p.store_admin_id
+                ORDER BY score DESC, t.player_id ASC
                 LIMIT " . self::SETTLE_TOP;
 
-        $bindings = array_merge(
-            [$start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')],
-            $platformIds
-        );
-
-        return Db::select($sql, $bindings);
+        return Db::select($sql, self::scoreBindings($start, $end));
     }
 
     /**
      * 店內排行（每間店各自取前 N）
      */
-    private static function queryByStore(array $platformIds, Carbon $start, Carbon $end): array
+    private static function queryByStore(Carbon $start, Carbon $end): array
     {
-        $in = implode(',', array_fill(0, count($platformIds), '?'));
-
         $sql = "SELECT * FROM (
-                    SELECT r.player_id, pl.store_admin_id, SUM(r.bet) AS score,
-                           ROW_NUMBER() OVER (PARTITION BY pl.store_admin_id ORDER BY SUM(r.bet) DESC, r.player_id ASC) AS rn
-                    FROM play_game_record r
-                    JOIN player pl ON pl.id = r.player_id
-                    WHERE r.created_at >= ? AND r.created_at < ?
-                      AND r.settlement_status = 1 AND r.type = 1 AND r.bet > 0
-                      AND r.platform_id IN ($in)
-                    GROUP BY r.player_id, pl.store_admin_id
-                ) t
-                WHERE t.rn <= " . self::SETTLE_TOP . "
-                ORDER BY t.store_admin_id ASC, t.rn ASC";
+                    SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
+                           ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
+                    FROM player p
+                    JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                    GROUP BY p.id, t.player_id
+                ) t2
+                WHERE t2.rn <= " . self::SETTLE_TOP . "
+                ORDER BY t2.store_admin_id ASC, t2.rn ASC";
 
-        $bindings = array_merge(
-            [$start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s')],
-            $platformIds
-        );
-
-        return Db::select($sql, $bindings);
+        return Db::select($sql, self::scoreBindings($start, $end));
     }
 
     /**
-     * 電子平台 ID 清單（來源：platform_filter.included_platforms）
+     * 計分子查詢的綁定參數
+     *
+     * @param Carbon $start
+     * @param Carbon $end
+     * @return array
      */
-    private static function electronicPlatformIds(): array
+    private static function scoreBindings(Carbon $start, Carbon $end): array
     {
-        $codes = config('platform_filter.included_platforms', []);
-        if (empty($codes)) {
-            return [];
-        }
+        $startAt = $start->format('Y-m-d H:i:s');
+        $endAt = $end->format('Y-m-d H:i:s');
 
-        return GamePlatform::query()
-            ->whereIn('code', $codes)
-            ->pluck('id')
-            ->map(function ($v) {
-                return (int)$v;
-            })
-            ->all();
+        return [$startAt, $endAt, $startAt, $endAt];
+    }
+
+    /**
+     * VIP 總榜排行（依 VIP 等級、同等級比分數，取前 N）
+     *
+     * @param Carbon $start
+     * @param Carbon $end
+     * @return array
+     */
+    private static function queryVip(Carbon $start, Carbon $end): array
+    {
+        $sql = "SELECT p.id AS player_id, p.store_admin_id, SUM(t.score) AS score
+                FROM player p
+                JOIN vip_level vl ON vl.id = p.vip_level_id
+                JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                WHERE vl.sort >= ?
+                  AND p.status = 1 AND p.deleted_at IS NULL AND p.store_admin_id > 0
+                GROUP BY p.id
+                ORDER BY MAX(vl.sort) DESC, score DESC, p.id ASC
+                LIMIT " . self::VIP_TOP;
+
+        $bindings = array_merge(self::scoreBindings($start, $end), [self::VIP_MIN_LEVEL]);
+
+        return Db::select($sql, $bindings);
     }
 
     /**
