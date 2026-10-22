@@ -67,10 +67,11 @@ class LeaderboardController
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
             }
 
-            $grid->model()->where('period_type', 1)->orderBy('period_key', 'desc')->orderBy('scope_type', 'asc');
+            $grid->model()->where('period_type', 1)->orderBy('start_at', 'desc')->orderBy('scope_type', 'asc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
+                $filter->like()->text('name')->placeholder(admin_trans('leaderboard.fields.name'));
                 $filter->like()->text('period_key')->placeholder(admin_trans('leaderboard.fields.period_key'));
 
                 $filter->eq()->select('scope_type')
@@ -87,6 +88,7 @@ class LeaderboardController
             });
 
             $grid->column('id', admin_trans('leaderboard.fields.id'))->align('center');
+            $grid->column('name', admin_trans('leaderboard.fields.name'))->align('center');
             $grid->column('period_key', admin_trans('leaderboard.fields.period_key'))->align('center');
             $grid->column('scope_type', admin_trans('leaderboard.fields.scope_type'))->align('center')
                 ->display(function ($value) {
@@ -143,10 +145,11 @@ class LeaderboardController
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
             }
 
-            $grid->model()->where('period_type', 2)->orderBy('period_key', 'desc');
+            $grid->model()->where('period_type', 2)->orderBy('start_at', 'desc')->orderBy('scope_type', 'asc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
+                $filter->like()->text('name')->placeholder(admin_trans('leaderboard.fields.name'));
                 $filter->like()->text('period_key')->placeholder(admin_trans('leaderboard.fields.period_key'));
 
                 $filter->eq()->select('scope_type')
@@ -163,6 +166,7 @@ class LeaderboardController
             });
 
             $grid->column('id', admin_trans('leaderboard.fields.id'))->align('center');
+            $grid->column('name', admin_trans('leaderboard.fields.name'))->align('center');
             $grid->column('period_key', admin_trans('leaderboard.fields.period_key'))->align('center');
             $grid->column('scope_type', admin_trans('leaderboard.fields.scope_type'))->align('center')
                 ->display(function ($value) {

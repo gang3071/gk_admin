@@ -67,7 +67,7 @@ class StoreLeaderboardController
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
             }
 
-            $grid->model()->where('period_type', 1)->where('scope_type', 3)->orderBy('period_key', 'desc');
+            $grid->model()->where('period_type', 1)->where('scope_type', 3)->orderBy('start_at', 'desc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
@@ -122,7 +122,7 @@ class StoreLeaderboardController
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
             }
 
-            $grid->model()->where('period_type', 2)->where('scope_type', 3)->orderBy('period_key', 'desc');
+            $grid->model()->where('period_type', 2)->where('scope_type', 3)->orderBy('start_at', 'desc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
