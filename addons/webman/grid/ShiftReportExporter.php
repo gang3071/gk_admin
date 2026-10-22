@@ -345,12 +345,9 @@ class ShiftReportExporter extends Excel
             return;
         }
 
-        // 查询该店家所有的交班记录（最近6个月，避免数据量过大）
-        $sixMonthsAgo = date('Y-m-d', strtotime('-6 months'));
 
         $allShiftRecords = StoreAgentShiftHandoverRecord::query()
             ->where('bind_admin_user_id', $this->storeAdminId)
-            ->where('created_at', '>=', $sixMonthsAgo)  // ✅ 只查询最近6个月数据
             ->pluck('id');
 
         if ($allShiftRecords->isEmpty()) {
