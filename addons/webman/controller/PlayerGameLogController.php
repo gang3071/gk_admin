@@ -629,17 +629,20 @@ class PlayerGameLogController
                 ORDER BY datetime ASC
                 FORMAT JSON";
         try {
-            $response = \Illuminate\Support\Facades\Http::withBasicAuth($cfg['user'], $cfg['password'])
-                ->withBody($sql, 'text/plain')
-                ->post($cfg['endpoint']);
-            if ($response->successful()) {
-                $rows = $response->json('data') ?? [];
+            $client = new \GuzzleHttp\Client();
+            $response = $client->post($cfg['endpoint'], [
+                'auth'    => [$cfg['user'], $cfg['password']],
+                'body'    => $sql,
+                'timeout' => 10,
+            ]);
+            if ($response->getStatusCode() === 200) {
+                $rows = json_decode($response->getBody()->getContents(), true)['data'] ?? [];
                 return json(['code' => 200, 'data' => [
                     'logs'       => $rows,
                     'time_range' => "{$startTime} 至 {$endTime}",
                 ]]);
             }
-            return json(['code' => 500, 'msg' => 'ClickHouse 返回异常：' . $response->status()]);
+            return json(['code' => 500, 'msg' => 'ClickHouse 返回异常：' . $response->getStatusCode()]);
         } catch (\Throwable $e) {
             \support\Log::channel('default')->error('ClickHouse 查询失败', ['error' => $e->getMessage()]);
             return json(['code' => 500, 'msg' => $e->getMessage()]);
