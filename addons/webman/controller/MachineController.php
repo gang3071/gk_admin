@@ -265,13 +265,8 @@ class MachineController
         )
             ->align('left');
         $grid->column('viewers', admin_trans('machine.fields.viewers'))->display(function ($val, Machine $data) {
-            $media = MachineMedia::where('machine_id', $data->id)->whereNull('deleted_at')->first();
-            if (!$media) {
-                return 0;
-            }
-            $mediaServer = new MediaServer($media->push_ip, $media->media_app);
-            $viewers = $mediaServer->getViewers($media->stream_name);
-            return $viewers !== false ? $viewers : 0;
+            // 從快取讀取，避免頁面渲染時對媒體伺服器發 N 個阻塞 HTTP 請求
+            return (int) Cache::get('machine:viewers:' . $data->id, 0);
         })->align('center');
         $grid->column('min_point', admin_trans('machine.fields.min_point'))->align('center');
         $grid->column('max_point', admin_trans('machine.fields.max_point'))->align('center');
@@ -434,6 +429,14 @@ class MachineController
         $grid->addButton()
             ->content(admin_trans('grid.add'))
             ->drawer($this->form());
+        $grid->tools([
+            Button::create(admin_trans('machine.btn.refresh_viewers'))
+                ->icon(Icon::create('ReloadOutlined'))
+                ->ajax([$this, 'refreshViewers'], [])
+                ->gridRefresh()
+                ->type('default')
+                ->size('small'),
+        ]);
         $grid->hideDelete();
         $grid->expandFilter();
     }
@@ -976,6 +979,29 @@ class MachineController
                 ->orderBy('id', 'desc');
             $this->getList($grid, GameType::TYPE_FISH);
         });
+    }
+
+    /**
+     * 刷新所有机台观看人数缓存（供页面主动触发）
+     * @auth true
+     */
+    public function refreshViewers(): \support\Response
+    {
+        $medias = MachineMedia::whereNull('deleted_at')->where('status', 1)->get();
+        $updated = 0;
+        foreach ($medias as $media) {
+            try {
+                $mediaServer = new MediaServer($media->push_ip, $media->media_app);
+                $viewers = $mediaServer->getViewers($media->stream_name);
+                if ($viewers !== false) {
+                    Cache::set('machine:viewers:' . $media->machine_id, (int)$viewers, 120);
+                    $updated++;
+                }
+            } catch (\Exception $e) {
+                // 单台失败不影响其他机台
+            }
+        }
+        return json(['code' => 1, 'msg' => "已刷新 {$updated} 台", 'data' => []]);
     }
 
     /**

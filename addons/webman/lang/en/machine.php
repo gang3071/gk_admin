@@ -153,6 +153,7 @@ return [
         'keep_time_change' => 'Adjust retention time',
         'chang_point_card' => 'Change the branch card',
         'clear_bet' => 'Pressure clearing',
+        'refresh_viewers' => 'Refresh viewer count',
         'check_machine' => 'Troubleshooting',
         'chang_point_card_confirm' => 'The machine in the game cannot change the point card, and the historical accumulated data will be recalculated. Are you sure you want to perform the operation? ',
         'clear_bet_confirm' => 'Clean the machine scores. The system will record the scores of the equipment. Are you sure you want to perform the operation? ',

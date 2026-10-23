@@ -156,6 +156,7 @@ return [
         'keep_time_change' => '保持期間を調整',
         'chang_point_card' => '支店カードを変更',
         'clear_bet' => 'プレッシャーのクリア',
+        'refresh_viewers' => '視聴者数を更新',
         'check_machine' => 'トラブルシューティング',
         'chang_point_card_confirm' => 'ゲーム内のマシンではポイントカードを変更できないため、過去の累積データが再計算されます。操作を実行してもよろしいですか? ',
         'clear_bet_confirm' => 'マシンのスコアを削除します。システムは機器のスコアを記録します。この操作を実行してもよろしいですか? ',

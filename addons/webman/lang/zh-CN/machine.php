@@ -153,6 +153,7 @@ return [
         'keep_time_change' => '调整保留时间',
         'chang_point_card' => '更换开分卡',
         'clear_bet' => '压分清理',
+        'refresh_viewers' => '刷新观看人数',
         'check_machine' => '故障排除',
         'chang_point_card_confirm' => '游戏中的机台无法更换开分卡，历史累计数据将会重新计算，你確定要執行操作嗎？',
         'clear_bet_confirm' => '清理机器压分，系统将已设备记录压分为准，你確定要執行操作嗎？',
