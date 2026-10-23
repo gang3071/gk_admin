@@ -3,7 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\model\GameType;
-use addons\webman\model\MachineReport;
+use addons\webman\service\MachineReportAggregator;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -38,65 +38,13 @@ class MachineReportController
         $page = Request::input('ex_admin_page', 1);
         $size = Request::input('ex_admin_size', 20);
         $exAdminFilter = Request::input('ex_admin_filter', []);
-        $machineReport = MachineReport::with(['machine', 'machine.producer', 'machine.machineLabel']);
         $exAdminSortBy = Request::input('ex_admin_sort_by', '');
         $exAdminSortField = Request::input('ex_admin_sort_field', '');
-        if (!empty($exAdminFilter)) {
-            if (!empty($exAdminFilter['date_start'])) {
-                $machineReport->where('date', '>=', $exAdminFilter['date_start']);
-            }
-            if (!empty($exAdminFilter['date_end'])) {
-                $machineReport->where('date', '<=', $exAdminFilter['date_end']);
-            }
-            if (!empty($exAdminFilter['department_id'])) {
-                $machineReport->where('department_id', $exAdminFilter['department_id']);
-            }
-            if (!empty($exAdminFilter['is_test'])) {    //筛选测试数据
-                $machineReport->where('is_test', '=', $exAdminFilter['is_test']);
-            }
-            if (!empty($exAdminFilter['machine'])) {
-                $machineReport->whereHas('machine', function ($query) use ($exAdminFilter) {
-                    if (!empty($exAdminFilter['machine']['name'])) {
-                        $query->whereHas('machineLabel', function ($query) use ($exAdminFilter) {
-                            $query->where('name', 'like', '%'.$exAdminFilter['machine']['name'].'%');
-                        });
-                    }
-                    if (!empty($exAdminFilter['machine']['code'])) {
-                        $query->where('code', $exAdminFilter['machine']['code']);
-                    }
-                    if (!empty($exAdminFilter['machine']['producer_id'])) {
-                        $query->where('producer_id', $exAdminFilter['machine']['producer_id']);
-                    }
-                    if (!empty($exAdminFilter['machine']['cate_id'])) {
-                        $query->whereIn('cate_id', $exAdminFilter['machine']['cate_id']);
-                    }
-                });
-            }
-        }
-        $machineReport = $machineReport->selectRaw('
-                        machine_id,
-                        sum(open_amount) as open_amount,
-                        sum(wash_amount) as wash_amount,
-                        sum(total_amount) as total_amount,
-                        sum(open_point) as open_point,
-                        sum(wash_point) as wash_point,
-                        sum(total_point) as total_point,
-                        sum(pressure) as total_pressure,
-                        sum(score) as total_score,
-                        sum(pressure - score) as total_diff,
-                        sum(turn_point) as total_turn_point,
-                        sum(lottery_amount) as lottery_amount,
-                        sum(activity_amount) as activity_amount,
-                        sum(open_amount-wash_amount-lottery_amount-activity_amount) as machine_total_point,
-                        odds');
-        $where = [];
-        if (isset($exAdminFilter['date_type'])) {
-            $where = getWhereDate($exAdminFilter['date_type'], 'date');
-        }
-        $machineReport->where($where);
-        $totalNum = clone $machineReport;
-        $total = $totalNum->groupBy('machine_id', 'odds')->get()->count();
+        // 由 player_game_log 实时聚合，不再读 machine_report 预聚合表（其累加链路已失效）
+        $machineReport = MachineReportAggregator::build($exAdminFilter);
+        $total = (clone $machineReport)->get()->count();
         $list = $machineReport
+            ->with(['machine', 'machine.producer', 'machine.machineLabel'])
             ->forPage($page, $size)
             ->when(!empty($exAdminSortField) && !empty($exAdminSortBy),
                 function ($query) use ($exAdminSortField, $exAdminSortBy) {
@@ -104,7 +52,6 @@ class MachineReportController
                 }, function ($query) {
                     $query->orderBy('machine_id', 'desc');
                 })
-            ->groupBy('machine_id', 'odds')
             ->get()
             ->toArray();
         return Grid::create($list, function (Grid $grid) use ($total, $list, $exAdminFilter) {
