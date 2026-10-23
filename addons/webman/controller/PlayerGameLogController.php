@@ -616,8 +616,9 @@ class PlayerGameLogController
         /** @var PlayerGameLog $record */
         $record = ($this->model)::findOrFail($id);
 
-        $startTime = Carbon::parse($record->created_at)->subSeconds(30)->format('Y-m-d H:i:s');
-        $endTime   = Carbon::parse($record->created_at)->addSeconds(10)->format('Y-m-d H:i:s');
+        $base      = Carbon::parse($record->created_at)->timezone('Asia/Shanghai');
+        $startTime = $base->copy()->subSeconds(30)->format('Y-m-d H:i:s.000');
+        $endTime   = $base->copy()->addSeconds(10)->format('Y-m-d H:i:s.999');
         $machineId = (int) $record->machine_id;
 
         $cfg = config('clickhouse');
