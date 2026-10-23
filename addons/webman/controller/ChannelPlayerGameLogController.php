@@ -452,8 +452,12 @@ class ChannelPlayerGameLogController
         $query = (new $this->model)->newQuery();
         $this->applyQueryConditions($query, $exAdminFilter);
 
+        // 总游戏点按实际方向累计：开分记负、其余记正，与列表符号口径一致。
+        // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+        // 现金投币/管理员上分写 0），所以不能直接 sum(game_amount)，必须按 action 归一。
+        $openAction = PlayerGameLog::ACTION_OPEN;
         $totalData = $query->selectRaw("
-                sum(game_amount) as total_game_amount,
+                sum(CASE WHEN action = {$openAction} THEN -ABS(game_amount) ELSE game_amount END) as total_game_amount,
                 sum(open_point) as total_open_point,
                 sum(wash_point) as total_wash_point,
                 sum(gift_point) as total_gift_point,
