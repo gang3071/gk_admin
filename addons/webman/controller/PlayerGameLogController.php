@@ -622,7 +622,7 @@ class PlayerGameLogController
         $machineId = (int) $record->machine_id;
 
         $cfg = config('clickhouse');
-        $sql = "SELECT datetime, level, source_type, log_direction, action, action_desc, raw_send, raw_recv, extra_data
+        $sql = "SELECT datetime, level, source_type, log_direction, action, action_desc, raw_send, raw_recv, extra_data, machine_state
                 FROM {$cfg['database']}.machine_ctrl
                 WHERE machine_id = {$machineId}
                   AND datetime >= '{$startTime}'

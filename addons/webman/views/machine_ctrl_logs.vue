@@ -47,9 +47,29 @@
           </a-tag>
         </template>
         <template v-else-if="column.key === 'action_desc'">
-          <span :style="{ fontSize: '12px', fontWeight: isKeyEvent(record) ? '600' : 'normal' }">
-            {{ record.action_desc }}
-          </span>
+          <div>
+            <span :style="{ fontSize: '12px', fontWeight: isKeyEvent(record) ? '600' : 'normal' }">
+              {{ record.action_desc }}
+            </span>
+            <!-- 机台状态关键字段 -->
+            <div v-if="stateFields(record).length" style="margin-top:3px; display:flex; flex-wrap:wrap; gap:3px">
+              <a-tag
+                v-for="f in stateFields(record)"
+                :key="f.key"
+                :color="f.color"
+                style="margin:0; font-size:11px; line-height:18px"
+              >{{ f.label }}={{ f.val }}</a-tag>
+            </div>
+            <!-- extra_data 关键字段 -->
+            <div v-if="extraFields(record).length" style="margin-top:3px; display:flex; flex-wrap:wrap; gap:3px">
+              <a-tag
+                v-for="f in extraFields(record)"
+                :key="f.key"
+                color="purple"
+                style="margin:0; font-size:11px; line-height:18px"
+              >{{ f.key }}={{ f.val }}</a-tag>
+            </div>
+          </div>
         </template>
         <template v-else-if="column.key === 'raw'">
           <span v-if="record.raw_send && record.raw_send !== '-'" style="font-family:monospace; font-size:11px; color:#1890ff">↑{{ record.raw_send }}</span>
@@ -87,7 +107,7 @@ export default {
         { title: '操作',   key: 'action',       width: 120, align: 'center' },
         { title: '描述',   dataIndex: 'action_desc', key: 'action_desc', ellipsis: true },
         { title: '指令/响应', key: 'raw',       width: 160 },
-        { title: '扩展',   key: 'extra_data',   width: 60,  align: 'center' },
+        { title: '指令/响应', key: 'raw', width: 160 },
       ],
     };
   },
@@ -120,6 +140,34 @@ export default {
     },
     isKeyEvent(record) {
       return ['wash', 'leave', 'account_query', 'wash_zero', 'all_down', 'check'].includes(record.action);
+    },
+    stateFields(record) {
+      if (!record.machine_state) return [];
+      try {
+        const s = JSON.parse(record.machine_state);
+        const map = [
+          { key: 'point',            label: '分',  color: 'blue' },
+          { key: 'player_open_point',label: '开分', color: 'cyan' },
+          { key: 'open_point',       label: '开分', color: 'cyan' },
+          { key: 'gaming_pressure',  label: '压',  color: 'orange' },
+          { key: 'gaming_score',     label: '得',  color: 'green' },
+          { key: 'turn_used_point',  label: '转',  color: 'default' },
+        ];
+        const seen = new Set();
+        return map
+          .filter(m => s[m.key] !== undefined && s[m.key] !== null && !seen.has(m.label) && seen.add(m.label))
+          .map(m => ({ ...m, val: s[m.key] }));
+      } catch { return []; }
+    },
+    extraFields(record) {
+      if (!record.extra_data) return [];
+      try {
+        const d = JSON.parse(record.extra_data);
+        return Object.entries(d)
+          .filter(([, v]) => v !== null && v !== '' && typeof v !== 'object')
+          .map(([k, v]) => ({ key: k, val: v }))
+          .slice(0, 5);
+      } catch { return []; }
     },
     rowClass(record) {
       if (record.level === 'ERROR') return 'row-error';
