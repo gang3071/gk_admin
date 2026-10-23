@@ -200,58 +200,58 @@ class MachineController
                     ->precision(3)
             )
             ->align('left');
-        $grid->column('now_status', admin_trans('machine.fields.now_status'))
-            ->display(function ($val, Machine $data) use (&$onlineStatusCache) {
-                // ✅ 首次调用时批量获取所有机台在线状态
-                if ($onlineStatusCache === null) {
-                    $onlineStatusCache = [];
-                    try {
-                        // 获取当前页所有机台ID
-                        $allMachines = $this->model::query()
-                            ->where('type', $data->type)
-                            ->get(['id']);
-                        $machineIds = $allMachines->pluck('id')->toArray();
-
-                        // 批量检查在线状态
-                        if (!empty($machineIds)) {
-                            $result = MachineApiService::getAllOnlineStatus(
-                                departmentId: Admin::user()->department_id,
-                                type: $data->type,
-                                adminId: Admin::id(),
-                                machineIds: $machineIds
-                            );
-                            // ✅ 修复：MachineApiService::handleResponse 已经提取了 data，直接使用返回的数组
-                            if (is_array($result)) {
-                                foreach ($result as $item) {
-                                    if (isset($item['id']) && isset($item['online'])) {
-                                        $onlineStatusCache[$item['id']] = $item['online'];
-                                    }
-                                }
-                                \support\Log::info('批量获取机台在线状态成功', [
-                                    'type' => $data->type,
-                                    'total_machines' => count($machineIds),
-                                    'online_count' => count(array_filter($onlineStatusCache))
-                                ]);
-                            }
-                        }
-                    } catch (\Exception $e) {
-                        \support\Log::warning('Batch check machine online via API failed', [
-                            'error' => $e->getMessage()
-                        ]);
-                    }
-                }
-
-                // ✅ 从缓存中读取在线状态
-                $machineStatus = ($onlineStatusCache[$data->id] ?? false) ? 'online' : 'offline';
-                return admin_view(plugin()->webman->getPath() . '/views/machine_status.vue')->attrs([
-                    'id' => $data->id,
-                    'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
-                    'department_id' => Admin::user()->department_id,
-                    'ws' => config('app.ws_url', ''), // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
-                    'machine_status' => $machineStatus,
-                ]);
-            })
-            ->align('center');
+//        $grid->column('now_status', admin_trans('machine.fields.now_status'))
+//            ->display(function ($val, Machine $data) use (&$onlineStatusCache) {
+//                // ✅ 首次调用时批量获取所有机台在线状态
+//                if ($onlineStatusCache === null) {
+//                    $onlineStatusCache = [];
+//                    try {
+//                        // 获取当前页所有机台ID
+//                        $allMachines = $this->model::query()
+//                            ->where('type', $data->type)
+//                            ->get(['id']);
+//                        $machineIds = $allMachines->pluck('id')->toArray();
+//
+//                        // 批量检查在线状态
+//                        if (!empty($machineIds)) {
+//                            $result = MachineApiService::getAllOnlineStatus(
+//                                departmentId: Admin::user()->department_id,
+//                                type: $data->type,
+//                                adminId: Admin::id(),
+//                                machineIds: $machineIds
+//                            );
+//                            // ✅ 修复：MachineApiService::handleResponse 已经提取了 data，直接使用返回的数组
+//                            if (is_array($result)) {
+//                                foreach ($result as $item) {
+//                                    if (isset($item['id']) && isset($item['online'])) {
+//                                        $onlineStatusCache[$item['id']] = $item['online'];
+//                                    }
+//                                }
+//                                \support\Log::info('批量获取机台在线状态成功', [
+//                                    'type' => $data->type,
+//                                    'total_machines' => count($machineIds),
+//                                    'online_count' => count(array_filter($onlineStatusCache))
+//                                ]);
+//                            }
+//                        }
+//                    } catch (\Exception $e) {
+//                        \support\Log::warning('Batch check machine online via API failed', [
+//                            'error' => $e->getMessage()
+//                        ]);
+//                    }
+//                }
+//
+//                // ✅ 从缓存中读取在线状态
+//                $machineStatus = ($onlineStatusCache[$data->id] ?? false) ? 'online' : 'offline';
+//                return admin_view(plugin()->webman->getPath() . '/views/machine_status.vue')->attrs([
+//                    'id' => $data->id,
+//                    'type' => Admin::user()->type == 1 ? 'admin' : 'channel',
+//                    'department_id' => Admin::user()->department_id,
+//                    'ws' => config('app.ws_url', ''), // ✅ 修复：使用 config() 替代 env()，确保生产环境配置缓存后仍然有效
+//                    'machine_status' => $machineStatus,
+//                ]);
+//            })
+//            ->align('center');
         $grid->column('odds_y', admin_trans('machine.fields.odds_y'))->editable(
             Editable::number('odds_y')
                 ->min(1)
