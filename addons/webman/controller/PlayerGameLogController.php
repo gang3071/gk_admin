@@ -424,8 +424,15 @@ class PlayerGameLogController
                         ->modal([MachineController::class, 'getRecording'],
                             ['machineRecording' => $data->machine_recording])
                         ->maskClosable();
+                    $actions->prepend($dropdown);
+                }
+                if (!empty($data->machine_id)) {
                     $actions->prepend(
-                        $dropdown
+                        Button::create('控制日志')
+                            ->type('link')
+                            ->modal([$this, 'machineCtrlLogs'], ['id' => $data->id])
+                            ->width('80%')
+                            ->title('机台控制日志（' . ($data->machine->code ?? '') . '）')
                     );
                 }
             })->align('center');
@@ -589,6 +596,93 @@ class PlayerGameLogController
             $grid->hideSelection();
             $grid->expandFilter();
         });
+    }
+
+    /**
+     * 查询上下分事件前后的机台控制日志（来自 ClickHouse）
+     * @param int $id PlayerGameLog ID
+     * @return Html
+     */
+    public function machineCtrlLogs(int $id): Html
+    {
+        /** @var PlayerGameLog $record */
+        $record = ($this->model)::with('machine')->findOrFail($id);
+
+        $startTime = Carbon::parse($record->created_at)->subSeconds(30)->format('Y-m-d H:i:s');
+        $endTime   = Carbon::parse($record->created_at)->addSeconds(10)->format('Y-m-d H:i:s');
+        $machineId = (int) $record->machine_id;
+
+        $rows = $this->queryMachineCtrlLogs($machineId, $startTime, $endTime);
+
+        $actionColor = [
+            'INFO'    => '#52c41a',
+            'WARNING' => '#fa8c16',
+            'ERROR'   => '#f5222d',
+        ];
+
+        $cols = ['时间', '级别', '来源', '方向', '操作', '描述', '发送指令', '接收响应', '扩展数据'];
+        $th = implode('', array_map(fn($c) => "<th style='padding:6px 10px;border:1px solid #e8e8e8;background:#fafafa;white-space:nowrap'>{$c}</th>", $cols));
+
+        $tbody = '';
+        if (empty($rows)) {
+            $span = count($cols);
+            $tbody = "<tr><td colspan='{$span}' style='text-align:center;padding:20px;color:#999'>该时间范围内无机台控制日志</td></tr>";
+        } else {
+            foreach ($rows as $row) {
+                $level = htmlspecialchars($row['level'] ?? '');
+                $color = $actionColor[$level] ?? '#666';
+                $cells = [
+                    "<td style='white-space:nowrap'>" . htmlspecialchars($row['datetime'] ?? '') . "</td>",
+                    "<td style='text-align:center'><span style='color:{$color};font-weight:bold'>{$level}</span></td>",
+                    "<td style='text-align:center'>" . htmlspecialchars($row['source_type'] ?? '') . "</td>",
+                    "<td style='text-align:center'>" . htmlspecialchars($row['log_direction'] ?? '') . "</td>",
+                    "<td style='text-align:center'>" . htmlspecialchars($row['action'] ?? '') . "</td>",
+                    "<td>" . htmlspecialchars($row['action_desc'] ?? '') . "</td>",
+                    "<td style='font-family:monospace;font-size:12px'>" . htmlspecialchars($row['raw_send'] ?? '') . "</td>",
+                    "<td style='font-family:monospace;font-size:12px'>" . htmlspecialchars($row['raw_recv'] ?? '') . "</td>",
+                    "<td style='font-size:12px;max-width:200px;word-break:break-all'>" . htmlspecialchars($row['extra_data'] ?? '') . "</td>",
+                ];
+                $tbody .= '<tr style="border-bottom:1px solid #e8e8e8">' . implode('', $cells) . '</tr>';
+            }
+        }
+
+        $timeInfo = "查询时间范围：{$startTime} 至 {$endTime}，共 " . count($rows) . " 条记录";
+        $html = "
+<div style='padding:8px 0 12px;color:#666;font-size:13px'>{$timeInfo}</div>
+<div style='overflow-x:auto'>
+  <table style='width:100%;border-collapse:collapse;font-size:13px'>
+    <thead><tr>{$th}</tr></thead>
+    <tbody>{$tbody}</tbody>
+  </table>
+</div>";
+
+        return Html::create()->content($html);
+    }
+
+    /**
+     * 通过 ClickHouse HTTP API 查询机台控制日志
+     */
+    private function queryMachineCtrlLogs(int $machineId, string $startTime, string $endTime): array
+    {
+        $cfg = config('clickhouse');
+        $sql = "SELECT datetime, level, source_type, log_direction, action, action_desc, raw_send, raw_recv, extra_data
+                FROM {$cfg['database']}.machine_ctrl
+                WHERE machine_id = {$machineId}
+                  AND datetime >= '{$startTime}'
+                  AND datetime <= '{$endTime}'
+                ORDER BY datetime ASC
+                FORMAT JSON";
+        try {
+            $response = \Illuminate\Support\Facades\Http::withBasicAuth($cfg['user'], $cfg['password'])
+                ->withBody($sql, 'text/plain')
+                ->post($cfg['endpoint']);
+            if ($response->successful()) {
+                return $response->json('data') ?? [];
+            }
+        } catch (\Throwable $e) {
+            \support\Log::channel('default')->error('ClickHouse 查询失败', ['error' => $e->getMessage()]);
+        }
+        return [];
     }
 
     /**
