@@ -169,8 +169,10 @@ class PlayerGameLogController
                     $val,
                     PlayerGameLog $data
                 ) {
-                    // 开分操作显示负号，其他操作保持原样
-                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -$val : $val;
+                    // 开分：钱从钱包流出，一律显示负号。
+                    // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+                    // 现金投币/管理员上分写 0），这里按 action 归一取绝对值，不依赖落库符号。
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -abs((float)$val) : $val;
                     return Html::create()->content([
                         $displayVal > 0 ? '+' . $displayVal : $displayVal,
                     ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
@@ -455,8 +457,10 @@ class PlayerGameLogController
                     $val,
                     PlayerGameLog $data
                 ) {
-                    // 开分操作显示负号，其他操作保持原样
-                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -$val : $val;
+                    // 开分：钱从钱包流出，一律显示负号。
+                    // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+                    // 现金投币/管理员上分写 0），这里按 action 归一取绝对值，不依赖落库符号。
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -abs((float)$val) : $val;
                     return Html::create()->content([
                         $displayVal > 0 ? '+' . $displayVal : $displayVal,
                     ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);

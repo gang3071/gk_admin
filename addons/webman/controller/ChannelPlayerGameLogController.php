@@ -151,11 +151,17 @@ class ChannelPlayerGameLogController
                 })->align('center');
             }, admin_trans('player_game_log.machine_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function ($val
+                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function (
+                    $val,
+                    PlayerGameLog $data
                 ) {
+                    // 开分：钱从钱包流出，一律显示负号。
+                    // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+                    // 现金投币/管理员上分写 0），这里按 action 归一取绝对值，不依赖落库符号。
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -abs((float)$val) : $val;
                     return Html::create()->content([
-                        $val > 0 ? '+' . $val : $val,
-                    ])->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
+                        $displayVal > 0 ? '+' . $displayVal : $displayVal,
+                    ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
                 })->align('center');
                 $grid->column('before_game_amount',
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');
@@ -558,11 +564,17 @@ class ChannelPlayerGameLogController
                 $grid->column('odds', admin_trans('player_game_log.fields.odds'))->align('center');
             }, admin_trans('player_game_log.machine_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function ($val
+                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function (
+                    $val,
+                    PlayerGameLog $data
                 ) {
+                    // 开分：钱从钱包流出，一律显示负号。
+                    // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+                    // 现金投币/管理员上分写 0），这里按 action 归一取绝对值，不依赖落库符号。
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -abs((float)$val) : $val;
                     return Html::create()->content([
-                        $val > 0 ? '+' . $val : $val,
-                    ])->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
+                        $displayVal > 0 ? '+' . $displayVal : $displayVal,
+                    ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
                 })->align('center');
                 $grid->column('before_game_amount',
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');
