@@ -658,16 +658,23 @@ class PlayerGameLogController
         $result  = [];
         $prevMs  = null;
 
-        // 机台状态关键字段定义
+        // 机台状态关键字段定义（字段名与 MachineLogger::normalizeMachineState 输出一致）
         $stateKeys = [
-            'point'             => ['label' => '当前分', 'color' => '#1890ff'],
-            'player_open_point' => ['label' => '开分',   'color' => '#13c2c2'],
-            'open_point'        => ['label' => '开分',   'color' => '#13c2c2'],
-            'gaming_pressure'   => ['label' => '压',     'color' => '#fa8c16'],
-            'gaming_score'      => ['label' => '得',     'color' => '#52c41a'],
-            'turn_used_point'   => ['label' => '转',     'color' => '#722ed1'],
-            'total_bet'         => ['label' => '总押',   'color' => '#f5222d'],
-            'total_win'         => ['label' => '总赢',   'color' => '#52c41a'],
+            // 通用字段（所有机台类型）
+            'point'             => ['label' => '當前分',  'color' => '#1890ff'],
+            'open_point'        => ['label' => '開分',    'color' => '#13c2c2'],
+            'wash_point'        => ['label' => '洗分',    'color' => '#52c41a'],
+            // Slot 在线
+            'pressure'          => ['label' => '壓分',    'color' => '#fa8c16'],
+            'score'             => ['label' => '得分',    'color' => '#722ed1'],
+            'bet'               => ['label' => '總押',    'color' => '#f5222d'],
+            'win'               => ['label' => '總贏',    'color' => '#2f54eb'],
+            // Slot 离线
+            'card_score'        => ['label' => '卡分',    'color' => '#d46b08'],
+            'machine_score'     => ['label' => '機台分',  'color' => '#08979c'],
+            // Steel Ball
+            'player_win_number' => ['label' => '打碼轉',  'color' => '#531dab'],
+            'turn'              => ['label' => '剩餘轉',  'color' => '#595959'],
         ];
 
         foreach ($rows as $row) {
