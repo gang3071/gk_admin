@@ -639,7 +639,7 @@ class PlayerGameLogController
             if ($response->getStatusCode() === 200) {
                 $rows = json_decode($response->getBody()->getContents(), true)['data'] ?? [];
                 return json(['code' => 200, 'data' => [
-                    'logs'       => $rows,
+                    'logs'       => $this->processCtrlLogs($rows),
                     'time_range' => "{$startTime} 至 {$endTime}",
                 ]]);
             }
@@ -648,6 +648,94 @@ class PlayerGameLogController
             \support\Log::channel('default')->error('ClickHouse 查询失败', ['error' => $e->getMessage()]);
             return json(['code' => 500, 'msg' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * 将 ClickHouse 原始行结构化处理，供前端直接渲染
+     */
+    private function processCtrlLogs(array $rows): array
+    {
+        $result  = [];
+        $prevMs  = null;
+
+        // 机台状态关键字段定义
+        $stateKeys = [
+            'point'             => ['label' => '当前分', 'color' => '#1890ff'],
+            'player_open_point' => ['label' => '开分',   'color' => '#13c2c2'],
+            'open_point'        => ['label' => '开分',   'color' => '#13c2c2'],
+            'gaming_pressure'   => ['label' => '压',     'color' => '#fa8c16'],
+            'gaming_score'      => ['label' => '得',     'color' => '#52c41a'],
+            'turn_used_point'   => ['label' => '转',     'color' => '#722ed1'],
+            'total_bet'         => ['label' => '总押',   'color' => '#f5222d'],
+            'total_win'         => ['label' => '总赢',   'color' => '#52c41a'],
+        ];
+
+        foreach ($rows as $row) {
+            // 解析毫秒时间戳（datetime 格式：2026-10-23 17:38:25.123）
+            $dtStr = $row['datetime'] ?? '';
+            preg_match('/(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})(?:\.(\d+))?/', $dtStr, $m);
+            $baseTs = isset($m[1]) ? strtotime($m[1]) * 1000 : 0;
+            $fracMs = isset($m[2]) ? (int) str_pad(substr($m[2], 0, 3), 3, '0') : 0;
+            $curMs  = $baseTs + $fracMs;
+
+            $elapsedMs = $prevMs !== null ? $curMs - $prevMs : null;
+            $prevMs    = $curMs;
+
+            // display_type 分类
+            if ($row['action'] === 'open' && $row['log_direction'] === 'response') {
+                $displayType = 'noise';
+            } elseif (in_array($row['action'], ['heartbeat', 'field_update']) || $row['source_type'] === 'heartbeat') {
+                $displayType = 'heartbeat';
+            } elseif ($row['log_direction'] === 'command') {
+                $displayType = 'command';
+            } elseif ($row['log_direction'] === 'response') {
+                $displayType = 'response';
+            } else {
+                $displayType = 'event';
+            }
+
+            // 解析机台状态
+            $state = [];
+            if (!empty($row['machine_state'])) {
+                $parsed = json_decode($row['machine_state'], true) ?? [];
+                $seenLabels = [];
+                foreach ($stateKeys as $key => $meta) {
+                    if (isset($parsed[$key]) && !in_array($meta['label'], $seenLabels)) {
+                        $state[]      = ['label' => $meta['label'], 'color' => $meta['color'], 'val' => $parsed[$key]];
+                        $seenLabels[] = $meta['label'];
+                    }
+                }
+            }
+
+            // 解析扩展字段
+            $extra = [];
+            if (!empty($row['extra_data'])) {
+                $parsed = json_decode($row['extra_data'], true) ?? [];
+                foreach ($parsed as $k => $v) {
+                    if (!is_array($v) && !is_null($v) && $v !== '') {
+                        $extra[] = ['key' => $k, 'val' => $v];
+                    }
+                }
+                $extra = array_slice($extra, 0, 6);
+            }
+
+            $result[] = [
+                'time'         => substr($dtStr, 11, 8),   // HH:ii:ss
+                'elapsed_ms'   => $elapsedMs,
+                'level'        => $row['level'],
+                'display_type' => $displayType,
+                'source_type'  => $row['source_type'],
+                'log_direction'=> $row['log_direction'],
+                'action'       => $row['action'],
+                'action_desc'  => $row['action_desc'],
+                'state'        => $state,
+                'extra'        => $extra,
+                'raw_send'     => $row['raw_send'] ?? '',
+                'raw_recv'     => $row['raw_recv'] ?? '',
+            ];
+        }
+
+        return $result;
     }
 
     /**
