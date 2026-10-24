@@ -51,15 +51,16 @@
           <div class="tl-desc">{{ item.action_desc }}</div>
 
           <!-- 心跳机台状态卡片 -->
-          <div v-if="item.source_type === 'heartbeat' || item.action === 'heartbeat' || item.action === 'field_update'" class="tl-state-card">
-            <template v-if="parseState(item.machine_state) as st">
-              <div class="state-grid">
-                <div v-for="f in stateDisplayFields(st)" :key="f.key" class="state-field">
-                  <span class="state-label">{{ f.label }}</span>
-                  <span class="state-val" :style="{ color: f.color }">{{ f.val }}</span>
-                </div>
+          <div
+            v-if="(item.source_type === 'heartbeat' || item.action === 'heartbeat' || item.action === 'field_update') && stateDisplayFields(parseState(item.machine_state)).length"
+            class="tl-state-card"
+          >
+            <div class="state-grid">
+              <div v-for="f in stateDisplayFields(parseState(item.machine_state))" :key="f.key" class="state-field">
+                <span class="state-label">{{ f.label }}</span>
+                <span class="state-val" :style="{ color: f.color }">{{ f.val }}</span>
               </div>
-            </template>
+            </div>
           </div>
 
           <!-- 指令/响应 hex -->
