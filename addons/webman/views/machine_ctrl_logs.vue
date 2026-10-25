@@ -50,7 +50,11 @@
           </div>
 
           <!-- 描述 -->
-          <div class="tl-desc">{{ item.action_desc }}</div>
+          <div class="tl-desc">
+            <span v-if="item.display_type === 'command'" class="dir-arrow dir-send">↑</span>
+            <span v-else-if="item.display_type === 'response'" class="dir-arrow dir-recv">↓</span>
+            {{ item.action_desc }}
+          </div>
 
           <!-- 心跳 / field_update → 机台状态卡片 -->
           <div v-if="item.display_type === 'heartbeat' && item.state.length" class="state-card">
@@ -205,6 +209,11 @@ export default {
 .state-cell  { display:flex; flex-direction:column; align-items:center; min-width:44px; }
 .state-label { font-size:11px; color:#8c8c8c; }
 .state-val   { font-size:16px; font-weight:700; font-family:monospace; }
+
+/* 方向箭頭（描述前） */
+.dir-arrow { font-weight:700; margin-right:3px; font-size:13px; }
+.dir-send  { color:#0050b3; }
+.dir-recv  { color:#135200; }
 
 /* 原始 hex */
 .hex-row   { font-family:monospace; font-size:11px; padding:2px 6px; border-radius:3px; margin-top:2px; word-break:break-all; }
