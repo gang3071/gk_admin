@@ -729,6 +729,9 @@ class PlayerGameLogController
      */
     private function processCtrlLogs(array $rows): array
     {
+        // 底层轮询指令：仅协议层噪音，对管理后台无业务价值，直接跳过
+        $hiddenActions = ['read_point', 'read_win_number', 'push', 'clear_log'];
+
         $result  = [];
         $prevMs  = null;
 
@@ -760,6 +763,8 @@ class PlayerGameLogController
         ];
 
         foreach ($rows as $row) {
+            if (in_array($row['action'] ?? '', $hiddenActions, true)) continue;
+
             // 解析毫秒时间戳（datetime 格式：2026-10-23 17:38:25.123）
             $dtStr = $row['datetime'] ?? '';
             preg_match('/(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})(?:\.(\d+))?/', $dtStr, $m);
