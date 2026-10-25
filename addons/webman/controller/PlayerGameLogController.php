@@ -620,7 +620,7 @@ class PlayerGameLogController
         $createdAt = $base->format('Y-m-d H:i:s.000');
         $machineId = (int) $record->machine_id;
 
-        $isOpen      = $record->action == \app\model\PlayerGameLog::ACTION_OPEN;
+        $isOpen      = $record->action == PlayerGameLog::ACTION_OPEN;
         $startMarker = $isOpen ? '開分開始' : '洗分開始';
         $endMarker   = $isOpen ? '開分結束' : '下分結束';
 
