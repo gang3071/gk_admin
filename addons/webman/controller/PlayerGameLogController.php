@@ -617,11 +617,86 @@ class PlayerGameLogController
         $record = ($this->model)::findOrFail($id);
 
         $base      = Carbon::parse($record->created_at)->timezone('Asia/Shanghai');
-        $startTime = $base->copy()->subSeconds(30)->format('Y-m-d H:i:s.000');
-        $endTime   = $base->copy()->addSeconds(10)->format('Y-m-d H:i:s.999');
+        $createdAt = $base->format('Y-m-d H:i:s.000');
         $machineId = (int) $record->machine_id;
 
-        $cfg = config('clickhouse');
+        $isOpen      = $record->action == \app\model\PlayerGameLog::ACTION_OPEN;
+        $startMarker = $isOpen ? '開分開始' : '洗分開始';
+        $endMarker   = $isOpen ? '開分結束' : '下分結束';
+
+        // 弃台/洗分操作：machine ctrl 在 created_at 之后才执行，向前后各找 5 分钟
+        $lookbackStart = $base->copy()->subMinutes(1)->format('Y-m-d H:i:s.000');
+        $lookforward   = $base->copy()->addMinutes(5)->format('Y-m-d H:i:s.999');
+        $heartbeatCond = "action IN ('heartbeat', 'field_update') OR source_type = 'heartbeat'";
+
+        $cfg    = config('clickhouse');
+        $client = new \GuzzleHttp\Client();
+
+        $chPost = fn(string $sql) => json_decode(
+            $client->post($cfg['endpoint'], [
+                'auth'    => [$cfg['user'], $cfg['password']],
+                'body'    => $sql,
+                'timeout' => 5,
+            ])->getBody()->getContents(),
+            true
+        )['data'][0] ?? [];
+
+        $isValid = fn(?string $v): bool => !empty($v) && !str_starts_with($v, '1970') && !str_starts_with($v, '0000');
+
+        // Step 1: 在 created_at ±window 内找操作起止 marker
+        $opStart = $opEnd = null;
+        try {
+            $row = $chPost("SELECT
+                              minIf(datetime, action_desc LIKE '%{$startMarker}%') AS op_start,
+                              maxIf(datetime, action_desc LIKE '%{$endMarker}%')   AS op_end
+                            FROM {$cfg['database']}.machine_ctrl
+                            WHERE machine_id = {$machineId}
+                              AND datetime >= '{$lookbackStart}'
+                              AND datetime <= '{$lookforward}'
+                            FORMAT JSON");
+            if ($isValid($row['op_start'] ?? null)) $opStart = $row['op_start'];
+            if ($isValid($row['op_end']   ?? null)) $opEnd   = $row['op_end'];
+        } catch (\Throwable $e) {
+            \support\Log::channel('default')->error('ClickHouse marker查询失败', ['error' => $e->getMessage()]);
+        }
+
+        // Step 2: 找 op_start 之前最近一条心跳
+        $startPivot = $opStart ?? $createdAt;
+        $startTime  = Carbon::parse($startPivot)->timezone('Asia/Shanghai')->format('Y-m-d H:i:s.000'); // 兜底
+        try {
+            $row = $chPost("SELECT max(datetime) AS pre_heartbeat
+                            FROM {$cfg['database']}.machine_ctrl
+                            WHERE machine_id = {$machineId}
+                              AND datetime < '{$startPivot}'
+                              AND datetime >= '{$lookbackStart}'
+                              AND ({$heartbeatCond})
+                            FORMAT JSON");
+            if ($isValid($row['pre_heartbeat'] ?? null)) {
+                $startTime = Carbon::parse($row['pre_heartbeat'])->timezone('Asia/Shanghai')->format('Y-m-d H:i:s.000');
+            }
+        } catch (\Throwable $e) {
+            \support\Log::channel('default')->error('ClickHouse pre_heartbeat查询失败', ['error' => $e->getMessage()]);
+        }
+
+        // Step 3: 找 op_end 之后最近一条心跳
+        $endPivot = $opEnd ?? $createdAt;
+        $endTime  = Carbon::parse($endPivot)->timezone('Asia/Shanghai')->addSeconds(5)->format('Y-m-d H:i:s.999'); // 兜底
+        try {
+            $row = $chPost("SELECT min(datetime) AS post_heartbeat
+                            FROM {$cfg['database']}.machine_ctrl
+                            WHERE machine_id = {$machineId}
+                              AND datetime > '{$endPivot}'
+                              AND datetime <= '{$lookforward}'
+                              AND ({$heartbeatCond})
+                            FORMAT JSON");
+            if ($isValid($row['post_heartbeat'] ?? null)) {
+                $endTime = Carbon::parse($row['post_heartbeat'])->timezone('Asia/Shanghai')->format('Y-m-d H:i:s.999');
+            }
+        } catch (\Throwable $e) {
+            \support\Log::channel('default')->error('ClickHouse post_heartbeat查询失败', ['error' => $e->getMessage()]);
+        }
+
+        // Step 4: 主查询
         $sql = "SELECT datetime, level, source_type, log_direction, action, action_desc, raw_send, raw_recv, extra_data, machine_state
                 FROM {$cfg['database']}.machine_ctrl
                 WHERE machine_id = {$machineId}
@@ -630,7 +705,6 @@ class PlayerGameLogController
                 ORDER BY datetime ASC
                 FORMAT JSON";
         try {
-            $client = new \GuzzleHttp\Client();
             $response = $client->post($cfg['endpoint'], [
                 'auth'    => [$cfg['user'], $cfg['password']],
                 'body'    => $sql,
