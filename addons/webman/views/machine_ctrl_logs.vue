@@ -30,7 +30,7 @@
       <div v-for="(item, idx) in visibleLogs" :key="idx" class="tl-row">
         <!-- 左轴 -->
         <div class="tl-axis">
-          <div class="tl-dot" :class="'dot-' + item.display_type + (item.level === 'ERROR' ? ' dot-error' : item.level === 'WARNING' ? ' dot-warn' : '')"></div>
+          <div class="tl-dot" :class="dotClass(item)"></div>
           <div v-if="idx < visibleLogs.length - 1" class="tl-line"></div>
         </div>
 
@@ -40,6 +40,10 @@
           <div class="tl-head">
             <code class="tl-time">{{ item.time }}</code>
             <span v-if="item.elapsed_ms !== null" class="tl-elapsed">+{{ fmtElapsed(item.elapsed_ms) }}</span>
+            <!-- 開分/洗分 醒目標記 -->
+            <span v-if="item.marker" class="tl-marker" :class="'marker-' + item.marker">
+              {{ markerLabel(item.marker) }}
+            </span>
             <a-tag :color="actionTagColor(item)" style="margin:0; font-size:11px; line-height:18px">{{ item.action }}</a-tag>
             <a-tag :color="levelColor(item.level)" style="margin:0; font-size:11px; line-height:18px">{{ item.level }}</a-tag>
             <a-tag v-if="item.source_type !== 'system'" style="margin:0; font-size:11px; line-height:18px; background:#f0f5ff; border-color:#adc6ff; color:#2f54eb">{{ item.source_type }}</a-tag>
@@ -106,7 +110,24 @@ export default {
       const m = { wash: 'red', leave: 'volcano', open: 'cyan' };
       return m[item.action] || 'default';
     },
+    markerLabel(m) {
+      return { open_start: '▶ 開分開始', open_end: '✓ 開分結束', wash_start: '▶ 洗分開始', wash_end: '✓ 洗分結束' }[m] || m;
+    },
+    dotClass(item) {
+      if (item.marker === 'open_start')  return 'dot-open-start';
+      if (item.marker === 'open_end')    return 'dot-open-end';
+      if (item.marker === 'wash_start')  return 'dot-wash-start';
+      if (item.marker === 'wash_end')    return 'dot-wash-end';
+      const base = 'dot-' + item.display_type;
+      if (item.level === 'ERROR')   return base + ' dot-error';
+      if (item.level === 'WARNING') return base + ' dot-warn';
+      return base;
+    },
     bodyClass(item) {
+      if (item.marker === 'open_start')  return 'body-open-start';
+      if (item.marker === 'open_end')    return 'body-open-end';
+      if (item.marker === 'wash_start')  return 'body-wash-start';
+      if (item.marker === 'wash_end')    return 'body-wash-end';
       if (item.level === 'ERROR')   return 'body-error';
       if (item.level === 'WARNING') return 'body-warn';
       if (['wash', 'leave', 'account_query', 'wash_zero', 'all_down'].includes(item.action)) return 'body-key';
@@ -148,16 +169,35 @@ export default {
 .dot-error     { background:#fff1f0 !important; border-color:#f5222d !important; }
 .dot-warn      { background:#fffbe6 !important; border-color:#fa8c16 !important; }
 
+/* 開分/洗分 標記圓點（放大、實心） */
+.dot-open-start { width:12px; height:12px; background:#13c2c2; border-color:#006d75; }
+.dot-open-end   { width:12px; height:12px; background:#52c41a; border-color:#237804; }
+.dot-wash-start { width:12px; height:12px; background:#fa8c16; border-color:#ad4e00; }
+.dot-wash-end   { width:12px; height:12px; background:#722ed1; border-color:#391085; }
+
 .tl-body     { flex:1; padding:5px 8px; border-radius:4px; margin-bottom:4px; border-left:3px solid transparent; min-width:0; }
 .body-default{ background:#fafafa; border-left-color:#e8e8e8; }
 .body-error  { background:#fff1f0; border-left-color:#f5222d; }
 .body-warn   { background:#fffbe6; border-left-color:#fa8c16; }
 .body-key    { background:#f6ffed; border-left-color:#52c41a; }
 
+/* 開分/洗分 標記行樣式（加粗左邊線、特殊背景） */
+.body-open-start { background:#e6fffb; border-left:4px solid #13c2c2; }
+.body-open-end   { background:#f6ffed; border-left:4px solid #52c41a; }
+.body-wash-start { background:#fff7e6; border-left:4px solid #fa8c16; }
+.body-wash-end   { background:#f9f0ff; border-left:4px solid #722ed1; }
+
 .tl-head   { display:flex; align-items:center; flex-wrap:wrap; gap:4px; margin-bottom:3px; }
 .tl-time   { font-size:12px; color:#595959; font-weight:700; background:none; padding:0; }
 .tl-elapsed{ font-size:11px; color:#8c8c8c; background:#f5f5f5; padding:0 5px; border-radius:3px; }
 .tl-desc   { font-size:12px; color:#262626; margin-bottom:2px; line-height:1.5; word-break:break-word; }
+
+/* 開分/洗分 醒目標籤 */
+.tl-marker         { font-size:12px; font-weight:700; padding:1px 8px; border-radius:3px; border:1px solid; }
+.marker-open_start { background:#e6fffb; border-color:#13c2c2; color:#006d75; }
+.marker-open_end   { background:#f6ffed; border-color:#52c41a; color:#237804; }
+.marker-wash_start { background:#fff7e6; border-color:#fa8c16; color:#ad4e00; }
+.marker-wash_end   { background:#f9f0ff; border-color:#722ed1; color:#391085; }
 
 /* 机台状态卡片 */
 .state-card  { background:#fff; border:1px solid #e8e8e8; border-radius:4px; padding:6px 10px; margin:4px 0; }

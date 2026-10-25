@@ -659,9 +659,17 @@ class PlayerGameLogController
         $prevMs  = null;
 
         // 机台状态关键字段定义（字段名与 MachineLogger::normalizeMachineState 输出一致）
+        // skip_zero=true：值为 0/空 时不展示（避免正常态产生噪音）
+        // bool=true：值非零时显示「是」而非原始数字
         $stateKeys = [
             // 通用字段（所有机台类型）
             'point'             => ['label' => '當前分',  'color' => '#1890ff'],
+            'gaming'            => ['label' => '遊戲中',  'color' => '#52c41a', 'skip_zero' => true, 'bool' => true],
+            'gaming_user_id'    => ['label' => '玩家ID',  'color' => '#1890ff', 'skip_zero' => true],
+            'reward_status'     => ['label' => '開獎中',  'color' => '#eb2f96', 'skip_zero' => true, 'bool' => true],
+            'has_lock'          => ['label' => '鎖定中',  'color' => '#f5222d', 'skip_zero' => true, 'bool' => true],
+            'keeping'           => ['label' => '保留中',  'color' => '#fa8c16', 'skip_zero' => true, 'bool' => true],
+            'keeping_user_id'   => ['label' => '保留玩家','color' => '#fa8c16', 'skip_zero' => true],
             'open_point'        => ['label' => '開分',    'color' => '#13c2c2'],
             'wash_point'        => ['label' => '洗分',    'color' => '#52c41a'],
             // Slot 在线
@@ -701,16 +709,27 @@ class PlayerGameLogController
                 $displayType = 'event';
             }
 
+            // 偵測開分/洗分 開始/結束標記（用於前端醒目顯示）
+            $marker = null;
+            $desc = $row['action_desc'] ?? '';
+            if (str_contains($desc, '開分開始'))      { $marker = 'open_start'; }
+            elseif (str_contains($desc, '開分結束'))  { $marker = 'open_end';   if ($displayType === 'noise') $displayType = 'response'; }
+            elseif (str_contains($desc, '下分開始'))  { $marker = 'wash_start'; }
+            elseif (str_contains($desc, '下分結束'))  { $marker = 'wash_end'; }
+
             // 解析机台状态
             $state = [];
             if (!empty($row['machine_state'])) {
                 $parsed = json_decode($row['machine_state'], true) ?? [];
                 $seenLabels = [];
                 foreach ($stateKeys as $key => $meta) {
-                    if (isset($parsed[$key]) && !in_array($meta['label'], $seenLabels)) {
-                        $state[]      = ['label' => $meta['label'], 'color' => $meta['color'], 'val' => $parsed[$key]];
-                        $seenLabels[] = $meta['label'];
-                    }
+                    if (!array_key_exists($key, $parsed)) continue;
+                    $val = $parsed[$key];
+                    if (!empty($meta['skip_zero']) && !$val) continue;
+                    if (in_array($meta['label'], $seenLabels)) continue;
+                    $displayVal   = !empty($meta['bool']) ? '是' : $val;
+                    $state[]      = ['label' => $meta['label'], 'color' => $meta['color'], 'val' => $displayVal];
+                    $seenLabels[] = $meta['label'];
                 }
             }
 
@@ -735,6 +754,7 @@ class PlayerGameLogController
                 'log_direction'=> $row['log_direction'],
                 'action'       => $row['action'],
                 'action_desc'  => $row['action_desc'],
+                'marker'       => $marker,
                 'state'        => $state,
                 'extra'        => $extra,
                 'raw_send'     => $row['raw_send'] ?? '',
