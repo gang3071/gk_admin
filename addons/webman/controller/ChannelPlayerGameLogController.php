@@ -49,96 +49,26 @@ class ChannelPlayerGameLogController
                 'machine.producer:id,name',                    // 嵌套加载但限制字段
             ]);
             $exAdminFilter = Request::input('ex_admin_filter', []);
+            $this->applyQueryConditions($grid->model(), $exAdminFilter);
 
-            /** @var \addons\webman\model\AdminUser $admin */
-            $admin = Admin::user();
-            if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
-                // 代理：查询所有下级店家的玩家记录
-                $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
-                $playerIds = \addons\webman\model\Player::query()->whereIn('store_admin_id', $storeIds)->pluck('id');
-                $grid->model()->whereIn('player_id', $playerIds);
-            } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
-                // 店家：查询自己的玩家记录
-                $playerIds = \addons\webman\model\Player::query()->where('store_admin_id', $admin->id)->pluck('id');
-                $grid->model()->whereIn('player_id', $playerIds);
-            }
-            if (!empty($exAdminFilter['created_at_start'])) {
-                $grid->model()->where('created_at', '>=', $exAdminFilter['created_at_start']);
-            }
-            if (!empty($exAdminFilter['created_at_end'])) {
-                $grid->model()->where('created_at', '<=', $exAdminFilter['created_at_end']);
-            }
-            if (!empty($exAdminFilter['department_id'])) {
-                $grid->model()->where('department_id', $exAdminFilter['department_id']);
-            }
-            if (!empty($exAdminFilter['action'])) {
-                $grid->model()->where('action', $exAdminFilter['action']);
-            }
-            if (!empty($exAdminFilter['source_type'])) {
-                $grid->model()->where('source_type', $exAdminFilter['source_type']);
-            }
-            if (!empty($exAdminFilter['action_type'])) {
-                switch ($exAdminFilter['action_type']) {
-                    case 'admin':
-                        $grid->model()->where('user_id', '!=', 0)->where('is_system', 0);
-                        break;
-                    case 'system':
-                        $grid->model()->where('is_system', 1);
-                        break;
-                    case 'player':
-                        $grid->model()->where('is_system', 0)->where('user_id', 0);
-                        break;
-                    default:
-                        return '';
-                }
-            }
-            if (!empty($exAdminFilter['machine'])) {
-                $grid->model()->whereHas('machine', function ($query) use ($exAdminFilter) {
-                    if (!empty($exAdminFilter['machine']['machineLabel']['name'])) {
-                        $query->whereHas('machineLabel', function ($query) use ($exAdminFilter) {
-                            $query->where('name', 'like',
-                                '%' . $exAdminFilter['machine']['machineLabel']['name'] . '%');
-                        });
-                    }
-                    if (!empty($exAdminFilter['machine']['code'])) {
-                        $query->where('code', $exAdminFilter['machine']['code']);
-                    }
-                    if (!empty($exAdminFilter['machine']['cate_id'])) {
-                        $query->whereIn('cate_id', $exAdminFilter['machine']['cate_id']);
-                    }
-                    if (!empty($exAdminFilter['machine']['producer_id'])) {
-                        $query->where('producer_id', $exAdminFilter['machine']['producer_id']);
-                    }
-                });
-            }
-            if (!empty($exAdminFilter['player']['uuid'])) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('uuid', $exAdminFilter['player']['uuid']);
-                });
-            }
-            if (!empty($exAdminFilter['player']['phone'])) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('phone', 'like', '%' . $exAdminFilter['player']['phone'] . '%');
-                });
-            }
-            
-            if (isset($exAdminFilter['date_type'])) {
-                $grid->model()->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
-            }
-            if (isset($exAdminFilter['search_type'])) {
-                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
-                    $query->where('is_test', $exAdminFilter['search_type']);
-                });
-            }
-            
             $grid->model()->orderBy('id', 'desc');
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($exAdminFilter) {
                 $row->gutter([10, 0]);
-                $row->column(admin_view(plugin()->webman->getPath() . '/views/total_info.vue')->attrs([
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/game_vendor_total_info.vue')->attrs([
                     'ex_admin_filter' => $exAdminFilter,
-                    'type' => 'PlayerGameLog',
+                    'api_url' => 'ex-admin/addons-webman-controller-ChannelPlayerGameLogController/totalInfo',
                     'department_id' => Admin::user()->department_id,
+                    'admin_user_id' => Admin::user()->id,
+                    'trans' => [
+                        'panelHeader' => admin_trans('player_game_log.stats.panel_header'),
+                        'loading' => admin_trans('player_game_log.stats.loading'),
+                        'refresh' => admin_trans('player_game_log.stats.refresh'),
+                        'loadError' => admin_trans('player_game_log.stats.load_error'),
+                        'retry' => admin_trans('player_game_log.stats.retry'),
+                        'clickToView' => admin_trans('player_game_log.stats.click_to_view'),
+                        'loadFailedMsg' => admin_trans('player_game_log.stats.load_failed_msg'),
+                    ],
                 ]));
             })->style(['background' => '#fff']);
             $grid->header($layout);
@@ -221,11 +151,17 @@ class ChannelPlayerGameLogController
                 })->align('center');
             }, admin_trans('player_game_log.machine_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function ($val
+                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function (
+                    $val,
+                    PlayerGameLog $data
                 ) {
+                    // 开分：钱从钱包流出，一律显示负号。
+                    // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+                    // 现金投币/管理员上分写 0），这里按 action 归一取绝对值，不依赖落库符号。
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -abs((float)$val) : $val;
                     return Html::create()->content([
-                        $val > 0 ? '+' . $val : $val,
-                    ])->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
+                        $displayVal > 0 ? '+' . $displayVal : $displayVal,
+                    ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
                 })->align('center');
                 $grid->column('before_game_amount',
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');
@@ -410,6 +346,142 @@ class ChannelPlayerGameLogController
             $grid->expandFilter();
         });
     }
+
+    /**
+     * 应用数据权限与搜索条件（列表与统计共用）
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param array $exAdminFilter
+     * @return void
+     */
+    protected function applyQueryConditions($query, array $exAdminFilter): void
+    {
+        // 数据权限：代理查下级店家玩家，店家查本店玩家
+        /** @var \addons\webman\model\AdminUser $admin */
+        $admin = Admin::user();
+        if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+            $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
+            $playerIds = \addons\webman\model\Player::query()->whereIn('store_admin_id', $storeIds)->pluck('id');
+            $query->whereIn('player_id', $playerIds);
+        } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+            $playerIds = \addons\webman\model\Player::query()->where('store_admin_id', $admin->id)->pluck('id');
+            $query->whereIn('player_id', $playerIds);
+        }
+
+        if (empty($exAdminFilter)) {
+            return;
+        }
+
+        if (!empty($exAdminFilter['created_at_start'])) {
+            $query->where('created_at', '>=', $exAdminFilter['created_at_start']);
+        }
+        if (!empty($exAdminFilter['created_at_end'])) {
+            $query->where('created_at', '<=', $exAdminFilter['created_at_end']);
+        }
+        if (!empty($exAdminFilter['department_id'])) {
+            $query->where('department_id', $exAdminFilter['department_id']);
+        }
+        if (!empty($exAdminFilter['action'])) {
+            $query->where('action', $exAdminFilter['action']);
+        }
+        if (!empty($exAdminFilter['source_type'])) {
+            $query->where('source_type', $exAdminFilter['source_type']);
+        }
+        if (!empty($exAdminFilter['action_type'])) {
+            switch ($exAdminFilter['action_type']) {
+                case 'admin':
+                    $query->where('user_id', '!=', 0)->where('is_system', 0);
+                    break;
+                case 'system':
+                    $query->where('is_system', 1);
+                    break;
+                case 'player':
+                    $query->where('is_system', 0)->where('user_id', 0);
+                    break;
+            }
+        }
+        if (!empty($exAdminFilter['machine'])) {
+            $query->whereHas('machine', function ($query) use ($exAdminFilter) {
+                if (!empty($exAdminFilter['machine']['machineLabel']['name'])) {
+                    $query->whereHas('machineLabel', function ($query) use ($exAdminFilter) {
+                        $query->where('name', 'like',
+                            '%' . $exAdminFilter['machine']['machineLabel']['name'] . '%');
+                    });
+                }
+                if (!empty($exAdminFilter['machine']['code'])) {
+                    $query->where('code', $exAdminFilter['machine']['code']);
+                }
+                if (!empty($exAdminFilter['machine']['cate_id'])) {
+                    $query->whereIn('cate_id', $exAdminFilter['machine']['cate_id']);
+                }
+                if (!empty($exAdminFilter['machine']['producer_id'])) {
+                    $query->where('producer_id', $exAdminFilter['machine']['producer_id']);
+                }
+            });
+        }
+        if (!empty($exAdminFilter['player']['uuid'])) {
+            $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                $query->where('uuid', $exAdminFilter['player']['uuid']);
+            });
+        }
+        if (!empty($exAdminFilter['player']['phone'])) {
+            $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                $query->where('phone', 'like', '%' . $exAdminFilter['player']['phone'] . '%');
+            });
+        }
+        if (isset($exAdminFilter['date_type'])) {
+            $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
+        }
+        if (isset($exAdminFilter['search_type'])) {
+            $query->whereHas('player', function ($query) use ($exAdminFilter) {
+                $query->where('is_test', $exAdminFilter['search_type']);
+            });
+        }
+    }
+
+    /**
+     * 上下分记录统计（独立接口，不走通用 totalInfo）
+     * 汇总口径与列表列一致，随搜索条件实时变化
+     * @group channel
+     * @auth true
+     * @return \support\Response
+     */
+    public function totalInfo(): \support\Response
+    {
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+
+        $query = (new $this->model)->newQuery();
+        $this->applyQueryConditions($query, $exAdminFilter);
+
+        // 总游戏点按实际方向累计：开分记负、其余记正，与列表符号口径一致。
+        // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+        // 现金投币/管理员上分写 0），所以不能直接 sum(game_amount)，必须按 action 归一。
+        $openAction = PlayerGameLog::ACTION_OPEN;
+        $totalData = $query->selectRaw("
+                sum(CASE WHEN action = {$openAction} THEN -ABS(game_amount) ELSE game_amount END) as total_game_amount,
+                sum(open_point) as total_open_point,
+                sum(wash_point) as total_wash_point,
+                sum(gift_point) as total_gift_point,
+                sum(pressure) as total_pressure,
+                sum(score) as total_score,
+                sum(turn_point) as total_turn_point,
+                sum(chip_amount) as total_chip_amount")
+            ->first();
+
+        $val = fn($field) => $totalData && $totalData->$field !== null ? floatval($totalData->$field) : 0.0;
+
+        $data = [
+            ['title' => admin_trans('player_game_log.total_data.total_game_amount'), 'number' => $val('total_game_amount'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_open_point'), 'number' => $val('total_open_point'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_wash_point'), 'number' => $val('total_wash_point'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_gift_point'), 'number' => $val('total_gift_point'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_pressure'), 'number' => $val('total_pressure'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_score'), 'number' => $val('total_score'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_turn_point'), 'number' => $val('total_turn_point'), 'prefix' => '', 'suffix' => ''],
+            ['title' => admin_trans('player_game_log.total_data.total_chip_amount'), 'number' => $val('total_chip_amount'), 'prefix' => '', 'suffix' => ''],
+        ];
+
+        return json(['code' => 200, 'data' => $data]);
+    }
     
     /**
      * 机台报表明细
@@ -496,11 +568,17 @@ class ChannelPlayerGameLogController
                 $grid->column('odds', admin_trans('player_game_log.fields.odds'))->align('center');
             }, admin_trans('player_game_log.machine_info'));
             $grid->column(function (Grid $grid) {
-                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function ($val
+                $grid->column('game_amount', admin_trans('player_game_log.fields.game_amount'))->display(function (
+                    $val,
+                    PlayerGameLog $data
                 ) {
+                    // 开分：钱从钱包流出，一律显示负号。
+                    // game_amount 的落库符号各写入方并不统一（gk_work 上分写正数、gk_api 写负数、
+                    // 现金投币/管理员上分写 0），这里按 action 归一取绝对值，不依赖落库符号。
+                    $displayVal = $data->action == PlayerGameLog::ACTION_OPEN ? -abs((float)$val) : $val;
                     return Html::create()->content([
-                        $val > 0 ? '+' . $val : $val,
-                    ])->style(['color' => ($val < 0 ? '#cd201f' : 'green')]);
+                        $displayVal > 0 ? '+' . $displayVal : $displayVal,
+                    ])->style(['color' => ($displayVal < 0 ? '#cd201f' : 'green')]);
                 })->align('center');
                 $grid->column('before_game_amount',
                     admin_trans('player_game_log.fields.before_game_amount'))->align('center');

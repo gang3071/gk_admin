@@ -151,6 +151,15 @@ class ChannelMarqueeController
                         ->required()
                 )->display(function ($val, SystemSetting $data) {
                     return $data->content ?? '--';
+                })->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return $data->feature === 'leaderboard_switch';
+                })->display(function ($value, SystemSetting $data) {
+                    return Tag::create(
+                        $data->status
+                            ? admin_trans('system_setting.leaderboard.switch_enabled')
+                            : admin_trans('system_setting.leaderboard.switch_disabled')
+                    )->color($data->status ? 'green' : 'red');
                 })->align('center');
 
             $grid->column('status', admin_trans('system_setting.fields.status'))->switch()->align('center');

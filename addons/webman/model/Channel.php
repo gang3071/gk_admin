@@ -165,6 +165,12 @@ class Channel extends Model
                     'feature' => 'ticket_machine_download_url',
                     'created_at' => date('Y-m-d H:i:s'),
                 ],
+                [
+                    'department_id' => $channel->department_id,
+                    'feature' => 'leaderboard_switch',
+                    'status' => 1,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ],
             ]);
             ChannelRechargeMethod::insert([
                 [

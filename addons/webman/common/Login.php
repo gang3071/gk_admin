@@ -18,6 +18,7 @@ use addons\webman\model\PlayerPresentRecord;
 use addons\webman\model\PlayerRechargeRecord;
 use addons\webman\model\PlayerWithdrawRecord;
 use addons\webman\model\PlayGameRecord;
+use addons\webman\service\MachineReportAggregator;
 use ExAdmin\ui\component\Component;
 use ExAdmin\ui\contract\LoginAbstract;
 use ExAdmin\ui\response\Message;
@@ -742,62 +743,23 @@ class Login extends LoginAbstract
                 ];
                 break;
             case 'MachineReport':
-                $query = PlayerGameLog::query();
-                if (!empty($departmentId)) {
-                    $query->where('department_id', $departmentId);
-                }
-                if (!empty($exAdminFilter)) {
-                    if (!empty($exAdminFilter['date_start'])) {
-                        $query->whereDate('created_at', '>=', $exAdminFilter['date_start']);
+                // 由 player_game_log 实时聚合（machine_report 的 PlayerGameLog::booted 累加链路已失效）
+                $rows = MachineReportAggregator::build($exAdminFilter, function ($query, $table) use ($departmentId) {
+                    (new MachineReport())->applyDataAuthTo($query, $table);
+                    if (!empty($departmentId)) {
+                        $query->where($table . '.department_id', $departmentId);
                     }
-                    if (!empty($exAdminFilter['date_end'])) {
-                        $query->whereDate('created_at', '<=', $exAdminFilter['date_end']);
-                    }
-                    if (!empty($exAdminFilter['department_id'])) {
-                        $query->where('department_id', $exAdminFilter['department_id']);
-                    }
-                    if (isset($exAdminFilter['is_test']) && $exAdminFilter['is_test'] !== '') {
-                        $query->where('is_test', '=', $exAdminFilter['is_test']);
-                    }
-                    if (!empty($exAdminFilter['machine'])) {
-                        $query->whereHas('machine', function ($query) use ($exAdminFilter) {
-                            if (!empty($exAdminFilter['machine']['name'])) {
-                                $query->whereHas('machineLabel', function ($query) use ($exAdminFilter) {
-                                    $query->where('name', 'like', '%' . $exAdminFilter['machine']['name'] . '%');
-                                });
-                            }
-                            if (!empty($exAdminFilter['machine']['code'])) {
-                                $query->where('code', $exAdminFilter['machine']['code']);
-                            }
-                            if (!empty($exAdminFilter['machine']['producer_id'])) {
-                                $query->where('producer_id', $exAdminFilter['machine']['producer_id']);
-                            }
-                            if (!empty($exAdminFilter['machine']['cate_id'])) {
-                                $query->whereIn('cate_id', $exAdminFilter['machine']['cate_id']);
-                            }
-                        });
-                    }
-                }
-                if (!empty($exAdminFilter['date_type'])) {
-                    $query->where(getDateWhere($exAdminFilter['date_type'], 'created_at'));
-                }
-                $totals = (clone $query)->selectRaw('
-                    SUM(CASE WHEN action = 1 THEN ABS(game_amount) ELSE 0 END) as open_amount,
-                    SUM(CASE WHEN action = 3 THEN ABS(game_amount) ELSE 0 END) as wash_amount,
-                    SUM(CASE WHEN action = 3 THEN ABS(game_amount) WHEN action = 1 THEN -ABS(game_amount) ELSE 0 END) as total_amount,
-                    SUM(open_point) as open_point,
-                    SUM(wash_point) as wash_point,
-                    SUM(open_point - wash_point) as total_point
-                ')->first();
-                $openAmountTotal  = floatval($totals['open_amount'] ?? 0);
-                $washAmountTotal  = floatval($totals['wash_amount'] ?? 0);
-                $totalAmount      = floatval($totals['total_amount'] ?? 0);
-                $openPointTotal   = floatval($totals['open_point'] ?? 0);
-                $washPointTotal   = floatval($totals['wash_point'] ?? 0);
-                $totalPointTotal  = floatval($totals['total_point'] ?? 0);
-                $totalActivityAmount = 0;
-                $totalLotteryAmount  = 0;
-                $totalActualWinLoss  = $totalAmount * -1;
+                })->get();
+
+                $openAmountTotal = floatval($rows->sum('open_amount'));
+                $washAmountTotal = floatval($rows->sum('wash_amount'));
+                $totalAmount = floatval($rows->sum('total_amount'));
+                $openPointTotal = floatval($rows->sum('open_point'));
+                $washPointTotal = floatval($rows->sum('wash_point'));
+                $totalPointTotal = floatval($rows->sum('total_point'));
+                $totalActivityAmount = floatval($rows->sum('activity_amount'));
+                $totalLotteryAmount = floatval($rows->sum('lottery_amount'));
+                $totalActualWinLoss = ($totalAmount + $totalActivityAmount + $totalLotteryAmount) * -1;
                 $data = [
                     [
                         'title' => admin_trans('machine_report.open_amount_total'),

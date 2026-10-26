@@ -41,6 +41,7 @@ return [
         'leaderboard_golden_weekly' => '金樽ゲーム量週間ランキング',
         'leaderboard_store_weekly' => '店舗週間ランキング',
         'leaderboard_golden_monthly' => '金樽ゲーム量月間ランキング',
+        'leaderboard_switch' => 'ランキングスイッチ',
     ],
     'marquee_max_len' => 'マーキーは最大 100 文字まで可能',
     'line_customer_max_len' => 'lineカスタマーサービスアドレスは最大200文字',
@@ -83,6 +84,8 @@ return [
         'rank1' => '1位報酬',
         'rank2' => '2位報酬',
         'rank3' => '3位報酬',
+        'switch_enabled' => '有効',
+        'switch_disabled' => '無効',
         'save_success' => '保存成功',
     ],
     // リベート設定

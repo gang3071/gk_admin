@@ -41,6 +41,49 @@ trait DataPermissions
     }
 
     /**
+     * 把数据权限条件套到任意查询上
+     *
+     * 用于从明细表聚合报表的场景：聚合主表不是本模型，
+     * 拿不到全局作用域，但数据权限口径必须与本模型一致。
+     *
+     * @param \Illuminate\Database\Eloquent\Builder $query 目标查询
+     * @param string $table 列前缀（如 player_game_log）
+     * @return void
+     */
+    public function applyDataAuthTo($query, string $table): void
+    {
+        $adminId = Admin::id();
+        if (!$adminId
+            || plugin()->webman->config('admin_auth_id') == $adminId
+            || count($this->dataAuth) == 0
+            || request()->app == 'api') {
+            return;
+        }
+
+        $role = $this->getUserRole($adminId);
+        if (!$role) {
+            return;
+        }
+
+        $query->where(function ($q) use ($role, $adminId, $table) {
+            switch ($role->data_type) {
+                case $this->CUSTOM_DATA_PERMISSIONS:
+                    $this->applyCustomPermissions($q, $table, $role, $adminId);
+                    break;
+                case $this->THIS_DEPARTMENT_AND_THE_FOLLOWING_DATA_PERMISSIONS:
+                    $this->applyDepartmentAndBelowPermissions($q, $table, $adminId);
+                    break;
+                case $this->DATA_PERMISSIONS_FOR_THIS_DEPARTMENT:
+                    $this->applyDepartmentPermissions($q, $table, $adminId);
+                    break;
+                case $this->PERSONAL_DATA_RIGHTS:
+                    $this->applyPersonalPermissions($q, $table);
+                    break;
+            }
+        });
+    }
+
+    /**
      * 数据权限字段
      * @var array
      */

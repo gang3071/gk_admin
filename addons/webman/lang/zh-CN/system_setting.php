@@ -41,6 +41,7 @@ return [
         'leaderboard_golden_weekly' => '金樽游戏量周排行',
         'leaderboard_store_weekly' => '各店周排行',
         'leaderboard_golden_monthly' => '金樽游戏量月排行',
+        'leaderboard_switch' => '排行榜开关',
     ],
     'marquee_max_len' => '跑馬燈最多100個字元',
     'line_customer_max_len' => 'Line客服地址最多200個字符',
@@ -83,6 +84,8 @@ return [
         'rank1' => '第 1 名奖励',
         'rank2' => '第 2 名奖励',
         'rank3' => '第 3 名奖励',
+        'switch_enabled' => '已启用',
+        'switch_disabled' => '已停用',
         'save_success' => '保存成功',
     ],
     // 反水配置
