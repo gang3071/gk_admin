@@ -33,6 +33,13 @@ class SliderController
             $grid->title(admin_trans('slider.title'));
             $grid->model()->orderBy('status', 'desc')->orderBy('sort', 'desc');
             $grid->sortDrag();
+            // 拖拽排序是原生 SQL 更新，不触发模型事件，需单独推送
+            $grid->sorting(function ($id) {
+                $slider = $this->model::find($id);
+                if ($slider) {
+                    \addons\webman\service\SliderPushService::notify($slider);
+                }
+            });
             $grid->column('picture_url', admin_trans('slider.fields.picture_url'))->display(function ($val, $data) {
                 $image = Image::create()
                     ->width(50)

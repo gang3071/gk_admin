@@ -66,6 +66,9 @@ class ChannelSliderController
                 }
                 return '';
             })->align('center');
+            $grid->column('ad_position', admin_trans('slider.fields.ad_position'))->display(function ($val) {
+                return admin_trans('slider.ad_position.' . $val);
+            })->align('center');
             $grid->sortInput('sort', admin_trans('slider.fields.sort'))->align('center');
             $grid->column('status', admin_trans('slider.fields.status'))->switch()->align('center');
             $grid->setForm()->drawer($this->form());
@@ -85,13 +88,25 @@ class ChannelSliderController
 
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('slider.title'));
-            $form->file('picture_url', admin_trans('slider.fields.picture_url'))
-                ->ext('jpg,png,jpeg')
-                ->type('image')
-                ->fileSize('1m')
-                ->required()
-                ->hideFinder()
-                ->paste();
+            $form->select('ad_position', admin_trans('slider.fields.ad_position'))
+                ->options([
+                    1 => admin_trans('slider.ad_position.1'),
+                    2 => admin_trans('slider.ad_position.2'),
+                    3 => admin_trans('slider.ad_position.3'),
+                    4 => admin_trans('slider.ad_position.4'),
+                ])->required()
+                ->when(1, function (Form $form) {
+                    $this->pictureField($form, 'slider.help.picture_size_1');
+                })
+                ->when(2, function (Form $form) {
+                    $this->pictureField($form, 'slider.help.picture_size_2');
+                })
+                ->when(3, function (Form $form) {
+                    $this->pictureField($form, 'slider.help.picture_size_3');
+                })
+                ->when(4, function (Form $form) {
+                    $this->pictureField($form);
+                });
             $form->text('url', admin_trans('slider.fields.url'))->ruleUrl()->maxlength(200);
             $lang = Container::getInstance()->translator->getLocale();
             //获取待绑定活动
@@ -106,5 +121,26 @@ class ChannelSliderController
             $form->hidden('department_id')->default(Admin::user()->department_id);
             $form->layout('vertical');
         });
+    }
+
+    /**
+     * 轮播图上传字段（按广告位带出对应尺寸建议）
+     *
+     * @param Form $form
+     * @param string|null $helpKey slider.help.* 尺寸建议语言键，null 表示不提示
+     * @return void
+     */
+    private function pictureField(Form $form, ?string $helpKey = null): void
+    {
+        $field = $form->file('picture_url', admin_trans('slider.fields.picture_url'))
+            ->ext('jpg,png,jpeg')
+            ->type('image')
+            ->fileSize('1m')
+            ->required()
+            ->hideFinder()
+            ->paste();
+        if ($helpKey !== null) {
+            $field->help(admin_trans($helpKey));
+        }
     }
 }

@@ -29,12 +29,38 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Slider extends Model
 {
     use SoftDeletes, HasDateTimeFormatter, DataPermissions;
+
+    /** 广告位：电子游戏大厅 */
+    const AD_POSITION_GAME_LOBBY = 1;
+    /** 广告位：实体大厅 */
+    const AD_POSITION_PHYSICAL_LOBBY = 2;
+    /** 广告位：待机页面 */
+    const AD_POSITION_STANDBY = 3;
+    /** 广告位：横版背景 */
+    const AD_POSITION_LANDSCAPE = 4;
+
     //数据权限字段
     protected $dataAuth = ['department_id'=>'department_id'];
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
         $this->setTable(plugin()->webman->config('database.slider_table'));
+    }
+
+    /**
+     * 模型的 "booted" 方法
+     *
+     * @return void
+     */
+    protected static function booted()
+    {
+        // 待机页面轮播图信息变动后推送客户端刷新
+        static::saved(function (Slider $slider) {
+            \addons\webman\service\SliderPushService::notify($slider);
+        });
+        static::deleted(function (Slider $slider) {
+            \addons\webman\service\SliderPushService::notify($slider, 'remove');
+        });
     }
 
     /**
