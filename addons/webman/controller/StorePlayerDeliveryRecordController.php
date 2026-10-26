@@ -1,0 +1,481 @@
+<?php
+
+namespace addons\webman\controller;
+
+use addons\webman\Admin;
+use addons\webman\model\GameType;
+use addons\webman\model\PlayerDeliveryRecord;
+use addons\webman\model\PlayerGameLog;
+use addons\webman\model\PlayerMoneyEditLog;
+use addons\webman\model\PlayerWalletTransfer;
+use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Icon;
+use ExAdmin\ui\component\detail\Detail;
+use ExAdmin\ui\component\echart\LineChart;
+use ExAdmin\ui\component\grid\avatar\Avatar;
+use ExAdmin\ui\component\grid\card\Card;
+use ExAdmin\ui\component\grid\grid\Actions;
+use ExAdmin\ui\component\grid\grid\Filter;
+use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\statistic\Statistic;
+use ExAdmin\ui\component\grid\tabs\Tabs;
+use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\support\Request;
+use Illuminate\Support\Carbon;
+use support\Db;
+
+/**
+ * 店家後台 - 玩家账变记录
+ * @group store
+ */
+class StorePlayerDeliveryRecordController
+{
+    protected $model;
+
+    public function __construct()
+    {
+        $this->model = plugin()->webman->config('database.player_delivery_record_model');
+    }
+
+    /**
+     * 玩家账变记录
+     * @group store
+     * @auth true
+     */
+    public function index(): Grid
+    {
+        return Grid::create(new $this->model(), function (Grid $grid) {
+            $grid->title(admin_trans('player_delivery_record.title'));
+            $grid->model()->with(['player', 'machine'])->orderBy('created_at', 'desc');
+            $grid->autoHeight();
+            $grid->bordered(true);
+
+            /** @var \addons\webman\model\AdminUser $admin */
+            $admin = Admin::user();
+
+            // 店家数据权限：只查询自己的玩家记录
+            $grid->model()->whereHas('player', function ($query) use ($admin) {
+                $query->where('store_admin_id', $admin->id);
+            });
+
+            $exAdminFilter = Request::input('ex_admin_filter', []);
+
+            if (!empty($exAdminFilter['created_at_start'])) {
+                $grid->model()->where('created_at', '>=', $exAdminFilter['created_at_start']);
+            }
+            if (!empty($exAdminFilter['created_at_end'])) {
+                $grid->model()->where('created_at', '<=', $exAdminFilter['created_at_end']);
+            }
+            if (!empty($exAdminFilter['platform_id'])) {
+                $grid->model()->where('platform_id', $exAdminFilter['platform_id']);
+            }
+            if (!empty($exAdminFilter['player']['uuid'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('uuid', $exAdminFilter['player']['uuid']);
+                });
+            }
+            if (!empty($exAdminFilter['player']['phone'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('phone', $exAdminFilter['player']['phone']);
+                });
+            }
+            if (isset($exAdminFilter['search_type'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('is_test', $exAdminFilter['search_type']);
+                });
+            }
+            if (!empty($exAdminFilter['search_source'])) {
+                $grid->model()->where('source', $exAdminFilter['search_source']);
+            }
+
+            $query = clone $grid->model();
+            $totalData = $query->selectRaw(
+                'sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, ' .
+                'sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ',`amount`,0)) as total_out_amount, ' .
+                'sum(if(`type`=' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount'
+            )->first();
+
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($totalData) {
+                $row->gutter([10, 0]);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($totalData['total_in_amount']) ? floatval($totalData['total_in_amount']) : 0)
+                            ->prefix(admin_trans('player_delivery_record.total_in_amount'))
+                            ->valueStyle(['font-size' => '14px', 'font-weight' => '500', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '30px', 'padding' => '0px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($totalData['total_out_amount']) ? floatval($totalData['total_out_amount']) : 0)
+                            ->prefix(admin_trans('player_delivery_record.total_out_amount'))
+                            ->valueStyle(['font-size' => '14px', 'font-weight' => '500', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '30px', 'padding' => '0px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(!empty($totalData['total_machine_amount']) ? floatval($totalData['total_machine_amount']) : 0)
+                            ->prefix(admin_trans('player_delivery_record.total_machine_amount'))
+                            ->valueStyle(['font-size' => '14px', 'font-weight' => '500', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '30px', 'padding' => '0px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value(bcsub(
+                                bcadd(($totalData['total_machine_amount'] ?? 0), ($totalData['total_in_amount'] ?? 0), 2),
+                                ($totalData['total_out_amount'] ?? 0), 2
+                            ))
+                            ->prefix(admin_trans('common.total'))
+                            ->valueStyle(['font-size' => '14px', 'font-weight' => '500', 'text-align' => 'center'])),
+                    ])->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '30px', 'padding' => '0px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                    , 4);
+            })->style(['background' => '#fff']);
+            $grid->tools([$layout]);
+
+            $grid->column('player.uuid', admin_trans('player.fields.uuid'))->align('center');
+            $grid->column('player.phone', admin_trans('player.fields.phone'))->display(function (
+                $val,
+                PlayerDeliveryRecord $data
+            ) {
+                $image = $data->player->avatar
+                    ? Avatar::create()->src(is_numeric($data->player->avatar) ? config('def_avatar.' . $data->player->avatar) : $data->player->avatar)
+                    : Avatar::create()->icon(Icon::create('UserOutlined'));
+                return Html::create()->content([
+                    $image,
+                    Html::div()->content($data->player->phone)
+                ]);
+            })->align('center');
+            $grid->column('player.name', admin_trans('player.fields.device_name'))->align('center');
+            $grid->column('player.type', admin_trans('player.fields.type'))->display(function ($val, PlayerDeliveryRecord $data) {
+                return Html::create()->content([
+                    $data->player->is_test == 1
+                        ? Tag::create(admin_trans('player.fields.is_test'))->color('red')
+                        : Tag::create(admin_trans('player.player'))->color('green')
+                ]);
+            })->align('center');
+            $grid->column('source', admin_trans('player_delivery_record.fields.source'))->display(function (
+                $val,
+                PlayerDeliveryRecord $data
+            ) {
+                $transKey = 'message.target.' . $val;
+                $translatedText = admin_trans($transKey);
+                if ($translatedText === $transKey) {
+                    $translatedText = $val;
+                }
+
+                switch ($data->type) {
+                    case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD:
+                    case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
+                    case PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE:
+                    case PlayerDeliveryRecord::TYPE_RECHARGE:
+                    case PlayerDeliveryRecord::TYPE_WITHDRAWAL:
+                    case PlayerDeliveryRecord::TYPE_WITHDRAWAL_BACK:
+                    case PlayerDeliveryRecord::TYPE_REGISTER_PRESENT:
+                    case PlayerDeliveryRecord::COIN_ADD:
+                    case PlayerDeliveryRecord::COIN_DEDUCT:
+                    case PlayerDeliveryRecord::TYPE_SPECIAL:
+                    case PlayerDeliveryRecord::TYPE_MACHINE:
+                        return Tag::create($translatedText)->color('red');
+                    case PlayerDeliveryRecord::TYPE_PRESENT_IN:
+                    case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
+                        return Tag::create($translatedText)->color('green');
+                    case PlayerDeliveryRecord::TYPE_BET:
+                    case PlayerDeliveryRecord::TYPE_CANCEL_BET:
+                    case PlayerDeliveryRecord::TYPE_SETTLEMENT:
+                    case PlayerDeliveryRecord::TYPE_ACTIVITY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
+                        return Tag::create($translatedText)->color('blue');
+                    case PlayerDeliveryRecord::TYPE_GIFT:
+                        return Tag::create($translatedText)->color('pink');
+                    case PlayerDeliveryRecord::TYPE_PREPAY:
+                    case PlayerDeliveryRecord::TYPE_REFUND:
+                        return Tag::create($translatedText)->color('cyan');
+                    case PlayerDeliveryRecord::TYPE_MACHINE_UP:
+                    case PlayerDeliveryRecord::TYPE_MACHINE_DOWN:
+                        if ($data->machine) {
+                            return Tag::create($data->machine->code)->color('orange')
+                                ->style(['cursor' => 'pointer'])
+                                ->modal([$this, 'machineInfo'], ['data' => $data->machine->toArray()])
+                                ->width('60%')
+                                ->title($data->machine->code . ' ' . $data->machine->name);
+                        }
+                        return Tag::create($translatedText)->color('cyan');
+                    case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
+                    case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
+                    case PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS:
+                        return Tag::create($translatedText)->color('#eb2f96');
+                    case PlayerDeliveryRecord::TYPE_PROFIT:
+                    case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
+                    case PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL:
+                        return Tag::create($translatedText)->color('purple');
+                    case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_IN:
+                        /** @var PlayerWalletTransfer $playerWalletTransfer */
+                        $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
+                        return Tag::create($playerWalletTransfer->gamePlatform->name)->color('purple');
+                    case PlayerDeliveryRecord::TYPE_NATIONAL_INVITE:
+                    case PlayerDeliveryRecord::TYPE_RECHARGE_REWARD:
+                    case PlayerDeliveryRecord::TYPE_DAMAGE_REBATE:
+                    case PlayerDeliveryRecord::TYPE_LOTTERY:
+                        return Tag::create($translatedText)->color('orange');
+                    case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
+                        /** @var PlayerWalletTransfer $playerWalletTransfer */
+                        $playerWalletTransfer = PlayerWalletTransfer::query()->where('id', $data->target_id)->first();
+                        return Tag::create($playerWalletTransfer->gamePlatform->name)->color('orange');
+                    case PlayerDeliveryRecord::TYPE_AGENT_OUT:
+                    case PlayerDeliveryRecord::TYPE_AGENT_IN:
+                        return Tag::create($data->player->channel->name)->color('orange');
+                    default:
+                        return $translatedText ? Tag::create($translatedText)->color('gray') : '';
+                }
+            })->align('center');
+            $grid->column('type', admin_trans('player_delivery_record.fields.type'))
+                ->display(function ($value) {
+                    if ($value === null || $value === '') {
+                        return Html::create()->content(['']);
+                    }
+                    $label = admin_trans('player_delivery_record.type.' . $value);
+                    return Html::create()->content([
+                        Tag::create($label)->color(PlayerDeliveryRecord::typeColor((int)$value))
+                    ]);
+                })->align('center')->sortable();
+            $grid->column('remark', admin_trans('player_withdraw_record.fields.remark'))->display(function ($value) {
+                return Html::create()->content([Html::div()->content($value)]);
+            })->width('150px')->align('center');
+            $grid->column('activity', admin_trans('activity.title'))->display(function ($activity, PlayerDeliveryRecord $data) {
+                if ($data->target == 'player_money_edit_log') {
+                    $activityContent = PlayerMoneyEditLog::query()
+                        ->leftJoin('activity_content', 'activity_content.id', '=', 'player_money_edit_log.activity')
+                        ->select('activity_content.name', 'activity_content.activity_id')
+                        ->where('player_money_edit_log.id', '=', $data->target_id)
+                        ->first();
+                    return Html::create()->content([
+                        Html::div()->content($activity),
+                        Html::create($activityContent->name)->style([
+                            'cursor' => 'pointer',
+                            'color' => 'rgb(24, 144, 255)'
+                        ])->drawer(['addons-webman-controller-ActivityController', 'details'], ['id' => $activityContent->activity_id]),
+                    ]);
+                }
+            });
+            $grid->column('amount', admin_trans('player_delivery_record.fields.amount'))->display(function (
+                $val,
+                PlayerDeliveryRecord $data
+            ) {
+                switch ($data->type) {
+                    case PlayerDeliveryRecord::TYPE_PRESENT_OUT:
+                    case PlayerDeliveryRecord::TYPE_MACHINE_UP:
+                    case PlayerDeliveryRecord::TYPE_WITHDRAWAL:
+                    case PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT:
+                    case PlayerDeliveryRecord::TYPE_GAME_PLATFORM_OUT:
+                    case PlayerDeliveryRecord::TYPE_AGENT_OUT:
+                    case PlayerDeliveryRecord::TYPE_BET:
+                    case PlayerDeliveryRecord::TYPE_GIFT:
+                    case PlayerDeliveryRecord::TYPE_PREPAY:
+                    case PlayerDeliveryRecord::COIN_DEDUCT:
+                        return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                    case PlayerDeliveryRecord::TYPE_SPECIAL:
+                        if ($data->amount_after < $data->amount_before) {
+                            return Html::create()->content(['-' . $val])->style(['color' => '#cd201f']);
+                        }
+                        return Html::create()->content(['+' . $val])->style(['color' => 'green']);
+                    case PlayerDeliveryRecord::TYPE_RE_SETTLEMENT:
+                        if ($val < 0) {
+                            return Html::create()->content([$val])->style(['color' => '#cd201f']);
+                        }
+                        return Html::create()->content(['+' . $val])->style(['color' => 'green']);
+                    default:
+                        return Html::create()->content(['+' . $val])->style(['color' => 'green']);
+                }
+            })->align('center');
+            $grid->column('amount_after', admin_trans('player_delivery_record.fields.amount_after'))->align('center');
+            $grid->column('amount_before', admin_trans('player_delivery_record.fields.amount_before'))->align('center');
+            $grid->column('user_name', admin_trans('player_delivery_record.fields.user_name'))->display(function (
+                $val,
+                PlayerDeliveryRecord $data
+            ) {
+                $name = admin_trans('player.player');
+                if (in_array($data->type, [
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_ADD,
+                    PlayerDeliveryRecord::TYPE_MODIFIED_AMOUNT_DEDUCT,
+                    PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE,
+                    PlayerDeliveryRecord::TYPE_SPECIAL,
+                ])) {
+                    $name = $data->user_name ?? admin_trans('common.default.admin');
+                }
+                if ($data->type == PlayerDeliveryRecord::TYPE_MACHINE_DOWN && !empty($data->user_id)) {
+                    $name = $data->user_name ?? admin_trans('common.default.admin');
+                }
+                return Html::create()->content([Html::div()->content($name)]);
+            });
+            $grid->column('created_at', admin_trans('player_delivery_record.fields.created_at'))->sortable()->align('center');
+
+            $grid->hideDelete();
+            $grid->hideSelection();
+            $grid->actions(function (Actions $actions) {
+                $actions->hideDel();
+                $actions->hideEdit();
+            });
+
+            $grid->filter(function (Filter $filter) {
+                $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
+                $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->eq()->select('search_source')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player_delivery_record.fields.source'))
+                    ->options([
+                        'modified_amount_add' => admin_trans('message.target.modified_amount_add'),
+                        'modified_amount_deduct' => admin_trans('message.target.modified_amount_deduct'),
+                        'wallet_modify' => admin_trans('message.target.wallet_modify'),
+                        'artificial_recharge' => admin_trans('message.target.artificial_recharge'),
+                        'self_recharge' => admin_trans('message.target.self_recharge'),
+                        'gb_recharge' => admin_trans('message.target.gb_recharge'),
+                        'coin_recharge' => admin_trans('message.target.coin_recharge'),
+                        'talk_recharge' => admin_trans('message.target.talk_recharge'),
+                        'channel_withdrawal' => admin_trans('message.target.channel_withdrawal'),
+                        'artificial_withdrawal' => admin_trans('message.target.artificial_withdrawal'),
+                        'gb_withdrawal' => admin_trans('message.target.gb_withdrawal'),
+                        'talk_withdrawal' => admin_trans('message.target.talk_withdrawal'),
+                        'withdrawal_back' => admin_trans('message.target.withdrawal_back'),
+                        'ticket_open_score' => admin_trans('message.target.ticket_open_score'),
+                        'ticket_redeem' => admin_trans('message.target.ticket_redeem'),
+                        'deposit_qr' => admin_trans('message.target.deposit_qr'),
+                        'lottery_game' => admin_trans('message.target.lottery_game'),
+                        'lottery_random' => admin_trans('message.target.lottery_random'),
+                        'lottery_fixed' => admin_trans('message.target.lottery_fixed'),
+                        'lottery_ticket_reward' => admin_trans('message.target.lottery_ticket_reward'),
+                        'machine_up' => admin_trans('message.target.machine_up'),
+                        'machine_down' => admin_trans('message.target.machine_down'),
+                        'birthday_bonus' => admin_trans('message.target.birthday_bonus'),
+                        'vip_upgrade_bonus' => admin_trans('message.target.vip_upgrade_bonus'),
+                        'vip_daily_login_bonus' => admin_trans('message.target.vip_daily_login_bonus'),
+                        'activity_bonus' => admin_trans('message.target.activity_bonus'),
+                        'register_present' => admin_trans('message.target.register_present'),
+                        'profit' => admin_trans('message.target.profit'),
+                        'national_invite' => admin_trans('message.target.national_invite'),
+                        'national_promoter' => admin_trans('message.target.national_promoter'),
+                        'player_recharge_record' => admin_trans('message.target.player_recharge_record'),
+                        'damage_rebate' => admin_trans('message.target.damage_rebate'),
+                        'reverse_water' => admin_trans('message.target.reverse_water'),
+                        'reverse_water_pool' => admin_trans('message.target.reverse_water_pool'),
+                        'machine_put_coins' => admin_trans('message.target.machine_put_coins'),
+                        'coin_add' => admin_trans('message.target.coin_add'),
+                        'coin_deduct' => admin_trans('message.target.coin_deduct'),
+                        'agent_in' => admin_trans('message.target.agent_in'),
+                        'agent_out' => admin_trans('message.target.agent_out'),
+                        'storage_recharge' => admin_trans('message.target.storage_recharge'),
+                        'retry_refund' => admin_trans('message.target.retry_refund'),
+                    ]);
+                $filter->select('search_type')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('player.fields.type'))
+                    ->options([
+                        0 => admin_trans('player.player'),
+                        1 => admin_trans('player.fields.is_test'),
+                    ]);
+                $filter->form()->hidden('created_at_start');
+                $filter->form()->hidden('created_at_end');
+                $filter->form()->dateTimeRange('created_at_start', 'created_at_end', '')->placeholder([
+                    admin_trans('public_msg.created_at_start'),
+                    admin_trans('public_msg.created_at_end')
+                ]);
+                $filter->in()->select('type')
+                    ->placeholder(admin_trans('player_delivery_record.fields.type'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->multiple()
+                    ->options(PlayerDeliveryRecord::typeOptions());
+            });
+            $grid->expandFilter();
+        });
+    }
+
+    /**
+     * 机台信息弹窗
+     * @param $data
+     * @return Card
+     */
+    public function machineInfo($data): Card
+    {
+        $tabs = Tabs::create()
+            ->pane(admin_trans('common.detail'), $this->machineDetail($data))
+            ->pane(admin_trans('common.chart'), $this->machineChart($data));
+        return Card::create($tabs);
+    }
+
+    private function machineDetail($machine): Detail
+    {
+        return Detail::create($machine, function (Detail $detail) {
+            $detail->item('id', admin_trans('machine.fields.id'));
+            $detail->item('name', admin_trans('machine.fields.name'));
+            $detail->item('code', admin_trans('machine.fields.code'))->span(2);
+            $detail->item('picture_url', admin_trans('machine.fields.picture_url'))->image();
+            $detail->item('odds_x', admin_trans('machine.fields.odds_x'));
+            $detail->item('odds_y', admin_trans('machine.fields.odds_y'))->span(2);
+            $detail->item('type', admin_trans('machine.fields.type'))->display(function ($val) {
+                $color = 'orange';
+                if ($val == GameType::TYPE_SLOT) {
+                    $color = 'green';
+                }
+                return Tag::create(admin_trans('game_type.game_type.' . $val))->color($color);
+            });
+        });
+    }
+
+    private function machineChart($data): LineChart
+    {
+        $range = Carbon::now()->subDays(15)->format('Y-m-d');
+        $openPoint = PlayerGameLog::whereDate('created_at', '>=', $range)
+            ->where('machine_id', $data['id'])
+            ->groupBy('date')
+            ->orderBy('date', 'DESC')
+            ->get([
+                DB::raw('Date(`created_at`) as date'),
+                DB::raw('SUM(`open_point`) as value')
+            ])
+            ->toArray();
+        $washPoint = PlayerGameLog::whereDate('created_at', '>=', $range)
+            ->where('machine_id', $data['id'])
+            ->groupBy('date')
+            ->orderBy('date', 'DESC')
+            ->get([
+                DB::raw('Date(`created_at`) as date'),
+                DB::raw('SUM(`wash_point`) as value')
+            ])
+            ->toArray();
+        $openPoint = $openPoint ? array_column($openPoint, 'value', 'date') : [];
+        $washPoint = $washPoint ? array_column($washPoint, 'value', 'date') : [];
+        $xAxis = [];
+        $openPointAxis = [];
+        $washPointAxis = [];
+
+        for ($i = 14; $i >= 0; $i--) {
+            $date = Carbon::now()->subDays($i)->format('Y-m-d');
+            $xAxis[] = $date;
+            $openPointAxis[] = $openPoint[$date] ?? 0;
+            $washPointAxis[] = $washPoint[$date] ?? 0;
+        }
+
+        return LineChart::create()
+            ->height('280px')
+            ->hideDateFilter()
+            ->header(Html::create(admin_trans('machine.point_chart'))->tag('h2')->style(['text-align' => 'center']))
+            ->xAxis($xAxis)
+            ->data(admin_trans('machine.open_point_chart'), $openPointAxis)
+            ->data(admin_trans('machine.wash_point_chart'), $washPointAxis);
+    }
+}

@@ -195,19 +195,19 @@ return [
 
     // ========== 账变记录 ==========
     [
-        'id' => 'addons\webman\controller\ChannelPlayerDeliveryRecordController-',
+        'id' => 'addons\webman\controller\StorePlayerDeliveryRecordController-',
         'pid' => 0,
         'url' => '',
         'group' => 'store',
         'title' => '账变记录',
         'children' => [
             [
-                'id' => 'addons\webman\controller\ChannelPlayerDeliveryRecordController\index',
-                'pid' => 'addons\webman\controller\ChannelPlayerDeliveryRecordController-',
+                'id' => 'addons\webman\controller\StorePlayerDeliveryRecordController\index',
+                'pid' => 'addons\webman\controller\StorePlayerDeliveryRecordController-',
                 'action' => 'index',
                 'method' => 'get',
                 'group' => 'store',
-                'url' => 'ex-admin/addons-webman-controller-ChannelPlayerDeliveryRecordController/index',
+                'url' => 'ex-admin/addons-webman-controller-StorePlayerDeliveryRecordController/index',
                 'title' => '账变记录',
             ],
         ]
