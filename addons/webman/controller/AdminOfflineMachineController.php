@@ -715,7 +715,7 @@ class AdminOfflineMachineController
                     '管理指令' => [
                         ['name' => '清除历史记录', 'cmd' => $serviceClass::ALL_DOWN, 'desc' => 'EA DE - ⚠️ 清除开洗分账+回补数', 'danger' => true],
                         ['name' => '故排（归0机板）', 'cmd' => $serviceClass::CHECK, 'desc' => 'A3 70 05 E0 F8 CE - ⚠️ 归0机板（保持登入状态）', 'danger' => true],
-                        ['name' => 'SSR讯号10秒', 'cmd' => $serviceClass::SSR_SIGNAL, 'desc' => 'EA EC - 给SSR讯号10秒（smart-slot移出按钮）', 'danger' => false],
+                        ['name' => '清除開洗分旗標', 'cmd' => $serviceClass::SSR_SIGNAL, 'desc' => 'EA EC - 清除開分旗標（D2→D0）或洗分旗標（D6→D5），使機台可接受下次開洗分（新版協議）', 'danger' => false],
                     ],
                 ];
             } else {
