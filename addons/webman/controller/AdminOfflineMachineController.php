@@ -8,6 +8,7 @@ use addons\webman\model\Machine;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineProducer;
 use addons\webman\model\MachineStrategy;
+use addons\webman\model\VipLevel;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
@@ -594,6 +595,17 @@ class AdminOfflineMachineController
             $form->switch('is_special', admin_trans('machine.fields.is_special'))
                 ->default(false);
 
+            $vipOptions = [0 => admin_trans('machine.vip_level_no_limit')] +
+                VipLevel::where('status', VipLevel::STATUS_ENABLED)
+                    ->orderBy('sort')
+                    ->pluck('name', 'id')
+                    ->all();
+            $form->select('min_vip_level_id', admin_trans('machine.fields.min_vip_level_id'))
+                ->options($vipOptions)
+                ->default(0)
+                ->showSearch()
+                ->dropdownMatchSelectWidth();
+
             $form->select('control_type', admin_trans('machine.fields.control_type'))
                 ->required()
                 ->options([
@@ -611,6 +623,7 @@ class AdminOfflineMachineController
                 // 确保是线下机台
                 $form->machine_source = Machine::MACHINE_SOURCE_OFFLINE;
                 $form->is_live = 0;
+                $form->min_vip_level_id = (int)($form->input('min_vip_level_id') ?? 0);
             });
 
             $form->saved(function (Form $form, $result) {
