@@ -11,6 +11,8 @@ use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\ToolTip;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -26,88 +28,63 @@ class StoreGameVendorReportController
      */
     public function index(): Grid
     {
+        $page          = Request::input('ex_admin_page', 1);
+        $size          = Request::input('ex_admin_size', 50);
         $exAdminFilter = Request::input('ex_admin_filter', []);
-
-        // 使用子查询替代 pluck，避免超大 IN 列表撑爆内存和 MySQL packet
-        $playerIds = Player::query()->where('store_admin_id', Admin::id())->select('id');
 
         $modelClass    = plugin()->webman->config('database.play_game_record_model');
         $platformModel = plugin()->webman->config('database.game_platform_model');
         $pgr           = (new $modelClass)->getTable();
+        $gp            = (new $platformModel)->getTable();
 
-        // 查询1：获取有效厂商信息（数据极小，极快）
-        $platforms = (new $platformModel)->newQuery()
-            ->whereNull('deleted_at')
-            ->select('id', 'cate_id', 'name')
-            ->get()
-            ->keyBy('id');
+        $query = $this->buildBaseQuery($exAdminFilter);
 
-        // 指定厂商筛选时缩小 IN 列表，避免冗余条件
-        $platformIn = !empty($exAdminFilter['platform_id'])
-            ? [(int)$exAdminFilter['platform_id']]
-            : $platforms->keys()->toArray();
+        $total = (clone $query)
+            ->selectRaw("$pgr.platform_id, $gp.cate_id")
+            ->groupBy("$pgr.platform_id", "$gp.cate_id")
+            ->get()->count();
 
-        // 查询2：按 platform_id 聚合，无 JOIN，索引友好
-        $query = (new $modelClass)->newQuery()
-            ->whereIn("$pgr.platform_id", $platformIn)
-            ->whereIn("$pgr.type", [PlayGameRecord::TYPE_BET, PlayGameRecord::TYPE_GIFT])
-            ->whereIn("$pgr.player_id", $playerIds);
-
-        $hasDateFilter = !empty($exAdminFilter['start_date'])
-            || !empty($exAdminFilter['end_date'])
-            || !empty($exAdminFilter['date_type']);
-
-        if (!empty($exAdminFilter)) {
-            if (!empty($exAdminFilter['start_date'])) {
-                $query->where("$pgr.created_at", '>=', $exAdminFilter['start_date']);
-            }
-            if (!empty($exAdminFilter['end_date'])) {
-                $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
-            }
-            if (!empty($exAdminFilter['date_type'])) {
-                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
-            }
-        }
-
-        if (!$hasDateFilter) {
-            $today = date('Y-m-d');
-            $query->whereBetween("$pgr.created_at", [$today . ' 00:00:00', $today . ' 23:59:59']);
-        }
-
-        $aggregated = $query
-            ->selectRaw("
-                $pgr.platform_id,
+        $list = $query
+            ->groupBy("$pgr.platform_id", "$gp.cate_id", "$gp.name")
+            ->selectRaw("$pgr.platform_id, $gp.cate_id, $gp.name as platform_name,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.bet  ELSE 0 END) as valid_bet,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status!=2 THEN $pgr.bet  ELSE 0 END) as total_bet,
                 SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.diff ELSE 0 END) as player_win_loss,
                 SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,
-                SUM(CASE WHEN $pgr.type=2 THEN 1        ELSE 0 END) as gift_count,
-                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.win  ELSE 0 END) as total_win
-            ")
-            ->groupBy("$pgr.platform_id")
-            ->get();
+                SUM(CASE WHEN $pgr.type=2 THEN 1          ELSE 0 END) as gift_count,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.win ELSE 0 END) as total_win")
+            ->orderBy("$gp.cate_id")
+            ->orderBy("$gp.name")
+            ->forPage($page, $size)
+            ->get()
+            ->toArray();
 
-        // PHP 合并厂商元数据（结果集 ≤ 30 行，O(n) 操作）
-        $list = $aggregated->map(function ($row) use ($platforms) {
-            $platform = $platforms->get($row->platform_id);
-            if (!$platform) return null; // 跳过已软删除厂商的历史记录
-            return array_merge($row->toArray(), [
-                'cate_id'       => $platform->cate_id,
-                'platform_name' => $platform->name,
-            ]);
-        })
-        ->filter()
-        ->sortBy(fn($item) => [$item['cate_id'], $item['platform_name']])
-        ->values()
-        ->toArray();
+        $platformOptions = $this->platformOptions($platformModel);
 
-        $total = count($list);
-
-        // 从已查询的 $platforms 推导筛选选项，无需第3次 DB 查询
-        $platformOptions = $platforms->sortBy('name')->pluck('name', 'id')->all();
-
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions) {
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $platformOptions, $exAdminFilter) {
             $grid->title(admin_trans('game_vendor_report.title'));
+
+            // 厂商数据统计面板（点击展开，随搜索条件实时刷新）
+            $layout = Layout::create();
+            $layout->row(function (Row $row) use ($exAdminFilter) {
+                $row->gutter([10, 0]);
+                $row->column(admin_view(plugin()->webman->getPath() . '/views/game_vendor_total_info.vue')->attrs([
+                    'ex_admin_filter' => $exAdminFilter,
+                    'api_url' => 'ex-admin/addons-webman-controller-StoreGameVendorReportController/totalInfo',
+                    'admin_user_id' => Admin::user()->id,
+                    'trans' => [
+                        'panelHeader' => admin_trans('game_vendor_report.stats.panel_header'),
+                        'loading' => admin_trans('game_vendor_report.stats.loading'),
+                        'refresh' => admin_trans('game_vendor_report.stats.refresh'),
+                        'loadError' => admin_trans('game_vendor_report.stats.load_error'),
+                        'retry' => admin_trans('game_vendor_report.stats.retry'),
+                        'clickToView' => admin_trans('game_vendor_report.stats.click_to_view'),
+                        'loadFailedMsg' => admin_trans('game_vendor_report.stats.load_failed_msg'),
+                    ],
+                ]));
+            })->style(['background' => '#fff']);
+            $grid->header($layout);
+
             $grid->bordered(true);
             $grid->autoHeight();
             $grid->driver()->setPk('platform_id');
@@ -125,11 +102,11 @@ class StoreGameVendorReportController
 
             $grid->column('valid_bet', admin_trans('game_vendor_report.valid_bet'))
                 ->display(fn($val) => number_format(floatval($val), 2))
-                ->align('right');
+                ->align('right')->sortable();
 
             $grid->column('total_bet', admin_trans('game_vendor_report.total_bet'))
                 ->display(fn($val) => number_format(floatval($val), 2))
-                ->align('right');
+                ->align('right')->sortable();
 
             $winLossLabel = Html::create()->content([
                 admin_trans('game_vendor_report.player_win_loss') . ' ',
@@ -144,18 +121,18 @@ class StoreGameVendorReportController
                     $style = $num > 0 ? ['color' => 'green'] : ($num < 0 ? ['color' => 'red'] : []);
                     return Html::create(number_format($num, 2))->style($style);
                 })
-                ->align('right');
+                ->align('right')->sortable();
 
             $grid->column('gift_amount', admin_trans('game_vendor_report.gift_amount'))
                 ->display(fn($val) => number_format(floatval($val), 2))
-                ->align('right');
+                ->align('right')->sortable();
 
             $grid->column('gift_count', admin_trans('game_vendor_report.gift_count'))
-                ->align('right');
+                ->align('right')->sortable();
 
             $grid->column('total_win', admin_trans('game_vendor_report.total_win'))
                 ->display(fn($val) => number_format(floatval($val), 2))
-                ->align('right');
+                ->align('right')->sortable();
 
             $grid->filter(function (Filter $filter) use ($platformOptions) {
                 $filter->select('date_type')
@@ -189,5 +166,127 @@ class StoreGameVendorReportController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
         });
+    }
+
+    /**
+     * 按搜索条件构建厂商数据基础查询（列表与统计共用）
+     * 店家范围：本店玩家记录
+     * @param array $exAdminFilter
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    protected function buildBaseQuery(array $exAdminFilter)
+    {
+        $playerIds = Player::query()
+            ->where('store_admin_id', Admin::id())
+            ->pluck('id');
+
+        $modelClass    = plugin()->webman->config('database.play_game_record_model');
+        $platformModel = plugin()->webman->config('database.game_platform_model');
+        $pgr           = (new $modelClass)->getTable();
+        $gp            = (new $platformModel)->getTable();
+
+        $query = (new $modelClass)->newQuery()
+            ->join($gp, "$gp.id", '=', "$pgr.platform_id")
+            ->whereNull("$gp.deleted_at")
+            ->whereIn("$pgr.type", [PlayGameRecord::TYPE_BET, PlayGameRecord::TYPE_GIFT])
+            ->whereIn("$pgr.player_id", $playerIds);
+
+        if (!empty($exAdminFilter)) {
+            if (!empty($exAdminFilter['start_date'])) {
+                $query->where("$pgr.created_at", '>=', $exAdminFilter['start_date']);
+            }
+            if (!empty($exAdminFilter['end_date'])) {
+                $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
+            }
+            if (!empty($exAdminFilter['date_type'])) {
+                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
+            }
+            if (!empty($exAdminFilter['platform_id'])) {
+                $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
+            }
+        }
+
+        return $query;
+    }
+
+    /**
+     * 厂商数据统计（独立接口，不走通用 totalInfo）
+     * 汇总口径与列表列一致，随搜索条件实时变化
+     * @group store
+     * @auth true
+     * @return \support\Response
+     */
+    public function totalInfo(): \support\Response
+    {
+        $exAdminFilter = Request::input('ex_admin_filter', []);
+
+        $modelClass = plugin()->webman->config('database.play_game_record_model');
+        $pgr        = (new $modelClass)->getTable();
+
+        $query = $this->buildBaseQuery($exAdminFilter);
+
+        $totalData = $query->selectRaw("
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.bet  ELSE 0 END) as valid_bet,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status!=2 THEN $pgr.bet  ELSE 0 END) as total_bet,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1  THEN $pgr.diff ELSE 0 END) as player_win_loss,
+                SUM(CASE WHEN $pgr.type=2 THEN $pgr.bet ELSE 0 END) as gift_amount,
+                SUM(CASE WHEN $pgr.type=2 THEN 1          ELSE 0 END) as gift_count,
+                SUM(CASE WHEN $pgr.type=1 AND $pgr.settlement_status=1 THEN $pgr.win ELSE 0 END) as total_win")
+            ->first();
+
+        // 玩家输赢：与列表展示口径一致，取反后正数=庄家赢
+        $playerWinLoss = $totalData && $totalData->player_win_loss !== null
+            ? floatval($totalData->player_win_loss) * -1
+            : 0.0;
+
+        $data = [
+            [
+                'title'  => admin_trans('game_vendor_report.valid_bet'),
+                'number' => $totalData && $totalData->valid_bet !== null ? floatval($totalData->valid_bet) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.total_bet'),
+                'number' => $totalData && $totalData->total_bet !== null ? floatval($totalData->total_bet) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.player_win_loss'),
+                'number' => $playerWinLoss,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.gift_amount'),
+                'number' => $totalData && $totalData->gift_amount !== null ? floatval($totalData->gift_amount) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.gift_count'),
+                'number' => $totalData && $totalData->gift_count !== null ? floatval($totalData->gift_count) : 0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+            [
+                'title'  => admin_trans('game_vendor_report.total_win'),
+                'number' => $totalData && $totalData->total_win !== null ? floatval($totalData->total_win) : 0.0,
+                'prefix' => '',
+                'suffix' => ''
+            ],
+        ];
+
+        return json(['code' => 200, 'data' => $data]);
+    }
+
+    protected function platformOptions(string $platformModel): array
+    {
+        return (new $platformModel)->newQuery()
+            ->whereNull('deleted_at')
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
     }
 }

@@ -14,6 +14,16 @@ return [
     'reset'          => 'Reset',
     'cate_name'               => 'Game Category',
     'platform'                => 'Vendor Platform',
+    'store'                   => 'Store',
     'total_win'               => 'Total Win',
     'player_win_loss_tip'     => 'Positive: house wins (player loses); Negative: house loses (player wins)',
+    'stats' => [
+        'panel_header'    => 'View Statistics',
+        'loading'         => 'Loading...',
+        'refresh'         => 'Refresh',
+        'load_error'      => 'Failed to load data',
+        'retry'           => 'Retry',
+        'click_to_view'   => 'Click to view statistics',
+        'load_failed_msg' => 'Failed to load data, please retry',
+    ],
 ];
