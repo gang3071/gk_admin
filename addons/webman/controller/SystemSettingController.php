@@ -334,7 +334,7 @@ class SystemSettingController
                 ->if(function ($value, SystemSetting $data) {
                     return $data->feature === 'ticket_machine_download_url';
                 })->editable(
-                    Editable::input('content')
+                    Editable::text('content')
                         ->rule(['required' => admin_trans('system_setting.fields.ticket_machine_download_url')])
                 )->display(function ($val, SystemSetting $data) {
                     return $data->content;
