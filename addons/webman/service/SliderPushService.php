@@ -28,10 +28,9 @@ class SliderPushService
         }
 
         $departmentId = (int)($slider->department_id ?? 0);
-        // 频道约定与 ClientMaintainService 一致
         $channel = $departmentId === 0
             ? 'client-all'
-            : 'client-department-' . $departmentId;
+            : 'player-channel-' . $departmentId;
 
         try {
             $result = sendSocketMessage($channel, [
