@@ -78,7 +78,7 @@ class SongOfflineSlot extends AbstractMachineService implements BaseMachine
     // ========================================
     const ALL_DOWN = 'eade';                // 清除历史记录（清除开洗分账+回补数）
     const CHECK = 'a37005e0f8ce';           // 故排（归0机板，固定指令）
-    const SSR_SIGNAL = 'eaec';              // SSR讯号10秒（线下特有：预留给smart-slot移出按钮）
+    const SSR_SIGNAL = 'eaec';              // EA EC：清除開洗分旗標（D2→D0 / D6→D5），新版協議前後置清旗標用
 
     // ========================================
     // 心跳和开机（线下版特有）
