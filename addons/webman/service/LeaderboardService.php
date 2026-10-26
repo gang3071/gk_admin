@@ -25,7 +25,7 @@ use support\Log;
  *
  * 計分口徑（與後台一致）：
  * - 遊戲記錄：play_game_record，已結算投注（settlement_status=1）加總 bet
- * - 上下分報表：player_game_log，加總 pressure（斯洛／鋼珠／漁機）
+ * - 上下分報表：player_game_log，加總 chip_amount（打碼量，斯洛／鋼珠／漁機）
  *
  * 期間口徑：當期進行中（本週一08:00~下週一08:00 / 本月1號08:00~下月1號08:00）
  * - 每 30 分鐘刷新當期名次（settle_at 保持 NULL = 未定案）
@@ -536,7 +536,7 @@ class LeaderboardService
     }
 
     /**
-     * 排行榜計分子查詢（遊戲記錄已結算投注 + 上下分報表押分）
+     * 排行榜計分子查詢（遊戲記錄已結算投注 + 上下分報表打碼量）
      *
      * @return string
      */
@@ -548,7 +548,7 @@ class LeaderboardService
                   AND r.settlement_status = 1
                 GROUP BY r.player_id
                 UNION ALL
-                SELECT g.player_id, SUM(g.pressure) AS score
+                SELECT g.player_id, SUM(g.chip_amount) AS score
                 FROM player_game_log g
                 WHERE g.created_at >= ? AND g.created_at < ?
                 GROUP BY g.player_id";
@@ -605,20 +605,22 @@ class LeaderboardService
     /**
      * VIP 總榜排行（依 VIP 等級、同等級比分數，取前 N）
      *
+     * 沒有打碼量的 VIP 也會列入，分數為 0
+     *
      * @param Carbon $start
      * @param Carbon $end
      * @return array
      */
     private static function queryVip(Carbon $start, Carbon $end): array
     {
-        $sql = "SELECT p.id AS player_id, p.store_admin_id, SUM(t.score) AS score
+        $sql = "SELECT p.id AS player_id, p.store_admin_id, COALESCE(SUM(t.score), 0) AS score
                 FROM player p
                 JOIN vip_level vl ON vl.id = p.vip_level_id
-                JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                LEFT JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
                 WHERE vl.sort >= ?
                   AND p.status = 1 AND p.deleted_at IS NULL AND p.store_admin_id > 0
                 GROUP BY p.id
-                ORDER BY MAX(vl.sort) DESC, score DESC, p.id ASC
+                ORDER BY MAX(vl.sort) DESC, COALESCE(SUM(t.score), 0) DESC, p.id ASC
                 LIMIT " . self::VIP_TOP;
 
         $bindings = array_merge(self::scoreBindings($start, $end), [self::VIP_MIN_LEVEL]);

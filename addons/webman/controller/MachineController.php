@@ -7,6 +7,7 @@ use addons\webman\model\GameType;
 use addons\webman\model\Machine;
 use addons\webman\model\MachineCategory;
 use addons\webman\model\MachineKeepingLog;
+use addons\webman\model\VipLevel;
 use addons\webman\model\MachineMedia;
 use addons\webman\model\MachineMediaPush;
 use addons\webman\model\MachineOpenCard;
@@ -589,6 +590,16 @@ class MachineController
                         }
                     ]);
                     $form->switch('is_special', admin_trans('machine.fields.is_special'))->default(false);
+                    $vipOptions = [0 => admin_trans('machine.vip_level_no_limit')] +
+                        VipLevel::where('status', VipLevel::STATUS_ENABLED)
+                            ->orderBy('sort')
+                            ->pluck('name', 'id')
+                            ->all();
+                    $form->select('min_vip_level_id', admin_trans('machine.fields.min_vip_level_id'))
+                        ->options($vipOptions)
+                        ->default(0)
+                        ->showSearch()
+                        ->dropdownMatchSelectWidth();
                     $form->select('control_type', admin_trans('machine.fields.control_type'))
                         ->required()
                         ->options([
@@ -743,6 +754,7 @@ class MachineController
         }
         $machine->label_id = $form->input('label_id');
         $machine->is_special = $form->input('is_special');
+        $machine->min_vip_level_id = (int)($form->input('min_vip_level_id') ?? 0);
         $machine->save();
         //保存修改时进行缓存处理
         // 格式化缓存key
