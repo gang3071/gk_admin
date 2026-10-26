@@ -209,6 +209,7 @@ return [
         //店舗プレイヤー管理
         'store_player' => 'プレイヤー管理',
         'store_player_list' => 'プレイヤーリスト',
+        'store_player_delivery_record' => '入出金履歴',
         'player_points_records' => 'ポイント記録',
         //店舗入金ボーナス管理
         'store_deposit_bonus_manage' => '入金ボーナス管理',

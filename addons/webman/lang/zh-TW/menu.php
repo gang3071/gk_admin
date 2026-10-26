@@ -207,6 +207,7 @@ return [
         //店機後台設備管理
         'store_player' => '玩家管理',
         'store_player_list' => '玩家列表',
+        'store_player_delivery_record' => '帳變記錄',
         //店機後台開分滿贈管理
         'store_deposit_bonus_manage' => '開分滿贈管理',
         'store_deposit_bonus_activity' => '活動管理',

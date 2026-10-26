@@ -208,6 +208,7 @@ return [
         //Store Player Management
         'store_player' => 'Player Management',
         'store_player_list' => 'Player List',
+        'store_player_delivery_record' => 'Account Change Records',
         //Store Deposit Bonus Management
         'store_deposit_bonus_manage' => 'Deposit Bonus Management',
         'store_deposit_bonus_activity' => 'Activity Management',

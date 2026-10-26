@@ -209,6 +209,7 @@ return [
         //店机后台设备管理
         'store_player' => '玩家管理',
         'store_player_list' => '玩家列表',
+        'store_player_delivery_record' => '账变记录',
         'player_points_records' => '积分记录',
         //店机后台开分满赠管理
         'store_deposit_bonus_manage' => '开分满赠管理',
