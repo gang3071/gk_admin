@@ -41,6 +41,7 @@ return [
         'leaderboard_golden_weekly' => 'Golden Weekly Game Volume Ranking',
         'leaderboard_store_weekly' => 'Store Weekly Ranking',
         'leaderboard_golden_monthly' => 'Golden Monthly Game Volume Ranking',
+        'leaderboard_switch' => 'Leaderboard Switch',
     ],
     'marquee_max_len' => 'Marquee can be up to 100 characters',
     'line_customer_max_len' => 'Line customer service address up to 200 characters',
@@ -83,6 +84,8 @@ return [
         'rank1' => '1st Place Reward',
         'rank2' => '2nd Place Reward',
         'rank3' => '3rd Place Reward',
+        'switch_enabled' => 'Enabled',
+        'switch_disabled' => 'Disabled',
         'save_success' => 'Saved successfully',
     ],
     // Rebate Configuration

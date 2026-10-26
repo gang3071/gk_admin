@@ -352,7 +352,16 @@ class SystemSettingController
                     return Tag::create($html)->color('blue')->modal([$this, 'editVipWelcomeVoice'], ['data' => $data]);
                 })->align('center')
                 ->if(function ($value, SystemSetting $data) {
-                    return Str::startsWith($data->feature, 'leaderboard_');
+                    return $data->feature === 'leaderboard_switch';
+                })->display(function ($value, SystemSetting $data) {
+                    return Tag::create(
+                        $data->status
+                            ? admin_trans('system_setting.leaderboard.switch_enabled')
+                            : admin_trans('system_setting.leaderboard.switch_disabled')
+                    )->color($data->status ? 'green' : 'red');
+                })->align('center')
+                ->if(function ($value, SystemSetting $data) {
+                    return Str::startsWith($data->feature, 'leaderboard_') && $data->feature !== 'leaderboard_switch';
                 })->display(function ($value, SystemSetting $data) {
                     $config = json_decode($data->content ?? '{}', true) ?: [];
                     $prizes = [];
