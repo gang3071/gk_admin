@@ -759,7 +759,8 @@ class Login extends LoginAbstract
                 $totalPointTotal = floatval($rows->sum('total_point'));
                 $totalActivityAmount = floatval($rows->sum('activity_amount'));
                 $totalLotteryAmount = floatval($rows->sum('lottery_amount'));
-                $totalActualWinLoss = ($totalAmount + $totalActivityAmount + $totalLotteryAmount) * -1;
+                // 实际盈亏不扣彩金（彩金走独立彩池），与列表「机台盈亏」口径一致
+                $totalActualWinLoss = ($totalAmount + $totalActivityAmount) * -1;
                 $data = [
                     [
                         'title' => admin_trans('machine_report.open_amount_total'),

@@ -24,6 +24,9 @@ use Illuminate\Support\Carbon;
  *
  * 彩金点数 / 活动点数不在 player_game_log 上，分别取自
  * player_lottery_record / player_activity_phase_record。
+ *
+ * 机台盈亏（machine_total_point）= 机器上点 - 机器下点 - 活动点数。
+ * 彩金走独立彩池，不计入机台盈亏，报表单独以「彩金点数」列展示。
  */
 class MachineReportAggregator
 {
@@ -64,7 +67,6 @@ class MachineReportAggregator
                      THEN ABS(player_game_log.game_amount) ELSE 0 END)
               - SUM(CASE WHEN player_game_log.action <> {$openAction} AND player_game_log.game_amount > 0
                      THEN player_game_log.game_amount ELSE 0 END)
-              - COALESCE(lot_sub.lottery_amount, 0)
               - COALESCE(act_sub.activity_amount, 0) AS machine_total_point
         ");
 
