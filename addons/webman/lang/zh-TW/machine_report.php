@@ -32,6 +32,7 @@ return [
         5 => '本月',
         6 => '上月'
     ],
+    'store' => '所屬店家',
     'open_amount_total' => '玩家總上點',
     'wash_amount_total' => '玩家總下點',
     'total_amount_total' => '玩家盈虧',

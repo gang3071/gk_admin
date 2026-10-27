@@ -32,6 +32,7 @@ return [
         5 => 'This month',
         6 => 'Last month'
     ],
+    'store' => 'Store',
     'open_amount_total' => 'Players total points',
     'wash_amount_total' => 'Players total points',
     'total_amount_total' => 'Player profit and loss',

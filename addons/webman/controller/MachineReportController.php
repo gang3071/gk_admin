@@ -2,6 +2,7 @@
 
 namespace addons\webman\controller;
 
+use addons\webman\model\AdminUser;
 use addons\webman\model\GameType;
 use addons\webman\service\MachineReportAggregator;
 use ExAdmin\ui\component\common\Button;
@@ -54,7 +55,8 @@ class MachineReportController
                 })
             ->get()
             ->toArray();
-        return Grid::create($list, function (Grid $grid) use ($total, $list, $exAdminFilter) {
+        $storeOptions = $this->storeOptions();
+        return Grid::create($list, function (Grid $grid) use ($total, $list, $exAdminFilter, $storeOptions) {
             $grid->title(admin_trans('machine_report.title'));
             $grid->bordered(true);
             $grid->autoHeight();
@@ -145,7 +147,7 @@ class MachineReportController
             $grid->hideDelete();
             $grid->hideSelection();
             $grid->expandFilter();
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('machine.name')->placeholder(admin_trans('machine.fields.name'));
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->hidden('date_start');
@@ -171,6 +173,12 @@ class MachineReportController
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('announcement.fields.department_id'))
                     ->remoteOptions(admin_url(['addons-webman-controller-ChannelController', 'getDepartmentOptions']));
+                $filter->eq()->select('store_id')
+                    ->placeholder(admin_trans('machine_report.store'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($storeOptions);
                 $producer = plugin()->webman->config('database.machine_producer_model');
                 $options = $producer::select(['id', 'name'])->pluck('name', 'id')->all();
                 $filter->eq()->select('machine.producer_id')
@@ -233,5 +241,24 @@ class MachineReportController
             $grid->attr('is_mongo_total', $total);
             $grid->attr('mongo_model', $list);
         });
+    }
+
+    /**
+     * 店家选项（总后台：全部店家）
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        return AdminUser::query()
+            ->where('type', AdminUser::TYPE_STORE)
+            ->where('status', 1)
+            ->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 }

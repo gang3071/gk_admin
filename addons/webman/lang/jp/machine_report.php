@@ -32,6 +32,7 @@ return [
         5 => '今月',
         6 => '先月'
     ],
+    'store' => '所属店舗',
     'open_amount_total' => 'プレイヤーの合計ポイント',
     'wash_amount_total' => 'プレイヤーの合計ポイント',
     'total_amount_total' => 'プレイヤーの損益',

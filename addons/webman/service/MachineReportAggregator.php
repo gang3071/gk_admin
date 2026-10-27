@@ -3,6 +3,7 @@
 namespace addons\webman\service;
 
 use addons\webman\model\GameType;
+use addons\webman\model\Player;
 use addons\webman\model\PlayerActivityPhaseRecord;
 use addons\webman\model\PlayerGameLog;
 use addons\webman\model\PlayerLotteryRecord;
@@ -153,6 +154,12 @@ class MachineReportAggregator
         }
         if (!empty($exAdminFilter['department_id'])) {
             $query->where($table . '.department_id', $exAdminFilter['department_id']);
+        }
+        // 店家筛选：经 Player 子查询把店家转换为玩家ID（与厂商报表同一套写法）
+        if (!empty($exAdminFilter['store_id'])) {
+            $query->whereIn($table . '.player_id', Player::query()
+                ->where('store_admin_id', $exAdminFilter['store_id'])
+                ->select('id'));
         }
         // is_test 只有游戏日志和彩金记录有；活动记录无此列
         if (!empty($exAdminFilter['is_test']) && in_array($table, ['player_game_log', 'player_lottery_record'], true)) {
