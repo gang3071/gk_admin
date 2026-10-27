@@ -11,6 +11,7 @@ use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Video;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Editable;
+use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\image\Image;
 use ExAdmin\ui\support\Container;
@@ -81,7 +82,21 @@ class ChannelSliderController
             $grid->sortInput('sort', admin_trans('slider.fields.sort'))->align('center');
             $grid->column('status', admin_trans('slider.fields.status'))->switch()->align('center');
             $grid->setForm()->drawer($this->form());
+            $grid->filter(function (Filter $filter) {
+                $filter->eq()->select('ad_position')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('slider.fields.ad_position'))
+                    ->options([
+                        Slider::AD_POSITION_GAME_LOBBY => admin_trans('slider.ad_position.' . Slider::AD_POSITION_GAME_LOBBY),
+                        Slider::AD_POSITION_PHYSICAL_LOBBY => admin_trans('slider.ad_position.' . Slider::AD_POSITION_PHYSICAL_LOBBY),
+                        Slider::AD_POSITION_STANDBY => admin_trans('slider.ad_position.' . Slider::AD_POSITION_STANDBY),
+                        Slider::AD_POSITION_LANDSCAPE => admin_trans('slider.ad_position.' . Slider::AD_POSITION_LANDSCAPE),
+                    ]);
+            });
             $grid->hideDelete();
+            $grid->expandFilter();
         });
     }
 
