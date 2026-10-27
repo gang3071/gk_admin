@@ -2,6 +2,7 @@
 
 return [
     'title' => '積分比例設置',
+    'machine_label' => '實體機台（鋼珠+斯洛）',
     'button' => '積分比例',
     'summary' => ' (Ex. 每1500打碼量 = 1積分)',
     'fields' => [

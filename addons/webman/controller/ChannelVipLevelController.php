@@ -359,6 +359,14 @@ class ChannelVipLevelController
             ->toArray();
 
         return Form::create([], function (Form $form) use ($gamePlatform, $vipLevelPoint) {
+            // 实体机台（platform_id = 0）固定一行，排在最前
+            $form->number('ratio_point_machine', admin_trans('vip_level_point.machine_label', [], 'vip_level_point'))
+                ->min(0)
+                ->max(100)
+                ->step(0.01)
+                ->required()
+                ->value($vipLevelPoint[0]['ratio_point'] ?? 0);
+
             foreach ($gamePlatform as $value) {
                 $form->number('ratio_point_' . $value->id, $value->name)
                     ->min(0)
@@ -374,6 +382,16 @@ class ChannelVipLevelController
                     $data = request()->post('data', []);
 
                     $redis = Redis::connection()->client();
+
+                    // 保存实体机台积分比例（platform_id = 0）
+                    if (isset($data['ratio_point_machine'])) {
+                        $ratioPoint = floatval($data['ratio_point_machine']);
+                        VipLevelPoint::updateOrCreate(
+                            ['vip_level_id' => $vipLevelId, 'platform_id' => 0],
+                            ['ratio_point' => $ratioPoint, 'status' => 1]
+                        );
+                        $redis->del(sprintf('gk_api:vip_level_point:%d:%d', $vipLevelId, 0));
+                    }
 
                     foreach ($gamePlatform as $value) {
                         $key = 'ratio_point_' . $value->id;
