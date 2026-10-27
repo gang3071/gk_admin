@@ -6,8 +6,8 @@ use addons\webman\Admin;
 use addons\webman\model\GamePlatform;
 use addons\webman\model\VipLevel;
 use addons\webman\model\VipLevelCashback;
-use addons\webman\model\VipLevelPoint;
 use addons\webman\model\VipLevelMachineRatio;
+use addons\webman\model\VipLevelPoint;
 use addons\webman\service\VipLevelService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Icon;
@@ -360,7 +360,7 @@ class ChannelVipLevelController
 
         return Form::create([], function (Form $form) use ($gamePlatform, $vipLevelPoint) {
             // 实体机台（platform_id = 0）固定一行，排在最前
-            $form->number('ratio_point_machine', admin_trans('vip_level_point.machine_label', [], 'vip_level_point'))
+            $form->number('ratio_point_machine', admin_trans('vip_level_point.machine_label'))
                 ->min(0)
                 ->max(100)
                 ->step(0.01)
