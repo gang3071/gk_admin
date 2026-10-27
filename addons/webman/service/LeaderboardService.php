@@ -47,15 +47,15 @@ class LeaderboardService
     const VIP_CODE_MONTHLY = 'vip_monthly';
 
     /** 結算週榜（period_type=1） */
-    public static function settleWeekly(): array
+    public static function settleWeekly(array $departmentIds): array
     {
-        return self::settle(1);
+        return self::settle(1, $departmentIds);
     }
 
     /** 結算月榜（period_type=2） */
-    public static function settleMonthly(): array
+    public static function settleMonthly(array $departmentIds): array
     {
-        return self::settle(2);
+        return self::settle(2, $departmentIds);
     }
 
     /**
@@ -68,7 +68,7 @@ class LeaderboardService
      * @param int $periodType 1=週榜 2=月榜
      * @return array ['refreshed'=>int, 'finalized'=>int, 'skipped'=>int, 'entries'=>int]
      */
-    public static function settle(int $periodType): array
+    public static function settle(int $periodType, array $departmentIds): array
     {
         $now = Carbon::now('Asia/Taipei');
         [$start, $end, $periodKey] = self::currentPeriod($periodType, $now);
@@ -88,12 +88,12 @@ class LeaderboardService
                 // 已定案，不再覆蓋
                 $result['skipped']++;
             } else {
-                $result['entries'] += self::refreshBoard($exist, $setting, $periodType, $periodKey, $start, $end, $now);
+                $result['entries'] += self::refreshBoard($exist, $setting, $periodType, $periodKey, $start, $end, $now, $departmentIds);
                 $result['refreshed']++;
             }
 
             // 2) 定案所有「已結束但未定案」的期
-            $result['finalized'] += self::finalizeEnded($code, $now);
+            $result['finalized'] += self::finalizeEnded($code, $now, $departmentIds);
         }
 
         // 3) VIP 總榜（不依 system_setting，固定結算）
@@ -145,7 +145,7 @@ class LeaderboardService
      * @param Carbon $now
      * @return int
      */
-    private static function refreshBoard($exist, array $setting, int $periodType, string $periodKey, Carbon $start, Carbon $end, Carbon $now): int
+    private static function refreshBoard($exist, array $setting, int $periodType, string $periodKey, Carbon $start, Carbon $end, Carbon $now, array $departmentIds): int
     {
         $ts = $now->format('Y-m-d H:i:s');
 
@@ -181,7 +181,7 @@ class LeaderboardService
 
         // 覆蓋名次：先刪同榜舊名次再重塞（同一 leaderboard_id，unique 不衝突）
         LeaderboardEntry::query()->where('leaderboard_id', $leaderboardId)->delete();
-        $rows = self::buildEntries($leaderboardId, $setting, $start, $end);
+        $rows = self::buildEntries($leaderboardId, $setting, $start, $end, $departmentIds);
         if (!empty($rows)) {
             LeaderboardEntry::query()->insert($rows);
         }
@@ -201,7 +201,7 @@ class LeaderboardService
      * @param Carbon $now
      * @return int 定案筆數
      */
-    private static function finalizeEnded(string $code, Carbon $now): int
+    private static function finalizeEnded(string $code, Carbon $now, array $departmentIds): int
     {
         $ts = $now->format('Y-m-d H:i:s');
 
@@ -227,7 +227,7 @@ class LeaderboardService
 
             // 以定案的期間重算最終名次
             LeaderboardEntry::query()->where('leaderboard_id', $lb->id)->delete();
-            $rows = self::buildEntries((int) $lb->id, $setting, $start, $end);
+            $rows = self::buildEntries((int) $lb->id, $setting, $start, $end, $departmentIds);
             if (!empty($rows)) {
                 LeaderboardEntry::query()->insert($rows);
             }
@@ -484,19 +484,19 @@ class LeaderboardService
     /**
      * 依範圍組出名次資料
      */
-    private static function buildEntries(int $leaderboardId, array $setting, Carbon $start, Carbon $end): array
+    private static function buildEntries(int $leaderboardId, array $setting, Carbon $start, Carbon $end, array $departmentIds): array
     {
         $rows = [];
 
         if ((int)$setting['scope_type'] === Leaderboard::SCOPE_TYPE_STORE) {
             // 店內：每間店各自取前 N
-            foreach (self::queryByStore($start, $end) as $r) {
+            foreach (self::queryByStore($start, $end, $departmentIds) as $r) {
                 $rows[] = self::entryRow($leaderboardId, (int)$r->player_id, (int)$r->rn, (float)$r->score, $setting, (int)$r->store_admin_id);
             }
         } else {
             // 全站：全體取前 N
             $rank = 0;
-            foreach (self::queryOverall($start, $end) as $r) {
+            foreach (self::queryOverall($start, $end, $departmentIds) as $r) {
                 $rank++;
                 $rows[] = self::entryRow($leaderboardId, (int)$r->player_id, $rank, (float)$r->score, $setting, (int)$r->store_admin_id);
             }
@@ -557,11 +557,12 @@ class LeaderboardService
     /**
      * 全站排行（取前 N）
      */
-    private static function queryOverall(Carbon $start, Carbon $end): array
+    private static function queryOverall(Carbon $start, Carbon $end, array $departmentIds): array
     {
         $sql = "SELECT t.player_id, p.store_admin_id, SUM(t.score) AS score
                 FROM player p
                 JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                WHERE p.department_id IN (" . implode(',', $departmentIds) . ")
                 GROUP BY t.player_id, p.store_admin_id
                 ORDER BY score DESC, t.player_id ASC
                 LIMIT " . self::SETTLE_TOP;
@@ -572,13 +573,14 @@ class LeaderboardService
     /**
      * 店內排行（每間店各自取前 N）
      */
-    private static function queryByStore(Carbon $start, Carbon $end): array
+    private static function queryByStore(Carbon $start, Carbon $end, array $departmentIds): array
     {
         $sql = "SELECT * FROM (
                     SELECT p.store_admin_id, t.player_id, SUM(t.score) AS score,
                            ROW_NUMBER() OVER (PARTITION BY p.store_admin_id ORDER BY SUM(t.score) DESC, t.player_id ASC) AS rn
                     FROM player p
                     JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
+                    WHERE p.department_id IN (" . implode(',', $departmentIds) . ")
                     GROUP BY p.id, t.player_id
                 ) t2
                 WHERE t2.rn <= " . self::SETTLE_TOP . "
