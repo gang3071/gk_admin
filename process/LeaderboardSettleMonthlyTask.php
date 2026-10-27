@@ -2,6 +2,7 @@
 
 namespace process;
 
+use addons\webman\model\SystemSetting;
 use addons\webman\service\LeaderboardService;
 use support\Log;
 use Workerman\Crontab\Crontab;
@@ -30,20 +31,32 @@ class LeaderboardSettleMonthlyTask
 
         // Cron：秒 分 時 日 月 週（每 1 分鐘，測試用）
         new Crontab('0 * * * * *', function () {
-            $this->doWork();
+            $departmentIds = SystemSetting::query()
+                ->offDataAuth()
+                ->where('feature', 'leaderboard_switch')
+                ->where('status', 1)
+                ->pluck('department_id')
+                ->toArray();
+
+            if (empty($departmentIds)) {
+                $this->log->info('LeaderboardSettleMonthlyTask 排行榜開關未啟用，進程退出');
+                return;
+            }
+
+            $this->doWork($departmentIds);
         });
     }
 
     /**
      * 執行月榜刷新（當期）+ 定案（已結束）
      */
-    private function doWork(): void
+    private function doWork(array $departmentIds): void
     {
         ini_set('memory_limit', '512M');
         $startTime = microtime(true);
 
         try {
-            $result = LeaderboardService::settleMonthly();
+            $result = LeaderboardService::settleMonthly($departmentIds);
 
             $this->log->info('LeaderboardSettleMonthlyTask 結算完成', [
                 'refreshed' => $result['refreshed'],
