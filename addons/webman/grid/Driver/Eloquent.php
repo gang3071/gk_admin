@@ -111,18 +111,46 @@ class Eloquent extends GridAbstract
             return $result;
         }
         $pk = $this->getPk();
-        $selectRaw = "{$pk},(@rownum := @rownum+1),case when @rownum = {$sort} then @rownum := @rownum+1 else @rownum := @rownum end AS rownum";
+        $table = $this->repository->getTable();
 
-        $sortSql = $this->builder->from(Db::raw("(SELECT @rownum := -1) r," . $this->repository->getTable()))
-            ->selectRaw($selectRaw)
-            ->reorder($field)
-            ->where($pk, '<>', $id)
-            ->toSql();
-        $this->repository->where($pk, $id)->update([$field => $sort]);
+        // 前端传入的 $sort 是「展示序」位置（0 = 列表最上面一行，含分页偏移）。
+        // 原实现按 $field 升序重编号，与列表 $field 倒序展示的方向相反，
+        // 会把「置顶」写成最小值（刷新后变置底）、拖拽位置整体镜像。
+        // 这里按列表实际展示顺序重排，展示越靠前分配越大的 $field 值，位置与展示一一对应。
+        $ids = array_values(array_filter($this->builder->pluck($pk)->all(), function ($rowId) use ($id) {
+            return (string)$rowId !== (string)$id;
+        }));
+        $target = max(0, min($sort, count($ids)));
+        array_splice($ids, $target, 0, [$id]);
 
-        Db::connection($this->repository->getConnectionName())->statement("update {$this->repository->getTable()} inner join ({$sortSql}) a on a.{$pk}={$this->repository->getTable()}.{$pk} set `{$field}`=a.rownum", $this->builder->getBindings());
+        $direction = $this->sortFieldDirection($field);
+        $total = count($ids);
+        $cases = [];
+        foreach ($ids as $index => $rowId) {
+            // 展示第 0 行：$field 倒序时拿最大值、正序时拿最小值
+            $value = $direction === 'asc' ? $index : $total - $index;
+            $cases[] = 'WHEN ' . (int)$rowId . ' THEN ' . (int)$value;
+        }
+        if ($cases) {
+            Db::connection($this->repository->getConnectionName())->statement(
+                "UPDATE `{$table}` SET `{$field}` = CASE `{$pk}` " . implode(' ', $cases) . ' ELSE `' . $field . '` END'
+            );
+        }
 
         return message_success(admin_trans('grid.sort_success'));
+    }
+
+    /**
+     * 取 $field 在列表中的排序方向，决定重编号序列递增还是递减
+     */
+    protected function sortFieldDirection(string $field): string
+    {
+        foreach (($this->builder->getQuery()->orders ?? []) as $order) {
+            if (($order['column'] ?? '') === $field) {
+                return strtolower($order['direction'] ?? 'desc') === 'asc' ? 'asc' : 'desc';
+            }
+        }
+        return 'desc';
     }
 
     /**
