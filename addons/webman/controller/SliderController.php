@@ -4,7 +4,9 @@ namespace addons\webman\controller;
 
 use addons\webman\form\MyEditor;
 use addons\webman\model\Channel;
+use addons\webman\model\Slider;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Video;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -41,6 +43,10 @@ class SliderController
                 }
             });
             $grid->column('picture_url', admin_trans('slider.fields.picture_url'))->display(function ($val, $data) {
+                // 视频素材用播放器展示，图片保持缩略图（视频放 <img> 会显示成乱码/破图）
+                if ((int)($data['type'] ?? Slider::TYPE_IMAGE) === Slider::TYPE_VIDEO) {
+                    return Video::create()->url($val)->size(120, 68);
+                }
                 $image = Image::create()
                     ->width(50)
                     ->height(50)
@@ -98,6 +104,16 @@ class SliderController
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('slider.title'));
             $form->select('department_id', admin_trans('slider.fields.department_id'))->options($this->getChannelOptions())->required();
+            $form->select('type', admin_trans('slider.fields.type'))
+                ->options([
+                    Slider::TYPE_IMAGE => admin_trans('slider.type.' . Slider::TYPE_IMAGE),
+                    Slider::TYPE_VIDEO => admin_trans('slider.type.' . Slider::TYPE_VIDEO),
+                ])
+                ->default(Slider::TYPE_IMAGE)
+                ->required()
+                ->when(Slider::TYPE_VIDEO, function (Form $form) {
+                    $this->videoField($form);
+                });
             $form->select('ad_position', admin_trans('slider.fields.ad_position'))
                 ->options([
                     1 => admin_trans('slider.ad_position.1'),
@@ -105,26 +121,14 @@ class SliderController
                     3 => admin_trans('slider.ad_position.3'),
                     4 => admin_trans('slider.ad_position.4'),
                 ])->required()
-                ->when(1, function ($form) {
-                    $form->image('picture_url', admin_trans('slider.fields.picture_url'))
-                        ->ext('jpg,png,jpeg,webp,mp4')
-                        ->fileSize('60m')
-                        ->help(admin_trans('slider.help.picture_size_1'))
-                        ->required();
+                ->when(1, function (Form $form) {
+                    $this->pictureField($form, 'slider.help.picture_size_1');
                 })
-                ->when(2, function ($form) {
-                    $form->image('picture_url', admin_trans('slider.fields.picture_url'))
-                        ->ext('jpg,png,jpeg,webp,mp4')
-                        ->fileSize('60m')
-                        ->help(admin_trans('slider.help.picture_size_2'))
-                        ->required();
+                ->when(2, function (Form $form) {
+                    $this->pictureField($form, 'slider.help.picture_size_2');
                 })
-                ->when(3, function ($form) {
-                    $form->image('picture_url', admin_trans('slider.fields.picture_url'))
-                        ->ext('jpg,png,jpeg,webp,mp4')
-                        ->fileSize('60m')
-                        ->help(admin_trans('slider.help.picture_size_3'))
-                        ->required();
+                ->when(3, function (Form $form) {
+                    $this->pictureField($form, 'slider.help.picture_size_3');
                 });
             $form->text('url', admin_trans('slider.fields.url'))->ruleUrl()->maxlength(200);
             $form->myEditor('content', admin_trans('slider.fields.content'));
@@ -146,5 +150,43 @@ class SliderController
             $data[$channel->department_id] = $channel->name;
         }
         return $data;
+    }
+
+    /**
+     * 图片上传字段（仅类型=图片时显示，按广告位带出尺寸建议）
+     *
+     * @param Form $form
+     * @param string|null $helpKey slider.help.* 尺寸建议语言键
+     * @return void
+     */
+    private function pictureField(Form $form, ?string $helpKey = null): void
+    {
+        $field = $form->image('picture_url', admin_trans('slider.fields.picture_url'))
+            ->ext('jpg,png,jpeg,webp')
+            ->fileSize('60m')
+            ->required();
+        if ($helpKey !== null) {
+            $field->help(admin_trans($helpKey));
+        }
+        // 与视频上传互斥：类型=视频时隐藏（此前图片字段放行 mp4，会把视频塞进图片预览导致显示乱码）
+        $field->where('type', Slider::TYPE_IMAGE);
+    }
+
+    /**
+     * 视频上传字段（仅类型=视频时显示）
+     *
+     * @param Form $form
+     * @return void
+     */
+    private function videoField(Form $form): void
+    {
+        $form->file('picture_url', admin_trans('slider.fields.video'))
+            ->ext('mp4,webm,mov')
+            ->type('file')
+            ->fileSize('60m')
+            ->help(admin_trans('slider.help.video_format'))
+            ->required()
+            ->hideFinder()
+            ->paste();
     }
 }

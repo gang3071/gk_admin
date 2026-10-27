@@ -8,6 +8,8 @@ return [
         'department_id' => '渠道',
         'content' => '内容',
         'picture_url' => '图片',
+        'type' => '类型',
+        'video' => '视频',
         'status' => '状态',
         'sort' => '排序',
         'ad_position' => '广告位',
@@ -19,10 +21,15 @@ return [
         3 => '待机页面',
         4 => '横版背景',
     ],
+    'type' => [
+        1 => '图片',
+        2 => '视频',
+    ],
     'url_max_length'=>'链接地址最多200个字符',
     'help' => [
         'picture_size_1' => '建议图片尺寸 1080 * 350 或 1080 * 533',
         'picture_size_2' => '建议图片尺寸 1080 * 545',
         'picture_size_3' => '建议图片尺寸 1080 * 1920',
+        'video_format' => '支持 mp4、webm、mov 格式',
     ]
 ];

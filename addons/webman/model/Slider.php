@@ -14,7 +14,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property int department_id 部门/渠道id
  * @property string url 超链接
  * @property string content 内文
- * @property string picture_url 图片地址
+ * @property string picture_url 图片/视频地址
+ * @property int type 类型 1=图片 2=视频
  * @property int status 状态
  * @property int sort 排序
  * @property int ad_position 广告位 1-电子游戏大厅(默认) 2-实体大厅 3-待机页面
@@ -29,6 +30,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Slider extends Model
 {
     use SoftDeletes, HasDateTimeFormatter, DataPermissions;
+
+    /** 类型：图片 */
+    const TYPE_IMAGE = 1;
+    /** 类型：视频 */
+    const TYPE_VIDEO = 2;
 
     /** 广告位：电子游戏大厅 */
     const AD_POSITION_GAME_LOBBY = 1;
