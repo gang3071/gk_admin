@@ -24,7 +24,7 @@ use support\Log;
  * 設定來源：system_setting（feature 以 leaderboard_ 開頭，content 為 JSON）
  *
  * 計分口徑（與後台一致）：
- * - 遊戲記錄：play_game_record，已結算投注（settlement_status=1）加總 bet
+ * - 遊戲記錄：play_game_record，已結算＋未結算投注（settlement_status IN (0,1)）加總 bet
  * - 上下分報表：player_game_log，加總 chip_amount（打碼量，斯洛／鋼珠／漁機）
  *
  * 期間口徑：當期進行中（本週一08:00~下週一08:00 / 本月1號08:00~下月1號08:00）
@@ -536,7 +536,7 @@ class LeaderboardService
     }
 
     /**
-     * 排行榜計分子查詢（遊戲記錄已結算投注 + 上下分報表打碼量）
+     * 排行榜計分子查詢（遊戲記錄已結算＋未結算投注 + 上下分報表打碼量）
      *
      * @return string
      */
@@ -545,7 +545,7 @@ class LeaderboardService
         return "SELECT r.player_id, SUM(r.bet) AS score
                 FROM play_game_record r
                 WHERE r.created_at >= ? AND r.created_at < ?
-                  AND r.settlement_status = 1
+                  AND r.settlement_status IN (0, 1)
                 GROUP BY r.player_id
                 UNION ALL
                 SELECT g.player_id, SUM(g.chip_amount) AS score

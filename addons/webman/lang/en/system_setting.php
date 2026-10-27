@@ -40,6 +40,7 @@ return [
         'vip_welcome_voice' => 'VIP Welcome Voice',
         'leaderboard_golden_weekly' => 'Golden Weekly Game Volume Ranking',
         'leaderboard_store_weekly' => 'Store Weekly Ranking',
+        'leaderboard_store_monthly' => 'Store Monthly Ranking',
         'leaderboard_golden_monthly' => 'Golden Monthly Game Volume Ranking',
         'leaderboard_switch' => 'Leaderboard Switch',
     ],

@@ -40,6 +40,7 @@ return [
         'vip_welcome_voice' => 'VIP歡迎語音',
         'leaderboard_golden_weekly' => '金樽遊戲量週排行',
         'leaderboard_store_weekly' => '各店週排行',
+        'leaderboard_store_monthly' => '各店月排行',
         'leaderboard_golden_monthly' => '金樽遊戲量月排行',
         'leaderboard_switch' => '排行榜開關',
     ],
