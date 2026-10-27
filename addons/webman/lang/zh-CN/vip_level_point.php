@@ -2,6 +2,7 @@
 
 return [
     'title' => '积分比例设置',
+    'machine_label' => '实体机台（钢珠+斯洛）',
     'button' => '积分比例',
     'summary' => ' (Ex. 每1500打码量 = 1积分)',
     'fields' => [
