@@ -2,6 +2,7 @@
 
 namespace process;
 
+use addons\webman\model\SystemSetting;
 use addons\webman\service\LeaderboardService;
 use support\Log;
 use Workerman\Crontab\Crontab;
@@ -30,20 +31,47 @@ class LeaderboardGrantTask
 
         // 每 5 分鐘執行一次
         new Crontab('0 */5 * * * *', function () {
-            $this->doWork();
+            $codes = [];
+            $systemSetting = SystemSetting::query()
+                ->offDataAuth()
+                ->where('feature', 'like', 'leaderboard_%')
+                ->where('department_id', 0)
+                ->where('status', 1)
+                ->get();
+
+            foreach ($systemSetting as $value) {
+                $content = json_decode($value->content, true);
+
+                if (! is_array($content)) {
+                    continue;
+                }
+
+                $content['automatic'] = (int)($content['automatic'] ?? 1);
+
+                if ($content['automatic'] == 1) {
+                    $codes[] = $content['code'];
+                }
+            }
+
+            if (empty($codes)) {
+                $this->log->info('LeaderboardGrantTask 沒有需要發獎的排行榜，進程退出');
+                return;
+            }
+
+            $this->doWork($codes);
         });
     }
 
     /**
      * 執行發獎
      */
-    private function doWork(): void
+    private function doWork(array $codes): void
     {
         ini_set('memory_limit', '512M');
         $startTime = microtime(true);
 
         try {
-            $result = LeaderboardService::grant();
+            $result = LeaderboardService::grant($codes);
 
             if ($result['granted'] > 0 || $result['failed'] > 0) {
                 $this->log->info('LeaderboardGrantTask 發獎完成', [

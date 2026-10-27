@@ -82,6 +82,7 @@ return [
         'title' => 'Leaderboard Settings',
         'name' => 'Board Name',
         'threshold' => 'Threshold Score',
+        'automatic' => 'Automatic Bonus Distribution',
         'rank1' => '1st Place Reward',
         'rank2' => '2nd Place Reward',
         'rank3' => '3rd Place Reward',

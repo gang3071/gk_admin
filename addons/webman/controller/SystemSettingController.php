@@ -24,12 +24,12 @@ use Webman\RedisQueue\Client;
 class SystemSettingController
 {
     protected $model;
-    
+
     public function __construct()
     {
         $this->model = plugin()->webman->config('database.system_setting_model');
     }
-    
+
     /**
      * 配置列表
      * @auth true
@@ -47,7 +47,7 @@ class SystemSettingController
         }
         return Card::create($tabs);
     }
-    
+
     /**
      * 系统配置
      */
@@ -61,7 +61,7 @@ class SystemSettingController
             $grid->column('feature', admin_trans('system_setting.fields.feature'))->display(function ($value) {
                 return admin_trans('system_setting.fields.' . $value);
             })->align('center');
-            
+
             $grid->column('setting', admin_trans('system_setting.fields.setting'))
                 ->if(function ($value, SystemSetting $data) {
                     return $data->feature === 'marquee' || $data->feature === 'machine_marquee';
@@ -385,7 +385,7 @@ class SystemSettingController
             });
         });
     }
-    
+
     /**
      * 结算日期
      * @return array
@@ -395,10 +395,10 @@ class SystemSettingController
         for ($i = 1; $i <= 28; $i++) {
             $data[$i] = $i . admin_trans('player_promoter.date');
         }
-        
+
         return $data;
     }
-    
+
     /**
      * 机台维护时间
      * @auth true
@@ -445,7 +445,7 @@ class SystemSettingController
             });
         });
     }
-    
+
     /**
      * 客户端维护时间
      * @auth true
@@ -670,6 +670,10 @@ class SystemSettingController
                 ->min(0)
                 ->required();
 
+            $form->switch('automatic', admin_trans('system_setting.leaderboard.automatic'))
+                ->value($config['automatic'] ?? 1)
+                ->required();
+
             $form->number('rank1_amount', admin_trans('system_setting.leaderboard.rank1'))
                 ->value($prizes[1] ?? 0)
                 ->min(0)
@@ -689,6 +693,7 @@ class SystemSettingController
                 $newConfig = $config;
                 $newConfig['name'] = $form->input('name');
                 $newConfig['threshold'] = (float)$form->input('threshold');
+                $newConfig['automatic'] = $form->input('automatic');
                 $newConfig['prizes'] = [
                     ['rank' => 1, 'amount' => (float)$form->input('rank1_amount')],
                     ['rank' => 2, 'amount' => (float)$form->input('rank2_amount')],
