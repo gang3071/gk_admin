@@ -6,9 +6,12 @@ use addons\webman\Admin;
 use addons\webman\form\MyEditor;
 use addons\webman\model\Activity;
 use addons\webman\model\ActivityContent;
+use addons\webman\model\Slider;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\common\Video;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Editable;
+use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\image\Image;
 use ExAdmin\ui\support\Container;
@@ -39,6 +42,13 @@ class ChannelSliderController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('picture_url', admin_trans('slider.fields.picture_url'))->display(function ($val, $data) {
+                // 视频素材用播放器展示，图片保持缩略图（视频放 <img> 会显示成乱码/破图）
+                if ((int)($data['type'] ?? Slider::TYPE_IMAGE) === Slider::TYPE_VIDEO) {
+                    // 播放器是块级元素，套一层 flex 让它和图片一样居中；尺寸收窄避免撑宽列
+                    return Html::create()->content([
+                        Video::create()->url($val)->size(80, 45),
+                    ])->style(['display' => 'flex', 'justifyContent' => 'center']);
+                }
                 $image = Image::create()
                     ->width(50)
                     ->height(50)
@@ -72,7 +82,21 @@ class ChannelSliderController
             $grid->sortInput('sort', admin_trans('slider.fields.sort'))->align('center');
             $grid->column('status', admin_trans('slider.fields.status'))->switch()->align('center');
             $grid->setForm()->drawer($this->form());
+            $grid->filter(function (Filter $filter) {
+                $filter->eq()->select('ad_position')
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->placeholder(admin_trans('slider.fields.ad_position'))
+                    ->options([
+                        Slider::AD_POSITION_GAME_LOBBY => admin_trans('slider.ad_position.' . Slider::AD_POSITION_GAME_LOBBY),
+                        Slider::AD_POSITION_PHYSICAL_LOBBY => admin_trans('slider.ad_position.' . Slider::AD_POSITION_PHYSICAL_LOBBY),
+                        Slider::AD_POSITION_STANDBY => admin_trans('slider.ad_position.' . Slider::AD_POSITION_STANDBY),
+                        Slider::AD_POSITION_LANDSCAPE => admin_trans('slider.ad_position.' . Slider::AD_POSITION_LANDSCAPE),
+                    ]);
+            });
             $grid->hideDelete();
+            $grid->expandFilter();
         });
     }
 
@@ -88,6 +112,16 @@ class ChannelSliderController
 
         return Form::create(new $this->model(), function (Form $form) {
             $form->title(admin_trans('slider.title'));
+            $form->select('type', admin_trans('slider.fields.type'))
+                ->options([
+                    Slider::TYPE_IMAGE => admin_trans('slider.type.' . Slider::TYPE_IMAGE),
+                    Slider::TYPE_VIDEO => admin_trans('slider.type.' . Slider::TYPE_VIDEO),
+                ])
+                ->default(Slider::TYPE_IMAGE)
+                ->required()
+                ->when(Slider::TYPE_VIDEO, function (Form $form) {
+                    $this->videoField($form);
+                });
             $form->select('ad_position', admin_trans('slider.fields.ad_position'))
                 ->options([
                     1 => admin_trans('slider.ad_position.1'),
@@ -124,7 +158,7 @@ class ChannelSliderController
     }
 
     /**
-     * 轮播图上传字段（按广告位带出对应尺寸建议）
+     * 图片上传字段（仅类型=图片时显示，按广告位带出对应尺寸建议）
      *
      * @param Form $form
      * @param string|null $helpKey slider.help.* 尺寸建议语言键，null 表示不提示
@@ -142,5 +176,26 @@ class ChannelSliderController
         if ($helpKey !== null) {
             $field->help(admin_trans($helpKey));
         }
+        // 与视频上传互斥：类型=视频时隐藏
+        // 条件字段必须用 getBindField() 的绑定名（与 when() 内部一致），写裸 'type' 会永远不匹配
+        $field->where($form->getBindField('type'), Slider::TYPE_IMAGE);
+    }
+
+    /**
+     * 视频上传字段（仅类型=视频时显示）
+     *
+     * @param Form $form
+     * @return void
+     */
+    private function videoField(Form $form): void
+    {
+        $form->file('picture_url', admin_trans('slider.fields.video'))
+            ->ext('mp4,webm,mov')
+            ->type('file')
+            ->fileSize('60m')
+            ->help(admin_trans('slider.help.video_format'))
+            ->required()
+            ->hideFinder()
+            ->paste();
     }
 }

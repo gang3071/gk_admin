@@ -8,6 +8,8 @@ return [
         'department_id' => 'チャンネル',
         'content' => 'コンテンツ',
         'picture_url' => '画像',
+        'type' => 'タイプ',
+        'video' => '動画',
         'status' => 'ステータス',
         'sort' => '並べ替え',
         'ad_position' => '広告位',
@@ -19,10 +21,15 @@ return [
         3 => 'スタンバイページ',
         4 => '横版背景',
     ],
+    'type' => [
+        1 => '画像',
+        2 => '動画',
+    ],
     'url_max_length' => 'リンク アドレスは 200 文字までです',
     'help' => [
         'picture_size_1' => '推奨画像サイズ: 1080 * 350 または 1080 * 533',
         'picture_size_2' => '推奨画像サイズ: 1080 * 545',
         'picture_size_3' => '推奨画像サイズ: 1080 * 1920',
+        'video_format' => 'mp4、webm、mov 形式に対応',
     ]
 ];
