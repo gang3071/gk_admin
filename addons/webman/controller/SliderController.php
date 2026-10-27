@@ -45,7 +45,10 @@ class SliderController
             $grid->column('picture_url', admin_trans('slider.fields.picture_url'))->display(function ($val, $data) {
                 // 视频素材用播放器展示，图片保持缩略图（视频放 <img> 会显示成乱码/破图）
                 if ((int)($data['type'] ?? Slider::TYPE_IMAGE) === Slider::TYPE_VIDEO) {
-                    return Video::create()->url($val)->size(120, 68);
+                    // 播放器是块级元素，套一层 flex 让它和图片一样居中；尺寸收窄避免撑宽列
+                    return Html::create()->content([
+                        Video::create()->url($val)->size(80, 45),
+                    ])->style(['display' => 'flex', 'justifyContent' => 'center']);
                 }
                 $image = Image::create()
                     ->width(50)
@@ -169,7 +172,8 @@ class SliderController
             $field->help(admin_trans($helpKey));
         }
         // 与视频上传互斥：类型=视频时隐藏（此前图片字段放行 mp4，会把视频塞进图片预览导致显示乱码）
-        $field->where('type', Slider::TYPE_IMAGE);
+        // 条件字段必须用 getBindField() 的绑定名（与 when() 内部一致），写裸 'type' 会永远不匹配
+        $field->where($form->getBindField('type'), Slider::TYPE_IMAGE);
     }
 
     /**
