@@ -60,6 +60,7 @@ return [
         PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => 'Cashback Pool Claim',
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP Daily Login Bonus',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => 'Activity Give',
+        PlayerDeliveryRecord::TYPE_LEADERBOARD_REWARD => 'Leaderboard Reward',
     ],
     'machine_refund' => 'Machine Refund',
     'detail' => 'details',
