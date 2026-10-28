@@ -671,7 +671,7 @@ class SystemSettingController
                 ->required();
 
             $form->switch('automatic', admin_trans('system_setting.leaderboard.automatic'))
-                ->value($config['automatic'] ?? 1)
+                ->value($config['automatic'] ?? 0)
                 ->required();
 
             $form->number('rank1_amount', admin_trans('system_setting.leaderboard.rank1'))

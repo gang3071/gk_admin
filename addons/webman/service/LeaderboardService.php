@@ -96,7 +96,7 @@ class LeaderboardService
         }
 
         // 3) VIP 總榜（不依 system_setting，固定結算）
-        self::settleVip($periodType, $start, $end, $periodKey, $now);
+        // self::settleVip($periodType, $start, $end, $periodKey, $now);
 
         return $result;
     }
@@ -635,7 +635,7 @@ class LeaderboardService
     /**
      * 建立待領取通知（不直接入帳）
      */
-    public static function grantOne($entry, Carbon $now, $admin = []): bool
+    public static function grantOne($entry, Carbon $now): bool
     {
         $playerId = (int)$entry->player_id;
         $amount = (float)$entry->prize_amount;
@@ -663,8 +663,8 @@ class LeaderboardService
             'amount'           => $amount,
             'rank'             => (int)$entry->rank,
             'leaderboard_name' => $leaderboardName,
-            'admin_id'         => is_object($admin) ? (int)($admin->id ?? 0) : 0,
-            'admin_name'       => is_object($admin) ? (string)($admin->username ?? '') : '',
+            'admin_id'         => 0,
+            'admin_name'       => '',
             'text'             => sprintf(
                 '恭喜獲得「%s」第%d名，獎勵 %s，請點擊領取',
                 $leaderboardName,

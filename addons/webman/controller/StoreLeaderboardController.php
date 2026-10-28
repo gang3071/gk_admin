@@ -206,7 +206,7 @@ class StoreLeaderboardController
             return message_error(admin_trans('leaderboard_entry.errorGrantPermissions'));
         }
 
-        $result = LeaderboardService::grantOne($entry, Carbon::now('Asia/Taipei'), Admin::user());
+        $result = LeaderboardService::grantOne($entry, Carbon::now('Asia/Taipei'));
 
         if (! $result) {
             return message_error(admin_trans('leaderboard_entry.errorGrant'));

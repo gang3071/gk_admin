@@ -2,7 +2,6 @@
 
 namespace addons\webman\controller;
 
-use addons\webman\Admin;
 use addons\webman\model\AdminUser;
 use addons\webman\model\Leaderboard;
 use addons\webman\model\LeaderboardEntry;
@@ -245,7 +244,7 @@ class LeaderboardController
             return message_error(admin_trans('leaderboard_entry.errorGrantPermissions'));
         }
 
-        $result = LeaderboardService::grantOne($entry, Carbon::now('Asia/Taipei'), Admin::user());
+        $result = LeaderboardService::grantOne($entry, Carbon::now('Asia/Taipei'));
 
         if (! $result) {
             return message_error(admin_trans('leaderboard_entry.errorGrant'));

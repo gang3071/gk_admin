@@ -46,7 +46,7 @@ class LeaderboardGrantTask
                     continue;
                 }
 
-                $content['automatic'] = (int)($content['automatic'] ?? 1);
+                $content['automatic'] = (int)($content['automatic'] ?? 0);
 
                 if ($content['automatic'] == 1) {
                     $codes[] = $content['code'];
