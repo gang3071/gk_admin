@@ -213,6 +213,7 @@ class StorePlayerDeliveryRecordController
                     case PlayerDeliveryRecord::TYPE_BIRTHDAY_BONUS:
                     case PlayerDeliveryRecord::TYPE_VIP_UPGRADE_BONUS:
                     case PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS:
+                    case PlayerDeliveryRecord::TYPE_LEADERBOARD_REWARD:
                         return Tag::create($translatedText)->color('#eb2f96');
                     case PlayerDeliveryRecord::TYPE_PROFIT:
                     case PlayerDeliveryRecord::TYPE_REVERSE_WATER:
@@ -376,6 +377,7 @@ class StorePlayerDeliveryRecordController
                         'agent_out' => admin_trans('message.target.agent_out'),
                         'storage_recharge' => admin_trans('message.target.storage_recharge'),
                         'retry_refund' => admin_trans('message.target.retry_refund'),
+                        'leaderboard_reward' => admin_trans('message.target.leaderboard_reward'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()

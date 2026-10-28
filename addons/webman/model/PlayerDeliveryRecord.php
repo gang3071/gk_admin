@@ -87,6 +87,7 @@ class PlayerDeliveryRecord extends Model
     const TYPE_REVERSE_WATER_POOL = 36; // 反水池反水领取
     const TYPE_VIP_DAILY_LOGIN_BONUS = 37; // VIP每日登录奖励
     const TYPE_ACTIVITY_GIVE = 38; // 活动外增
+    const TYPE_LEADERBOARD_REWARD = 39; // 排行榜奖励
 
     protected $fillable = [
         'player_id',
@@ -219,6 +220,7 @@ class PlayerDeliveryRecord extends Model
             self::TYPE_VIP_UPGRADE_BONUS => '#722ed1',
             self::TYPE_VIP_DAILY_LOGIN_BONUS => '#eb2f96',
             self::TYPE_ACTIVITY_GIVE => '#CC6600',
+            self::TYPE_LEADERBOARD_REWARD => '#eb2f96',
         ];
         return $map[$type] ?? 'gray';
     }
@@ -267,6 +269,7 @@ class PlayerDeliveryRecord extends Model
             self::TYPE_VIP_UPGRADE_BONUS,
             self::TYPE_VIP_DAILY_LOGIN_BONUS,
             self::TYPE_ACTIVITY_GIVE,
+            self::TYPE_LEADERBOARD_REWARD,
         ];
         $options = [];
         foreach ($types as $type) {

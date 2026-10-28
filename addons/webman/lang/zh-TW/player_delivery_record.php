@@ -60,6 +60,7 @@ return [
         PlayerDeliveryRecord::TYPE_REVERSE_WATER_POOL => '反水池反水領取',
         PlayerDeliveryRecord::TYPE_VIP_DAILY_LOGIN_BONUS => 'VIP每日登錄獎勵',
         PlayerDeliveryRecord::TYPE_ACTIVITY_GIVE => '活動外增',
+        PlayerDeliveryRecord::TYPE_LEADERBOARD_REWARD => '排行榜獎勵',
     ],
     'machine_refund' => '機台退款',
     'detail' => '詳情',
