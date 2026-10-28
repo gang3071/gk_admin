@@ -149,6 +149,8 @@ class ShiftReportExporter extends Excel
         return match ($column) {
             'player_name', 'player_phone' => (string) $value,
             'machine_point' => number_format($value, 0),
+            // 未核销不展示负数，数值小于 0 时展示为 0
+            'ticket_unredeemed_amount' => number_format(max((float)$value, 0), 2),
             default => number_format($value, 2),
         };
     }
