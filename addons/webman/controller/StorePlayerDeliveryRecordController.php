@@ -377,6 +377,7 @@ class StorePlayerDeliveryRecordController
                         'agent_out' => admin_trans('message.target.agent_out'),
                         'storage_recharge' => admin_trans('message.target.storage_recharge'),
                         'retry_refund' => admin_trans('message.target.retry_refund'),
+                        'leaderboard_reward' => admin_trans('message.target.leaderboard_reward'),
                     ]);
                 $filter->select('search_type')
                     ->showSearch()
