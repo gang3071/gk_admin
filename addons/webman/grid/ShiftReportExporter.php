@@ -688,7 +688,7 @@ class ShiftReportExporter extends Excel
         $reportSheet = $this->spreadsheet->createSheet();
         $reportSheet->setTitle(admin_trans('shift_handover.machine_report_sheet_title'));
 
-        // 斯洛类型列定义（全部列）
+        // 斯洛类型列定义（全部列；押分栏展示打码量 chip_amount）
         $slotColumns = [
             'machine_code' => admin_trans('shift_handover.machine_code'),
             'machine_name' => admin_trans('shift_handover.machine_name'),
@@ -772,7 +772,7 @@ class ShiftReportExporter extends Excel
                 $reportSheet->getRowDimension($row)->setRowHeight(22);
                 $row++;
 
-                // 数据行
+                // 数据行（押分栏展示打码量 chip_amount）
                 $slotSubtotal = ['open_point' => 0, 'wash_point' => 0, 'profit' => 0, 'pressure' => 0, 'score' => 0];
                 foreach ($slotDetails as $detailIndex => $detail) {
                     $reportSheet->setCellValue('A' . $row, $detail->machine_code ?: '-');
@@ -780,7 +780,7 @@ class ShiftReportExporter extends Excel
                     $reportSheet->setCellValue('C' . $row, number_format($detail->open_point, 2));
                     $reportSheet->setCellValue('D' . $row, number_format($detail->wash_point, 2));
                     $reportSheet->setCellValue('E' . $row, number_format($detail->profit, 2));
-                    $reportSheet->setCellValue('F' . $row, number_format($detail->pressure, 2));
+                    $reportSheet->setCellValue('F' . $row, number_format($detail->chip_amount, 2));
                     $reportSheet->setCellValue('G' . $row, number_format($detail->score, 2));
 
                     // 数字列右对齐
@@ -799,11 +799,11 @@ class ShiftReportExporter extends Excel
                     $reportSheet->getStyle('E' . $row)->getFont()->getColor()->setRGB($profitColor);
                     $reportSheet->getStyle('E' . $row)->getFont()->setBold(true);
 
-                    // 累加小计
+                    // 累加小计（押分栏按打码量 chip_amount 累加）
                     $slotSubtotal['open_point'] += $detail->open_point;
                     $slotSubtotal['wash_point'] += $detail->wash_point;
                     $slotSubtotal['profit'] += $detail->profit;
-                    $slotSubtotal['pressure'] += $detail->pressure;
+                    $slotSubtotal['pressure'] += $detail->chip_amount;
                     $slotSubtotal['score'] += $detail->score;
 
                     $row++;

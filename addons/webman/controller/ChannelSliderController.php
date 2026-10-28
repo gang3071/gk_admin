@@ -8,7 +8,6 @@ use addons\webman\model\Activity;
 use addons\webman\model\ActivityContent;
 use addons\webman\model\Slider;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\common\Video;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\grid\Editable;
 use ExAdmin\ui\component\grid\grid\Filter;
@@ -42,11 +41,18 @@ class ChannelSliderController
             $grid->autoHeight();
             $grid->bordered(true);
             $grid->column('picture_url', admin_trans('slider.fields.picture_url'))->display(function ($val, $data) {
-                // 视频素材用播放器展示，图片保持缩略图（视频放 <img> 会显示成乱码/破图）
+                // 视频素材用原生 video 预览，图片保持缩略图（视频放 <img> 会显示成乱码/破图）
                 if ((int)($data['type'] ?? Slider::TYPE_IMAGE) === Slider::TYPE_VIDEO) {
-                    // 播放器是块级元素，套一层 flex 让它和图片一样居中；尺寸收窄避免撑宽列
+                    // 原生 video 不带 xgplayer 那个 70px 圆形播放按钮背景；preload=metadata 取首帧当缩略图，controls 可直接播放
+                    // video 是块级元素，套一层 flex 让它和图片一样居中；尺寸收窄避免撑宽列
+                    $video = Html::create()->tag('video')
+                        ->attr('src', $val)
+                        ->attr('preload', 'metadata')
+                        ->attr('controls', true)
+                        ->attr('playsinline', true)
+                        ->style(['width' => '80px', 'height' => '45px', 'objectFit' => 'contain', 'background' => '#000000']);
                     return Html::create()->content([
-                        Video::create()->url($val)->size(80, 45),
+                        $video,
                     ])->style(['display' => 'flex', 'justifyContent' => 'center']);
                 }
                 $image = Image::create()

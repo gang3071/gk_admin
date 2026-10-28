@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property float $wash_point 下分
  * @property float $profit 利润（上分-下分）
  * @property float $pressure 押分
+ * @property float $chip_amount 打码量
  * @property float $score 得分
  * @property string $created_at 创建时间
  * @property string $updated_at 更新时间
@@ -52,6 +53,7 @@ class StoreShiftMachineDetail extends Model
         'wash_point',
         'profit',
         'pressure',
+        'chip_amount',
         'score',
     ];
 
@@ -62,6 +64,7 @@ class StoreShiftMachineDetail extends Model
         'wash_point' => 'float',
         'profit' => 'float',
         'pressure' => 'float',
+        'chip_amount' => 'float',
         'score' => 'float',
     ];
 
