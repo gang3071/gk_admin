@@ -229,6 +229,7 @@ return [
     'details_title' => '▼ 各次交班記錄明細 ▼',
     'no_shift_records' => '暫無交班記錄（請選擇交班記錄後再導出，或檢查篩選條件）',
     'machine_report_sheet_title' => '機台報表',
+    'summary_sheet_title' => '交班匯總',
 
     // 設備明細導出
     'export' => [

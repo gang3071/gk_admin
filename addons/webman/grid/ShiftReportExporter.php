@@ -27,6 +27,9 @@ class ShiftReportExporter extends Excel
     // 存储交班记录的ID和时间，用于导出汇总工作表
     protected $shiftSummary = [];
 
+    // 汇总工作表数据（每个交班记录只保留总计，不含明细）
+    protected $summaryRows = [];
+
     /**
      * 固定导出的16个列定义
      */
@@ -168,6 +171,47 @@ class ShiftReportExporter extends Excel
         return true;
     }
 
+    /**
+     * 交班记录标题行（交班ID + 交班时间），明细主表/汇总表/机台报表共用
+     */
+    protected function writeShiftTitleRow($sheet, int $row, string $titleText, string $lastColumnLetter): void
+    {
+        $sheet->setCellValue('A' . $row, $titleText);
+        $sheet->mergeCells('A' . $row . ':' . $lastColumnLetter . $row);
+        $sheet->getStyle('A' . $row)->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+        ]);
+        $sheet->getRowDimension($row)->setRowHeight(25);
+    }
+
+    /**
+     * 储值机购票/储值/小计行，明细主表与汇总表共用
+     * A=储值机购票： B=购票  C=储值： D=储值  E=小计： F=小计
+     */
+    protected function writeStorageSummaryRow($sheet, int $row, $ticketAmount, $rechargeAmount): void
+    {
+        $subtotalValue = number_format($ticketAmount + $rechargeAmount, 2);
+        $sheet->setCellValue('A' . $row, admin_trans('shift_handover.storage_ticket_purchase') . '：');
+        $sheet->setCellValue('B' . $row, number_format($ticketAmount, 2));
+        $sheet->setCellValue('C' . $row, admin_trans('shift_handover.storage_recharge') . '：');
+        $sheet->setCellValue('D' . $row, number_format($rechargeAmount, 2));
+        $sheet->setCellValue('E' . $row, admin_trans('shift_handover.subtotal') . '：');
+        $sheet->setCellValue('F' . $row, $subtotalValue);
+        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('C' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('E' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('E' . $row)->getFont()->getColor()->setRGB('1890ff');
+        $sheet->getStyle('B' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('D' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('F' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
+        $sheet->getStyle('F' . $row)->getFont()->setBold(true);
+        $sheet->getStyle('F' . $row)->getFont()->getColor()->setRGB('1890ff');
+        $sheet->getRowDimension($row)->setRowHeight(20);
+    }
+
     public function write(array $data, \Closure $finish = null)
     {
         try {
@@ -218,43 +262,19 @@ class ShiftReportExporter extends Excel
                 // 交班记录标题行（包含交班ID和时间）
                 $titleText = admin_trans('shift_handover.shift_id') . ': ' . $originalRecord->id . '    ' .
                              admin_trans('shift_handover.shift_time') . ': ' . $originalRecord->start_time . ' ~ ' . $originalRecord->end_time;
-                $this->sheet->setCellValue('A' . $this->currentRow, $titleText);
-                $this->sheet->mergeCells('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow);
-                $this->sheet->getStyle('A' . $this->currentRow)->applyFromArray([
-                    'font' => ['bold' => true, 'size' => 14],
-                    'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
-                    'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
-                    'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
-                ]);
-                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(25);
+                $this->writeShiftTitleRow($this->sheet, $this->currentRow, $titleText, $lastColumnLetter);
                 $this->currentRow++;
 
                 // 储值机设备明细行（按出票/储值设备拆分，位于汇总行上方）
                 $this->writeStorageDeviceRows($originalRecord);
 
                 // 储值机购票、储值机储值、小计
-                $storageTicketLabel = admin_trans('shift_handover.storage_ticket_purchase') . '：';
-                $storageTicketValue = number_format($originalRecord->storage_ticket_purchase ?? 0, 2);
-                $storageRechargeLabel = admin_trans('shift_handover.storage_recharge') . '：';
-                $storageRechargeValue = number_format($originalRecord->storage_recharge ?? 0, 2);
-                $storageSubtotalLabel = admin_trans('shift_handover.subtotal') . '：';
-                $storageSubtotalValue = number_format(($originalRecord->storage_ticket_purchase ?? 0) + ($originalRecord->storage_recharge ?? 0), 2);
-                $this->sheet->setCellValue('A' . $this->currentRow, $storageTicketLabel);
-                $this->sheet->setCellValue('B' . $this->currentRow, $storageTicketValue);
-                $this->sheet->setCellValue('C' . $this->currentRow, $storageRechargeLabel);
-                $this->sheet->setCellValue('D' . $this->currentRow, $storageRechargeValue);
-                $this->sheet->setCellValue('E' . $this->currentRow, $storageSubtotalLabel);
-                $this->sheet->setCellValue('F' . $this->currentRow, $storageSubtotalValue);
-                $this->sheet->getStyle('A' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('C' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('E' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('E' . $this->currentRow)->getFont()->getColor()->setRGB('1890ff');
-                $this->sheet->getStyle('B' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $this->sheet->getStyle('D' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $this->sheet->getStyle('F' . $this->currentRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_RIGHT);
-                $this->sheet->getStyle('F' . $this->currentRow)->getFont()->setBold(true);
-                $this->sheet->getStyle('F' . $this->currentRow)->getFont()->getColor()->setRGB('1890ff');
-                $this->sheet->getRowDimension($this->currentRow)->setRowHeight(20);
+                $this->writeStorageSummaryRow(
+                    $this->sheet,
+                    $this->currentRow,
+                    $originalRecord->storage_ticket_purchase ?? 0,
+                    $originalRecord->storage_recharge ?? 0
+                );
                 $this->currentRow++;
 
                 // 获取设备明细
@@ -412,7 +432,6 @@ class ShiftReportExporter extends Excel
 
                     // 小计行
                     $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $originalRecord->id . ')';
-                    $this->sheet->setCellValue('A' . $this->currentRow, $subtotalLabel);
 
                     // 写入小计数据
                     foreach ($activeColumns as $colIndex => $column) {
@@ -424,6 +443,9 @@ class ShiftReportExporter extends Excel
                             $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
                         }
                     }
+
+                    // 小计标签写在A列（放在数据写入之后，避免被 player_name 列覆盖）
+                    $this->sheet->setCellValue('A' . $this->currentRow, $subtotalLabel);
 
                     $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
                         'font' => ['bold' => true, 'size' => 11],
@@ -444,6 +466,16 @@ class ShiftReportExporter extends Excel
 
                     $this->currentRow++;
                 }
+
+                // 收集汇总工作表数据（只保留加总，不含会员/设备明细）
+                $this->summaryRows[] = [
+                    'id' => $originalRecord->id,
+                    'start_time' => $originalRecord->start_time,
+                    'end_time' => $originalRecord->end_time,
+                    'storage_ticket_purchase' => $originalRecord->storage_ticket_purchase ?? 0,
+                    'storage_recharge' => $originalRecord->storage_recharge ?? 0,
+                    'subtotal' => $subtotal,
+                ];
 
                 // 空行分隔
                 $this->currentRow += 2;
@@ -468,6 +500,12 @@ class ShiftReportExporter extends Excel
 
                 // 创建机台报表工作表
                 $this->createMachineReportSheet();
+
+                // 创建汇总工作表（插入为第一个工作表）
+                $this->createSummarySheet($activeColumns);
+
+                // 打开文件默认显示汇总工作表
+                $this->spreadsheet->setActiveSheetIndex(0);
 
                 // 冻结首行
                 $this->sheet->freezePane('A1');
@@ -689,15 +727,7 @@ class ShiftReportExporter extends Excel
             // ===== 标题行：交班ID + 交班时间 =====
             $titleText = admin_trans('shift_handover.shift_id') . ': ' . $item['id'] . '    ' .
                          admin_trans('shift_handover.shift_time') . ': ' . $timeRange;
-            $reportSheet->setCellValue('A' . $row, $titleText);
-            $reportSheet->mergeCells('A' . $row . ':' . $maxColLetter . $row);
-            $reportSheet->getStyle('A' . $row)->applyFromArray([
-                'font' => ['bold' => true, 'size' => 14],
-                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E8F4F8']],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
-                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
-            ]);
-            $reportSheet->getRowDimension($row)->setRowHeight(25);
+            $this->writeShiftTitleRow($reportSheet, $row, $titleText, $maxColLetter);
             $row++;
 
             // 查询该交班记录的实体机台明细
@@ -901,11 +931,106 @@ class ShiftReportExporter extends Excel
     }
 
     /**
+     * 创建汇总工作表（插入为第一个工作表，打开文件默认显示）
+     * 沿用明细主表版式，但只保留加总：交班标题行 + 储值机购票/储值/小计 + 表头 + 小计行
+     * 不含会员/储值机设备等明细行
+     */
+    protected function createSummarySheet(array $activeColumns = [])
+    {
+        if (empty($this->summaryRows)) {
+            return;
+        }
+
+        if (empty($activeColumns)) {
+            $activeColumns = $this->getActiveColumns();
+        }
+        $lastColumnLetter = $this->getColumnLetter(count($activeColumns) - 1);
+
+        // 插入为第一个工作表
+        $summarySheet = $this->spreadsheet->createSheet(0);
+        $summarySheet->setTitle(admin_trans('shift_handover.summary_sheet_title'));
+
+        $row = 1;
+        foreach ($this->summaryRows as $item) {
+            // 交班标题行（交班ID + 交班时间）
+            $timeRange = $item['start_time'] . ' ~ ' . $item['end_time'];
+            $titleText = admin_trans('shift_handover.shift_id') . ': ' . $item['id'] . '    ' .
+                         admin_trans('shift_handover.shift_time') . ': ' . $timeRange;
+            $this->writeShiftTitleRow($summarySheet, $row, $titleText, $lastColumnLetter);
+            $row++;
+
+            // 储值机购票、储值、小计
+            $this->writeStorageSummaryRow($summarySheet, $row, $item['storage_ticket_purchase'], $item['storage_recharge']);
+            $row++;
+
+            // 表头（沿用明细主表列）
+            foreach ($activeColumns as $index => $column) {
+                $headerLabel = admin_trans($this->availableColumns[$column] ?? $column);
+                $summarySheet->setCellValueByColumnAndRow($index + 1, $row, $headerLabel);
+            }
+            $summarySheet->getStyle('A' . $row . ':' . $lastColumnLetter . $row)->applyFromArray([
+                'font' => ['bold' => true, 'size' => 11],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D0E8F2']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CCCCCC']]]
+            ]);
+            $summarySheet->getRowDimension($row)->setRowHeight(22);
+            $row++;
+
+            // 小计行（只留加总）
+            $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $item['id'] . ')';
+
+            // 写入小计数据
+            foreach ($activeColumns as $colIndex => $column) {
+                if (in_array($column, ['player_name', 'player_phone'])) {
+                    $summarySheet->setCellValueByColumnAndRow($colIndex + 1, $row, '');
+                } else {
+                    $value = $item['subtotal'][$column] ?? 0;
+                    $summarySheet->setCellValueByColumnAndRow($colIndex + 1, $row, $this->formatColumnValue($column, $value));
+                }
+            }
+
+            // 小计标签写在A列（放在数据写入之后，避免被 player_name 列覆盖）
+            $summarySheet->setCellValue('A' . $row, $subtotalLabel);
+
+            $summarySheet->getStyle('A' . $row . ':' . $lastColumnLetter . $row)->applyFromArray([
+                'font' => ['bold' => true, 'size' => 11],
+                'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFE599']],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT, 'vertical' => Alignment::VERTICAL_CENTER],
+                'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '999999']]]
+            ]);
+            $summarySheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+            // 小计利润颜色
+            if (in_array('profit', $activeColumns)) {
+                $profitColIndex = array_search('profit', $activeColumns);
+                $profitLetter = $this->getColumnLetter($profitColIndex);
+                $subtotalProfit = $item['subtotal']['profit'] ?? 0;
+                $subtotalProfitColor = bccomp($subtotalProfit, '0', 2) >= 0 ? '3f8600' : 'cf1322';
+                $summarySheet->getStyle($profitLetter . $row)->getFont()->getColor()->setRGB($subtotalProfitColor);
+            }
+
+            $row++;
+
+            // 空行分隔
+            $row += 2;
+        }
+
+        // 列宽（与明细主表一致）
+        $this->setColumnWidths($activeColumns, $summarySheet);
+
+        // 冻结首行
+        $summarySheet->freezePane('A1');
+    }
+
+    /**
      * 设置列宽（基于选中的列）
      * @param array $activeColumns 当前激活的列
+     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet|null $sheet 目标工作表（默认明细主表）
      */
-    protected function setColumnWidths(array $activeColumns = [])
+    protected function setColumnWidths(array $activeColumns = [], $sheet = null)
     {
+        $sheet = $sheet ?: $this->sheet;
         // 列宽度定义
         $columnWidths = [
             'player_name' => 12,
@@ -936,7 +1061,7 @@ class ShiftReportExporter extends Excel
         foreach ($activeColumns as $index => $column) {
             $letter = $this->getColumnLetter($index);
             $width = $columnWidths[$column] ?? 14;
-            $this->sheet->getColumnDimension($letter)->setWidth($width);
+            $sheet->getColumnDimension($letter)->setWidth($width);
         }
     }
 

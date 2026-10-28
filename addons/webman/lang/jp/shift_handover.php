@@ -230,6 +230,7 @@ return [
     'details_title' => '▼ 各交代記録詳細 ▼',
     'no_shift_records' => '交代記録がありません（エクスポート前に交代記録を選択するか、フィルター条件を確認してください）',
     'machine_report_sheet_title' => 'マシンレポート',
+    'summary_sheet_title' => 'シフト集計',
 
     // デバイス詳細エクスポート
     'export' => [

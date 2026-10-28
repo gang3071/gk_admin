@@ -229,6 +229,7 @@ return [
     'details_title' => '▼ 各次交班记录明细 ▼',
     'no_shift_records' => '暂无交班记录（请选择交班记录后再导出，或检查筛选条件）',
     'machine_report_sheet_title' => '机台报表',
+    'summary_sheet_title' => '交班汇总',
 
     // 标签（带冒号）
     'label' => [
