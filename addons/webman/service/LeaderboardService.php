@@ -565,6 +565,7 @@ class LeaderboardService
                 JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
                 WHERE p.department_id IN (" . implode(',', $departmentIds) . ")
                 GROUP BY t.player_id, p.store_admin_id
+                HAVING SUM(t.score) > 0
                 ORDER BY score DESC, t.player_id ASC
                 LIMIT " . self::SETTLE_TOP;
 
@@ -583,6 +584,7 @@ class LeaderboardService
                     JOIN (" . self::scoreSubquery() . ") t ON t.player_id = p.id
                     WHERE p.department_id IN (" . implode(',', $departmentIds) . ")
                     GROUP BY p.id, t.player_id
+                    HAVING SUM(t.score) > 0
                 ) t2
                 WHERE t2.rn <= " . self::SETTLE_TOP . "
                 ORDER BY t2.store_admin_id ASC, t2.rn ASC";
