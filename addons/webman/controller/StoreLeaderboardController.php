@@ -4,6 +4,9 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Leaderboard;
+use addons\webman\model\LeaderboardEntry;
+use addons\webman\service\LeaderboardService;
+use Carbon\Carbon;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
 use ExAdmin\ui\component\common\Icon;
@@ -38,21 +41,22 @@ class StoreLeaderboardController
     {
         return Card::create(
             Tabs::create()
-                ->pane(admin_trans('leaderboard.period_type.' . Leaderboard::PERIOD_TYPE_WEEK), self::week())
-                ->pane(admin_trans('leaderboard.period_type.' . Leaderboard::PERIOD_TYPE_MONTH), self::month())
+                ->pane(admin_trans('leaderboard.period_type.' . Leaderboard::PERIOD_TYPE_WEEK), self::list(Leaderboard::PERIOD_TYPE_WEEK))
+                ->pane(admin_trans('leaderboard.period_type.' . Leaderboard::PERIOD_TYPE_MONTH), self::list(Leaderboard::PERIOD_TYPE_MONTH))
                 ->type('card')
                 ->destroyInactiveTabPane()
         );
     }
 
     /**
-     * 週榜 列表
+     * 榜單列表
      * @auth true
+     * @param int $periodType
      * @return Grid
      */
-    public function week(): Grid
+    public function list(int $periodType): Grid
     {
-        return Grid::create(new $this->model, function (Grid $grid) {
+        return Grid::create(new $this->model, function (Grid $grid) use ($periodType) {
             $grid->title(admin_trans('leaderboard.title'));
             $grid->hideDelete();
             $grid->hideSelection();
@@ -67,7 +71,7 @@ class StoreLeaderboardController
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
             }
 
-            $grid->model()->where('period_type', 1)->where('scope_type', 3)->orderBy('start_at', 'desc');
+            $grid->model()->where('period_type', $periodType)->where('scope_type', 3)->orderBy('start_at', 'desc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
@@ -93,7 +97,7 @@ class StoreLeaderboardController
                     Button::create(admin_trans('leaderboard_entry.title'))
                         ->type('primary')
                         ->icon(Icon::create('ProfileOutlined'))
-                        ->modal([$this, 'weekDetail'], ['id' => $data['id']])
+                        ->modal([$this, 'detail'], ['id' => $data['id']])
                         ->width('80%')
                 );
             });
@@ -101,67 +105,12 @@ class StoreLeaderboardController
     }
 
     /**
-     * 月榜 列表
-     * @auth true
-     * @return Grid
-     */
-    public function month(): Grid
-    {
-        return Grid::create(new $this->model, function (Grid $grid) {
-            $grid->title(admin_trans('leaderboard.title'));
-            $grid->hideDelete();
-            $grid->hideSelection();
-
-            $exAdminFilter = Request::input('ex_admin_filter', []);
-
-            if (! empty($exAdminFilter['settle_at_start'])) {
-                $grid->model()->where('settle_at', '>=', $exAdminFilter['settle_at_start']);
-            }
-
-            if (! empty($exAdminFilter['settle_at_end'])) {
-                $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
-            }
-
-            $grid->model()->where('period_type', 2)->where('scope_type', 3)->orderBy('start_at', 'desc');
-
-            $grid->expandFilter();
-            $grid->filter(function (Filter $filter) {
-                $filter->like()->text('period_key')->placeholder(admin_trans('leaderboard.fields.period_key'));
-
-                $filter->form()->hidden('settle_at_start');
-                $filter->form()->hidden('settle_at_end');
-                $filter->form()->dateTimeRange('settle_at_start', 'settle_at_end', '')
-                    ->placeholder([admin_trans('leaderboard.settle_at.start'), admin_trans('leaderboard.settle_at.end')]);
-            });
-
-            $grid->column('id', admin_trans('leaderboard.fields.id'))->align('center');
-            $grid->column('period_key', admin_trans('leaderboard.fields.period_key'))->align('center');
-            $grid->column('start_at', admin_trans('leaderboard.fields.start_at'))->align('center');
-            $grid->column('end_at', admin_trans('leaderboard.fields.end_at'))->align('center');
-            $grid->column('threshold', admin_trans('leaderboard.fields.threshold'))->align('center');
-            $grid->column('settle_at', admin_trans('leaderboard.fields.settle_at'))->align('center');
-
-            $grid->actions(function (Actions $actions, $data) {
-                $actions->hideDel();
-
-                $actions->prepend(
-                    Button::create(admin_trans('leaderboard_entry.title'))
-                        ->type('primary')
-                        ->icon(Icon::create('ProfileOutlined'))
-                        ->modal([$this, 'monthDetail'], ['id' => $data['id']])
-                        ->width('80%')
-                );
-            });
-        });
-    }
-
-    /**
-     * 週榜 詳情
+     * 榜單詳情
      * @auth true
      * @param int $id
      * @return Grid
      */
-    public function weekDetail(int $id): Grid
+    public function detail(int $id): Grid
     {
         return Grid::create(new $this->modelEntry, function (Grid $grid) use ($id) {
             $grid->title(admin_trans('leaderboard_entry.title'));
@@ -169,7 +118,7 @@ class StoreLeaderboardController
             $grid->hideSelection();
 
             $grid->model()->where('leaderboard_id', $id)->where('store_admin_id', Admin::user()->id);
-            $grid->model()->orderBy('store_admin_id', 'asc')->orderBy('rank', 'asc');
+            $grid->model()->with('leaderboard')->orderBy('rank', 'asc');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
@@ -205,65 +154,59 @@ class StoreLeaderboardController
                 });
             $grid->column('granted_at', admin_trans('leaderboard_entry.fields.granted_at'))->align('center');
 
-            $grid->actions(function (Actions $actions) {
+            $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
+
+                if (
+                    $data['grant_status'] == LeaderboardEntry::GRANT_STATUS_UNISSUED &&
+                    $data['prize_amount'] > 0 &&
+                    ! empty($data['leaderboard']['settle_at'])
+                ) {
+                    $actions->prepend(
+                        Button::create(admin_trans('leaderboard_entry.buttonGrant'))
+                            ->type('primary')
+                            ->icon(Icon::create('CaretRightFilled'))
+                            ->confirm(
+                                admin_trans('leaderboard_entry.confirmGrant'), [$this, 'grantOne'], ['id' => $data['id']]
+                            )
+                            ->gridRefresh()
+                    );
+                }
             });
         });
     }
 
     /**
-     * 月榜 詳情
+     * 發放獎勵
      * @auth true
      * @param int $id
-     * @return Grid
      */
-    public function monthDetail(int $id): Grid
+    public static function grantOne(int $id)
     {
-        return Grid::create(new $this->modelEntry, function (Grid $grid) use ($id) {
-            $grid->title(admin_trans('leaderboard_entry.title'));
-            $grid->hideDelete();
-            $grid->hideSelection();
+        $entry = LeaderboardEntry::query()
+            ->with('leaderboard')
+            ->find($id);
 
-            $grid->model()->where('leaderboard_id', $id)->where('store_admin_id', Admin::user()->id);
-            $grid->model()->orderBy('rank', 'asc');
+        if (
+            ! $entry ||
+            ! $entry->leaderboard ||
+            ! $entry->leaderboard->settle_at ||
+            $entry->grant_status != LeaderboardEntry::GRANT_STATUS_UNISSUED ||
+            $entry->prize_amount <= 0
+        ) {
+            return message_error(admin_trans('leaderboard_entry.errorGrant'));
+        }
 
-            $grid->expandFilter();
-            $grid->filter(function (Filter $filter) {
-                $filter->like()->text('player.name')->placeholder(admin_trans('leaderboard_entry.fields.player_id'));
-                $filter->eq()->select('grant_status')
-                    ->showSearch()
-                    ->style(['width' => '200px'])
-                    ->dropdownMatchSelectWidth()
-                    ->placeholder(admin_trans('leaderboard_entry.fields.grant_status'))
-                    ->options([
-                        0 => admin_trans('leaderboard_entry.grant_status.0'),
-                        1 => admin_trans('leaderboard_entry.grant_status.1')
-                    ]);
-            });
+        if ($entry->store_admin_id != Admin::user()->id) {
+            return message_error(admin_trans('leaderboard_entry.errorGrantPermissions'));
+        }
 
-            $grid->column('rank', admin_trans('leaderboard_entry.fields.rank'))->align('center');
-            $grid->column('player.name', admin_trans('leaderboard_entry.fields.player_id'))->align('center');
-            $grid->column('score', admin_trans('leaderboard_entry.fields.score'))->align('center');
-            $grid->column('prize_amount', admin_trans('leaderboard_entry.fields.prize_amount'))->align('center');
-            $grid->column('grant_status', admin_trans('leaderboard_entry.fields.grant_status'))->align('center')
-                ->display(function ($value) {
-                    switch ($value) {
-                        case 0:
-                            $tag = Tag::create(admin_trans('leaderboard_entry.grant_status.0'))->color('#ff4d4f');
-                            break;
+        $result = LeaderboardService::grantOne($entry, Carbon::now('Asia/Taipei'), Admin::user());
 
-                        case 1:
-                            $tag = Tag::create(admin_trans('leaderboard_entry.grant_status.1'))->color('#52c41a');
-                            break;
-                    }
+        if (! $result) {
+            return message_error(admin_trans('leaderboard_entry.errorGrant'));
+        }
 
-                    return Html::create()->content([$tag]);
-                });
-            $grid->column('granted_at', admin_trans('leaderboard_entry.fields.granted_at'))->align('center');
-
-            $grid->actions(function (Actions $actions) {
-                $actions->hideDel();
-            });
-        });
+        return message_success(admin_trans('leaderboard_entry.successGrant'));
     }
 }

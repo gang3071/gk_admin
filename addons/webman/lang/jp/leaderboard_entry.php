@@ -23,5 +23,10 @@ return [
         'start' => '付与開始時間',
         'end' => '付与終了時間'
     ],
+    'buttonGrant' => '報酬を配布',
+    'confirmGrant' => 'ランキング報酬を配布しますか？',
+    'errorGrant' => 'データエラー。ランキング期間が終了していること、賞金が0より大きいこと、および未配布であることを確認してください。',
+    'errorGrantPermissions' => '操作権限がありません。',
+    'successGrant' => '配布が成功しました。',
 ];
 

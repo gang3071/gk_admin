@@ -1202,6 +1202,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-ChannelLeaderboardController/index',
         'title' => '排行榜',
     ],
+    [
+        'id' => 'addons\webman\controller\ChannelLeaderboardController\grantOne',
+        'pid' => 'addons\webman\controller\ChannelLeaderboardController\index',
+        'action' => 'grantOne',
+        'method' => 'post',
+        'group' => 'channel',
+        'url' => 'ex-admin/addons-webman-controller-ChannelLeaderboardController/grantOne',
+        'title' => '手動派發獎勵',
+    ],
     //机台管理
     [
         'id' => 'addons\webman\controller\ChannelMachineController-',

@@ -928,6 +928,15 @@ return [
         'url' => 'ex-admin/addons-webman-controller-LeaderboardController/index',
         'title' => '排行榜',
     ],
+    [
+        'id' => 'addons\webman\controller\LeaderboardController\grantOne',
+        'pid' => 'addons\webman\controller\LeaderboardController\index',
+        'action' => 'grantOne',
+        'method' => 'post',
+        'group' => 'department',
+        'url' => 'ex-admin/addons-webman-controller-LeaderboardController/grantOne',
+        'title' => '手動派發獎勵',
+    ],
     // 设备列表（顶级主菜单）
     [
         'id' => 'addons\webman\controller\AdminDeviceController\index',

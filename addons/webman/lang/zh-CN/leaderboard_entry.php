@@ -23,5 +23,10 @@ return [
         'start' => '发放开始时间',
         'end' => '发放结束时间'
     ],
+    'buttonGrant' => '发放奖励',
+    'confirmGrant' => '确定发放排行榜奖励？',
+    'errorGrant' => '数据错误，请确认排行榜期别已结束、奖金大于 0 且未发放过',
+    'errorGrantPermissions' => '无权操作',
+    'successGrant' => '发放成功',
 ];
 

@@ -190,6 +190,15 @@ return [
                 'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/index',
                 'title' => '排行榜',
             ],
+            [
+                'id' => 'addons\webman\controller\StoreLeaderboardController\grantOne',
+                'pid' => 'addons\webman\controller\StoreLeaderboardController\index',
+                'action' => 'grantOne',
+                'method' => 'post',
+                'group' => 'store',
+                'url' => 'ex-admin/addons-webman-controller-StoreLeaderboardController/grantOne',
+                'title' => '手動派發獎勵',
+            ],
         ]
     ],
 

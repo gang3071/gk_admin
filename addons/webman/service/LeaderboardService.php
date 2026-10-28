@@ -636,7 +636,7 @@ class LeaderboardService
     /**
      * 發放單筆獎勵
      */
-    public static function grantOne($entry, Carbon $now): bool
+    public static function grantOne($entry, Carbon $now, $admin = []): bool
     {
         $playerId = (int)$entry->player_id;
         $amount = (float)$entry->prize_amount;
@@ -704,6 +704,8 @@ class LeaderboardService
             $log->bet_multiple = 0;
             $log->bet_num = 0;
             $log->remark = sprintf('%s 第%d名', $entry->leaderboard->name ?? '', $entry->rank);
+            $log->user_id = $admin->id ?? 0;
+            $log->user_name = $admin->username ?? '';
             $log->created_at = $ts;
             $log->updated_at = $ts;
             $log->save();

@@ -23,5 +23,10 @@ return [
         'start' => 'Distribution Start Time',
         'end' => 'Distribution End Time'
     ],
+    'buttonGrant' => 'Distribute Reward',
+    'confirmGrant' => 'Confirm Distributing Leaderboard Reward?',
+    'errorGrant' => 'Data error. Please confirm that the leaderboard period has ended, the bonus is greater than 0, and it has not been distributed yet.',
+    'errorGrantPermissions' => 'Unauthorized operation.',
+    'successGrant' => 'Distributed successfully.',
 ];
 
