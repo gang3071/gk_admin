@@ -761,7 +761,7 @@ class LeaderboardService
             $notice->save();
 
             sendSocketMessage('player-' . $playerId, [
-                'msg_type'         => 'player_notice',
+                'msg_type'         => 'leaderboard_reward',
                 'player_id'        => $playerId,
                 'notice_type'      => Notice::TYPE_LEADERBOARD_REWARD,
                 'notice_title'     => $notice->title,
