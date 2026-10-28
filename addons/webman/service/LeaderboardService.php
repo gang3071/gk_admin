@@ -408,7 +408,7 @@ class LeaderboardService
      *
      * @return array ['granted'=>int, 'failed'=>int]
      */
-    public static function grant(): array
+    public static function grant(array $codes): array
     {
         $now = Carbon::now('Asia/Taipei');
         $result = ['granted' => 0, 'failed' => 0];
@@ -419,8 +419,9 @@ class LeaderboardService
             }])
             ->where('grant_status', LeaderboardEntry::GRANT_STATUS_UNISSUED)
             ->where('prize_amount', '>', 0)
-            ->whereHas('leaderboard', function ($q) {
+            ->whereHas('leaderboard', function ($q) use ($codes) {
                 $q->whereNotNull('settle_at');
+                $q->whereIn('code', $codes);
             })
             ->orderBy('id')
             ->limit(500)
@@ -633,7 +634,7 @@ class LeaderboardService
     /**
      * 發放單筆獎勵
      */
-    private static function grantOne($entry, Carbon $now): bool
+    public static function grantOne($entry, Carbon $now): bool
     {
         $playerId = (int)$entry->player_id;
         $amount = (float)$entry->prize_amount;

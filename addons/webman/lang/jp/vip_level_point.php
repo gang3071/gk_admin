@@ -2,6 +2,7 @@
 
 return [
     'title' => 'ポイント比率設定',
+    'machine_label' => '実機台（鋼珠+スロット）',
     'button' => 'ポイント比率',
     'summary' => ' (Ex. ベット額1500ごとに = 1ポイント)',
     'fields' => [

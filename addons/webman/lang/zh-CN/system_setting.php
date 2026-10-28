@@ -82,6 +82,7 @@ return [
         'title' => '排行榜设定',
         'name' => '榜单名称',
         'threshold' => '门槛分数',
+        'automatic' => '自动派发奖金',
         'rank1' => '第 1 名奖励',
         'rank2' => '第 2 名奖励',
         'rank3' => '第 3 名奖励',

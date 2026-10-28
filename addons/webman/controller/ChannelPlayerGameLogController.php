@@ -482,7 +482,7 @@ class ChannelPlayerGameLogController
 
         return json(['code' => 200, 'data' => $data]);
     }
-    
+
     /**
      * 机台报表明细
      * @group channel

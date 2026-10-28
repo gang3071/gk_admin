@@ -2,6 +2,7 @@
 
 return [
     'title' => 'Point Ratio Settings',
+    'machine_label' => 'Physical Machine (Jackpot + Slot)',
     'button' => 'Point Ratio',
     'summary' => ' (Ex. Every 1500 Turnover = 1 Point)',
     'fields' => [
