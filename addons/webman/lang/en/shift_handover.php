@@ -231,6 +231,7 @@ return [
     'no_shift_records' => 'No shift records (Please select shift records before exporting, or check filter criteria)',
     'machine_report_sheet_title' => 'Machine Report',
     'summary_sheet_title' => 'Shift Summary',
+    'detail_sheet_title' => 'Shift Details',
 
     // Device Detail Export
     'export' => [

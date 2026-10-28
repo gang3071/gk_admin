@@ -222,6 +222,9 @@ class ShiftReportExporter extends Excel
 
             // 如果是第一次调用，初始化店家所有设备
             if ($this->processedRecords == 0) {
+                // 明细主表工作表名称
+                $this->sheet->setTitle(admin_trans('shift_handover.detail_sheet_title'));
+
                 // 获取店家管理员ID
                 if (!empty($data)) {
                     $firstRecordId = $data[0]['id'] ?? null;
@@ -430,10 +433,7 @@ class ShiftReportExporter extends Excel
 
                     $this->currentRow++;
 
-                    // 小计行
-                    $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $originalRecord->id . ')';
-
-                    // 写入小计数据
+                    // 小计行（只写加总数据，不显示小计标签）
                     foreach ($activeColumns as $colIndex => $column) {
                         if (in_array($column, ['player_name', 'player_phone'])) {
                             $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, '');
@@ -443,9 +443,6 @@ class ShiftReportExporter extends Excel
                             $this->sheet->setCellValueByColumnAndRow($colIndex + 1, $this->currentRow, $formattedValue);
                         }
                     }
-
-                    // 小计标签写在A列（放在数据写入之后，避免被 player_name 列覆盖）
-                    $this->sheet->setCellValue('A' . $this->currentRow, $subtotalLabel);
 
                     $this->sheet->getStyle('A' . $this->currentRow . ':' . $lastColumnLetter . $this->currentRow)->applyFromArray([
                         'font' => ['bold' => true, 'size' => 11],
@@ -709,8 +706,8 @@ class ShiftReportExporter extends Excel
             'pressure' => admin_trans('shift_handover.machine_pressure'),
         ];
 
-        // 设置列宽（固定宽度，两种类型共用）
-        $reportSheet->getColumnDimension('A')->setWidth(15);
+        // 设置列宽（固定宽度，两种类型共用；A 栏宽度 20）
+        $reportSheet->getColumnDimension('A')->setWidth(20);
         $reportSheet->getColumnDimension('B')->setWidth(18);
         $reportSheet->getColumnDimension('C')->setWidth(12);
         $reportSheet->getColumnDimension('D')->setWidth(12);
@@ -977,10 +974,7 @@ class ShiftReportExporter extends Excel
             $summarySheet->getRowDimension($row)->setRowHeight(22);
             $row++;
 
-            // 小计行（只留加总）
-            $subtotalLabel = admin_trans('shift_handover.subtotal') . ' (' . admin_trans('shift_handover.shift_id') . '#' . $item['id'] . ')';
-
-            // 写入小计数据
+            // 小计行（只留加总，不显示小计标签）
             foreach ($activeColumns as $colIndex => $column) {
                 if (in_array($column, ['player_name', 'player_phone'])) {
                     $summarySheet->setCellValueByColumnAndRow($colIndex + 1, $row, '');
@@ -989,9 +983,6 @@ class ShiftReportExporter extends Excel
                     $summarySheet->setCellValueByColumnAndRow($colIndex + 1, $row, $this->formatColumnValue($column, $value));
                 }
             }
-
-            // 小计标签写在A列（放在数据写入之后，避免被 player_name 列覆盖）
-            $summarySheet->setCellValue('A' . $row, $subtotalLabel);
 
             $summarySheet->getStyle('A' . $row . ':' . $lastColumnLetter . $row)->applyFromArray([
                 'font' => ['bold' => true, 'size' => 11],
@@ -1057,10 +1048,10 @@ class ShiftReportExporter extends Excel
             $activeColumns = array_keys($columnWidths);
         }
 
-        // 根据选中的列设置宽度
+        // 根据选中的列设置宽度（A 栏固定宽度 20）
         foreach ($activeColumns as $index => $column) {
             $letter = $this->getColumnLetter($index);
-            $width = $columnWidths[$column] ?? 14;
+            $width = $index === 0 ? 20 : ($columnWidths[$column] ?? 14);
             $sheet->getColumnDimension($letter)->setWidth($width);
         }
     }
