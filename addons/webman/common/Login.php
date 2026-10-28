@@ -754,9 +754,12 @@ class Login extends LoginAbstract
                 $openAmountTotal = floatval($rows->sum('open_amount'));
                 $washAmountTotal = floatval($rows->sum('wash_amount'));
                 $totalAmount = floatval($rows->sum('total_amount'));
-                $openPointTotal = floatval($rows->sum('open_point'));
-                $washPointTotal = floatval($rows->sum('wash_point'));
-                $totalPointTotal = floatval($rows->sum('total_point'));
+                // 三张卡片标签是「押分/得分/押得盈亏」，必须与列表同名列同口径：
+                // 取 total_pressure/total_score/total_diff（押分、得分、押分-得分），
+                // 不能取 open_point/wash_point（那是机台上分/下分，另一个口径，两者数值不同）
+                $pressureTotal = floatval($rows->sum('total_pressure'));
+                $scoreTotal = floatval($rows->sum('total_score'));
+                $diffTotal = floatval($rows->sum('total_diff'));
                 $totalActivityAmount = floatval($rows->sum('activity_amount'));
                 $totalLotteryAmount = floatval($rows->sum('lottery_amount'));
                 // 实际盈亏不扣彩金（彩金走独立彩池），与列表「机台盈亏」口径一致
@@ -782,19 +785,19 @@ class Login extends LoginAbstract
                     ],
                     [
                         'title' => admin_trans('machine_report.open_point_total'),
-                        'number' => $openPointTotal,
+                        'number' => $pressureTotal,
                         'prefix' => '',
                         'suffix' => ''
                     ],
                     [
                         'title' => admin_trans('machine_report.wash_point_total'),
-                        'number' => $washPointTotal,
+                        'number' => $scoreTotal,
                         'prefix' => '',
                         'suffix' => ''
                     ],
                     [
                         'title' => admin_trans('machine_report.total_point_total'),
-                        'number' => $totalPointTotal,
+                        'number' => $diffTotal,
                         'prefix' => '',
                         'suffix' => ''
                     ],
