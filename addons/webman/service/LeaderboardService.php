@@ -759,6 +759,21 @@ class LeaderboardService
             $notice->created_at = $ts;
             $notice->updated_at = $ts;
             $notice->save();
+
+            sendSocketMessage('player-' . $playerId, [
+                'msg_type'         => 'player_notice',
+                'player_id'        => $playerId,
+                'notice_type'      => Notice::TYPE_LEADERBOARD_REWARD,
+                'notice_title'     => $notice->title,
+                'notice_content'   => $notice->content,
+                'amount'           => (float)$amount,
+                'leaderboard_name' => $entry->leaderboard->name ?? '',
+                'rank'             => (int)$entry->rank,
+                'notice_num'       => Notice::query()
+                    ->where('player_id', $playerId)
+                    ->where('status', 0)
+                    ->count('*'),
+            ]);
         } catch (\Throwable $e) {
             Log::channel('leaderboard')->error('[排行榜發獎] 寫入通知失敗', [
                 'entry_id' => $entry->id,
