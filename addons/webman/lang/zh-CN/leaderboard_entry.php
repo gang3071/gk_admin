@@ -17,7 +17,8 @@ return [
     ],
     'grant_status' => [
         0 => '未发放',
-        1 => '已发放'
+        1 => '已领取',
+        2 => '待领取'
     ],
     'granted_at' => [
         'start' => '发放开始时间',
@@ -27,6 +28,6 @@ return [
     'confirmGrant' => '确定发放排行榜奖励？',
     'errorGrant' => '数据错误，请确认排行榜期别已结束、奖金大于 0 且未发放过',
     'errorGrantPermissions' => '无权操作',
-    'successGrant' => '发放成功',
+    'successGrant' => '已建立待领取通知',
 ];
 

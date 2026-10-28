@@ -156,7 +156,8 @@ class ChannelLeaderboardController
                     ->placeholder(admin_trans('leaderboard_entry.fields.grant_status'))
                     ->options([
                         0 => admin_trans('leaderboard_entry.grant_status.0'),
-                        1 => admin_trans('leaderboard_entry.grant_status.1')
+                        1 => admin_trans('leaderboard_entry.grant_status.1'),
+                        2 => admin_trans('leaderboard_entry.grant_status.2')
                     ]);
 
                 $filter->eq()->select('store_admin_id')
@@ -180,6 +181,10 @@ class ChannelLeaderboardController
 
                         case 1:
                             $tag = Tag::create(admin_trans('leaderboard_entry.grant_status.1'))->color('#52c41a');
+                            break;
+
+                        case 2:
+                            $tag = Tag::create(admin_trans('leaderboard_entry.grant_status.2'))->color('#faad14');
                             break;
                     }
 

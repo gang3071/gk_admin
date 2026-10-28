@@ -6,7 +6,6 @@ use addons\webman\model\Leaderboard;
 use addons\webman\model\LeaderboardEntry;
 use addons\webman\model\Notice;
 use addons\webman\model\Player;
-use addons\webman\model\PlayerMoneyEditLog;
 use addons\webman\model\SystemSetting;
 use Carbon\Carbon;
 use support\Db;
@@ -402,16 +401,16 @@ class LeaderboardService
     }
 
     /**
-     * 發放獎勵（只發，不算）
+     * 建立排行榜待領取通知（不直接入帳）
      *
-     * 撈「已結算、未發、有獎金」的名次，逐一發到錢包。
+     * 撈「已定案、未領取、有獎金」的名次，逐一建立通知並推 WS。
      *
-     * @return array ['granted'=>int, 'failed'=>int]
+     * @return array ['notified'=>int, 'failed'=>int]
      */
     public static function grant(array $codes): array
     {
         $now = Carbon::now('Asia/Taipei');
-        $result = ['granted' => 0, 'failed' => 0];
+        $result = ['notified' => 0, 'failed' => 0];
 
         $entries = LeaderboardEntry::query()
             ->with(['leaderboard' => function ($q) {
@@ -430,7 +429,7 @@ class LeaderboardService
         foreach ($entries as $entry) {
             try {
                 if (self::grantOne($entry, $now)) {
-                    $result['granted']++;
+                    $result['notified']++;
                 }
             } catch (\Throwable $e) {
                 $result['failed']++;
@@ -634,7 +633,7 @@ class LeaderboardService
     }
 
     /**
-     * 發放單筆獎勵
+     * 建立待領取通知（不直接入帳）
      */
     public static function grantOne($entry, Carbon $now, $admin = []): bool
     {
@@ -642,148 +641,73 @@ class LeaderboardService
         $amount = (float)$entry->prize_amount;
         $ts = $now->format('Y-m-d H:i:s');
 
-        // 若錢包異動紀錄已存在，代表前次流程已完成入帳，直接補回名次狀態。
-        $existingLog = PlayerMoneyEditLog::query()
-            ->where('tradeno', 'LBR' . $entry->id)
-            ->withTrashed()
+        $exists = Notice::query()
+            ->where('type', Notice::TYPE_LEADERBOARD_REWARD)
+            ->where('source_id', (int)$entry->id)
+            ->where('player_id', $playerId)
             ->exists();
-        if ($existingLog) {
+        if ($exists) {
             LeaderboardEntry::query()->where('id', $entry->id)->update([
-                'grant_status' => LeaderboardEntry::GRANT_STATUS_ISSUED,
-                'granted_at'   => $ts,
+                'grant_status' => LeaderboardEntry::GRANT_STATUS_CLAIMABLE,
                 'updated_at'   => $ts,
             ]);
             return false;
         }
 
-        // 1) 原子搶單：只有把 grant_status 從 0 改成 1 成功才發，避免重複發放
-        $claimed = LeaderboardEntry::query()
-            ->where('id', $entry->id)
-            ->where('grant_status', LeaderboardEntry::GRANT_STATUS_UNISSUED)
-            ->update([
-                'grant_status' => LeaderboardEntry::GRANT_STATUS_ISSUED,
-                'granted_at'   => $ts,
-                'updated_at'   => $ts,
-            ]);
-        if ($claimed === 0) {
-            return false; // 已被處理
-        }
-
         $player = Player::query()->where('id', $playerId)->first(['id', 'department_id']);
         $departmentId = (int)($player->department_id ?? 0);
+        $leaderboardName = $entry->leaderboard->name ?? '';
 
-        // 2) 發到錢包（Redis + DB，Redis 為即時權威）
-        try {
-            $before = WalletService::getBalance($playerId);
-            $after = WalletService::atomicIncrement($playerId, $amount);
-        } catch (\Throwable $e) {
-            // 發錢失敗 → 還原標記，讓下次重試
-            LeaderboardEntry::query()->where('id', $entry->id)->update([
-                'grant_status' => LeaderboardEntry::GRANT_STATUS_UNISSUED,
-                'granted_at'   => null,
-                'updated_at'   => $ts,
-            ]);
-            throw $e;
-        }
-
-        // 3) 錢包異動紀錄（tradeno 欄位上限 20 字，用短代碼）
-        //    寫入失敗代表「錢已加但無帳務紀錄」，必須把剛加的金額退回後再重試
-        try {
-            $log = new PlayerMoneyEditLog();
-            $log->player_id = $playerId;
-            $log->department_id = $departmentId;
-            $log->type = PlayerMoneyEditLog::TYPE_INCREASE;
-            $log->action = PlayerMoneyEditLog::LEADERBOARD_GIVE;
-            $log->tradeno = 'LBR' . $entry->id;
-            $log->currency = 'TWD';
-            $log->money = $amount;
-            $log->origin_money = $before;
-            $log->after_money = $after;
-            $log->inmoney = $amount;
-            $log->subsidy_money = 0;
-            $log->bet_multiple = 0;
-            $log->bet_num = 0;
-            $log->remark = sprintf('%s 第%d名', $entry->leaderboard->name ?? '', $entry->rank);
-            $log->user_id = $admin->id ?? 0;
-            $log->user_name = $admin->username ?? '';
-            $log->created_at = $ts;
-            $log->updated_at = $ts;
-            $log->save();
-        } catch (\Throwable $e) {
-            // 先把步驟 2 加的金額扣回，避免帳務與紀錄不一致
-            $rolledBack = false;
-            try {
-                $rollbackResult = WalletService::atomicDecrement($playerId, $amount);
-                $rolledBack = (bool)($rollbackResult['ok'] ?? false);
-            } catch (\Throwable $rollbackError) {
-                // 退款失敗（例：餘額已被花掉）→ 保留已發狀態，避免下輪重複發錢，留待人工核對
-                Log::channel('leaderboard')->error('[排行榜發獎] 退款失敗，需人工核對', [
-                    'entry_id'  => $entry->id,
-                    'player_id' => $playerId,
-                    'amount'    => $amount,
-                    'error'     => $rollbackError->getMessage(),
-                ]);
-            }
-
-            // 只有在錢確實退回時，才把名次還原為未發，讓下輪安全重試
-            if ($rolledBack) {
-                LeaderboardEntry::query()->where('id', $entry->id)->update([
-                    'grant_status' => LeaderboardEntry::GRANT_STATUS_UNISSUED,
-                    'granted_at'   => null,
-                    'updated_at'   => $ts,
-                ]);
-            }
-
-            Log::channel('leaderboard')->error('[排行榜發獎] 寫入錢包異動紀錄失敗', [
-                'entry_id'    => $entry->id,
-                'rolled_back' => $rolledBack,
-                'error'       => $e->getMessage(),
-            ]);
-
-            throw $e;
-        }
-
-        // 4) 玩家通知（登入後跳得名訊息）
-        try {
-            $notice = new Notice();
-            $notice->department_id = $departmentId;
-            $notice->player_id = $playerId;
-            $notice->source_id = (int)$entry->id;
-            $notice->type = Notice::TYPE_LEADERBOARD_REWARD;
-            $notice->receiver = Notice::RECEIVER_PLAYER;
-            $notice->is_private = 1;
-            $notice->status = 0;
-            $notice->title = '排行榜獎勵';
-            $notice->content = sprintf(
-                '恭喜獲得「%s」第%d名，獎勵 %s 已入帳',
-                $entry->leaderboard->name ?? '',
-                $entry->rank,
+        $payload = [
+            'entry_id'         => (int)$entry->id,
+            'amount'           => $amount,
+            'rank'             => (int)$entry->rank,
+            'leaderboard_name' => $leaderboardName,
+            'admin_id'         => is_object($admin) ? (int)($admin->id ?? 0) : 0,
+            'admin_name'       => is_object($admin) ? (string)($admin->username ?? '') : '',
+            'text'             => sprintf(
+                '恭喜獲得「%s」第%d名，獎勵 %s，請點擊領取',
+                $leaderboardName,
+                (int)$entry->rank,
                 number_format($amount, 2, '.', '')
-            );
-            $notice->created_at = $ts;
-            $notice->updated_at = $ts;
-            $notice->save();
+            ),
+        ];
 
-            sendSocketMessage('player-' . $playerId, [
-                'msg_type'         => 'leaderboard_reward',
-                'player_id'        => $playerId,
-                'notice_type'      => Notice::TYPE_LEADERBOARD_REWARD,
-                'notice_title'     => $notice->title,
-                'notice_content'   => $notice->content,
-                'amount'           => (float)$amount,
-                'leaderboard_name' => $entry->leaderboard->name ?? '',
-                'rank'             => (int)$entry->rank,
-                'notice_num'       => Notice::query()
-                    ->where('player_id', $playerId)
-                    ->where('status', 0)
-                    ->count('*'),
-            ]);
-        } catch (\Throwable $e) {
-            Log::channel('leaderboard')->error('[排行榜發獎] 寫入通知失敗', [
-                'entry_id' => $entry->id,
-                'error'    => $e->getMessage(),
-            ]);
-        }
+        $notice = new Notice();
+        $notice->department_id = $departmentId;
+        $notice->player_id = $playerId;
+        $notice->source_id = (int)$entry->id;
+        $notice->type = Notice::TYPE_LEADERBOARD_REWARD;
+        $notice->receiver = Notice::RECEIVER_PLAYER;
+        $notice->is_private = 1;
+        $notice->status = 0;
+        $notice->title = '排行榜獎勵';
+        $notice->content = json_encode($payload, JSON_UNESCAPED_UNICODE);
+        $notice->created_at = $ts;
+        $notice->updated_at = $ts;
+        $notice->save();
+
+        LeaderboardEntry::query()->where('id', $entry->id)->update([
+            'grant_status' => LeaderboardEntry::GRANT_STATUS_CLAIMABLE,
+            'updated_at'   => $ts,
+        ]);
+
+        sendSocketMessage('player-' . $playerId, [
+            'msg_type'         => 'leaderboard_reward',
+            'player_id'        => $playerId,
+            'notice_id'        => (int)$notice->id,
+            'entry_id'         => (int)$entry->id,
+            'notice_type'      => Notice::TYPE_LEADERBOARD_REWARD,
+            'notice_title'     => $notice->title,
+            'notice_content'   => $payload['text'],
+            'amount'           => $amount,
+            'leaderboard_name' => $leaderboardName,
+            'rank'             => (int)$entry->rank,
+            'notice_num'       => Notice::query()
+                ->where('player_id', $playerId)
+                ->where('status', 0)
+                ->count('*'),
+        ]);
 
         return true;
     }

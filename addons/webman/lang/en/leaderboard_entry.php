@@ -17,7 +17,8 @@ return [
     ],
     'grant_status' => [
         0 => 'Pending',
-        1 => 'Distributed'
+        1 => 'Claimed',
+        2 => 'Claimable'
     ],
     'granted_at' => [
         'start' => 'Distribution Start Time',
@@ -27,6 +28,6 @@ return [
     'confirmGrant' => 'Confirm Distributing Leaderboard Reward?',
     'errorGrant' => 'Data error. Please confirm that the leaderboard period has ended, the bonus is greater than 0, and it has not been distributed yet.',
     'errorGrantPermissions' => 'Unauthorized operation.',
-    'successGrant' => 'Distributed successfully.',
+    'successGrant' => 'Claimable reward created.',
 ];
 

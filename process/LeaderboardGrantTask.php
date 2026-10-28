@@ -73,16 +73,16 @@ class LeaderboardGrantTask
         try {
             $result = LeaderboardService::grant($codes);
 
-            if ($result['granted'] > 0 || $result['failed'] > 0) {
-                $this->log->info('LeaderboardGrantTask 發獎完成', [
-                    'granted' => $result['granted'],
+            if ($result['notified'] > 0 || $result['failed'] > 0) {
+                $this->log->info('LeaderboardGrantTask 通知完成', [
+                    'notified' => $result['notified'],
                     'failed' => $result['failed'],
                     'elapsed' => round(microtime(true) - $startTime, 3),
                 ]);
             }
 
         } catch (\Throwable $e) {
-            $this->log->error('LeaderboardGrantTask 發獎異常', [
+            $this->log->error('LeaderboardGrantTask 通知異常', [
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),

@@ -17,7 +17,8 @@ return [
     ],
     'grant_status' => [
         0 => '未發放',
-        1 => '已發放'
+        1 => '已領取',
+        2 => '待領取'
     ],
     'granted_at' => [
         'start' => '發放開始時間',
@@ -27,5 +28,5 @@ return [
     'confirmGrant' => '確定發放排行榜獎勵？',
     'errorGrant' => '數據錯誤，請確認排行榜期別已結束、獎金大於 0 且未發放過',
     'errorGrantPermissions' => '無權操作',
-    'successGrant' => '發放成功',
+    'successGrant' => '已建立待領取通知',
 ];
