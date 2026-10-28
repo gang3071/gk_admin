@@ -38,7 +38,6 @@ return [
         PlayerMoneyEditLog::COIN_WITHDRAWAL => '貨幣商現金引出し',
         PlayerMoneyEditLog::DEPOSIT_BONUS_GRANT => 'チャージボーナス付与',
         PlayerMoneyEditLog::DEPOSIT_BONUS_CANCEL => 'チャージボーナスキャンセル',
-        PlayerMoneyEditLog::LEADERBOARD_GIVE => 'ランキング報酬',
     ],
     'total_data' => [
         'total_recharge' => '開分',

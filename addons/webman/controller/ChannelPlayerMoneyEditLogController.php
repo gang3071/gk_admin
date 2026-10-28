@@ -46,12 +46,7 @@ class ChannelPlayerMoneyEditLogController
     public function index(): Grid
     {
         return Grid::create(new $this->model, function (Grid $grid) {
-            $grid->model()->with(['player', 'user'])
-                ->where(function ($query) {
-                    $query->where('user_id', '!=', 0)
-                        ->orWhere('action', PlayerMoneyEditLog::LEADERBOARD_GIVE);
-                })
-                ->orderBy('id', 'desc');
+            $grid->model()->with(['player', 'user'])->where('user_id', '!=', 0)->orderBy('id', 'desc');
 
             $requestFilter = Request::input('ex_admin_filter', []);
             $quickSearch = Request::input('quickSearch', []);
@@ -320,8 +315,6 @@ class ChannelPlayerMoneyEditLogController
                         case PlayerMoneyEditLog::VIP_RECHARGE:
                         case PlayerMoneyEditLog::COIN_RECHARGE:
                             return Tag::create(admin_trans('player_money_edit_log.action.' . $val))->color('green');
-                        case PlayerMoneyEditLog::LEADERBOARD_GIVE:
-                            return Tag::create(admin_trans('player_money_edit_log.action.' . $val))->color('cyan');
                         case PlayerMoneyEditLog::TESTING_MACHINE:
                         case PlayerMoneyEditLog::OTHER:
                         case PlayerMoneyEditLog::SPECIAL:
@@ -368,17 +361,14 @@ class ChannelPlayerMoneyEditLogController
                 $val,
                 PlayerMoneyEditLog $data
             ) {
-                $image = $data->user
-                    ? Image::create()
-                        ->width(30)
-                        ->height(30)
-                        ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
-                        ->src($data->user->avatar)
-                    : '';
-
+                $image = Image::create()
+                    ->width(30)
+                    ->height(30)
+                    ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
+                    ->src($data->user->avatar);
                 return Html::create()->content([
                     $image,
-                    Html::div()->content($data->user ? $data->user->nickname : ($data->user_name ?: '-'))
+                    Html::div()->content($data->user->nickname)
                 ]);
             })->align('center');
             $grid->column('remark', admin_trans('player_money_edit_log.fields.remark'))->display(function ($value) {
@@ -431,7 +421,6 @@ class ChannelPlayerMoneyEditLogController
                         PlayerMoneyEditLog::SPECIAL => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::SPECIAL),
                         PlayerMoneyEditLog::COIN_RECHARGE => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::COIN_RECHARGE),
                         PlayerMoneyEditLog::COIN_WITHDRAWAL => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::COIN_WITHDRAWAL),
-                        PlayerMoneyEditLog::LEADERBOARD_GIVE => admin_trans('player_money_edit_log.action.' . PlayerMoneyEditLog::LEADERBOARD_GIVE),
                     ]);
                 $activity_ids = Activity::query()->whereJsonContains('department_id',
                     Admin::user()->department_id)->pluck('id');

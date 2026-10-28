@@ -38,7 +38,6 @@ return [
         PlayerMoneyEditLog::COIN_WITHDRAWAL => 'Coin wash score',
         PlayerMoneyEditLog::DEPOSIT_BONUS_GRANT => 'Deposit Bonus Grant',
         PlayerMoneyEditLog::DEPOSIT_BONUS_CANCEL => 'Deposit Bonus Cancel',
-        PlayerMoneyEditLog::LEADERBOARD_GIVE => 'Leaderboard reward',
     ],
     'total_data' => [
         'total_recharge' => 'Open Score',
