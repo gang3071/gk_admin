@@ -38,6 +38,7 @@ return [
         PlayerMoneyEditLog::COIN_WITHDRAWAL => '幣商洗分',
         PlayerMoneyEditLog::DEPOSIT_BONUS_GRANT => '開分滿贈發放',
         PlayerMoneyEditLog::DEPOSIT_BONUS_CANCEL => '開分滿贈取消',
+        PlayerMoneyEditLog::LEADERBOARD_GIVE => '排行榜獎勵',
     ],
     'total_data' => [
         'total_recharge' => '開分',

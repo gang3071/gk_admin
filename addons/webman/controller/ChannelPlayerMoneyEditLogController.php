@@ -31,13 +31,13 @@ use support\Db;
 class ChannelPlayerMoneyEditLogController
 {
     protected $model;
-    
+
     public function __construct()
     {
         $this->model = plugin()->webman->config('database.player_money_edit_log_model');
-        
+
     }
-    
+
     /**
      * 玩家资料修改日志
      * @group channel
@@ -46,8 +46,13 @@ class ChannelPlayerMoneyEditLogController
     public function index(): Grid
     {
         return Grid::create(new $this->model, function (Grid $grid) {
-            $grid->model()->with(['player', 'user'])->where('user_id', '!=', 0)->orderBy('id', 'desc');;
-            
+            $grid->model()->with(['player', 'user'])
+                ->where(function ($query) {
+                    $query->where('user_id', '!=', 0)
+                        ->orWhere('action', PlayerMoneyEditLog::LEADERBOARD_GIVE);
+                })
+                ->orderBy('id', 'desc');
+
             $requestFilter = Request::input('ex_admin_filter', []);
             $quickSearch = Request::input('quickSearch', []);
             if (!empty($requestFilter)) {
@@ -58,11 +63,11 @@ class ChannelPlayerMoneyEditLogController
                     $grid->model()->where('created_at', '<=', $requestFilter['created_at_end']);
                 }
             }
-            
+
             if (isset($requestFilter['date_type'])) {
                 $grid->model()->where(getDateWhere($requestFilter['date_type'], 'created_at'));
             }
-            
+
             if (isset($requestFilter['activity'])) {
                 $grid->model()->where('activity', $requestFilter['activity']);
             }
@@ -71,7 +76,7 @@ class ChannelPlayerMoneyEditLogController
                     $query->where('is_test', $requestFilter['search_type']);
                 });
             }
-            
+
             $query = clone $grid->model();
             $where = [];
             if (!empty($requestFilter['remark'])) {
@@ -91,13 +96,13 @@ class ChannelPlayerMoneyEditLogController
             }
             $totalData = $query->selectRaw(
                 'sum(IF(action = 0, money, 0)) as total_recharge,
-                        sum(IF(action = 1, money, 0)) as total_vip_recharge, 
-                        sum(IF(action = 2, money, 0)) as total_testing_machine, 
-                        sum(IF(action = 3, money, 0)) as total_other, sum(IF(action = 4, money, 0)) as total_activity_give, 
-                        sum(IF(action = 5, money, 0)) as total_triple_seven_give, 
-                        sum(IF(action = 6, money, 0)) as total_composite_machine_give, 
-                        sum(IF(action = 7, money, 0)) as total_real_person_give, 
-                        sum(IF(action = 8, money, 0)) as total_electronic_give, 
+                        sum(IF(action = 1, money, 0)) as total_vip_recharge,
+                        sum(IF(action = 2, money, 0)) as total_testing_machine,
+                        sum(IF(action = 3, money, 0)) as total_other, sum(IF(action = 4, money, 0)) as total_activity_give,
+                        sum(IF(action = 5, money, 0)) as total_triple_seven_give,
+                        sum(IF(action = 6, money, 0)) as total_composite_machine_give,
+                        sum(IF(action = 7, money, 0)) as total_real_person_give,
+                        sum(IF(action = 8, money, 0)) as total_electronic_give,
                         sum(IF(action = 9, money, 0)) as total_admin_deduct,
                         sum(IF(action = 11, money, 0)) as total_activity'
             )
@@ -132,7 +137,7 @@ class ChannelPlayerMoneyEditLogController
                     }
                 })
                 ->first();
-            
+
             $grid->model()
                 ->addSelect([
                     '*', // 保留默认字段
@@ -264,7 +269,7 @@ class ChannelPlayerMoneyEditLogController
                     , 3);
             })->style(['background' => '#fff']);
             $grid->header($layout);
-            
+
             $grid->title(admin_trans('player_money_edit_log.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -315,6 +320,8 @@ class ChannelPlayerMoneyEditLogController
                         case PlayerMoneyEditLog::VIP_RECHARGE:
                         case PlayerMoneyEditLog::COIN_RECHARGE:
                             return Tag::create(admin_trans('player_money_edit_log.action.' . $val))->color('green');
+                        case PlayerMoneyEditLog::LEADERBOARD_GIVE:
+                            return Tag::create(admin_trans('player_money_edit_log.action.' . $val))->color('cyan');
                         case PlayerMoneyEditLog::TESTING_MACHINE:
                         case PlayerMoneyEditLog::OTHER:
                         case PlayerMoneyEditLog::SPECIAL:
@@ -421,6 +428,7 @@ class ChannelPlayerMoneyEditLogController
                         PlayerMoneyEditLog::SPECIAL => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::SPECIAL),
                         PlayerMoneyEditLog::COIN_RECHARGE => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::COIN_RECHARGE),
                         PlayerMoneyEditLog::COIN_WITHDRAWAL => admin_trans('player.wallet.wallet_type.' . PlayerMoneyEditLog::COIN_WITHDRAWAL),
+                        PlayerMoneyEditLog::LEADERBOARD_GIVE => admin_trans('player_money_edit_log.action.' . PlayerMoneyEditLog::LEADERBOARD_GIVE),
                     ]);
                 $activity_ids = Activity::query()->whereJsonContains('department_id',
                     Admin::user()->department_id)->pluck('id');
@@ -457,7 +465,7 @@ class ChannelPlayerMoneyEditLogController
             $grid->expandFilter();
         });
     }
-    
+
     private function getActivity($id)
     {
         return ActivityContent::query()->where('id', $id)->value('name');
