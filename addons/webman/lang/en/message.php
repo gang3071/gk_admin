@@ -336,6 +336,7 @@ return [
         'birthday_bonus' => 'VIP Birthday Bonus',
         'vip_upgrade_bonus' => 'VIP Upgrade Bonus',
         'vip_daily_login_bonus' => 'VIP Daily Login Bonus',
+        'leaderboard_reward' => 'Leaderboard Reward',
         'storage_recharge' => 'Recharge Machine Top-up',
         'machine_open_failed_refund' => 'Machine Open Score Failed - Refund',
         'retry_refund' => 'Partial Open Failure Refund',

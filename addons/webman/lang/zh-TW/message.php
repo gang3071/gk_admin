@@ -336,6 +336,7 @@ return [
         'birthday_bonus' => 'VIP生日禮金',
         'vip_upgrade_bonus' => 'VIP升級禮金',
         'vip_daily_login_bonus' => 'VIP每日登錄獎勵',
+        'leaderboard_reward' => '排行榜獎勵',
         'storage_recharge' => '儲值機儲值',
         'machine_open_failed_refund' => '機台上分失敗退款',
         'retry_refund' => '開分部分失敗回補',

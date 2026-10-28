@@ -220,6 +220,7 @@ class PlayerDeliveryRecord extends Model
             self::TYPE_VIP_UPGRADE_BONUS => '#722ed1',
             self::TYPE_VIP_DAILY_LOGIN_BONUS => '#eb2f96',
             self::TYPE_ACTIVITY_GIVE => '#CC6600',
+            self::TYPE_LEADERBOARD_REWARD => '#eb2f96',
         ];
         return $map[$type] ?? 'gray';
     }
@@ -268,6 +269,7 @@ class PlayerDeliveryRecord extends Model
             self::TYPE_VIP_UPGRADE_BONUS,
             self::TYPE_VIP_DAILY_LOGIN_BONUS,
             self::TYPE_ACTIVITY_GIVE,
+            self::TYPE_LEADERBOARD_REWARD,
         ];
         $options = [];
         foreach ($types as $type) {

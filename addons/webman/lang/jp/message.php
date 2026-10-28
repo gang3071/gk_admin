@@ -335,6 +335,7 @@ return [
         'birthday_bonus' => 'VIP誕生日ボーナス',
         'vip_upgrade_bonus' => 'VIPアップグレードボーナス',
         'vip_daily_login_bonus' => 'VIP毎日ログインボーナス',
+        'leaderboard_reward' => 'ランキング報酬',
         'storage_recharge' => 'チャージ機チャージ',
         'machine_open_failed_refund' => '台上載入失敗返金',
         'retry_refund' => '上載部分失敗返金',
