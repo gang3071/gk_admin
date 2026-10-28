@@ -75,6 +75,7 @@ class StoreLeaderboardController
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
+                $filter->like()->text('name')->placeholder(admin_trans('leaderboard.fields.name'));
                 $filter->like()->text('period_key')->placeholder(admin_trans('leaderboard.fields.period_key'));
 
                 $filter->form()->hidden('settle_at_start');
@@ -84,6 +85,7 @@ class StoreLeaderboardController
             });
 
             $grid->column('id', admin_trans('leaderboard.fields.id'))->align('center');
+            $grid->column('name', admin_trans('leaderboard.fields.name'))->align('center');
             $grid->column('period_key', admin_trans('leaderboard.fields.period_key'))->align('center');
             $grid->column('start_at', admin_trans('leaderboard.fields.start_at'))->align('center');
             $grid->column('end_at', admin_trans('leaderboard.fields.end_at'))->align('center');
