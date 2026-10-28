@@ -368,14 +368,17 @@ class ChannelPlayerMoneyEditLogController
                 $val,
                 PlayerMoneyEditLog $data
             ) {
-                $image = Image::create()
-                    ->width(30)
-                    ->height(30)
-                    ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
-                    ->src($data->user->avatar);
+                $image = $data->user
+                    ? Image::create()
+                        ->width(30)
+                        ->height(30)
+                        ->style(['border-radius' => '50%', 'objectFit' => 'cover'])
+                        ->src($data->user->avatar)
+                    : '';
+
                 return Html::create()->content([
                     $image,
-                    Html::div()->content($data->user->nickname)
+                    Html::div()->content($data->user ? $data->user->nickname : ($data->user_name ?: '-'))
                 ]);
             })->align('center');
             $grid->column('remark', admin_trans('player_money_edit_log.fields.remark'))->display(function ($value) {
