@@ -128,7 +128,8 @@ class ShiftReportExporter extends Excel
             'redeem_machine_amount' => $detail ? ($detail->redeem_machine_amount ?? 0) : 0,
             'channel_withdrawal_amount' => $detail ? ($detail->channel_withdrawal_amount ?? 0) : 0,
             'ticket_redeem_amount' => $detail ? ($detail->ticket_redeem_amount ?? 0) : 0,
-            'ticket_unredeemed_amount' => $detail ? ($detail->ticket_unredeemed_amount ?? 0) : 0,
+            // 未核销不计负数，小于 0 按 0 取值（明细展示与小计累加口径一致）
+            'ticket_unredeemed_amount' => $detail ? max((float)($detail->ticket_unredeemed_amount ?? 0), 0) : 0,
             'experience_coupon_amount' => $detail ? ($detail->experience_coupon_amount ?? 0) : 0,
             'welfare_coupon_amount' => $detail ? ($detail->welfare_coupon_amount ?? 0) : 0,
             'electronic_game_bet_amount' => $detail ? $detail->electronic_game_bet_amount : 0,
