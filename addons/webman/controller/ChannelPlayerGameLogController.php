@@ -16,7 +16,6 @@ use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\component\navigation\dropdown\Dropdown;
 use ExAdmin\ui\support\Request;
-use Illuminate\Support\Carbon;
 
 /**
  * 机台游戏记录
@@ -512,10 +511,10 @@ class ChannelPlayerGameLogController
                 $grid->model()->where(getDateWhere($requestFilter['date_type'], 'created_at'));
             }
             if (!empty($requestFilter['start_date'])) {
-                $grid->model()->where('created_at', '>=', Carbon::parse($requestFilter['start_date'])->startOfDay());
+                $grid->model()->where('created_at', '>=', parseFilterTime($requestFilter['start_date']));
             }
             if (!empty($requestFilter['end_date'])) {
-                $grid->model()->where('created_at', '<=', Carbon::parse($requestFilter['end_date'])->endOfDay());
+                $grid->model()->where('created_at', '<=', parseFilterTime($requestFilter['end_date'], true));
             }
             //筛选出用户
             if (!empty($requestFilter['is_test'])) {

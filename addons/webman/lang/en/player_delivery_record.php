@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'player_id' => 'player',
+        'store' => 'Store',
         'target' => 'Transaction data table',
         'target_id' => 'data id',
         'type' => 'type',
@@ -68,4 +69,7 @@ return [
     'total_in_amount' => 'Open Score',
     'total_out_amount' => 'Wash Score',
     'total_machine_amount' => 'Money feeding',
+    'total_add_amount' => 'Game points added',
+    'total_sub_amount' => 'Game points deducted',
+    'total_net_amount' => 'Net game points',
 ];

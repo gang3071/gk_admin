@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'player_id' => '玩家',
+        'store' => '所属店家',
         'target' => '交易資料表',
         'target_id' => '資料id',
         'type' => '类型',
@@ -68,4 +69,7 @@ return [
     'total_in_amount' => '开分',
     'total_out_amount' => '洗分',
     'total_machine_amount' => '投钞',
+    'total_add_amount' => '游戏点加点',
+    'total_sub_amount' => '游戏点减点',
+    'total_net_amount' => '游戏点净额',
 ];

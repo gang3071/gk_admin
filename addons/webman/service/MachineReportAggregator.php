@@ -133,8 +133,8 @@ class MachineReportAggregator
     /**
      * 筛选条件统一应用到三个明细查询
      *
-     * 注意：明细表的 created_at 是 timestamp，起止都要按「整天」收边，
-     * 否则 date_end 会把当天数据截掉。
+     * 注意：明细表的 created_at 是 timestamp，起止边界统一交给 parseFilterTime 收边——
+     * 带时分秒的按精确时刻比较，只到天的按整天收边，否则 date_end 会把当天数据截掉。
      *
      * @param \Closure|null $extraFilter function($query, string $table): void
      */
@@ -147,10 +147,10 @@ class MachineReportAggregator
         }
 
         if (!empty($exAdminFilter['date_start'])) {
-            $query->where($timeColumn, '>=', Carbon::parse($exAdminFilter['date_start'])->startOfDay());
+            $query->where($timeColumn, '>=', parseFilterTime($exAdminFilter['date_start']));
         }
         if (!empty($exAdminFilter['date_end'])) {
-            $query->where($timeColumn, '<', Carbon::parse($exAdminFilter['date_end'])->addDay()->startOfDay());
+            $query->where($timeColumn, '<=', parseFilterTime($exAdminFilter['date_end'], true));
         }
         if (!empty($exAdminFilter['department_id'])) {
             $query->where($table . '.department_id', $exAdminFilter['department_id']);

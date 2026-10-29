@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Activity;
+use addons\webman\model\AdminUser;
 use addons\webman\model\GameType;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerGameLog;
@@ -50,22 +51,30 @@ class ChannelPlayerDeliveryRecordController
      */
     public function index(): Grid
     {
-        return Grid::create(new $this->model(), function (Grid $grid) {
+        $storeOptions = $this->storeOptions();
+        return Grid::create(new $this->model(), function (Grid $grid) use ($storeOptions) {
             $grid->title(admin_trans('player_delivery_record.title'));
             $grid->model()->with(['player', 'machine'])->orderBy('created_at', 'desc');
             $grid->autoHeight();
             $grid->bordered(true);
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /**
+             * 可见范围：主站不限，渠道限本渠道，代理限下级店家，店家限自己。
+             * DataPermissions 全局作用域在 data_type=0 或无角色时不过滤，这里显式收口。
+             */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
-            if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+            if ($admin->type === AdminUser::TYPE_CHANNEL) {
+                // 渠道：只看本渠道的账变记录
+                $grid->model()->where('department_id', $admin->department_id);
+            } elseif ($admin->type === AdminUser::TYPE_AGENT) {
                 // 代理：查询所有下级店家的玩家记录
-                $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
+                $storeIds = $admin->childStores()->where('type', AdminUser::TYPE_STORE)->pluck('id');
                 $grid->model()->whereHas('player', function ($query) use ($storeIds) {
                     $query->whereIn('store_admin_id', $storeIds);
                 });
-            } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+            } elseif ($admin->type === AdminUser::TYPE_STORE) {
                 // 店家：查询自己的玩家记录
                 $grid->model()->whereHas('player', function ($query) use ($admin) {
                     $query->where('store_admin_id', $admin->id);
@@ -90,6 +99,11 @@ class ChannelPlayerDeliveryRecordController
                     $query->where('phone', $exAdminFilter['player']['phone']);
                 });
             }
+            if (!empty($exAdminFilter['store_id'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('store_admin_id', $exAdminFilter['store_id']);
+                });
+            }
             if (!empty($exAdminFilter['player']['recommend_player']['uuid'])) {
                 $grid->model()->whereHas('player.recommend_player', function ($query) use ($exAdminFilter) {
                     $query->where('uuid', $exAdminFilter['player']['recommend_player']['uuid']);
@@ -112,7 +126,15 @@ class ChannelPlayerDeliveryRecordController
                 $grid->model()->where('target', 'player_money_edit_log')->whereIn('target_id',$target_id);
             }
             $query = clone $grid->model();
-            $totalData = $query->selectRaw('sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ',`amount`,0)) as total_out_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount')->first();
+            $totalData = $query->selectRaw(
+                'sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, ' .
+                'sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ',`amount`,0)) as total_out_amount, ' .
+                'sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount, ' .
+                // 游戏点加减按「变更前→变更后」归一：amount 是幅度（提现/扣点/机台下分都存正数），
+                // 单看 amount 正负会把扣减算成加点。
+                'sum(if(`amount_after` > `amount_before`, abs(`amount`), 0)) as total_add_amount, ' .
+                'sum(if(`amount_after` < `amount_before`, abs(`amount`), 0)) as total_sub_amount'
+            )->first();
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
                 $row->gutter([10, 0]);
@@ -174,6 +196,30 @@ class ChannelPlayerDeliveryRecordController
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 4);
+            })->style(['background' => '#fff']);
+
+            // 游戏点加减卡片（加点 / 减点 / 净额）
+            $statCard = function ($value, $label) {
+                return Card::create([
+                    Row::create()->column(Statistic::create()->value($value)->prefix($label)->valueStyle([
+                        'font-size' => '14px',
+                        'font-weight' => '500',
+                        'text-align' => 'center'
+                    ])),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center',
+                    'height' => '30px',
+                    'padding' => '0px'
+                ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']);
+            };
+            $layout->row(function (Row $row) use ($statCard, $totalData) {
+                $row->gutter([10, 0]);
+                $addAmount = floatval($totalData['total_add_amount'] ?? 0);
+                $subAmount = floatval($totalData['total_sub_amount'] ?? 0);
+                $row->column($statCard($addAmount, admin_trans('player_delivery_record.total_add_amount')), 8);
+                $row->column($statCard($subAmount, admin_trans('player_delivery_record.total_sub_amount')), 8);
+                $row->column($statCard($addAmount - $subAmount, admin_trans('player_delivery_record.total_net_amount')), 8);
             })->style(['background' => '#fff']);
             $grid->tools([$layout]);
             $grid->bordered();
@@ -369,9 +415,15 @@ class ChannelPlayerDeliveryRecordController
                 $actions->hideDel();
                 $actions->hideEdit();
             });
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->eq()->select('store_id')
+                    ->placeholder(admin_trans('player_delivery_record.fields.store'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($storeOptions);
                 $filter->eq()->select('search_source')
                     ->showSearch()
                     ->style(['width' => '200px'])
@@ -465,6 +517,34 @@ class ChannelPlayerDeliveryRecordController
             });
             $grid->expandFilter();
         });
+    }
+
+    /**
+     * 门店选项，口径与 index() 的可见范围一致，保证列表里看得到的记录都能筛出来。
+     * 含停用门店：停用不影响历史账变记录的可见性。
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        $admin = Admin::user();
+        $query = AdminUser::query()->where('type', AdminUser::TYPE_STORE);
+
+        if ($admin->type === AdminUser::TYPE_CHANNEL) {
+            $query->where('department_id', $admin->department_id);
+        } elseif ($admin->type === AdminUser::TYPE_AGENT) {
+            $query->where('parent_admin_id', $admin->id);
+        } elseif ($admin->type === AdminUser::TYPE_STORE) {
+            $query->where('id', $admin->id);
+        }
+
+        return $query->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 
     /**

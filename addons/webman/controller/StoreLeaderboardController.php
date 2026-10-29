@@ -14,8 +14,11 @@ use ExAdmin\ui\component\grid\card\Card;
 use ExAdmin\ui\component\grid\grid\Actions;
 use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
+use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\grid\tabs\Tabs;
 use ExAdmin\ui\component\grid\tag\Tag;
+use ExAdmin\ui\component\layout\layout\Layout;
+use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -100,6 +103,44 @@ class StoreLeaderboardController
                 $filter->form()->dateTimeRange('settle_at_start', 'settle_at_end', '')
                     ->placeholder([admin_trans('leaderboard.settle_at.start'), admin_trans('leaderboard.settle_at.end')]);
             });
+
+            $leaderboardQuery = clone $grid->model();
+            new \addons\webman\grid\Filter($leaderboardQuery, $grid->getFilter()->getRule());
+
+            $totalData = LeaderboardEntry::query()
+                ->whereIn('leaderboard_id', $leaderboardQuery->select('id'))
+                ->whereIn('store_admin_id', $storeAdminIds)
+                ->selectRaw('
+                    SUM(IF(grant_status != 1, prize_amount, 0)) as unclaimed_prize_total,
+                    SUM(IF(grant_status = 1, prize_amount, 0)) as claimed_prize_total
+                ')
+                ->first();
+
+            $layout = Layout::create();
+            $layout->style(['background' => '#fff'])->row(function (Row $row) use ($totalData) {
+                $row->gutter([10, 0]);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value((float) ($totalData->unclaimed_prize_total ?? 0))
+                            ->prefix(admin_trans('leaderboard.unclaimed_prize'))
+                            ->valueStyle(['font-size' => '14px', 'font-weight' => '500', 'text-align' => 'center'])),
+                    ])
+                    ->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '30px', 'padding' => '0px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                , 6);
+                $row->column(
+                    Card::create([
+                        Row::create()->column(Statistic::create()
+                            ->value((float) ($totalData->claimed_prize_total ?? 0))
+                            ->prefix(admin_trans('leaderboard.claimed_prize'))
+                            ->valueStyle(['font-size' => '14px', 'font-weight' => '500', 'text-align' => 'center'])),
+                    ])
+                    ->bodyStyle(['display' => 'flex', 'align-items' => 'center', 'height' => '30px', 'padding' => '0px'])
+                    ->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
+                , 6);
+            });
+            $grid->tools([$layout]);
 
             $grid->column('id', admin_trans('leaderboard.fields.id'))->align('center');
             $grid->column('name', admin_trans('leaderboard.fields.name'))->align('center');
