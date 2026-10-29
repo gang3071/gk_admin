@@ -14,6 +14,7 @@ use ExAdmin\ui\component\grid\grid\Filter;
 use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\image\Image;
 use ExAdmin\ui\support\Container;
+use Illuminate\Support\Str;
 
 /**
  * 轮播图
@@ -74,7 +75,14 @@ class ChannelSliderController
             $grid->column('activity_id', admin_trans('activity_content.fields.name'))->display(function ($val) use ($lang) {
                 /** @var ActivityContent $activityContent */
                 if(!empty($val)) {
-                    $activityContent = ActivityContent::query()->where('activity_id', $val)->where('lang', $lang)->first();
+                    // 语种码统一成 zh-TW 形式（cookie ex_admin_lang 可能是 zh_TW 等写法）；查不到内容直接返回空，避免取 ->name 空指针崩掉整个列表
+                    $activityContent = ActivityContent::query()
+                        ->where('activity_id', $val)
+                        ->where('lang', Str::replace('_', '-', $lang))
+                        ->first();
+                    if (!$activityContent) {
+                        return '';
+                    }
                     return Html::create($activityContent->name)->style([
                         'cursor' => 'pointer',
                         'color' => 'rgb(24, 144, 255)'
@@ -152,7 +160,7 @@ class ChannelSliderController
             //获取待绑定活动
             $activity_ids = Activity::query()->whereJsonContains('department_id',
                 Admin::user()->department_id)->pluck('id');
-            $options = ActivityContent::query()->where('lang', $lang)
+            $options = ActivityContent::query()->where('lang', Str::replace('_', '-', $lang))
                 ->whereIn('activity_id',$activity_ids)->pluck('name', 'activity_id')->toArray();
             $form->select('activity_id',admin_trans('activity_content.fields.name'))
                 ->options($options);
