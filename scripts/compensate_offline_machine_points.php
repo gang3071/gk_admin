@@ -104,10 +104,9 @@ $redisDb = (int)($redisCfg['database'] ?? env('REDIS_DB', 0));
 if ($redisDb > 0) $redis->select($redisDb);
 
 // ─── 常數 ────────────────────────────────────────────────────────────────────
-const ACTION_LEAVE           = 2;
-const ACTION_DOWN            = 3;
-const MACHINE_SOURCE_OFFLINE = 2;
-const COMPENSATION_SOURCE    = 'offline_machine_compensation';
+const ACTION_LEAVE        = 2;
+const ACTION_DOWN         = 3;
+const COMPENSATION_SOURCE = 'offline_machine_compensation';
 const POINTS_CACHE_PREFIX = 'gk_api:player_points:';  // 與 PlayerPointsService::syncPointsCache 一致
 const POINTS_RATIO        = 0.0006;                    // 打碼量 → 積分：chip_amount × 0.0006
 const BATCH_SIZE          = 100;
@@ -117,7 +116,7 @@ cbold(str_repeat('─', 60));
 cbold('  實體機台積分補償腳本（補積分）');
 cbold(str_repeat('─', 60));
 cinfo("  範圍：{$startTs} ～ {$endTs}");
-cinfo('  條件：所有線下機台（machine_source=2，含 MEI/SONG 全工控類型）');
+cinfo('  條件：所有機台（含線上 / 線下，不限工控類型）');
 cinfo('  積分：chip_amount × ' . POINTS_RATIO . ' → player_points.available_points');
 if ($dryRun) {
     cwarn('  模式：DRY-RUN（僅列印，不實際入帳）');
@@ -155,7 +154,6 @@ $pendingIds = DB::table('player_game_log as gl')
     ->where('gl.player_id', '>', 0)
     ->whereIn('gl.action', [ACTION_LEAVE, ACTION_DOWN])
     ->where('gl.chip_amount', '>', 0)
-    ->where('m.machine_source', MACHINE_SOURCE_OFFLINE)
     ->whereBetween('gl.created_at', [$startTs, $endTs])
     ->whereNull('gl.deleted_at')
     ->orderBy('gl.id')
