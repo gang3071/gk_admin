@@ -52,4 +52,16 @@ class LeaderboardEntry extends Model
     {
         return $this->belongsTo(Leaderboard::class, 'leaderboard_id');
     }
+
+    /**
+     * 發放狀態描述
+     */
+    public static function getGrantStatusDescription(): array
+    {
+        return [
+            self::GRANT_STATUS_UNISSUED => admin_trans('leaderboard_entry.grant_status.' . self::GRANT_STATUS_UNISSUED),
+            self::GRANT_STATUS_ISSUED => admin_trans('leaderboard_entry.grant_status.' . self::GRANT_STATUS_ISSUED),
+            self::GRANT_STATUS_CLAIMABLE => admin_trans('leaderboard_entry.grant_status.' . self::GRANT_STATUS_CLAIMABLE)
+        ];
+    }
 }

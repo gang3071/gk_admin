@@ -12,6 +12,7 @@ return [
         'start_at' => 'Start Time',
         'end_at' => 'End Time',
         'settle_at' => 'Settlement Time',
+        'unclaimed_claimed_prize' => 'Unclaimed/Claimed Prize Amount',
         'threshold' => 'Threshold Score',
         'prize_config' => 'Prize Configuration',
         'entry_count' => 'Rankings Count',

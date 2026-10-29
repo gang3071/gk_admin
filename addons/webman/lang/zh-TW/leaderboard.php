@@ -12,6 +12,7 @@ return [
         'start_at' => '開始時間',
         'end_at' => '結束時間',
         'settle_at' => '結算時間',
+        'unclaimed_claimed_prize' => '未領取/已領取獎金',
         'threshold' => '門檻分數',
         'prize_config' => '獎勵金額設定',
         'entry_count' => '本期名次筆數',

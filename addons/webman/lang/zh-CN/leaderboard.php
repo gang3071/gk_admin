@@ -12,6 +12,7 @@ return [
         'start_at' => '开始时间',
         'end_at' => '结束时间',
         'settle_at' => '结算时间',
+        'unclaimed_claimed_prize' => '未领取/已领取奖金',
         'threshold' => '门槛分数',
         'prize_config' => '奖励金额设定',
         'entry_count' => '本期名次笔数',

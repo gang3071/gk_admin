@@ -56,7 +56,10 @@ class LeaderboardController
      */
     public function list(int $periodType): Grid
     {
-        return Grid::create(new $this->model, function (Grid $grid) use ($periodType) {
+        $stores = self::getStores();
+        $storeAdminIds = array_keys($stores);
+
+        return Grid::create(new $this->model, function (Grid $grid) use ($periodType, $storeAdminIds) {
             $grid->title(admin_trans('leaderboard.title'));
             $grid->hideDelete();
             $grid->hideSelection();
@@ -71,7 +74,22 @@ class LeaderboardController
                 $grid->model()->where('settle_at', '<=', $exAdminFilter['settle_at_end']);
             }
 
-            $grid->model()->where('period_type', $periodType)->orderBy('start_at', 'desc')->orderBy('scope_type', 'asc');
+            $grid->model()
+                ->where('period_type', $periodType)
+                ->orderBy('start_at', 'desc')
+                ->orderBy('scope_type', 'asc')
+                ->withSum([
+                    'items as unclaimed_prize_total' => function ($query) use ($storeAdminIds) {
+                        $query->whereIn('store_admin_id', $storeAdminIds)
+                            ->where('grant_status', '!=', LeaderboardEntry::GRANT_STATUS_ISSUED);
+                    }
+                ], 'prize_amount')
+                ->withSum([
+                    'items as claimed_prize_total' => function ($query) use ($storeAdminIds) {
+                        $query->whereIn('store_admin_id', $storeAdminIds)
+                            ->where('grant_status', LeaderboardEntry::GRANT_STATUS_ISSUED);
+                    }
+                ], 'prize_amount');
 
             $grid->expandFilter();
             $grid->filter(function (Filter $filter) {
@@ -112,7 +130,13 @@ class LeaderboardController
             $grid->column('end_at', admin_trans('leaderboard.fields.end_at'))->align('center');
             $grid->column('threshold', admin_trans('leaderboard.fields.threshold'))->align('center');
             $grid->column('settle_at', admin_trans('leaderboard.fields.settle_at'))->align('center');
+            $grid->column('unclaimed_prize_total', admin_trans('leaderboard.fields.unclaimed_claimed_prize'))->align('center')
+                ->display(function ($value, Leaderboard $data) {
+                    $unclaimed = number_format((float) $data->unclaimed_prize_total, 2);
+                    $claimed = number_format((float) $data->claimed_prize_total, 2);
 
+                    return $unclaimed . ' / ' . $claimed;
+                });
             $grid->actions(function (Actions $actions, $data) {
                 $actions->hideDel();
 
@@ -153,11 +177,7 @@ class LeaderboardController
                     ->style(['width' => '200px'])
                     ->dropdownMatchSelectWidth()
                     ->placeholder(admin_trans('leaderboard_entry.fields.grant_status'))
-                    ->options([
-                        0 => admin_trans('leaderboard_entry.grant_status.0'),
-                        1 => admin_trans('leaderboard_entry.grant_status.1'),
-                        2 => admin_trans('leaderboard_entry.grant_status.2')
-                    ]);
+                    ->options(LeaderboardEntry::getGrantStatusDescription());
 
                 $filter->eq()->select('store_admin_id')
                     ->showSearch()

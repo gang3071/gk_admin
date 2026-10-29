@@ -12,6 +12,7 @@ return [
         'start_at' => '開始時間',
         'end_at' => '終了時間',
         'settle_at' => '集計時間',
+        'unclaimed_claimed_prize' => '未受領/受領済み賞金額',
         'threshold' => 'しきい値スコア',
         'prize_config' => '報酬設定',
         'entry_count' => '今期ランクイン件数',

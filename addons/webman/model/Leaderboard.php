@@ -4,6 +4,7 @@ namespace addons\webman\model;
 
 use addons\webman\traits\HasDateTimeFormatter;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * @property int id 主鍵
@@ -39,6 +40,14 @@ class Leaderboard extends Model
     {
         parent::__construct($attributes);
         $this->setTable(plugin()->webman->config('database.leaderboard_table'));
+    }
+
+    /**
+     * 榜單詳情
+     */
+    public function items(): HasMany
+    {
+        return $this->hasMany(LeaderboardEntry::class, 'leaderboard_id');
     }
 
     /**
