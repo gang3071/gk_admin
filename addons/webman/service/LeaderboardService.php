@@ -657,17 +657,20 @@ class LeaderboardService
         $player = Player::query()->where('id', $playerId)->first(['id', 'department_id']);
         $departmentId = (int)($player->department_id ?? 0);
         $leaderboardName = $entry->leaderboard->name ?? '';
+        $periodKey = (string)($entry->leaderboard->period_key ?? '');
 
         $payload = [
             'entry_id'         => (int)$entry->id,
             'amount'           => $amount,
             'rank'             => (int)$entry->rank,
             'leaderboard_name' => $leaderboardName,
+            'period_key'       => $periodKey,
             'admin_id'         => 0,
             'admin_name'       => '',
             'text'             => sprintf(
-                '恭喜獲得「%s」第%d名，獎勵 %s，請點擊領取',
+                '恭喜獲得「%s」%s 期第%d名，獎勵 %s，請點擊領取',
                 $leaderboardName,
+                $periodKey !== '' ? $periodKey : '-',
                 (int)$entry->rank,
                 number_format($amount, 2, '.', '')
             ),
