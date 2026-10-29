@@ -256,6 +256,25 @@ function dateFormat($datetimeString): string
 }
 
 /**
+ * 解析后台时间筛选的边界值
+ *
+ * 值带时分秒（dateTimeRange 提交，如 2026-10-29 14:30:00）就按精确时刻比较；
+ * 只到天的值（旧 dateRange、date_type、外部传参）按整天收边，保持旧口径不变。
+ *
+ * @param string $value 筛选值
+ * @param bool $isEnd 是否为结束边界（结束边界含当天 23:59:59）
+ * @return Carbon
+ */
+function parseFilterTime($value, bool $isEnd = false): Carbon
+{
+    $time = Carbon::parse($value);
+    if (str_contains((string)$value, ':')) {
+        return $time;
+    }
+    return $isEnd ? $time->endOfDay() : $time->startOfDay();
+}
+
+/**
  * 获取日期范围条件（用于结算）
  * @param $type
  * @param $column

@@ -152,8 +152,8 @@ class MachineReportController
                 $filter->like()->text('machine.code')->placeholder(admin_trans('machine.fields.code'));
                 $filter->hidden('date_start');
                 $filter->hidden('date_end');
-                $filter->form()->dateRange('date_start', 'date_end',
-                    '')->placeholder([admin_trans('public_msg.date_start'), admin_trans('public_msg.date_end')]);
+                $filter->form()->dateTimeRange('date_start', 'date_end',
+                    '')->placeholder([admin_trans('public_msg.created_at_start'), admin_trans('public_msg.created_at_end')]);
                 $filter->select('date_type')
                     ->placeholder(admin_trans('machine_report.fields.date_type'))
                     ->showSearch()
