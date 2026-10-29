@@ -169,6 +169,10 @@ class DishOrderController
 
             // 取消訂單時退積分
             $form->saving(function (Form $form) {
+                // 只讀展示欄位（device.device_name、player.name）不參與保存，
+                // 否則會走 BelongsTo 關聯寫入：無設備訂單會造出孤兒設備並因唯一鍵回滾，導致狀態修改丟失
+                $form->removeInput(['device', 'player']);
+
                 $newStatus = $form->input('status');
                 $orderId = (int)$form->input('id');
 
