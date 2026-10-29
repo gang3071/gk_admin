@@ -31,5 +31,6 @@ return [
         'start' => 'Settlement Start Time',
         'end' => 'Settlement End Time'
     ],
+    'unclaimed_prize' => 'Total Unclaimed Prize',
+    'claimed_prize' => 'Total Claimed Prize',
 ];
-

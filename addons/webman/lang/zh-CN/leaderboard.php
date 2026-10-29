@@ -31,5 +31,6 @@ return [
         'start' => '结算开始时间',
         'end' => '结算结束时间'
     ],
+    'unclaimed_prize' => '总未领取奖金',
+    'claimed_prize' => '总已领取奖金',
 ];
-

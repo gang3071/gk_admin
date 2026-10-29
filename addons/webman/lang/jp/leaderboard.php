@@ -31,5 +31,6 @@ return [
         'start' => '集計開始時間',
         'end' => '集計終了時間'
     ],
+    'unclaimed_prize' => '未受領賞金合計',
+    'claimed_prize' => '受領済み賞金合計',
 ];
-

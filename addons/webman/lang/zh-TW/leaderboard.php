@@ -31,4 +31,6 @@ return [
         'start' => '結算開始時間',
         'end' => '結算結束時間'
     ],
+    'unclaimed_prize' => '總未領取獎金',
+    'claimed_prize' => '總已領取獎金',
 ];
