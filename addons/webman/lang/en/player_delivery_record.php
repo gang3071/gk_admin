@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'player_id' => 'player',
+        'store' => 'Store',
         'target' => 'Transaction data table',
         'target_id' => 'data id',
         'type' => 'type',

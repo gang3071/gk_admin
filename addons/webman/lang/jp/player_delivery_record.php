@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'player_id' => 'プレイヤー',
+        'store' => '所属店舗',
         'target' => 'トランザクションデータテーブル',
         'target_id' => 'データ ID',
         'type' => 'タイプ',

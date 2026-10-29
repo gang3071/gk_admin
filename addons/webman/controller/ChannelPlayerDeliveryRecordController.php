@@ -4,6 +4,7 @@ namespace addons\webman\controller;
 
 use addons\webman\Admin;
 use addons\webman\model\Activity;
+use addons\webman\model\AdminUser;
 use addons\webman\model\GameType;
 use addons\webman\model\PlayerDeliveryRecord;
 use addons\webman\model\PlayerGameLog;
@@ -50,22 +51,30 @@ class ChannelPlayerDeliveryRecordController
      */
     public function index(): Grid
     {
-        return Grid::create(new $this->model(), function (Grid $grid) {
+        $storeOptions = $this->storeOptions();
+        return Grid::create(new $this->model(), function (Grid $grid) use ($storeOptions) {
             $grid->title(admin_trans('player_delivery_record.title'));
             $grid->model()->with(['player', 'machine'])->orderBy('created_at', 'desc');
             $grid->autoHeight();
             $grid->bordered(true);
             $exAdminFilter = Request::input('ex_admin_filter', []);
 
-            /** @var \addons\webman\model\AdminUser $admin */
+            /**
+             * 可见范围：主站不限，渠道限本渠道，代理限下级店家，店家限自己。
+             * DataPermissions 全局作用域在 data_type=0 或无角色时不过滤，这里显式收口。
+             */
+            /** @var AdminUser $admin */
             $admin = Admin::user();
-            if ($admin->type === \addons\webman\model\AdminUser::TYPE_AGENT) {
+            if ($admin->type === AdminUser::TYPE_CHANNEL) {
+                // 渠道：只看本渠道的账变记录
+                $grid->model()->where('department_id', $admin->department_id);
+            } elseif ($admin->type === AdminUser::TYPE_AGENT) {
                 // 代理：查询所有下级店家的玩家记录
-                $storeIds = $admin->childStores()->where('type', \addons\webman\model\AdminUser::TYPE_STORE)->pluck('id');
+                $storeIds = $admin->childStores()->where('type', AdminUser::TYPE_STORE)->pluck('id');
                 $grid->model()->whereHas('player', function ($query) use ($storeIds) {
                     $query->whereIn('store_admin_id', $storeIds);
                 });
-            } elseif ($admin->type === \addons\webman\model\AdminUser::TYPE_STORE) {
+            } elseif ($admin->type === AdminUser::TYPE_STORE) {
                 // 店家：查询自己的玩家记录
                 $grid->model()->whereHas('player', function ($query) use ($admin) {
                     $query->where('store_admin_id', $admin->id);
@@ -88,6 +97,11 @@ class ChannelPlayerDeliveryRecordController
             if (!empty($exAdminFilter['player']['phone'])) {
                 $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
                     $query->where('phone', $exAdminFilter['player']['phone']);
+                });
+            }
+            if (!empty($exAdminFilter['store_id'])) {
+                $grid->model()->whereHas('player', function ($query) use ($exAdminFilter) {
+                    $query->where('store_admin_id', $exAdminFilter['store_id']);
                 });
             }
             if (!empty($exAdminFilter['player']['recommend_player']['uuid'])) {
@@ -369,9 +383,15 @@ class ChannelPlayerDeliveryRecordController
                 $actions->hideDel();
                 $actions->hideEdit();
             });
-            $grid->filter(function (Filter $filter) {
+            $grid->filter(function (Filter $filter) use ($storeOptions) {
                 $filter->like()->text('player.uuid')->placeholder(admin_trans('player.fields.uuid'));
                 $filter->like()->text('player.phone')->placeholder(admin_trans('player.fields.phone'));
+                $filter->eq()->select('store_id')
+                    ->placeholder(admin_trans('player_delivery_record.fields.store'))
+                    ->showSearch()
+                    ->style(['width' => '200px'])
+                    ->dropdownMatchSelectWidth()
+                    ->options($storeOptions);
                 $filter->eq()->select('search_source')
                     ->showSearch()
                     ->style(['width' => '200px'])
@@ -465,6 +485,34 @@ class ChannelPlayerDeliveryRecordController
             });
             $grid->expandFilter();
         });
+    }
+
+    /**
+     * 门店选项，口径与 index() 的可见范围一致，保证列表里看得到的记录都能筛出来。
+     * 含停用门店：停用不影响历史账变记录的可见性。
+     * @return array
+     */
+    protected function storeOptions(): array
+    {
+        $admin = Admin::user();
+        $query = AdminUser::query()->where('type', AdminUser::TYPE_STORE);
+
+        if ($admin->type === AdminUser::TYPE_CHANNEL) {
+            $query->where('department_id', $admin->department_id);
+        } elseif ($admin->type === AdminUser::TYPE_AGENT) {
+            $query->where('parent_admin_id', $admin->id);
+        } elseif ($admin->type === AdminUser::TYPE_STORE) {
+            $query->where('id', $admin->id);
+        }
+
+        return $query->orderBy('id', 'desc')
+            ->get(['id', 'nickname', 'username'])
+            ->mapWithKeys(function ($store) {
+                $label = $store->nickname ?: $store->username;
+                $label .= " ({$store->username})";
+                return [$store->id => $label];
+            })
+            ->toArray();
     }
 
     /**

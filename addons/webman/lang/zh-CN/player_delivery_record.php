@@ -7,6 +7,7 @@ return [
     'fields' => [
         'id' => 'ID',
         'player_id' => '玩家',
+        'store' => '所属店家',
         'target' => '交易資料表',
         'target_id' => '資料id',
         'type' => '类型',
