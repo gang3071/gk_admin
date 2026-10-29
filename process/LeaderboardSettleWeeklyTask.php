@@ -30,7 +30,7 @@ class LeaderboardSettleWeeklyTask
         ]);
 
         // Cron：秒 分 時 日 月 週（每 1 分鐘，測試用）
-        new Crontab('0 * * * * *', function () {
+        new Crontab('0 */30 * * * *', function () {
             $departmentIds = SystemSetting::query()
                 ->offDataAuth()
                 ->where('feature', 'leaderboard_switch')
