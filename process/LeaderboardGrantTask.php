@@ -30,7 +30,7 @@ class LeaderboardGrantTask
         ]);
 
         // 每 5 分鐘執行一次
-        new Crontab('0 */5 * * * *', function () {
+        new Crontab('0 */30 * * * *', function () {
             $codes = [];
             $systemSetting = SystemSetting::query()
                 ->offDataAuth()
