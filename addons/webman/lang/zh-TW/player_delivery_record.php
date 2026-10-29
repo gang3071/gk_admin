@@ -69,4 +69,7 @@ return [
     'total_in_amount' => '開分',
     'total_out_amount' => '洗分',
     'total_machine_amount' => '投鈔',
+    'total_add_amount' => '遊戲點加點',
+    'total_sub_amount' => '遊戲點減點',
+    'total_net_amount' => '遊戲點淨額',
 ];

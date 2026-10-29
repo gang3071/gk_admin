@@ -126,7 +126,15 @@ class ChannelPlayerDeliveryRecordController
                 $grid->model()->where('target', 'player_money_edit_log')->whereIn('target_id',$target_id);
             }
             $query = clone $grid->model();
-            $totalData = $query->selectRaw('sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ',`amount`,0)) as total_out_amount, sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount')->first();
+            $totalData = $query->selectRaw(
+                'sum(if(`type`=' . PlayerDeliveryRecord::TYPE_PRESENT_IN . ',`amount`,0)) as total_in_amount, ' .
+                'sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_PRESENT_OUT . ',`amount`,0)) as total_out_amount, ' .
+                'sum(if(`type`= ' . PlayerDeliveryRecord::TYPE_MACHINE . ',`amount`,0)) as total_machine_amount, ' .
+                // 游戏点加减按「变更前→变更后」归一：amount 是幅度（提现/扣点/机台下分都存正数），
+                // 单看 amount 正负会把扣减算成加点。
+                'sum(if(`amount_after` > `amount_before`, abs(`amount`), 0)) as total_add_amount, ' .
+                'sum(if(`amount_after` < `amount_before`, abs(`amount`), 0)) as total_sub_amount'
+            )->first();
             $layout = Layout::create();
             $layout->row(function (Row $row) use ($totalData) {
                 $row->gutter([10, 0]);
@@ -188,6 +196,30 @@ class ChannelPlayerDeliveryRecordController
                         'padding' => '0px'
                     ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px'])
                     , 4);
+            })->style(['background' => '#fff']);
+
+            // 游戏点加减卡片（加点 / 减点 / 净额）
+            $statCard = function ($value, $label) {
+                return Card::create([
+                    Row::create()->column(Statistic::create()->value($value)->prefix($label)->valueStyle([
+                        'font-size' => '14px',
+                        'font-weight' => '500',
+                        'text-align' => 'center'
+                    ])),
+                ])->bodyStyle([
+                    'display' => 'flex',
+                    'align-items' => 'center',
+                    'height' => '30px',
+                    'padding' => '0px'
+                ])->hoverable()->headStyle(['height' => '0px', 'border-bottom' => '0px', 'min-height' => '0px']);
+            };
+            $layout->row(function (Row $row) use ($statCard, $totalData) {
+                $row->gutter([10, 0]);
+                $addAmount = floatval($totalData['total_add_amount'] ?? 0);
+                $subAmount = floatval($totalData['total_sub_amount'] ?? 0);
+                $row->column($statCard($addAmount, admin_trans('player_delivery_record.total_add_amount')), 8);
+                $row->column($statCard($subAmount, admin_trans('player_delivery_record.total_sub_amount')), 8);
+                $row->column($statCard($addAmount - $subAmount, admin_trans('player_delivery_record.total_net_amount')), 8);
             })->style(['background' => '#fff']);
             $grid->tools([$layout]);
             $grid->bordered();

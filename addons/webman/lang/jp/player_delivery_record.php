@@ -69,4 +69,7 @@ return [
     'total_in_amount' => 'チャージ',
     'total_out_amount' => '洗分',
     'total_machine_amount' => '投鈔',
+    'total_add_amount' => 'ゲームポイント加算',
+    'total_sub_amount' => 'ゲームポイント減算',
+    'total_net_amount' => 'ゲームポイント純額',
 ];
