@@ -517,10 +517,12 @@ class AdminOfflineMachineController
             // 小松线下版 Slot（SONG control_type）比值从预设列表选择，避免填错导致 getOpenUnit() 找不到对应配置
             // 编辑时读取 control_type 判断；新建时默认走下拉（线下新增通常是 SONG 协议机台）
             // driver()->get() 可能返回数组或对象，用 data_get() 统一处理
+            // 新建时无法在表单渲染阶段得知 control_type，只对编辑 SONG 机台显示比值下拉
             $existingModel  = $form->isEdit() ? $form->driver()->get() : null;
             $existCtrlType  = data_get($existingModel, 'control_type');
             $isSongSlot = $gameType == GameType::TYPE_SLOT
-                && (!$form->isEdit() || $existCtrlType === Machine::CONTROL_TYPE_SONG);
+                && $form->isEdit()
+                && $existCtrlType === Machine::CONTROL_TYPE_SONG;
 
             if ($isSongSlot) {
                 $oddsOptions = [];
