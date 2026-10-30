@@ -568,11 +568,15 @@ class AdminOfflineMachineController
                         }
                     })
                     ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
-                        // MEI 协议：自由输入 odds_x / odds_y
-                        $f->number('odds_x', admin_trans('machine.fields.odds_x'))
-                            ->max(100000)->min(0.01)->precision(2)->required();
-                        $f->number('odds_y', admin_trans('machine.fields.odds_y'))
-                            ->max(100000)->min(0.01)->precision(2)->required();
+                        // MEI 协议：自由输入 odds_x / odds_y（同一行）
+                        $f->row(function (Form $f) {
+                            $f->number('odds_x', admin_trans('machine.fields.odds_x'))
+                                ->max(100000)->min(0.01)->precision(2)->required()
+                                ->span(11)->style(['width' => '100%']);
+                            $f->number('odds_y', admin_trans('machine.fields.odds_y'))
+                                ->max(100000)->min(0.01)->precision(2)->required()
+                                ->span(11)->style(['margin-left' => '10px', 'width' => '100%']);
+                        });
                     });
             } else {
                 // 钢珠机台：工控类型 + 自由输入比值（不联动）
