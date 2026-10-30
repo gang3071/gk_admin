@@ -683,17 +683,18 @@ class AdminOfflineMachineController
                 $form->input('is_live', 0);
                 $form->input('min_vip_level_id', (int)($form->input('min_vip_level_id') ?? 0));
 
-                // SONG Slot 机台：从比值下拉解析 odds_x / odds_y
-                $oddsRatio = $form->input('odds_ratio');
-                if ($oddsRatio !== null) {
+                // SONG Slot 机台：从比值下拉解析 odds_x / odds_y（仅限 SONG 协议）
+                $controlType = (int)$form->input('control_type');
+                $oddsRatio   = $form->input('odds_ratio');
+                if ($controlType === Machine::CONTROL_TYPE_SONG && $oddsRatio !== null) {
                     $options = config('machine.song_offline.open_options', []);
                     if (!isset($options[$oddsRatio])) {
                         throw new \InvalidArgumentException("无效的机台比值：{$oddsRatio}，请从下拉中选择合法比值");
                     }
                     $form->input('odds_x', $options[$oddsRatio]['odds_x']);
                     $form->input('odds_y', $options[$oddsRatio]['odds_y']);
-                    $form->removeInput('odds_ratio'); // 移除虚拟字段，不写入数据库
                 }
+                $form->removeInput('odds_ratio'); // 虚拟字段，始终移除，不写入数据库
             });
 
             $form->saved(function (Form $form) {
