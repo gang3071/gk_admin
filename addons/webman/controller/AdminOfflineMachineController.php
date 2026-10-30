@@ -716,7 +716,7 @@ class AdminOfflineMachineController
                     }
                 }
 
-                return message_success(admin_trans('common.save_success'));
+                return message_success(admin_trans('form.save_success'));
             });
 
             $form->actions()->hideResetButton();
