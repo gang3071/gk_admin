@@ -86,6 +86,11 @@ return [
         'total_lottery_ticket_reward' => '总摸奖券奖励',
     ],
 
+    // 当前页汇总
+    'summary' => [
+        'row_label' => '汇总',
+    ],
+
     // 消息提示
     'message' => [
         'store_not_found' => '店家不存在',

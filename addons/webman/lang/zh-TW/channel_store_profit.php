@@ -86,6 +86,11 @@ return [
         'total_lottery_ticket_reward' => '總摸獎券獎勵',
     ],
 
+    // 當前頁匯總
+    'summary' => [
+        'row_label' => '匯總',
+    ],
+
     // 消息提示
     'message' => [
         'store_not_found' => '店家不存在',

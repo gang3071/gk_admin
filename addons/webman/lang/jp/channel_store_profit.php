@@ -86,6 +86,11 @@ return [
         'total_lottery_ticket_reward' => '総抽選券当選報酬',
     ],
 
+    // ページ集計
+    'summary' => [
+        'row_label' => '集計',
+    ],
+
     // Messages
     'message' => [
         'store_not_found' => '店舗が見つかりません',
