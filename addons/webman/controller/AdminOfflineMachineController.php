@@ -516,24 +516,18 @@ class AdminOfflineMachineController
 
             // 小松线下版 Slot（SONG control_type）比值从预设列表选择，避免填错导致 getOpenUnit() 找不到对应配置
             // 编辑时读取 control_type 判断；新建时默认走下拉（线下新增通常是 SONG 协议机台）
-            // driver()->get() 可能返回数组或对象，用 data_get() 统一处理
-            // 新建时无法在表单渲染阶段得知 control_type，只对编辑 SONG 机台显示比值下拉
-            $existingModel  = $form->isEdit() ? $form->driver()->get() : null;
-            $existCtrlType  = data_get($existingModel, 'control_type');
-            $isSongSlot = $gameType == GameType::TYPE_SLOT
-                && $form->isEdit()
-                && $existCtrlType === Machine::CONTROL_TYPE_SONG;
-
-            if ($isSongSlot) {
+            if ($gameType == GameType::TYPE_SLOT) {
+                // Slot 线下机台（SONG / MEI）：比值统一从预设列表选择
+                // 服务端渲染无法在页面内动态切换字段，添加/编辑行为保持一致
                 $oddsOptions = [];
                 foreach (config('machine.song_offline.open_options', []) as $key => $opt) {
                     $oddsOptions[$key] = "{$key}（机台 {$opt['machine_score']} 分/次，上分单位 " . ($opt['min_player_amount'] / 100) . ' 元）';
                 }
-                // 编辑时从现有 odds_x:odds_y 还原当前比值；新建时默认 1:1
-                $currentRatio = '1:1';
-                if ($form->isEdit()) {
-                    $currentRatio = data_get($existingModel, 'odds_x') . ':' . data_get($existingModel, 'odds_y');
-                }
+                // 编辑时从现有 odds_x:odds_y 还原当前选项；新建时默认 1:1
+                $existingModel = $form->isEdit() ? $form->driver()->get() : null;
+                $currentRatio  = $form->isEdit()
+                    ? (data_get($existingModel, 'odds_x') . ':' . data_get($existingModel, 'odds_y'))
+                    : '1:1';
                 $form->row(function (Form $form) use ($oddsOptions, $currentRatio) {
                     $form->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
                         ->options($oddsOptions)
@@ -542,7 +536,7 @@ class AdminOfflineMachineController
                         ->span(22);
                 });
             } else {
-                // 钢珠机台、MEI 类型 Slot 保留自由输入
+                // 钢珠机台保留自由输入
                 $form->row(function (Form $form) {
                     $form->number('odds_x', admin_trans('machine.fields.odds_x'))
                         ->max(100000)
