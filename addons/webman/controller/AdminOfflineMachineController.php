@@ -679,9 +679,9 @@ class AdminOfflineMachineController
             // 保存前处理
             $form->saving(function (Form $form) use ($gameType) {
                 // 确保是线下机台
-                $form->machine_source = Machine::MACHINE_SOURCE_OFFLINE;
-                $form->is_live = 0;
-                $form->min_vip_level_id = (int)($form->input('min_vip_level_id') ?? 0);
+                $form->input('machine_source', Machine::MACHINE_SOURCE_OFFLINE);
+                $form->input('is_live', 0);
+                $form->input('min_vip_level_id', (int)($form->input('min_vip_level_id') ?? 0));
 
                 // SONG Slot 机台：从比值下拉解析 odds_x / odds_y
                 $oddsRatio = $form->input('odds_ratio');
@@ -690,14 +690,14 @@ class AdminOfflineMachineController
                     if (!isset($options[$oddsRatio])) {
                         throw new \InvalidArgumentException("无效的机台比值：{$oddsRatio}，请从下拉中选择合法比值");
                     }
-                    $form->odds_x = $options[$oddsRatio]['odds_x'];
-                    $form->odds_y = $options[$oddsRatio]['odds_y'];
+                    $form->input('odds_x', $options[$oddsRatio]['odds_x']);
+                    $form->input('odds_y', $options[$oddsRatio]['odds_y']);
                     $form->removeInput('odds_ratio'); // 移除虚拟字段，不写入数据库
                 }
             });
 
-            $form->saved(function (Form $form, $result) {
-                if ($result && $form->model()->id) {
+            $form->saved(function (Form $form) {
+                if ($form->model()->id) {
                     /** @var Machine $machine */
                     $machine = Machine::find($form->model()->id);
 
