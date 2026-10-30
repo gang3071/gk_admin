@@ -561,8 +561,8 @@ class AdminOfflineMachineController
                                     Alert::create()
                                         ->type('info')
                                         ->showIcon(true)
-                                        ->message($msg)
-                                        ->description($desc)
+                                        ->message(Html::raw('<span style="font-size:12px;">' . $msg . '</span>'))
+                                        ->description(Html::raw('<span style="font-size:11px;">' . $desc . '</span>'))
                                 );
                             });
                         }
