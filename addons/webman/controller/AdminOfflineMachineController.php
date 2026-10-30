@@ -537,7 +537,8 @@ class AdminOfflineMachineController
                         $f->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
                             ->options($oddsOptions)
                             ->default($currentRatio)
-                            ->required();
+                            ->required()
+                            ->help('机台每次开分积分如括号所示（分/次）；玩家每次上分扣对应游戏点（最低单位 = 括号内元数 × 100），上分金额须为最低单位的整数倍');
                     })
                     ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
                         // MEI 协议：自由输入 odds_x / odds_y
