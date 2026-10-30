@@ -15,7 +15,7 @@ use ExAdmin\ui\component\grid\ToolTip;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
 use ExAdmin\ui\support\Request;
-use support\Cache;
+use Carbon\Carbon;
 
 /**
  * 子站 - 厂商数据报表
@@ -23,12 +23,6 @@ use support\Cache;
  */
 class ChannelGameVendorReportController
 {
-    /**
-     * 分组聚合结果缓存时间（秒）
-     * 列表/分页/统计面板共用同一份结果，60 秒内重复访问不再扫大表
-     */
-    protected const CACHE_TTL = 60;
-
     /**
      * 厂商数据报表
      * @group channel
@@ -42,7 +36,7 @@ class ChannelGameVendorReportController
 
         $platformModel = plugin()->webman->config('database.game_platform_model');
 
-        // 一次分组聚合出全部厂商行（带缓存）；总数、分页、统计汇总都在这份结果上推导，
+        // 一次分组聚合出全部厂商行；总数、分页、统计汇总都在这份结果上推导，
         // 避免同一请求对大表做两遍聚合（原 count 查询也是完整的 GROUP BY 扫描）
         $rows    = $this->groupedRows($exAdminFilter);
         $total   = count($rows);
@@ -196,7 +190,7 @@ class ChannelGameVendorReportController
                 $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
             }
             if (!empty($exAdminFilter['date_type'])) {
-                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
+                $query->where(getDateWhere8am($exAdminFilter['date_type'], "$pgr.created_at"));
             }
             if (!empty($exAdminFilter['platform_id'])) {
                 $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
@@ -212,18 +206,55 @@ class ChannelGameVendorReportController
     }
 
     /**
-     * 厂商分组聚合结果（列表/分页/统计共用，按 渠道+筛选条件 缓存）
+     * 今日业务日区间，与「今日打码量」同口径（ChannelIndexController 同款分界）
+     * 今日 = 早上 08:00 ~ 隔天早上 08:00；凌晨 08:00 前算上一个业务日（昨日 08:00 ~ 今日 08:00）
+     * @return array [start, end] 日期时间字符串
+     */
+    protected function todayRange(): array
+    {
+        $now = Carbon::now();
+        $today8am = Carbon::today()->setTime(8, 0, 0);
+
+        if ($now->gte($today8am)) {
+            $start = $today8am;
+            $end   = Carbon::tomorrow()->setTime(8, 0, 0);
+        } else {
+            // 当前在今日 08:00 之前（凌晨），今日区间 = 昨日 08:00 ~ 今日 08:00
+            $start = Carbon::yesterday()->setTime(8, 0, 0);
+            $end   = $today8am;
+        }
+
+        // end_date 在 buildBaseQuery 走 <= 比较，取 07:59:59 使区间等价于 [08:00, 隔天 08:00)
+        return [$start->toDateTimeString(), $end->copy()->subSecond()->toDateTimeString()];
+    }
+
+    /**
+     * 未指定任何时间条件（start_date/end_date/date_type 都为空）时，默认只统计今日
+     * 用户指定任一时间条件时按用户选择查询，不再套默认区间
+     * @param array $exAdminFilter
+     * @return array
+     */
+    protected function applyDefaultDateRange(array $exAdminFilter): array
+    {
+        if (!empty($exAdminFilter['start_date']) || !empty($exAdminFilter['end_date']) || !empty($exAdminFilter['date_type'])) {
+            return $exAdminFilter;
+        }
+
+        [$exAdminFilter['start_date'], $exAdminFilter['end_date']] = $this->todayRange();
+
+        return $exAdminFilter;
+    }
+
+    /**
+     * 厂商分组聚合结果（列表/分页/统计共用）
      * 不带分页，返回全部分组行；分页与汇总数值在 PHP 侧从这份结果推导
      * @param array $exAdminFilter
      * @return array
      */
     protected function groupedRows(array $exAdminFilter): array
     {
-        $cacheKey = $this->cacheKey($exAdminFilter);
-        $cached   = Cache::get($cacheKey);
-        if (is_array($cached)) {
-            return $cached;
-        }
+        // 未指定时间条件时默认只查今日
+        $exAdminFilter = $this->applyDefaultDateRange($exAdminFilter);
 
         $modelClass    = plugin()->webman->config('database.play_game_record_model');
         $platformModel = plugin()->webman->config('database.game_platform_model');
@@ -244,20 +275,7 @@ class ChannelGameVendorReportController
             ->get()
             ->toArray();
 
-        Cache::set($cacheKey, $rows, self::CACHE_TTL);
-
         return $rows;
-    }
-
-    /**
-     * 缓存键：渠道 + 搜索条件（同一渠道内结果只与筛选条件有关，与登录账号无关）
-     * @param array $exAdminFilter
-     * @return string
-     */
-    protected function cacheKey(array $exAdminFilter): string
-    {
-        ksort($exAdminFilter);
-        return 'game_vendor_report:' . Admin::user()->department_id . ':' . md5(json_encode($exAdminFilter, JSON_UNESCAPED_UNICODE));
     }
 
     /**
@@ -325,7 +343,7 @@ class ChannelGameVendorReportController
 
     /**
      * 厂商数据统计（独立接口，不走通用 totalInfo）
-     * 汇总口径与列表列一致，随搜索条件实时变化；复用列表的缓存聚合结果，不再单独扫大表
+     * 汇总口径与列表列一致，随搜索条件实时变化；复用列表的分组聚合，不再单独扫大表
      * @group channel
      * @auth true
      * @return \support\Response

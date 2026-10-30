@@ -341,6 +341,63 @@ function getDateWhere($type, $column): array
 }
 
 /**
+ * 结算周期筛选（厂商数据报表）：所有周期的时间点统一分界在早上 08:00
+ * 今日 = 今天 08:00 ~ 隔天 08:00，本周 = 周一 08:00 ~ 下周一 08:00，本月 = 1 日 08:00 ~ 下月 1 日 08:00，以此类推
+ * 今日/昨天按「今日打码量」口径判定：当前时间在 08:00 之前时，今日 = 昨日 08:00 ~ 今日 08:00，昨天相应前移一天
+ * 与 getDateWhere 的区别：原方法以 0 点为界，本方法以 8 点为界
+ * @param $type 1=今日 2=昨天 3=本周 4=上周 5=本月 6=上月
+ * @param $column
+ * @return array
+ */
+function getDateWhere8am($type, $column): array
+{
+    $today = Carbon::today();
+    $today8am = $today->copy()->setTime(8, 0, 0);
+
+    // 当前业务日：凌晨 08:00 前算上一天（与今日打码量同款判定）
+    $businessDay = Carbon::now()->gte($today8am) ? $today : $today->copy()->subDay();
+
+    switch ($type) {
+        case 1: // 今日
+            $start = $businessDay->copy()->setTime(8, 0, 0);
+            $end   = $start->copy()->addDay();
+            break;
+        case 2: // 昨天
+            $start = $businessDay->copy()->subDay()->setTime(8, 0, 0);
+            $end   = $start->copy()->addDay();
+            break;
+        case 3: // 本周
+            $start = $today->copy()->startOfWeek(Carbon::MONDAY)->setTime(8, 0, 0);
+            $end   = $start->copy()->addWeek();
+            break;
+        case 4: // 上周
+            $start = $today->copy()->subWeek()->startOfWeek(Carbon::MONDAY)->setTime(8, 0, 0);
+            $end   = $today->copy()->startOfWeek(Carbon::MONDAY)->setTime(8, 0, 0);
+            break;
+        case 5: // 本月
+            $start = $today->copy()->firstOfMonth()->setTime(8, 0, 0);
+            $end   = $start->copy()->addMonth();
+            break;
+        case 6: // 上月
+            $start = $today->copy()->firstOfMonth()->subMonth()->setTime(8, 0, 0);
+            $end   = $today->copy()->firstOfMonth()->setTime(8, 0, 0);
+            break;
+        default:
+            return [];
+    }
+
+    return [
+        [
+            function ($query) use ($column, $start, $end) {
+                // end 走 <= 比较，取 07:59:59 使区间等价于 [08:00, 隔周期 08:00)
+                $query->where($column, '>=', $start)
+                    ->where($column, '<=', $end->copy()->subSecond());
+            }
+        ]
+    ];
+}
+
+/**
  * 获取日期范围条件（通用版本）
  * @param $type
  * @param $column

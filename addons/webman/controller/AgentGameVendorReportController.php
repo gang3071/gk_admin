@@ -208,7 +208,7 @@ class AgentGameVendorReportController
                 $query->where("$pgr.created_at", '<=', $exAdminFilter['end_date']);
             }
             if (!empty($exAdminFilter['date_type'])) {
-                $query->where(getDateWhere($exAdminFilter['date_type'], "$pgr.created_at"));
+                $query->where(getDateWhere8am($exAdminFilter['date_type'], "$pgr.created_at"));
             }
             if (!empty($exAdminFilter['platform_id'])) {
                 $query->where("$pgr.platform_id", $exAdminFilter['platform_id']);
