@@ -544,16 +544,13 @@ class AdminOfflineMachineController
 
                         // 根据当前选择的比值联动显示对应的 info 说明（info 条件 = control_type==SONG AND odds_ratio==ratio）
                         foreach ($openOptions as $ratio => $opt) {
-                            $unit   = $opt['min_player_amount'] / 100;
                             $points = $opt['min_player_amount'];
                             $score  = $opt['machine_score'];
                             $msg    = strtr(admin_trans('machine.help.odds_ratio_info'), [
                                 '{score}'  => $score,
                                 '{points}' => $points,
-                                '{unit}'   => $unit,
                             ]);
                             $desc   = strtr(admin_trans('machine.help.odds_ratio_detail'), [
-                                '{unit}'   => $unit,
                                 '{points}' => $points,
                             ]);
                             $select->when($ratio, function ($f2) use ($msg, $desc) {

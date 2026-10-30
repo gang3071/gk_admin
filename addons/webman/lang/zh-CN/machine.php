@@ -201,8 +201,8 @@ return [
         'max_point' => '设置0时为不限制',
         'stream_name' => '值为 -1 表示设定失败，並不显示在前台',
         'picture_url_size' => '建議圖片尺寸 335 * 366',
-        'odds_ratio_info' => '机台开分1次 = {score} 分；玩家每次上分最低扣款 {points} 游戏点（{unit} 元）',
-        'odds_ratio_detail' => '上分金额须为 {unit} 元（{points} 游戏点）的整数倍',
+        'odds_ratio_info' => '机台开分1次 {score} 分，玩家扣款 {points} 游戏点',
+        'odds_ratio_detail' => '上分必须为 {points} 游戏点的整数倍',
     ],
     /** TODO 翻译 */
     'detail' => '详情',
