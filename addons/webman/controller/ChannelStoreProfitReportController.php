@@ -3,6 +3,7 @@
 namespace addons\webman\controller;
 
 use addons\webman\Admin;
+use addons\webman\grid\SummaryGrid;
 use addons\webman\model\AdminUser;
 use addons\webman\model\Player;
 use Carbon\Carbon;
@@ -21,6 +22,7 @@ use ExAdmin\ui\component\grid\grid\Grid;
 use ExAdmin\ui\component\grid\statistic\Statistic;
 use ExAdmin\ui\component\layout\layout\Layout;
 use ExAdmin\ui\component\layout\Row;
+use ExAdmin\ui\component\navigation\Pagination;
 use ExAdmin\ui\support\Request;
 
 /**
@@ -39,6 +41,20 @@ class ChannelStoreProfitReportController
         'morning' => ['start' => 8, 'end' => 16],
         'afternoon' => ['start' => 16, 'end' => 24],
         'night' => ['start' => 0, 'end' => 8],
+    ];
+
+    /**
+     * 金额列（列表列与当前页汇总条共用，保证汇总口径与列表列一致）
+     */
+    private const AMOUNT_COLUMNS = [
+        'open_score_amount', 'withdraw_amount',
+        'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
+        'counter_ticket_amount', 'counter_redeem_amount',
+        'storage_ticket_purchase', 'storage_recharge',
+        'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
+        'welfare_coupon_amount', 'lottery_amount', 'activity_total', 'lottery_ticket_reward_amount',
+        'electronic_game_bet_amount', 'machine_bet_amount',
+        'total_income', 'total_expense',
     ];
 
     /**
@@ -276,7 +292,7 @@ class ChannelStoreProfitReportController
         $storeOptions = $this->getStoreOptions($admin->department_id);
         $agentOptions = $this->getAgentOptions($admin->department_id);
 
-        return Grid::create($reportData, function (Grid $grid) use ($exAdminFilter, $reportData, $storeOptions, $agentOptions, $totalStats) {
+        return SummaryGrid::create($reportData, function (SummaryGrid $grid) use ($exAdminFilter, $reportData, $storeOptions, $agentOptions, $totalStats) {
             $grid->title(admin_trans('channel_store_profit.title'));
             $grid->autoHeight();
             $grid->bordered(true);
@@ -286,6 +302,9 @@ class ChannelStoreProfitReportController
 
             // 列定义
             $this->buildGridColumns($grid);
+
+            // 列表内汇总行（每页最后一行）
+            $this->buildPageSummary($grid, $reportData);
 
             // 筛选器
             $this->buildGridFilter($grid, $storeOptions, $agentOptions);
@@ -742,18 +761,7 @@ class ChannelStoreProfitReportController
         $grid->column('agent_name', admin_trans('channel_store_profit.fields.agent_name'))->width(120)->align('center');
 
         // 金额列
-        $amountColumns = [
-            'open_score_amount', 'withdraw_amount',
-            'incoming_ticket_amount', 'ticket_redeem_amount', 'ticket_open_score_amount',
-            'counter_ticket_amount', 'counter_redeem_amount',
-            'storage_ticket_purchase', 'storage_recharge',
-            'redeem_amount', 'redeem_machine_amount', 'ticket_unredeemed_amount', 'experience_coupon_amount',
-            'welfare_coupon_amount', 'lottery_amount', 'activity_total', 'lottery_ticket_reward_amount',
-            'electronic_game_bet_amount', 'machine_bet_amount',
-            'total_income', 'total_expense',
-        ];
-
-        foreach ($amountColumns as $column) {
+        foreach (self::AMOUNT_COLUMNS as $column) {
             $grid->column($column, admin_trans("channel_store_profit.fields.{$column}"))
                 ->display(function ($value) {
                     return number_format(floatval($value), 2);
@@ -795,6 +803,78 @@ class ChannelStoreProfitReportController
                     ->maxLength(500)
                     ->rows(3)
             )->width(200)->align('center')->ellipsis(true);
+    }
+
+    /**
+     * 构建列表内汇总行（每页最后一行）
+     *
+     * 口径：仅当前分页页展示的数据，切片方式与 Arrays 驱动的分页保持一致
+     *
+     * @param SummaryGrid $grid
+     * @param array $reportData 全量报表数据
+     */
+    private function buildPageSummary(SummaryGrid $grid, array $reportData): void
+    {
+        // 分页切片口径与 Arrays 驱动一致：ex_admin_page / ex_admin_size，缺省取分页组件默认值
+        $page = max(1, (int)Request::input('ex_admin_page', 1));
+        $size = max(1, (int)Request::input('ex_admin_size', Pagination::create()->attr('pageSize')));
+        $pageData = array_slice($reportData, ($page - 1) * $size, $size);
+
+        if (empty($pageData)) {
+            return;
+        }
+
+        $totals = $this->summarizeColumns($pageData);
+
+        $grid->summaryRow($this->buildSummaryRow($totals), ['agent_commission', 'channel_commission', 'remark']);
+    }
+
+    /**
+     * 汇总当前页数据
+     *
+     * @param array $pageData 当前页报表数据
+     * @return array 字段 => 当前页合计
+     */
+    private function summarizeColumns(array $pageData): array
+    {
+        $fields = array_merge(['device_count'], self::AMOUNT_COLUMNS, ['total_profit', 'agent_profit', 'channel_profit']);
+
+        $totals = [];
+        foreach ($fields as $field) {
+            $total = '0';
+            foreach ($pageData as $row) {
+                $total = bcadd($total, (string)floatval($row[$field] ?? 0), 2);
+            }
+            // 设备数量是整数列
+            $totals[$field] = $field === 'device_count' ? (int)$total : floatval($total);
+        }
+
+        return $totals;
+    }
+
+    /**
+     * 列表内汇总行原始数据（ID=0、店家名称为「汇总」，其余字段为当前页合计）
+     *
+     * @param array $totals 字段 => 当前页合计
+     * @return array
+     */
+    private function buildSummaryRow(array $totals): array
+    {
+        $row = [
+            'id' => 0,
+            'store_name' => admin_trans('channel_store_profit.summary.row_label'),
+            'store_username' => '',
+            'agent_name' => '',
+        ];
+        foreach ($totals as $field => $total) {
+            $row[$field] = $total;
+        }
+        // 比例与备注没有合计含义，汇总行留白
+        $row['agent_commission'] = '';
+        $row['channel_commission'] = '';
+        $row['remark'] = '';
+
+        return $row;
     }
 
     /**
