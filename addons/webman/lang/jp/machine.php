@@ -204,6 +204,8 @@ return [
         'max_point' => '0に設定すると制限はありません',
         'stream_name' => '値 -1 は、設定が失敗したため、前面に表示されないことを示します',
         'picture_url_size' => '推奨画像サイズ 335 * 366',
+        'odds_ratio_info' => 'マシン1回開分 = {score} pt；プレイヤー最低チャージ {points} ゲームポイント（{unit} クレジット）',
+        'odds_ratio_detail' => 'チャージ額は {unit} クレジット（{points} ゲームポイント）の整数倍であること',
     ],
     'detail' => '詳細',
     'chart' => 'チャート',

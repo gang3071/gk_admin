@@ -12,6 +12,7 @@ use addons\webman\model\VipLevel;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\feedback\Alert;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
@@ -525,6 +526,8 @@ class AdminOfflineMachineController
                     ? (data_get($existingModel, 'odds_x') . ':' . data_get($existingModel, 'odds_y'))
                     : '1:1';
 
+                $openOptions = config('machine.song_offline.open_options', []);
+
                 $form->select('control_type', admin_trans('machine.fields.control_type'))
                     ->required()
                     ->options([
@@ -532,18 +535,37 @@ class AdminOfflineMachineController
                         Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
                     ])
                     ->default(Machine::CONTROL_TYPE_MEI)
-                    ->when(Machine::CONTROL_TYPE_SONG, function ($f) use ($oddsOptions, $currentRatio) {
+                    ->when(Machine::CONTROL_TYPE_SONG, function ($f) use ($oddsOptions, $currentRatio, $openOptions) {
                         // SONG 协议：从预设比值列表选择，saving() 负责解析为 odds_x/odds_y
-                        $f->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
+                        $select = $f->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
                             ->options($oddsOptions)
                             ->default($currentRatio)
-                            ->required()
-                            ->help(
-                                Html::raw(
-                                    '<div>机台开分1次 = 括号积分（分/次）；玩家扣款 = 上分单位（元）× 100 游戏点</div>'
-                                    . '<div style="margin-top:4px;font-size:12px;color:#666;">上分金额须为最低单位的整数倍，例如选 3:1（上分单位 3 元）→ 上分须为 300、600、900 游戏点</div>'
-                                )
-                            );
+                            ->required();
+
+                        // 根据当前选择的比值联动显示对应的 info 说明（info 条件 = control_type==SONG AND odds_ratio==ratio）
+                        foreach ($openOptions as $ratio => $opt) {
+                            $unit   = $opt['min_player_amount'] / 100;
+                            $points = $opt['min_player_amount'];
+                            $score  = $opt['machine_score'];
+                            $msg    = strtr(admin_trans('machine.help.odds_ratio_info'), [
+                                '{score}'  => $score,
+                                '{points}' => $points,
+                                '{unit}'   => $unit,
+                            ]);
+                            $desc   = strtr(admin_trans('machine.help.odds_ratio_detail'), [
+                                '{unit}'   => $unit,
+                                '{points}' => $points,
+                            ]);
+                            $select->when($ratio, function ($f2) use ($msg, $desc) {
+                                $f2->push(
+                                    Alert::create()
+                                        ->type('info')
+                                        ->showIcon(true)
+                                        ->message($msg)
+                                        ->description($desc)
+                                );
+                            });
+                        }
                     })
                     ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
                         // MEI 协议：自由输入 odds_x / odds_y
