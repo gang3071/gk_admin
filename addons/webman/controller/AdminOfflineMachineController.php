@@ -12,6 +12,7 @@ use addons\webman\model\VipLevel;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
+use ExAdmin\ui\component\feedback\Alert;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
@@ -538,7 +539,13 @@ class AdminOfflineMachineController
                             ->options($oddsOptions)
                             ->default($currentRatio)
                             ->required()
-                            ->help('机台每次开分积分如括号所示（分/次）；玩家每次上分扣对应游戏点（最低单位 = 括号内元数 × 100），上分金额须为最低单位的整数倍');
+                            ->help(
+                                Alert::create()
+                                    ->type('info')
+                                    ->showIcon(true)
+                                    ->message('机台开分1次 = 括号积分（分/次）；玩家扣款 = 上分单位（元）× 100 游戏点')
+                                    ->description('上分金额须为最低单位的整数倍，例如选 3:1（上分单位 3 元）→ 上分须为 300、600、900 游戏点')
+                            );
                     })
                     ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
                         // MEI 协议：自由输入 odds_x / odds_y
