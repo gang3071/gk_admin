@@ -12,7 +12,6 @@ use addons\webman\model\VipLevel;
 use app\service\MachineApiService;
 use ExAdmin\ui\component\common\Button;
 use ExAdmin\ui\component\common\Html;
-use ExAdmin\ui\component\feedback\Alert;
 use ExAdmin\ui\component\form\field\Switches;
 use ExAdmin\ui\component\form\Form;
 use ExAdmin\ui\component\grid\card\Card;
@@ -540,11 +539,10 @@ class AdminOfflineMachineController
                             ->default($currentRatio)
                             ->required()
                             ->help(
-                                Alert::create()
-                                    ->type('info')
-                                    ->showIcon(true)
-                                    ->message('机台开分1次 = 括号积分（分/次）；玩家扣款 = 上分单位（元）× 100 游戏点')
-                                    ->description('上分金额须为最低单位的整数倍，例如选 3:1（上分单位 3 元）→ 上分须为 300、600、900 游戏点')
+                                Html::raw(
+                                    '<div>机台开分1次 = 括号积分（分/次）；玩家扣款 = 上分单位（元）× 100 游戏点</div>'
+                                    . '<div style="margin-top:4px;font-size:12px;color:#666;">上分金额须为最低单位的整数倍，例如选 3:1（上分单位 3 元）→ 上分须为 300、600、900 游戏点</div>'
+                                )
                             );
                     })
                     ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
