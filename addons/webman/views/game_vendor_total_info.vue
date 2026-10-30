@@ -68,6 +68,11 @@ export default {
   name: "game_vendor_total_info",
   props: {
     ex_admin_filter: [],
+    // 首屏随列表带出的汇总数据，展开面板时无需再发请求
+    initial_data: {
+      type: Array,
+      default: null
+    },
     api_url: {
       type: String,
       default: ''
@@ -144,7 +149,16 @@ export default {
       currentFilter: null
     };
   },
+  created() {
+    // 首屏已随列表带出汇总数据，展开面板时直接展示
+    this.seedStats();
+  },
   watch: {
+    initial_data: {
+      handler() {
+        this.seedStats();
+      }
+    },
     ex_admin_filter: {
       handler(newVal) {
         this.currentFilter = newVal;
@@ -159,6 +173,15 @@ export default {
     }
   },
   methods: {
+    seedStats() {
+      if (this.initial_data && this.initial_data.length) {
+        this.statsData = this.initial_data;
+        this.hasLoaded = true;
+        this.filterChangedWhileClosed = false;
+        this.loading = false;
+        this.error = false;
+      }
+    },
     getValueStyle(item) {
       const baseStyle = {
         fontSize: '15px',

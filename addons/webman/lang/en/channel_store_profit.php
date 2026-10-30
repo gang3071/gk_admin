@@ -86,6 +86,11 @@ return [
         'total_lottery_ticket_reward' => 'Total Lottery Ticket Reward',
     ],
 
+    // Page summary
+    'summary' => [
+        'row_label' => 'Summary',
+    ],
+
     // Messages
     'message' => [
         'store_not_found' => 'Store not found',
