@@ -201,6 +201,7 @@ return [
         'max_point' => 'When set to 0, there is no limit',
         'stream_name' => 'A value of -1 indicates that the setting failed and will not be displayed in the foreground',
         'picture_url_size' => 'Recommended picture size 335 * 366',
+        'odds_ratio_option' => '{key} (machine {score} pts/open, top-up unit {points} game points)',
         'odds_ratio_info' => 'Machine opens 1 time: {score} pts; player deducted {points} game points',
         'odds_ratio_detail' => 'Top-up must be a multiple of {points} game points',
     ],

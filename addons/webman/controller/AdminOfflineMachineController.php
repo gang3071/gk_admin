@@ -517,16 +517,19 @@ class AdminOfflineMachineController
 
             // 工控类型 + 比值：Slot 机台使用联动，选择 SONG 显示预设比值下拉，选择 MEI 显示数字输入
             if ($gameType == GameType::TYPE_SLOT) {
+                $openOptions = config('machine.song_offline.open_options', []);
                 $oddsOptions = [];
-                foreach (config('machine.song_offline.open_options', []) as $key => $opt) {
-                    $oddsOptions[$key] = "{$key}（机台 {$opt['machine_score']} 分/次，上分单位 " . ($opt['min_player_amount'] / 100) . ' 元）';
+                foreach ($openOptions as $key => $opt) {
+                    $oddsOptions[$key] = strtr(admin_trans('machine.help.odds_ratio_option'), [
+                        '{key}'    => $key,
+                        '{score}'  => $opt['machine_score'],
+                        '{points}' => $opt['min_player_amount'],
+                    ]);
                 }
                 $existingModel = $form->isEdit() ? $form->driver()->get() : null;
                 $currentRatio  = $form->isEdit()
                     ? (data_get($existingModel, 'odds_x') . ':' . data_get($existingModel, 'odds_y'))
                     : '1:1';
-
-                $openOptions = config('machine.song_offline.open_options', []);
 
                 $form->select('control_type', admin_trans('machine.fields.control_type'))
                     ->required()
