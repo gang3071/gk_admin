@@ -204,6 +204,7 @@ return [
         'odds_ratio_option' => '{key}（機台 {score} 分/次，上分單位 {points} 遊戲點）',
         'odds_ratio_info' => '機台開分1次 {score} 分，玩家扣款 {points} 遊戲點',
         'odds_ratio_detail' => '上分必須為 {points} 遊戲點的整數倍',
+        'invalid_odds_ratio' => '無效的機台比值：{ratio}，請從下拉中選擇合法比值',
     ],
     /** TODO翻譯*/
     'detail' => '詳情',

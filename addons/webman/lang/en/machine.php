@@ -204,6 +204,7 @@ return [
         'odds_ratio_option' => '{key} (machine {score} pts/open, top-up unit {points} game points)',
         'odds_ratio_info' => 'Machine opens 1 time: {score} pts; player deducted {points} game points',
         'odds_ratio_detail' => 'Top-up must be a multiple of {points} game points',
+        'invalid_odds_ratio' => 'Invalid machine ratio: {ratio}. Please select a valid ratio from the dropdown.',
     ],
     /** TODO translation */
     'detail' => 'details',

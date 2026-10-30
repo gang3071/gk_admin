@@ -689,7 +689,9 @@ class AdminOfflineMachineController
                 if ($controlType === Machine::CONTROL_TYPE_SONG && $oddsRatio !== null) {
                     $options = config('machine.song_offline.open_options', []);
                     if (!isset($options[$oddsRatio])) {
-                        throw new \InvalidArgumentException("无效的机台比值：{$oddsRatio}，请从下拉中选择合法比值");
+                        throw new \InvalidArgumentException(
+                            strtr(admin_trans('machine.help.invalid_odds_ratio'), ['{ratio}' => $oddsRatio])
+                        );
                     }
                     $form->input('odds_x', $options[$oddsRatio]['odds_x']);
                     $form->input('odds_y', $options[$oddsRatio]['odds_y']);

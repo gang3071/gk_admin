@@ -207,6 +207,7 @@ return [
         'odds_ratio_option' => '{key}（マシン {score} pt/回，チャージ単位 {points} ゲームポイント）',
         'odds_ratio_info' => 'マシン1回開分 {score} pt，プレイヤー {points} ゲームポイント消費',
         'odds_ratio_detail' => 'チャージ額は {points} ゲームポイントの整数倍であること',
+        'invalid_odds_ratio' => '無効なマシン倍率：{ratio}。ドロップダウンから有効な倍率を選択してください。',
     ],
     'detail' => '詳細',
     'chart' => 'チャート',
