@@ -514,45 +514,55 @@ class AdminOfflineMachineController
                     ->style(['margin-left' => '10px']);
             });
 
-            // 小松线下版 Slot（SONG control_type）比值从预设列表选择，避免填错导致 getOpenUnit() 找不到对应配置
-            // 编辑时读取 control_type 判断；新建时默认走下拉（线下新增通常是 SONG 协议机台）
+            // 工控类型 + 比值：Slot 机台使用联动，选择 SONG 显示预设比值下拉，选择 MEI 显示数字输入
             if ($gameType == GameType::TYPE_SLOT) {
-                // Slot 线下机台（SONG / MEI）：比值统一从预设列表选择
-                // 服务端渲染无法在页面内动态切换字段，添加/编辑行为保持一致
                 $oddsOptions = [];
                 foreach (config('machine.song_offline.open_options', []) as $key => $opt) {
                     $oddsOptions[$key] = "{$key}（机台 {$opt['machine_score']} 分/次，上分单位 " . ($opt['min_player_amount'] / 100) . ' 元）';
                 }
-                // 编辑时从现有 odds_x:odds_y 还原当前选项；新建时默认 1:1
                 $existingModel = $form->isEdit() ? $form->driver()->get() : null;
                 $currentRatio  = $form->isEdit()
                     ? (data_get($existingModel, 'odds_x') . ':' . data_get($existingModel, 'odds_y'))
                     : '1:1';
-                $form->row(function (Form $form) use ($oddsOptions, $currentRatio) {
-                    $form->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
-                        ->options($oddsOptions)
-                        ->default($currentRatio)
-                        ->required()
-                        ->span(22);
-                });
+
+                $form->select('control_type', admin_trans('machine.fields.control_type'))
+                    ->required()
+                    ->options([
+                        Machine::CONTROL_TYPE_MEI  => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                        Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                    ])
+                    ->default(Machine::CONTROL_TYPE_MEI)
+                    ->when(Machine::CONTROL_TYPE_SONG, function ($f) use ($oddsOptions, $currentRatio) {
+                        // SONG 协议：从预设比值列表选择，saving() 负责解析为 odds_x/odds_y
+                        $f->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
+                            ->options($oddsOptions)
+                            ->default($currentRatio)
+                            ->required();
+                    })
+                    ->when(Machine::CONTROL_TYPE_MEI, function ($f) {
+                        // MEI 协议：自由输入 odds_x / odds_y
+                        $f->number('odds_x', admin_trans('machine.fields.odds_x'))
+                            ->max(100000)->min(0.01)->precision(2)->required();
+                        $f->number('odds_y', admin_trans('machine.fields.odds_y'))
+                            ->max(100000)->min(0.01)->precision(2)->required();
+                    });
             } else {
-                // 钢珠机台保留自由输入
+                // 钢珠机台：工控类型 + 自由输入比值（不联动）
+                $form->select('control_type', admin_trans('machine.fields.control_type'))
+                    ->required()
+                    ->options([
+                        Machine::CONTROL_TYPE_MEI  => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
+                        Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
+                    ])
+                    ->default(Machine::CONTROL_TYPE_MEI);
+
                 $form->row(function (Form $form) {
                     $form->number('odds_x', admin_trans('machine.fields.odds_x'))
-                        ->max(100000)
-                        ->min(0.01)
-                        ->precision(2)
-                        ->required()
-                        ->span(11)
-                        ->style(['width' => '100%']);
-
+                        ->max(100000)->min(0.01)->precision(2)->required()
+                        ->span(11)->style(['width' => '100%']);
                     $form->number('odds_y', admin_trans('machine.fields.odds_y'))
-                        ->max(100000)
-                        ->min(0.01)
-                        ->precision(2)
-                        ->required()
-                        ->span(11)
-                        ->style(['margin-left' => '10px', 'width' => '100%']);
+                        ->max(100000)->min(0.01)->precision(2)->required()
+                        ->span(11)->style(['margin-left' => '10px', 'width' => '100%']);
                 });
             }
 
@@ -629,14 +639,6 @@ class AdminOfflineMachineController
                 ->default(0)
                 ->showSearch()
                 ->dropdownMatchSelectWidth();
-
-            $form->select('control_type', admin_trans('machine.fields.control_type'))
-                ->required()
-                ->options([
-                    Machine::CONTROL_TYPE_MEI => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_MEI),
-                    Machine::CONTROL_TYPE_SONG => admin_trans('machine.control_type.' . Machine::CONTROL_TYPE_SONG),
-                ])
-                ->default(Machine::CONTROL_TYPE_MEI);
 
             $form->textarea('remark', admin_trans('machine.fields.remark'))
                 ->maxlength(250)
