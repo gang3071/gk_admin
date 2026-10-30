@@ -274,6 +274,7 @@ class MachineController
         $grid->column('status', admin_trans('machine.fields.status'))->switch()->align('center');
         $grid->column('is_use', admin_trans('machine.fields.is_use'))->switch()->align('center');
         $grid->column('maintaining', admin_trans('machine.fields.maintaining'))->switch()->align('center');
+        $grid->column('is_high_setting', admin_trans('machine.fields.is_high_setting'))->switch()->align('center');
         $grid->column('has_lock', admin_trans('machine.fields.has_lock'))->display(function (
             $val,
             Machine $data

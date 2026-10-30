@@ -77,6 +77,7 @@ return [
         'label_id' => 'マシンラベル',
         'is_special' => '特別仕機かどうか',
         'min_vip_level_id' => '最低VIPレベル制限',
+        'is_high_setting' => '高設定',
         'use_turn' => '回転数の使用',
         'has_lock' => 'ロックするかどうか',
         'viewers' => '視聴者数',

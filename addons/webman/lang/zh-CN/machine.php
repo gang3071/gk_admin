@@ -75,6 +75,7 @@ return [
         'label_id' => '机器标签',
         'is_special' => '是否特仕机',
         'min_vip_level_id' => '最低VIP等级限制',
+        'is_high_setting' => '高设定',
         'use_turn' => '使用转数',
         'has_lock' => '是否锁定',
         'viewers' => '观看人数',

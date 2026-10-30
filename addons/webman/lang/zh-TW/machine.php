@@ -75,6 +75,7 @@ return [
         'label_id' => '機器標籤',
         'is_special' => '是否特仕機',
         'min_vip_level_id' => '最低VIP等級限制',
+        'is_high_setting' => '高設定',
         'use_turn' => '使用轉數',
         'has_lock' => '是否鎖定',
         'viewers' => '觀看人數',
