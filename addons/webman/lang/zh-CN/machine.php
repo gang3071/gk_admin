@@ -35,6 +35,7 @@ return [
         'player_score' => '原始得分',
         'odds_x' => '比值X',
         'odds_y' => '比值Y',
+        'odds_ratio' => '机台比值',
         'min_point' => '最低上分',
         'max_point' => '最高上分',
         'control_open_point' => '工控压分',

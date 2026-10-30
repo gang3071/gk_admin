@@ -35,6 +35,7 @@ return [
         'player_score' => 'Original score',
         'odds_x' => 'ratioX',
         'odds_y' => 'ratio Y',
+        'odds_ratio' => 'Machine Ratio',
         'min_point' => 'Minimum top score',
         'max_point' => 'Highest score',
         'control_open_point' => 'Industrial control pressure point',

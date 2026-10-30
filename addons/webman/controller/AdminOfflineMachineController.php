@@ -514,23 +514,49 @@ class AdminOfflineMachineController
                     ->style(['margin-left' => '10px']);
             });
 
-            $form->row(function (Form $form) {
-                $form->number('odds_x', admin_trans('machine.fields.odds_x'))
-                    ->max(100000)
-                    ->min(0.01)
-                    ->precision(2)
-                    ->required()
-                    ->span(11)
-                    ->style(['width' => '100%']);
+            // 小松线下版 Slot（SONG control_type）比值从预设列表选择，避免填错导致 getOpenUnit() 找不到对应配置
+            // 编辑时读取 control_type 判断；新建时默认走下拉（线下新增通常是 SONG 协议机台）
+            $isSongSlot = $gameType == GameType::TYPE_SLOT
+                && (!$form->isEdit() || $form->driver()->get()->control_type === Machine::CONTROL_TYPE_SONG);
 
-                $form->number('odds_y', admin_trans('machine.fields.odds_y'))
-                    ->max(100000)
-                    ->min(0.01)
-                    ->precision(2)
-                    ->required()
-                    ->span(11)
-                    ->style(['margin-left' => '10px', 'width' => '100%']);
-            });
+            if ($isSongSlot) {
+                $oddsOptions = [];
+                foreach (config('machine.song_offline.open_options', []) as $key => $opt) {
+                    $oddsOptions[$key] = "{$key}（机台 {$opt['machine_score']} 分/次，上分单位 " . ($opt['min_player_amount'] / 100) . ' 元）';
+                }
+                // 编辑时从现有 odds_x:odds_y 还原当前比值；新建时默认 1:1
+                $currentRatio = '1:1';
+                if ($form->isEdit()) {
+                    $m = $form->driver()->get();
+                    $currentRatio = $m->odds_x . ':' . $m->odds_y;
+                }
+                $form->row(function (Form $form) use ($oddsOptions, $currentRatio) {
+                    $form->select('odds_ratio', admin_trans('machine.fields.odds_ratio'))
+                        ->options($oddsOptions)
+                        ->default($currentRatio)
+                        ->required()
+                        ->span(22);
+                });
+            } else {
+                // 钢珠机台、MEI 类型 Slot 保留自由输入
+                $form->row(function (Form $form) {
+                    $form->number('odds_x', admin_trans('machine.fields.odds_x'))
+                        ->max(100000)
+                        ->min(0.01)
+                        ->precision(2)
+                        ->required()
+                        ->span(11)
+                        ->style(['width' => '100%']);
+
+                    $form->number('odds_y', admin_trans('machine.fields.odds_y'))
+                        ->max(100000)
+                        ->min(0.01)
+                        ->precision(2)
+                        ->required()
+                        ->span(11)
+                        ->style(['margin-left' => '10px', 'width' => '100%']);
+                });
+            }
 
             $form->row(function (Form $form) {
                 $form->text('min_point', admin_trans('machine.fields.min_point'))
@@ -619,11 +645,23 @@ class AdminOfflineMachineController
                 ->rows(3);
 
             // 保存前处理
-            $form->saving(function (Form $form) {
+            $form->saving(function (Form $form) use ($gameType) {
                 // 确保是线下机台
                 $form->machine_source = Machine::MACHINE_SOURCE_OFFLINE;
                 $form->is_live = 0;
                 $form->min_vip_level_id = (int)($form->input('min_vip_level_id') ?? 0);
+
+                // SONG Slot 机台：从比值下拉解析 odds_x / odds_y
+                $oddsRatio = $form->input('odds_ratio');
+                if ($oddsRatio !== null) {
+                    $options = config('machine.song_offline.open_options', []);
+                    if (!isset($options[$oddsRatio])) {
+                        throw new \InvalidArgumentException("无效的机台比值：{$oddsRatio}，请从下拉中选择合法比值");
+                    }
+                    $form->odds_x = $options[$oddsRatio]['odds_x'];
+                    $form->odds_y = $options[$oddsRatio]['odds_y'];
+                    $form->removeInput('odds_ratio'); // 移除虚拟字段，不写入数据库
+                }
             });
 
             $form->saved(function (Form $form, $result) {

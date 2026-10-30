@@ -36,6 +36,7 @@ return [
         'player_score' => '元のスコア',
         'odds_x' => 'ratioX',
         'odds_y' => '比率 Y',
+        'odds_ratio' => 'マシン倍率',
         'min_point' => '最小最高スコア',
         'max_point' => '最高スコア',
         'control_open_point' => '工業用制御圧力点',
