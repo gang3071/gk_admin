@@ -697,9 +697,9 @@ class AdminOfflineMachineController
             });
 
             $form->saved(function (Form $form) {
-                if ($form->model()->id) {
+                if ($form->driver()->model()->id) {
                     /** @var Machine $machine */
-                    $machine = Machine::find($form->model()->id);
+                    $machine = Machine::find($form->driver()->model()->id);
 
                     if ($machine) {
                         // 线下机台不允许配置直播流，删除可能存在的媒体配置
